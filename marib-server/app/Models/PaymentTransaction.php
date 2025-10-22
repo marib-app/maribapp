@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Str;
 use App\Models\Concerns\HasPaymentLabels;
-use App\Services\Payment\GatewayLabelService;
+use App\Services\Payments\GatewayLabelService;
 
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Log;
@@ -151,7 +151,7 @@ class PaymentTransaction extends Model
 
         return $service->labelForTransaction($this);
     }
-    
+
     public function getGatewayCodeAttribute(): ?string
     {
         $rawGateway = $this->payment_gateway;

@@ -6,7 +6,7 @@ use App\Models\ManualPaymentRequest;
 use App\Models\PaymentTransaction;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
-use App\Services\Payment\GatewayLabelService;
+use App\Services\Payments\GatewayLabelService;
 
 use Illuminate\Support\Str;
 

@@ -9,7 +9,7 @@ use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Query\JoinClause;
-use App\Services\Payment\GatewayLabelService;
+use App\Services\Payments\GatewayLabelService;
 use Throwable;
 
 class PaymentRequestTableQuery

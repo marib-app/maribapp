@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\Payment;
+namespace App\Services\Payments;
 
 use App\Models\ManualBank;
 use App\Models\ManualPaymentRequest;

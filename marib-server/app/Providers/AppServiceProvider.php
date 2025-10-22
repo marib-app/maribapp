@@ -7,7 +7,7 @@ namespace App\Providers;
 use App\Models\OrderItem;
 use App\Observers\OrderItemObserver;
 use App\Services\CacheMetricsRecorder;
-use App\Services\Payment\GatewayLabelService;
+use App\Services\Payments\GatewayLabelService;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;

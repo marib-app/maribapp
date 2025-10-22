@@ -1,63 +1,30 @@
-// lib/ui/screens/home/section/Items_List/widgets/map_search/ads_google_map.dart
-//
-// AdsGoogleMap (نسخة عقارات) — خريطة مع:
-// - ماركرات مخصصة بشكل منزل + شارة سعر/عملة
-// - دائرة موقع المستخدم + دائرة نطاق البحث (بلون الهوية)
-// - "بحث في هذه المنطقة" + تخفيض النتائج مع عدّاد
-// - بطاقات أفقية متزامنة مع الماركرات عند تفعيل نطاق/منطقة
-// - بطاقة تفاصيل سفلية بعرض الشاشة (صورة + اسم متحرّك + سعر/عملة + زر التفاصيل)
-// - شاشة "حدد نطاق البحث (كم)" محسّنة (Draggable)
-//
-
 import 'dart:async';
 import 'dart:math' as math;
-import 'dart:ui' as ui;
-
+import 'package:marib/data/model/item/item_model.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'dart:io';
-import 'dart:convert';
-import 'package:flutter_svg/svg.dart';
-import 'package:marib/app/routes.dart';
-import 'package:marib/data/cubits/auth/authentication_cubit.dart';
-import 'package:marib/data/cubits/category/fetch_category_cubit.dart';
-import 'package:marib/data/model/category_model.dart';
-import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
-import 'package:marib/ui/screens/widgets/custom_text_form_field.dart';
-import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
-import 'package:marib/ui/theme/theme.dart';
-import 'package:marib/utils/cloudState/cloud_state.dart';
-import 'package:marib/utils/extensions/extensions.dart';
-import 'package:marib/utils/helper_utils.dart';
-import 'package:marib/utils/ui_utils.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:marib/utils/api.dart';
-import 'package:country_picker/country_picker.dart';
-import 'package:marib/utils/hive_utils.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:geocoding/geocoding.dart';
-import 'package:file_picker/file_picker.dart';
 
-import 'package:marib/ui/screens/auth/sign_up/email_verification_screen.dart';
-import 'package:marib/ui/theme/theme.dart'; // context.color.*
-import 'package:marib/utils/helper_utils.dart'; // HelperUtils.showSnackBarMessage
+import 'package:marib/ui/theme/theme.dart';
+
+import 'package:marib/utils/helper_utils.dart';
+import 'package:marib/utils/extensions/extensions.dart';
 
 import 'map_repository.dart' show normalizeCategory;
-import 'package:marib/data/model/item/item_model.dart';
-import 'package:marib/data/model/item/item_model.dart';
-import 'dart:collection';
-import 'package:flutter/foundation.dart';
+import 'components/bottom_details_sheet.dart';
+import 'components/horizontal_ad_strip.dart';
+import 'components/map_search_types.dart';
+import 'components/marker_factory.dart';
+import 'components/mini_fab.dart';
+import 'components/no_results_overlay.dart';
+import 'components/radius_sheet.dart';
+import 'components/top_info_bar.dart';
+export 'components/map_search_types.dart';
 
 // ===================================================================
 // واجهة الاستخدام العامة
 // ===================================================================
 
-typedef PriceFormatter = String Function(ItemModel ad);
-typedef ImageUrlResolver = String? Function(ItemModel ad);
+
 
 class AdsGoogleMap extends StatefulWidget {
   // الأساسيات
@@ -75,7 +42,7 @@ class AdsGoogleMap extends StatefulWidget {
   final bool enableRadiusFilter; // تفعيل "نطاق البحث"
   final double initialRadiusKm; // 0 = غير مفعّل افتراضياً
   final Function(LatLngBounds)?
-  onSearchThisArea; // (اختياري) نداء API مع bounds
+      onSearchThisArea; // (اختياري) نداء API مع bounds
   final Future<void> Function()? onLoadMore; // طلب صفحة إضافية
   final VoidCallback? onViewportFilterCleared; // عند إلغاء مرشح النطاق
   final bool hasMoreAds; // هل يوجد المزيد للتحميل
@@ -153,7 +120,7 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
   Brightness? _cachedBrightness;
 
   // مصنع الماركرات (يرسم المنزل + شارة السعر)
-  late final _MarkerFactory _markerFactory = _MarkerFactory();
+  late final MarkerFactory _markerFactory = MarkerFactory();
 
   @override
   void initState() {
@@ -524,7 +491,7 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
             alignment: Alignment.topCenter,
             child: Padding(
               padding: const EdgeInsets.only(top: 8),
-              child: _TopInfoBar(
+              child: TopInfoBar(
                 totalValidAds: _totalValidAds,
                 currentShownCount: _currentShownCount,
                 activeCategory: widget.activeCategory,
@@ -567,7 +534,7 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
           ),
 
         // لا توجد نتائج
-        if (!hasResults) const _NoResultsOverlay(),
+        if (!hasResults) const NoResultsOverlay(),
 
         // بطاقات أفقية عند تفعيل أي نطاق/منطقة
         if ((_viewportFilterOn || (_radiusOn && widget.userLatLng != null)) &&
@@ -577,7 +544,7 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
               alignment: Alignment.bottomCenter,
               child: SizedBox(
                 height: 140,
-                child: _HorizontalAdStrip(
+                child: HorizontalAdStrip(
                   ads: _visibleAds,
                   imageUrlResolver: _imageOf,
                   priceFormatter: _formatPrice,
@@ -599,7 +566,7 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
           ),
 
         // بطاقة التفاصيل السفلية
-        _BottomDetailsSheet(
+        BottomDetailsSheet(
           open: _detailsOpen,
           ad: _selectedAd,
           imageUrlResolver: _imageOf,
@@ -625,7 +592,7 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _MiniFab(
+                  MiniFab(
                     icon: Icons.layers_rounded,
                     tooltip: 'نوع الخريطة',
                     onTap: () {
@@ -649,7 +616,7 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
                     },
                   ),
                   const SizedBox(height: 8),
-                  _MiniFab(
+                  MiniFab(
                     icon: Icons.my_location_rounded,
                     tooltip: 'العودة لموقعي',
                     onTap: _animateToUser,
@@ -657,7 +624,7 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
                   if (widget.enableRadiusFilter &&
                       widget.userLatLng != null) ...[
                     const SizedBox(height: 8),
-                    _MiniFab(
+                    MiniFab(
                       icon: Icons.radio_button_checked_rounded,
                       tooltip:
                           _radiusOn ? 'تعديل نطاق البحث' : 'تفعيل نطاق البحث',
@@ -672,7 +639,7 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
                             borderRadius:
                                 BorderRadius.vertical(top: Radius.circular(18)),
                           ),
-                          builder: (_) => _RadiusSheet(
+                          builder: (_) => RadiusSheet(
                             radiusKm: _radiusKm,
                             onChanged: (v) => setState(() => _radiusKm = v),
                             onDisable: () {
@@ -704,848 +671,5 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
         ),
       ],
     );
-  }
-}
-
-// ===================================================================
-// مكونات UI صغيرة (Top bar / FAB / No results / Bottom sheet / Strip)
-// ===================================================================
-
-class _TopInfoBar extends StatelessWidget {
-  final int totalValidAds;
-  final int currentShownCount;
-  final String? activeCategory;
-  final bool viewportOn;
-  final bool radiusOn;
-  final double radiusKm;
-  final VoidCallback onClearAll;
-
-  const _TopInfoBar({
-    required this.totalValidAds,
-    required this.currentShownCount,
-    required this.activeCategory,
-    required this.viewportOn,
-    required this.radiusOn,
-    required this.radiusKm,
-    required this.onClearAll,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final text = 'المعروض: $currentShownCount / $totalValidAds';
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor.withOpacity(.96),
-        borderRadius: BorderRadius.circular(24),
-        border:
-            Border.all(color: Theme.of(context).dividerColor.withOpacity(.25)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(.08),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Wrap(
-        crossAxisAlignment: WrapCrossAlignment.center,
-        spacing: 8,
-        runSpacing: 4,
-        children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.apartment_rounded,
-                  size: 16, color: context.color.textDefaultColor),
-              const SizedBox(width: 6),
-              Text(
-                text,
-                style: TextStyle(
-                  color: context.color.textDefaultColor,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
-          ),
-          if (activeCategory != null && activeCategory != 'الكل')
-            _chip(context, activeCategory!),
-          if (viewportOn) _chip(context, 'بحث في هذه المنطقة'),
-          if (radiusOn)
-            _chip(context, 'نطاق ${radiusKm.toStringAsFixed(0)} كم'),
-          if (viewportOn || radiusOn) _cancelChip(context, onTap: onClearAll),
-        ],
-      ),
-    );
-  }
-
-  Widget _chip(BuildContext context, String text) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(
-          color: Theme.of(context).chipTheme.backgroundColor ??
-              Theme.of(context).cardColor,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-              color: Theme.of(context).dividerColor.withOpacity(.25)),
-        ),
-        child: Text(
-          text,
-          style: TextStyle(
-            fontSize: 11.5,
-            color: context.color.textDefaultColor,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      );
-
-  Widget _cancelChip(BuildContext context, {required VoidCallback onTap}) =>
-      InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: Colors.transparent,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-                color: context.color.territoryColor.withOpacity(.65), width: 1),
-          ),
-          child: Text(
-            'إلغاء',
-            style: TextStyle(
-              color: context.color.territoryColor,
-              fontWeight: FontWeight.w700,
-              fontSize: 12,
-            ),
-          ),
-        ),
-      );
-}
-
-class _MiniFab extends StatelessWidget {
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback onTap;
-
-  const _MiniFab(
-      {required this.icon, required this.tooltip, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return FloatingActionButton(
-      heroTag: '${icon.codePoint}_fab',
-      mini: true,
-      tooltip: tooltip,
-      onPressed: onTap,
-      backgroundColor: Theme.of(context).cardColor,
-      foregroundColor: context.color.textDefaultColor,
-      elevation: 2,
-      child: Icon(icon),
-    );
-  }
-}
-
-class _NoResultsOverlay extends StatelessWidget {
-  const _NoResultsOverlay();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardColor.withOpacity(.98),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-              color: Theme.of(context).dividerColor.withOpacity(.25)),
-        ),
-        child: const Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.search_off_rounded, size: 32),
-            SizedBox(height: 8),
-            Text('لا توجد إعلانات ضمن الإعدادات الحالية'),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _BottomDetailsSheet extends StatelessWidget {
-  final bool open;
-  final ItemModel? ad;
-  final ImageUrlResolver? imageUrlResolver;
-  final PriceFormatter priceFormatter;
-  final VoidCallback onClose;
-  final VoidCallback onOpenDetails;
-
-  const _BottomDetailsSheet({
-    required this.open,
-    required this.ad,
-    required this.imageUrlResolver,
-    required this.priceFormatter,
-    required this.onClose,
-    required this.onOpenDetails,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final brand = context.color.territoryColor;
-
-    return AnimatedPositioned(
-      duration: const Duration(milliseconds: 250),
-      curve: Curves.easeOut,
-      left: 0,
-      right: 0,
-      bottom: open ? 0 : -240,
-      child: SafeArea(
-        top: false,
-        child: Container(
-          height: 200,
-          margin: const EdgeInsets.symmetric(horizontal: 8),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Theme.of(context).cardColor.withOpacity(.98),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(.12),
-                blurRadius: 12,
-                offset: const Offset(0, -4),
-              ),
-            ],
-          ),
-          child: (ad == null)
-              ? const SizedBox.shrink()
-              : Row(
-                  children: [
-                    // صورة
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: AspectRatio(
-                        aspectRatio: 1,
-                        child: _previewImage(context, ad),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    // نصوص + أزرار
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _AutoScrollText(
-                            text: ad!.name ?? 'إعلان عقاري',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 16,
-                              color: context.color.textDefaultColor,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            priceFormatter(ad!),
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              color: brand,
-                              fontSize: 14,
-                            ),
-                          ),
-                          const Spacer(),
-                          Row(
-                            children: [
-                              OutlinedButton.icon(
-                                onPressed: onClose,
-                                icon: const Icon(Icons.close),
-                                label: const Text('إغلاق'),
-                              ),
-                              const SizedBox(width: 8),
-                              ElevatedButton.icon(
-                                onPressed: onOpenDetails,
-                                icon: const Icon(Icons.open_in_new_rounded),
-                                label: const Text('تفاصيل الإعلان'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: brand,
-                                  foregroundColor: Colors.white,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-        ),
-      ),
-    );
-  }
-
-  Widget _previewImage(BuildContext context, ItemModel? ad) {
-    final url = (ad == null) ? null : imageUrlResolver?.call(ad);
-    if (url != null && url.isNotEmpty) {
-      return Image.network(url, fit: BoxFit.cover);
-    }
-    return Container(
-      color: Theme.of(context).dividerColor.withOpacity(.15),
-      child: const Icon(Icons.image, size: 36),
-    );
-  }
-}
-
-class _HorizontalAdStrip extends StatefulWidget {
-  final List<ItemModel> ads;
-  final ImageUrlResolver? imageUrlResolver;
-  final PriceFormatter priceFormatter;
-  final ValueChanged<ItemModel> onTapCard;
-  final Future<void> Function()? onLoadMore;
-  final bool hasMore;
-  final bool isLoadingMore;
-
-  const _HorizontalAdStrip({
-    required this.ads,
-    required this.imageUrlResolver,
-    required this.priceFormatter,
-    required this.onTapCard,
-    this.onLoadMore,
-    this.hasMore = false,
-    this.isLoadingMore = false,
-  });
-
-
-  @override
-  State<_HorizontalAdStrip> createState() => _HorizontalAdStripState();
-}
-
-class _HorizontalAdStripState extends State<_HorizontalAdStrip> {
-  late final ScrollController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = ScrollController();
-    _controller.addListener(_handleScroll);
-  }
-
-  void _handleScroll() {
-    if (!widget.hasMore || widget.onLoadMore == null || widget.isLoadingMore) {
-      return;
-    }
-    if (!_controller.hasClients) return;
-    final position = _controller.position;
-    if (!position.hasPixels) return;
-
-    const threshold = 80.0;
-    if (position.pixels >= position.maxScrollExtent - threshold) {
-      widget.onLoadMore!();
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.removeListener(_handleScroll);
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final list = ListView.separated(
-      controller: _controller,
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      itemBuilder: (_, i) {
-        final ad = widget.ads[i];
-
-        return _AdThumbCard(
-          ad: ad,
-          imageUrl: widget.imageUrlResolver?.call(ad),
-          price: widget.priceFormatter(ad),
-          onTap: () => widget.onTapCard(ad),
-        );
-      },
-      separatorBuilder: (_, __) => const SizedBox(width: 10),
-      itemCount: widget.ads.length,
-    );
-
-    return Stack(
-      alignment: Alignment.bottomCenter,
-      children: [
-        list,
-        if (widget.isLoadingMore)
-          Positioned(
-            bottom: 8,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Theme.of(context).cardColor.withOpacity(.92),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: Theme.of(context).dividerColor.withOpacity(.2),
-                ),
-              ),
-              child: const SizedBox(
-                height: 18,
-                width: 18,
-                child: CircularProgressIndicator(strokeWidth: 2.2),
-              ),
-            ),
-          ),
-      ],
-
-    );
-  }
-}
-
-class _AdThumbCard extends StatelessWidget {
-  final ItemModel ad;
-  final String? imageUrl;
-  final String price;
-  final VoidCallback onTap;
-
-  const _AdThumbCard({
-    required this.ad,
-    required this.imageUrl,
-    required this.price,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final brand = context.color.territoryColor;
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        width: 220,
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardColor.withOpacity(.98),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-              color: Theme.of(context).dividerColor.withOpacity(.25)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(.08),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: AspectRatio(
-                aspectRatio: 1,
-                child: (imageUrl != null && imageUrl!.isNotEmpty)
-                    ? Image.network(imageUrl!, fit: BoxFit.cover)
-                    : Container(
-                        color: Theme.of(context).dividerColor.withOpacity(.15),
-                        child: const Icon(Icons.image, size: 28),
-                      ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _AutoScrollText(
-                    text: ad.name ?? 'إعلان عقاري',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 13.5,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                    gap: 30,
-                  ),
-                  const Spacer(),
-                  Text(
-                    price.isEmpty ? '—' : price,
-                    style: TextStyle(fontWeight: FontWeight.w700, color: brand),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ===================================================================
-// شاشة "حدد نطاق البحث (كم)" — DraggableScrollableSheet
-// ===================================================================
-
-class _RadiusSheet extends StatelessWidget {
-  final double radiusKm;
-  final ValueChanged<double> onChanged;
-  final VoidCallback onDisable;
-  final VoidCallback onApply;
-
-  const _RadiusSheet({
-    required this.radiusKm,
-    required this.onChanged,
-    required this.onDisable,
-    required this.onApply,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final brand = context.color.territoryColor;
-
-    return DraggableScrollableSheet(
-      expand: false,
-      initialChildSize: 0.36,
-      minChildSize: 0.28,
-      maxChildSize: 0.6,
-      builder: (_, controller) {
-        return Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
-          ),
-          child: ListView(
-            controller: controller,
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
-            children: [
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).dividerColor.withOpacity(.4),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text('حدد نطاق البحث (كم)',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w900,
-                    fontSize: 16,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  )),
-              const SizedBox(height: 12),
-              Slider(
-                value: radiusKm.clamp(1, 50),
-                onChanged: onChanged,
-                min: 1,
-                max: 50,
-                divisions: 49,
-                label: '${radiusKm.toStringAsFixed(0)} كم',
-                activeColor: brand,
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('1 كم',
-                      style: TextStyle(color: Theme.of(context).hintColor)),
-                  Text('${radiusKm.toStringAsFixed(0)} كم',
-                      style:
-                          TextStyle(fontWeight: FontWeight.bold, color: brand)),
-                  Text('50 كم',
-                      style: TextStyle(color: Theme.of(context).hintColor)),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: onDisable,
-                      child: const Text('تعطيل'),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: onApply,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: brand,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: const Text('تطبيق'),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-// ===================================================================
-// نص متحرّك تلقائي إذا كان أطول من العرض
-// ===================================================================
-
-class _AutoScrollText extends StatefulWidget {
-  final String text;
-  final TextStyle? style;
-  final double gap;
-
-  const _AutoScrollText(
-      {required this.text, this.style, this.gap = 40, Key? key})
-      : super(key: key);
-
-  @override
-  State<_AutoScrollText> createState() => _AutoScrollTextState();
-}
-
-class _AutoScrollTextState extends State<_AutoScrollText> {
-  final _ctrl = ScrollController();
-  Timer? _timer;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _kickoff());
-  }
-
-  void _kickoff() {
-    if (!_ctrl.hasClients) return;
-    if (_ctrl.position.maxScrollExtent <= 0) return;
-
-    _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 3), (_) async {
-      if (!_ctrl.hasClients) return;
-      await _ctrl.animateTo(_ctrl.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 1200),
-          curve: Curves.easeInOut);
-      await Future.delayed(const Duration(milliseconds: 400));
-      if (!_ctrl.hasClients) return;
-      await _ctrl.animateTo(0,
-          duration: const Duration(milliseconds: 1200),
-          curve: Curves.easeInOut);
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      controller: _ctrl,
-      scrollDirection: Axis.horizontal,
-      physics: const NeverScrollableScrollPhysics(),
-      child: Row(
-        children: [
-          Text(widget.text, style: widget.style, maxLines: 1),
-          SizedBox(width: widget.gap),
-          Text(widget.text, style: widget.style, maxLines: 1),
-        ],
-      ),
-    );
-  }
-}
-
-// ===================================================================
-/* مصنع الماركرات: يرسم Pin منزل + شارة السعر على Canvas ثم يحولها Bitmap */
-// ===================================================================
-
-class _MarkerFactory {
-  static const int _maxCacheSize = 96;
-
-  final LinkedHashMap<String, BitmapDescriptor> _cache = LinkedHashMap();
-  int _generatedCount = 0;
-
-  Future<BitmapDescriptor> realEstateMarker({
-    required BuildContext context,
-    required String priceLabel,
-    required bool selected,
-    required Color brand,
-  }) async {
-    final brightness = Theme.of(context).brightness;
-    final key = _buildCacheKey(
-      priceLabel: priceLabel,
-      selected: selected,
-      brand: brand,
-      brightness: brightness,
-    );
-
-    final cached = _getFromCache(key);
-    if (cached != null) return cached;
-
-    // أبعاد الرسم
-    const double pinH = 66;
-    const double pinW = 46;
-    const double badgeH = 24;
-    const double badgePad = 6;
-    const double pinToBadgeSpace = 6;
-
-    // قياس نص الشارة
-    final ui.ParagraphBuilder pb = ui.ParagraphBuilder(
-      ui.ParagraphStyle(fontSize: 12, textDirection: ui.TextDirection.rtl),
-    )
-      ..pushStyle(
-        ui.TextStyle(
-          color: const ui.Color(0xffffffff),
-          fontWeight: ui.FontWeight.w700,
-        ),
-      )
-      ..addText(priceLabel);
-    final ui.Paragraph paragraph = pb.build()
-      ..layout(const ui.ParagraphConstraints(width: 140));
-    final double textW = paragraph.maxIntrinsicWidth.clamp(32, 140);
-
-    final totalW = pinW + pinToBadgeSpace + textW + badgePad * 2;
-    final totalH = math.max(pinH, badgeH);
-
-    final recorder = ui.PictureRecorder();
-    final canvas =
-        Canvas(recorder, Rect.fromLTWH(0, 0, totalW, totalH.toDouble()));
-
-    final isDark = brightness == Brightness.dark;
-    final pinColor = selected
-        ? brand
-        : (isDark ? const Color(0xFF2a7bff) : const Color(0xFF1e88e5));
-    final badgeColor = selected
-        ? brand
-        : (isDark ? const Color(0xFF333333) : const Color(0xCC000000));
-
-    // جسم الـ Pin
-    final pinRect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(0, 0, pinW, pinH - 10),
-      const Radius.circular(14),
-    );
-    final paintPin = Paint()..color = pinColor;
-    canvas.drawRRect(pinRect, paintPin);
-
-    // سنّة الـ Pin
-    final path = Path()
-      ..moveTo(pinW / 2 - 8, pinH - 10)
-      ..lineTo(pinW / 2, pinH)
-      ..lineTo(pinW / 2 + 8, pinH - 10)
-      ..close();
-    canvas.drawPath(path, paintPin);
-
-    // أيقونة منزل
-    final double houseX = pinW / 2 - 10;
-    const double houseY = 10.0; // ✅ تأكد أنها double
-    final roof = Path()
-      ..moveTo(houseX + 10, houseY)
-      ..lineTo(houseX + 20, houseY + 12)
-      ..lineTo(houseX, houseY + 12)
-      ..close();
-    final housePaint = Paint()..color = Colors.white;
-    canvas.drawPath(roof, housePaint);
-    final body = RRect.fromRectAndRadius(
-      Rect.fromLTWH(houseX + 2, houseY + 12, 16, 14),
-      const Radius.circular(3),
-    );
-    canvas.drawRRect(body, housePaint);
-
-    // شارة السعر
-    final badgeLeft = pinW + pinToBadgeSpace;
-    final badgeRect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(
-          badgeLeft, (totalH - badgeH) / 2, textW + badgePad * 2, badgeH),
-      const Radius.circular(20),
-    );
-    final paintBadge = Paint()..color = badgeColor;
-    canvas.drawRRect(badgeRect, paintBadge);
-
-    // نص الشارة
-    canvas.drawParagraph(
-      paragraph,
-      Offset(badgeLeft + badgePad, (totalH - paragraph.height) / 2),
-    );
-
-    final picture = recorder.endRecording();
-    final img = await picture.toImage(totalW.ceil(), totalH.ceil());
-    final bytes = await img.toByteData(format: ui.ImageByteFormat.png);
-    final desc = BitmapDescriptor.fromBytes(bytes!.buffer.asUint8List());
-    _addToCache(key, desc);
-    _generatedCount++;
-    _debugCacheStats();
-    return desc;
-  }
-
-  BitmapDescriptor? _getFromCache(String key) {
-    final existing = _cache.remove(key);
-    if (existing != null) {
-      _cache[key] = existing; // LRU: انقل العنصر لآخر القائمة
-    }
-    return existing;
-  }
-
-  void _addToCache(String key, BitmapDescriptor descriptor) {
-    _cache[key] = descriptor;
-    if (_cache.length > _maxCacheSize) {
-      final oldestKey = _cache.keys.first;
-      _cache.remove(oldestKey);
-    }
-  }
-
-  String _buildCacheKey({
-    required String priceLabel,
-    required bool selected,
-    required Color brand,
-    required Brightness brightness,
-  }) {
-    final normalizedPrice = _normalizePriceLabel(priceLabel);
-    final selectionKey = selected ? 'sel' : 'nor';
-    final brightnessKey = brightness == Brightness.dark ? 'dark' : 'light';
-    final brandKey = brand.value.toRadixString(16);
-    return '$normalizedPrice|$selectionKey|$brandKey|$brightnessKey';
-  }
-
-  String _normalizePriceLabel(String priceLabel) {
-    final trimmed = priceLabel.trim();
-    if (trimmed.isEmpty || trimmed == '—') {
-      return 'na';
-    }
-
-    final currencyTokens = RegExp(r'[A-Za-z]{2,}')
-        .allMatches(trimmed)
-        .map((m) => m.group(0)!.toUpperCase())
-        .join('-');
-    final currency = currencyTokens.isEmpty ? 'GEN' : currencyTokens;
-
-    final numericCandidate = trimmed.replaceAll(RegExp(r'[^0-9]'), '');
-    if (numericCandidate.isEmpty) {
-      return '${currency}_TXT_${trimmed.toLowerCase()}';
-    }
-
-    final normalizedNumber = double.tryParse(numericCandidate);
-
-    if (normalizedNumber == null) {
-      return '${currency}_TXT_${trimmed.toLowerCase()}';
-    }
-
-    final bucketSize = _bucketStepFor(normalizedNumber);
-    final bucketed =
-        ((normalizedNumber / bucketSize).round() * bucketSize).round();
-    return '${currency}_$bucketed';
-  }
-
-  double _bucketStepFor(double value) {
-    if (value <= 0) return 1;
-    if (value < 5000) return 250;
-    if (value < 20000) return 1000;
-    if (value < 100000) return 5000;
-    if (value < 500000) return 25000;
-    if (value < 2000000) return 100000;
-    return 500000;
-  }
-
-  void _debugCacheStats() {
-    if (kDebugMode) {
-      debugPrint(
-        '[MarkerFactory] generated=$_generatedCount cacheSize=${_cache.length}/$_maxCacheSize',
-      );
-    }
   }
 }

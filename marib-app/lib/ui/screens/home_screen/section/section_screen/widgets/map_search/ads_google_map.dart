@@ -400,6 +400,7 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
     setState(() {
       _viewportFilterOn = true;
       _showSearchAreaBtn = false;
+      _selectedAd = null;
     });
     await _rebuildMarkers();
 
@@ -414,6 +415,7 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
   Future<void> _clearViewportFilter({bool withSnack = true}) async {
     setState(() {
       _viewportFilterOn = false;
+      _selectedAd = null;
     });
     widget.onViewportFilterCleared?.call();
     await _rebuildMarkers();
@@ -538,7 +540,9 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
 
         // بطاقات أفقية عند تفعيل أي نطاق/منطقة
         if ((_viewportFilterOn || (_radiusOn && widget.userLatLng != null)) &&
-            _visibleAds.isNotEmpty)
+            _visibleAds.isNotEmpty &&
+            !_detailsOpen)
+
           SafeArea(
             child: Align(
               alignment: Alignment.bottomCenter,
@@ -629,7 +633,11 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
                       tooltip:
                           _radiusOn ? 'تعديل نطاق البحث' : 'تفعيل نطاق البحث',
                       onTap: () async {
-                        _radiusOn = true;
+                        setState(() {
+                          _radiusOn = true;
+                          _selectedAd = null;
+                        });
+
                         await showModalBottomSheet(
                           context: context,
                           isScrollControlled: true,
@@ -643,7 +651,11 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
                             radiusKm: _radiusKm,
                             onChanged: (v) => setState(() => _radiusKm = v),
                             onDisable: () {
-                              setState(() => _radiusOn = false);
+                              setState(() {
+                                _radiusOn = false;
+                                _selectedAd = null;
+                              });
+
                               Navigator.pop(context);
                               _rebuildMarkers();
                               HelperUtils.showSnackBarMessage(
@@ -651,6 +663,7 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
                             },
                             onApply: () {
                               Navigator.pop(context);
+                              setState(() => _selectedAd = null);
                               _rebuildMarkers();
                               HelperUtils.showSnackBarMessage(
                                 context,

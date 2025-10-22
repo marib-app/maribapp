@@ -18,9 +18,8 @@ import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/responsiveSize.dart';
 import 'package:marib/data/model/custom_field/custom_field_model.dart'
     show CustomFieldColorEntry;
-
-
-
+import 'package:marib/data/services/delivery_pricing_service.dart'
+    show DeliveryPackageSize;
 
 class ProductManagementScreen extends StatefulWidget {
   const ProductManagementScreen({super.key, required this.item});
@@ -39,8 +38,8 @@ class ProductManagementScreen extends StatefulWidget {
 
         return BlocProvider(
           create: (_) =>
-          ProductManagementCubit(ItemPurchaseOptionsRepository(), item)
-            ..initialize(),
+              ProductManagementCubit(ItemPurchaseOptionsRepository(), item)
+                ..initialize(),
           child: ProductManagementScreen(item: item),
         );
       },
@@ -66,11 +65,6 @@ class ProductManagementScreen extends StatefulWidget {
   State<ProductManagementScreen> createState() =>
       _ProductManagementScreenState();
 }
-
-
-
-
-
 
 class _UnsupportedProductManagement extends StatelessWidget {
   const _UnsupportedProductManagement();
@@ -113,15 +107,13 @@ class _UnsupportedProductManagement extends StatelessWidget {
   }
 }
 
-
-
 class _ProductManagementScreenState extends State<ProductManagementScreen>
     with SingleTickerProviderStateMixin {
-  late final TabController _tabController = TabController(length: 3, vsync: this)
-    ..addListener(_onTabChanged);
+  late final TabController _tabController =
+      TabController(length: 3, vsync: this)..addListener(_onTabChanged);
 
   final Map<String, TextEditingController> _stockControllers =
-  <String, TextEditingController>{};
+      <String, TextEditingController>{};
   int _currentTabIndex = 0;
 
   @override
@@ -169,7 +161,6 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
             body: _buildBody(context, state),
             bottomNavigationBar: _buildBottomBar(context, state),
           ),
-
         );
       },
     );
@@ -193,10 +184,8 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
       color: color.primaryColor,
       child: TabBarView(
         controller: _tabController,
-
         children: <Widget>[
           _AttributesTab(state: state),
-
           _StockTab(
             state: state,
             stockControllers: _stockControllers,
@@ -215,46 +204,46 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
         ?.copyWith(fontWeight: FontWeight.w700);
 
     return Container(
-        decoration: BoxDecoration(
-          color: color.secondaryColor,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.borderColor.withOpacity(0.4)),
+      decoration: BoxDecoration(
+        color: color.secondaryColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.borderColor.withOpacity(0.4)),
+      ),
+      child: TabBar(
+        controller: _tabController,
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        indicator: BoxDecoration(
+          color: color.territoryColor.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(12),
         ),
-        child: TabBar(
-          controller: _tabController,
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-          indicator: BoxDecoration(
-            color: color.territoryColor.withOpacity(0.12),
-            borderRadius: BorderRadius.circular(12),
-        ),
-          indicatorSize: TabBarIndicatorSize.tab,
-          labelColor: color.territoryColor,
-          unselectedLabelColor: color.textDefaultColor.withOpacity(0.7),
-          labelStyle: labelStyle,
-          tabs: const <Tab>[
-            Tab(text: 'السمات'),
-            Tab(text: 'المخزون'),
-            Tab(text: 'الخصم'),
-          ],
-        ),
+        indicatorSize: TabBarIndicatorSize.tab,
+        labelColor: color.territoryColor,
+        unselectedLabelColor: color.textDefaultColor.withOpacity(0.7),
+        labelStyle: labelStyle,
+        tabs: const <Tab>[
+          Tab(text: 'السمات'),
+          Tab(text: 'المخزون'),
+          Tab(text: 'الخصم'),
+        ],
+      ),
     );
   }
 
-  Widget _buildBottomBar(
-      BuildContext context, ProductManagementState state) {
+  Widget _buildBottomBar(BuildContext context, ProductManagementState state) {
     final ProductManagementCubit cubit = context.read<ProductManagementCubit>();
 
-    final bool isSaving = state.attributesSaving || state.stockSaving || state.discountSaving;
+    final bool isSaving =
+        state.attributesSaving || state.stockSaving || state.discountSaving;
     final String saveLabel = <int, String>{
-      0: 'حفظ السمات',
-      1: 'حفظ المخزون',
-      2: 'حفظ الخصم',
-    }[_currentTabIndex] ?? 'حفظ';
+          0: 'حفظ السمات',
+          1: 'حفظ المخزون',
+          2: 'حفظ الخصم',
+        }[_currentTabIndex] ??
+        'حفظ';
 
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-
         child: Row(
           children: <Widget>[
             Expanded(
@@ -303,7 +292,8 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
         outcome = await cubit.saveDiscount();
         break;
       default:
-        outcome = const SubmissionOutcome(success: false, message: 'إجراء غير معروف.');
+        outcome = const SubmissionOutcome(
+            success: false, message: 'إجراء غير معروف.');
     }
 
     if (outcome.success) {
@@ -334,9 +324,9 @@ class _AttributesTab extends StatefulWidget {
 
 class _AttributesTabState extends State<_AttributesTab> {
   final Map<String, TextEditingController> _nameControllers =
-  <String, TextEditingController>{};
+      <String, TextEditingController>{};
   final Map<String, List<TextEditingController>> _optionControllers =
-  <String, List<TextEditingController>>{};
+      <String, List<TextEditingController>>{};
 
   static const List<String> _defaultSizeCatalog = <String>[
     'XS',
@@ -373,16 +363,19 @@ class _AttributesTabState extends State<_AttributesTab> {
   void didUpdateWidget(covariant _AttributesTab oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.state.managedAttributes != widget.state.managedAttributes ||
-        oldWidget.state.attributeSelections != widget.state.attributeSelections) {
+        oldWidget.state.attributeSelections !=
+            widget.state.attributeSelections) {
       _syncControllers();
     }
   }
+
   @override
   void dispose() {
     for (final TextEditingController controller in _nameControllers.values) {
       controller.dispose();
     }
-    for (final List<TextEditingController> controllers in _optionControllers.values) {
+    for (final List<TextEditingController> controllers
+        in _optionControllers.values) {
       for (final TextEditingController controller in controllers) {
         controller.dispose();
       }
@@ -390,22 +383,24 @@ class _AttributesTabState extends State<_AttributesTab> {
     super.dispose();
   }
 
-
   void _syncControllers() {
     final Set<String> keys = widget.state.managedAttributes
         .map((ManagedPurchaseAttribute attribute) => attribute.key)
         .toSet();
 
-    final List<String> removedNameKeys =
-    _nameControllers.keys.where((String key) => !keys.contains(key)).toList();
+    final List<String> removedNameKeys = _nameControllers.keys
+        .where((String key) => !keys.contains(key))
+        .toList();
     for (final String key in removedNameKeys) {
       _nameControllers.remove(key)?.dispose();
     }
 
-    final List<String> removedOptionKeys =
-    _optionControllers.keys.where((String key) => !keys.contains(key)).toList();
+    final List<String> removedOptionKeys = _optionControllers.keys
+        .where((String key) => !keys.contains(key))
+        .toList();
     for (final String key in removedOptionKeys) {
-      final List<TextEditingController>? controllers = _optionControllers.remove(key);
+      final List<TextEditingController>? controllers =
+          _optionControllers.remove(key);
       if (controllers != null) {
         for (final TextEditingController controller in controllers) {
           controller.dispose();
@@ -413,16 +408,16 @@ class _AttributesTabState extends State<_AttributesTab> {
       }
     }
 
-    for (final ManagedPurchaseAttribute attribute in widget.state.managedAttributes) {
+    for (final ManagedPurchaseAttribute attribute
+        in widget.state.managedAttributes) {
       _ensureNameController(attribute.key, attribute.name);
-      final List<TextEditingController> controllers =
-      _optionControllers.putIfAbsent(attribute.key, () => <TextEditingController>[]);
+      final List<TextEditingController> controllers = _optionControllers
+          .putIfAbsent(attribute.key, () => <TextEditingController>[]);
       final int optionsLength = attribute.options.length;
 
-
-
       if (controllers.length > optionsLength) {
-        final Iterable<TextEditingController> toDispose = controllers.sublist(optionsLength);
+        final Iterable<TextEditingController> toDispose =
+            controllers.sublist(optionsLength);
         for (final TextEditingController controller in toDispose) {
           controller.dispose();
         }
@@ -431,7 +426,6 @@ class _AttributesTabState extends State<_AttributesTab> {
       while (controllers.length < optionsLength) {
         controllers.add(TextEditingController());
       }
-
 
       for (int index = 0; index < optionsLength; index++) {
         final String value = attribute.options[index];
@@ -445,9 +439,10 @@ class _AttributesTabState extends State<_AttributesTab> {
       }
     }
   }
+
   TextEditingController _ensureNameController(String key, String value) {
-    final TextEditingController controller =
-    _nameControllers.putIfAbsent(key, () => TextEditingController(text: value));
+    final TextEditingController controller = _nameControllers.putIfAbsent(
+        key, () => TextEditingController(text: value));
     if (controller.text != value) {
       controller.text = value;
       controller.selection = TextSelection.fromPosition(
@@ -456,6 +451,7 @@ class _AttributesTabState extends State<_AttributesTab> {
     }
     return controller;
   }
+
   @override
   Widget build(BuildContext context) {
     _syncControllers();
@@ -465,30 +461,154 @@ class _AttributesTabState extends State<_AttributesTab> {
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-
       children: <Widget>[
-    Align(
-    alignment: AlignmentDirectional.centerStart,
-      child: OutlinedButton.icon(
-        onPressed: () => _showAddAttributeMenu(context),
-        icon: const Icon(Icons.add),
-        label: const Text('إضافة سمة جديدة للمنتج'),
-      ),
+        Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: OutlinedButton.icon(
+            onPressed: () => _showAddAttributeMenu(context),
+            icon: const Icon(Icons.add),
+            label: const Text('إضافة سمة جديدة للمنتج'),
+          ),
         ),
+        const SizedBox(height: 16),
+        _buildDeliverySizeCard(context, state),
         const SizedBox(height: 16),
         if (attributes.isEmpty)
           const _EmptyState(
             message:
-            'لم يتم إضافة سمات بعد. استخدم زر "إضافة سمة جديدة للمنتج" لتخصيص المنتج.',
+                'لم يتم إضافة سمات بعد. استخدم زر "إضافة سمة جديدة للمنتج" لتخصيص المنتج.',
           )
         else
           ...attributes
               .map((ManagedPurchaseAttribute attribute) => Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: _buildAttributeCard(context, attribute, cubit),
-          ))
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: _buildAttributeCard(context, attribute, cubit),
+                  ))
               .toList(growable: false),
       ],
+    );
+  }
+
+  Widget _buildDeliverySizeCard(
+    BuildContext context,
+    ProductManagementState state,
+  ) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme palette = context.color;
+    final ProductManagementCubit cubit = context.read<ProductManagementCubit>();
+    final DeliveryPackageSize? selectedSize = state.deliverySize;
+
+    final Map<DeliveryPackageSize, String> labelKeys =
+        <DeliveryPackageSize, String>{
+      DeliveryPackageSize.small: 'deliverySizeSmall',
+      DeliveryPackageSize.medium: 'deliverySizeMedium',
+      DeliveryPackageSize.large: 'deliverySizeLarge',
+    };
+
+    final String currentLabelKey = selectedSize == null
+        ? 'deliverySizeUnset'
+        : labelKeys[selectedSize] ?? 'deliverySizeUnset';
+
+    Widget buildChip({
+      required DeliveryPackageSize? size,
+      required String labelKey,
+      required bool isSelected,
+    }) {
+      return _buildTextAttributeChip(
+        context: context,
+        theme: theme,
+        color: palette,
+        label: labelKey.translate(context),
+        isSelected: isSelected,
+        onSelected: () => cubit.setDeliverySize(size),
+      );
+    }
+
+    return Card(
+      color: palette.secondaryColor,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: palette.borderColor.withOpacity(0.4)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              'deliverySizeCardTitle'.translate(context),
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: palette.textDefaultColor,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'deliverySizeCardSubtitle'.translate(context),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: palette.textDefaultColor.withOpacity(0.7),
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: palette.territoryColor.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: <Widget>[
+                  Text(
+                    'deliverySizeCurrentLabel'.translate(context),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: palette.territoryColor,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    currentLabelKey.translate(context),
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: palette.textDefaultColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 12,
+              runSpacing: 8,
+              children: <Widget>[
+                buildChip(
+                  size: DeliveryPackageSize.small,
+                  labelKey: 'deliverySizeSmall',
+                  isSelected: selectedSize == DeliveryPackageSize.small,
+                ),
+                buildChip(
+                  size: DeliveryPackageSize.medium,
+                  labelKey: 'deliverySizeMedium',
+                  isSelected: selectedSize == DeliveryPackageSize.medium,
+                ),
+                buildChip(
+                  size: DeliveryPackageSize.large,
+                  labelKey: 'deliverySizeLarge',
+                  isSelected: selectedSize == DeliveryPackageSize.large,
+                ),
+                buildChip(
+                  size: null,
+                  labelKey: 'deliverySizeClear',
+                  isSelected: selectedSize == null,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -496,13 +616,13 @@ class _AttributesTabState extends State<_AttributesTab> {
     BuildContext context,
     ManagedPurchaseAttribute attribute,
     ProductManagementCubit cubit,
-      ) {
+  ) {
     final ThemeData theme = Theme.of(context);
     final ColorScheme palette = context.color;
     final ProductManagementState state = widget.state;
 
     final TextEditingController nameController =
-    _ensureNameController(attribute.key, attribute.name);
+        _ensureNameController(attribute.key, attribute.name);
 
     late final Widget content;
     switch (attribute.type) {
@@ -511,7 +631,9 @@ class _AttributesTabState extends State<_AttributesTab> {
             state.colorSelections[attribute.key] ?? attribute.colorEntries;
         final Set<String> suggestedCodes = <String>{
           for (final CustomFieldColorEntry entry in entries) entry.code,
-          for (final String code in state.attributeSelections[attribute.key] ?? const <String>[]) code,
+          for (final String code
+              in state.attributeSelections[attribute.key] ?? const <String>[])
+            code,
         }..removeWhere((String code) => code.isEmpty);
 
         content = _ColorAttributeManager(
@@ -528,8 +650,10 @@ class _AttributesTabState extends State<_AttributesTab> {
       case ManagedAttributeType.size:
         content = _SizeAttributeManager(
           catalog: _defaultSizeCatalog,
-          selected: state.attributeSelections[attribute.key] ?? const <String>[],
-          onToggle: (String value) => cubit.toggleAttributeValue(attribute.key, value),
+          selected:
+              state.attributeSelections[attribute.key] ?? const <String>[],
+          onToggle: (String value) =>
+              cubit.toggleAttributeValue(attribute.key, value),
         );
         break;
       case ManagedAttributeType.custom:
@@ -537,7 +661,7 @@ class _AttributesTabState extends State<_AttributesTab> {
         break;
     }
 
-  return Card(
+    return Card(
       color: palette.secondaryColor,
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -551,60 +675,60 @@ class _AttributesTabState extends State<_AttributesTab> {
           children: <Widget>[
             TextField(
               controller: nameController,
-
               decoration: _themedInputDecoration(
                 context,
                 label: 'اسم السمة',
-
               ),
-              onChanged: (String value) => cubit.setAttributeName(attribute.key, value),
+              onChanged: (String value) =>
+                  cubit.setAttributeName(attribute.key, value),
             ),
-        const SizedBox(height: 12),
-        Row(
-          children: <Widget>[
-            Expanded(
-              child: SwitchListTile(
-                value: attribute.requiredForCheckout,
-                onChanged: (bool value) => cubit.setAttributeRequired(attribute.key, value),
-                title: const Text('مطلوب عند الشراء'),
-                contentPadding: EdgeInsets.zero,
-                dense: true,
+            const SizedBox(height: 12),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: SwitchListTile(
+                    value: attribute.requiredForCheckout,
+                    onChanged: (bool value) =>
+                        cubit.setAttributeRequired(attribute.key, value),
+                    title: const Text('مطلوب عند الشراء'),
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
                   ),
-            ),
-            Expanded(
-              child: SwitchListTile(
-                value: attribute.affectsStock,
-                onChanged: (bool value) => cubit.setAttributeAffectsStock(attribute.key, value),
-                title: const Text('يؤثر على المخزون'),
-                contentPadding: EdgeInsets.zero,
-                dense: true,
+                ),
+                Expanded(
+                  child: SwitchListTile(
+                    value: attribute.affectsStock,
+                    onChanged: (bool value) =>
+                        cubit.setAttributeAffectsStock(attribute.key, value),
+                    title: const Text('يؤثر على المخزون'),
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
                   ),
+                ),
+                IconButton(
+                  tooltip: 'حذف السمة',
+                  onPressed: () => cubit.removeAttribute(attribute.key),
+                  icon: const Icon(Icons.delete_outline),
+                ),
+              ],
             ),
-            IconButton(
-              tooltip: 'حذف السمة',
-              onPressed: () => cubit.removeAttribute(attribute.key),
-              icon: const Icon(Icons.delete_outline),
-            ),
-          ],
-        ),
             const SizedBox(height: 12),
             content,
           ],
         ),
       ),
-  );
+    );
   }
-
 
   Widget _buildCustomOptions(
     BuildContext context,
     ManagedPurchaseAttribute attribute,
     ProductManagementCubit cubit,
-      ) {
+  ) {
     final ThemeData theme = Theme.of(context);
     final List<String> options = attribute.options;
-    final List<TextEditingController> controllers =
-    _optionControllers.putIfAbsent(attribute.key, () => <TextEditingController>[]);
+    final List<TextEditingController> controllers = _optionControllers
+        .putIfAbsent(attribute.key, () => <TextEditingController>[]);
 
     final List<Widget> children = <Widget>[];
 
@@ -637,21 +761,21 @@ class _AttributesTabState extends State<_AttributesTab> {
       children.add(
         Row(
           children: <Widget>[
-        Expanded(
-        child: TextField(
-          controller: controller,
-          decoration: _themedInputDecoration(
-            context,
-            label: 'الخيار ${index + 1}',
-          ),
-          onChanged: (String value) =>
-              cubit.updateAttributeOption(attribute.key, index, value),
+            Expanded(
+              child: TextField(
+                controller: controller,
+                decoration: _themedInputDecoration(
+                  context,
+                  label: 'الخيار ${index + 1}',
+                ),
+                onChanged: (String value) =>
+                    cubit.updateAttributeOption(attribute.key, index, value),
               ),
-
             ),
             IconButton(
               tooltip: 'حذف الخيار',
-              onPressed: () => cubit.removeAttributeOption(attribute.key, index),
+              onPressed: () =>
+                  cubit.removeAttributeOption(attribute.key, index),
               icon: const Icon(Icons.delete_outline),
             ),
           ],
@@ -693,14 +817,13 @@ class _AttributesTabState extends State<_AttributesTab> {
               color: palette.secondaryColor,
               borderRadius: BorderRadius.circular(20),
             ),
-
             child: Column(
               mainAxisSize: MainAxisSize.min,
-
               children: <Widget>[
                 ListTile(
                   leading: const Icon(Icons.palette_outlined),
-                  title: Text('إضافة سمة ألوان', style: theme.textTheme.bodyLarge),
+                  title:
+                      Text('إضافة سمة ألوان', style: theme.textTheme.bodyLarge),
                   onTap: () {
                     Navigator.of(sheetContext).pop();
                     cubit.addColorAttribute();
@@ -708,7 +831,8 @@ class _AttributesTabState extends State<_AttributesTab> {
                 ),
                 ListTile(
                   leading: const Icon(Icons.straighten),
-                  title: Text('إضافة سمة مقاسات', style: theme.textTheme.bodyLarge),
+                  title: Text('إضافة سمة مقاسات',
+                      style: theme.textTheme.bodyLarge),
                   onTap: () {
                     Navigator.of(sheetContext).pop();
                     cubit.addSizeAttribute();
@@ -716,14 +840,13 @@ class _AttributesTabState extends State<_AttributesTab> {
                 ),
                 ListTile(
                   leading: const Icon(Icons.view_list_outlined),
-                  title: Text('إضافة سمة مخصصة', style: theme.textTheme.bodyLarge),
+                  title:
+                      Text('إضافة سمة مخصصة', style: theme.textTheme.bodyLarge),
                   onTap: () {
                     Navigator.of(sheetContext).pop();
                     cubit.addCustomAttribute();
                   },
                 ),
-
-
               ],
             ),
           ),
@@ -732,7 +855,6 @@ class _AttributesTabState extends State<_AttributesTab> {
     );
   }
 }
-
 
 void _openColorAttributeEditor({
   required BuildContext context,
@@ -747,7 +869,7 @@ void _openColorAttributeEditor({
 
   final List<CustomFieldColorEntry> initial = currentEntries
       .map((CustomFieldColorEntry entry) =>
-      CustomFieldColorEntry(code: entry.code, quantity: entry.quantity))
+          CustomFieldColorEntry(code: entry.code, quantity: entry.quantity))
       .toList(growable: false);
 
   showModalBottomSheet<void>(
@@ -769,7 +891,6 @@ void _openColorAttributeEditor({
   );
 }
 
-
 Widget _buildTextAttributeChip({
   required BuildContext context,
   required ThemeData theme,
@@ -783,14 +904,14 @@ Widget _buildTextAttributeChip({
     selected: isSelected,
     labelStyle: theme.textTheme.bodyMedium?.copyWith(
       fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-      color:
-      isSelected ? color.territoryColor : color.textDefaultColor,
+      color: isSelected ? color.territoryColor : color.textDefaultColor,
     ),
     selectedColor: color.territoryColor.withOpacity(0.12),
     backgroundColor: color.secondaryColor,
     side: BorderSide(
-      color:
-      isSelected ? color.territoryColor : color.borderColor.withOpacity(0.5),
+      color: isSelected
+          ? color.territoryColor
+          : color.borderColor.withOpacity(0.5),
     ),
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(12),
@@ -798,11 +919,6 @@ Widget _buildTextAttributeChip({
     onSelected: (_) => onSelected(),
   );
 }
-
-
-
-
-
 
 class _SizeAttributeManager extends StatelessWidget {
   const _SizeAttributeManager({
@@ -826,18 +942,17 @@ class _SizeAttributeManager extends StatelessWidget {
       runSpacing: 8,
       children: catalog
           .map((String value) => _buildTextAttributeChip(
-        context: context,
-        theme: theme,
-        color: palette,
-        label: value,
-        isSelected: selectedSet.contains(value),
-        onSelected: () => onToggle(value),
-      ))
+                context: context,
+                theme: theme,
+                color: palette,
+                label: value,
+                isSelected: selectedSet.contains(value),
+                onSelected: () => onToggle(value),
+              ))
           .toList(growable: false),
     );
   }
 }
-
 
 class _ColorAttributeManager extends StatelessWidget {
   const _ColorAttributeManager({
@@ -869,7 +984,7 @@ class _ColorAttributeManager extends StatelessWidget {
             runSpacing: 10,
             children: entries
                 .map((CustomFieldColorEntry entry) =>
-                _ColorSelectionChip(entry: entry))
+                    _ColorSelectionChip(entry: entry))
                 .toList(growable: false),
           ),
         const SizedBox(height: 12),
@@ -903,7 +1018,7 @@ class _ColorSelectionChip extends StatelessWidget {
     final int? quantity = entry.quantity;
 
     final String quantityLabel =
-    quantity != null && quantity > 0 ? ' × $quantity' : '';
+        quantity != null && quantity > 0 ? ' × $quantity' : '';
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -921,7 +1036,8 @@ class _ColorSelectionChip extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: color,
-              border: Border.all(color: Colors.black.withOpacity(0.18), width: 1),
+              border:
+                  Border.all(color: Colors.black.withOpacity(0.18), width: 1),
             ),
           ),
           const SizedBox(width: 8),
@@ -956,7 +1072,8 @@ class _ColorAttributeEditorSheet extends StatefulWidget {
       _ColorAttributeEditorSheetState();
 }
 
-class _ColorAttributeEditorSheetState extends State<_ColorAttributeEditorSheet> {
+class _ColorAttributeEditorSheetState
+    extends State<_ColorAttributeEditorSheet> {
   late LinkedHashMap<String, CustomFieldColorEntry> _entries;
   late Map<String, TextEditingController> _controllers;
   late TextEditingController _hexController;
@@ -968,7 +1085,8 @@ class _ColorAttributeEditorSheetState extends State<_ColorAttributeEditorSheet> 
     _controllers = <String, TextEditingController>{};
     for (final CustomFieldColorEntry entry in widget.entries) {
       final String code = entry.code.toUpperCase();
-      _entries[code] = CustomFieldColorEntry(code: code, quantity: entry.quantity);
+      _entries[code] =
+          CustomFieldColorEntry(code: code, quantity: entry.quantity);
       _controllers[code] =
           TextEditingController(text: entry.quantity?.toString() ?? '');
     }
@@ -1041,7 +1159,8 @@ class _ColorAttributeEditorSheetState extends State<_ColorAttributeEditorSheet> 
               ),
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
@@ -1063,7 +1182,7 @@ class _ColorAttributeEditorSheetState extends State<_ColorAttributeEditorSheet> 
                         Column(
                           children: _entries.values
                               .map((CustomFieldColorEntry entry) =>
-                              _buildSelectedColorTile(context, entry))
+                                  _buildSelectedColorTile(context, entry))
                               .toList(growable: false),
                         ),
                       const SizedBox(height: 24),
@@ -1080,11 +1199,11 @@ class _ColorAttributeEditorSheetState extends State<_ColorAttributeEditorSheet> 
                           runSpacing: 10,
                           children: suggested
                               .map((String code) => _ColorChoiceChip(
-                            code: code,
-                            label: '#$code',
-                            selected: _entries.containsKey(code),
-                            onTap: () => _toggleColor(code),
-                          ))
+                                    code: code,
+                                    label: '#$code',
+                                    selected: _entries.containsKey(code),
+                                    onTap: () => _toggleColor(code),
+                                  ))
                               .toList(growable: false),
                         ),
                         const SizedBox(height: 24),
@@ -1099,16 +1218,19 @@ class _ColorAttributeEditorSheetState extends State<_ColorAttributeEditorSheet> 
                       Wrap(
                         spacing: 10,
                         runSpacing: 10,
-                        children: paletteEntries.map((Map<String, String> entry) {
+                        children:
+                            paletteEntries.map((Map<String, String> entry) {
                           final String? rawHex = entry['hex'];
-                          final String? normalized = _normalizeColorValue(rawHex);
+                          final String? normalized =
+                              _normalizeColorValue(rawHex);
                           if (normalized == null) {
                             return const SizedBox.shrink();
                           }
-                          final bool selected = _entries.containsKey(normalized);
-                          final bool isRecommended = recommendedSet.contains(normalized);
-                          final String label =
-                              entry['name'] ?? '#$normalized';
+                          final bool selected =
+                              _entries.containsKey(normalized);
+                          final bool isRecommended =
+                              recommendedSet.contains(normalized);
+                          final String label = entry['name'] ?? '#$normalized';
                           return _ColorChoiceChip(
                             code: normalized,
                             label: label,
@@ -1196,7 +1318,7 @@ class _ColorAttributeEditorSheetState extends State<_ColorAttributeEditorSheet> 
     final String code = entry.code.toUpperCase();
     final TextEditingController controller = _controllers.putIfAbsent(
       code,
-          () => TextEditingController(text: entry.quantity?.toString() ?? ''),
+      () => TextEditingController(text: entry.quantity?.toString() ?? ''),
     );
 
     return Container(
@@ -1216,7 +1338,8 @@ class _ColorAttributeEditorSheetState extends State<_ColorAttributeEditorSheet> 
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: _colorFromHex(code) ?? palette.borderColor,
-              border: Border.all(color: Colors.black.withOpacity(0.18), width: 1),
+              border:
+                  Border.all(color: Colors.black.withOpacity(0.18), width: 1),
             ),
           ),
           const SizedBox(width: 12),
@@ -1233,7 +1356,8 @@ class _ColorAttributeEditorSheetState extends State<_ColorAttributeEditorSheet> 
                 const SizedBox(height: 8),
                 TextField(
                   controller: controller,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: false),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: false),
                   inputFormatters: <TextInputFormatter>[
                     FilteringTextInputFormatter.digitsOnly,
                   ],
@@ -1268,7 +1392,8 @@ class _ColorAttributeEditorSheetState extends State<_ColorAttributeEditorSheet> 
         _entries.remove(normalized);
         _controllers.remove(normalized)?.dispose();
       } else {
-        _entries[normalized] = CustomFieldColorEntry(code: normalized, quantity: 0);
+        _entries[normalized] =
+            CustomFieldColorEntry(code: normalized, quantity: 0);
         _controllers[normalized] = TextEditingController(text: '0');
       }
     });
@@ -1286,7 +1411,8 @@ class _ColorAttributeEditorSheetState extends State<_ColorAttributeEditorSheet> 
 
     setState(() {
       if (!_entries.containsKey(normalized)) {
-        _entries[normalized] = CustomFieldColorEntry(code: normalized, quantity: 0);
+        _entries[normalized] =
+            CustomFieldColorEntry(code: normalized, quantity: 0);
         _controllers[normalized] = TextEditingController(text: '0');
       }
       _hexController.clear();
@@ -1362,8 +1488,8 @@ class _ColorChoiceChip extends StatelessWidget {
         color: selected
             ? palette.territoryColor
             : (muted
-            ? palette.textDefaultColor.withOpacity(0.65)
-            : palette.textDefaultColor),
+                ? palette.textDefaultColor.withOpacity(0.65)
+                : palette.textDefaultColor),
       ),
       selectedColor: palette.territoryColor.withOpacity(0.18),
       backgroundColor: palette.secondaryColor,
@@ -1371,14 +1497,6 @@ class _ColorChoiceChip extends StatelessWidget {
     );
   }
 }
-
-
-
-
-
-
-
-
 
 class _ColorAttributeChip extends StatelessWidget {
   const _ColorAttributeChip({
@@ -1399,15 +1517,15 @@ class _ColorAttributeChip extends StatelessWidget {
     final ColorScheme palette = context.color;
     final Color color = _colorFromHex(code) ?? palette.borderColor;
     final int? quantity = entry?.quantity;
-    final String label = '#$code${quantity != null && quantity > 0 ? ' × $quantity' : ''}';
+    final String label =
+        '#$code${quantity != null && quantity > 0 ? ' × $quantity' : ''}';
 
     return FilterChip(
       label: Text(
         label,
         style: theme.textTheme.bodyMedium?.copyWith(
           fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-          color:
-          isSelected ? palette.territoryColor : palette.textDefaultColor,
+          color: isSelected ? palette.territoryColor : palette.textDefaultColor,
         ),
       ),
       avatar: Container(
@@ -1423,8 +1541,9 @@ class _ColorAttributeChip extends StatelessWidget {
       selectedColor: palette.territoryColor.withOpacity(0.12),
       backgroundColor: palette.secondaryColor,
       side: BorderSide(
-        color:
-        isSelected ? palette.territoryColor : palette.borderColor.withOpacity(0.5),
+        color: isSelected
+            ? palette.territoryColor
+            : palette.borderColor.withOpacity(0.5),
       ),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
@@ -1444,7 +1563,13 @@ bool _isColorAttribute(ItemPurchaseAttributeOption attribute) {
     return true;
   }
 
-  const List<String> arabicColorKeywords = <String>['لون', 'اللون', 'الوان', 'ألوان', 'الالوان'];
+  const List<String> arabicColorKeywords = <String>[
+    'لون',
+    'اللون',
+    'الوان',
+    'ألوان',
+    'الالوان'
+  ];
 
   bool containsArabicColorKeyword(String value) {
     for (final String keyword in arabicColorKeywords) {
@@ -1455,18 +1580,15 @@ bool _isColorAttribute(ItemPurchaseAttributeOption attribute) {
     return false;
   }
 
-
   if (normalizedKey.contains('color') ||
       normalizedKey.contains('colour') ||
       containsArabicColorKeyword(normalizedKey)) {
-
     return true;
   }
 
   if (normalizedName.contains('color') ||
       normalizedName.contains('colour') ||
       containsArabicColorKeyword(normalizedName)) {
-
     return true;
   }
 
@@ -1489,8 +1611,6 @@ Color? _colorFromHex(String value) {
   }
   return Color(int.parse('0xFF$normalized'));
 }
-
-
 
 class _StockTab extends StatelessWidget {
   const _StockTab({required this.state, required this.stockControllers});
@@ -1527,17 +1647,17 @@ class _StockTab extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-            Text(
-            'المخزون الكلي للمنتج',
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+              Text(
+                'المخزون الكلي للمنتج',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: controller,
                 keyboardType:
-                const TextInputType.numberWithOptions(decimal: false),
+                    const TextInputType.numberWithOptions(decimal: false),
                 decoration: _themedInputDecoration(
                   context,
                   label: 'الكمية المتوفرة',
@@ -1554,12 +1674,14 @@ class _StockTab extends StatelessWidget {
 
     if (!state.isCombinationReady) {
       return const _EmptyState(
-        message: 'اختر قيم السمات المؤثرة على المخزون ثم احفظها لتوليد التركيبات.',
+        message:
+            'اختر قيم السمات المؤثرة على المخزون ثم احفظها لتوليد التركيبات.',
       );
     }
 
     if (state.variantForms.isEmpty) {
-      return const _EmptyState(message: 'لا توجد توليفات متاحة للمخزون حالياً.');
+      return const _EmptyState(
+          message: 'لا توجد توليفات متاحة للمخزون حالياً.');
     }
 
     final List<VariantStockFormState> forms = state.variantForms.values.toList()
@@ -1568,7 +1690,6 @@ class _StockTab extends StatelessWidget {
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-
       children: <Widget>[
         Align(
           alignment: AlignmentDirectional.centerStart,
@@ -1606,7 +1727,6 @@ class _StockTab extends StatelessWidget {
             ),
             child: Padding(
               padding: const EdgeInsets.all(18),
-
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
@@ -1621,13 +1741,14 @@ class _StockTab extends StatelessWidget {
                         ),
                       ),
                       IconButton(
-                        onPressed: () => cubit.toggleVariantVisibility(form.variantKey),
+                        onPressed: () =>
+                            cubit.toggleVariantVisibility(form.variantKey),
                         icon: Icon(
                           form.hidden ? Icons.visibility_off : Icons.visibility,
                           color: color.territoryColor,
-
                         ),
-                        tooltip: form.hidden ? 'إظهار التوليفة' : 'إخفاء التوليفة',
+                        tooltip:
+                            form.hidden ? 'إظهار التوليفة' : 'إخفاء التوليفة',
                       ),
                     ],
                   ),
@@ -1636,15 +1757,15 @@ class _StockTab extends StatelessWidget {
                     controller: controller,
                     enabled: !form.hidden,
                     keyboardType:
-                    const TextInputType.numberWithOptions(decimal: false),
+                        const TextInputType.numberWithOptions(decimal: false),
                     decoration: _themedInputDecoration(
                       context,
                       hint: '0',
                     ).copyWith(
                       suffixText: form.hidden ? 'مخفي' : null,
                     ),
-                    onChanged: (String value) =>
-                        cubit.setVariantStock(form.variantKey, int.tryParse(value) ?? 0),
+                    onChanged: (String value) => cubit.setVariantStock(
+                        form.variantKey, int.tryParse(value) ?? 0),
                   ),
                 ],
               ),
@@ -1662,7 +1783,8 @@ class _StockTab extends StatelessWidget {
       builder: (BuildContext context) {
         return AlertDialog(
           backgroundColor: context.color.secondaryColor,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: Text(
             'تعبئة كمية موحدة',
             style: Theme.of(context)
@@ -1691,7 +1813,7 @@ class _StockTab extends StatelessWidget {
                 backgroundColor: context.color.territoryColor,
                 foregroundColor: context.color.secondaryColor,
                 padding:
-                const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                    const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
@@ -1710,8 +1832,8 @@ class _StockTab extends StatelessWidget {
   }
 
   TextEditingController _ensureStockController(String key, String value) {
-    final TextEditingController controller =
-    stockControllers.putIfAbsent(key, () => TextEditingController(text: value));
+    final TextEditingController controller = stockControllers.putIfAbsent(
+        key, () => TextEditingController(text: value));
     if (controller.text != value) {
       controller.text = value;
       controller.selection = TextSelection.fromPosition(
@@ -1722,10 +1844,10 @@ class _StockTab extends StatelessWidget {
   }
 
   String _describeVariant(
-      Map<String, String> attributes,
-      ItemPurchaseOptions options,
-      List<ManagedPurchaseAttribute> managedAttributes,
-      ) {
+    Map<String, String> attributes,
+    ItemPurchaseOptions options,
+    List<ManagedPurchaseAttribute> managedAttributes,
+  ) {
     ManagedPurchaseAttribute? resolveManaged(String key) {
       for (final ManagedPurchaseAttribute attribute in managedAttributes) {
         if (attribute.key == key) {
@@ -1739,7 +1861,8 @@ class _StockTab extends StatelessWidget {
     attributes.forEach((String key, String value) {
       final ManagedPurchaseAttribute? managed = resolveManaged(key);
 
-      final ItemPurchaseAttributeOption? attribute = options.attributeByKey(key);
+      final ItemPurchaseAttributeOption? attribute =
+          options.attributeByKey(key);
       final String managedName = managed?.name ?? '';
       final String attributeName = attribute?.name ?? '';
       final bool hasManagedName = managedName.trim().isNotEmpty;
@@ -1755,8 +1878,8 @@ class _StockTab extends StatelessWidget {
       if (isColorAttribute) {
         final String? normalized = _normalizeColorValue(value);
         if (normalized != null) {
-          final List<CustomFieldColorEntry> entries =
-          (managed != null && managed.colorEntries.isNotEmpty)
+          final List<CustomFieldColorEntry> entries = (managed != null &&
+                  managed.colorEntries.isNotEmpty)
               ? managed.colorEntries
               : (attribute?.colorEntries ?? const <CustomFieldColorEntry>[]);
 
@@ -1808,8 +1931,7 @@ class _DiscountTabState extends State<_DiscountTab> {
   @override
   void didUpdateWidget(covariant _DiscountTab oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final String nextValue =
-        widget.state.discountValue?.toString() ?? '';
+    final String nextValue = widget.state.discountValue?.toString() ?? '';
     final double? controllerValue = double.tryParse(
       _controller.text.replaceAll(',', '.'),
     );
@@ -1831,10 +1953,8 @@ class _DiscountTabState extends State<_DiscountTab> {
     final theme = Theme.of(context);
     final color = context.color;
 
-
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-
       children: <Widget>[
         Container(
           decoration: BoxDecoration(
@@ -1846,7 +1966,7 @@ class _DiscountTabState extends State<_DiscountTab> {
             value: state.discountEnabled,
             onChanged: cubit.setDiscountEnabled,
             contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             activeColor: color.territoryColor,
             title: Text(
               'تفعيل الخصم',
@@ -1869,10 +1989,10 @@ class _DiscountTabState extends State<_DiscountTab> {
           ],
           onChanged: state.discountEnabled
               ? (String? value) {
-            if (value != null) {
-              cubit.setDiscountType(value);
-            }
-          }
+                  if (value != null) {
+                    cubit.setDiscountType(value);
+                  }
+                }
               : null,
         ),
         const SizedBox(height: 16),
@@ -1886,14 +2006,13 @@ class _DiscountTabState extends State<_DiscountTab> {
                 ? 'قيمة الخصم (%)'
                 : 'قيمة الخصم',
             helperText:
-            state.discountType == 'percent' ? 'الحد الأقصى 90%' : null,
+                state.discountType == 'percent' ? 'الحد الأقصى 90%' : null,
           ),
           onChanged: (String value) => cubit.setDiscountValue(
             double.tryParse(value.replaceAll(',', '.')),
           ),
         ),
         const SizedBox(height: 16),
-
         _DatePickerField(
           label: 'بداية الخصم',
           value: state.discountStart,
@@ -1938,7 +2057,8 @@ class _DatePickerField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm');
-    final String displayValue = value == null ? 'غير محدد' : formatter.format(value!);
+    final String displayValue =
+        value == null ? 'غير محدد' : formatter.format(value!);
 
     final color = context.color;
     final theme = Theme.of(context);
@@ -2015,7 +2135,8 @@ class _DatePickerField extends StatelessWidget {
       return;
     }
 
-    onChanged(DateTime(date.year, date.month, date.day, time.hour, time.minute));
+    onChanged(
+        DateTime(date.year, date.month, date.day, time.hour, time.minute));
   }
 }
 
@@ -2059,17 +2180,14 @@ class _SummaryTile extends StatelessWidget {
   }
 }
 
-
-
-
 InputDecoration _themedInputDecoration(
-    BuildContext context, {
-      String? label,
-      String? hint,
-      String? helperText,
-      Widget? prefixIcon,
-      Widget? suffixIcon,
-    }) {
+  BuildContext context, {
+  String? label,
+  String? hint,
+  String? helperText,
+  Widget? prefixIcon,
+  Widget? suffixIcon,
+}) {
   final color = context.color;
   return InputDecoration(
     labelText: label,

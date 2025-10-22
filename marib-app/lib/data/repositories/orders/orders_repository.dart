@@ -69,6 +69,8 @@ class OrdersRepository {
       final List<int> rawBytes = _normalizeBytes(response.data);
       final String? contentType =
           response.headers.value(HttpHeaders.contentTypeHeader)?.toLowerCase();
+      final bool isHtmlResponse =
+          contentType != null && contentType.contains('text/html');
 
       if (contentType != null && contentType.contains('application/pdf')) {
         final String? fileName = _resolveFileName(response.headers);
@@ -87,6 +89,12 @@ class OrdersRepository {
       }
 
       final String decoded = utf8.decode(rawBytes, allowMalformed: true).trim();
+      if (isHtmlResponse || _looksLikeHtml(decoded)) {
+        return InvoiceDownloadResult.html(
+          decoded,
+          fileName: 'invoice-$id.html',
+        );
+      }
       final String? urlFromText = _extractUrl(decoded);
       if (urlFromText != null) {
         return InvoiceDownloadResult.link(urlFromText);
@@ -125,6 +133,17 @@ class OrdersRepository {
     } catch (error) {
       throw ApiException(error.toString());
     }
+  }
+
+  bool _looksLikeHtml(String value) {
+    final String normalized = value.trimLeft().toLowerCase();
+    if (normalized.isEmpty) {
+      return false;
+    }
+
+    return normalized.startsWith('<!doctype html') ||
+        normalized.startsWith('<html') ||
+        (normalized.contains('<html') && normalized.contains('<body'));
   }
 
   static OrderDetails parseOrderDetailsResponse(
@@ -636,16 +655,24 @@ class OrdersRepository {
 }
 
 class InvoiceDownloadResult {
-  const InvoiceDownloadResult._({this.bytes, this.fileName, this.downloadUrl});
+  const InvoiceDownloadResult._({
+    this.bytes,
+    this.fileName,
+    this.downloadUrl,
+    this.html,
+  });
 
   final Uint8List? bytes;
   final String? fileName;
   final String? downloadUrl;
+  final String? html;
 
   bool get hasBytes => bytes != null && bytes!.isNotEmpty;
 
   bool get hasDownloadUrl =>
       downloadUrl != null && downloadUrl!.trim().isNotEmpty;
+
+  bool get hasHtml => html != null && html!.trim().isNotEmpty;
 
   factory InvoiceDownloadResult.bytes(Uint8List bytes, {String? fileName}) {
     return InvoiceDownloadResult._(bytes: bytes, fileName: fileName);
@@ -653,5 +680,9 @@ class InvoiceDownloadResult {
 
   factory InvoiceDownloadResult.link(String url) {
     return InvoiceDownloadResult._(downloadUrl: url);
+  }
+
+  factory InvoiceDownloadResult.html(String html, {String? fileName}) {
+    return InvoiceDownloadResult._(html: html, fileName: fileName);
   }
 }

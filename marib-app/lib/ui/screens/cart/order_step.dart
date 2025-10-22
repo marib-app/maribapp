@@ -15,6 +15,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:marib/data/cubits/orders/order_payment_cubit.dart';
 import 'components/order_payment_sheet.dart';
 import 'order_outstanding_info.dart';
+import 'dart:convert';
 
 
 
@@ -282,6 +283,27 @@ class _OrderStepsScreenState extends State<OrderStepsScreen> {
         final File file = await _persistInvoice(
           result.bytes!,
           fileName: result.fileName ?? 'invoice-${order.id}.pdf',
+        );
+
+        final OpenResult openResult = await OpenFilex.open(file.path);
+        if (openResult.type != ResultType.done) {
+          UiUtils.showSoftSnackBar(
+            context,
+            message:
+            'تم تنزيل الفاتورة لكن تعذر فتحها تلقائيًا. الموقع: ${file.path}',
+          );
+        }
+        return;
+      }
+
+      if (result.hasHtml) {
+        final Uint8List htmlBytes = Uint8List.fromList(
+          utf8.encode(result.html!),
+        );
+        final File file = await _persistInvoice(
+          htmlBytes,
+          fileName: result.fileName ?? 'invoice-${order.id}.html',
+          defaultExtension: '.html',
         );
 
         final OpenResult openResult = await OpenFilex.open(file.path);
@@ -754,24 +776,35 @@ class _OrderStepsScreenState extends State<OrderStepsScreen> {
   }
 
 
+  Future<File> _persistInvoice(
+      Uint8List bytes, {
+        required String fileName,
+        String defaultExtension = '.pdf',
+      }) async {
 
-  Future<File> _persistInvoice(Uint8List bytes, {required String fileName}) async {
+
     final Directory directory = await getTemporaryDirectory();
-    final String sanitized = _sanitizeFileName(fileName);
+    final String sanitized =
+    _sanitizeFileName(fileName, defaultExtension: defaultExtension);
+
     final File file = File(path.join(directory.path, sanitized));
     await file.writeAsBytes(bytes, flush: true);
     return file;
   }
 
-  String _sanitizeFileName(String value) {
+  String _sanitizeFileName(String value, {String defaultExtension = '.pdf'}) {
     String normalized = value.trim();
+    final String extension =
+    defaultExtension.startsWith('.') ? defaultExtension : '.$defaultExtension';
+
+
     if (normalized.isEmpty) {
-      normalized = 'invoice.pdf';
+      normalized = 'invoice$extension';
     }
 
     normalized = normalized.replaceAll(RegExp('[\\/:*?"<>|]'), '-');
-    if (!normalized.toLowerCase().endsWith('.pdf')) {
-      normalized = '$normalized.pdf';
+    if (!normalized.toLowerCase().endsWith(extension.toLowerCase())) {
+      normalized = '$normalized$extension';
     }
     return normalized;
   }

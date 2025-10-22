@@ -38,6 +38,7 @@ import 'package:marib/utils/notification/chat_message_handler.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:convert';
 import 'dart:collection';
+import 'package:flutter/foundation.dart';
 
 enum UserPresenceEventType { userTyping, userPresenceUpdated }
 
@@ -152,13 +153,9 @@ class NotificationService {
         return;
       }
     }
-    final List<String> keysToRemove =
-        List<String>.from(_conversationParticipantsCache.keys);
-    for (final String key in keysToRemove) {
-      if (overflow <= 0) {
-        break;
-      }
-      _enforceParticipantsCacheLimit(entriesToInsert: 1);
+    while (overflow > 0 && _conversationParticipantsCache.isNotEmpty) {
+      final String oldestKey = _conversationParticipantsCache.keys.first;
+      _conversationParticipantsCache.remove(oldestKey);
       overflow--;
     }
   }
@@ -1563,6 +1560,13 @@ class NotificationService {
       accessedAt: DateTime.now(),
     );
   }
+
+
+  @visibleForTesting
+  static int debugParticipantsCacheSize() {
+    return _conversationParticipantsCache.length;
+  }
+
 
   static void cacheParticipants({
     required List<ChatParticipant> participants,

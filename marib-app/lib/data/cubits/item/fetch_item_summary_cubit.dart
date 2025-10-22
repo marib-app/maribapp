@@ -80,6 +80,9 @@ class FetchItemSummaryCubit extends Cubit<FetchItemSummaryState> {
 
   final ItemRepository _itemRepository;
 
+  int _requestTokenCounter = 0;
+  int? _activeRequestToken;
+
   Future<void> fetchSummaries({
     required int categoryId,
     String? search,
@@ -87,6 +90,9 @@ class FetchItemSummaryCubit extends Cubit<FetchItemSummaryState> {
     ItemFilterModel? filter,
     int? perPage,
   }) async {
+    final int requestToken = ++_requestTokenCounter;
+    _activeRequestToken = requestToken;
+
     final String? normalizedSearch = _sanitizeQuery(search);
     final String? normalizedSort = _sanitizeQuery(sortBy);
     final ItemFilterModel? clonedFilter = _cloneFilter(filter);
@@ -115,6 +121,10 @@ class FetchItemSummaryCubit extends Cubit<FetchItemSummaryState> {
         perPage: effectivePerPage,
       );
 
+      if (!_isCurrentRequest(requestToken)) {
+        return;
+      }
+
       emit(
         FetchItemSummarySuccess(
           items: result.modelList,
@@ -128,7 +138,14 @@ class FetchItemSummaryCubit extends Cubit<FetchItemSummaryState> {
         ),
       );
     } catch (e) {
+      if (!_isCurrentRequest(requestToken)) {
+        return;
+      }
       emit(FetchItemSummaryFailure(e.toString()));
+    } finally {
+      if (_isCurrentRequest(requestToken)) {
+        _activeRequestToken = null;
+      }
     }
   }
 
@@ -276,4 +293,7 @@ class FetchItemSummaryCubit extends Cubit<FetchItemSummaryState> {
     final String trimmed = value.trim();
     return trimmed.isEmpty ? null : trimmed;
   }
+
+  bool _isCurrentRequest(int requestToken) =>
+      _activeRequestToken == requestToken;
 }

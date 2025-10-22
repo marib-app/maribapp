@@ -491,6 +491,15 @@ class ManualPaymentRequestService
             $manualRequestMeta = [];
         }
 
+
+        $skippedReason = $normalizeString(Arr::get($manualRequestMeta, 'skipped.reason'));
+
+        if ($skippedReason === 'missing_manual_bank') {
+            return null;
+        }
+
+
+
         $walletMeta = Arr::get($meta, 'wallet');
         if (! is_array($walletMeta)) {
             $walletMeta = [];
@@ -783,14 +792,32 @@ class ManualPaymentRequestService
         } else {
 
             if ($manualBankMissing && $manualBankId === null) {
+
+                $providedManualBankId = Arr::get($data, 'manual_bank_id')
+                    ?? Arr::get($manualMeta, 'manual_bank.id')
+                    ?? Arr::get($manualRequestMeta, 'manual_bank_id')
+                    ?? Arr::get($manualRequestMeta, 'bank_id');
+
+
+
                 Log::warning('Unable to determine manual bank while creating manual payment request from transaction.', [
                     'payment_transaction_id' => $transaction->getKey(),
-                    'provided_manual_bank_id' => Arr::get($data, 'manual_bank_id')
-                        ?? Arr::get($manualMeta, 'manual_bank.id')
-                        ?? Arr::get($manualRequestMeta, 'manual_bank_id')
-                        ?? Arr::get($manualRequestMeta, 'bank_id'),
+                    'provided_manual_bank_id' => $providedManualBankId,
+
                     'provided_manual_bank_name' => $bankName,
                 ]);
+
+                $this->markTransactionManualPaymentRequestSkipped(
+                    $transaction,
+                    'missing_manual_bank',
+                    [
+                        'manual_bank_id' => is_scalar($providedManualBankId) ? (string) $providedManualBankId : null,
+                        'manual_bank_name' => $bankName,
+                    ]
+                );
+
+                return null;
+
             }
 
 
@@ -864,6 +891,52 @@ class ManualPaymentRequestService
 
         return $manualPaymentRequest;
     }
+
+
+    private function markTransactionManualPaymentRequestSkipped(
+        PaymentTransaction $transaction,
+        string $reason,
+        array $context = []
+    ): void {
+        $meta = $transaction->meta;
+
+        if (! is_array($meta)) {
+            $meta = [];
+        }
+
+        $skipPayload = array_filter([
+            'reason' => trim($reason) !== '' ? trim($reason) : null,
+            'at' => now()->toIso8601String(),
+            'manual_bank_id' => $context['manual_bank_id'] ?? null,
+            'manual_bank_name' => $context['manual_bank_name'] ?? null,
+        ], static function ($value) {
+            if (is_array($value)) {
+                return true;
+            }
+
+            return $value !== null && $value !== '';
+        });
+
+        if ($skipPayload === []) {
+            return;
+        }
+
+        $meta = array_replace_recursive($meta, [
+            'manual_payment_request' => [
+                'skipped' => $skipPayload,
+            ],
+        ]);
+
+        $filteredMeta = $this->filterArrayRecursive($meta);
+
+        if ($filteredMeta !== $transaction->meta) {
+            $transaction->forceFill([
+                'meta' => $filteredMeta,
+            ])->saveQuietly();
+        }
+    }
+
+ 
 
 
     public function syncTransactionManualBankPayload(

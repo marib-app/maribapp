@@ -6,6 +6,7 @@ use App\Events\OrderNoteUpdated;
 use App\Models\Order;
 use App\Models\ManualPaymentRequest;
 use App\Models\OrderHistory;
+use App\Models\Item;
 use App\Models\OrderItem;
 use App\Models\OrderStatus;
 use App\Models\OrderPaymentGroup;
@@ -17,8 +18,13 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use App\Services\DepartmentReportService;
+use App\Services\DelegateNotificationService;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
+use Throwable;
 use Illuminate\Support\Facades\Route;
+
 
 class OrderController extends Controller
 {
@@ -29,7 +35,13 @@ class OrderController extends Controller
     /**
      * إنشاء مثيل جديد للمتحكم
      */
-    public function __construct()
+
+
+    public function __construct(
+        private readonly DepartmentReportService $departmentReportService,
+        private readonly DelegateNotificationService $delegateNotificationService,
+    )
+
     {
         // لا حاجة لـ middleware هنا، سيتم فحص الصلاحيات في كل دالة
     }
@@ -139,7 +151,7 @@ class OrderController extends Controller
         ResponseService::noAnyPermissionThenRedirect(['shein-orders-list']);
         // إعداد الاستعلام مع تحميل العلاقات وتصفية حسب الفئة الأم رقم 4
         $department = DepartmentReportService::DEPARTMENT_SHEIN;
-        $categoryIds = app(DepartmentReportService::class)->resolveCategoryIds($department);
+        $categoryIds = $this->departmentReportService->resolveCategoryIds($department);
 
         $query = Order::with([
             'user' => static fn ($query) => $query->withTrashed(),
@@ -250,7 +262,7 @@ class OrderController extends Controller
         ResponseService::noAnyPermissionThenRedirect(['computer-orders-list']);
 
         $department = DepartmentReportService::DEPARTMENT_COMPUTER;
-        $categoryIds = app(DepartmentReportService::class)->resolveCategoryIds($department);
+        $categoryIds = $this->departmentReportService->resolveCategoryIds($department);
 
 
         $query = Order::with([
@@ -360,6 +372,7 @@ class OrderController extends Controller
         $request->validate([
             'user_id' => 'required|exists:users,id',
             'seller_id' => 'nullable|exists:users,id',
+            'department' => ['nullable', Rule::in(array_keys($this->departmentReportService->availableDepartments()))],
             'items' => 'required|array|min:1',
             'items.*.item_id' => 'required|exists:items,id',
             'items.*.price' => 'required|numeric|min:0',
@@ -369,6 +382,22 @@ class OrderController extends Controller
             'billing_address' => 'nullable|string',
             'notes' => 'nullable|string',
         ]);
+
+        $itemsPayload = collect($request->items ?? []);
+        $itemIds = $itemsPayload->pluck('item_id')->filter()->unique()->all();
+
+        $items = Item::query()
+            ->whereIn('id', $itemIds)
+            ->get()
+            ->keyBy('id');
+
+        $department = $this->resolveOrderDepartment(
+            $this->normalizeDepartment($request->input('department')),
+            $itemsPayload,
+            $items
+        );
+
+
 
         try {
             // بدء المعاملة
@@ -387,6 +416,7 @@ class OrderController extends Controller
             $order = Order::create([
                 'user_id' => $request->user_id,
                 'seller_id' => $request->seller_id,
+                'department' => $department,
                 'order_number' => null,
                 'total_amount' => $totalAmount,
                 'tax_amount' => $taxAmount,
@@ -405,7 +435,14 @@ class OrderController extends Controller
 
             // إضافة عناصر الطلب
             foreach ($request->items as $itemData) {
-                $item = \App\Models\Item::findOrFail($itemData['item_id']);
+                $item = $items->get($itemData['item_id']);
+
+                if (! $item instanceof Item) {
+                    throw ValidationException::withMessages([
+                        'items' => __('لم يتم العثور على أحد العناصر المحددة.'),
+                    ]);
+                }
+                
                 $subtotal = $itemData['price'] * $itemData['quantity'];
 
                 OrderItem::create([
@@ -426,6 +463,13 @@ class OrderController extends Controller
                 'status_to' => Order::STATUS_PROCESSING,
                 'comment' => 'تم إنشاء الطلب',
             ]);
+
+
+            try {
+                $this->delegateNotificationService->notifyNewOrder($order);
+            } catch (Throwable $exception) {
+                report($exception);
+            }
 
             // تأكيد المعاملة
             DB::commit();
@@ -1138,6 +1182,135 @@ class OrderController extends Controller
             'partial' => 'مدفوع جزئياً',
             'failed' => 'فشل الدفع',
         ];
+    }
+
+
+    private function resolveOrderDepartment(?string $requestedDepartment, Collection $itemsPayload, Collection $items): string
+    {
+        $resolvedDepartments = collect();
+        $categoryCache = [];
+
+        foreach ($itemsPayload as $itemPayload) {
+            $itemId = $itemPayload['item_id'] ?? null;
+
+            if ($itemId === null) {
+                continue;
+            }
+
+            $item = $items->get($itemId);
+
+            if (! $item instanceof Item) {
+                continue;
+            }
+
+            $department = $this->resolveItemDepartment($item, $categoryCache);
+
+            if ($department !== null) {
+                $resolvedDepartments->push($department);
+            }
+        }
+
+        $resolvedDepartments = $resolvedDepartments->unique()->values();
+
+        if ($requestedDepartment !== null) {
+            $mismatch = $resolvedDepartments->first(static fn ($department) => $department !== $requestedDepartment);
+
+            if ($mismatch !== null) {
+                throw ValidationException::withMessages([
+                    'department' => __('القسم المحدد لا يتطابق مع عناصر السلة.'),
+                ]);
+            }
+
+            return $requestedDepartment;
+        }
+
+        if ($resolvedDepartments->count() > 1) {
+            throw ValidationException::withMessages([
+                'items' => __('لا يمكن إتمام الطلب بسبب اختلاف الأقسام داخل السلة.'),
+            ]);
+        }
+
+        if ($resolvedDepartments->count() === 1) {
+            return (string) $resolvedDepartments->first();
+        }
+
+        return $this->normalizeDepartment(config('cart.default_department'))
+            ?? DepartmentReportService::DEPARTMENT_STORE;
+    }
+
+    private function resolveItemDepartment(Item $item, array &$categoryCache): ?string
+    {
+        $availableDepartments = array_keys($this->departmentReportService->availableDepartments());
+        $itemCategoryIds = $this->gatherItemCategoryIds($item);
+
+        foreach ($availableDepartments as $department) {
+            if (! array_key_exists($department, $categoryCache)) {
+                $categoryCache[$department] = $this->departmentReportService->resolveCategoryIds($department);
+            }
+
+            $departmentCategories = $categoryCache[$department];
+
+            if ($departmentCategories !== [] && array_intersect($itemCategoryIds, $departmentCategories) !== []) {
+                return $department;
+            }
+        }
+
+        $interfaceType = $item->interface_type ?? null;
+
+        if ($interfaceType !== null) {
+            $mappedDepartment = $this->normalizeDepartment(config('cart.interface_map.' . $interfaceType));
+
+            if ($mappedDepartment !== null) {
+                return $mappedDepartment;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array<int, int>
+     */
+    private function gatherItemCategoryIds(Item $item): array
+    {
+        $categoryIds = [];
+
+        if ($item->category_id !== null) {
+            $categoryIds[] = (int) $item->category_id;
+        }
+
+        $rawList = $item->all_category_ids;
+
+        if (is_string($rawList) && trim($rawList) !== '') {
+            foreach (explode(',', $rawList) as $value) {
+                $normalized = trim($value);
+
+                if ($normalized === '') {
+                    continue;
+                }
+
+                if (! is_numeric($normalized)) {
+                    continue;
+                }
+
+                $categoryIds[] = (int) $normalized;
+            }
+        }
+
+        return array_values(array_unique($categoryIds));
+    }
+
+    private function normalizeDepartment(?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $normalized = Str::of($value)->trim()->lower();
+
+        $stringValue = (string) $normalized;
+
+        return $stringValue === '' ? null : $stringValue;
     }
 
 

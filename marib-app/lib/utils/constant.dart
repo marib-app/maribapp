@@ -111,11 +111,9 @@ class Constant {
   static const int publicRootCategoryId = 6;
   static const int storeRootCategoryId = 6;
 
-
   static const int accountTypeCustomer = 1;
   static const int accountTypeRealEstate = 2;
   static const int accountTypeSeller = 3;
-
 
   static List<PostedSinceItem> postedSince = [
     PostedSinceItem(status: "All Time", value: "all-time"),

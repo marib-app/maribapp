@@ -6,6 +6,7 @@ use App\Models\ManualPaymentRequest;
 use App\Models\PaymentTransaction;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
+use App\Services\Payment\GatewayLabelService;
 
 use Illuminate\Support\Str;
 
@@ -20,37 +21,50 @@ class PaymentLabelService
     public static function forPaymentTransaction(PaymentTransaction $transaction): array
 
     {
+        /** @var GatewayLabelService $service */
+        $service = app(GatewayLabelService::class);
+
         $normalizedGateway = self::normalizeGatewayKey($transaction->payment_gateway);
+        $channelLabel = trim((string) $service->labelForTransaction($transaction));
 
         if ($normalizedGateway === 'wallet') {
+            if ($channelLabel === '') {
+                $channelLabel = 'المحفظة';
+            }
 
             return [
-                'channel_label' => 'المحفظة',
+                'channel_label' => $channelLabel,
                 'bank_label' => null,
             ];
         }
 
         if (self::isManualBankGateway($normalizedGateway) || $transaction->manual_payment_request_id) {
-            $bankName = self::resolveBankNameFromTransaction($transaction);
+            if ($channelLabel === '') {
+                $fallbackBankName = self::resolveBankNameFromTransaction($transaction);
 
-            if ($bankName === null || $bankName === '') {
-                Log::warning('Bank name missing for manual bank transaction channel label.', [
-                    'payment_transaction_id' => $transaction->getKey(),
-                    'payment_gateway' => $transaction->payment_gateway,
-                    'manual_payment_request_id' => $transaction->manual_payment_request_id,
-                ]);
+                if ($fallbackBankName === null || $fallbackBankName === '') {
+                    Log::warning('Bank name missing for manual bank transaction channel label.', [
+                        'payment_transaction_id' => $transaction->getKey(),
+                        'payment_gateway' => $transaction->payment_gateway,
+                        'manual_payment_request_id' => $transaction->manual_payment_request_id,
+                    ]);
+                }
+
+                $channelLabel = is_string($fallbackBankName) ? trim($fallbackBankName) : '';
             }
-            $label = $bankName ? trim($bankName) : '';
 
             return [
-                'channel_label' => $label,
-                'bank_label' => $label !== '' ? $label : null,
+                'channel_label' => $channelLabel,
+                'bank_label' => $channelLabel !== '' ? $channelLabel : null,
             ];
         }
-        $gatewayName = self::resolveGatewayName($transaction, $normalizedGateway);
+
+        if ($channelLabel === '') {
+            $channelLabel = self::resolveGatewayName($transaction, $normalizedGateway);
+        }
 
         return [
-            'channel_label' => $gatewayName,
+            'channel_label' => $channelLabel,
             'bank_label' => null,
         ];
 
@@ -64,18 +78,23 @@ class PaymentLabelService
     public static function forManualPaymentRequest(ManualPaymentRequest $manualPaymentRequest): array
     
     {
-        $bankName = $manualPaymentRequest->relationLoaded('manualBank')
-            ? $manualPaymentRequest->manualBank?->name
-            : $manualPaymentRequest->manualBank()->value('name');
+        /** @var GatewayLabelService $service */
+        $service = app(GatewayLabelService::class);
 
-        if (! is_string($bankName) || trim($bankName) === '') {
+        $label = trim((string) $service->labelForRow([
+            'channel' => 'manual_banks',
+            'manual_payment_request' => $manualPaymentRequest,
+            'manual_payment_request_id' => $manualPaymentRequest->getKey(),
+            'manual_bank_id' => $manualPaymentRequest->manual_bank_id,
+            'manual_bank_name' => $manualPaymentRequest->bank_name,
+        ]));
+
+        if ($label === '') {
             Log::warning('Bank name missing for manual payment request channel label.', [
                 'manual_payment_request_id' => $manualPaymentRequest->getKey(),
             ]);
-            $bankName = '';
 
         }
-        $label = trim((string) $bankName);
 
         return [
             'channel_label' => $label,

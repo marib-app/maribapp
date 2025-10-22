@@ -1,10 +1,15 @@
 <?php
 
 namespace App\Providers;
+
+
+
 use App\Models\OrderItem;
 use App\Observers\OrderItemObserver;
-use Illuminate\Support\Facades\DB;
 use App\Services\CacheMetricsRecorder;
+use App\Services\Payment\GatewayLabelService;
+use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
 
@@ -38,5 +43,14 @@ class AppServiceProvider extends ServiceProvider
         $this->app->terminating(static function () {
             app(CacheMetricsRecorder::class)->flush();
         });
+
+        Blade::directive('gatewayLabel', static function ($expression) {
+            return sprintf(
+                '<?php echo e(app(%s::class)->labelForRow(%s)); ?>',
+                addslashes(GatewayLabelService::class),
+                $expression
+            );
+        });
+
     }
 }

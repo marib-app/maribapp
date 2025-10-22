@@ -9,6 +9,7 @@ use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Query\JoinClause;
+use App\Services\Payment\GatewayLabelService;
 use Throwable;
 
 class PaymentRequestTableQuery
@@ -204,14 +205,8 @@ class PaymentRequestTableQuery
         $transactionGatewayLabelCandidates = [];
 
         if ($supportsPaymentTransactionMeta) {
-            foreach ([
-                "$.payload.bank_name",
-                "$.payload.bank.name",
-                "$.manual_bank.name",
-                "$.manual.bank.name",
-                "$.manual.bank.bank_name",
-                "$.manual.bank.beneficiary_name",
-            ] as $path) {
+            foreach (GatewayLabelService::BANK_LABEL_JSON_PATHS as $path) {
+
                 $transactionGatewayLabelCandidates[] = sprintf(
                     "NULLIF(%s, '')",
                     $sanitizeManualBankAlias("JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '{$path}'))")
@@ -221,14 +216,8 @@ class PaymentRequestTableQuery
         }
 
         if ($supportsManualMeta) {
-            foreach ([
-                "$.payload.bank_name",
-                "$.payload.bank.name",
-                "$.manual_bank.name",
-                "$.manual.bank.name",
-                "$.manual.bank.bank_name",
-                "$.manual.bank.beneficiary_name",
-            ] as $path) {
+            foreach (GatewayLabelService::BANK_LABEL_JSON_PATHS as $path) {
+
                 $transactionGatewayLabelCandidates[] = sprintf(
                     "NULLIF(%s, '')",
                     $sanitizeManualBankAlias("JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '{$path}'))")
@@ -312,16 +301,8 @@ class PaymentRequestTableQuery
         $walletGatewayLabelCandidates = [];
 
         if ($supportsWalletMeta) {
-            foreach ([
-                "$.payload.bank_name",
-                "$.payload.bank.name",
-                "$.manual_bank.name",
-                "$.manual_bank.bank_name",
-                "$.manual_bank.beneficiary_name",
-                "$.manual.bank.name",
-                "$.manual.bank.bank_name",
-                "$.manual.bank.beneficiary_name",
-            ] as $path) {
+            foreach (GatewayLabelService::BANK_LABEL_JSON_PATHS as $path) {
+
                 $walletGatewayLabelCandidates[] = sprintf(
                     "NULLIF(%s, '')",
                     $sanitizeManualBankAlias("JSON_UNQUOTE(JSON_EXTRACT(wt.meta, '{$path}'))")
@@ -331,16 +312,8 @@ class PaymentRequestTableQuery
         }
 
         if ($supportsManualMeta) {
-            foreach ([
-                "$.payload.bank_name",
-                "$.payload.bank.name",
-                "$.manual_bank.name",
-                "$.manual_bank.bank_name",
-                "$.manual_bank.beneficiary_name",
-                "$.manual.bank.name",
-                "$.manual.bank.bank_name",
-                "$.manual.bank.beneficiary_name",
-            ] as $path) {
+            foreach (GatewayLabelService::BANK_LABEL_JSON_PATHS as $path) {
+
                 $walletGatewayLabelCandidates[] = sprintf(
                     "NULLIF(%s, '')",
                     $sanitizeManualBankAlias("JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '{$path}'))")
@@ -528,16 +501,8 @@ class PaymentRequestTableQuery
         $manualRequestGatewayLabelCandidates = [];
 
         if ($supportsManualMeta) {
-            foreach ([
-                "$.payload.bank_name",
-                "$.payload.bank.name",
-                "$.manual_bank.name",
-                "$.manual_bank.bank_name",
-                "$.manual_bank.beneficiary_name",
-                "$.manual.bank.name",
-                "$.manual.bank.bank_name",
-                "$.manual.bank.beneficiary_name",
-            ] as $path) {
+            foreach (GatewayLabelService::BANK_LABEL_JSON_PATHS as $path) {
+
                 $manualRequestGatewayLabelCandidates[] = sprintf(
                     "NULLIF(%s, '')",
                     $sanitizeManualBankAlias("JSON_UNQUOTE(JSON_EXTRACT(mpr.meta, '{$path}'))")

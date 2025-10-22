@@ -644,7 +644,7 @@ class PaymentRequestTableQuery
                 'CASE WHEN LOWER(pt.payable_type) = ? THEN pt.payable_id ELSE NULL END as wallet_transaction_id',
                 [strtolower(WalletTransaction::class)]
             )
-            ->selectRaw('pt.manual_payment_request_id')
+            ->selectRaw('COALESCE(pt.manual_payment_request_id, wt_link.manual_payment_request_id) as manual_payment_request_id')
             ->selectRaw('pt.user_id')
             ->selectRaw('users.name as user_name')
             ->selectRaw('users.mobile as user_mobile')
@@ -672,6 +672,7 @@ class PaymentRequestTableQuery
             ->selectRaw("'payment_transactions' as source")
             ->leftJoin('users', 'users.id', '=', 'pt.user_id')
             ->leftJoin('manual_payment_requests as mpr', 'mpr.id', '=', 'pt.manual_payment_request_id')
+            ->leftJoin('wallet_transactions as wt_link', 'wt_link.payment_transaction_id', '=', 'pt.id')
             ->when(
                 $supportsManualBankLookup,
                 static fn (Builder $query) => $query->leftJoin(

@@ -28,6 +28,9 @@ class ManualPaymentRequestService
 
     private bool $manualPaymentRequestConnectionResolved = false;
 
+    private bool $defaultManualBankResolved = false;
+
+    private ?ManualBank $defaultManualBank = null;
 
     
     /**
@@ -302,6 +305,16 @@ class ManualPaymentRequestService
             $manualBank = ManualBank::query()->find($manualBankId);
         }
 
+
+        if (! $manualBank instanceof ManualBank && $manualBankId === null) {
+            $manualBank = $this->resolveDefaultManualBank();
+
+            if ($manualBank instanceof ManualBank) {
+                $manualBankId = $manualBank->getKey();
+            }
+        }
+
+
         $supportsBankNameColumn = $this->manualPaymentSupportsBankNameColumn();
         $supportsBankAccountNameColumn = $this->manualPaymentSupportsBankAccountNameColumn();
 
@@ -562,6 +575,18 @@ class ManualPaymentRequestService
         $manualBank = $manualBankId !== null
             ? ManualBank::query()->find($manualBankId)
             : null;
+
+
+
+        if (! $manualBank instanceof ManualBank && $manualBankId === null && $bankName === null) {
+            $manualBank = $this->resolveDefaultManualBank();
+
+            if ($manualBank instanceof ManualBank) {
+                $manualBankId = $manualBank->getKey();
+                $bankName = $normalizeString($manualBank->name) ?? $bankName;
+            }
+        }
+
 
         if (! $manualBank instanceof ManualBank && $bankName !== null) {
             $normalizedBankName = Str::of($bankName)->trim()->lower()->value();
@@ -891,6 +916,71 @@ class ManualPaymentRequestService
 
         return $manualPaymentRequest;
     }
+
+
+
+    private function resolveDefaultManualBank(): ?ManualBank
+    {
+        if ($this->defaultManualBankResolved) {
+            return $this->defaultManualBank;
+        }
+
+        $this->defaultManualBankResolved = true;
+
+        $manualBank = null;
+        $configuredId = config('payments.default_manual_bank_id');
+
+        if ($configuredId !== null && $configuredId !== '') {
+            $normalizedId = is_numeric($configuredId) ? (int) $configuredId : null;
+
+            if ($normalizedId !== null && $normalizedId > 0) {
+                try {
+                    $manualBank = ManualBank::query()->find($normalizedId);
+                } catch (Throwable) {
+                    $manualBank = null;
+                }
+            }
+        }
+
+        if (! $manualBank instanceof ManualBank) {
+            try {
+                $model = new ManualBank();
+                $table = $model->getTable();
+
+                if (! Schema::hasTable($table)) {
+                    $this->defaultManualBank = null;
+
+                    return null;
+                }
+
+                $query = ManualBank::query();
+
+                if (Schema::hasColumn($table, 'status')) {
+                    $query->where('status', true);
+                } elseif (Schema::hasColumn($table, 'is_active')) {
+                    $query->where('is_active', true);
+                }
+
+                if (Schema::hasColumn($table, 'display_order')) {
+                    $query->orderBy('display_order');
+                }
+
+                $manualBank = $query->orderBy('name')->orderBy('id')->first();
+            } catch (Throwable) {
+                $manualBank = null;
+            }
+        }
+
+        if (! $manualBank instanceof ManualBank) {
+            $this->defaultManualBank = null;
+
+            return null;
+        }
+
+        return $this->defaultManualBank = $manualBank;
+    }
+
+
 
 
     private function markTransactionManualPaymentRequestSkipped(

@@ -3,6 +3,7 @@
     use Illuminate\Support\Arr;
     use Illuminate\Support\Str;
     $statusHtml = match ($request->status) {
+    $readOnly = (bool) ($readOnly ?? false);
 
 
         ManualPaymentRequest::STATUS_APPROVED => '<span class="badge bg-success">' . __('Approved') . '</span>',
@@ -429,66 +430,70 @@
 
 
 
-        @if($paymentGatewayKey === 'east_yemen_bank')
+    @if($paymentGatewayKey === 'east_yemen_bank')
         <div class="card shadow-sm mt-4">
             <div class="card-header bg-light d-flex justify-content-between align-items-center">
                 <h6 class="mb-0"><i class="fa fa-exchange-alt me-2"></i>{{ __('East Yemen Bank Actions') }}</h6>
                 <span class="badge bg-primary">{{ __('Gateway Active') }}</span>
             </div>
             <div class="card-body">
-                @can('manual-payments-review')
-                    <div class="row g-3">
-                        <div class="col-lg-4 col-md-6">
-                            <div class="border rounded p-3 h-100">
-                                <h6 class="mb-3">{{ __('Initiate Voucher') }}</h6>
-                                <form action="{{ route('payment-requests.east-yemen.request', $request) }}" method="post" class="manual-payment-action">
-                                    @csrf
-                                    <div class="mb-3">
-                                        <label for="east-yemen-customer-identifier" class="form-label">{{ __('Customer Identifier') }}</label>
-                                        <input type="text" id="east-yemen-customer-identifier" name="customer_identifier" class="form-control" placeholder="{{ __('Enter customer identifier') }}" required>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="east-yemen-description" class="form-label">{{ __('Description (optional)') }}</label>
-                                        <input type="text" id="east-yemen-description" name="description" value="{{ $request->reference }}" class="form-control" placeholder="{{ __('Voucher description') }}">
-                                    </div>
-                                    <button type="submit" class="btn btn-outline-primary w-100">{{ __('Request Payment') }}</button>
-                                </form>
+                @if(! $readOnly)
+                    @can('manual-payments-review')
+                        <div class="row g-3">
+                            <div class="col-lg-4 col-md-6">
+                                <div class="border rounded p-3 h-100">
+                                    <h6 class="mb-3">{{ __('Initiate Voucher') }}</h6>
+                                    <form action="{{ route('payment-requests.east-yemen.request', $request) }}" method="post" class="manual-payment-action">
+                                        @csrf
+                                        <div class="mb-3">
+                                            <label for="east-yemen-customer-identifier" class="form-label">{{ __('Customer Identifier') }}</label>
+                                            <input type="text" id="east-yemen-customer-identifier" name="customer_identifier" class="form-control" placeholder="{{ __('Enter customer identifier') }}" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="east-yemen-description" class="form-label">{{ __('Description (optional)') }}</label>
+                                            <input type="text" id="east-yemen-description" name="description" value="{{ $request->reference }}" class="form-control" placeholder="{{ __('Voucher description') }}">
+                                        </div>
+                                        <button type="submit" class="btn btn-outline-primary w-100">{{ __('Request Payment') }}</button>
+                                    </form>
+                                </div>
+                            </div>
+                            <div class="col-lg-4 col-md-6">
+                                <div class="border rounded p-3 h-100">
+                                    <h6 class="mb-3">{{ __('Confirm Voucher') }}</h6>
+                                    <form action="{{ route('payment-requests.east-yemen.confirm', $request) }}" method="post" class="manual-payment-action">
+                                        @csrf
+                                        <div class="mb-3">
+                                            <label for="east-yemen-confirm-voucher" class="form-label">{{ __('Voucher Number') }}</label>
+                                            <input type="text" id="east-yemen-confirm-voucher" name="voucher_number" class="form-control" value="{{ $defaultVoucherNumber }}" placeholder="{{ __('Enter voucher number') }}" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="east-yemen-otp" class="form-label">{{ __('OTP (optional)') }}</label>
+                                            <input type="text" id="east-yemen-otp" name="otp" class="form-control" placeholder="{{ __('Enter one-time password if required') }}">
+                                        </div>
+                                        <button type="submit" class="btn btn-outline-success w-100">{{ __('Confirm Payment') }}</button>
+                                    </form>
+                                </div>
+                            </div>
+                            <div class="col-lg-4 col-md-12">
+                                <div class="border rounded p-3 h-100">
+                                    <h6 class="mb-3">{{ __('Check Voucher Status') }}</h6>
+                                    <form action="{{ route('payment-requests.east-yemen.check', $request) }}" method="post" class="manual-payment-action">
+                                        @csrf
+                                        <div class="mb-3">
+                                            <label for="east-yemen-check-voucher" class="form-label">{{ __('Voucher Number') }}</label>
+                                            <input type="text" id="east-yemen-check-voucher" name="voucher_number" class="form-control" value="{{ $defaultVoucherNumber }}" placeholder="{{ __('Enter voucher number') }}" required>
+                                        </div>
+                                        <button type="submit" class="btn btn-outline-secondary w-100">{{ __('Check Status') }}</button>
+                                    </form>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-lg-4 col-md-6">
-                            <div class="border rounded p-3 h-100">
-                                <h6 class="mb-3">{{ __('Confirm Voucher') }}</h6>
-                                <form action="{{ route('payment-requests.east-yemen.confirm', $request) }}" method="post" class="manual-payment-action">
-                                    @csrf
-                                    <div class="mb-3">
-                                        <label for="east-yemen-confirm-voucher" class="form-label">{{ __('Voucher Number') }}</label>
-                                        <input type="text" id="east-yemen-confirm-voucher" name="voucher_number" class="form-control" value="{{ $defaultVoucherNumber }}" placeholder="{{ __('Enter voucher number') }}" required>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="east-yemen-otp" class="form-label">{{ __('OTP (optional)') }}</label>
-                                        <input type="text" id="east-yemen-otp" name="otp" class="form-control" placeholder="{{ __('Enter one-time password if required') }}">
-                                    </div>
-                                    <button type="submit" class="btn btn-outline-success w-100">{{ __('Confirm Payment') }}</button>
-                                </form>
-                            </div>
-                        </div>
-                        <div class="col-lg-4 col-md-12">
-                            <div class="border rounded p-3 h-100">
-                                <h6 class="mb-3">{{ __('Check Voucher Status') }}</h6>
-                                <form action="{{ route('payment-requests.east-yemen.check', $request) }}" method="post" class="manual-payment-action">
-                                    @csrf
-                                    <div class="mb-3">
-                                        <label for="east-yemen-check-voucher" class="form-label">{{ __('Voucher Number') }}</label>
-                                        <input type="text" id="east-yemen-check-voucher" name="voucher_number" class="form-control" value="{{ $defaultVoucherNumber }}" placeholder="{{ __('Enter voucher number') }}" required>
-                                    </div>
-                                    <button type="submit" class="btn btn-outline-secondary w-100">{{ __('Check Status') }}</button>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
+                    @else
+                        <p class="text-muted mb-0">{{ __('You do not have permission to interact with the East Yemen Bank gateway.') }}</p>
+                    @endcan
                 @else
-                    <p class="text-muted mb-0">{{ __('You do not have permission to interact with the East Yemen Bank gateway.') }}</p>
-                @endcan
+                    <p class="text-muted mb-0">{{ __('Gateway actions are available only for manual payment requests.') }}</p>
+                @endif
 
                 @if(!empty($eastYemenMeta))
                     <hr class="my-4">
@@ -501,38 +506,54 @@
 
 
 
-    @if($canReview)
-        <div class="card border-primary shadow-sm mt-4">
-            <div class="card-header bg-primary text-white d-flex flex-wrap justify-content-between align-items-center gap-2">
-                <h6 class="mb-0"><i class="fa fa-clipboard-check me-2"></i>{{ __('Review Decision') }}</h6>
-                <small class="fw-light">{{ __('Choose the final status, add notes, and optionally alert the requester.') }}</small>
-            </div>
-            <div class="card-body">
-                <form action="{{ route('payment-requests.decision', $request) }}" method="post" class="manual-payment-action" data-reload-on-success="true" enctype="multipart/form-data">
-                    @csrf
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">{{ __('Decision') }}</label>
-                        <div class="d-flex flex-wrap gap-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="decision" id="decision-approved" value="{{ \App\Models\ManualPaymentRequest::STATUS_APPROVED }}">
-                                <label class="form-check-label" for="decision-approved">
-                                    <i class="fa fa-check text-success me-1"></i>{{ __('Verified') }}
-                                </label>
-
-
-
-
-
-
-
-
-
+    @if(! $readOnly)
+        @if($canReview)
+            <div class="card border-primary shadow-sm mt-4">
+                <div class="card-header bg-primary text-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <h6 class="mb-0"><i class="fa fa-clipboard-check me-2"></i>{{ __('Review Decision') }}</h6>
+                    <small class="fw-light">{{ __('Choose the final status, add notes, and optionally alert the requester.') }}</small>
+                </div>
+                <div class="card-body">
+                    <form action="{{ route('payment-requests.decision', $request) }}" method="post" class="manual-payment-action" data-reload-on-success="true" enctype="multipart/form-data">
+                        @csrf
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">{{ __('Decision') }}</label>
+                            <div class="d-flex flex-wrap gap-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="decision" id="decision-approved" value="{{ \App\Models\ManualPaymentRequest::STATUS_APPROVED }}">
+                                    <label class="form-check-label" for="decision-approved">
+                                        <i class="fa fa-check text-success me-1"></i>{{ __('Verified') }}
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="decision" id="decision-rejected" value="{{ \App\Models\ManualPaymentRequest::STATUS_REJECTED }}">
+                                    <label class="form-check-label" for="decision-rejected">
+                                        <i class="fa fa-times text-danger me-1"></i>{{ __('Not verified') }}
+                                    </label>
+                                </div>
                             </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="decision" id="decision-rejected" value="{{ \App\Models\ManualPaymentRequest::STATUS_REJECTED }}">
-                                <label class="form-check-label" for="decision-rejected">
-                                    <i class="fa fa-times text-danger me-1"></i>{{ __('Not verified') }}
-                                </label>
+
+                        <div class="mb-3">
+                            <label for="decision-note" class="form-label fw-semibold">{{ __('Internal note (optional)') }}</label>
+                            <textarea class="form-control" name="admin_note" id="decision-note" rows="3" placeholder="{{ __('Add any context for this decision (visible to admins).') }}"></textarea>
+                            <div class="form-text">{{ __('Notes are stored with the history and can be shared in notifications if enabled.') }}</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="decision-document-valid-until" class="form-label fw-semibold">{{ __('Document valid until') }}</label>
+                            <input type="date" class="form-control" name="document_valid_until" id="decision-document-valid-until" value="{{ old('document_valid_until') }}">
+                            <div class="form-text">{{ __('Leave blank if there is no expiry date.') }}</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="decision-attachment" class="form-label fw-semibold">{{ __('Attach image (optional)') }}</label>
+                            <input class="form-control" type="file" name="attachment" id="decision-attachment" accept="image/*">
+                            <div class="form-text">{{ __('Accepted formats: JPG, PNG. Maximum size 5 MB.') }}</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" role="switch" id="decision-notify" name="notify_user" value="1" checked>
+                                <label class="form-check-label" for="decision-notify">{{ __('Send notification to requester') }}</label>
+
 
 
                             </div>
@@ -540,56 +561,29 @@
 
 
                         </div>
-                    <div class="mb-3">
-                        <label for="decision-note" class="form-label fw-semibold">{{ __('Internal note (optional)') }}</label>
-                        <textarea class="form-control" name="admin_note" id="decision-note" rows="3" placeholder="{{ __('Add any context for this decision (visible to admins).') }}"></textarea>
-                        <div class="form-text">{{ __('Notes are stored with the history and can be shared in notifications if enabled.') }}</div>
-
-
-                    </div>
-                    <div class="mb-3">
-                        <label for="decision-document-valid-until" class="form-label fw-semibold">{{ __('Document valid until') }}</label>
-                        <input type="date" class="form-control" name="document_valid_until" id="decision-document-valid-until" value="{{ old('document_valid_until') }}">
-                        <div class="form-text">{{ __('Leave blank if there is no expiry date.') }}</div>
-
-
-                    </div>
-                    <div class="mb-3">
-                        <label for="decision-attachment" class="form-label fw-semibold">{{ __('Attach image (optional)') }}</label>
-                        <input class="form-control" type="file" name="attachment" id="decision-attachment" accept="image/*">
-                        <div class="form-text">{{ __('Accepted formats: JPG, PNG. Maximum size 5 MB.') }}</div>
+                        <div class="d-flex justify-content-end">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fa fa-save me-1"></i>{{ __('Submit decision') }}
+                            </button>
+                        </div>
+                    </form>
 
 
                 </div>
 
-                    <div class="mb-4">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" role="switch" id="decision-notify" name="notify_user" value="1" checked>
-                            <label class="form-check-label" for="decision-notify">{{ __('Send notification to requester') }}</label>
-                        </div>
-                        <div class="form-text">{{ __('Disable this option to save without alerting the user.') }}</div>
-                    </div>
-
-                    <div class="d-flex justify-content-end">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fa fa-save me-1"></i>{{ __('Submit decision') }}
-                        </button>
-                    </div>
-                </form>
-
 
             </div>
-        </div>
-    @else
-        <div class="alert alert-info mt-3" role="alert">
-            <i class="fa fa-lock me-2"></i>{{ __('This request has already been reviewed or you do not have permission to update it.') }}
-        </div>
-    @endif
+        @else
+            <div class="alert alert-info mt-3" role="alert">
+                <i class="fa fa-lock me-2"></i>{{ __('This request has already been reviewed or you do not have permission to update it.') }}
+            </div>
+        @endif
 
-    @include('payments.manual.partials.status-timeline', [
-        'timelineData' => $timelineData ?? [],
-        'timelineEndpoint' => route('payment-requests.timeline', $request),
-    ])
+        @include('payments.manual.partials.status-timeline', [
+            'timelineData' => $timelineData ?? [],
+            'timelineEndpoint' => route('payment-requests.timeline', $request),
+        ])
+    @endif
 
     
         </div>

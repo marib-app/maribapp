@@ -66,6 +66,7 @@
                     'paymentGatewayCanonical' => $paymentGatewayCanonical ?? null,
                     'paymentGatewayLabel' => $paymentGatewayLabel ?? null,
                     'departmentLabel' => $departmentLabel ?? null,
+                    'readOnly' => false,
 
                 ])
             

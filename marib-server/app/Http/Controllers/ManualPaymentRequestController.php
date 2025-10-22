@@ -608,6 +608,50 @@ class ManualPaymentRequestController extends Controller
         ], $this->manualPaymentRequestPresentationData($manualPaymentRequest)));
     }
 
+
+    public function reviewTransaction(PaymentTransaction $paymentTransaction)
+    {
+        ResponseService::noAnyPermissionThenRedirect(['manual-payments-review']);
+
+        $paymentTransaction->load([
+            'user',
+            'order.user',
+            'walletTransaction.walletAccount.user',
+            'payable',
+            'manualPaymentRequest.user',
+            'manualPaymentRequest.manualBank',
+            'manualPaymentRequest.paymentTransaction.order.user',
+            'manualPaymentRequest.paymentTransaction.walletTransaction.walletAccount.user',
+            'manualPaymentRequest.payable',
+            'manualPaymentRequest.histories.user',
+        ]);
+
+        $manualPaymentRequest = $paymentTransaction->manualPaymentRequest;
+
+        if ($manualPaymentRequest instanceof ManualPaymentRequest) {
+            $manualPaymentRequest = $this->loadManualPaymentRequestRelations($manualPaymentRequest);
+        } else {
+            $manualPaymentRequest = $this->makeManualPaymentRequestFromTransaction($paymentTransaction);
+        }
+
+        $presentation = $this->manualPaymentRequestPresentationData($manualPaymentRequest);
+
+        return view(
+            'payments.manual.review-transaction',
+            array_merge(
+                [
+                    'transaction' => $paymentTransaction,
+                    'request' => $manualPaymentRequest,
+                    'canReview' => false,
+                    'timelineData' => [],
+                ],
+                $presentation
+            )
+        );
+    }
+
+
+
     private function manualPaymentRequestPresentationData(ManualPaymentRequest $manualPaymentRequest): array
     {
 
@@ -682,7 +726,61 @@ class ManualPaymentRequestController extends Controller
 
 
 
+    private function makeManualPaymentRequestFromTransaction(PaymentTransaction $paymentTransaction): ManualPaymentRequest
+    {
+        $paymentTransaction->loadMissing([
+            'user',
+            'order.user',
+            'walletTransaction.walletAccount.user',
+            'payable',
+        ]);
 
+        $manualPaymentRequest = ManualPaymentRequest::make([
+            'user_id' => $paymentTransaction->user_id,
+            'payable_type' => $paymentTransaction->payable_type,
+            'payable_id' => $paymentTransaction->payable_id,
+            'amount' => (float) ($paymentTransaction->amount ?? 0),
+            'currency' => $paymentTransaction->currency
+                ?? ($paymentTransaction->order?->currency ?? config('app.currency', 'SAR')),
+            'reference' => $paymentTransaction->payment_id
+                ?? $paymentTransaction->payment_signature
+                ?? (string) $paymentTransaction->getKey(),
+            'status' => $this->mapTransactionStatusToManualPaymentStatus($paymentTransaction->payment_status),
+            'meta' => is_array($paymentTransaction->meta) ? $paymentTransaction->meta : [],
+        ]);
+
+        $manualPaymentRequest->setAttribute(
+            'id',
+            $paymentTransaction->manual_payment_request_id ?? $paymentTransaction->getKey()
+        );
+        $manualPaymentRequest->setAttribute('payment_transaction_id', $paymentTransaction->getKey());
+        $manualPaymentRequest->setAttribute('created_at', $paymentTransaction->created_at);
+        $manualPaymentRequest->setAttribute('updated_at', $paymentTransaction->updated_at);
+
+        $manualPaymentRequest->setRelation('paymentTransaction', $paymentTransaction);
+        $manualPaymentRequest->setRelation('user', $paymentTransaction->user);
+        $manualPaymentRequest->setRelation('manualBank', null);
+        $manualPaymentRequest->setRelation('histories', Collection::make());
+
+        if ($paymentTransaction->payable instanceof Model) {
+            $manualPaymentRequest->setRelation('payable', $paymentTransaction->payable);
+        } elseif ($paymentTransaction->order instanceof Model) {
+            $manualPaymentRequest->setRelation('payable', $paymentTransaction->order);
+        } elseif ($paymentTransaction->walletTransaction instanceof Model) {
+            $manualPaymentRequest->setRelation('payable', $paymentTransaction->walletTransaction);
+        }
+
+        return $manualPaymentRequest;
+    }
+
+    private function mapTransactionStatusToManualPaymentStatus(?string $status): string
+    {
+        return match ($this->normalizePaymentRequestStatus($status) ?? 'pending') {
+            'succeed' => ManualPaymentRequest::STATUS_APPROVED,
+            'failed' => ManualPaymentRequest::STATUS_REJECTED,
+            default => ManualPaymentRequest::STATUS_PENDING,
+        };
+    }
 
 
     private function manualPaymentTimelinePayload(ManualPaymentRequest $manualPaymentRequest): array
@@ -1706,6 +1804,21 @@ class ManualPaymentRequestController extends Controller
             return '';
         }
 
+
+        $channel = $this->normalizePaymentRequestChannel(
+            data_get($row, 'channel') ?? data_get($row, 'payment_gateway')
+        );
+
+        if ($channel === 'wallet') {
+            $walletReviewButton = $this->renderPaymentTransactionReviewButton($transactionId);
+
+            if ($walletReviewButton !== '') {
+                return $walletReviewButton;
+            }
+        }
+
+
+
         $transaction = PaymentTransaction::query()
             ->with('manualPaymentRequest')
             ->find($transactionId);
@@ -1795,6 +1908,36 @@ class ManualPaymentRequestController extends Controller
     }
 
 
+    private function renderPaymentTransactionReviewButton(int $paymentTransactionId): string
+    {
+        if (! Route::has('payment-requests.review-transaction')) {
+            return '';
+        }
+
+        if ($paymentTransactionId <= 0) {
+            return '';
+        }
+
+        $user = Auth::user();
+
+        if (! ($user?->can('manual-payments-review') ?? false)) {
+            return '';
+        }
+
+        $url = route('payment-requests.review-transaction', ['paymentTransaction' => $paymentTransactionId]);
+
+        return BootstrapTableService::button(
+            'fa fa-eye',
+            $url,
+            ['btn-outline-primary', 'view-payment-transaction'],
+            [
+                'target' => '_blank',
+                'rel' => 'noopener noreferrer',
+                'title' => trans('Review transaction'),
+            ],
+            trans('Review transaction')
+        );
+    }
 
     private function resolveManualPaymentRequestForRow(object $row): ?ManualPaymentRequest
     {

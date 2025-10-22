@@ -1060,6 +1060,10 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
 Route::get('/product-details/{slug}', [SettingController::class, 'webPageURL'])->name('deep-link');
 Route::get('payment-requests/open/{paymentTransaction}', [ManualPaymentRequestController::class, 'deepLink'])->name('payment-requests.deep-link');
 
+Route::get(
+    'payment-requests/review-transaction/{paymentTransaction}',
+    [ManualPaymentRequestController::class, 'reviewTransaction']
+)->name('payment-requests.review-transaction')->middleware('can:manual-payments-review');
 
 /* ----------------------- أدوات صيانة (للاستخدام بحذر) ----------------------- */
 

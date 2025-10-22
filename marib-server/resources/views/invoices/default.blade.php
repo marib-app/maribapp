@@ -207,7 +207,7 @@
                 <span class="invoice-badge">فاتورة مبيعات</span>
                 <h2>{{ $company['name'] }}</h2>
                 @if (! empty($company['address']))
-                    <p>{{ $company['address'] }}</p>
+                    <p>{!! nl2br(e($company['address'])) !!}</p>
                 @endif
                 <p>
                     @if (! empty($company['phone']))
@@ -244,10 +244,10 @@
                         <p>البريد الإلكتروني: {{ $customer->email }}</p>
                     @endif
                     @if (! empty($billing_address))
-                        <p>عنوان الفوترة: {{ $billing_address }}</p>
+                        <p>عنوان الفوترة: {!! nl2br(e($billing_address)) !!}</p>
                     @endif
                     @if (! empty($shipping_address))
-                        <p>عنوان التوصيل: {{ $shipping_address }}</p>
+                        <p>عنوان التوصيل: {!! nl2br(e($shipping_address)) !!}</p>
                     @endif
                 </div>
             </div>
@@ -309,14 +309,14 @@
             @if (! empty($order->notes))
                 <div class="notes">
                     <strong>ملاحظات الطلب:</strong>
-                    <p>{{ $order->notes }}</p>
+                    <p>{!! nl2br(e($order->notes)) !!}</p>
                 </div>
             @endif
         </section>
 
         @if (! empty($company['footer_note']))
             <div class="footer">
-                {{ $company['footer_note'] }}
+                {!! nl2br(e($company['footer_note'])) !!}
             </div>
         @endif
     </div>

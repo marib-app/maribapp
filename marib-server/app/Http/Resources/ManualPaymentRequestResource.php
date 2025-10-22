@@ -2,7 +2,7 @@
 
 namespace App\Http\Resources;
 
-
+use App\Models\ManualBank;
 use App\Models\ManualPaymentRequest;
 use App\Models\WalletTransaction;
 use Illuminate\Database\Eloquent\Model as EloquentModel;
@@ -302,7 +302,7 @@ class ManualPaymentRequestResource extends JsonResource
         }
 
         return match ($canonicalGateway) {
-            'manual_banks' => $manualBankName ?? __('Bank Transfer'),
+            'manual_banks' => $manualBankName ?? ManualBank::defaultDisplayName(),
             'east_yemen_bank' => $manualBankName ?? __('East Yemen Bank'),
             'wallet' => $manualBankName ?? __('Wallet'),
             'cash' => __('Cash'),

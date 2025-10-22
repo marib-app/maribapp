@@ -2,6 +2,8 @@
 
 namespace App\Queries;
 
+
+use App\Models\ManualBank;
 use App\Models\ManualPaymentRequest;
 use App\Models\WalletTransaction;
 use Illuminate\Database\Query\Builder;
@@ -1062,17 +1064,29 @@ class PaymentRequestTableQuery
     {
         $candidates = self::prepareCoalesceCandidates($labelCandidates);
         $channelExpression = self::channelExpressionFromGateway($gatewayExpression);
+        $defaultManualLabel = self::quoteString(ManualBank::defaultDisplayName());
         $walletCase = "CASE WHEN ({$channelExpression}) = 'wallet' THEN 'المحفظة' END";
         $eastYemenCase = "CASE WHEN ({$channelExpression}) = 'east_yemen_bank' THEN 'بنك الشرق' END";
+
+        $manualLabelExpression = $defaultManualLabel;
+
+        if ($candidates !== []) {
+            $manualLabelExpression = 'COALESCE(' . implode(', ', array_merge($candidates, [$defaultManualLabel])) . ')';
+        }
+
+        $manualCase = "CASE WHEN ({$channelExpression}) = 'manual_banks' THEN {$manualLabelExpression} END";
 
         $fallback = "CASE"
             . " WHEN ({$channelExpression}) = 'wallet' THEN 'المحفظة'"
             . " WHEN ({$channelExpression}) = 'east_yemen_bank' THEN 'بنك الشرق'"
+            . " WHEN ({$channelExpression}) = 'manual_banks' THEN {$defaultManualLabel}"
             . " ELSE 'تحويل بنكي'"
             . ' END';
+
         $coalesceParts = array_merge([
             $walletCase,
             $eastYemenCase,
+            $manualCase,
         ], $candidates, [
             $fallback,
         ]);
@@ -1102,6 +1116,12 @@ class PaymentRequestTableQuery
 
         return '(' . implode(',', $escaped) . ')';
     }
+
+    private static function quoteString(string $value): string
+    {
+        return "'" . str_replace("'", "''", $value) . "'";
+    }
+
 
     /**
      * @param array<int, string> $aliases

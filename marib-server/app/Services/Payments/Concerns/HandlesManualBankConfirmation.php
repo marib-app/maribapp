@@ -178,6 +178,20 @@ trait HandlesManualBankConfirmation
             $meta['manual_payment_request'] = $manualPaymentMeta;
         }
 
+
+        if (isset($bankDetails['id']) && $bankDetails['id'] !== null && $bankDetails['id'] !== '') {
+            $normalizedBankId = is_numeric($bankDetails['id']) ? (int) $bankDetails['id'] : null;
+
+            if ($normalizedBankId !== null && $normalizedBankId > 0) {
+                data_set($meta, 'payload.manual_bank_id', $normalizedBankId);
+            }
+        }
+
+        if (isset($bankDetails['name']) && is_string($bankDetails['name']) && trim($bankDetails['name']) !== '') {
+            data_set($meta, 'payload.bank_name', trim($bankDetails['name']));
+        }
+
+
         return $meta;
     }
 

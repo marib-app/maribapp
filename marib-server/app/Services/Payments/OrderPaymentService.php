@@ -327,7 +327,30 @@ class OrderPaymentService
 
             $transaction->payment_status = Arr::get($data, 'auto_confirm') ? 'succeed' : 'pending';
             $transaction->payment_id = $data['reference'] ?? $transaction->payment_id;
-            $transaction->meta = array_replace_recursive($transaction->meta ?? [], [
+            $meta = $transaction->meta ?? [];
+            if (! is_array($meta)) {
+                $meta = [];
+            }
+
+            $manualBankIdForPayload = $manualBankIdentifier ?? $manualPaymentRequest->manual_bank_id;
+            if (is_string($manualBankIdForPayload) && trim($manualBankIdForPayload) === '') {
+                $manualBankIdForPayload = null;
+            }
+
+            if ($manualBankIdForPayload !== null && $manualBankIdForPayload !== '') {
+                $normalizedBankId = is_numeric($manualBankIdForPayload) ? (int) $manualBankIdForPayload : null;
+
+                if ($normalizedBankId !== null && $normalizedBankId > 0) {
+                    data_set($meta, 'payload.manual_bank_id', $normalizedBankId);
+                }
+            }
+
+            if (is_string($resolvedBankName) && trim($resolvedBankName) !== '') {
+                data_set($meta, 'payload.bank_name', trim($resolvedBankName));
+            }
+
+            $transaction->meta = array_replace_recursive($meta, [
+                
                 'manual' => $manualMeta,
                 'manual_payment_request' => [
                     'id' => $manualPaymentRequest->getKey(),

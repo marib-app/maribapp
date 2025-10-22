@@ -542,6 +542,10 @@ class PaymentController extends Controller
                 }
             );
 
+            $bankMeta = [];
+
+
+
             if (! empty($validated['manual_bank_id']) || ! empty($validated['bank_account_id'])) {
                 $bankMeta = [
 
@@ -581,6 +585,30 @@ class PaymentController extends Controller
             if (! is_array($meta)) {
                 $meta = [];
             }
+
+
+            $manualBankId = $manualPaymentRequest->manual_bank_id
+                ?? ($manualMeta['bank']['id'] ?? null);
+
+            if (is_string($manualBankId) && trim($manualBankId) === '') {
+                $manualBankId = null;
+            }
+
+            if ($manualBankId !== null && $manualBankId !== '') {
+                $normalizedBankId = is_numeric($manualBankId) ? (int) $manualBankId : null;
+
+                if ($normalizedBankId !== null && $normalizedBankId > 0) {
+                    data_set($meta, 'payload.manual_bank_id', $normalizedBankId);
+                }
+            }
+
+            if (isset($bankMeta['name']) && is_string($bankMeta['name']) && $bankMeta['name'] !== '') {
+                data_set($meta, 'payload.bank_name', $bankMeta['name']);
+            } elseif (is_string($resolvedBankName) && trim($resolvedBankName) !== '') {
+                data_set($meta, 'payload.bank_name', trim($resolvedBankName));
+            }
+
+
 
             $meta = array_replace_recursive($meta, [
                 'manual' => $manualMeta,

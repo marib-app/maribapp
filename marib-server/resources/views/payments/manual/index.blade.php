@@ -611,8 +611,6 @@
             cash: @json(__('Cash')),
         };
 
-        const MANUAL_PAYMENT_GATEWAYS_WITH_BANK_NAME = ['manual_banks', 'east_yemen_bank', 'wallet'];
-
         const MANUAL_PAYMENT_DEPARTMENT_STYLES = {
             shein: 'bg-info text-dark',
             computer: 'bg-secondary text-white',
@@ -818,75 +816,32 @@
                 return trimmed;
             };
 
-            const preferManualBankLabel = normalized
-                && MANUAL_PAYMENT_GATEWAYS_WITH_BANK_NAME.includes(normalized);
+            const candidates = [
 
-            const manualBankCandidates = [
+                safeRow.gateway_label,
+                safeRow.payment_gateway_label,
+                safeRow.channel_label,
+                safeRow.payment_gateway_name,
                 safeRow.manual_bank_name,
                 safeRow.bank_name,
-                safeRow.channel_name,
-                safeRow.channel_label,
-                safeRow.gateway_label,
-                safeRow.payment_gateway_name,
-                safeRow.payment_gateway_label,
-            ];
-
-            if (preferManualBankLabel) {
-
-                for (const candidate of manualBankCandidates) {
-                    const resolved = valueOrNull(candidate);
-
-                    if (resolved === null) {
-                        continue;
-                    }
-
-                    const normalizedCandidate = normalizeManualPaymentGateway(resolved);
-
-                    if (normalizedCandidate
-                        && MANUAL_PAYMENT_GATEWAYS_WITH_BANK_NAME.includes(normalizedCandidate)) {
-                            
-                            continue;
-                    }
-
-                    return resolved;
-                }
-            }
-
-
-
-            const genericCandidates = [
-                ...manualBankCandidates,
+                fallback,
 
                 safeRow.payment_gateway,
                 safeRow.channel,
-                fallback,
+                rawGatewayValue,
             ];
 
-            for (const candidate of genericCandidates) {
+            for (const candidate of candidates) {
                 const resolved = valueOrNull(candidate);
 
-                if (resolved === null) {
-                    continue;
+                if (resolved !== null) {
+                    return resolved;
                 }
 
-                const normalizedCandidate = normalizeManualPaymentGateway(resolved);
-
-                if (preferManualBankLabel
-                    && normalizedCandidate
-                    && MANUAL_PAYMENT_GATEWAYS_WITH_BANK_NAME.includes(normalizedCandidate)) {
-                        
-                        continue;
-                }
-
-                return resolved;
             }
 
             if (normalized && Object.prototype.hasOwnProperty.call(MANUAL_PAYMENT_GATEWAY_LABEL_OVERRIDES, normalized)) {
                 return MANUAL_PAYMENT_GATEWAY_LABEL_OVERRIDES[normalized];
-            }
-
-            if (fallback !== undefined && fallback !== null && fallback !== '') {
-                return String(fallback);
             }
 
             return '—';

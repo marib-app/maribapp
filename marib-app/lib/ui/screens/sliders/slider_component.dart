@@ -252,7 +252,6 @@ class _SliderComponentState extends State<SliderComponent>
     );
   }
 
-
   Widget _buildBannerShell({required Widget child, VoidCallback? onTap}) {
     final BorderRadius borderRadius = BorderRadius.circular(12);
     return Material(
@@ -614,6 +613,7 @@ class _SliderComponentState extends State<SliderComponent>
               height: kSliderBannerHeight,
               child: Stack(
                 fit: StackFit.expand,
+                clipBehavior: Clip.none,
                 children: [
                   NotificationListener<UserScrollNotification>(
                     onNotification: (notification) {
@@ -628,33 +628,53 @@ class _SliderComponentState extends State<SliderComponent>
                       }
                       return false;
                     },
-                    child: PageView.builder(
-                      controller: _pageController,
-                      itemCount: itemCount,
-                      physics: pagePhysics,
-                      onPageChanged: hasBanners
-                          ? (int index) {
-                              if (bannersLength > 1) {
-                                _bannerIndex.value = index % bannersLength;
-                              } else {
-                                _bannerIndex.value = 0;
-                              }
-                              _currentPage = index.toDouble();
-                            }
-                          : null,
-                      itemBuilder: (_, int index) {
-                        final int actualIndex =
-                            bannersLength == 1 ? 0 : index % bannersLength;
-                        final HomeSlider slider = filteredList[actualIndex];
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final double pageWidth = constraints.maxWidth;
 
-                        return _buildBannerShell(
-                          onTap: () => _handleTap(slider),
-                          child: LazyNetworkImage(
-                            imageUrl: slider.image ?? '',
-                            fit: BoxFit.cover,
-                            placeholder: const ShimmerBox(),
-                            errorWidget: const ShimmerBox(animate: false),
-                          ),
+                        return PageView.builder(
+                          controller: _pageController,
+                          itemCount: itemCount,
+                          physics: pagePhysics,
+                          onPageChanged: hasBanners
+                              ? (int index) {
+                                  if (bannersLength > 1) {
+                                    _bannerIndex.value = index % bannersLength;
+                                  } else {
+                                    _bannerIndex.value = 0;
+                                  }
+                                  _currentPage = index.toDouble();
+                                }
+                              : null,
+                          itemBuilder: (_, int index) {
+                            final int actualIndex =
+                                bannersLength == 1 ? 0 : index % bannersLength;
+                            final HomeSlider slider = filteredList[actualIndex];
+
+                            return OverflowBox(
+                              alignment: Alignment.center,
+                              minWidth: pageWidth + kSliderBannerSpacing,
+                              maxWidth: pageWidth + kSliderBannerSpacing,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: kSliderBannerSpacing / 2,
+                                ),
+                                child: SizedBox(
+                                  width: pageWidth,
+                                  child: _buildBannerShell(
+                                    onTap: () => _handleTap(slider),
+                                    child: LazyNetworkImage(
+                                      imageUrl: slider.image ?? '',
+                                      fit: BoxFit.cover,
+                                      placeholder: const ShimmerBox(),
+                                      errorWidget:
+                                          const ShimmerBox(animate: false),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
                         );
                       },
                     ),

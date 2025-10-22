@@ -64,14 +64,14 @@ class ManualPaymentRequestResource extends JsonResource
         $canonicalGateway = ManualPaymentRequest::canonicalGateway($gatewayKey) ?? 'manual_banks';
         $labels = $manualPaymentRequestModel instanceof ManualPaymentRequest
             ? PaymentLabelService::forManualPaymentRequest($manualPaymentRequestModel)
-            : ['gateway_label' => null, 'bank_label' => null];
+            : ['channel_label' => null, 'bank_label' => null];
 
         $transactionLabels = $paymentTransaction instanceof PaymentTransaction
             ? PaymentLabelService::forPaymentTransaction($paymentTransaction)
-            : ['gateway_label' => null, 'bank_label' => null];
+            : ['channel_label' => null, 'bank_label' => null];
 
         $manualBankName = $labels['bank_label'];
-        $gatewayLabel = $labels['gateway_label'];
+        $channelLabel = $labels['channel_label'];
 
 
 
@@ -120,8 +120,9 @@ class ManualPaymentRequestResource extends JsonResource
             'payment_gateway_key' => $canonicalGateway,
             'payment_gateway_canonical' => $canonicalGateway,
             'payment_gateway_normalized' => $canonicalGateway,
-            'payment_gateway_label' => $gatewayLabel,
-            'payment_gateway_name' => $gatewayLabel,
+            'payment_gateway_label' => $channelLabel,
+            'payment_gateway_name' => $channelLabel,
+            'channel_label' => $channelLabel,
 
 
             'reference' => $this->reference,
@@ -147,7 +148,9 @@ class ManualPaymentRequestResource extends JsonResource
                 'amount' => (float) $paymentTransaction->amount,
                 'currency' => $paymentTransaction->currency,
                 'receipt_url' => $this->generateSignedUrl($paymentTransaction->receipt_path ?? $this->receipt_path),
-                'gateway_label' => $transactionLabels['gateway_label'],
+                'gateway_label' => $transactionLabels['channel_label'],
+                'channel_label' => $transactionLabels['channel_label'],
+                
                 'bank_label' => $transactionLabels['bank_label'],
 
 

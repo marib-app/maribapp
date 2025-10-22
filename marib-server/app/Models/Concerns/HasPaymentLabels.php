@@ -12,7 +12,7 @@ trait HasPaymentLabels
 
     public function getGatewayLabelAttribute(): ?string
     {
-        return $this->resolvePaymentLabels()['gateway_label'] ?? null;
+        return $this->resolvePaymentLabels()['channel_label'] ?? null;
     }
 
     public function getBankLabelAttribute(): ?string
@@ -32,7 +32,7 @@ trait HasPaymentLabels
             $this->paymentLabelCache = PaymentLabelService::forManualPaymentRequest($this);
         } else {
             $this->paymentLabelCache = [
-                'gateway_label' => null,
+                'channel_label' => null,
                 'bank_label' => null,
             ];
         }

@@ -3,7 +3,6 @@
 namespace App\Queries;
 
 
-use App\Models\ManualBank;
 use App\Models\ManualPaymentRequest;
 use App\Models\WalletTransaction;
 use Illuminate\Database\Query\Builder;
@@ -1068,32 +1067,37 @@ class PaymentRequestTableQuery
     {
         $candidates = self::prepareCoalesceCandidates($labelCandidates);
         $channelExpression = self::channelExpressionFromGateway($gatewayExpression);
-        $defaultManualLabel = self::quoteString(ManualBank::defaultDisplayName());
+        $manualLabelExpression = $candidates === []
+            ? 'NULL'
+            : 'COALESCE(' . implode(', ', $candidates) . ')';
+
         $walletCase = "CASE WHEN ({$channelExpression}) = 'wallet' THEN 'المحفظة' END";
-        $eastYemenCase = "CASE WHEN ({$channelExpression}) = 'east_yemen_bank' THEN 'بنك الشرق' END";
+        $manualCase = $manualLabelExpression === 'NULL'
+            ? 'NULL'
+            : "CASE WHEN ({$channelExpression}) = 'manual_banks' THEN {$manualLabelExpression} END";
+        $otherGateways = "CASE WHEN ({$channelExpression}) NOT IN ('wallet','manual_banks') "
+            . "THEN NULLIF(TRIM({$gatewayExpression}), '') END";
 
-        $manualLabelExpression = $defaultManualLabel;
 
-        if ($candidates !== []) {
-            $manualLabelExpression = 'COALESCE(' . implode(', ', array_merge($candidates, [$defaultManualLabel])) . ')';
-        }
-
-        $manualCase = "CASE WHEN ({$channelExpression}) = 'manual_banks' THEN {$manualLabelExpression} END";
-
-        $fallback = "CASE"
-            . " WHEN ({$channelExpression}) = 'wallet' THEN 'المحفظة'"
-            . " WHEN ({$channelExpression}) = 'east_yemen_bank' THEN 'بنك الشرق'"
-            . " WHEN ({$channelExpression}) = 'manual_banks' THEN {$defaultManualLabel}"
-            . " ELSE 'تحويل بنكي'"
-            . ' END';
-
-        $coalesceParts = array_merge([
-            $walletCase,
-            $eastYemenCase,
+        $coalesceParts = array_filter([
             $manualCase,
-        ], $candidates, [
-            $fallback,
-        ]);
+            $walletCase,
+            $otherGateways,
+        ], static function ($expression): bool {
+            if (! is_string($expression)) {
+                return false;
+            }
+
+
+            $trimmed = trim($expression);
+
+
+            return $trimmed !== '' && strtoupper($trimmed) !== 'NULL';
+        });
+
+        if ($coalesceParts === []) {
+            return 'NULL';
+        }
 
 
         return 'COALESCE(' . implode(', ', $coalesceParts) . ')';

@@ -434,12 +434,12 @@ class PackageController extends Controller {
             $labels = PaymentLabelService::forManualPaymentRequest($manualRequest);
         } else {
             $labels = [
-                'gateway_label' => $row['gateway_label'] ?? null,
+                'channel_label' => $row['gateway_label'] ?? null,
                 'bank_label' => $row['manual_bank_name'] ?? null,
             ];
         }
 
-        $gatewayLabel = $labels['gateway_label'];
+        $gatewayLabel = $labels['channel_label'];
         $bankLabel = $labels['bank_label'];
 
         $manualBankName = $gatewayLabel === trans('المحفظة') ? null : $bankLabel;
@@ -475,6 +475,7 @@ class PackageController extends Controller {
             'gateway_label'              => $gatewayLabel,
             'gateway_name'               => $row['gateway_name'] ?? null,
             'payment_gateway'            => $gatewayLabel,
+            'channel_label'              => $gatewayLabel,
             'manual_bank_name'           => $manualBankName,
             'bank_label'                 => $bankLabel,
             'manual_bank_id'             => $row['manual_bank_id'] ?? null,

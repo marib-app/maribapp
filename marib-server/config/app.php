@@ -192,6 +192,7 @@ return [
         /*
          * Package Service Providers...
          */
+        Barryvdh\DomPDF\ServiceProvider::class,
 
         /*
          * Application Service Providers...
@@ -224,7 +225,8 @@ return [
         // 'ExampleClass' => App\Example\ExampleClass::class,
         'Form'     => Collective\Html\FormFacde::class,
         'html'     => Collective\Html\HtmlFacde::class,
-        'Paystack' => Unicodeveloper\Paystack\Facades\Paystack::class,
+        'Paystack' => Unicodeveloper\Paystack\Facades\Paystack::class,        
+        'PDF'      => Barryvdh\DomPDF\PDF::class,
     ])->toArray(),
 
 ];

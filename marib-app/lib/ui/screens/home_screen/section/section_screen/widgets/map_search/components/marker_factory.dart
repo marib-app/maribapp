@@ -24,6 +24,7 @@ class MarkerFactory {
     final brightness = Theme.of(context).brightness;
     final normalizedSection = _resolveSectionKey(sectionLabel);
     final zoomBucket = _zoomBucketFor(zoomLevel);
+    final isDark = brightness == Brightness.dark;
 
     final key = _buildCacheKey(
       priceLabel: priceLabel,

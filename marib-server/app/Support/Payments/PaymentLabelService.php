@@ -249,45 +249,34 @@ class PaymentLabelService
             'manual_bank_name',
             'manual_bank.name',
             'manual_bank.bank_name',
-            'manual_bank.beneficiary_name',
             'manual_payment_request.bank_name',
             'manual_payment_request.manualBank.name',
             'manual_payment_request.manualBank.bank_name',
-            'manual_payment_request.manualBank.beneficiary_name',
             'manual_payment_request.meta.bank.name',
             'manual_payment_request.meta.bank.bank_name',
-            'manual_payment_request.meta.bank.beneficiary_name',
             'manual_payment_request.meta.manual.bank.name',
             'manual_payment_request.meta.manual.bank.bank_name',
-            'manual_payment_request.meta.manual.bank.beneficiary_name',
             'manual_payment_request.meta.manual_bank.name',
             'manual_payment_request.meta.manual_bank.bank_name',
-            'manual_payment_request.meta.manual_bank.beneficiary_name',
             'manual_payment_request.meta.manual_payment_request.bank.name',
             'manual_payment_request.meta.manual_payment_request.manual_bank.name',
             'meta.manual_bank.name',
             'meta.manual_bank.bank_name',
-            'meta.manual_bank.beneficiary_name',
             'meta.manual.bank.name',
             'meta.manual.bank.bank_name',
-            'meta.manual.bank.beneficiary_name',
             'meta.payload.bank.name',
             'meta.payload.bank_name',
             'meta.payload.manual_bank_name',
             'meta.bank.name',
             'meta.bank.bank_name',
-            'meta.bank.beneficiary_name',
             'transaction_meta.manual_bank.name',
             'transaction_meta.manual_bank.bank_name',
-            'transaction_meta.manual_bank.beneficiary_name',
             'transaction_meta.manual.bank.name',
             'transaction_meta.manual.bank.bank_name',
-            'transaction_meta.manual.bank.beneficiary_name',
             'transaction_meta.payload.bank.name',
             'transaction_meta.payload.bank_name',
             'transaction_meta.bank.name',
             'transaction_meta.bank.bank_name',
-            'transaction_meta.bank.beneficiary_name',
         ];
 
         foreach ($candidatePaths as $path) {
@@ -315,9 +304,8 @@ class PaymentLabelService
                 $manualPaymentRequest->loadMissing('manualBank');
 
                 $candidate = $manualPaymentRequest->manualBank?->name
-                    ?? $manualPaymentRequest->manualBank?->bank_name
-                    ?? $manualPaymentRequest->manualBank?->beneficiary_name
-                    ?? $manualPaymentRequest->bank_name;
+                    ?? $manualPaymentRequest->manualBank?->bank_name;
+
 
                 if (is_string($candidate) && trim($candidate) !== '') {
                     return trim($candidate);

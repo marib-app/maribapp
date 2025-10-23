@@ -57,7 +57,8 @@ import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
 import 'package:shimmer/shimmer.dart';
 
 import 'package:flutter/widgets.dart';
-import 'dart:convert';
+import 'package:marib/utils/seller_category_utils.dart'
+    as seller_category_utils;
 
 /// ويدجت لعرض صورة البائع بشكل احترافي مع شيمر يظهر إلى أن تكتمل الصورة
 class SellerProfileImage extends StatefulWidget {
@@ -325,7 +326,9 @@ Widget setSellerDetails(BuildContext context, ItemModel model) {
     onTap: () {
       if (_isMerchantAccount(user) && user.id != null) {
         final String displayName = _merchantDisplayName(user);
-        final List<int> sellerCategoryIds = _extractSellerCategoryIds(user);
+        final seller_category_utils.SellerCategoryIdentifiers sellerCategories =
+            _extractSellerCategoryIdentifiers(user);
+        final dynamic sellerCategoryPayload = sellerCategories.toRoutePayload();
 
         Navigator.pushNamed(
           context,
@@ -336,8 +339,8 @@ Widget setSellerDetails(BuildContext context, ItemModel model) {
             'categoryIds': [Constant.storeRootCategoryId.toString()],
             'interfaceType': 'e_store',
             'sellerId': user.id,
-            if (sellerCategoryIds.isNotEmpty)
-              'sellerCategoryIds': sellerCategoryIds,
+            if (sellerCategoryPayload != null)
+              'sellerCategoryIds': sellerCategoryPayload,
           },
         );
         return;
@@ -414,20 +417,7 @@ int? _extractAccountType(User user) {
 }
 
 Map<String, dynamic>? _contactInfoFromUser(User user) {
-  final Map<String, dynamic>? additional = _coerceAdditionalInfo(user);
-  if (additional == null) {
-    return null;
-  }
-
-  final dynamic contactInfo =
-      additional['contact_info'] ?? additional['contactInfo'];
-  if (contactInfo is Map<String, dynamic>) {
-    return Map<String, dynamic>.from(contactInfo);
-  }
-  if (contactInfo is Map) {
-    return contactInfo.map((key, value) => MapEntry(key.toString(), value));
-  }
-  return null;
+  return seller_category_utils.extractContactInfo(user.additionalInfo);
 }
 
 String _merchantDisplayName(User user) {
@@ -441,105 +431,10 @@ String _merchantDisplayName(User user) {
   return user.name ?? '';
 }
 
-Map<String, dynamic>? _coerceAdditionalInfo(User user) {
-  final dynamic additional = user.additionalInfo;
-  if (additional is Map<String, dynamic>) {
-    return Map<String, dynamic>.from(additional);
-  }
-  if (additional is Map) {
-    return additional.map((key, value) => MapEntry(key.toString(), value));
-  }
-  if (additional is String) {
-    final String trimmed = additional.trim();
-    if (trimmed.isEmpty) {
-      return null;
-    }
-    try {
-      final dynamic decoded = json.decode(trimmed);
-      if (decoded is Map<String, dynamic>) {
-        return Map<String, dynamic>.from(decoded);
-      }
-      if (decoded is Map) {
-        return decoded.map((key, value) => MapEntry(key.toString(), value));
-      }
-    } catch (_) {
-      return null;
-    }
-  }
-  return null;
-}
-
-List<int> _extractSellerCategoryIds(User user) {
+seller_category_utils.SellerCategoryIdentifiers
+    _extractSellerCategoryIdentifiers(User user) {
   final Map<String, dynamic>? contactInfo = _contactInfoFromUser(user);
-  if (contactInfo == null) {
-    return const <int>[];
-  }
-  final dynamic raw = contactInfo['business_categories'];
-  return _normalizeCategoryIdList(raw);
-}
-
-List<int> _normalizeCategoryIdList(dynamic raw) {
-  final Set<int> result = <int>{};
-
-  void addValue(dynamic value) {
-    if (value == null) {
-      return;
-    }
-    if (value is int) {
-      if (value > 0) result.add(value);
-      return;
-    }
-    if (value is num) {
-      final int normalized = value.toInt();
-      if (normalized > 0) {
-        result.add(normalized);
-      }
-      return;
-    }
-    if (value is String) {
-      final String trimmed = value.trim();
-      if (trimmed.isEmpty) {
-        return;
-      }
-      final int? parsed = int.tryParse(trimmed);
-      if (parsed != null) {
-        if (parsed > 0) {
-          result.add(parsed);
-        }
-        return;
-      }
-      try {
-        final dynamic decoded = json.decode(trimmed);
-        if (decoded is List) {
-          for (final dynamic entry in decoded) {
-            addValue(entry);
-          }
-          return;
-        }
-      } catch (_) {
-        // Not a JSON array; fall through to comma split.
-      }
-      if (trimmed.contains(',')) {
-        for (final String part in trimmed.split(',')) {
-          addValue(part);
-        }
-      }
-      return;
-    }
-    if (value is Iterable) {
-      for (final dynamic entry in value) {
-        addValue(entry);
-      }
-    }
-  }
-
-  addValue(raw);
-
-  if (result.isEmpty) {
-    return const <int>[];
-  }
-
-  return result.toList(growable: false)..sort();
+  return seller_category_utils.extractSellerCategoryIdentifiers(contactInfo);
 }
 
 class SellerDetailsShimmer extends StatelessWidget {

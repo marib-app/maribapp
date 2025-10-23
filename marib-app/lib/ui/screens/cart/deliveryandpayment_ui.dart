@@ -18,7 +18,7 @@ import 'components/delivery_and_payment/return_and_deposit_tab.dart';
 import 'components/delivery_and_payment/delivery_payment_timing_selector.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/money_formatter.dart';
-
+import 'components/delivery_and_payment/manual_transfer_submission.dart';
 
 class DeliveryAndPaymentUI extends StatelessWidget {
   // حالة عامة
@@ -87,7 +87,8 @@ class DeliveryAndPaymentUI extends StatelessWidget {
   // الشريط السفلي
   final bool canProceed;
   final bool submitting;
-  final Future<void> Function() onConfirm;
+  final Future<void> Function(ManualTransferSubmissionData? manualTransfer)
+      onConfirm;
   final String? checkoutErrorMessage;
   final bool checkoutErrorIsAddressIssue;
   final bool checkoutErrorCanRetry;
@@ -95,7 +96,6 @@ class DeliveryAndPaymentUI extends StatelessWidget {
   final List<dynamic>? deliveryPaymentOptions;
   final String? deliveryPaymentTiming;
   final ValueChanged<String>? onSelectDeliveryPaymentTiming;
-
 
   const DeliveryAndPaymentUI({
     super.key,
@@ -125,7 +125,6 @@ class DeliveryAndPaymentUI extends StatelessWidget {
     this.returnPolicyText,
     this.depositInfo,
     this.onToggleDeposit,
-
     required this.allowPayNow,
     required this.allowPayOnDelivery,
     required this.codFeeAmount,
@@ -156,15 +155,14 @@ class DeliveryAndPaymentUI extends StatelessWidget {
     this.checkoutErrorIsAddressIssue = false,
     this.checkoutErrorCanRetry = false,
     this.onRetryCheckout,
-
   });
 
   @override
   Widget build(BuildContext context) {
     final List<DeliveryPaymentTimingOption> timingOptions =
-    normalizeDeliveryPaymentTimingOptions(deliveryPaymentOptions);
+        normalizeDeliveryPaymentTimingOptions(deliveryPaymentOptions);
     final DeliveryPaymentTimingOption? selectedTimingOption =
-    findDeliveryPaymentTimingOption(
+        findDeliveryPaymentTimingOption(
       timingOptions,
       deliveryPaymentTiming,
     );
@@ -172,16 +170,12 @@ class DeliveryAndPaymentUI extends StatelessWidget {
     final String resolvedPaymentTimingLabel =
         selectedTimingOption?.label ?? paymentTimingLabel;
     final String? resolvedPaymentTimingNote =
-    (selectedTimingOption?.description
-        ?.trim()
-        .isNotEmpty ?? false)
-        ? selectedTimingOption!.description
-        : paymentTimingNote;
+        (selectedTimingOption?.description?.trim().isNotEmpty ?? false)
+            ? selectedTimingOption!.description
+            : paymentTimingNote;
 
-
-    final String resolvedDeliveryFee = freeShippingApplied
-        ? 'مجانًا'
-        : _resolveDeliveryFee(deliveryPrice);
+    final String resolvedDeliveryFee =
+        freeShippingApplied ? 'مجانًا' : _resolveDeliveryFee(deliveryPrice);
 
     final bool showCheckoutError =
         checkoutErrorMessage != null && checkoutErrorMessage!.trim().isNotEmpty;
@@ -190,15 +184,13 @@ class DeliveryAndPaymentUI extends StatelessWidget {
     return Scaffold(
       bottomNavigationBar: addressReady
           ? _buildBottomCheckoutBar(
-        context,
-        requiredAmountDisplay,
-        canProceed,
-        submitting,
-      )
+              context,
+              requiredAmountDisplay,
+              canProceed,
+              submitting,
+            )
           : null,
-      backgroundColor: Theme
-          .of(context)
-          .brightness == Brightness.dark
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
           ? const Color(0xFF1C1C1E)
           : const Color(0xFFF0F2F4),
       appBar: UiUtils.buildAppBar(
@@ -253,8 +245,6 @@ class DeliveryAndPaymentUI extends StatelessWidget {
                   ),
                   const SizedBox(height: 11),
                 ],
-
-
                 CartPaymentMethodsTab(
                   loading: loading,
                   addressReady: addressReady,
@@ -289,14 +279,13 @@ class DeliveryAndPaymentUI extends StatelessWidget {
     );
   }
 
-  Widget _buildBottomCheckoutBar(BuildContext context,
-      String totalAmountDisplay,
-      bool isButtonEnabled,
-      bool submitting,) {
-    final bool isDark = Theme
-        .of(context)
-        .brightness == Brightness.dark;
-
+  Widget _buildBottomCheckoutBar(
+    BuildContext context,
+    String totalAmountDisplay,
+    bool isButtonEnabled,
+    bool submitting,
+  ) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
     String? restrictionMessage;
     if (payOnDeliverySelected && !allowPayOnDelivery) {
@@ -312,9 +301,7 @@ class DeliveryAndPaymentUI extends StatelessWidget {
 
     final List<CartDiscount> appliedCoupons = discounts
         .where((CartDiscount discount) =>
-    discount.isApplied && (discount.code
-        ?.trim()
-        .isNotEmpty ?? false))
+            discount.isApplied && (discount.code?.trim().isNotEmpty ?? false))
         .toList();
 
     Widget buildCouponErrorBanner(String message) {
@@ -357,21 +344,16 @@ class DeliveryAndPaymentUI extends StatelessWidget {
     Widget buildAppliedCouponChip(CartDiscount discount) {
       final String code = (discount.code ?? discount.displayTitle).trim();
       final String displayCode =
-      code.isEmpty ? discount.displayTitle : code.toUpperCase();
+          code.isEmpty ? discount.displayTitle : code.toUpperCase();
       final String? amount = discount.amountDisplay;
-      final String labelText = amount != null && amount
-          .trim()
-          .isNotEmpty
+      final String labelText = amount != null && amount.trim().isNotEmpty
           ? '$displayCode — $amount'
           : displayCode;
 
       return InputChip(
         avatar: Icon(
           Icons.local_offer_outlined,
-          color: Theme
-              .of(context)
-              .colorScheme
-              .primary,
+          color: Theme.of(context).colorScheme.primary,
           size: 18,
         ),
         label: Text(
@@ -384,7 +366,7 @@ class DeliveryAndPaymentUI extends StatelessWidget {
         onDeleted: couponInProgress ? null : () => onRemoveCoupon(discount),
         deleteIconColor: isDark ? Colors.white70 : Colors.black54,
         backgroundColor:
-        isDark ? const Color(0xFF2C2C2E) : const Color(0xFFF6F8FB),
+            isDark ? const Color(0xFF2C2C2E) : const Color(0xFFF6F8FB),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
           side: BorderSide(
@@ -401,7 +383,7 @@ class DeliveryAndPaymentUI extends StatelessWidget {
       ),
     );
     final Color inputFillColor =
-    isDark ? const Color(0xFF1F1F1F) : const Color(0xFFF4F6FA);
+        isDark ? const Color(0xFF1F1F1F) : const Color(0xFFF4F6FA);
 
     final TextStyle totalLabelStyle = TextStyle(
       fontWeight: FontWeight.w600,
@@ -410,16 +392,10 @@ class DeliveryAndPaymentUI extends StatelessWidget {
     final TextStyle totalValueStyle = TextStyle(
       fontWeight: FontWeight.w700,
       fontSize: 18,
-      color: Theme
-          .of(context)
-          .colorScheme
-          .primary,
+      color: Theme.of(context).colorScheme.primary,
     );
 
-    final double viewInsets = MediaQuery
-        .of(context)
-        .viewInsets
-        .bottom;
+    final double viewInsets = MediaQuery.of(context).viewInsets.bottom;
     final double bottomKeyboardPadding = viewInsets > 0 ? 20 : 24;
 
     return AnimatedPadding(
@@ -433,11 +409,11 @@ class DeliveryAndPaymentUI extends StatelessWidget {
           padding: EdgeInsets.fromLTRB(16, 14, 16, bottomKeyboardPadding),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface.withOpacity(
-              isDark ? 0.7 : 0.95,
-            ),
+                  isDark ? 0.7 : 0.95,
+                ),
           ),
           child: SingleChildScrollView(
-              child: Column(
+            child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -466,22 +442,30 @@ class DeliveryAndPaymentUI extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                 ],
-                if (departmentNotice != null && departmentNotice!.trim().isNotEmpty) ...[
+                if (departmentNotice != null &&
+                    departmentNotice!.trim().isNotEmpty) ...[
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                     decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF3A3A3A) : const Color(0xFFFFF3CD),
+                      color: isDark
+                          ? const Color(0xFF3A3A3A)
+                          : const Color(0xFFFFF3CD),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: isDark ? Colors.orange.shade200 : const Color(0xFFFFEEBA),
+                        color: isDark
+                            ? Colors.orange.shade200
+                            : const Color(0xFFFFEEBA),
                       ),
                     ),
                     child: Text(
                       departmentNotice!,
                       style: TextStyle(
                         fontSize: 13,
-                        color: isDark ? Colors.orange.shade100 : const Color(0xFF856404),
+                        color: isDark
+                            ? Colors.orange.shade100
+                            : const Color(0xFF856404),
                         fontWeight: FontWeight.w600,
                       ),
                       textAlign: TextAlign.center,
@@ -494,7 +478,8 @@ class DeliveryAndPaymentUI extends StatelessWidget {
                   const SizedBox(height: 12),
                 ],
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                   decoration: BoxDecoration(
                     color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
                     borderRadius: BorderRadius.circular(14),
@@ -504,12 +489,12 @@ class DeliveryAndPaymentUI extends StatelessWidget {
                     boxShadow: isDark
                         ? null
                         : [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.04),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.04),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -524,7 +509,8 @@ class DeliveryAndPaymentUI extends StatelessWidget {
                                 enabled: !couponInProgress && !submitting,
                                 autocorrect: false,
                                 enableSuggestions: false,
-                                textCapitalization: TextCapitalization.characters,
+                                textCapitalization:
+                                    TextCapitalization.characters,
                                 textInputAction: TextInputAction.done,
                                 scrollPadding: EdgeInsets.only(
                                   bottom: viewInsets + 120,
@@ -538,7 +524,8 @@ class DeliveryAndPaymentUI extends StatelessWidget {
                                   enabledBorder: inputBorder,
                                   focusedBorder: inputBorder.copyWith(
                                     borderSide: BorderSide(
-                                      color: Theme.of(context).colorScheme.primary,
+                                      color:
+                                          Theme.of(context).colorScheme.primary,
                                       width: 1.2,
                                     ),
                                   ),
@@ -555,11 +542,16 @@ class DeliveryAndPaymentUI extends StatelessWidget {
                           SizedBox(
                             height: 46,
                             child: ElevatedButton(
-                              onPressed: (!couponInProgress && !submitting) ? onApplyCoupon : null,
+                              onPressed: (!couponInProgress && !submitting)
+                                  ? onApplyCoupon
+                                  : null,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Theme.of(context).colorScheme.primary,
-                                foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                                padding: const EdgeInsets.symmetric(horizontal: 18),
+                                backgroundColor:
+                                    Theme.of(context).colorScheme.primary,
+                                foregroundColor:
+                                    Theme.of(context).colorScheme.onPrimary,
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 18),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -567,14 +559,16 @@ class DeliveryAndPaymentUI extends StatelessWidget {
                               ),
                               child: couponInProgress
                                   ? const SizedBox(
-                                height: 18,
-                                width: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
+                                      height: 18,
+                                      width: 18,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2),
+                                    )
                                   : const Text(
-                                'تطبيق الكوبون',
-                                style: TextStyle(fontWeight: FontWeight.w700),
-                              ),
+                                      'تطبيق الكوبون',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.w700),
+                                    ),
                             ),
                           ),
                         ],
@@ -587,7 +581,9 @@ class DeliveryAndPaymentUI extends StatelessWidget {
                             'القسائم المفعّلة',
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
-                              color: isDark ? Colors.white70 : Colors.blueGrey.shade700,
+                              color: isDark
+                                  ? Colors.white70
+                                  : Colors.blueGrey.shade700,
                             ),
                           ),
                         ),
@@ -595,7 +591,9 @@ class DeliveryAndPaymentUI extends StatelessWidget {
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
-                          children: appliedCoupons.map(buildAppliedCouponChip).toList(),
+                          children: appliedCoupons
+                              .map(buildAppliedCouponChip)
+                              .toList(),
                         ),
                       ],
                     ],
@@ -603,9 +601,12 @@ class DeliveryAndPaymentUI extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE7ECF3),
+                    color: isDark
+                        ? const Color(0xFF2C2C2E)
+                        : const Color(0xFFE7ECF3),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
@@ -623,10 +624,11 @@ class DeliveryAndPaymentUI extends StatelessWidget {
                   onPressed: () async {
                     if (!buttonEnabled || submitting) return;
 
-                    final String pm = (selectedPaymentMethod ?? '').trim().toLowerCase();
+                    final String pm =
+                        (selectedPaymentMethod ?? '').trim().toLowerCase();
 
                     if (pm == 'wallet') {
-                      await onConfirm();
+                      await onConfirm(null);
                       return;
                     }
                     final bool isBank = pm.contains('bank');
@@ -637,50 +639,68 @@ class DeliveryAndPaymentUI extends StatelessWidget {
                         : selectedBankIndex;
 
                     final CheckoutBank? selectedBank =
-                    (idx != null && idx >= 0 && idx < banks.length) ? banks[idx] : null;
+                        (idx != null && idx >= 0 && idx < banks.length)
+                            ? banks[idx]
+                            : null;
 
-                    final String bankMethod = (selectedBank?.paymentMethod ?? '').trim().toLowerCase();
+                    final String bankMethod =
+                        (selectedBank?.paymentMethod ?? '')
+                            .trim()
+                            .toLowerCase();
 
-                    if (requiresPurchaseCodeGateway(pm) || requiresPurchaseCodeGateway(bankMethod)) {
+                    if (requiresPurchaseCodeGateway(pm) ||
+                        requiresPurchaseCodeGateway(bankMethod)) {
                       if (selectedBank == null && banks.length > 1) {
-                        HelperUtils.showSnackBarMessage(context, 'اختر بنكًا أولًا');
+                        HelperUtils.showSnackBarMessage(
+                            context, 'اختر بنكًا أولًا');
 
                         return;
                       }
-                      PaymentMethodsSection.showPurchaseCodeDialog(context, onConfirm);
+                      PaymentMethodsSection.showPurchaseCodeDialog(
+                        context,
+                        () => onConfirm(null),
+                      );
+
                       return;
                     }
                     if (selectedBank != null || isBank) {
                       if (selectedBank == null) {
-                        HelperUtils.showSnackBarMessage(context, 'اختر بنكًا أولًا');
+                        HelperUtils.showSnackBarMessage(
+                            context, 'اختر بنكًا أولًا');
 
                         return;
                       }
 
                       final bool isManualBank =
-                          isManualBankGateway(bankMethod) || isManualBankGateway(pm);
+                          isManualBankGateway(bankMethod) ||
+                              isManualBankGateway(pm);
 
                       if (isManualBank) {
-                        final String accountNum = (selectedBank.accountNumber?.trim().isNotEmpty == true)
-                            ? selectedBank.accountNumber!.trim()
-                            : (selectedBank.iban ?? '');
+                        final String accountNum =
+                            (selectedBank.accountNumber?.trim().isNotEmpty ==
+                                    true)
+                                ? selectedBank.accountNumber!.trim()
+                                : (selectedBank.iban ?? '');
 
                         PaymentMethodsSection.showBankTransferDialog(
                           context,
-                          paymentMethodName: selectedBank.name,
-                          accountName: selectedBank.accountName ?? '',
-                          accountNumber: accountNum,
-                          onConfirm: onConfirm,
+                          bank: selectedBank,
+                          onConfirm: (data) async {
+                            await onConfirm(data);
+                          },
                         );
                         return;
                       }
 
-                      await onConfirm();
+                      await onConfirm(null);
                       return;
                     }
 
                     if (isCode) {
-                      PaymentMethodsSection.showPurchaseCodeDialog(context, onConfirm);
+                      PaymentMethodsSection.showPurchaseCodeDialog(
+                        context,
+                        () => onConfirm(null),
+                      );
                       return;
                     }
                     HelperUtils.showSnackBarMessage(context, 'حدد طريقة الدفع');
@@ -692,10 +712,9 @@ class DeliveryAndPaymentUI extends StatelessWidget {
                   isInProgress: submitting,
                   disabled: !buttonEnabled,
                   onTapDisabledButton: () {
-                    final String feedbackMessage =
-                        restrictionMessage ?? 'يرجى إكمال بيانات التوصيل والدفع أولًا.';
+                    final String feedbackMessage = restrictionMessage ??
+                        'يرجى إكمال بيانات التوصيل والدفع أولًا.';
                     HelperUtils.showSnackBarMessage(context, feedbackMessage);
-
                   },
                 ),
               ],
@@ -762,28 +781,26 @@ class DeliveryAndPaymentUI extends StatelessWidget {
     return null;
   }
 
-
   bool _hasReturnDepositToShow() {
     bool hasDeposit = false;
     final Map<String, dynamic>? deposit = depositInfo;
     if (deposit != null) {
-      final dynamic amount = deposit['amountDueNow'] ??
-          deposit['effectiveAmountDueDisplay'];
-      final dynamic total = deposit['totalAmount'] ??
-          deposit['effectiveTotalDisplay'];
+      final dynamic amount =
+          deposit['amountDueNow'] ?? deposit['effectiveAmountDueDisplay'];
+      final dynamic total =
+          deposit['totalAmount'] ?? deposit['effectiveTotalDisplay'];
 
       final dynamic percent = deposit['percent'];
       final dynamic goodsValue = deposit['goodsValue'];
-      final dynamic remaining = deposit['remainingBalance'] ??
-          deposit['effectiveRemainingDisplay'];
+      final dynamic remaining =
+          deposit['remainingBalance'] ?? deposit['effectiveRemainingDisplay'];
       final dynamic message = deposit['message'];
       final dynamic includesShipping = deposit['includesShipping'];
-      final bool hasToggle = deposit['toggleAllowed'] == true ||
-          deposit['toggleRequired'] == true;
+      final bool hasToggle =
+          deposit['toggleAllowed'] == true || deposit['toggleRequired'] == true;
 
       hasDeposit = _isNonEmptyString(amount) ||
           _isNonEmptyString(total) ||
-
           _isNonEmptyString(percent) ||
           _isNonEmptyString(goodsValue) ||
           _isNonEmptyString(remaining) ||
@@ -797,9 +814,7 @@ class DeliveryAndPaymentUI extends StatelessWidget {
 
   bool _isNonEmptyString(dynamic value) {
     if (value is String) {
-      return value
-          .trim()
-          .isNotEmpty;
+      return value.trim().isNotEmpty;
     }
     return false;
   }
@@ -820,17 +835,15 @@ class _CheckoutErrorBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool isDark = Theme
-        .of(context)
-        .brightness == Brightness.dark;
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
     final Color backgroundColor = isDark
         ? Colors.red.shade900.withOpacity(0.25)
         : const Color(0xFFFFF3F3);
-    final Color borderColor = isDark ? Colors.red.shade400 : Colors.red
-        .shade200;
+    final Color borderColor =
+        isDark ? Colors.red.shade400 : Colors.red.shade200;
     final Color textColor = isDark ? Colors.red.shade100 : Colors.red.shade900;
     final IconData icon =
-    isAddressIssue ? Icons.location_off_outlined : Icons.error_outline;
+        isAddressIssue ? Icons.location_off_outlined : Icons.error_outline;
 
     return Container(
       width: double.infinity,
@@ -873,8 +886,8 @@ class _CheckoutErrorBanner extends StatelessWidget {
                 onPressed: onRetry == null
                     ? null
                     : () {
-                  onRetry!();
-                },
+                        onRetry!();
+                      },
                 icon: Icon(Icons.refresh, color: textColor),
                 label: Text(
                   'إعادة المحاولة',

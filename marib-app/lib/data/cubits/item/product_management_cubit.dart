@@ -1252,16 +1252,6 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       ));
     }
 
-    if (state.deliverySize == null) {
-      emit(state.copyWith(
-        deliverySizeError: 'يرجى إدخال وزن المنتج بالكيلوجرام.',
-        clearDeliverySizeError: false,
-      ));
-      return const _AttributesPayloadResult.failure(SubmissionOutcome(
-        success: false,
-        message: 'يرجى إدخال وزن المنتج بالكيلوجرام قبل الحفظ.',
-      ));
-    }
 
     final List<Map<String, dynamic>> attributesPayload =
         <Map<String, dynamic>>[];

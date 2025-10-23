@@ -41,13 +41,18 @@ class ItemPurchaseOptionsRepository {
   }) async {
     final String? normalizedSize =
         deliverySize != null ? _formatDeliverySize(deliverySize) : null;
+    final Map<String, dynamic> payload = <String, dynamic>{
+      'attributes': attributes,
+    };
+
+    if (normalizedSize != null) {
+      payload['delivery_size'] = normalizedSize;
+    }
 
     final Map<String, dynamic> response = await Api.post(
       url: Api.itemAttributesApi(itemId),
-      parameter: <String, dynamic>{
-        'attributes': attributes,
-        'delivery_size': normalizedSize ?? '',
-      },
+      parameter: payload,
+
     );
 
     return _parseUpdateResponse(response);

@@ -264,6 +264,11 @@ class TransferDetailsResolver implements Arrayable, \JsonSerializable
             $apply('bank_name', Arr::get($meta, 'bank.name'), 'mpr');
             $apply('bank_name', Arr::get($meta, 'bank.bank_name'), 'mpr');
 
+            $transferMeta = Arr::get($meta, 'transfer_details');
+            if (! is_array($transferMeta)) {
+                $transferMeta = [];
+            }
+
             $apply('sender_name', Arr::get($meta, 'metadata.sender_name'), 'mpr');
             $apply('sender_name', Arr::get($meta, 'metadata.sender'), 'mpr');
             $apply('sender_name', Arr::get($meta, 'sender_name'), 'mpr');
@@ -271,6 +276,11 @@ class TransferDetailsResolver implements Arrayable, \JsonSerializable
             $apply('sender_name', Arr::get($meta, 'manual.sender_name'), 'mpr');
             $apply('sender_name', Arr::get($meta, 'manual.metadata.sender_name'), 'mpr');
             $apply('sender_name', Arr::get($meta, 'manual.metadata.sender'), 'mpr');
+            $apply('sender_name', Arr::get($meta, 'transfer.sender_name'), 'mpr');
+            $apply('sender_name', Arr::get($meta, 'transfer.sender'), 'mpr');
+            $apply('sender_name', Arr::get($transferMeta, 'sender_name'), 'mpr');
+            $apply('sender_name', Arr::get($transferMeta, 'sender'), 'mpr');
+
 
             $apply('transfer_reference', $this->manualPaymentRequest->reference, 'mpr');
             $apply('transfer_reference', Arr::get($meta, 'metadata.transfer_reference'), 'mpr');
@@ -281,6 +291,16 @@ class TransferDetailsResolver implements Arrayable, \JsonSerializable
             $apply('transfer_reference', Arr::get($meta, 'manual.metadata.transfer_reference'), 'mpr');
             $apply('transfer_reference', Arr::get($meta, 'manual.metadata.transfer_code'), 'mpr');
             $apply('transfer_reference', Arr::get($meta, 'manual.metadata.reference'), 'mpr');
+            $apply('transfer_reference', Arr::get($meta, 'transfer.transfer_reference'), 'mpr');
+            $apply('transfer_reference', Arr::get($meta, 'transfer.transfer_code'), 'mpr');
+            $apply('transfer_reference', Arr::get($meta, 'transfer.transfer_number'), 'mpr');
+            $apply('transfer_reference', Arr::get($meta, 'transfer.reference'), 'mpr');
+            $apply('transfer_reference', Arr::get($transferMeta, 'transfer_reference'), 'mpr');
+            $apply('transfer_reference', Arr::get($transferMeta, 'transfer_code'), 'mpr');
+            $apply('transfer_reference', Arr::get($transferMeta, 'transfer_number'), 'mpr');
+            $apply('transfer_reference', Arr::get($transferMeta, 'reference'), 'mpr');
+            $apply('transfer_reference', $this->manualPaymentRequest->reference, 'mpr');
+
 
             $apply('note', $this->manualPaymentRequest->user_note, 'mpr', true);
             $apply('note', Arr::get($meta, 'user_note'), 'mpr', true);
@@ -289,6 +309,9 @@ class TransferDetailsResolver implements Arrayable, \JsonSerializable
             $apply('note', Arr::get($meta, 'metadata.customer_note'), 'mpr', true);
             $apply('note', Arr::get($meta, 'metadata.note'), 'mpr', true);
             $apply('note', Arr::get($meta, 'metadata.notes'), 'mpr', true);
+            $apply('note', Arr::get($meta, 'transfer.note'), 'mpr', true);
+            $apply('note', Arr::get($transferMeta, 'note'), 'mpr', true);
+
 
             $receiptMeta = Arr::get($meta, 'receipt');
             if (is_array($receiptMeta)) {
@@ -303,7 +326,23 @@ class TransferDetailsResolver implements Arrayable, \JsonSerializable
             }
 
             $setReceiptUrl(Arr::get($meta, 'receipt_url'), 'mpr');
+            $setReceiptUrl(Arr::get($meta, 'transfer.receipt_url'), 'mpr');
+            $setReceiptUrl(Arr::get($meta, 'transfer_details.receipt_url'), 'mpr');
+            $setReceiptUrl(Arr::get($transferMeta, 'receipt_url'), 'mpr');
             $setReceiptPath(Arr::get($meta, 'receiptPath'), Arr::get($meta, 'receipt.disk'), 'mpr');
+            $setReceiptPath(Arr::get($meta, 'transfer.receipt_path'), Arr::get($meta, 'transfer.receipt_disk'), 'mpr');
+            $setReceiptPath(Arr::get($meta, 'transfer.receiptPath'), Arr::get($meta, 'transfer.receipt.disk'), 'mpr');
+            $setReceiptPath(
+                Arr::get($meta, 'transfer_details.receipt_path'),
+                Arr::get($meta, 'transfer_details.receipt_disk') ?? Arr::get($meta, 'transfer_details.disk'),
+                'mpr'
+            );
+            $setReceiptPath(
+                Arr::get($transferMeta, 'receipt_path'),
+                Arr::get($transferMeta, 'receipt_disk') ?? Arr::get($transferMeta, 'disk'),
+                'mpr'
+            );
+
 
             if ($values['receipt_url'] === null) {
                 $setReceiptPath(
@@ -353,6 +392,11 @@ class TransferDetailsResolver implements Arrayable, \JsonSerializable
             $apply('sender_name', Arr::get($meta, 'manual.sender_name'), 'tx_meta');
             $apply('sender_name', Arr::get($meta, 'manual.sender'), 'tx_meta');
             $apply('sender_name', Arr::get($meta, 'payload.sender_name'), 'tx_meta');
+            $apply('sender_name', Arr::get($meta, 'transfer.sender_name'), 'tx_meta');
+            $apply('sender_name', Arr::get($meta, 'transfer.sender'), 'tx_meta');
+            $apply('sender_name', Arr::get($meta, 'transfer_details.sender_name'), 'tx_meta');
+            $apply('sender_name', Arr::get($meta, 'transfer_details.sender'), 'tx_meta');
+
 
             $apply('transfer_reference', Arr::get($meta, 'manual.metadata.transfer_reference'), 'tx_meta');
             $apply('transfer_reference', Arr::get($meta, 'manual.metadata.transfer_code'), 'tx_meta');
@@ -360,11 +404,23 @@ class TransferDetailsResolver implements Arrayable, \JsonSerializable
             $apply('transfer_reference', Arr::get($meta, 'manual.transfer_number'), 'tx_meta');
             $apply('transfer_reference', Arr::get($meta, 'manual.reference'), 'tx_meta');
             $apply('transfer_reference', Arr::get($meta, 'payload.transfer_reference'), 'tx_meta');
+            $apply('transfer_reference', Arr::get($meta, 'transfer.transfer_reference'), 'tx_meta');
+            $apply('transfer_reference', Arr::get($meta, 'transfer.transfer_code'), 'tx_meta');
+            $apply('transfer_reference', Arr::get($meta, 'transfer.transfer_number'), 'tx_meta');
+            $apply('transfer_reference', Arr::get($meta, 'transfer.reference'), 'tx_meta');
+            $apply('transfer_reference', Arr::get($meta, 'transfer_details.transfer_reference'), 'tx_meta');
+            $apply('transfer_reference', Arr::get($meta, 'transfer_details.transfer_code'), 'tx_meta');
+            $apply('transfer_reference', Arr::get($meta, 'transfer_details.transfer_number'), 'tx_meta');
+            $apply('transfer_reference', Arr::get($meta, 'transfer_details.reference'), 'tx_meta');
+
+
 
             $apply('note', Arr::get($meta, 'manual.note'), 'tx_meta', true);
             $apply('note', Arr::get($meta, 'manual.user_note'), 'tx_meta', true);
             $apply('note', Arr::get($meta, 'manual.metadata.note'), 'tx_meta', true);
             $apply('note', Arr::get($meta, 'manual.metadata.notes'), 'tx_meta', true);
+            $apply('note', Arr::get($meta, 'transfer.note'), 'tx_meta', true);
+            $apply('note', Arr::get($meta, 'transfer_details.note'), 'tx_meta', true);
 
             $receiptMeta = Arr::get($meta, 'receipt');
             if (is_array($receiptMeta)) {
@@ -379,6 +435,8 @@ class TransferDetailsResolver implements Arrayable, \JsonSerializable
             }
 
             $setReceiptUrl(Arr::get($meta, 'receipt_url'), 'tx_meta');
+            $setReceiptUrl(Arr::get($meta, 'transfer.receipt_url'), 'tx_meta');
+            $setReceiptUrl(Arr::get($meta, 'transfer_details.receipt_url'), 'tx_meta');
 
             if ($values['receipt_url'] === null) {
                 $attachments = Arr::get($meta, 'attachments');
@@ -409,6 +467,14 @@ class TransferDetailsResolver implements Arrayable, \JsonSerializable
                 $setReceiptPath($this->paymentTransaction->receipt_path, 'public', 'tx_columns');
             }
 
+            $setReceiptPath(Arr::get($meta, 'transfer.receipt_path'), Arr::get($meta, 'transfer.receipt_disk'), 'tx_meta');
+            $setReceiptPath(Arr::get($meta, 'transfer.receiptPath'), Arr::get($meta, 'transfer.receipt.disk'), 'tx_meta');
+            $setReceiptPath(
+                Arr::get($meta, 'transfer_details.receipt_path'),
+                Arr::get($meta, 'transfer_details.receipt_disk') ?? Arr::get($meta, 'transfer_details.disk'),
+                'tx_meta'
+            );
+
             if ($values['transfer_reference'] === null) {
                 $apply('transfer_reference', $this->paymentTransaction->payment_id, 'tx_columns');
                 $apply('transfer_reference', $this->paymentTransaction->payment_signature, 'tx_columns');
@@ -435,14 +501,28 @@ class TransferDetailsResolver implements Arrayable, \JsonSerializable
             $apply('sender_name', Arr::get($meta, 'metadata.sender_name'), 'wallet_tx');
             $apply('sender_name', Arr::get($meta, 'metadata.sender'), 'wallet_tx');
             $apply('sender_name', Arr::get($meta, 'sender_name'), 'wallet_tx');
+            $apply('sender_name', Arr::get($meta, 'transfer.sender_name'), 'wallet_tx');
+            $apply('sender_name', Arr::get($meta, 'transfer.sender'), 'wallet_tx');
+            $apply('sender_name', Arr::get($meta, 'transfer_details.sender_name'), 'wallet_tx');
+            $apply('sender_name', Arr::get($meta, 'transfer_details.sender'), 'wallet_tx');
 
             $apply('transfer_reference', Arr::get($meta, 'metadata.transfer_reference'), 'wallet_tx');
             $apply('transfer_reference', Arr::get($meta, 'metadata.reference'), 'wallet_tx');
             $apply('transfer_reference', Arr::get($meta, 'transfer_reference'), 'wallet_tx');
             $apply('transfer_reference', Arr::get($meta, 'reference'), 'wallet_tx');
+            $apply('transfer_reference', Arr::get($meta, 'transfer.transfer_reference'), 'wallet_tx');
+            $apply('transfer_reference', Arr::get($meta, 'transfer.transfer_code'), 'wallet_tx');
+            $apply('transfer_reference', Arr::get($meta, 'transfer.transfer_number'), 'wallet_tx');
+            $apply('transfer_reference', Arr::get($meta, 'transfer.reference'), 'wallet_tx');
+            $apply('transfer_reference', Arr::get($meta, 'transfer_details.transfer_reference'), 'wallet_tx');
+            $apply('transfer_reference', Arr::get($meta, 'transfer_details.transfer_code'), 'wallet_tx');
+            $apply('transfer_reference', Arr::get($meta, 'transfer_details.transfer_number'), 'wallet_tx');
+            $apply('transfer_reference', Arr::get($meta, 'transfer_details.reference'), 'wallet_tx');
 
             $apply('note', Arr::get($meta, 'metadata.note'), 'wallet_tx', true);
             $apply('note', Arr::get($meta, 'note'), 'wallet_tx', true);
+            $apply('note', Arr::get($meta, 'transfer.note'), 'wallet_tx', true);
+            $apply('note', Arr::get($meta, 'transfer_details.note'), 'wallet_tx', true);
 
             $receiptMeta = Arr::get($meta, 'receipt');
             if (is_array($receiptMeta)) {
@@ -457,6 +537,31 @@ class TransferDetailsResolver implements Arrayable, \JsonSerializable
             }
 
             $setReceiptUrl(Arr::get($meta, 'receipt_url'), 'wallet_tx');
+            $setReceiptUrl(Arr::get($meta, 'transfer.receipt_url'), 'wallet_tx');
+            $setReceiptUrl(Arr::get($meta, 'transfer_details.receipt_url'), 'wallet_tx');
+
+            $setReceiptPath(Arr::get($meta, 'transfer.receipt_path'), Arr::get($meta, 'transfer.receipt_disk'), 'wallet_tx');
+            $setReceiptPath(Arr::get($meta, 'transfer.receiptPath'), Arr::get($meta, 'transfer.receipt.disk'), 'wallet_tx');
+            $setReceiptPath(
+                Arr::get($meta, 'transfer_details.receipt_path'),
+                Arr::get($meta, 'transfer_details.receipt_disk') ?? Arr::get($meta, 'transfer_details.disk'),
+                'wallet_tx'
+            );
+        }
+
+        if (isset($this->row['transfer_details']) && is_array($this->row['transfer_details'])) {
+            $transferDetails = $this->row['transfer_details'];
+            $apply('sender_name', Arr::get($transferDetails, 'sender_name'), 'row');
+            $apply('sender_name', Arr::get($transferDetails, 'sender'), 'row');
+            $apply('transfer_reference', Arr::get($transferDetails, 'transfer_reference'), 'row');
+            $apply('transfer_reference', Arr::get($transferDetails, 'transfer_code'), 'row');
+            $apply('transfer_reference', Arr::get($transferDetails, 'transfer_number'), 'row');
+            $apply('transfer_reference', Arr::get($transferDetails, 'reference'), 'row');
+            $apply('note', Arr::get($transferDetails, 'note'), 'row', true);
+            $setReceiptUrl(Arr::get($transferDetails, 'receipt_url'), 'row');
+            $setReceiptPath(Arr::get($transferDetails, 'receipt_path'), Arr::get($transferDetails, 'receipt_disk'), 'row');
+
+
         }
 
         if ($values['bank_name'] === null) {
@@ -478,7 +583,7 @@ class TransferDetailsResolver implements Arrayable, \JsonSerializable
         }
 
         $resolvedSource = 'tx_meta';
-        foreach (['mpr', 'tx_meta', 'tx_columns', 'wallet_tx'] as $candidate) {
+        foreach (['mpr', 'tx_meta', 'tx_columns', 'wallet_tx', 'row'] as $candidate) {
             if (in_array($candidate, $sources, true)) {
                 $resolvedSource = $candidate;
                 break;

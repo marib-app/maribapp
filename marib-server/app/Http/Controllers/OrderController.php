@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 use App\Events\OrderNoteUpdated;
+use App\Models\ManualBank;
+use Illuminate\Database\Eloquent\Builder;
 
 use App\Models\Order;
 use App\Models\ManualPaymentRequest;
@@ -58,18 +60,25 @@ class OrderController extends Controller
         ResponseService::noAnyPermissionThenRedirect(['orders-list']);
         
         $manualPaymentRequestColumns = $this->manualPaymentRequestSelectColumns();
+        $manualBankColumns = ManualBank::relationSelectColumns();
 
 
         $query = Order::with([
             'user' => static fn ($query) => $query->withTrashed(),
             'seller' => static fn ($query) => $query->withTrashed(),
             'items.item.category',
-            'latestManualPaymentRequest' => static function ($query) use ($manualPaymentRequestColumns) {
+            'latestManualPaymentRequest' => static function ($query) use ($manualPaymentRequestColumns, $manualBankColumns) {
+                
                 $query->select($manualPaymentRequestColumns);
+                $query->with([
+                    'manualBank' => static function (Builder $manualBankQuery) use ($manualBankColumns): void {
+                        $manualBankQuery->select($manualBankColumns);
+                    },
+                ]);
 
-                $query->with('manualBank:id,name,bank_name,beneficiary_name');
+
             },
-            'latestPaymentTransaction' => static function ($query) {
+            'latestPaymentTransaction' => static function ($query) use ($manualBankColumns) {
                 $query->select([
                     'payment_transactions.id',
                     'payment_transactions.payable_id',
@@ -86,7 +95,12 @@ class OrderController extends Controller
                     'payment_transactions.manual_payment_request_id',
                     'payment_transactions.meta',
                 ]);
-                $query->with('manualPaymentRequest.manualBank:id,name,bank_name,beneficiary_name');
+                $query->with([
+                    'manualPaymentRequest.manualBank' => static function (Builder $manualBankQuery) use ($manualBankColumns): void {
+                        $manualBankQuery->select($manualBankColumns);
+                    },
+                ]);
+            
             },
         ])
         
@@ -170,19 +184,21 @@ class OrderController extends Controller
         $categoryIds = $this->departmentReportService->resolveCategoryIds($department);
 
         $manualPaymentRequestColumns = $this->manualPaymentRequestSelectColumns();
+        $manualBankColumns = ManualBank::relationSelectColumns();
 
 
         $query = Order::with([
             'user' => static fn ($query) => $query->withTrashed(),
             'seller' => static fn ($query) => $query->withTrashed(),
             'items.item.category',
-            'latestManualPaymentRequest' => static function ($query) use ($manualPaymentRequestColumns) {
-                $query->select($manualPaymentRequestColumns);
-
-
-                $query->with('manualBank:id,name,bank_name,beneficiary_name');
+            'latestManualPaymentRequest' => static function ($query) use ($manualPaymentRequestColumns, $manualBankColumns) {                $query->select($manualPaymentRequestColumns);
+                $query->with([
+                    'manualBank' => static function (Builder $manualBankQuery) use ($manualBankColumns): void {
+                        $manualBankQuery->select($manualBankColumns);
+                    },
+                ]);
             },
-            'latestPaymentTransaction' => static function ($query) {
+            'latestPaymentTransaction' => static function ($query) use ($manualBankColumns) {
                 $query->select([
                     'payment_transactions.id',
                     'payment_transactions.payable_id',
@@ -200,6 +216,12 @@ class OrderController extends Controller
                     'payment_transactions.meta',
                 ]);
                 $query->with('manualPaymentRequest.manualBank:id,name,bank_name,beneficiary_name');
+                $query->with([
+                    'manualPaymentRequest.manualBank' => static function (Builder $manualBankQuery) use ($manualBankColumns): void {
+                        $manualBankQuery->select($manualBankColumns);
+                    },
+                ]);
+            
             },
         ])
         
@@ -295,18 +317,22 @@ class OrderController extends Controller
         $categoryIds = $this->departmentReportService->resolveCategoryIds($department);
 
         $manualPaymentRequestColumns = $this->manualPaymentRequestSelectColumns();
+        $manualBankColumns = ManualBank::relationSelectColumns();
 
         $query = Order::with([
             'user' => static fn ($query) => $query->withTrashed(),
             'seller' => static fn ($query) => $query->withTrashed(),
             'items.item.category',
-            'latestManualPaymentRequest' => static function ($query) use ($manualPaymentRequestColumns) {
-                $query->select($manualPaymentRequestColumns);
+            'latestManualPaymentRequest' => static function ($query) use ($manualPaymentRequestColumns, $manualBankColumns) {                $query->select($manualPaymentRequestColumns);
 
 
-                $query->with('manualBank:id,name,bank_name,beneficiary_name');
+                $query->with([
+                    'manualBank' => static function (Builder $manualBankQuery) use ($manualBankColumns): void {
+                        $manualBankQuery->select($manualBankColumns);
+                    },
+                ]);
             },
-            'latestPaymentTransaction' => static function ($query) {
+            'latestPaymentTransaction' => static function ($query) use ($manualBankColumns) {
                 $query->select([
                     'payment_transactions.id',
                     'payment_transactions.payable_id',
@@ -323,7 +349,12 @@ class OrderController extends Controller
                     'payment_transactions.manual_payment_request_id',
                     'payment_transactions.meta',
                 ]);
-                $query->with('manualPaymentRequest.manualBank:id,name,bank_name,beneficiary_name');
+                $query->with([
+                    'manualPaymentRequest.manualBank' => static function (Builder $manualBankQuery) use ($manualBankColumns): void {
+                        $manualBankQuery->select($manualBankColumns);
+                    },
+                ]);
+            
             },
         ])
             ->withCount(['openManualPaymentRequests as pending_manual_payment_requests_count'])

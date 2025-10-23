@@ -14,6 +14,11 @@ class ManualBank extends Model
     use HasFactory;
 
     private static ?string $defaultDisplayNameCache = null;
+    /**
+     * @var array<string, bool>
+     */
+    private static array $columnSupportCache = [];
+
 
     // ✅ نستخدم fillable لآمان أعلى
     protected $fillable = [
@@ -32,6 +37,48 @@ class ManualBank extends Model
 
     // لعرض رابط شعار البنك مباشرة
     protected $appends = ['logo_url'];
+
+
+        /**
+     * Determine if the manual banks table includes the given column.
+     */
+    public static function supportsColumn(string $column): bool
+    {
+        if (array_key_exists($column, self::$columnSupportCache)) {
+            return self::$columnSupportCache[$column];
+        }
+
+        try {
+            $instance = new self();
+            $table = $instance->getTable();
+
+            if (! Schema::hasTable($table)) {
+                return self::$columnSupportCache[$column] = false;
+            }
+
+            return self::$columnSupportCache[$column] = Schema::hasColumn($table, $column);
+        } catch (Throwable) {
+            return self::$columnSupportCache[$column] = false;
+        }
+    }
+
+    /**
+     * Columns that can be safely selected when eager loading the manual bank relation.
+     *
+     * @return array<int, string>
+     */
+    public static function relationSelectColumns(): array
+    {
+        $columns = ['id'];
+
+        foreach (['name', 'bank_name', 'beneficiary_name'] as $column) {
+            if (self::supportsColumn($column)) {
+                $columns[] = $column;
+            }
+        }
+
+        return $columns;
+    }
 
     /**
      * علاقة: طلبات التحويل اليدوي المرتبطة بهذا البنك

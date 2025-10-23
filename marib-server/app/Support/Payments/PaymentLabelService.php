@@ -2,12 +2,15 @@
 
 namespace App\Support\Payments;
 
+use App\Models\ManualBank;
 use App\Models\ManualPaymentRequest;
 use App\Models\PaymentTransaction;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
+
 
 use Illuminate\Support\Str;
 
@@ -298,8 +301,14 @@ class PaymentLabelService
         if ($gatewayKey === 'manual_banks' && data_get($data, 'manual_payment_request_id')) {
             $manualPaymentRequestId = (int) data_get($data, 'manual_payment_request_id');
 
+            $manualBankColumns = ManualBank::relationSelectColumns();
+
             $manualPaymentRequest = ManualPaymentRequest::query()
-                ->with('manualBank:id,name,bank_name,beneficiary_name')
+                ->with([
+                    'manualBank' => static function (Builder $query) use ($manualBankColumns): void {
+                        $query->select($manualBankColumns);
+                    },
+                ])
                 ->find($manualPaymentRequestId);
 
             if ($manualPaymentRequest instanceof ManualPaymentRequest) {

@@ -7,6 +7,7 @@ import 'package:marib/data/services/cart_shipping_quote_service.dart';
 import 'package:marib/data/model/cart/cart_discount.dart';
 import 'package:marib/utils/currency_utils.dart';
 import 'package:marib/utils/constant.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 
 /// Environment overrides (comma-separated lists allowed).
 const String _cartGetEndpointOverride =
@@ -96,19 +97,44 @@ final List<String> _cartClearEndpointCandidates = _buildCartEndpointCandidates(
   ],
 );
 
+
+const List<String> _cartApplyCouponEndpointDefaults = <String>[
+  'api/cart/apply-coupon',
+  'cart/apply-coupon',
+  'cart/coupons/apply',
+  'cart/apply-coupon-code',
+  'api/cart/coupon',
+  'cart/coupon',
+  'cart/coupons',
+];
+
 final List<String> _cartApplyCouponEndpointCandidates =
     _buildCartEndpointCandidates(
   override: _cartApplyCouponEndpointOverride,
-  defaults: <String>[
-    'api/cart/apply-coupon',
-    'cart/apply-coupon',
-    'api/cart/coupon',
-    'cart/coupon',
-    'cart/coupons/apply',
-    'cart/apply-coupon-code',
-    'cart/coupons',
-  ],
+      defaults: _cartApplyCouponEndpointDefaults,
+
 );
+
+
+@visibleForTesting
+List<String> buildCartApplyCouponEndpointCandidatesForTesting({
+  String? override,
+}) {
+  return _buildCartEndpointCandidates(
+    override: override ?? _cartApplyCouponEndpointOverride,
+    defaults: _cartApplyCouponEndpointDefaults,
+  );
+}
+
+@visibleForTesting
+bool shouldUseBaseUrlForCartEndpointForTesting(String endpoint) {
+  return _shouldUseBaseUrl(endpoint);
+}
+
+
+
+
+
 
 final List<String> _cartRemoveCouponEndpointCandidates =
     _buildCartEndpointCandidates(

@@ -1,16 +1,30 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-
+import 'package:google_fonts/google_fonts.dart';
+import 'package:lottie/lottie.dart';
 import 'package:marib/app/routes.dart';
 import 'package:marib/utils/hive_utils.dart';
-import 'package:marib/utils/ui_utils.dart';
-import 'lottie_helpers.dart';
+import 'package:marib/utils/screen_scaler.dart';
 
-import 'models/card_planet_data.dart';
-import 'widgets/card_planet.dart';
-import 'dart:math' as math;
+class CardPlanetData {
+  final String title;
+  final String subtitle;
+  final ImageProvider? image;
+  final List<Color> backgroundGradientColors;
+  final Color titleColor;
+  final Color subtitleColor;
+  final String? animationPath;
+
+  CardPlanetData({
+    required this.title,
+    required this.subtitle,
+    this.image,
+    required this.backgroundGradientColors,
+    required this.titleColor,
+    required this.subtitleColor,
+    this.animationPath,
+  });
+}
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -19,21 +33,14 @@ class OnboardingScreen extends StatefulWidget {
   State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen>
-    with SingleTickerProviderStateMixin {
-  final ValueNotifier<int> currentIndex = ValueNotifier<int>(0);
-
-  late final PageController _pageController;
-  late final ValueNotifier<double> _pageNotifier;
-
+class _OnboardingScreenState extends State<OnboardingScreen> {
+  final PageController _pageController = PageController();
+  double currentPage = 0.0;
   bool _showHint = false;
+  bool _showStartButton = false; // لعرض زر البدء مع أنيميشن
   Timer? _hintTimer;
-  final Map<String, LottieComposition> _preloadedCompositions = {};
-  late final AnimationController _hintAnimationController;
-  late final Animation<double> _hintFadeAnimation;
-  late final Animation<Offset> _hintSlideAnimation;
 
-  final data = [
+  final List<CardPlanetData> data = [
     CardPlanetData(
       title: "مرحباً بك في مأرب بين يديك!",
       subtitle: "كل ما تحتاجه في مأرب بتطبيق واحد – تسوق، خدمات، عروض وتوصيل!",
@@ -49,7 +56,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       titleColor: Colors.white,
       subtitleColor: Colors.white,
       animationPath: 'assets/lottie/a_1.json',
-      backgroundAnimationPath: 'assets/lottie/bg-2.json',
     ),
     CardPlanetData(
       title: "كل العقارات بخطوة!",
@@ -58,7 +64,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       titleColor: Colors.yellow,
       subtitleColor: Colors.white,
       animationPath: 'assets/lottie/a_2.json',
-      backgroundAnimationPath: 'assets/lottie/bg-1.json',
     ),
     CardPlanetData(
       title: "خلّي متجرك يلمع",
@@ -67,7 +72,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       titleColor: Colors.amber,
       subtitleColor: Colors.white,
       animationPath: 'assets/lottie/a_3.json',
-      backgroundAnimationPath: 'assets/lottie/bg-2.json',
     ),
     CardPlanetData(
       title: "بع، اشترِي، وأعلن!",
@@ -76,12 +80,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       titleColor: Colors.lightBlueAccent,
       subtitleColor: Colors.white,
       animationPath: 'assets/lottie/a_4.json',
-      backgroundAnimationPath: 'assets/lottie/bg-1.json',
     ),
     CardPlanetData(
       title: "موثوق رسميًا",
-      subtitle:
-          "تطبيق مرخص من وزارة الصناعة والتجارة – مأرب\nرقم القيد: 6561 / السجل: 3154",
+      subtitle: "تطبيق مرخص من وزارة الصناعة والتجارة – مأرب\nرقم القيد: 6561 / السجل: 3154",
       image: const AssetImage("assets/image/6.png"),
       backgroundGradientColors: [Colors.black, Colors.blueGrey.shade900],
       titleColor: Colors.cyanAccent,
@@ -89,313 +91,266 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     ),
   ];
 
+
   @override
   void initState() {
     super.initState();
+    _pageController.addListener(() {
+      setState(() {
+        currentPage = _pageController.page ?? 0.0;
 
-    _pageController = PageController();
-    _pageNotifier =
-        ValueNotifier<double>(_pageController.initialPage.toDouble());
-    _pageController.addListener(_handlePageChanged);
-
-    _hintAnimationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1300),
-    );
-    final animationCurve = CurvedAnimation(
-      parent: _hintAnimationController,
-      curve: Curves.easeInOut,
-    );
-    _hintFadeAnimation =
-        Tween<double>(begin: 0.6, end: 1).animate(animationCurve);
-    _hintSlideAnimation =
-        Tween<Offset>(begin: Offset.zero, end: const Offset(0, -0.05))
-            .animate(animationCurve);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      unawaited(_preloadAssets());
+        // إخفاء التلميح فور الوصول إلى الصفحة الأخيرة أو في الصفحة التي تحتوي على "موثوق رسميًا"
+        if (currentPage >= data.length - 1 ||
+            data[currentPage.floor()].title == "موثوق رسميًا") {
+          _showHint = false;
+          _showStartButton = true; // إظهار زر البدء مع التأثير
+        }
+      });
     });
-    _hintTimer = Timer(const Duration(seconds: 3), () {
-      if (!mounted) return;
-      setState(() => _showHint = true);
-      _syncHintAnimation();
+
+    // عرض التلميح بعد فترة معينة بشرط ألا تكون الصفحة "موثوق رسميًا"
+    _hintTimer = Timer(const Duration(seconds: 2), () {
+      if (mounted && currentPage < data.length - 1 &&
+          data[currentPage.floor()].title != "موثوق رسميًا") {
+        setState(() {
+          _showHint = true;
+        });
+      }
     });
   }
 
-  void _handlePageChanged() {
-    final page = _pageController.hasClients
-        ? _pageController.page ?? _pageController.initialPage.toDouble()
-        : _pageController.initialPage.toDouble();
-    if (_pageNotifier.value != page) {
-      _pageNotifier.value = page;
-    }
-  }
+  Color lerpColor(Color a, Color b, double t) =>
+      Color.lerp(a, b, t.clamp(0.0, 1.0))!;
 
-  void _syncHintAnimation() {
-    final shouldAnimate = _showHint && currentIndex.value != data.length - 1;
-    if (shouldAnimate) {
-      if (!_hintAnimationController.isAnimating) {
-        _hintAnimationController.repeat(reverse: true);
-      }
-    } else {
-      if (_hintAnimationController.isAnimating ||
-          _hintAnimationController.value != 0.0) {
-        _hintAnimationController.stop();
-        _hintAnimationController.reset();
-      }
-    }
-  }
+  double lerpDouble(double a, double b, double t) =>
+      a + (b - a) * t.clamp(0.0, 1.0);
 
-  Future<void> _preloadAssets() async {
-    final Map<String, LottieComposition> loaded = {};
 
-    for (final card in data) {
-      if (!mounted) return;
-
-      final image = card.image;
-      if (image != null) {
-        await precacheImage(image, context);
-      }
-
-      await _loadComposition(card.animationPath, loaded);
-      await _loadComposition(card.backgroundAnimationPath, loaded);
-    }
-
-    if (!mounted || loaded.isEmpty) return;
-    setState(() {
-      _preloadedCompositions.addAll(loaded);
-    });
-  }
-
-  Future<void> _loadComposition(
-    String? path,
-    Map<String, LottieComposition> target,
-  ) async {
-    if (path == null ||
-        _preloadedCompositions.containsKey(path) ||
-        target.containsKey(path)) {
-      return;
-    }
-
-    try {
-      final composition = await loadLottieComposition(
-        path,
-        bundle: rootBundle,
-      );
-      target[path] = composition;
-    } catch (error, stackTrace) {
-      if (kDebugMode) {
-        debugPrint('Failed to preload Lottie asset $path: $error');
-        debugPrint('$stackTrace');
-      }
-    }
-  }
-
-  @override
-  void dispose() {
-    _hintAnimationController.dispose();
-    _hintTimer?.cancel();
-    _pageController.removeListener(_handlePageChanged);
-    _pageController.dispose();
-    _pageNotifier.dispose();
-    currentIndex.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
+    ScreenScaler.init(context);
+
+    int basePage = currentPage.floor();
+    double pageOffset = currentPage - basePage;
+
+    // تدرج الخلفية بين الصفحتين بناء على موقع السحب
+    final Color backgroundStart = basePage < data.length - 1
+        ? lerpColor(data[basePage].backgroundGradientColors.first,
+        data[basePage + 1].backgroundGradientColors.first, pageOffset)
+        : data[basePage].backgroundGradientColors.first;
+
+    final Color backgroundEnd = basePage < data.length - 1
+        ? lerpColor(data[basePage].backgroundGradientColors.last,
+        data[basePage + 1].backgroundGradientColors.last, pageOffset)
+        : data[basePage].backgroundGradientColors.last;
+
     return Scaffold(
-      body: ValueListenableBuilder<int>(
-        valueListenable: currentIndex,
-        child: GestureDetector(
-          behavior: HitTestBehavior.translucent,
-          onHorizontalDragUpdate: (_) {},
-          // تمكين التفاعل بالسحب على كامل الشاشة
-          child: Stack(
-            children: [
-              Directionality(
-                textDirection: TextDirection.rtl,
-                child: PageView.builder(
-                  controller: _pageController,
-                  itemCount: data.length,
-                  onPageChanged: (index) {
-                    currentIndex.value = index;
-                    _syncHintAnimation();
-                    if (index == data.length - 1 && _showHint) {
-                      setState(() => _showHint = false);
-                    }
-                  },
-                  itemBuilder: (context, index) {
-                    return ValueListenableBuilder<double>(
-                      valueListenable: _pageNotifier,
-                      builder: (context, page, _) {
-                        final effectivePage = page
-                            .clamp(0.0, (data.length - 1).toDouble())
-                            .toDouble();
-                        final progress = index - effectivePage;
-                        final shouldAnimate = progress.abs() <= 1.0;
-                        final contentProgress =
-                        (1 - progress.abs()).clamp(0.0, 1.0).toDouble();
-                        return CardPlanet(
-                          data: data[index],
-                          progress: progress,
-                          contentProgress: contentProgress,
-                          shouldAnimate: shouldAnimate,
-                          compositions: _preloadedCompositions,
-                        );
-                      },
-                    );
-                  },
-                ),
+      backgroundColor: backgroundEnd,
+      body: Stack(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [backgroundStart, backgroundEnd],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-              ValueListenableBuilder<int>(
-                valueListenable: currentIndex,
-                builder: (context, index, _) {
-                  return Positioned(
-                    bottom: 20,
-                    left: 0,
-                    right: 0,
-                    child: Directionality(
-                      textDirection: TextDirection.rtl,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: List.generate(data.length, (i) {
-                          final selected = i == index;
-                          return AnimatedContainer(
-                            duration: const Duration(milliseconds: 300),
-                            margin: const EdgeInsets.symmetric(horizontal: 4),
-                            width: selected ? 18 : 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: selected ? Colors.white : Colors.white38,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          );
-                        }),
-                      ),
+            ),
+            child: PageView.builder(
+              controller: _pageController,
+              itemCount: data.length,
+              itemBuilder: (context, index) {
+                final item = data[index];
+
+                // حساب شفافية كل صفحة حسب موقع السحب
+                double opacity;
+                if (index == basePage) {
+                  opacity = 1 - pageOffset;
+                } else if (index == basePage + 1) {
+                  opacity = pageOffset;
+                } else {
+                  opacity = 0.0;
+                }
+
+                // تحريك النص من اليمين لليسار (slide + opacity)
+                double textTranslateX;
+                if (index == basePage) {
+                  textTranslateX = lerpDouble(0, -100, pageOffset);
+                } else if (index == basePage + 1) {
+                  textTranslateX = lerpDouble(100, 0, pageOffset);
+                } else {
+                  textTranslateX = 100;
+                }
+
+                // تحريك الصورة/الأنيميشن من الأسفل للأعلى
+                double imageTranslateY;
+                if (index == basePage) {
+                  imageTranslateY = lerpDouble(0, -50, pageOffset);
+                } else if (index == basePage + 1) {
+                  imageTranslateY = lerpDouble(50, 0, pageOffset);
+                } else {
+                  imageTranslateY = 50;
+                }
+
+                return Opacity(
+                  opacity: opacity,
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: ScreenScaler.s(24),
+                      vertical: ScreenScaler.s(60),
                     ),
-                  );
-                },
-              ),
-              ValueListenableBuilder<int>(
-                valueListenable: currentIndex,
-                builder: (context, index, _) {
-                  final shouldShowHint = _showHint && index != data.length - 1;
-                  if (!shouldShowHint) {
-                    return const SizedBox.shrink();
-                  }
-                  return Positioned(
-                    bottom: 100,
-                    left: 0,
-                    right: 0,
-                    child: IgnorePointer(
-                      ignoring: true,
-                      child: FadeTransition(
-                        opacity: _hintFadeAnimation,
-                        child: SlideTransition(
-                          position: _hintSlideAnimation,
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: const [
-                              Icon(Icons.swipe_right, color: Colors.white70),
-                              SizedBox(height: 6),
-                              Text(
-                                "اسحب لليمين للمتابعة",
-                                style: TextStyle(
-                                    color: Colors.white70, fontSize: 14),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (item.animationPath != null)
+                          Transform.translate(
+                            offset: Offset(0, imageTranslateY),
+                            child: SizedBox(
+                              height: ScreenScaler.s(300),
+                              child: Lottie.asset(
+                                item.animationPath!,
+                                fit: BoxFit.contain,
                               ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-              Positioned(
-                left: 20,
-                bottom: 60,
-                child: ValueListenableBuilder<int>(
-                  valueListenable: currentIndex,
-                  builder: (context, index, _) {
-                    return index == data.length - 1
-                        ? ElevatedButton(
-                            onPressed: () {
-                              HiveUtils.setUserIsNotNew();
-                              Navigator.of(context).pushNamedAndRemoveUntil(
-                                  Routes.login, (_) => false);
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: Colors.black,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 24, vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                              elevation: 8,
-                            ),
-                            child: const Text(
-                              "ابدأ الآن",
-                              style: TextStyle(fontWeight: FontWeight.bold),
                             ),
                           )
-                        : const SizedBox();
-                  },
+                        else
+                          if (item.image != null)
+                            Transform.translate(
+                              offset: Offset(0, imageTranslateY),
+                              child: Image(
+                                image: item.image!,
+                                height: ScreenScaler.s(300),
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                        SizedBox(height: ScreenScaler.s(40)),
+                        Transform.translate(
+                          offset: Offset(textTranslateX, 0),
+                          child: Directionality(
+                            textDirection: TextDirection.rtl,
+                            child: Column(
+                              children: [
+                                Text(
+                                  item.title,
+                                  style: GoogleFonts.tajawal(
+                                    fontSize: ScreenScaler.s(22),
+                                    fontWeight: FontWeight.bold,
+                                    color: item.titleColor,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                SizedBox(height: ScreenScaler.s(12)),
+                                Text(
+                                  item.subtitle,
+                                  style: GoogleFonts.tajawal(
+                                    fontSize: ScreenScaler.s(16),
+                                    height: 1.6,
+                                    color: item.subtitleColor,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+
+          // مؤشرات التقدم (Dots)
+          Positioned(
+            bottom: ScreenScaler.s(20),
+            left: 0,
+            right: 0,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(data.length, (i) {
+                double selectedness = 1.0 -
+                    (currentPage - i).abs().clamp(0.0, 1.0);
+                double width = lerpDouble(8, 18, selectedness)!;
+                Color color = Color.lerp(
+                    Colors.white38, Colors.white, selectedness)!;
+
+                return Container(
+                  margin: EdgeInsets.symmetric(horizontal: ScreenScaler.s(4)),
+                  width: ScreenScaler.s(width),
+                  height: ScreenScaler.s(8),
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(ScreenScaler.s(8)),
+                  ),
+                );
+              }),
+            ),
+          ),
+
+          // التلميح (Swipe hint)
+          if (_showHint && currentPage < data.length - 1)
+            Positioned(
+              bottom: ScreenScaler.s(60),
+              left: 0,
+              right: 0,
+              child: IgnorePointer(
+                ignoring: true,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.swipe_right,
+                      color: Colors.white70,
+                      size: ScreenScaler.iconSize(context, baseSize: 24),
+                    ),
+                    SizedBox(height: ScreenScaler.s(6)),
+                    Text(
+                      "اسحب لليمين للمتابعة",
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: ScreenScaler.fontSize(context, baseSize: 14),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
-        ),
-        builder: (context, _, child) {
-          return ValueListenableBuilder<double>(
-            valueListenable: _pageNotifier,
-            builder: (context, page, _) {
-              final clampedPage =
-                  page.clamp(0.0, (data.length - 1).toDouble()).toDouble();
-              final lowerIndex = clampedPage.floor();
-              final upperIndex = math.min(data.length - 1, clampedPage.ceil());
-              final t = (clampedPage - lowerIndex).clamp(0.0, 1.0);
+            ),
 
-              List<Color> gradientFor(int cardIndex) =>
-                  data[cardIndex].backgroundGradientColors;
-
-              List<Color> lerpGradient(
-                List<Color> from,
-                List<Color> to,
-                double progress,
-              ) {
-                final maxLength = math.max(from.length, to.length);
-                return List<Color>.generate(maxLength, (i) {
-                  final fromColor = from[i % from.length];
-                  final toColor = to[i % to.length];
-                  return Color.lerp(fromColor, toColor, progress) ?? fromColor;
-                });
-              }
-
-              final blendedColors = lowerIndex == upperIndex
-                  ? gradientFor(lowerIndex)
-                  : lerpGradient(
-                      gradientFor(lowerIndex),
-                      gradientFor(upperIndex),
-                      t,
-                    );
-
-              return AnimatedContainer(
-                duration: const Duration(milliseconds: 250),
-                curve: Curves.easeOut,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: blendedColors,
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+          // زر البدء في الصفحة الأخيرة (ظهور مع تأثير)
+          if (_showStartButton && currentPage >= data.length - 1 - 0.01)
+            Positioned(
+              left: ScreenScaler.s(20),
+              bottom: ScreenScaler.s(60),
+              child: ElevatedButton(
+                onPressed: () {
+                  HiveUtils.setUserIsNotNew();
+                  Navigator.of(context)
+                      .pushNamedAndRemoveUntil(Routes.login, (_) => false);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.black,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: ScreenScaler.s(24),
+                    vertical: ScreenScaler.s(12),
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(ScreenScaler.s(30)),
+                  ),
+                  elevation: 8,
+                ),
+                child: Text(
+                  "ابدأ الآن",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: ScreenScaler.s(16),
                   ),
                 ),
-                child: child,
-              );
-            },
-          );
-        },
+              ),
+            ),
+        ],
       ),
     );
   }

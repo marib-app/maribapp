@@ -74,7 +74,7 @@ return [
 
     'fcm' => [
         'verify_ssl' => env('FCM_VERIFY_SSL', true),
-        'ca_path'    => env('FCM_CA_PATH', base_path('certs/cacert.pem')),
+        'ca_path'    => env('FCM_CA_PATH') ?: base_path('certs/cacert.pem'),
         'ttl'        => env('FCM_TTL', '3600s'),
     ],
 

@@ -54,28 +54,25 @@ class NotificationService {
         }
 
         if (config('services.fcm.verify_ssl')) {
-            $caBundlePath = config('services.fcm.ca_path');
+            $caBundleInfo = self::resolveCaBundleConfiguration();
 
-            if (empty($caBundlePath)) {
-                \Log::error('NotificationService: FCM CA bundle path is not configured.');
-
-                return [
-                    'error'   => true,
-                    'message' => 'FCM CA bundle path is not configured.',
-                ];
-            }
-
-            $resolvedCaBundlePath = self::resolveAbsolutePath($caBundlePath);
-
-            if (!is_file($resolvedCaBundlePath) || !is_readable($resolvedCaBundlePath)) {
-                \Log::error('NotificationService: FCM CA bundle is missing or unreadable.', [
-                    'path' => $resolvedCaBundlePath,
+            if ($caBundleInfo['path'] === null) {
+                \Log::warning('NotificationService: No readable CA bundle configured for FCM; relying on system store.', [
+                    'configured_path' => $caBundleInfo['configured_raw'],
+                    'default_path' => $caBundleInfo['default_path'],
+                ]);
+            } elseif (
+                $caBundleInfo['used_fallback']
+                && is_string($caBundleInfo['configured_raw'])
+                && trim($caBundleInfo['configured_raw']) !== ''
+            ) {
+                \Log::info('NotificationService: Falling back to default CA bundle for FCM.', [
+                    'configured_path' => $caBundleInfo['configured_raw'],
+                    'resolved_path' => $caBundleInfo['path'],
+                    'default_path' => $caBundleInfo['default_path'],
                 ]);
                 
-                return [
-                    'error'   => true,
-                    'message' => 'FCM CA bundle not found at ' . $resolvedCaBundlePath,
-                ];
+
             }
         }
 
@@ -206,6 +203,36 @@ class NotificationService {
             $invalidatedTokens = [];
             $successfulDeliveries = 0;
 
+            $verifySsl = (bool) config('services.fcm.verify_ssl', true);
+            $caBundleInfo = [
+                'path' => null,
+                'configured_raw' => null,
+                'default_path' => null,
+                'used_fallback' => false,
+            ];
+
+            if ($verifySsl) {
+                $caBundleInfo = self::resolveCaBundleConfiguration();
+
+                if ($caBundleInfo['path'] === null) {
+                    \Log::warning('NotificationService: Proceeding without explicit CA bundle for curl; relying on system store.', [
+                        'configured_path' => $caBundleInfo['configured_raw'],
+                        'default_path' => $caBundleInfo['default_path'],
+                    ]);
+                } elseif (
+                    $caBundleInfo['used_fallback']
+                    && is_string($caBundleInfo['configured_raw'])
+                    && trim($caBundleInfo['configured_raw']) !== ''
+                ) {
+                    \Log::info('NotificationService: Using default CA bundle for curl FCM requests.', [
+                        'configured_path' => $caBundleInfo['configured_raw'],
+                        'resolved_path' => $caBundleInfo['path'],
+                        'default_path' => $caBundleInfo['default_path'],
+                    ]);
+                }
+            }
+
+
             foreach ($registrationIDs as $index => $registrationID) {
                 // \Log::info('NotificationService: Processing device', [
                 //     'device_index' => $index + 1,
@@ -306,24 +333,11 @@ class NotificationService {
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
                 curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
 
-                $verifySsl = (bool) config('services.fcm.verify_ssl', true);
                 curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, $verifySsl ? 2 : 0);
                 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, $verifySsl);
 
-                if ($verifySsl) {
-                    $caBundlePath = config('services.fcm.ca_path');
-
-                    if (!empty($caBundlePath)) {
-                        $resolvedCaBundlePath = self::resolveAbsolutePath($caBundlePath);
-
-                        if (is_file($resolvedCaBundlePath) && is_readable($resolvedCaBundlePath)) {
-                            curl_setopt($ch, CURLOPT_CAINFO, $resolvedCaBundlePath);
-                        } else {
-                            \Log::warning('NotificationService: FCM CA bundle missing or unreadable for curl.', [
-                                'path' => $resolvedCaBundlePath,
-                            ]);
-                        }
-                    }
+                if ($verifySsl && !empty($caBundleInfo['path'])) {
+                    curl_setopt($ch, CURLOPT_CAINFO, $caBundleInfo['path']);
                 }
 
                 
@@ -533,35 +547,29 @@ class NotificationService {
             if (!$verifySsl) {
                 $httpClientOptions['verify'] = false;
             } else {
-                $customCaPath = config('services.fcm.ca_path');
+                $caBundleInfo = self::resolveCaBundleConfiguration();
 
-                if (empty($customCaPath)) {
-                    \Log::error('NotificationService: FCM CA bundle path is not configured.');
+                if (!empty($caBundleInfo['path'])) {
+                    $httpClientOptions['verify'] = $caBundleInfo['path'];
 
-                    return [
-                        'error'   => true,
-                        'message' => 'FCM CA bundle path is not configured.',
-                    ];
-                }
-
-                $resolvedCaBundlePath = self::resolveAbsolutePath($customCaPath);
-
-                if (!is_file($resolvedCaBundlePath) || !is_readable($resolvedCaBundlePath)) {
-                    $message = 'FCM CA bundle not found at ' . $resolvedCaBundlePath;
-                    \Log::error('NotificationService: FCM CA bundle is missing or unreadable.', [
-                        'path' => $resolvedCaBundlePath,
+                    if (
+                        $caBundleInfo['used_fallback']
+                        && is_string($caBundleInfo['configured_raw'])
+                        && trim($caBundleInfo['configured_raw']) !== ''
+                    ) {
+                        \Log::info('NotificationService: Using default CA bundle for FCM access token request.', [
+                            'configured_path' => $caBundleInfo['configured_raw'],
+                            'resolved_path' => $caBundleInfo['path'],
+                            'default_path' => $caBundleInfo['default_path'],
+                        ]);
+                    }
+                } else {
+                    \Log::warning('NotificationService: No readable CA bundle configured for FCM access token; relying on system store.', [
+                        'configured_path' => $caBundleInfo['configured_raw'],
+                        'default_path' => $caBundleInfo['default_path'],
                     ]);
 
-                    return [
-                        'error'   => true,
-                        'message' => $message,
-                    ];
-
-
                 }
-                $httpClientOptions['verify'] = $resolvedCaBundlePath;
-
-
             }
 
             if (!empty($httpClientOptions)) {
@@ -775,6 +783,43 @@ class NotificationService {
         $absolutePath = base_path($path);
 
         return realpath($absolutePath) ?: $absolutePath;
+    }
+
+    protected static function resolveCaBundleConfiguration(): array
+    {
+        $configuredRaw = config('services.fcm.ca_path');
+        $configured = is_string($configuredRaw) ? trim($configuredRaw) : '';
+        $defaultPath = base_path('certs/cacert.pem');
+
+        $candidates = [];
+
+        if ($configured !== '') {
+            $candidates[] = $configured;
+        }
+
+        if (!in_array($defaultPath, $candidates, true)) {
+            $candidates[] = $defaultPath;
+        }
+
+        foreach ($candidates as $index => $candidate) {
+            $resolved = self::resolveAbsolutePath($candidate);
+
+            if (is_file($resolved) && is_readable($resolved)) {
+                return [
+                    'path' => $resolved,
+                    'configured_raw' => $configuredRaw,
+                    'default_path' => $defaultPath,
+                    'used_fallback' => $index > 0,
+                ];
+            }
+        }
+
+        return [
+            'path' => null,
+            'configured_raw' => $configuredRaw,
+            'default_path' => $defaultPath,
+            'used_fallback' => false,
+        ];
     }
 
 

@@ -33,6 +33,7 @@ class ItemsBodyBox extends StatefulWidget {
   final VoidCallback? onCartTap;
   final int sliderRefreshToken;
   final List<int>? sellerCategoryIds;
+  final String? interfaceType;
 
   // جديد: لا تبني شريط التصنيفات/السلايدر إلا إذا true
   final bool enableTopBar;
@@ -54,6 +55,7 @@ class ItemsBodyBox extends StatefulWidget {
     required this.searchController,
     this.categoryName,
     required this.showCartAction,
+    this.interfaceType,
     this.onCartTap,
     this.enableTopBar = false, // ← افتراضي: مخفي
     this.enableAdSlider = false,
@@ -261,6 +263,8 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
                                   );
                               _lastExecutedQuery = query;
                             },
+                            interfaceType: widget.interfaceType,
+                            sellerCategoryIds: _sellerCategoryIds,
                           ),
                         );
                       },

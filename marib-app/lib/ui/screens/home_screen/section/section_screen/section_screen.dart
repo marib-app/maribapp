@@ -833,6 +833,7 @@ class Section_screenState extends State<Section_screen> {
                                     searchController: searchController,
                                     specialRequestSectionSlug:
                                         _requestSectionSlug,
+                                    interfaceType: _sliderInterfaceType,
                                     enableTopBar: _showSlider,
                                     enableAdSlider: _showAdSlider,
                                     // إن كانت موجودة عندك

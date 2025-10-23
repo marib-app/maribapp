@@ -4,23 +4,26 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shimmer/shimmer.dart';
 
 import 'package:marib/data/cubits/category/fetch_category_cubit.dart';
-
+import 'package:marib/utils/slider_interface_mapper.dart';
 
 const _shimmerBaseColor = Color(0xFFB8BEC9);
 const _shimmerHighlightColor = Color(0xFFE4E8F0);
-
 
 class PcSliderWidget extends StatefulWidget {
   final int parentId;
   final int? selectedCategoryId;
   final ValueChanged<int?>? onCategorySelected;
   final bool fancySelection;
+  final String? interfaceType;
+  final List<int>? sellerCategoryIds;
 
   const PcSliderWidget({
     super.key,
     required this.parentId,
     this.selectedCategoryId,
     this.onCategorySelected,
+    this.interfaceType,
+    this.sellerCategoryIds,
     this.fancySelection = true,
   });
 
@@ -38,6 +41,7 @@ class _PcSliderWidgetState extends State<PcSliderWidget> {
   // مفاتيح العناصر للـ ensureVisible
   final Map<int, GlobalKey> _itemKeys = {};
   int? _lastCenteredId;
+  Set<int>? _sellerCategoryIdSet;
 
   // ثوابت تنسيق
   static const double _kBarTop = 10.0;
@@ -50,6 +54,10 @@ class _PcSliderWidgetState extends State<PcSliderWidget> {
   @override
   void initState() {
     super.initState();
+
+    _sellerCategoryIdSet =
+        _normalizeSellerCategoryIds(widget.sellerCategoryIds);
+
     _kickoffCategoriesFetchIfNeeded();
     WidgetsBinding.instance.addPostFrameCallback((_) => _centerCurrent());
   }
@@ -63,12 +71,20 @@ class _PcSliderWidgetState extends State<PcSliderWidget> {
       _lastCenteredId = null;
     }
 
-    if (widget.selectedCategoryId != null && widget.selectedCategoryId != _selectedId) {
+    if (!listEquals(oldWidget.sellerCategoryIds, widget.sellerCategoryIds)) {
+      _sellerCategoryIdSet =
+          _normalizeSellerCategoryIds(widget.sellerCategoryIds);
+      _kickoffCategoriesFetchIfNeeded(force: true);
+    }
+
+    if (widget.selectedCategoryId != null &&
+        widget.selectedCategoryId != _selectedId) {
       setState(() {
         _selectedId = widget.selectedCategoryId!;
         _lastCenteredId = null;
       });
-      WidgetsBinding.instance.addPostFrameCallback((_) => _centerCurrent(force: true));
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => _centerCurrent(force: true));
     }
   }
 
@@ -76,7 +92,16 @@ class _PcSliderWidgetState extends State<PcSliderWidget> {
     final catCubit = context.read<FetchCategoryCubit>();
     final FetchCategoryState state = catCubit.state;
     final FetchCategorySuccess? success =
-    state is FetchCategorySuccess ? state : null;
+        state is FetchCategorySuccess ? state : null;
+    final Set<int>? sellerSet = _sellerCategoryIdSet;
+    final bool restrictBySeller = sellerSet != null && sellerSet.isNotEmpty;
+    final String? normalizedInterface =
+        SliderInterfaceMapper.normalize(widget.interfaceType) ??
+            widget.interfaceType?.trim();
+    final String? interfaceType =
+        (normalizedInterface != null && normalizedInterface.isNotEmpty)
+            ? normalizedInterface
+            : success?.interfaceType;
 
     final int parentId = widget.parentId;
     final bool shouldFetch = force ||
@@ -90,7 +115,12 @@ class _PcSliderWidgetState extends State<PcSliderWidget> {
     catCubit.fetchCategories(
       forceRefresh: force ? true : null,
       categoryId: parentId,
-      interfaceType: success?.interfaceType,
+      interfaceType: interfaceType,
+      onlyAllowed: restrictBySeller,
+      ensureCategoryIds:
+          restrictBySeller ? sellerSet!.toList(growable: false) : const <int>[],
+      allowedCategoryIds:
+          restrictBySeller ? sellerSet!.toList(growable: false) : const <int>[],
     );
   }
 
@@ -106,8 +136,6 @@ class _PcSliderWidgetState extends State<PcSliderWidget> {
 
     _centerCurrent(force: true);
     widget.onCategorySelected?.call(id);
-
-
   }
 
   void _centerCurrent({bool force = false}) {
@@ -165,7 +193,8 @@ class _PcSliderWidgetState extends State<PcSliderWidget> {
                     padding: const EdgeInsets.symmetric(horizontal: _kListHPad),
                     scrollDirection: Axis.horizontal,
                     itemCount: _display.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: _kChipSpacing),
+                    separatorBuilder: (_, __) =>
+                        const SizedBox(width: _kChipSpacing),
                     itemBuilder: (context, index) {
                       final m = _display[index];
                       final id = m['id'] as int;
@@ -264,7 +293,8 @@ class _PcSliderWidgetState extends State<PcSliderWidget> {
                     ),
                   ),
                 ),
-                separatorBuilder: (_, __) => const SizedBox(width: _kChipSpacing),
+                separatorBuilder: (_, __) =>
+                    const SizedBox(width: _kChipSpacing),
                 itemCount: 10,
               ),
             ),
@@ -310,22 +340,85 @@ class _PcSliderWidgetState extends State<PcSliderWidget> {
   }
 
   List<Map<String, dynamic>> _buildDisplayList(
-      FetchCategorySuccess state,
-      int parentId,
-      ) {
+    FetchCategorySuccess state,
+    int parentId,
+  ) {
     try {
       final parent = state.categories.firstWhere((c) => c.id == parentId);
       final children = parent.children ?? const [];
-      return [
+      final List<Map<String, dynamic>> base = [
         {'id': 0, 'name': 'الكل'},
         ...children.map((c) => {'id': c.id, 'name': c.name}),
       ];
+      return _reorderForSellerCategories(base);
     } catch (e) {
       debugPrint("PcSliderWidget: error loading children of $parentId → $e");
       return [
         {'id': 0, 'name': 'الكل'},
       ];
     }
+  }
+
+  Set<int>? _normalizeSellerCategoryIds(List<int>? ids) {
+    if (ids == null) {
+      return null;
+    }
+    final Set<int> normalized = <int>{};
+    for (final int id in ids) {
+      if (id > 0) {
+        normalized.add(id);
+      }
+    }
+    return normalized.isEmpty ? null : normalized;
+  }
+
+  List<Map<String, dynamic>> _reorderForSellerCategories(
+      List<Map<String, dynamic>> categories) {
+    final Set<int>? sellerSet = _sellerCategoryIdSet;
+    if (sellerSet == null || sellerSet.isEmpty || categories.length <= 2) {
+      return categories;
+    }
+
+    final List<Map<String, dynamic>> sellerFirst = <Map<String, dynamic>>[];
+    final List<Map<String, dynamic>> others = <Map<String, dynamic>>[];
+
+    for (final Map<String, dynamic> entry in categories.skip(1)) {
+      final dynamic rawId = entry['id'];
+      final int? id = rawId is int ? rawId : int.tryParse('$rawId');
+      if (id != null && sellerSet.contains(id)) {
+        sellerFirst.add(entry);
+      } else {
+        others.add(entry);
+      }
+    }
+
+    if (sellerFirst.isEmpty) {
+      return categories;
+    }
+
+    final List<Map<String, dynamic>> ordered = <Map<String, dynamic>>[
+      categories.first
+    ];
+    final Set<int> seen = <int>{0};
+
+    void addEntry(Map<String, dynamic> entry) {
+      final dynamic rawId = entry['id'];
+      final int? id = rawId is int ? rawId : int.tryParse('$rawId');
+      if (id == null || seen.contains(id)) {
+        return;
+      }
+      seen.add(id);
+      ordered.add(entry);
+    }
+
+    for (final Map<String, dynamic> entry in sellerFirst) {
+      addEntry(entry);
+    }
+    for (final Map<String, dynamic> entry in others) {
+      addEntry(entry);
+    }
+
+    return ordered;
   }
 }
 
@@ -344,27 +437,27 @@ Widget _chip({
 
   final decoration = fancySelection && isSelected
       ? BoxDecoration(
-    color: primary.withOpacity(.08),
-    borderRadius: BorderRadius.circular(18),
-    border: Border.all(color: primary.withOpacity(.65), width: 1),
-    boxShadow: [
-      BoxShadow(
-        color: primary.withOpacity(.12),
-        blurRadius: 6,
-        offset: const Offset(0, 2),
-      ),
-    ],
-  )
+          color: primary.withOpacity(.08),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: primary.withOpacity(.65), width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: primary.withOpacity(.12),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        )
       : BoxDecoration(
-    color: bg,
-    borderRadius: BorderRadius.circular(18),
-    border: Border.all(
-      color: isSelected
-          ? primary.withOpacity(.40)
-          : theme.dividerColor.withOpacity(.15),
-      width: 1,
-    ),
-  );
+          color: bg,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: isSelected
+                ? primary.withOpacity(.40)
+                : theme.dividerColor.withOpacity(.15),
+            width: 1,
+          ),
+        );
 
   return Semantics(
     button: true,

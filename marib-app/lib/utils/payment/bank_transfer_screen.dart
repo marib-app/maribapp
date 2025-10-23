@@ -378,52 +378,43 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     }
 
     String _bankIdentity(BankAccount bank) {
-      if (bank.id > 0) {
-        return 'id:${bank.id}';
-      }
+      final iban = _normalize(bank.iban, removeWhitespace: true);
 
-      final buffer = StringBuffer();
-      final bankName = _normalize(bank.bankName, collapseWhitespace: true);
-      final accountName = _normalize(bank.accountName,
-          removeWhitespace: true, collapseWhitespace: true);
       final accountNumber =
           _normalize(bank.accountNumber, removeWhitespace: true);
 
-      final iban = _normalize(bank.iban, removeWhitespace: true);
-      final swift = _normalize(bank.swift, removeWhitespace: true);
-      final branch = _normalize(bank.branch, collapseWhitespace: true);
+      final accountName = _normalize(
+        bank.accountName,
+        removeWhitespace: true,
+        collapseWhitespace: true,
+      );
+      final bankName = _normalize(bank.bankName, collapseWhitespace: true);
+      final components = <String>[
+        if (iban.isNotEmpty) 'iban:$iban',
+        if (accountNumber.isNotEmpty) 'acc:$accountNumber',
+        if (swift.isNotEmpty) 'swift:$swift',
+        if (accountName.isNotEmpty) 'beneficiary:$accountName',
+        if (bankName.isNotEmpty) 'name:$bankName',
+      ];
 
-      if (bankName.isNotEmpty) {
-        buffer.write('name:$bankName');
-      }
-      if (accountName.isNotEmpty) {
-        buffer.write('|beneficiary:$accountName');
-      }
-      if (iban.isNotEmpty) {
-        buffer.write('|iban:$iban');
-      }
-      if (accountNumber.isNotEmpty) {
-        buffer.write('|acc:$accountNumber');
-      }
-      if (swift.isNotEmpty) {
-        buffer.write('|swift:$swift');
-      }
-      if (branch.isNotEmpty) {
-        buffer.write('|branch:$branch');
-      }
-
-      if (buffer.isEmpty) {
-        final notes = _normalize(bank.notes, collapseWhitespace: true);
-        if (notes.isNotEmpty) {
-          buffer.write('notes:${notes.hashCode}');
+      if (components.isEmpty) {
+        if (bank.id > 0) {
+          components.add('id:${bank.id}');
+        } else {
+          final notes = _normalize(bank.notes, collapseWhitespace: true);
+          if (notes.isNotEmpty) {
+            components.add('notes:${notes.hashCode}');
+          }
         }
+      } else if (bank.id > 0) {
+        components.add('id:${bank.id}');
       }
 
-      if (buffer.isEmpty) {
-        buffer.write('bank:${identityHashCode(bank)}');
+      if (components.isEmpty) {
+        components.add('bank:${identityHashCode(bank)}');
       }
 
-      return buffer.toString();
+      return components.join('|');
     }
 
     final seen = <String>{};

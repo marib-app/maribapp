@@ -73,13 +73,52 @@ class HelperUtils {
 
     final Uri? parsed = Uri.tryParse(value);
     final bool hasScheme = parsed?.hasScheme ?? false;
-    if (hasScheme) {
+    final Uri? hostOrigin = _resolveHostOrigin();
+
+    if (parsed != null && hasScheme) {
+      if (hostOrigin != null &&
+          _isHttpScheme(parsed.scheme) &&
+          _isHttpScheme(hostOrigin.scheme) &&
+          parsed.host == hostOrigin.host) {
+        final bool schemeMismatch = parsed.scheme != hostOrigin.scheme;
+        final bool portMismatch =
+            _effectivePort(parsed) != _effectivePort(hostOrigin);
+
+        if (schemeMismatch || portMismatch) {
+          final StringBuffer rebuilt = StringBuffer()
+            ..write(hostOrigin.scheme)
+            ..write('://')
+            ..write(hostOrigin.host);
+
+          if (hostOrigin.hasPort) {
+            rebuilt
+              ..write(':')
+              ..write(hostOrigin.port);
+          }
+
+          rebuilt.write(parsed.path);
+
+          if (parsed.hasQuery) {
+            rebuilt
+              ..write('?')
+              ..write(parsed.query);
+          }
+
+          if (parsed.fragment.isNotEmpty) {
+            rebuilt
+              ..write('#')
+              ..write(parsed.fragment);
+          }
+
+          return rebuilt.toString();
+        }
+      }
+
 
       return value;
     }
 
 
-    final Uri? hostOrigin = _resolveHostOrigin();
 
     if (value.startsWith('//')) {
       if (hostOrigin != null) {
@@ -121,6 +160,20 @@ class HelperUtils {
 
     return '$base$value';
   }
+
+
+  static bool _isHttpScheme(String? scheme) {
+    return scheme == 'http' || scheme == 'https';
+  }
+
+  static int _effectivePort(Uri uri) {
+    if (uri.hasPort) {
+      return uri.port;
+    }
+
+    return uri.scheme == 'https' ? 443 : 80;
+  }
+
 
   static Uri? _resolveHostOrigin() {
     Uri? parseAndNormalize(String? candidate) {

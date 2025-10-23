@@ -189,26 +189,6 @@ class _HomeTabViewState extends State<HomeTabView> {
     });
   }
 
-  Set<int> _deriveVisibleCategoryIds(FetchItemSummarySuccess? state) {
-    if (state == null) {
-      return const <int>{};
-    }
-
-    final Set<int> ids = <int>{};
-    for (final ItemSummary item in state.items) {
-      final int? primaryCategoryId = item.categoryId;
-      if (primaryCategoryId != null && primaryCategoryId > 0) {
-        ids.add(primaryCategoryId);
-      }
-
-      final int? nestedCategoryId = _tryExtractNestedCategoryId(item);
-      if (nestedCategoryId != null && nestedCategoryId > 0) {
-        ids.add(nestedCategoryId);
-      }
-    }
-    return ids;
-  }
-
   int? _tryExtractNestedCategoryId(ItemSummary item) {
     try {
       final dynamic dynamicItem = item;
@@ -241,10 +221,6 @@ class _HomeTabViewState extends State<HomeTabView> {
     List<CategoryModel> categories,
     Set<int> allowedIds,
   ) {
-    if (allowedIds.isEmpty) {
-      return categories;
-    }
-
     final List<CategoryModel> result = <CategoryModel>[];
     for (final CategoryModel category in categories) {
       final List<CategoryModel> children =
@@ -866,10 +842,27 @@ class _HomeTabViewState extends State<HomeTabView> {
                                   itemState is FetchItemSummarySuccess
                                       ? itemState
                                       : null;
-                              final Set<int> allowedCategoryIds =
-                                  _deriveVisibleCategoryIds(successState);
+                              final Set<int> allowedCategoryIds = <int>{};
+                              if (successState != null) {
+                                for (final ItemSummary item
+                                    in successState.items) {
+                                  final int? primaryCategoryId =
+                                      item.categoryId;
+                                  if (primaryCategoryId != null &&
+                                      primaryCategoryId > 0) {
+                                    allowedCategoryIds.add(primaryCategoryId);
+                                  }
+
+                                  final int? nestedCategoryId =
+                                      _tryExtractNestedCategoryId(item);
+                                  if (nestedCategoryId != null &&
+                                      nestedCategoryId > 0) {
+                                    allowedCategoryIds.add(nestedCategoryId);
+                                  }
+                                }
+                              }
                               final bool shouldFilterCategories =
-                                  allowedCategoryIds.isNotEmpty;
+                                  successState != null;
                               final List<CategoryModel> filteredRootChildren =
                                   shouldFilterCategories
                                       ? _filterCategoriesByAllowedIds(
@@ -897,8 +890,12 @@ class _HomeTabViewState extends State<HomeTabView> {
                                   (currentParent.children?.isNotEmpty ?? false)
                                       ? (currentParent.children!)
                                       : filteredRootChildren;
-
-                              if (subcats.isEmpty)
+                              final List<CategoryModel> visibleSubcats =
+                                  shouldFilterCategories
+                                      ? _filterCategoriesByAllowedIds(
+                                          subcats, allowedCategoryIds)
+                                      : subcats;
+                              if (visibleSubcats.isEmpty)
                                 return const SizedBox.shrink();
 
                               final brand =
@@ -917,7 +914,7 @@ class _HomeTabViewState extends State<HomeTabView> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   SubcatsHorizontalGrid(
-                                    subcats: subcats,
+                                    subcats: visibleSubcats,
                                     selectedId: _activeSubcatId,
                                     // تظليل الفرعيّة المختارة
                                     brand: brand,

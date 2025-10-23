@@ -307,9 +307,10 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         }
         settingsCurrency = candidate.mergePreferNew(settingsCurrency);
       }
+      final List<BankAccount> dedupedBanks = _dedupeBanks(settings.banks);
 
       setState(() {
-        _banks = settings.banks;
+        _banks = dedupedBanks;
         _eastYemenBank = settings.eastYemenBank;
         _paymentIntentId = settings.paymentIntentId?.trim();
         _paymentTransactionId = settings.paymentTransactionId?.trim();
@@ -377,6 +378,76 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       if (mounted) setState(() => _loadingBanks = false);
     }
   }
+
+  List<BankAccount> _dedupeBanks(List<BankAccount> banks) {
+    if (banks.length < 2) {
+      return banks;
+    }
+
+    String _normalize(String? value, {bool removeWhitespace = false}) {
+      if (value == null) return '';
+      final trimmed = value.trim();
+      if (trimmed.isEmpty) return '';
+      final normalized = removeWhitespace
+          ? trimmed.replaceAll(RegExp(r'\s+'), '')
+          : trimmed;
+      return normalized.toLowerCase();
+    }
+
+    String _bankIdentity(BankAccount bank) {
+      if (bank.id > 0) {
+        return 'id:${bank.id}';
+      }
+
+      final buffer = StringBuffer();
+      final bankName = _normalize(bank.bankName);
+      final accountNumber = _normalize(bank.accountNumber, removeWhitespace: true);
+      final iban = _normalize(bank.iban, removeWhitespace: true);
+      final swift = _normalize(bank.swift, removeWhitespace: true);
+      final branch = _normalize(bank.branch);
+
+      if (bankName.isNotEmpty) {
+        buffer.write('name:$bankName');
+      }
+      if (iban.isNotEmpty) {
+        buffer.write('|iban:$iban');
+      }
+      if (accountNumber.isNotEmpty) {
+        buffer.write('|acc:$accountNumber');
+      }
+      if (swift.isNotEmpty) {
+        buffer.write('|swift:$swift');
+      }
+      if (branch.isNotEmpty) {
+        buffer.write('|branch:$branch');
+      }
+
+      if (buffer.isEmpty) {
+        final notes = _normalize(bank.notes);
+        if (notes.isNotEmpty) {
+          buffer.write('notes:${notes.hashCode}');
+        }
+      }
+
+      if (buffer.isEmpty) {
+        buffer.write('bank:${identityHashCode(bank)}');
+      }
+
+      return buffer.toString();
+    }
+
+    final seen = <String>{};
+    final uniqueBanks = <BankAccount>[];
+    for (final bank in banks) {
+      final key = _bankIdentity(bank);
+      if (seen.add(key)) {
+        uniqueBanks.add(bank);
+      }
+    }
+
+    return uniqueBanks;
+  }
+
 
   Future<bool> _ensurePaymentIntent() async {
     final currentIntent = _paymentIntentId?.trim();

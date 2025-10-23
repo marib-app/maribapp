@@ -109,7 +109,7 @@ class Constant {
   static const int sheinRootCategoryId = 4;
   static const int computerRootCategoryId = 5;
   static const int publicRootCategoryId = 6;
-  static const int storeRootCategoryId = 6;
+  static const int storeRootCategoryId = 3;
 
   static const int accountTypeCustomer = 1;
   static const int accountTypeRealEstate = 2;

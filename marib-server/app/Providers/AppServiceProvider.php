@@ -8,10 +8,13 @@ use App\Models\OrderItem;
 use App\Observers\OrderItemObserver;
 use App\Services\CacheMetricsRecorder;
 use App\Services\Payments\GatewayLabelService;
+use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
+use Throwable;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -51,6 +54,32 @@ class AppServiceProvider extends ServiceProvider
                 $expression
             );
         });
+
+
+        $this->ensurePublicStorageSymlink();
+
+    }
+
+    private function ensurePublicStorageSymlink(): void
+    {
+        $storageDirectory = storage_path('app/public');
+        $publicLink = public_path('storage');
+
+        if (!is_dir($storageDirectory) || file_exists($publicLink)) {
+            return;
+        }
+
+        try {
+            /** @var Filesystem $filesystem */
+            $filesystem = $this->app->make(Filesystem::class);
+            $filesystem->link($storageDirectory, $publicLink);
+        } catch (Throwable $exception) {
+            Log::warning('Failed to create public storage symlink', [
+                'link' => $publicLink,
+                'target' => $storageDirectory,
+                'exception' => $exception->getMessage(),
+            ]);
+        }
 
     }
 }

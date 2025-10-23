@@ -25,6 +25,7 @@ use Illuminate\Validation\ValidationException;
 use Throwable;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 
 class OrderController extends Controller
@@ -56,24 +57,16 @@ class OrderController extends Controller
     {
         ResponseService::noAnyPermissionThenRedirect(['orders-list']);
         
+        $manualPaymentRequestColumns = $this->manualPaymentRequestSelectColumns();
+
+
         $query = Order::with([
             'user' => static fn ($query) => $query->withTrashed(),
             'seller' => static fn ($query) => $query->withTrashed(),
             'items.item.category',
-            'latestManualPaymentRequest' => static function ($query) {
-                $query->select([
-                    'manual_payment_requests.id',
-                    'manual_payment_requests.payable_id',
-                    'manual_payment_requests.payable_type',
-                    'manual_payment_requests.status',
-                    'manual_payment_requests.amount',
-                    'manual_payment_requests.currency',
-                    'manual_payment_requests.created_at',
-                    'manual_payment_requests.reviewed_at',
-                    'manual_payment_requests.manual_bank_id',
-                    'manual_payment_requests.bank_name',
-                    'manual_payment_requests.meta',
-                ]);
+            'latestManualPaymentRequest' => static function ($query) use ($manualPaymentRequestColumns) {
+                $query->select($manualPaymentRequestColumns);
+
                 $query->with('manualBank:id,name,bank_name,beneficiary_name');
             },
             'latestPaymentTransaction' => static function ($query) {
@@ -176,24 +169,17 @@ class OrderController extends Controller
         $department = DepartmentReportService::DEPARTMENT_SHEIN;
         $categoryIds = $this->departmentReportService->resolveCategoryIds($department);
 
+        $manualPaymentRequestColumns = $this->manualPaymentRequestSelectColumns();
+
+
         $query = Order::with([
             'user' => static fn ($query) => $query->withTrashed(),
             'seller' => static fn ($query) => $query->withTrashed(),
             'items.item.category',
-            'latestManualPaymentRequest' => static function ($query) {
-                $query->select([
-                    'manual_payment_requests.id',
-                    'manual_payment_requests.payable_id',
-                    'manual_payment_requests.payable_type',
-                    'manual_payment_requests.status',
-                    'manual_payment_requests.amount',
-                    'manual_payment_requests.currency',
-                    'manual_payment_requests.created_at',
-                    'manual_payment_requests.reviewed_at',
-                    'manual_payment_requests.manual_bank_id',
-                    'manual_payment_requests.bank_name',
-                    'manual_payment_requests.meta',
-                ]);
+            'latestManualPaymentRequest' => static function ($query) use ($manualPaymentRequestColumns) {
+                $query->select($manualPaymentRequestColumns);
+
+
                 $query->with('manualBank:id,name,bank_name,beneficiary_name');
             },
             'latestPaymentTransaction' => static function ($query) {
@@ -300,35 +286,24 @@ class OrderController extends Controller
         return view('orders.shein', compact('orders', 'orderStatuses', 'users', 'categoryIds', 'department', 'paymentGroups'));
     
     }
+    public function indexComputer(Request $request)
 
-
-
-        public function indexComputer(Request $request)
     {
         ResponseService::noAnyPermissionThenRedirect(['computer-orders-list']);
 
         $department = DepartmentReportService::DEPARTMENT_COMPUTER;
         $categoryIds = $this->departmentReportService->resolveCategoryIds($department);
 
+        $manualPaymentRequestColumns = $this->manualPaymentRequestSelectColumns();
 
         $query = Order::with([
             'user' => static fn ($query) => $query->withTrashed(),
             'seller' => static fn ($query) => $query->withTrashed(),
             'items.item.category',
-            'latestManualPaymentRequest' => static function ($query) {
-                $query->select([
-                    'manual_payment_requests.id',
-                    'manual_payment_requests.payable_id',
-                    'manual_payment_requests.payable_type',
-                    'manual_payment_requests.status',
-                    'manual_payment_requests.amount',
-                    'manual_payment_requests.currency',
-                    'manual_payment_requests.created_at',
-                    'manual_payment_requests.reviewed_at',
-                    'manual_payment_requests.manual_bank_id',
-                    'manual_payment_requests.bank_name',
-                    'manual_payment_requests.meta',
-                ]);
+            'latestManualPaymentRequest' => static function ($query) use ($manualPaymentRequestColumns) {
+                $query->select($manualPaymentRequestColumns);
+
+
                 $query->with('manualBank:id,name,bank_name,beneficiary_name');
             },
             'latestPaymentTransaction' => static function ($query) {
@@ -1391,5 +1366,31 @@ class OrderController extends Controller
         return $stringValue === '' ? null : $stringValue;
     }
 
+    private function manualPaymentRequestSelectColumns(): array
+    {
+        $columns = [
+            'manual_payment_requests.id',
+            'manual_payment_requests.payable_id',
+            'manual_payment_requests.payable_type',
+            'manual_payment_requests.status',
+            'manual_payment_requests.amount',
+            'manual_payment_requests.currency',
+            'manual_payment_requests.created_at',
+            'manual_payment_requests.reviewed_at',
+        ];
 
+        if (Schema::hasColumn('manual_payment_requests', 'manual_bank_id')) {
+            $columns[] = 'manual_payment_requests.manual_bank_id';
+        }
+
+        if (Schema::hasColumn('manual_payment_requests', 'bank_name')) {
+            $columns[] = 'manual_payment_requests.bank_name';
+        }
+
+        if (Schema::hasColumn('manual_payment_requests', 'meta')) {
+            $columns[] = 'manual_payment_requests.meta';
+        }
+
+        return $columns;
+    }
 }

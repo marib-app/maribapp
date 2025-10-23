@@ -32,6 +32,7 @@ import 'components/delivery_and_payment/delivery_payment_timing_selector.dart';
 
 import 'package:marib/utils/currency_utils.dart';
 import 'package:marib/utils/money_formatter.dart';
+import 'dart:math' as math;
 
 class DeliveryandpaymentScreen extends StatefulWidget {
   const DeliveryandpaymentScreen({super.key});
@@ -752,8 +753,17 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
         rawCode.isEmpty ? 'القسيمة' : rawCode.toUpperCase();
     final String? discountAmount = discount.amountDisplay;
     final String message = discount.displayMessage;
+    const double discountEpsilon = 0.009;
+    final double discountTotal = _appliedDiscountTotal;
+    final double discountedTotalValue = _resolveRequiredPaymentAmount();
+    final double originalTotalValue =
+        math.max(0, discountedTotalValue + discountTotal);
+    final bool showOriginalTotal = discountTotal > discountEpsilon &&
+        (originalTotalValue - discountedTotalValue) > discountEpsilon;
     final String totalAfterDiscount =
-        _formatCurrencyAmount(_resolveRequiredPaymentAmount());
+        _formatCurrencyAmount(discountedTotalValue);
+    final String? originalTotalDisplay =
+        showOriginalTotal ? _formatCurrencyAmount(originalTotalValue) : null;
 
     showDialog<void>(
       context: context,
@@ -812,6 +822,23 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (originalTotalDisplay != null) ...[
+                      Text(
+                        'الإجمالي قبل الخصم',
+                        style:
+                            baseTextStyle.copyWith(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        originalTotalDisplay,
+                        style: baseTextStyle.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.redAccent.shade200,
+                          decoration: TextDecoration.lineThrough,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
                     Text(
                       'الإجمالي بعد الخصم',
                       style:
@@ -1502,6 +1529,23 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
   bool get _isDepositApplied =>
       _depositInfo != null && (_depositRequired || _depositToggleValue);
 
+  double get _appliedDiscountTotal => _discounts.fold<double>(
+        0,
+        (double sum, CartDiscount discount) {
+          if (!discount.isApplied) {
+            return sum;
+          }
+          final num? amount = discount.amount;
+          if (amount == null) {
+            return sum;
+          }
+          return sum + amount.toDouble();
+        },
+      );
+
+  double get _discountedSubtotal =>
+      math.max(0, _subtotal - _appliedDiscountTotal);
+
   double? _resolveDepositDueAmount(Map<String, dynamic> info) {
     final double? explicit = info['amountDueNowValue'] is num
         ? (info['amountDueNowValue'] as num).toDouble()
@@ -1514,7 +1558,10 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
         : _numericValue(info['ratioValue']);
     final double? goods = info['goodsValueValue'] is num
         ? (info['goodsValueValue'] as num).toDouble()
-        : _numericValue(info['goodsValueValue']) ?? _subtotal;
+        : _numericValue(info['goodsValueValue']) ??
+            _numericValue(info['goodsValue']) ??
+            _discountedSubtotal;
+
     double? base = goods;
     if (info['includesShipping'] == true) {
       final double? shipping = info['shippingFeeValue'] is num
@@ -1542,9 +1589,13 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     if (explicit != null) {
       return explicit;
     }
-    final double? goods = info['goodsValueValue'] is num
+    final double? goodsExplicit = info['goodsValueValue'] is num
         ? (info['goodsValueValue'] as num).toDouble()
-        : _numericValue(info['goodsValueValue']) ?? _subtotal;
+        : _numericValue(info['goodsValueValue']);
+    final double? goods = goodsExplicit ??
+        _numericValue(info['goodsValue']) ??
+        _discountedSubtotal;
+
     final double? shipping = info['shippingFeeValue'] is num
         ? (info['shippingFeeValue'] as num).toDouble()
         : _numericValue(info['shippingFeeValue']);
@@ -1557,7 +1608,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
   double _resolveRequiredPaymentAmount() {
     final Map<String, dynamic>? info = _depositInfo;
     if (info == null || info.isEmpty) {
-      return _subtotal;
+      return _discountedSubtotal;
     }
     final bool applied = _isDepositApplied;
     final double? resolvedAmount = applied
@@ -1566,7 +1617,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     if (resolvedAmount != null && resolvedAmount > 0) {
       return resolvedAmount;
     }
-    return _subtotal;
+    return _discountedSubtotal;
   }
 
   String? _resolveDepositCurrency(Map<String, dynamic>? info) {
@@ -1625,7 +1676,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     final double? shippingValue =
         shippingValueExplicit ?? _numericValue(info['shippingFee']);
     final double? totalValue = _resolveTotalAmountValue(info) ??
-        ((goodsValue ?? _subtotal) + (shippingValue ?? 0));
+        ((goodsValue ?? _discountedSubtotal) + (shippingValue ?? 0));
 
     final double? depositDueValue = _resolveDepositDueAmount(info);
     double resolvedDueValue =
@@ -2683,7 +2734,8 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     currency ??= order?.currency;
 
     final num deliveryFee = _deliveryInfo?.fee ?? 0;
-    final double fallbackAmount = (_subtotal + deliveryFee.toDouble());
+    final double fallbackAmount =
+        (_discountedSubtotal + deliveryFee.toDouble());
 
     final double finalAmount = resolvedAmount != null && resolvedAmount > 0
         ? resolvedAmount

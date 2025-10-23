@@ -19,6 +19,7 @@ import 'components/delivery_and_payment/delivery_payment_timing_selector.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/money_formatter.dart';
 import 'components/delivery_and_payment/manual_transfer_submission.dart';
+import 'dart:math' as math;
 
 class DeliveryAndPaymentUI extends StatelessWidget {
   // حالة عامة
@@ -304,6 +305,42 @@ class DeliveryAndPaymentUI extends StatelessWidget {
             discount.isApplied && (discount.code?.trim().isNotEmpty ?? false))
         .toList();
 
+    final double totalDiscountAmount = discounts.fold<double>(
+      0,
+      (double sum, CartDiscount discount) {
+        if (!discount.isApplied) {
+          return sum;
+        }
+        final num? amount = discount.amount;
+        if (amount == null) {
+          return sum;
+        }
+        return sum + amount.toDouble();
+      },
+    );
+
+    const double discountEpsilon = 0.009;
+    final double discountedTotal = requiredAmount;
+    final double originalTotal =
+        math.max(0, discountedTotal + totalDiscountAmount);
+    final bool showOriginalTotal = totalDiscountAmount > discountEpsilon &&
+        (originalTotal - discountedTotal) > discountEpsilon;
+
+    final MoneyFormatter totalFormatter = MoneyFormatter.fromCartCurrency(
+      currency: orderCurrencyLabel,
+      currencyCode: orderCurrencyCode,
+      fallbackLabel: orderCurrencyLabel ?? orderCurrencyCode,
+    );
+
+    final String discountedTotalDisplay =
+        totalFormatter.format(discountedTotal);
+    final String resolvedDiscountedDisplay =
+        discountedTotalDisplay.trim().isNotEmpty
+            ? discountedTotalDisplay
+            : totalAmountDisplay;
+    final String? originalTotalDisplay =
+        showOriginalTotal ? totalFormatter.format(originalTotal) : null;
+
     Widget buildCouponErrorBanner(String message) {
       final Color accent = Colors.redAccent;
       return Container(
@@ -394,7 +431,11 @@ class DeliveryAndPaymentUI extends StatelessWidget {
       fontSize: 18,
       color: Theme.of(context).colorScheme.primary,
     );
-
+    final TextStyle originalTotalStyle = TextStyle(
+      fontWeight: FontWeight.w600,
+      color: Colors.redAccent.shade200,
+      decoration: TextDecoration.lineThrough,
+    );
     final double viewInsets = MediaQuery.of(context).viewInsets.bottom;
     final double bottomKeyboardPadding = viewInsets > 0 ? 20 : 24;
 
@@ -614,7 +655,24 @@ class DeliveryAndPaymentUI extends StatelessWidget {
                       Expanded(
                         child: Text('المبلغ الإجمالي', style: totalLabelStyle),
                       ),
-                      Text(totalAmountDisplay, style: totalValueStyle),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          if (originalTotalDisplay != null) ...[
+                            Text(
+                              originalTotalDisplay,
+                              style: originalTotalStyle,
+                              textAlign: TextAlign.right,
+                            ),
+                            const SizedBox(height: 4),
+                          ],
+                          Text(
+                            resolvedDiscountedDisplay,
+                            style: totalValueStyle,
+                            textAlign: TextAlign.right,
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),

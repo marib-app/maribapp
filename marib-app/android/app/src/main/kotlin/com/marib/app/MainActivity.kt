@@ -5,12 +5,15 @@ import android.hardware.display.DisplayManager
 import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
-import android.os.ThermalManager
 import android.view.Display
 import android.util.Log
 import android.view.Window
 import android.view.WindowManager
 import kotlin.math.abs
+import io.flutter.embedding.android.FlutterFragmentActivity
+import java.lang.reflect.Method
+import java.lang.reflect.Proxy
+import java.util.concurrent.Executor
 
 class MainActivity : FlutterFragmentActivity() {
 
@@ -24,22 +27,23 @@ class MainActivity : FlutterFragmentActivity() {
         getSystemService(Context.POWER_SERVICE) as PowerManager
     }
 
-    private val thermalManager: ThermalManager? by lazy {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            getSystemService(Context.THERMAL_SERVICE) as ThermalManager
-        } else {
-            null
+    private val thermalManager: Any? by lazy {
+        if (!ThermalCompat.isSupported) {
+            return@lazy null
         }
+
+        val serviceName = ThermalCompat.thermalServiceName ?: return@lazy null
+        getSystemService(serviceName)
     }
 
-    private val thermalStatusListener: ThermalManager.OnThermalStatusChangedListener? by lazy {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            ThermalManager.OnThermalStatusChangedListener {
-                lockPreferredRefreshRate()
-            }
-        } else {
-            null
+    private val thermalStatusListener: Any? by lazy {
+        if (!ThermalCompat.isSupported) {
+            return@lazy null
         }
+        ThermalCompat.createListener(
+            onStatusChanged = { lockPreferredRefreshRate() },
+            fallbackClassLoader = javaClass.classLoader
+        )
     }
 
     private var isThermalListenerRegistered: Boolean = false
@@ -131,11 +135,13 @@ class MainActivity : FlutterFragmentActivity() {
             return true
         }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        if (ThermalCompat.isSupported) {
             val manager = thermalManager
-            if (manager != null) {
-                val thermalStatus = manager.getCurrentThermalStatus()
-                if (thermalStatus >= ThermalManager.THERMAL_STATUS_MODERATE) {
+            val threshold = ThermalCompat.thermalStatusModerate
+
+            if (manager != null && threshold != null) {
+                val thermalStatus = ThermalCompat.getCurrentThermalStatus(manager, TAG)
+                if (thermalStatus != null && thermalStatus >= threshold) {
                     return true
                 }
             }
@@ -145,7 +151,7 @@ class MainActivity : FlutterFragmentActivity() {
     }
 
     private fun registerThermalStatusListenerIfNeeded() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+        if (!ThermalCompat.isSupported) {
             return
         }
 
@@ -156,18 +162,20 @@ class MainActivity : FlutterFragmentActivity() {
             return
         }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            manager.registerThermalStatusListener(mainExecutor, listener)
+        val didRegister = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            ThermalCompat.registerListener(manager, listener, mainExecutor, TAG)
         } else {
-            @Suppress("DEPRECATION")
-            manager.registerThermalStatusListener(listener)
+            ThermalCompat.registerListener(manager, listener, null, TAG)
+
         }
 
-        isThermalListenerRegistered = true
+        if (didRegister) {
+            isThermalListenerRegistered = true
+        }
     }
 
     private fun unregisterThermalStatusListenerIfNeeded() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+        if (!ThermalCompat.isSupported) {
             return
         }
 
@@ -179,10 +187,12 @@ class MainActivity : FlutterFragmentActivity() {
         val listener = thermalStatusListener
 
         if (manager != null && listener != null) {
-            manager.unregisterThermalStatusListener(listener)
+            val didUnregister = ThermalCompat.unregisterListener(manager, listener, TAG)
+            if (didUnregister) {
+                isThermalListenerRegistered = false
+            }
         }
 
-        isThermalListenerRegistered = false
     }
 
 
@@ -251,11 +261,7 @@ class MainActivity : FlutterFragmentActivity() {
         }
     }
 
-    companion object {
-        private const val TAG = "MainActivity"
-        private const val SUSTAINED_REFRESH_RATE = 60f
 
-    }
 
 
 
@@ -277,4 +283,160 @@ class MainActivity : FlutterFragmentActivity() {
         }
     }
 
+
+    companion object {
+        private const val TAG = "MainActivity"
+        private const val SUSTAINED_REFRESH_RATE = 60f
+    }
+
+    private object ThermalCompat {
+        private const val SERVICE_NAME_FALLBACK = "thermalservice"
+
+        val isSupported: Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+
+        val thermalServiceName: String? = if (isSupported) {
+            try {
+                Context::class.java.getField("THERMAL_SERVICE").get(null) as? String
+            } catch (error: ReflectiveOperationException) {
+                SERVICE_NAME_FALLBACK
+            }
+        } else {
+            null
+        }
+
+        val thermalStatusModerate: Int? = managerClass?.let { clazz ->
+            try {
+                clazz.getField("THERMAL_STATUS_MODERATE").getInt(null)
+            } catch (error: ReflectiveOperationException) {
+                null
+            }
+        }
+
+        private val managerClass: Class<*>? = if (isSupported) {
+            loadClass("android.os.ThermalManager")
+        } else {
+            null
+        }
+
+        private val listenerInterface: Class<*>? = if (isSupported) {
+            loadClass("android.os.ThermalManager\$OnThermalStatusChangedListener")
+        } else {
+            null
+        }
+
+        private val getCurrentThermalStatusMethod: Method? = managerClass?.findMethod("getCurrentThermalStatus")
+
+        private val registerListenerMethod: Method? = listenerInterface?.let { listenerClass ->
+            managerClass?.findMethod("registerThermalStatusListener", listenerClass)
+        }
+
+        private val registerListenerWithExecutorMethod: Method? = listenerInterface?.let { listenerClass ->
+            managerClass?.findMethod("registerThermalStatusListener", Executor::class.java, listenerClass)
+        }
+
+        private val unregisterListenerMethod: Method? = listenerInterface?.let { listenerClass ->
+            managerClass?.findMethod("unregisterThermalStatusListener", listenerClass)
+        }
+
+        fun createListener(onStatusChanged: () -> Unit, fallbackClassLoader: ClassLoader?): Any? {
+            if (!isSupported) {
+                return null
+            }
+
+            val listenerClass = listenerInterface ?: return null
+            val classLoader = listenerClass.classLoader ?: fallbackClassLoader ?: return null
+
+            return Proxy.newProxyInstance(classLoader, arrayOf(listenerClass)) { _, method, _ ->
+                if (method?.name == "onThermalStatusChanged") {
+                    onStatusChanged()
+                }
+                null
+            }
+        }
+
+        fun registerListener(manager: Any, listener: Any, executor: Executor?, logTag: String): Boolean {
+            if (!isSupported) {
+                return false
+            }
+
+            return try {
+                when {
+                    executor != null && registerListenerWithExecutorMethod != null -> {
+                        registerListenerWithExecutorMethod.invoke(manager, executor, listener)
+                        true
+                    }
+
+                    registerListenerMethod != null -> {
+                        registerListenerMethod.invoke(manager, listener)
+                        true
+                    }
+
+                    else -> false
+                }
+            } catch (error: ReflectiveOperationException) {
+                Log.w(logTag, "Unable to register thermal status listener via reflection", error)
+                false
+            } catch (error: SecurityException) {
+                Log.w(logTag, "Security manager prevented registering thermal status listener", error)
+                false
+            }
+        }
+
+        fun unregisterListener(manager: Any, listener: Any, logTag: String): Boolean {
+            if (!isSupported) {
+                return false
+            }
+
+            val method = unregisterListenerMethod ?: return false
+
+            return try {
+                method.invoke(manager, listener)
+                true
+            } catch (error: ReflectiveOperationException) {
+                Log.w(logTag, "Unable to unregister thermal status listener via reflection", error)
+                false
+            } catch (error: SecurityException) {
+                Log.w(logTag, "Security manager prevented unregistering thermal status listener", error)
+                false
+            }
+        }
+
+        fun getCurrentThermalStatus(manager: Any, logTag: String): Int? {
+            if (!isSupported) {
+                return null
+            }
+
+            val method = getCurrentThermalStatusMethod ?: return null
+
+            return try {
+                method.invoke(manager) as? Int
+            } catch (error: ReflectiveOperationException) {
+                Log.w(logTag, "Unable to read current thermal status via reflection", error)
+                null
+            } catch (error: SecurityException) {
+                Log.w(logTag, "Security manager prevented reading thermal status", error)
+                null
+            }
+        }
+
+        private fun loadClass(name: String): Class<*>? {
+            return try {
+                Class.forName(name)
+            } catch (error: ClassNotFoundException) {
+                null
+            } catch (error: LinkageError) {
+                null
+            }
+        }
+
+        private fun Class<*>.findMethod(name: String, vararg parameterTypes: Class<*>): Method? {
+            return try {
+                getMethod(name, *parameterTypes)
+            } catch (error: NoSuchMethodException) {
+                null
+            } catch (error: SecurityException) {
+                null
+            }
+        }
+    }
 }

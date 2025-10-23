@@ -33,7 +33,6 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
   String _currentAddress = '';
   Set<Marker> _markers = {};
   List<ItemModel> _ads = [];
-  LatLngBounds? _activeBounds;
   int _currentPage = 1;
   bool _hasMore = true;
 
@@ -62,7 +61,7 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
   Future<void> _initializeData() async {
     try {
       await _getCurrentLocation();
-      await _refreshAds(bounds: null);
+      await _refreshAds();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -102,16 +101,14 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
     } catch (_) {}
   }
 
-  Future<void> _refreshAds({LatLngBounds? bounds}) async {
+  Future<void> _refreshAds() async {
     _currentPage = 1;
-    _activeBounds = bounds;
     _hasMore = true;
-    await _fetchAds(page: 1, bounds: bounds, reset: true);
+    await _fetchAds(page: 1, reset: true);
   }
 
   Future<void> _fetchAds({
     required int page,
-    LatLngBounds? bounds,
     bool reset = false,
   }) async {
     if (_isFetching) return;
@@ -129,7 +126,6 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
     try {
       final result = await _repo.fetchAdsPage(
         page: page,
-        bounds: bounds ?? _activeBounds,
         perPage: _pageSize,
       );
 
@@ -171,16 +167,7 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
   Future<void> _loadMoreAds() async {
     if (!_hasMore || _isFetching) return;
     final nextPage = _currentPage + 1;
-    await _fetchAds(page: nextPage, bounds: _activeBounds, reset: false);
-  }
-
-  Future<void> _handleViewportSearch(LatLngBounds bounds) async {
-    await _refreshAds(bounds: bounds);
-  }
-
-  Future<void> _handleViewportCleared() async {
-    if (_activeBounds == null) return;
-    await _refreshAds(bounds: null);
+    await _fetchAds(page: nextPage, reset: false);
   }
 
   // ==================== Helpers ====================
@@ -304,7 +291,6 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
     if (_mapReady.isCompleted) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _fitToMarkers());
     }
-
   }
 
   Future<void> _goToUserLocation() async {
@@ -355,8 +341,7 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
                   ? LatLng(
                       _currentPosition!.latitude, _currentPosition!.longitude)
                   : null,
-              enableViewportSearch: true,
-              // زر "بحث في هذه المنطقة"
+
               enableRadiusFilter: true,
               // "حدد نطاق البحث (كم)"
               initialRadiusKm: 0,
@@ -365,8 +350,6 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
               hasMoreAds: _hasMore,
               isLoadingMore: _isFetchingMore,
               onLoadMore: _loadMoreAds,
-              onSearchThisArea: _handleViewportSearch,
-              onViewportFilterCleared: _handleViewportCleared,
 
               // (اختياري) تنسيق عرض السعر + العملة على الماركر والكروت
               priceFormatter: (ad) {

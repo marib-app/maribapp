@@ -302,7 +302,6 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
       }).toList();
     }
 
-    // فلتر المنطقة الظاهرة على الشاشة
 
     // بناء الماركرات
     final used = <String>{};
@@ -335,7 +334,7 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
     final selectedId = _selectedAd?.id;
     final currentZoom = await _currentZoomLevel();
 
-    for (final ad in afterViewport) {
+    for (final ad in afterRadius) {
       if (ad.latitude == null || ad.longitude == null) continue;
       final pos = LatLng(ad.latitude!, ad.longitude!);
 
@@ -386,46 +385,15 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
         ..clear()
         ..addAll(cs);
 
-      _currentShownCount = afterViewport
+      _currentShownCount = afterRadius
+
           .where((a) => a.latitude != null && a.longitude != null)
           .length;
-      _visibleAds = afterViewport;
+      _visibleAds = afterRadius;
     });
   }
 
-  // ----------------- أفعال الفلاتر -----------------
 
-  Future<void> _applyViewportSearch() async {
-    _lastViewportBounds = await _getVisibleRegion();
-    if (widget.onSearchThisArea != null && _lastViewportBounds != null) {
-      widget.onSearchThisArea!(_lastViewportBounds!);
-    }
-    setState(() {
-      _viewportFilterOn = true;
-      _showSearchAreaBtn = false;
-      _selectedAd = null;
-    });
-    await _rebuildMarkers();
-
-    HelperUtils.showSnackBarMessage(
-      context,
-      "تم تفعيل \"بحث في هذه المنطقة\" • المعروض: $_currentShownCount / $_totalValidAds\n"
-      "النتائج الآن حسب النطاق المرئي. لإلغاء التصفية استخدم زر (إلغاء) بجوار العداد.",
-      messageDuration: 4,
-    );
-  }
-
-  Future<void> _clearViewportFilter({bool withSnack = true}) async {
-    setState(() {
-      _viewportFilterOn = false;
-      _selectedAd = null;
-    });
-    widget.onViewportFilterCleared?.call();
-    await _rebuildMarkers();
-    if (withSnack) {
-      HelperUtils.showSnackBarMessage(context, "تم إلغاء بحث في هذه المنطقة");
-    }
-  }
 
   void _handleLongPress(LatLng at) async {
     _tempPin = Marker(
@@ -482,15 +450,6 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
           mapToolbarEnabled: false,
           mapType: _mapType,
           onLongPress: _handleLongPress,
-          onCameraIdle: () async {
-            if (!widget.enableViewportSearch) return;
-            _idleTimer?.cancel();
-            _idleTimer = Timer(const Duration(milliseconds: 450), () async {
-              final b = await _getVisibleRegion();
-              if (b == null) return;
-              setState(() => _showSearchAreaBtn = true);
-            });
-          },
         ),
 
         // شريط علوي: عدّاد + فلاتر + زر إلغاء
@@ -503,43 +462,13 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
                 totalValidAds: _totalValidAds,
                 currentShownCount: _currentShownCount,
                 activeCategory: widget.activeCategory,
-                viewportOn: _viewportFilterOn,
                 radiusOn: _radiusOn && widget.userLatLng != null,
                 radiusKm: _radiusKm,
-                onClearAll: () async {
-                  await _clearViewportFilter(withSnack: false);
-                  setState(() => _radiusOn = false);
-                  await _rebuildMarkers();
-                  HelperUtils.showSnackBarMessage(
-                      context, "تم إلغاء جميع محددات النطاق");
-                },
               ),
             ),
           ),
         ),
 
-        // زر "بحث في هذه المنطقة"
-        if (_showSearchAreaBtn && widget.enableViewportSearch)
-          SafeArea(
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: Padding(
-                padding: const EdgeInsets.only(top: 52),
-                child: ElevatedButton.icon(
-                  onPressed: _applyViewportSearch,
-                  icon: const Icon(Icons.manage_search_rounded),
-                  label: const Text('بحث في هذه المنطقة'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: brand,
-                    foregroundColor: Colors.white,
-                    shape: const StadiumBorder(),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 10),
-                  ),
-                ),
-              ),
-            ),
-          ),
 
         // لا توجد نتائج
         if (!hasResults) const NoResultsOverlay(),
@@ -678,7 +607,7 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
                                       HelperUtils.showSnackBarMessage(
                                         context,
                                         "تم تطبيق نطاق ${_radiusKm.toStringAsFixed(0)} كم • المعروض: $_currentShownCount / $_totalValidAds\n"
-                                        "النتائج الآن حسب النطاق المحدد. لإلغاء، استخدم زر (إلغاء) بجوار العداد.",
+                                            "يمكنك تعديل النطاق أو تعطيله من نفس الزر.",
                                         messageDuration: 4,
                                       );
                                     },

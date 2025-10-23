@@ -71,6 +71,41 @@ class OrderPaymentIntentResult {
   final Map<String, dynamic>? gatewayResponse;
   final Map<String, dynamic> raw;
 
+
+  OrderPaymentIntentResult copyWith({
+    String? intentId,
+    String? transactionId,
+    String? gateway,
+    String? status,
+    String? message,
+    String? authorizationUrl,
+    String? reference,
+    bool? requiresAction,
+    bool? requiresConfirmation,
+    List<OrderPaymentMethod>? availableMethods,
+    Map<String, dynamic>? intent,
+    Map<String, dynamic>? transaction,
+    Map<String, dynamic>? gatewayResponse,
+    Map<String, dynamic>? raw,
+  }) {
+    return OrderPaymentIntentResult(
+      intentId: intentId ?? this.intentId,
+      transactionId: transactionId ?? this.transactionId,
+      gateway: gateway ?? this.gateway,
+      status: status ?? this.status,
+      message: message ?? this.message,
+      authorizationUrl: authorizationUrl ?? this.authorizationUrl,
+      reference: reference ?? this.reference,
+      requiresAction: requiresAction ?? this.requiresAction,
+      requiresConfirmation: requiresConfirmation ?? this.requiresConfirmation,
+      availableMethods: availableMethods ?? this.availableMethods,
+      intent: intent ?? this.intent,
+      transaction: transaction ?? this.transaction,
+      gatewayResponse: gatewayResponse ?? this.gatewayResponse,
+      raw: raw ?? this.raw,
+    );
+  }
+
   bool get isSuccessful {
     final String normalized = (status ?? message ?? '')
         .toString()
@@ -232,6 +267,8 @@ OrderPaymentIntentResult parseOrderPaymentIntent(dynamic response) {
     data['payment_methods'],
     data['available_payment_methods'],
     data['available_methods'],
+    data['allowed_payment_methods'],
+    data['payment_method_tokens'],
     data['methods'],
     data['payment_method_options'],
     data['payment_gateways'],
@@ -239,10 +276,13 @@ OrderPaymentIntentResult parseOrderPaymentIntent(dynamic response) {
     data['payment_options'],
     top['payment_methods'],
     top['available_payment_methods'],
+    top['allowed_payment_methods'],
     top['payment_gateways'],
     intent?['available_payment_methods'],
+    intent?['allowed_payment_methods'],
     intent?['methods'],
     transaction?['available_payment_methods'],
+    transaction?['allowed_payment_methods'],
   ].whereType<dynamic>().toList();
 
   List<OrderPaymentMethod> methods = <OrderPaymentMethod>[];

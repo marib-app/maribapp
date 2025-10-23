@@ -85,6 +85,11 @@ class OrderPaymentCubit extends Cubit<OrderPaymentState> {
     String? currency,
     Map<String, dynamic>? extraData,
   }) async {
+
+    final bool sameOrder = state.orderId == orderId;
+    final OrderPaymentMethod? previousSelection =
+    sameOrder ? state.selectedMethod : null;
+
     emit(
       state.copyWith(
         status: OrderPaymentStatus.loading,
@@ -93,6 +98,7 @@ class OrderPaymentCubit extends Cubit<OrderPaymentState> {
         currency: currency,
         clearAction: true,
         clearError: true,
+        clearSelectedMethod: !sameOrder,
       ),
     );
 
@@ -104,17 +110,9 @@ class OrderPaymentCubit extends Cubit<OrderPaymentState> {
         extraData: extraData,
       );
 
-      final List<OrderPaymentMethod> methods = result.availableMethods;
-      final OrderPaymentMethod? selected = _resolveInitialMethod(methods, state.selectedMethod);
-
-      emit(
-        state.copyWith(
-          status: OrderPaymentStatus.options,
-          methods: methods,
-          selectedMethod: selected,
-          intent: result,
-          clearError: true,
-        ),
+      _applyOptions(
+        result,
+        previousSelection: previousSelection,
       );
     } catch (error) {
       emit(
@@ -185,6 +183,20 @@ class OrderPaymentCubit extends Cubit<OrderPaymentState> {
         );
         return;
       }
+
+      if (_requiresPaymentMethodSelection(initiation)) {
+        final String? serverMessage = initiation.message?.trim();
+        _applyOptions(
+          initiation,
+          previousSelection: resolvedMethod,
+          clearError: false,
+          message: (serverMessage != null && serverMessage.isNotEmpty)
+              ? serverMessage
+              : 'يرجى اختيار وسيلة الدفع.',
+        );
+        return;
+      }
+
 
       await _confirm(
         method: resolvedMethod,
@@ -290,6 +302,87 @@ class OrderPaymentCubit extends Cubit<OrderPaymentState> {
   void reset() {
     emit(const OrderPaymentState());
   }
+
+
+  void _applyOptions(
+      OrderPaymentIntentResult result, {
+        OrderPaymentMethod? previousSelection,
+        OrderPaymentStatus status = OrderPaymentStatus.options,
+        bool clearError = true,
+        String? message,
+      }) {
+    final List<OrderPaymentMethod> methods = result.availableMethods;
+    final OrderPaymentMethod? selected =
+    _resolveInitialMethod(methods, previousSelection);
+
+    emit(
+      state.copyWith(
+        status: status,
+        methods: methods,
+        selectedMethod: selected,
+        clearSelectedMethod: selected == null,
+        intent: result,
+        errorMessage: message,
+        clearError: message == null && clearError,
+        clearAction: true,
+      ),
+    );
+  }
+
+  bool _requiresPaymentMethodSelection(OrderPaymentIntentResult result) {
+    final String normalizedStatus =
+    (result.status ?? result.message ?? '').toLowerCase().trim();
+    if (normalizedStatus == 'requires_payment_method') {
+      return true;
+    }
+
+    final dynamic rawFlag = result.raw['requires_payment_method'] ??
+        result.intent?['requires_payment_method'] ??
+        result.transaction?['requires_payment_method'];
+
+    if (_isTruthy(rawFlag)) {
+      return true;
+    }
+
+    final bool missingTransaction =
+        (result.transactionId == null || result.transactionId!.trim().isEmpty) &&
+            result.availableMethods.isNotEmpty;
+
+    if (missingTransaction && !result.requiresAction) {
+      return true;
+    }
+
+    return false;
+  }
+
+  bool _isTruthy(dynamic value) {
+    if (value == null) {
+      return false;
+    }
+    if (value is bool) {
+      return value;
+    }
+    if (value is num) {
+      return value != 0;
+    }
+
+    final String normalized = value.toString().toLowerCase().trim();
+    if (normalized.isEmpty) {
+      return false;
+    }
+
+    const Set<String> truthy = <String>{
+      'true',
+      '1',
+      'yes',
+      'y',
+      'required',
+      'requires_payment_method',
+    };
+
+    return truthy.contains(normalized);
+  }
+
 
   OrderPaymentMethod? _resolveInitialMethod(
       List<OrderPaymentMethod> methods,

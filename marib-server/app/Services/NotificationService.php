@@ -432,7 +432,21 @@ class NotificationService {
                         'failures' => $failedDeliveries,
                         'invalid_tokens_removed' => $invalidatedTokens,
                         'invalid_tokens_removed_count' => count($invalidatedTokens),
+                    ],
+                ];
+            }
 
+            if ($successfulDeliveries === 0) {
+                return [
+                    'error' => true,
+                    'message' => 'No notifications were delivered to any devices.',
+                    'code' => 404,
+                    'details' => [],
+                    'data' => [
+                        'success' => 0,
+                        'failure' => 0,
+                        'invalid_tokens_removed' => $invalidatedTokens,
+                        'invalid_tokens_removed_count' => count($invalidatedTokens),
                     ],
                 ];
             }
@@ -448,6 +462,7 @@ class NotificationService {
                     'failure' => 0,
                     'invalid_tokens_removed' => $invalidatedTokens,
                     'invalid_tokens_removed_count' => count($invalidatedTokens),
+
                 ],
             ];
         } catch (Throwable $th) {
@@ -671,6 +686,7 @@ class NotificationService {
 
         return false;
     }
+
 
     protected static function shouldIgnoreFcmFailure(?string $errorCode, ?string $status, ?int $httpCode): bool
     {

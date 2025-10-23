@@ -1,13 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:lottie/lottie.dart';
 import 'package:marib/ui/theme/theme.dart';
-import 'package:marib/utils/app_icon.dart';
 import 'package:marib/utils/extensions/extensions.dart';
-import 'package:marib/utils/ui_utils.dart';
-import 'package:flutter/material.dart';
-
-import 'package:marib/utils/app_icon.dart';
-
 
 enum EmptyStateCategory {
   general,
@@ -38,147 +31,141 @@ class _EmptyStateMessage {
   const _EmptyStateMessage({
     required this.titleKey,
     required this.subtitleKey,
-    this.illustration,
+    required this.icon,
   });
 
   final String titleKey;
   final String subtitleKey;
-  final String? illustration;
+  final IconData icon;
 }
 
-final String _defaultEmptyStateIllustration = AppIcons.no_data_found;
-
-final Map<EmptyStateCategory, Map<EmptyStateIssue, _EmptyStateMessage>>
+const Map<EmptyStateCategory, Map<EmptyStateIssue, _EmptyStateMessage>>
 _emptyStateMessages = {
   EmptyStateCategory.general: {
     EmptyStateIssue.noData: _EmptyStateMessage(
       titleKey: 'emptyStateGeneralTitle',
       subtitleKey: 'emptyStateGeneralDescription',
-      illustration: _defaultEmptyStateIllustration,
+      icon: Icons.inbox_outlined,
     ),
-    EmptyStateIssue.network:  _EmptyStateMessage(
+    EmptyStateIssue.network: _EmptyStateMessage(
       titleKey: 'emptyStateGeneralNetworkTitle',
       subtitleKey: 'emptyStateGeneralNetworkDescription',
-      illustration: AppIcons.no_internet,
+      icon: Icons.wifi_off_outlined,
     ),
-    EmptyStateIssue.server:  _EmptyStateMessage(
+    EmptyStateIssue.server: _EmptyStateMessage(
       titleKey: 'emptyStateGeneralServerTitle',
       subtitleKey: 'emptyStateGeneralServerDescription',
-      illustration: AppIcons.somethingWentWrong,
+      icon: Icons.cloud_off_outlined,
     ),
   },
   EmptyStateCategory.favorites: {
-    EmptyStateIssue.noData:  _EmptyStateMessage(
+    EmptyStateIssue.noData: _EmptyStateMessage(
       titleKey: 'emptyStateFavoritesTitle',
       subtitleKey: 'emptyStateFavoritesDescription',
-      illustration: AppIcons.like,
+      icon: Icons.favorite_border,
     ),
   },
   EmptyStateCategory.transactions: {
-    EmptyStateIssue.noData:  _EmptyStateMessage(
+    EmptyStateIssue.noData: _EmptyStateMessage(
       titleKey: 'emptyStateTransactionsTitle',
       subtitleKey: 'emptyStateTransactionsDescription',
-      illustration: AppIcons.transaction,
+      icon: Icons.receipt_long_outlined,
     ),
   },
   EmptyStateCategory.subscriptions: {
-    EmptyStateIssue.noData:  _EmptyStateMessage(
+    EmptyStateIssue.noData: _EmptyStateMessage(
       titleKey: 'emptyStateSubscriptionsTitle',
       subtitleKey: 'emptyStateSubscriptionsDescription',
-      illustration: AppIcons.subscription,
+      icon: Icons.subscriptions_outlined,
     ),
   },
   EmptyStateCategory.wallet: {
-    EmptyStateIssue.noData:  _EmptyStateMessage(
+    EmptyStateIssue.noData: _EmptyStateMessage(
       titleKey: 'emptyStateWalletTitle',
       subtitleKey: 'emptyStateWalletDescription',
-      illustration: AppIcons.wallet,
+      icon: Icons.account_balance_wallet_outlined,
     ),
   },
   EmptyStateCategory.chat: {
-    EmptyStateIssue.noData:  _EmptyStateMessage(
+    EmptyStateIssue.noData: _EmptyStateMessage(
       titleKey: 'emptyStateChatTitle',
       subtitleKey: 'emptyStateChatDescription',
-      illustration: AppIcons.message,
+      icon: Icons.chat_bubble_outline,
     ),
   },
   EmptyStateCategory.blocked: {
-    EmptyStateIssue.noData:  _EmptyStateMessage(
+    EmptyStateIssue.noData: _EmptyStateMessage(
       titleKey: 'emptyStateBlockedTitle',
       subtitleKey: 'emptyStateBlockedDescription',
-      illustration: AppIcons.blockedUserIcon,
+      icon: Icons.block_outlined,
     ),
   },
   EmptyStateCategory.faqs: {
-    EmptyStateIssue.noData:  _EmptyStateMessage(
+    EmptyStateIssue.noData: _EmptyStateMessage(
       titleKey: 'emptyStateFaqsTitle',
       subtitleKey: 'emptyStateFaqsDescription',
-      illustration: AppIcons.faqsIcon,
+      icon: Icons.help_outline,
     ),
   },
   EmptyStateCategory.profile: {
-    EmptyStateIssue.noData:  _EmptyStateMessage(
+    EmptyStateIssue.noData: _EmptyStateMessage(
       titleKey: 'emptyStateProfileTitle',
       subtitleKey: 'emptyStateProfileDescription',
-      illustration: AppIcons.profile,
+      icon: Icons.person_outline,
     ),
   },
   EmptyStateCategory.items: {
-    EmptyStateIssue.noData:  _EmptyStateMessage(
+    EmptyStateIssue.noData: _EmptyStateMessage(
       titleKey: 'emptyStateItemsTitle',
       subtitleKey: 'emptyStateItemsDescription',
-      illustration: AppIcons.items,
+      icon: Icons.widgets_outlined,
     ),
   },
   EmptyStateCategory.search: {
-    EmptyStateIssue.noData:  _EmptyStateMessage(
+    EmptyStateIssue.noData: _EmptyStateMessage(
       titleKey: 'emptyStateSearchTitle',
       subtitleKey: 'emptyStateSearchDescription',
-      illustration: AppIcons.search,
+      icon: Icons.search,
     ),
   },
   EmptyStateCategory.notifications: {
-    EmptyStateIssue.noData:  _EmptyStateMessage(
+    EmptyStateIssue.noData: _EmptyStateMessage(
       titleKey: 'emptyStateNotificationsTitle',
       subtitleKey: 'emptyStateNotificationsDescription',
-      illustration: AppIcons.notification,
+      icon: Icons.notifications_none_outlined,
     ),
   },
   EmptyStateCategory.categories: {
-    EmptyStateIssue.noData:  _EmptyStateMessage(
+    EmptyStateIssue.noData: _EmptyStateMessage(
       titleKey: 'emptyStateCategoriesTitle',
       subtitleKey: 'emptyStateCategoriesDescription',
-      illustration: AppIcons.categoryIcon,
+      icon: Icons.category_outlined,
     ),
   },
   EmptyStateCategory.location: {
-    EmptyStateIssue.noData:  _EmptyStateMessage(
+    EmptyStateIssue.noData: _EmptyStateMessage(
       titleKey: 'emptyStateLocationTitle',
       subtitleKey: 'emptyStateLocationDescription',
-      illustration: AppIcons.location,
+      icon: Icons.location_on_outlined,
     ),
   },
   EmptyStateCategory.advertisements: {
-    EmptyStateIssue.noData:  _EmptyStateMessage(
+    EmptyStateIssue.noData: _EmptyStateMessage(
       titleKey: 'emptyStateAdvertisementsTitle',
       subtitleKey: 'emptyStateAdvertisementsDescription',
-      illustration: AppIcons.ads,
+      icon: Icons.campaign_outlined,
     ),
   },
   EmptyStateCategory.reviews: {
-    EmptyStateIssue.noData:  _EmptyStateMessage(
+    EmptyStateIssue.noData: _EmptyStateMessage(
       titleKey: 'emptyStateReviewsTitle',
       subtitleKey: 'emptyStateReviewsDescription',
-      illustration: AppIcons.myReviewIcon,
+      icon: Icons.rate_review_outlined,
     ),
   },
 };
 
-
-
 class NoDataFound extends StatelessWidget {
-
-
   const NoDataFound({
     super.key,
     this.height,
@@ -192,7 +179,6 @@ class NoDataFound extends StatelessWidget {
     this.customIllustration,
   });
 
-
   final double? height;
   final String? mainMessage;
   final String? subMessage;
@@ -205,88 +191,81 @@ class NoDataFound extends StatelessWidget {
 
   _EmptyStateMessage _resolveMessage() {
     final categoryMessages = _emptyStateMessages[category];
-    final generalMessages = _emptyStateMessages[EmptyStateCategory.general]!;
+    final generalMessages =
+    _emptyStateMessages[EmptyStateCategory.general]!;
 
+    if (categoryMessages == null) {
+      return generalMessages[issue] ??
+          generalMessages[EmptyStateIssue.noData]!;
+    }
 
-    return categoryMessages != null && categoryMessages.containsKey(issue)
-        ? categoryMessages[issue]!
-        : categoryMessages != null &&
-        categoryMessages.containsKey(EmptyStateIssue.noData)
-        ? categoryMessages[EmptyStateIssue.noData]!
-        : generalMessages[issue] ??
+    if (categoryMessages.containsKey(issue)) {
+      return categoryMessages[issue]!;
+    }
+
+    if (categoryMessages.containsKey(EmptyStateIssue.noData)) {
+      return categoryMessages[EmptyStateIssue.noData]!;
+    }
+
+    return generalMessages[issue] ??
         generalMessages[EmptyStateIssue.noData]!;
   }
-
 
   @override
   Widget build(BuildContext context) {
     final message = _resolveMessage();
-    final color = context.color.territoryColor;
+    final palette = context.color;
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
+    final iconColor = theme.colorScheme.onSurfaceVariant.withOpacity(0.72);
+    final titleColor = palette.textDefaultColor;
+    final subtitleColor = palette.textLightColor;
     final resolvedTitle = mainMessage ?? message.titleKey.translate(context);
     final resolvedSubtitle =
         subMessage ?? message.subtitleKey.translate(context);
+
     return Center(
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 420),
-        padding: padding ?? const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: color.withOpacity(0.14), width: 1.2),
-          boxShadow: [
-            BoxShadow(
-              color: color.withOpacity(0.08),
-              blurRadius: 28,
-              spreadRadius: 0,
-              offset: const Offset(0, 14),
-            ),
-          ],
-        ),
-        child: Column(
+      child: Padding(
+        padding:
+        padding ?? const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 360),
+          child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-        Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              color.withOpacity(0.18),
-              color.withOpacity(0.06),
-            ],
-          ),
-        ),
-        child: _buildIllustration(message),
-            ),
-              const SizedBox(height: 24),
+              _buildIllustration(context, message, iconColor),
+              const SizedBox(height: 20),
               Text(
                 resolvedTitle,
                 textAlign: TextAlign.center,
               )
                   .size(context.font.extraLarge)
-                  .color(color)
+                  .color(titleColor)
                   .bold(weight: FontWeight.w700),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               Text(
                 resolvedSubtitle,
                 textAlign: TextAlign.center,
               )
                   .size(context.font.large)
-                  .color(context.color.textLightColor)
+                  .color(subtitleColor)
                   .centerAlign(),
               if (onTap != null) ...[
-                const SizedBox(height: 24),
-                _buildActionButton(context, color),
+                const SizedBox(height: 28),
+                _buildActionButton(context, onSurface),
               ],
             ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildIllustration(_EmptyStateMessage message) {
+  Widget _buildIllustration(
+      BuildContext context,
+      _EmptyStateMessage message,
+      Color iconColor,
+      ) {
     if (customIllustration != null) {
       return SizedBox(
         height: height ?? 120,
@@ -298,51 +277,42 @@ class NoDataFound extends StatelessWidget {
       );
     }
 
-    final resolvedHeight = height ?? 120;
-    final asset = message.illustration ?? _defaultEmptyStateIllustration;
+    final resolvedSize = height ?? 72;
 
-    if (asset.endsWith('.json')) {
-      return SizedBox(
-        height: resolvedHeight,
-        width: resolvedHeight,
-        child: Lottie.asset(
-          asset,
-          repeat: true,
-          fit: BoxFit.contain,
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.2),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Icon(
+          message.icon,
+          size: resolvedSize,
+          color: iconColor,
         ),
-      );
-    }
-
-    return SizedBox(
-      height: resolvedHeight,
-      width: resolvedHeight,
-      child: UiUtils.getSvg(
-        asset,
-        fit: BoxFit.contain,
       ),
     );
   }
 
-  Widget _buildActionButton(BuildContext context, Color color) {
+  Widget _buildActionButton(BuildContext context, Color onSurface) {
     final label = (actionLabel ?? 'retry').translate(context);
 
     return ConstrainedBox(
-        constraints: const BoxConstraints(minWidth: 160),
-        child: ElevatedButton(
-          onPressed: onTap,
-          style: ElevatedButton.styleFrom(
-            elevation: 0,
-            backgroundColor: color,
-            foregroundColor: context.color.buttonColor,
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-
+      constraints: const BoxConstraints(minWidth: 160),
+      child: OutlinedButton(
+        onPressed: onTap,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: onSurface,
+          side: BorderSide(color: onSurface.withOpacity(0.4)),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
           ),
-          ),
-          child: Text(label)
-              .size(context.font.large)
-              .bold(weight: FontWeight.w600),
+        ),
+        child: Text(label)
+            .size(context.font.large)
+            .bold(weight: FontWeight.w600),
       ),
     );
   }

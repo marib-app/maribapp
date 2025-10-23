@@ -36,7 +36,13 @@ class ManualPaymentRequestResource extends JsonResource
         }
 
         $manualBank = $manualPaymentRequestModel?->manualBank;
-        
+                $manualBankPayload = $manualBank instanceof ManualBank
+            ? array_merge($manualBank->toArray(), [
+                'logo_url' => $this->generateSignedUrl($manualBank->logo ?? null),
+                'qr_code_url' => $this->generateSignedUrl($manualBank->qr_code ?? null),
+            ])
+            : null;
+
         $payable = $this->whenLoaded('payable');
 
         if (
@@ -73,7 +79,27 @@ class ManualPaymentRequestResource extends JsonResource
         $manualBankName = $labels['bank_label'];
         $channelLabel = $labels['channel_label'];
 
+        $meta = null;
 
+        if ($manualPaymentRequestModel instanceof ManualPaymentRequest && is_array($manualPaymentRequestModel->meta)) {
+            $meta = $manualPaymentRequestModel->meta;
+        } elseif (is_array($this->meta)) {
+            $meta = $this->meta;
+        }
+
+        if (! is_array($meta) || $meta === []) {
+            $meta = null;
+        }
+
+        $paymentTransactionMeta = null;
+
+        if ($paymentTransaction instanceof PaymentTransaction && is_array($paymentTransaction->meta)) {
+            $paymentTransactionMeta = $paymentTransaction->meta;
+        }
+
+        if (! is_array($paymentTransactionMeta) || $paymentTransactionMeta === []) {
+            $paymentTransactionMeta = null;
+        }
 
         $paymentStatus = $this->normalizePaymentStatus($paymentTransaction?->payment_status);
         $manualReference = $this->reference
@@ -100,16 +126,41 @@ class ManualPaymentRequestResource extends JsonResource
         }
 
 
+        $manualPaymentSnapshot = array_filter([
+            'id' => $this->id,
+            'manual_payment_id' => (string) $this->id,
+            'reference' => $this->reference,
+            'manual_reference' => $manualReference,
+            'status' => $this->status,
+            'payment_status' => $paymentStatus,
+            'amount' => $this->amount !== null ? (float) $this->amount : null,
+            'currency' => $this->currency,
+            'notes' => $this->user_note,
+            'admin_note' => $this->admin_note,
+            'payment_gateway' => $gatewayKey,
+            'payment_gateway_key' => $canonicalGateway,
+            'payment_gateway_label' => $channelLabel,
+            'manual_bank_name' => $manualBankName,
+            'receipt_url' => $this->generateSignedUrl($this->receipt_path),
+            'meta' => $meta,
+            'metadata' => $meta,
+            'manual_bank' => $manualBankPayload,
+            'context' => is_array($meta) ? ($meta['context'] ?? null) : null,
+            'payable_type' => $this->payable_type,
+            'payable_id' => $this->payable_id,
+            'payment_transaction_id' => $paymentTransaction?->id,
+        ], static fn ($value) => $value !== null && $value !== '');
+
+
+
         return [
             'id' => $this->id,
             'manual_payment_id' => (string) $this->id,
 
 
             'user_id' => $this->user_id,
-            'manual_bank' => $manualBank ? array_merge($manualBank->toArray(), [
-                'logo_url' => $this->generateSignedUrl($manualBank->logo ?? null),
-                'qr_code_url' => $this->generateSignedUrl($manualBank->qr_code ?? null),
-            ]) : null,
+            'manual_bank' => $manualBankPayload,
+
             'manual_bank_name' => $manualBankName,
             'bank_label' => $manualBankName,
             'amount' => $this->whenNotNull($this->amount, fn () => (float) $this->amount),
@@ -134,6 +185,17 @@ class ManualPaymentRequestResource extends JsonResource
             'transaction_status' => $paymentStatus,
 
             'receipt_url' => $this->generateSignedUrl($this->receipt_path),
+
+            'transaction_id' => $paymentTransaction?->id,
+            'payment_transaction_id' => $paymentTransaction?->id,
+            'transaction_identifier' => $paymentTransaction?->payment_id
+                ?? $paymentTransaction?->payment_signature
+                ?? $paymentTransaction?->idempotency_key,
+            'meta' => $meta,
+            'metadata' => $meta,
+            'context' => is_array($meta) ? ($meta['context'] ?? null) : null,
+            'manual_payment' => $manualPaymentSnapshot !== [] ? $manualPaymentSnapshot : null,
+
             'payable' => $payable ? [
                 'id' => $this->payable_id,
                 'type' => class_basename($this->payable_type),
@@ -147,12 +209,17 @@ class ManualPaymentRequestResource extends JsonResource
                 'status' => $paymentStatus,
                 'amount' => (float) $paymentTransaction->amount,
                 'currency' => $paymentTransaction->currency,
+                'payment_method' => $paymentTransaction->payment_method,
+                'payment_gateway' => $paymentTransaction->payment_gateway,
+                'manual_payment_request_id' => $paymentTransaction->manual_payment_request_id,
+
                 'receipt_url' => $this->generateSignedUrl($paymentTransaction->receipt_path ?? $this->receipt_path),
                 'gateway_label' => $transactionLabels['channel_label'],
                 'channel_label' => $transactionLabels['channel_label'],
                 
                 'bank_label' => $transactionLabels['bank_label'],
-
+                'meta' => $paymentTransactionMeta,
+                'metadata' => $paymentTransactionMeta,
 
                 'order' => $order ? [
                     'id' => $order->id,

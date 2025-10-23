@@ -257,6 +257,7 @@ class FetchItemSummaryCubit extends Cubit<FetchItemSummaryState> {
         a.latitude == b.latitude &&
         a.longitude == b.longitude &&
         a.currency == b.currency &&
+        a.userId == b.userId &&
         mapEquals(a.customFields ?? const {}, b.customFields ?? const {});
   }
 
@@ -279,6 +280,7 @@ class FetchItemSummaryCubit extends Cubit<FetchItemSummaryState> {
       latitude: filter.latitude,
       longitude: filter.longitude,
       currency: filter.currency,
+      userId: filter.userId,
       customFields: filter.customFields == null
           ? null
           : Map<String, dynamic>.from(filter.customFields!),

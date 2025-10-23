@@ -39,16 +39,7 @@ class CreateOrLinkManualPaymentRequest
             ])->saveQuietly();
         }
 
-        $manualRequest = $this->manualPaymentRequestService->createOrUpdateForManualTransaction(
-            $user,
-            $payableType,
-            $payableId,
-            $transaction,
-            $data
-        );
-
-        $manualMeta = is_array($manualRequest->meta) ? $manualRequest->meta : [];
-        $transactionMeta = is_array($transaction->meta) ? $transaction->meta : [];
+        
 
         $senderName = $this->normalizeString(
             Arr::get($data, 'sender_name')
@@ -69,6 +60,23 @@ class CreateOrLinkManualPaymentRequest
                 ?? Arr::get($data, 'metadata.note')
                 ?? Arr::get($data, 'metadata.notes')
         );
+
+
+        $data['sender_name'] = $senderName;
+        $data['reference'] = $transferReference;
+        $data['note'] = $note;
+
+        $manualRequest = $this->manualPaymentRequestService->createOrUpdateForManualTransaction(
+            $user,
+            $payableType,
+            $payableId,
+            $transaction,
+            $data
+        )->refresh();
+
+        $manualMeta = is_array($manualRequest->meta) ? $manualRequest->meta : [];
+        $transactionMeta = is_array($transaction->meta) ? $transaction->meta : [];
+
 
         if ($senderName !== null) {
             data_set($manualMeta, 'manual.sender_name', $senderName);
@@ -98,7 +106,7 @@ class CreateOrLinkManualPaymentRequest
             'meta' => $this->filterArrayRecursive($transactionMeta),
         ])->saveQuietly();
 
-        return $manualRequest->fresh();
+        return $manualRequest->refresh();
     }
 
     private function normalizeString($value): ?string

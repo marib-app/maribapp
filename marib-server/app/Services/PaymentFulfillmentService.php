@@ -1119,6 +1119,33 @@ class PaymentFulfillmentService
         }
         $notificationData = $this->buildNotificationDataPayload($transaction, $normalizedType);
 
+
+        if (($notificationData['payable_type_alias'] ?? null) === 'wallet_top_up') {
+            $currency = strtoupper((string) ($transaction->currency ?? config('app.currency', 'SAR')));
+            $amount = (float) $transaction->amount;
+
+            $title = __('Wallet top-up completed');
+            $body = __('Your wallet top-up of :amount :currency has been processed successfully.', [
+                'amount' => number_format($amount, 2),
+                'currency' => $currency,
+            ]);
+
+            $notificationData = array_replace($notificationData, [
+                'event' => 'wallet_top_up',
+                'category' => 'wallet_top_up',
+                'wallet_amount' => $amount,
+                'wallet_currency' => $currency,
+            ]);
+
+            return [
+                'title' => $title,
+                'body' => $body,
+                'type' => 'wallet',
+                'data' => $notificationData,
+            ];
+        } 
+
+
         return [
             'title' => $title,
             'body' => $body,

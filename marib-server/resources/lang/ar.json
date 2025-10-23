@@ -668,6 +668,9 @@
     "wallet.filters.payments": "المشتريات",
     "wallet.filters.transfers": "التحويلات",
     "wallet.filters.refunds": "المبالغ المستردة",
+    "Wallet top-up completed": "تم شحن المحفظة بنجاح",
+    "Your wallet top-up of :amount :currency has been processed successfully.": "تمت معالجة شحن محفظتك بمبلغ :amount :currency بنجاح.",
+
     "Manual Payment Order Overview": "متابعة طلب السلة",
     "Manual Payment Order Status": "حالة الطلب",
     "Manual Payment Payment Status": "حالة الدفع",

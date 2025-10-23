@@ -434,13 +434,17 @@ class PackageController extends Controller {
             $labels = PaymentLabelService::forManualPaymentRequest($manualRequest);
         } else {
             $labels = [
+                'gateway_key' => $row['gateway_key'] ?? null,
+                'gateway_label' => $row['gateway_label'] ?? null,
+                'bank_name' => $row['manual_bank_name'] ?? null,
                 'channel_label' => $row['gateway_label'] ?? null,
                 'bank_label' => $row['manual_bank_name'] ?? null,
             ];
         }
 
-        $gatewayLabel = $labels['channel_label'];
-        $bankLabel = $labels['bank_label'];
+        $gatewayLabel = $labels['gateway_label'];
+        $bankLabel = $labels['bank_name'];
+        $gatewayKey = $labels['gateway_key'] ?? ($row['gateway_key'] ?? null);
 
         $manualBankName = $gatewayLabel === trans('المحفظة') ? null : $bankLabel;
 
@@ -471,13 +475,14 @@ class PackageController extends Controller {
             'reference'                  => $row['reference'] ?? null,
             'payment_status'             => $row['status_group'] ?? null,
             'status_group'               => $row['status_group'] ?? null,
-            'gateway_key'                => $row['gateway_key'] ?? null,
+            'gateway_key'                => $gatewayKey,
             'gateway_label'              => $gatewayLabel,
             'gateway_name'               => $row['gateway_name'] ?? null,
             'payment_gateway'            => $gatewayLabel,
             'channel_label'              => $gatewayLabel,
             'manual_bank_name'           => $manualBankName,
             'bank_label'                 => $bankLabel,
+            'bank_name'                  => $bankLabel,
             'manual_bank_id'             => $row['manual_bank_id'] ?? null,
             'normalized_channel'         => $normalizedChannel,
             'normalized_channel_label'   => $this->paymentRequestChannelLabel($normalizedChannel),

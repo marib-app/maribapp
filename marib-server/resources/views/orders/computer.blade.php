@@ -336,7 +336,7 @@
                                                 -
                                             @endif
                                         </td>
-                                        <td>{{ $order->payment_method ?: 'غير محدد' }}</td>
+                                        <td>{{ $order->resolved_payment_gateway_label ?? 'غير محدد' }}</td>
                                         <td>
                                             @php
                                                 $latestManualPaymentRequest = $order->latestManualPaymentRequest;

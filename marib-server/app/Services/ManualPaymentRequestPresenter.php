@@ -61,8 +61,14 @@ class ManualPaymentRequestPresenter
 
         $manualPaymentRequest->loadMissing('manualBank');
         $labels = PaymentLabelService::forManualPaymentRequest($manualPaymentRequest);
-        $paymentGatewayLabel = $labels['channel_label'];
-        $manualBankName = $labels['bank_label'];
+        $paymentGatewayLabel = $labels['gateway_label'];
+        $manualBankName = $labels['bank_name'];
+
+        if (! empty($labels['gateway_key'])) {
+            $paymentGatewayKey = $labels['gateway_key'];
+            $paymentGatewayCanonical = $labels['gateway_key'];
+        }
+
         $departmentLabel = $this->paymentRequestDepartmentLabel($manualPaymentRequest->department ?? null);
 
         return compact(

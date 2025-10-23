@@ -70,7 +70,30 @@ class OrderController extends Controller
                     'manual_payment_requests.currency',
                     'manual_payment_requests.created_at',
                     'manual_payment_requests.reviewed_at',
+                    'manual_payment_requests.manual_bank_id',
+                    'manual_payment_requests.bank_name',
+                    'manual_payment_requests.meta',
                 ]);
+                $query->with('manualBank:id,name,bank_name,beneficiary_name');
+            },
+            'latestPaymentTransaction' => static function ($query) {
+                $query->select([
+                    'payment_transactions.id',
+                    'payment_transactions.payable_id',
+                    'payment_transactions.payable_type',
+                    'payment_transactions.payment_gateway',
+                    'payment_transactions.gateway_code',
+                    'payment_transactions.payment_gateway_name',
+                    'payment_transactions.gateway_label',
+                    'payment_transactions.channel_label',
+                    'payment_transactions.payment_gateway_label',
+                    'payment_transactions.payment_status',
+                    'payment_transactions.amount',
+                    'payment_transactions.currency',
+                    'payment_transactions.manual_payment_request_id',
+                    'payment_transactions.meta',
+                ]);
+                $query->with('manualPaymentRequest.manualBank:id,name,bank_name,beneficiary_name');
             },
         ])
         
@@ -146,7 +169,6 @@ class OrderController extends Controller
     }
 
 
-
     public function indexShein(Request $request)
     {
         ResponseService::noAnyPermissionThenRedirect(['shein-orders-list']);
@@ -168,7 +190,30 @@ class OrderController extends Controller
                     'manual_payment_requests.currency',
                     'manual_payment_requests.created_at',
                     'manual_payment_requests.reviewed_at',
+                    'manual_payment_requests.manual_bank_id',
+                    'manual_payment_requests.bank_name',
+                    'manual_payment_requests.meta',
                 ]);
+                $query->with('manualBank:id,name,bank_name,beneficiary_name');
+            },
+            'latestPaymentTransaction' => static function ($query) {
+                $query->select([
+                    'payment_transactions.id',
+                    'payment_transactions.payable_id',
+                    'payment_transactions.payable_type',
+                    'payment_transactions.payment_gateway',
+                    'payment_transactions.gateway_code',
+                    'payment_transactions.payment_gateway_name',
+                    'payment_transactions.gateway_label',
+                    'payment_transactions.channel_label',
+                    'payment_transactions.payment_gateway_label',
+                    'payment_transactions.payment_status',
+                    'payment_transactions.amount',
+                    'payment_transactions.currency',
+                    'payment_transactions.manual_payment_request_id',
+                    'payment_transactions.meta',
+                ]);
+                $query->with('manualPaymentRequest.manualBank:id,name,bank_name,beneficiary_name');
             },
         ])
         
@@ -280,7 +325,30 @@ class OrderController extends Controller
                     'manual_payment_requests.currency',
                     'manual_payment_requests.created_at',
                     'manual_payment_requests.reviewed_at',
+                    'manual_payment_requests.manual_bank_id',
+                    'manual_payment_requests.bank_name',
+                    'manual_payment_requests.meta',
                 ]);
+                $query->with('manualBank:id,name,bank_name,beneficiary_name');
+            },
+            'latestPaymentTransaction' => static function ($query) {
+                $query->select([
+                    'payment_transactions.id',
+                    'payment_transactions.payable_id',
+                    'payment_transactions.payable_type',
+                    'payment_transactions.payment_gateway',
+                    'payment_transactions.gateway_code',
+                    'payment_transactions.payment_gateway_name',
+                    'payment_transactions.gateway_label',
+                    'payment_transactions.channel_label',
+                    'payment_transactions.payment_gateway_label',
+                    'payment_transactions.payment_status',
+                    'payment_transactions.amount',
+                    'payment_transactions.currency',
+                    'payment_transactions.manual_payment_request_id',
+                    'payment_transactions.meta',
+                ]);
+                $query->with('manualPaymentRequest.manualBank:id,name,bank_name,beneficiary_name');
             },
         ])
             ->withCount(['openManualPaymentRequests as pending_manual_payment_requests_count'])
@@ -504,6 +572,9 @@ class OrderController extends Controller
             'seller' => static fn ($query) => $query->withTrashed(),
             'items',
             'history.user' => static fn ($query) => $query->withTrashed(),
+            'latestManualPaymentRequest.manualBank',
+            'latestPaymentTransaction.manualPaymentRequest.manualBank',
+
         ])
         
         ->findOrFail($id);
@@ -812,6 +883,9 @@ class OrderController extends Controller
                 'items',
                 'history.user' => static fn ($query) => $query->withTrashed(),
                 'manualPaymentRequests.paymentTransaction',
+                'latestManualPaymentRequest.manualBank',
+                'latestPaymentTransaction.manualPaymentRequest.manualBank',
+
             ])
             
             ->findOrFail($id);

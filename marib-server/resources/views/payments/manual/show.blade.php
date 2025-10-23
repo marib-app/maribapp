@@ -21,7 +21,7 @@
         $paymentGatewayCanonical = 'manual_banks';
     }
 
-    $paymentGatewayLabel = $paymentGatewayLabel ?? __('Bank Transfer');
+    $paymentGatewayLabel = $paymentGatewayLabel ?? ($manualBankName ?? '—');
     $manualBankName = $manualBankName ?? null;
     $departmentLabel = $departmentLabel ?? __('Unknown Department');
 

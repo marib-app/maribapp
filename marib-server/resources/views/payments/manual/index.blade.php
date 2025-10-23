@@ -782,14 +782,16 @@
 
         function resolveManualPaymentGatewayLabel(row, fallback, normalizedGateway) {
             const safeRow = row && typeof row === 'object' ? row : {};
-            const rawGatewayValue = typeof safeRow.gateway_code === 'string'
-                ? safeRow.gateway_code
-                : (typeof safeRow.channel === 'string'
-                    ? safeRow.channel
-                    : (typeof safeRow.payment_gateway === 'string'
-                        ? safeRow.payment_gateway
-                        : (typeof safeRow.payment_method === 'string' ? safeRow.payment_method : '')
-                    ));
+            const rawGatewayValue = typeof safeRow.gateway_key === 'string'
+                ? safeRow.gateway_key
+                : (typeof safeRow.gateway_code === 'string'
+                    ? safeRow.gateway_code
+                    : (typeof safeRow.channel === 'string'
+                        ? safeRow.channel
+                        : (typeof safeRow.payment_gateway === 'string'
+                            ? safeRow.payment_gateway
+                            : (typeof safeRow.payment_method === 'string' ? safeRow.payment_method : '')
+                        )));
 
 
             const normalized = normalizedGateway
@@ -827,6 +829,7 @@
                 fallback,
 
                 safeRow.payment_gateway,
+                safeRow.gateway_key,
                 safeRow.channel,
                 rawGatewayValue,
             ];
@@ -881,11 +884,11 @@
                 return normalizeManualPaymentStatus(trimmed);
             }
 
-            if (key === 'payment_gateway' || key === 'channel') {
+            if (key === 'payment_gateway' || key === 'channel' || key === 'gateway_key') {
                 return normalizeManualPaymentGateway(trimmed);
             }
 
-           if (key === 'payable_type' || key === 'category') {
+            if (key === 'payable_type' || key === 'category') {
                 return normalizeManualPaymentCategory(trimmed);
             }
 
@@ -1568,7 +1571,7 @@
                         render: function (data, type, row) {
 
                             const normalizedGateway = normalizeManualPaymentGateway(
-                                row?.gateway_code ?? row?.channel ?? row?.payment_gateway ?? row?.payment_method ?? ''
+                                row?.gateway_key ?? row?.gateway_code ?? row?.channel ?? row?.payment_gateway ?? row?.payment_method ?? ''
                             ) ?? '';
 
                             if (type === 'sort' || type === 'type') {

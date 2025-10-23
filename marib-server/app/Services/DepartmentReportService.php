@@ -10,6 +10,7 @@ use App\Models\PaymentTransaction;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use App\Support\Payments\PaymentLabelService;
 
 class DepartmentReportService
 {
@@ -72,7 +73,19 @@ class DepartmentReportService
         $ordersByPaymentMethod = (clone $ordersQuery)
             ->select('payment_method', DB::raw('count(*) as total'))
             ->groupBy('payment_method')
-            ->get();
+            ->get()
+            ->map(function ($row) {
+                $labels = PaymentLabelService::forPayload([
+                    'payment_method' => $row->payment_method,
+                    'payment_gateway' => $row->payment_method,
+                ]);
+
+                $row->payment_gateway_key = $labels['gateway_key'];
+                $row->payment_gateway_label = $labels['gateway_label'];
+                $row->bank_name = $labels['bank_name'];
+
+                return $row;
+            });
 
         $dailySales = (clone $deliveredOrders)
             ->select(

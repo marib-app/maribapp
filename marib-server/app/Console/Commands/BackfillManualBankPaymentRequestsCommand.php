@@ -8,6 +8,7 @@ use App\Services\Payments\ManualPaymentRequestService;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
+use App\Support\Payments\PaymentLabelService;
 
 class BackfillManualBankPaymentRequestsCommand extends Command
 {
@@ -79,8 +80,9 @@ class BackfillManualBankPaymentRequestsCommand extends Command
 
         $processed = 0;
         $linked = 0;
+        $updatedBankNames = 0;
 
-        $query->chunkById($chunkSize, function ($transactions) use (&$processed, &$linked, $service, $dryRun): void {
+        $query->chunkById($chunkSize, function ($transactions) use (&$processed, &$linked, &$updatedBankNames, $service, $dryRun): void {
             foreach ($transactions as $transaction) {
                 ++$processed;
 
@@ -96,6 +98,22 @@ class BackfillManualBankPaymentRequestsCommand extends Command
                 if ($manualRequest instanceof ManualPaymentRequest || $transaction->manual_payment_request_id !== $originalId) {
                     ++$linked;
                 }
+
+
+                $labels = PaymentLabelService::forPaymentTransaction($transaction->fresh('manualPaymentRequest.manualBank'));
+                $bankName = $labels['bank_name'] ?? null;
+
+                if (is_string($bankName) && trim($bankName) !== '') {
+                    $meta = $transaction->meta ?? [];
+                    $existing = data_get($meta, 'payload.bank_name');
+
+                    if (! is_string($existing) || trim($existing) === '') {
+                        data_set($meta, 'payload.bank_name', $bankName);
+                        $transaction->forceFill(['meta' => $meta])->saveQuietly();
+                        ++$updatedBankNames;
+                    }
+                }
+
             }
         }, 'id');
 
@@ -105,7 +123,7 @@ class BackfillManualBankPaymentRequestsCommand extends Command
             return self::SUCCESS;
         }
 
-        $this->info(sprintf('Backfill completed. %d transaction(s) processed, %d linked.', $processed, $linked));
+        $this->info(sprintf('Backfill completed. %d transaction(s) processed, %d linked, %d bank name(s) updated.', $processed, $linked, $updatedBankNames));
 
         return self::SUCCESS;
     }

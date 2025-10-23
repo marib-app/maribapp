@@ -10,11 +10,14 @@ use App\Services\DeliveryPricingService;
 use App\Services\DeliveryPricingResult;
 use App\Services\Exceptions\DeliveryPricingException;
 use App\Services\LegalNumberingService;
+use App\Models\ManualPaymentRequest;
+use App\Models\PaymentTransaction;
 
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use App\Exceptions\PaymentUnderReviewException;
+use App\Support\Payments\PaymentLabelService;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\DB;
 
@@ -190,9 +193,16 @@ class Order extends Model
         'payment_summary',
         'tracking_details',
         'actions',
+        'resolved_payment_gateway_label',
+        'resolved_payment_gateway_key',
+        'resolved_payment_gateway_bank_name',
 
 
     ];
+
+
+
+    private ?array $paymentGatewayLabelsCache = null;
 
 
 
@@ -388,6 +398,16 @@ class Order extends Model
             );
     }
 
+    public function latestPaymentTransaction(): HasOne
+    {
+        return $this->hasOne(PaymentTransaction::class, 'payable_id')
+            ->whereIn(
+                DB::raw('LOWER(payment_transactions.payable_type)'),
+                ManualPaymentRequest::orderPayableTypeTokens()
+            )
+            ->latestOfMany('id');
+    }
+
 
     public function hasSuccessfulPayment(): bool
     {
@@ -410,6 +430,104 @@ class Order extends Model
     }
 
 
+    public function resolvePaymentGatewayLabels(): array
+    {
+        if ($this->paymentGatewayLabelsCache !== null) {
+            return $this->paymentGatewayLabelsCache;
+        }
+
+        $this->loadMissing([
+            'latestManualPaymentRequest.manualBank',
+            'latestPaymentTransaction.manualPaymentRequest.manualBank',
+        ]);
+
+        $defaultLabel = is_string($this->payment_method) && trim($this->payment_method) !== ''
+            ? trim($this->payment_method)
+            : null;
+
+        $default = [
+            'gateway_key' => ManualPaymentRequest::canonicalGateway($this->payment_method) ?? null,
+            'gateway_label' => $defaultLabel,
+            'bank_name' => null,
+            'channel_label' => $defaultLabel,
+            'bank_label' => null,
+        ];
+
+        $manualRequest = null;
+
+        if ($this->relationLoaded('latestManualPaymentRequest')) {
+            $manualRequest = $this->latestManualPaymentRequest;
+        }
+
+        if (! $manualRequest && $this->relationLoaded('manualPaymentRequests')) {
+            $manualRequest = $this->manualPaymentRequests
+                ->sortByDesc('id')
+                ->first();
+        }
+
+        if (! $manualRequest) {
+            $manualRequest = $this->latestManualPaymentRequest()
+                ->with('manualBank')
+                ->first();
+        }
+
+        if ($manualRequest instanceof ManualPaymentRequest) {
+            $manualRequest->loadMissing('manualBank');
+            $labels = PaymentLabelService::forManualPaymentRequest($manualRequest);
+            $this->paymentGatewayLabelsCache = array_merge($default, $labels);
+
+            return $this->paymentGatewayLabelsCache;
+        }
+
+        $transaction = null;
+
+        if ($this->relationLoaded('latestPaymentTransaction')) {
+            $transaction = $this->latestPaymentTransaction;
+        }
+
+        if (! $transaction && $this->relationLoaded('paymentTransactions')) {
+            $transaction = $this->paymentTransactions
+                ->sortByDesc('id')
+                ->first();
+        }
+
+        if (! $transaction) {
+            $transaction = $this->latestPaymentTransaction()
+                ->with('manualPaymentRequest.manualBank')
+                ->first();
+        }
+
+        if ($transaction instanceof PaymentTransaction) {
+            $transaction->loadMissing('manualPaymentRequest.manualBank');
+            $labels = PaymentLabelService::forPaymentTransaction($transaction);
+            $this->paymentGatewayLabelsCache = array_merge($default, $labels);
+
+            return $this->paymentGatewayLabelsCache;
+        }
+
+        $labels = PaymentLabelService::forPayload([
+            'payment_gateway' => $this->payment_method,
+            'payment_method' => $this->payment_method,
+        ]);
+        $this->paymentGatewayLabelsCache = array_merge($default, $labels);
+
+        return $this->paymentGatewayLabelsCache;
+    }
+
+    public function getResolvedPaymentGatewayLabelAttribute(): ?string
+    {
+        return $this->resolvePaymentGatewayLabels()['gateway_label'] ?? null;
+    }
+
+    public function getResolvedPaymentGatewayKeyAttribute(): ?string
+    {
+        return $this->resolvePaymentGatewayLabels()['gateway_key'] ?? null;
+    }
+
+    public function getResolvedPaymentGatewayBankNameAttribute(): ?string
+    {
+        return $this->resolvePaymentGatewayLabels()['bank_name'] ?? null;
+    }
 
 
     public function manualPaymentRequests(): HasMany

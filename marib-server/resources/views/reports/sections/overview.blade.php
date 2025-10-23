@@ -156,7 +156,10 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     const statusData = @json($metrics['orders_by_status']->map(fn($row) => ['label' => $row->order_status, 'total' => (int) $row->total]));
-    const paymentData = @json($metrics['orders_by_payment_method']->map(fn($row) => ['label' => $row->payment_method ?: 'غير محدد', 'total' => (int) $row->total]));
+    const paymentData = @json($metrics['orders_by_payment_method']->map(fn($row) => [
+        'label' => $row->payment_gateway_label ?: ($row->bank_name ?: ($row->payment_method ?: 'غير محدد')),
+        'total' => (int) $row->total,
+    ]));
     const dailyData = @json($metrics['daily_sales']->map(fn($row) => ['date' => $row->date, 'total_orders' => (int) $row->total_orders, 'total_amount' => (float) $row->total_amount]));
 
     const palette = ['#3c8dbc', '#00a65a', '#f39c12', '#00c0ef', '#605ca8', '#d81b60'];

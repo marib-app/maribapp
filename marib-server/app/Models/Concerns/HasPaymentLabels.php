@@ -12,12 +12,30 @@ trait HasPaymentLabels
 
     public function getGatewayLabelAttribute(): ?string
     {
-        return $this->resolvePaymentLabels()['channel_label'] ?? null;
+        return $this->resolvePaymentLabels()['gateway_label'] ?? null;
+    }
+
+    public function getChannelLabelAttribute(): ?string
+    {
+        return $this->resolvePaymentLabels()['gateway_label'] ?? null;
+    }
+
+    public function getGatewayKeyAttribute(): ?string
+    {
+        return $this->resolvePaymentLabels()['gateway_key'] ?? null;
+    
+    
     }
 
     public function getBankLabelAttribute(): ?string
     {
-        return $this->resolvePaymentLabels()['bank_label'] ?? null;
+        return $this->resolvePaymentLabels()['bank_name'] ?? null;
+    }
+
+    public function getManualBankNameAttribute(): ?string
+    {
+        return $this->resolvePaymentLabels()['bank_name'] ?? null;
+    
     }
 
     private function resolvePaymentLabels(): array
@@ -32,6 +50,9 @@ trait HasPaymentLabels
             $this->paymentLabelCache = PaymentLabelService::forManualPaymentRequest($this);
         } else {
             $this->paymentLabelCache = [
+                'gateway_key' => null,
+                'gateway_label' => null,
+                'bank_name' => null,
                 'channel_label' => null,
                 'bank_label' => null,
             ];

@@ -63,7 +63,7 @@
     <script>
         (function () {
             const normalizedChannelKey = 'normalized_channel';
-            const gatewayFieldAliases = ['gateway_label', 'payment_gateway'];
+            const gatewayFieldAliases = ['gateway_label', 'payment_gateway', 'gateway_key'];
             const originalQueryParams = window.queryParams ?? (p => p);
 
             function parseFilterPayload(raw) {

@@ -7963,8 +7963,14 @@ private function formatServiceFieldValueForApi(ServiceCustomField $field, ?Servi
                 ], 401);
             }
             
-            $query = Order::with(['items.item.category', 'seller'])
-                ->where('user_id', $user->id);
+            $query = Order::with([
+                'items.item.category',
+                'seller',
+                'latestManualPaymentRequest.manualBank',
+                'latestPaymentTransaction.manualPaymentRequest.manualBank',
+            ])
+            
+            ->where('user_id', $user->id);
             
             // Filter by order status if provided
             if ($request->has('order_status')) {

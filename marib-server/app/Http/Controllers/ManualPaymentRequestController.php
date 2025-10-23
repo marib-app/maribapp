@@ -282,18 +282,29 @@ class ManualPaymentRequestController extends Controller
 
             if ($labels === null) {
                 $labels = [
+                    'gateway_key' => null,
+                    'gateway_label' => null,
+                    'bank_name' => null,
                     'channel_label' => null,
                     'bank_label' => null,
                 ];
             }
 
-            $channelLabel = $labels['channel_label'];
-            $bankLabel = $labels['bank_label'];
+            $channelLabel = $labels['gateway_label'];
+            $bankLabel = $labels['bank_name'];
+            $gatewayKeyFromLabels = $labels['gateway_key'];
+
+            if ($gatewayKeyFromLabels) {
+                $rowData['payment_gateway_key'] = $gatewayKeyFromLabels;
+                $rowData['gateway_code'] = $gatewayKeyFromLabels;
+            }
 
             $rowData['gateway_label'] = $channelLabel;
             $rowData['channel_label'] = $channelLabel;
-            $rowData['payment_gateway'] = $channelLabel;
+            $rowData['gateway_key'] = $gatewayKeyFromLabels ?? $canonicalGateway;
+            $rowData['payment_gateway'] = $gatewayKeyFromLabels ?? $canonicalGateway;
             $rowData['bank_label'] = $bankLabel;
+            $rowData['bank_name'] = $bankLabel;
             $rowData['manual_bank_name'] = $bankLabel;
 
             $rowData['formatted_amount'] = number_format((float) ($requestRow->amount ?? 0), 2)
@@ -669,6 +680,9 @@ class ManualPaymentRequestController extends Controller
             $manualRequestId = $this->normalizeManualPaymentIdentifier($rowArray['manual_payment_request_id'] ?? null);
 
             $labels = [
+                'gateway_key' => $rowArray['gateway_key'] ?? null,
+                'gateway_label' => $rowArray['gateway_label'] ?? null,
+                'bank_name' => $rowArray['bank_label'] ?? null,
                 'channel_label' => $rowArray['gateway_label'] ?? null,
                 'bank_label' => $rowArray['bank_label'] ?? null,
             ];
@@ -681,7 +695,7 @@ class ManualPaymentRequestController extends Controller
                 }
             }
 
-            if (($labels['channel_label'] ?? null) === null && $manualRequestId !== null && $manualRequests->has($manualRequestId)) {
+            if (($labels['gateway_label'] ?? null) === null && $manualRequestId !== null && $manualRequests->has($manualRequestId)) {
                 $labels = PaymentLabelService::forManualPaymentRequest($manualRequests->get($manualRequestId));
             }
 
@@ -689,14 +703,16 @@ class ManualPaymentRequestController extends Controller
                 $labels = PaymentLabelService::forManualPaymentRequest($manualRequests->get($manualRequestId));
             }
 
-            $channelLabel = $labels['channel_label'];
-            $bankLabel = $labels['bank_label'];
+            $channelLabel = $labels['gateway_label'];
+            $bankLabel = $labels['bank_name'];
+            $gatewayKey = $labels['gateway_key'];
 
             $rowArray['gateway_label'] = $channelLabel;
             $rowArray['payment_gateway_label'] = $channelLabel;
             $rowArray['channel_label'] = $channelLabel;
             $rowArray['bank_label'] = $bankLabel;
             $rowArray['manual_bank_name'] = $bankLabel;
+            $rowArray['gateway_key'] = $gatewayKey ?? ($rowArray['gateway_key'] ?? null);
 
 
             if ($rowArray['gateway_label'] === trans('المحفظة')) {
@@ -790,8 +806,15 @@ class ManualPaymentRequestController extends Controller
         $paymentGatewayKey = $paymentGatewayCanonical;
 
         $labels = PaymentLabelService::forManualPaymentRequest($manualPaymentRequest);
-        $paymentGatewayLabel = $labels['channel_label'];
-        $manualBankName = $labels['bank_label'];
+        $paymentGatewayLabel = $labels['gateway_label'];
+        $manualBankName = $labels['bank_name'];
+        if (! empty($labels['gateway_key'])) {
+            $paymentGatewayKey = $labels['gateway_key'];
+            $paymentGatewayCanonical = $labels['gateway_key'];
+        }
+
+
+        
         $departmentLabel = $this->paymentRequestDepartmentLabel($manualPaymentRequest->department ?? null);
 
         return compact(

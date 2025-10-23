@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Str;
 use App\Models\Concerns\HasPaymentLabels;
-use App\Services\Payments\GatewayLabelService;
+use App\Support\Payments\PaymentLabelService;
 
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Log;
@@ -144,13 +144,7 @@ class PaymentTransaction extends Model
         });
     }
 
-    public function getGatewayLabelAttribute(): string
-    {
-        /** @var GatewayLabelService $service */
-        $service = app(GatewayLabelService::class);
 
-        return $service->labelForTransaction($this);
-    }
 
     public function getGatewayCodeAttribute(): ?string
     {

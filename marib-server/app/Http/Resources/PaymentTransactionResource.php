@@ -2,8 +2,9 @@
 
 namespace App\Http\Resources;
 
-use Illuminate\Http\Resources\Json\JsonResource;
+use App\Support\Payments\PaymentLabelService;
 use Illuminate\Database\Eloquent\Model as EloquentModel;
+use Illuminate\Http\Resources\Json\JsonResource;
 
 class PaymentTransactionResource extends JsonResource
 {
@@ -22,6 +23,15 @@ class PaymentTransactionResource extends JsonResource
         $manualBank = $manualPaymentRequest?->manualBank;
         $order = $resource instanceof EloquentModel ? $resource->order : null;
 
+        $labels = $resource instanceof EloquentModel
+            ? PaymentLabelService::forPaymentTransaction($resource)
+            : [
+                'gateway_key' => null,
+                'gateway_label' => null,
+                'bank_name' => null,
+                'channel_label' => null,
+                'bank_label' => null,
+            ];
 
         return [
             'id' => $this->id,
@@ -30,10 +40,13 @@ class PaymentTransactionResource extends JsonResource
             'currency' => $this->currency,
             'payment_gateway' => $this->payment_gateway,
             'gateway_code' => $this->gateway_code,
-            'gateway_label' => $this->gateway_display,
-            'gateway_display' => $this->gateway_display,
-            
-            'bank_label' => $this->bank_label,
+            'gateway_key' => $labels['gateway_key'],
+            'gateway_label' => $labels['gateway_label'],
+            'gateway_display' => $labels['gateway_label'],
+            'channel_label' => $labels['gateway_label'],
+
+            'bank_label' => $labels['bank_name'],
+            'bank_name' => $labels['bank_name'],
 
             'created_at' => optional($this->created_at)->toIso8601String(),
 

@@ -191,7 +191,7 @@
                             <div class="col-sm-4 col-6">
                                 <div class="description-block border-right">
                                     <h5 class="description-header text-primary">{{ $method->total }}</h5>
-                                    <span class="description-text">{{ $method->payment_method ?: 'غير محدد' }}</span>
+                                    <span class="description-text">{{ $method->payment_gateway_label ?? $method->bank_name ?? ($method->payment_method ?: 'غير محدد') }}</span>
                                 </div>
                             </div>
                         @endforeach
@@ -405,7 +405,7 @@ $(function () {
     const paymentMethodData = {
         labels: [
             @foreach($ordersByPaymentMethod as $method)
-                '{{ $method->payment_method ?: "غير محدد" }}',
+                '{{ $method->payment_gateway_label ?? $method->bank_name ?? ($method->payment_method ?: "غير محدد") }}',
             @endforeach
         ],
         datasets: [{

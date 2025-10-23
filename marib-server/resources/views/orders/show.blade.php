@@ -512,7 +512,7 @@
                                 </li>
                                 <li>
                                     <span class="order-summary-label">طريقة الدفع</span>
-                                    <span class="order-summary-value">{{ $order->payment_method ?: 'غير محدد' }}</span>
+                                    <span class="order-summary-value">{{ $order->resolved_payment_gateway_label ?? 'غير محدد' }}</span>
                                 </li>
                                 <li>
                                     <span class="order-summary-label">توقيت دفع التوصيل</span>

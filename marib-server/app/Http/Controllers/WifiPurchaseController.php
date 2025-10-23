@@ -11,6 +11,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
+use App\Support\Payments\PaymentLabelService;
 
 class WifiPurchaseController extends Controller
 {
@@ -112,6 +113,7 @@ class WifiPurchaseController extends Controller
             'reveal_count' => $code->reveal_count,
             'revealed_at' => optional($code->revealed_at)->toDateTimeString(),
         ]);
+        $transactionLabels = PaymentLabelService::forPaymentTransaction($transaction);
 
         return response()->json([
             'data' => [
@@ -134,6 +136,9 @@ class WifiPurchaseController extends Controller
                     'payment_status' => $transaction->payment_status,
                     'meta' => $transaction->meta,
                     'terms_acknowledged' => (bool) data_get($transaction->meta, 'terms_acknowledged'),
+                    'gateway_key' => $transactionLabels['gateway_key'],
+                    'gateway_label' => $transactionLabels['gateway_label'],
+                    'bank_name' => $transactionLabels['bank_name'],
                 ], static fn ($value) => $value !== null),
             ],
         ]);

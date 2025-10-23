@@ -101,6 +101,12 @@ class InvoicePdfService
      */
     private function buildViewPayload(Order $order): array
     {
+
+        $order->loadMissing([
+            'latestManualPaymentRequest.manualBank',
+            'latestPaymentTransaction.manualPaymentRequest.manualBank',
+        ]);
+
         $settings = $this->resolveSettings();
 
         $company = [
@@ -137,7 +143,12 @@ class InvoicePdfService
             ? (Order::PAYMENT_STATUS_LABELS[$order->payment_status] ?? $order->payment_status)
             : null;
 
-        $paymentMethod = $order->payment_method ?: null;
+        $paymentLabels = $order->resolvePaymentGatewayLabels();
+        $paymentMethod = $paymentLabels['gateway_label']
+            ?? ($order->payment_method ?: null);
+        $paymentGatewayKey = $paymentLabels['gateway_key'] ?? null;
+        $paymentBankName = $paymentLabels['bank_name'] ?? null;
+
 
         return [
             'order' => $order,
@@ -152,6 +163,9 @@ class InvoicePdfService
 
                 'method' => $paymentMethod ? __($paymentMethod) : __('غير محدد'),
                 'status' => $paymentStatus ? __($paymentStatus) : __('غير محدد'),
+                'gateway_key' => $paymentGatewayKey,
+                'bank_name' => $paymentBankName,
+
             ],
             'billing_address' => $order->billing_address ?? Arr::get($order->address_snapshot, 'billing.address'),
             'shipping_address' => $order->shipping_address ?? Arr::get($order->address_snapshot, 'shipping.address'),

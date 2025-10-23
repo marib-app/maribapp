@@ -8,6 +8,7 @@ use Illuminate\Support\Str;
 use App\Services\DepartmentPolicyService;
 use App\Services\OrderCancellationService;
 use Illuminate\Support\Facades\URL;
+use App\Support\Payments\PaymentLabelService;
 
 use App\Models\Order;
 use App\Models\OrderHistory;
@@ -63,7 +64,12 @@ class OrderApiController extends Controller
 
 
         $orders = Order::query()
-            ->with(['items'])
+            ->with([
+                'items',
+                'latestManualPaymentRequest.manualBank',
+                'latestPaymentTransaction.manualPaymentRequest.manualBank',
+            ])
+            
             ->where('user_id', $user->getKey())
             ->when($status, static fn ($query) => $query->where('order_status', $status))
             ->latest()
@@ -227,7 +233,10 @@ class OrderApiController extends Controller
             'seller',
             'coupon',
             'history.user',
-            'paymentTransactions',
+            'paymentTransactions.manualPaymentRequest.manualBank',
+            'latestManualPaymentRequest.manualBank',
+            'latestPaymentTransaction.manualPaymentRequest.manualBank',
+        
         ]);
 
         $order->append(['status_display', 'status_reserve_options', 'actions']);
@@ -836,6 +845,22 @@ class OrderApiController extends Controller
         $nowAmount = $summary['online_payable'] ?? null;
         $onDeliveryAmount = $summary['cod_due'] ?? null;
 
+        $labelDefaults = [
+            'gateway_key' => null,
+            'gateway_label' => null,
+            'bank_name' => null,
+            'channel_label' => null,
+            'bank_label' => null,
+        ];
+
+        if ($transaction instanceof PaymentTransaction) {
+            $transaction->loadMissing('manualPaymentRequest.manualBank');
+            $labels = array_merge($labelDefaults, PaymentLabelService::forPaymentTransaction($transaction));
+        } else {
+            $labels = array_merge($labelDefaults, $order->resolvePaymentGatewayLabels());
+        }
+
+
         return [
             'method' => $method,
             'reference' => $reference,
@@ -847,6 +872,13 @@ class OrderApiController extends Controller
             ],
 
             'expires_at' => data_get($defaultIntent, 'expires_at'),
+
+            'gateway_key' => $labels['gateway_key'],
+            'gateway_label' => $labels['gateway_label'],
+            'channel_label' => $labels['channel_label'] ?? $labels['gateway_label'],
+            'bank_name' => $labels['bank_name'],
+            'bank_label' => $labels['bank_name'],
+
 
 
         ];

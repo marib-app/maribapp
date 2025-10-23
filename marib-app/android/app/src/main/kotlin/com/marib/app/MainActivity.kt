@@ -303,7 +303,11 @@ class MainActivity : FlutterFragmentActivity() {
         } else {
             null
         }
-
+        private val managerClass: Class<*>? = if (isSupported) {
+            loadClass("android.os.ThermalManager")
+        } else {
+            null
+        }
         val thermalStatusModerate: Int? = managerClass?.let { clazz ->
             try {
                 clazz.getField("THERMAL_STATUS_MODERATE").getInt(null)
@@ -312,11 +316,6 @@ class MainActivity : FlutterFragmentActivity() {
             }
         }
 
-        private val managerClass: Class<*>? = if (isSupported) {
-            loadClass("android.os.ThermalManager")
-        } else {
-            null
-        }
 
         private val listenerInterface: Class<*>? = if (isSupported) {
             loadClass("android.os.ThermalManager\$OnThermalStatusChangedListener")

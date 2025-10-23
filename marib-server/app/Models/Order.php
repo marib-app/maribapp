@@ -23,10 +23,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Support\Arr;
 use InvalidArgumentException;
+use Throwable;
 
 class Order extends Model
 {
@@ -1492,25 +1493,229 @@ class Order extends Model
         return collect($receipts)
             ->filter(static fn ($receipt) => is_array($receipt))
             ->map(function (array $receipt): array {
-                return [
+                $amount = Arr::has($receipt, 'amount')
+                    ? (float) Arr::get($receipt, 'amount')
+                    : null;
+
+                $currency = Arr::get(
+                    $receipt,
+                    'currency',
+                    $this->currency ?? config('app.currency', 'SAR')
+                );
+
+                $explicitUrl = $this->normalizeReceiptUrlComponent(Arr::get($receipt, 'receipt_url'))
+                    ?? $this->normalizeReceiptUrlComponent(Arr::get($receipt, 'receipt'));
+                $receiptPath = $this->normalizeReceiptComponent(Arr::get($receipt, 'receipt_path'));
+                $receiptDisk = $this->normalizeReceiptComponent(Arr::get($receipt, 'receipt_disk'));
+                $attachments = $this->normalizeDepositReceiptAttachments(Arr::get($receipt, 'attachments'));
+
+                if ($explicitUrl === null) {
+                    $explicitUrl = $this->resolveDepositReceiptUrl($receiptPath, $receiptDisk, $attachments);
+                }
+
+                $entry = [
                     'transaction_id' => Arr::get($receipt, 'transaction_id'),
-                    'amount' => Arr::has($receipt, 'amount')
-                        ? (float) Arr::get($receipt, 'amount')
-                        : null,
-                    'currency' => Arr::get(
-                        $receipt,
-                        'currency',
-                        $this->currency ?? config('app.currency', 'SAR')
-                    ),
+                    'amount' => $amount,
+                    'currency' => $currency,
                     'paid_at' => Arr::get($receipt, 'paid_at'),
                     'gateway' => Arr::get($receipt, 'gateway'),
                     'reference' => Arr::get($receipt, 'reference'),
                 ];
+
+                if ($explicitUrl !== null) {
+                    $entry['receipt_url'] = $explicitUrl;
+                    $entry['receipt'] = $explicitUrl;
+                }
+
+                if ($receiptPath !== null) {
+                    $entry['receipt_path'] = $receiptPath;
+                }
+
+                if ($receiptDisk !== null) {
+                    $entry['receipt_disk'] = $receiptDisk;
+                }
+
+                if ($attachments !== []) {
+                    $entry['attachments'] = $attachments;
+                }
+
+                return $entry;
+
             })
             ->values()
             ->all();
     }
 
+
+    /**
+     * @param mixed $attachments
+     * @return array<int, array<string, mixed>>
+     */
+    private function normalizeDepositReceiptAttachments(mixed $attachments): array
+    {
+        if (! is_iterable($attachments)) {
+            return [];
+        }
+
+        $normalized = [];
+
+        foreach ($attachments as $attachment) {
+            if (! is_array($attachment)) {
+                continue;
+            }
+
+            $normalizedEntry = [
+                'type' => $this->normalizeReceiptComponent(Arr::get($attachment, 'type')),
+                'path' => $this->normalizeReceiptComponent(Arr::get($attachment, 'path')),
+                'disk' => $this->normalizeReceiptComponent(Arr::get($attachment, 'disk')),
+                'name' => $this->normalizeReceiptComponent(Arr::get($attachment, 'name')),
+                'mime_type' => $this->normalizeReceiptComponent(Arr::get($attachment, 'mime_type')),
+                'size' => $this->normalizeReceiptSize(Arr::get($attachment, 'size')),
+                'uploaded_at' => $this->normalizeReceiptComponent(Arr::get($attachment, 'uploaded_at')),
+                'url' => $this->normalizeReceiptUrlComponent(Arr::get($attachment, 'url')),
+            ];
+
+            $normalized[] = array_filter(
+                $normalizedEntry,
+                static fn ($value) => $value !== null
+            );
+        }
+
+        return $normalized;
+    }
+
+    private function normalizeReceiptComponent(mixed $value): ?string
+    {
+        if (! is_string($value)) {
+            return null;
+        }
+
+        $trimmed = trim($value);
+
+        return $trimmed === '' ? null : $trimmed;
+    }
+
+    private function normalizeReceiptUrlComponent(mixed $value): ?string
+    {
+        if (! is_string($value)) {
+            return null;
+        }
+
+        $trimmed = trim($value);
+
+        if ($trimmed === '') {
+            return null;
+        }
+
+        return filter_var($trimmed, FILTER_VALIDATE_URL) ? $trimmed : null;
+    }
+
+    private function normalizeReceiptSize(mixed $value): ?float
+    {
+        if (is_int($value) || is_float($value)) {
+            $floatValue = (float) $value;
+
+            return $floatValue >= 0 ? $floatValue : null;
+        }
+
+        if (is_string($value)) {
+            $trimmed = trim($value);
+
+            if ($trimmed === '') {
+                return null;
+            }
+
+            if (is_numeric($trimmed)) {
+                $floatValue = (float) $trimmed;
+
+                return $floatValue >= 0 ? $floatValue : null;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $attachments
+     */
+    private function resolveDepositReceiptUrl(?string $receiptPath, ?string $receiptDisk, array $attachments): ?string
+    {
+        $pathCandidates = [];
+
+        if ($receiptPath !== null) {
+            $pathCandidates[] = [
+                'path' => $receiptPath,
+                'disk' => $receiptDisk,
+            ];
+        }
+
+        foreach ($attachments as $attachment) {
+            $attachmentPath = $this->normalizeReceiptComponent($attachment['path'] ?? null);
+
+            if ($attachmentPath === null) {
+                continue;
+            }
+
+            $pathCandidates[] = [
+                'path' => $attachmentPath,
+                'disk' => $this->normalizeReceiptComponent($attachment['disk'] ?? null) ?? $receiptDisk,
+            ];
+        }
+
+        if ($pathCandidates === []) {
+            return null;
+        }
+
+        foreach ($pathCandidates as $candidate) {
+            $diskCandidates = [];
+
+            if (isset($candidate['disk']) && $candidate['disk'] !== null) {
+                $diskCandidates[] = $candidate['disk'];
+            }
+
+            if ($receiptDisk !== null) {
+                $diskCandidates[] = $receiptDisk;
+            }
+
+            $defaultDisk = config('filesystems.default');
+
+            if (is_string($defaultDisk) && trim($defaultDisk) !== '') {
+                $diskCandidates[] = trim($defaultDisk);
+            }
+
+            $diskCandidates[] = 'public';
+
+            foreach ($diskCandidates as $diskName) {
+                if (! is_string($diskName) || $diskName === '') {
+                    continue;
+                }
+
+                try {
+                    $disk = Storage::disk($diskName);
+                } catch (Throwable) {
+                    continue;
+                }
+
+                try {
+                    $resolved = $disk->url($candidate['path']);
+                } catch (Throwable) {
+                    continue;
+                }
+
+                if (! is_string($resolved) || $resolved === '') {
+                    continue;
+                }
+
+                if (filter_var($resolved, FILTER_VALIDATE_URL)) {
+                    return $resolved;
+                }
+
+                return url($resolved);
+            }
+        }
+
+        return null;
+    }
 
 
 

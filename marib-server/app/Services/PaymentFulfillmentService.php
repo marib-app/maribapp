@@ -11,6 +11,7 @@ use App\Models\Package;
 use App\Models\Service;
 use App\Models\ServiceRequest;
 use App\Services\DepartmentPolicyService;
+use Illuminate\Support\Facades\Storage;
 
 use App\Models\WalletTransaction;
 use App\Services\Payments\TransactionAmountResolver;
@@ -472,7 +473,9 @@ class PaymentFulfillmentService
         }
 
         if ($depositApplied > 0.0) {
-            $receipts[] = [
+            $receiptMeta = $this->prepareDepositReceiptMetadata($transaction);
+
+            $receiptEntry = [
                 'transaction_id' => $transaction->getKey(),
                 'amount' => round($depositApplied, 2),
                 'currency' => $orderCurrency,
@@ -480,6 +483,26 @@ class PaymentFulfillmentService
                 'gateway' => $paymentGateway,
                 'reference' => $reference,
             ];
+
+            if ($receiptMeta['receipt_path'] !== null) {
+                $receiptEntry['receipt_path'] = $receiptMeta['receipt_path'];
+            }
+
+            if ($receiptMeta['receipt_disk'] !== null) {
+                $receiptEntry['receipt_disk'] = $receiptMeta['receipt_disk'];
+            }
+
+            if ($receiptMeta['receipt_url'] !== null) {
+                $receiptEntry['receipt_url'] = $receiptMeta['receipt_url'];
+                $receiptEntry['receipt'] = $receiptMeta['receipt_url'];
+            }
+
+            if ($receiptMeta['attachments'] !== []) {
+                $receiptEntry['attachments'] = $receiptMeta['attachments'];
+            }
+
+            $receipts[] = $receiptEntry;
+
         }
 
         $depositPayload = array_replace($depositPayload, [
@@ -503,6 +526,235 @@ class PaymentFulfillmentService
 
 
 
+    /**
+     * @return array{receipt_path: ?string, receipt_disk: ?string, receipt_url: ?string, attachments: array<int, array<string, mixed>>}
+     */
+    private function prepareDepositReceiptMetadata(PaymentTransaction $transaction): array
+    {
+        $manualRequest = $transaction->manualPaymentRequest;
+
+        if (! $manualRequest instanceof ManualPaymentRequest && $transaction->manual_payment_request_id) {
+            $manualRequest = ManualPaymentRequest::query()->find($transaction->manual_payment_request_id);
+        }
+
+        $manualMeta = $manualRequest instanceof ManualPaymentRequest && is_array($manualRequest->meta)
+            ? $manualRequest->meta
+            : [];
+        $transactionMeta = is_array($transaction->meta) ? $transaction->meta : [];
+
+        $attachments = $this->normalizeReceiptAttachments([
+            data_get($manualMeta, 'attachments'),
+            data_get($transactionMeta, 'attachments'),
+        ]);
+
+        $receiptPath = $this->firstNonEmptyString([
+            data_get($manualMeta, 'receipt.path'),
+            data_get($manualMeta, 'receipt_path'),
+            $manualRequest instanceof ManualPaymentRequest ? $manualRequest->receipt_path : null,
+            data_get($transactionMeta, 'receipt.path'),
+            data_get($transactionMeta, 'receipt_path'),
+            $transaction->receipt_path,
+        ]);
+
+        $receiptDisk = $this->firstNonEmptyString(array_merge([
+            data_get($manualMeta, 'receipt.disk'),
+            data_get($manualMeta, 'receipt_disk'),
+            data_get($transactionMeta, 'receipt.disk'),
+            data_get($transactionMeta, 'receipt_disk'),
+        ], array_map(static function (array $attachment): ?string {
+            $disk = Arr::get($attachment, 'disk');
+
+            return is_string($disk) && $disk !== '' ? $disk : null;
+        }, $attachments)));
+
+        $receiptUrl = $this->firstValidUrl(array_merge([
+            data_get($manualMeta, 'receipt.url'),
+            data_get($manualMeta, 'receipt_url'),
+            data_get($transactionMeta, 'receipt.url'),
+            data_get($transactionMeta, 'receipt_url'),
+        ], array_map(static function (array $attachment): ?string {
+            $url = Arr::get($attachment, 'url');
+
+            return is_string($url) && trim($url) !== '' ? trim($url) : null;
+        }, $attachments)));
+
+        if ($receiptUrl === null) {
+            $receiptUrl = $this->generateReceiptUrl($receiptPath, $receiptDisk, $attachments);
+        }
+
+        return [
+            'receipt_path' => $receiptPath,
+            'receipt_disk' => $receiptDisk,
+            'receipt_url' => $receiptUrl,
+            'attachments' => $attachments,
+        ];
+    }
+
+    /**
+     * @param array<int, mixed> $sources
+     * @return array<int, array<string, mixed>>
+     */
+    private function normalizeReceiptAttachments(array $sources): array
+    {
+        $normalized = [];
+
+        foreach ($sources as $source) {
+            if (! is_iterable($source)) {
+                continue;
+            }
+
+            foreach ($source as $attachment) {
+                if (! is_array($attachment)) {
+                    continue;
+                }
+
+                $normalized[] = array_filter([
+                    'type' => Arr::get($attachment, 'type'),
+                    'path' => Arr::get($attachment, 'path'),
+                    'disk' => Arr::get($attachment, 'disk'),
+                    'name' => Arr::get($attachment, 'name'),
+                    'mime_type' => Arr::get($attachment, 'mime_type'),
+                    'size' => Arr::get($attachment, 'size'),
+                    'uploaded_at' => Arr::get($attachment, 'uploaded_at'),
+                    'url' => Arr::get($attachment, 'url'),
+                ], static fn ($value) => $value !== null && $value !== '');
+            }
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * @param array<int, ?string> $candidates
+     */
+    private function firstNonEmptyString(array $candidates): ?string
+    {
+        foreach ($candidates as $candidate) {
+            if (! is_string($candidate)) {
+                continue;
+            }
+
+            $trimmed = trim($candidate);
+
+            if ($trimmed === '') {
+                continue;
+            }
+
+            return $trimmed;
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array<int, ?string> $candidates
+     */
+    private function firstValidUrl(array $candidates): ?string
+    {
+        foreach ($candidates as $candidate) {
+            if (! is_string($candidate)) {
+                continue;
+            }
+
+            $trimmed = trim($candidate);
+
+            if ($trimmed === '') {
+                continue;
+            }
+
+            if (filter_var($trimmed, FILTER_VALIDATE_URL)) {
+                return $trimmed;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $attachments
+     */
+    private function generateReceiptUrl(?string $receiptPath, ?string $preferredDisk, array $attachments): ?string
+    {
+        $pathCandidates = [];
+
+        if (is_string($receiptPath) && $receiptPath !== '') {
+            $pathCandidates[] = [
+                'path' => $receiptPath,
+                'disk' => $preferredDisk,
+            ];
+        }
+
+        foreach ($attachments as $attachment) {
+            $path = Arr::get($attachment, 'path');
+
+            if (! is_string($path) || trim($path) === '') {
+                continue;
+            }
+
+            $pathCandidates[] = [
+                'path' => trim($path),
+                'disk' => $this->firstNonEmptyString([
+                    Arr::get($attachment, 'disk'),
+                    $preferredDisk,
+                ]),
+            ];
+        }
+
+        if ($pathCandidates === []) {
+            return null;
+        }
+
+        foreach ($pathCandidates as $candidate) {
+            $path = $candidate['path'];
+            $diskCandidates = [];
+
+            if (isset($candidate['disk']) && is_string($candidate['disk']) && $candidate['disk'] !== '') {
+                $diskCandidates[] = $candidate['disk'];
+            }
+
+            if (is_string($preferredDisk) && $preferredDisk !== '') {
+                $diskCandidates[] = $preferredDisk;
+            }
+
+            $defaultDisk = config('filesystems.default');
+
+            if (is_string($defaultDisk) && $defaultDisk !== '') {
+                $diskCandidates[] = $defaultDisk;
+            }
+
+            $diskCandidates[] = 'public';
+
+            foreach ($diskCandidates as $diskName) {
+                if (! is_string($diskName) || $diskName === '') {
+                    continue;
+                }
+
+                try {
+                    $disk = Storage::disk($diskName);
+                } catch (Throwable) {
+                    continue;
+                }
+
+                try {
+                    $resolved = $disk->url($path);
+                } catch (Throwable) {
+                    continue;
+                }
+
+                if (! is_string($resolved) || $resolved === '') {
+                    continue;
+                }
+
+                if (filter_var($resolved, FILTER_VALIDATE_URL)) {
+                    return $resolved;
+                }
+
+                return url($resolved);
+            }
+        }
+
+        return null;
+    }
 
 
 

@@ -108,6 +108,7 @@ class NotificationService {
     'wallet',
     'wallet_withdrawal',
     'wallet_deposit',
+    'wallet_top_up',
   };
 
 

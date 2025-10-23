@@ -1331,7 +1331,6 @@ class _BankTransferScreenState extends State<BankTransferScreen>
 
   String _sourceLabel() => _deviceLabel();
 
-  @override
   Future<bool> _onWillPop() async {
     if (_allowRoutePop) {
       return true;

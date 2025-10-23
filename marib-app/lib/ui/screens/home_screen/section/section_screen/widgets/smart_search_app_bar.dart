@@ -73,7 +73,8 @@ class SmartSearchAppBar extends StatefulWidget implements PreferredSizeWidget {
   State<SmartSearchAppBar> createState() => _SmartSearchAppBarState();
 }
 
-class _SmartSearchAppBarState extends State<SmartSearchAppBar> {
+class _SmartSearchAppBarState extends State<SmartSearchAppBar>
+    with WidgetsBindingObserver {
   final FocusNode _focusNode = FocusNode();
   late final ValueNotifier<bool> _showClear;
   final GlobalKey _cartActionKey =
@@ -85,11 +86,16 @@ class _SmartSearchAppBarState extends State<SmartSearchAppBar> {
   late final IconData _hintIcon;
   int _hintIndex = 0;
   Timer? _hintTimer;
+  bool _isLifecycleResumed = true;
 
   @override
   void initState() {
     super.initState();
-
+    WidgetsBinding.instance.addObserver(this);
+    final AppLifecycleState? lifecycleState =
+        WidgetsBinding.instance.lifecycleState;
+    _isLifecycleResumed =
+        lifecycleState == null || lifecycleState == AppLifecycleState.resumed;
     final result = RealEstateSearchHints.forTitle(widget.appBarTitle);
     _hints = result.hints;
     _hintIcon = result.icon;
@@ -97,7 +103,10 @@ class _SmartSearchAppBarState extends State<SmartSearchAppBar> {
     _showClear = ValueNotifier<bool>(widget.searchController.text.isNotEmpty);
     widget.searchController.addListener(_onTextChanged);
 
-    _startHintsRotation(interval: widget.hintInterval);
+    if (_isLifecycleResumed) {
+      _startHintsRotation(interval: widget.hintInterval);
+    }
+
     _scheduleCartWidthUpdate();
   }
 
@@ -116,9 +125,10 @@ class _SmartSearchAppBarState extends State<SmartSearchAppBar> {
     final shouldPause =
         _focusNode.hasFocus || widget.searchController.text.isNotEmpty;
     if (shouldPause) {
-      _hintTimer?.cancel();
+      _cancelHintTimer();
     } else {
-      if (_hintTimer == null || !_hintTimer!.isActive) {
+      if ((_hintTimer == null || !_hintTimer!.isActive) &&
+          _isLifecycleResumed) {
         _startHintsRotation(interval: widget.hintInterval);
       }
     }
@@ -142,13 +152,40 @@ class _SmartSearchAppBarState extends State<SmartSearchAppBar> {
 
   void _startHintsRotation({Duration interval = const Duration(seconds: 3)}) {
     if (_hints.isEmpty) return;
-    _hintTimer?.cancel();
+    if (!_isLifecycleResumed) {
+      return;
+    }
+    _cancelHintTimer();
     _hintTimer = Timer.periodic(interval, (_) {
+      if (!_isLifecycleResumed) {
+        return;
+      }
       if (!mounted) return;
       final idle = !_focusNode.hasFocus && widget.searchController.text.isEmpty;
       if (!idle) return;
       setState(() => _hintIndex = (_hintIndex + 1) % _hints.length);
     });
+  }
+
+  void _cancelHintTimer() {
+    _hintTimer?.cancel();
+    _hintTimer = null;
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final bool shouldResume = state == AppLifecycleState.resumed;
+    if (shouldResume == _isLifecycleResumed) {
+      return;
+    }
+    _isLifecycleResumed = shouldResume;
+    if (shouldResume) {
+      if (!_focusNode.hasFocus && widget.searchController.text.isEmpty) {
+        _startHintsRotation(interval: widget.hintInterval);
+      }
+    } else {
+      _cancelHintTimer();
+    }
   }
 
   void _scheduleCartWidthUpdate() {
@@ -177,7 +214,6 @@ class _SmartSearchAppBarState extends State<SmartSearchAppBar> {
         });
       }
       _cartWidthUpdatePending = false;
-
     });
   }
 

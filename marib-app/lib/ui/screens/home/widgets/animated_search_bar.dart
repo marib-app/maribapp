@@ -10,7 +10,8 @@ class AnimatedSearchBar extends StatefulWidget {
   State<AnimatedSearchBar> createState() => _AnimatedSearchBarState();
 }
 
-class _AnimatedSearchBarState extends State<AnimatedSearchBar> with TickerProviderStateMixin {
+class _AnimatedSearchBarState extends State<AnimatedSearchBar>
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   final List<String> hints = [
     "ابحث عن منتج يهمك 🔍",
     "وش تحتاج اليوم؟ 🛒",
@@ -19,7 +20,8 @@ class _AnimatedSearchBarState extends State<AnimatedSearchBar> with TickerProvid
   ];
 
   int currentHintIndex = 0;
-  late Timer _timer;
+  Timer? _timer;
+  bool _isLifecycleResumed = true;
 
   Duration _getDurationForHint(String text) {
     final base = 4.0; // مدة أساسية بالثواني
@@ -28,7 +30,14 @@ class _AnimatedSearchBarState extends State<AnimatedSearchBar> with TickerProvid
   }
 
   void _startTimer() {
+    if (!_isLifecycleResumed || hints.isEmpty) {
+      return;
+    }
+    _cancelTimer();
     _timer = Timer(_getDurationForHint(hints[currentHintIndex]), () {
+      if (!mounted) {
+        return;
+      }
       setState(() {
         currentHintIndex = (currentHintIndex + 1) % hints.length;
       });
@@ -39,14 +48,41 @@ class _AnimatedSearchBarState extends State<AnimatedSearchBar> with TickerProvid
   @override
   void initState() {
     super.initState();
-    _startTimer();
+    WidgetsBinding.instance.addObserver(this);
+    final AppLifecycleState? lifecycleState =
+        WidgetsBinding.instance.lifecycleState;
+    _isLifecycleResumed = lifecycleState == null ||
+        lifecycleState == AppLifecycleState.resumed;
+    if (_isLifecycleResumed) {
+      _startTimer();
+    }
   }
 
   @override
   void dispose() {
-    _timer.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    _cancelTimer();
     super.dispose();
   }
+  void _cancelTimer() {
+    _timer?.cancel();
+    _timer = null;
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final bool shouldResume = state == AppLifecycleState.resumed;
+    if (shouldResume == _isLifecycleResumed) {
+      return;
+    }
+    _isLifecycleResumed = shouldResume;
+    if (shouldResume) {
+      _startTimer();
+    } else {
+      _cancelTimer();
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {

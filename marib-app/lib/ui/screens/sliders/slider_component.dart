@@ -96,7 +96,7 @@ Future<bool> _canLaunchExternalUrl(Uri uri) {
 }
 
 class _SliderComponentState extends State<SliderComponent>
-    with AutomaticKeepAliveClientMixin {
+    with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
   final ValueNotifier<int> _bannerIndex =
       ValueNotifier(0); // لتتبع السلايدر الحالي
   Timer? _sliderTimer;
@@ -104,6 +104,7 @@ class _SliderComponentState extends State<SliderComponent>
   bool _userInteracting = false;
   double? _currentPage;
   final Set<int> _pendingSliderClickReports = <int>{};
+  bool _isLifecycleResumed = true;
 
   /// ✅ الفلترة النهائية للسلايدر حسب نوع الواجهة، مع حماية إضافية
   List<HomeSlider> get filteredList {
@@ -146,6 +147,11 @@ class _SliderComponentState extends State<SliderComponent>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    final AppLifecycleState? lifecycleState =
+        WidgetsBinding.instance.lifecycleState;
+    _isLifecycleResumed =
+        lifecycleState == null || lifecycleState == AppLifecycleState.resumed;
 
     _pageController = PageController(
       initialPage: bannersLength == 1 ? 0 : bannersLength * 1000,
@@ -153,7 +159,9 @@ class _SliderComponentState extends State<SliderComponent>
 
     _currentPage = _pageController.initialPage.toDouble();
 
-    _startAutoSlider(resetToInitial: true);
+    if (_isLifecycleResumed) {
+      _startAutoSlider(resetToInitial: true);
+    }
   }
 
   @override
@@ -161,22 +169,32 @@ class _SliderComponentState extends State<SliderComponent>
     super.didUpdateWidget(oldWidget);
 
     if (oldWidget.sliderList != widget.sliderList) {
-      _startAutoSlider(resetToInitial: true);
+      if (_isLifecycleResumed) {
+        _startAutoSlider(resetToInitial: true);
+      } else {
+        _stopAutoSlider();
+      }
     }
   }
 
   @override
   void dispose() {
-    _sliderTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    _stopAutoSlider();
     _pageController.dispose();
     _bannerIndex.dispose();
     super.dispose();
   }
 
+  void _stopAutoSlider() {
+    _sliderTimer?.cancel();
+    _sliderTimer = null;
+  }
+
   // ✅ تشغيل السلايدر بشكل تلقائي كل 5 ثوانٍ
 
   void _startAutoSlider({bool resetToInitial = false}) {
-    _sliderTimer?.cancel(); // وقف المؤقت السابق لو موجود
+    _stopAutoSlider(); // وقف المؤقت السابق لو موجود
 
     if (resetToInitial) {
       _resetToInitialPage();
@@ -190,6 +208,10 @@ class _SliderComponentState extends State<SliderComponent>
     if (bannersLength <= 1) {
       return;
     }
+    if (!_isLifecycleResumed) {
+      return;
+    }
+
     _sliderTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       if (!mounted || bannersLength == 0 || !_pageController.hasClients) return;
       if (_userInteracting)
@@ -216,6 +238,20 @@ class _SliderComponentState extends State<SliderComponent>
         }
       });
     });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final bool shouldResume = state == AppLifecycleState.resumed;
+    if (shouldResume == _isLifecycleResumed) {
+      return;
+    }
+    _isLifecycleResumed = shouldResume;
+    if (shouldResume) {
+      _startAutoSlider();
+    } else {
+      _stopAutoSlider();
+    }
   }
 
   void _resetToInitialPage() {

@@ -248,7 +248,11 @@ class FetchItemSummaryCubit extends Cubit<FetchItemSummaryState> {
         a.customFields ?? const <String, dynamic>{};
     final Map<String, dynamic> bCustomFields =
         b.customFields ?? const <String, dynamic>{};
-    final bool userIdEqual = a.userId == b.userId;
+
+    if (a.userId != b.userId) {
+      return false;
+    }
+
 
     return a.maxPrice == b.maxPrice &&
         a.minPrice == b.minPrice &&
@@ -263,7 +267,6 @@ class FetchItemSummaryCubit extends Cubit<FetchItemSummaryState> {
         a.latitude == b.latitude &&
         a.longitude == b.longitude &&
         a.currency == b.currency &&
-        userIdEqual &&
         mapEquals(aCustomFields, bCustomFields);
   }
 

@@ -62,6 +62,146 @@
         $orderRemainingBalance = $depositRemainingAmount;
     }
 
+    $normalizeDepositRatio = static function ($value): ?float {
+        if ($value instanceof \Stringable) {
+            $value = (string) $value;
+        }
+
+        if (is_string($value)) {
+            $trimmed = trim($value);
+
+            if ($trimmed === '') {
+                return null;
+            }
+
+            $percentageDetected = false;
+
+            if (Str::contains($trimmed, '%')) {
+                $percentageDetected = true;
+                $trimmed = str_replace('%', '', $trimmed);
+            }
+
+            if (! is_numeric($trimmed)) {
+                return null;
+            }
+
+            $value = (float) $trimmed;
+
+            if ($percentageDetected) {
+                $value = $value / 100;
+            }
+        } elseif (is_bool($value) || $value === null) {
+            return null;
+        } elseif (! is_numeric($value)) {
+            return null;
+        } else {
+            $value = (float) $value;
+        }
+
+        if (! is_finite($value) || $value <= 0.0) {
+            return null;
+        }
+
+        if ($value > 1.0) {
+            if ($value <= 100.0) {
+                $value = $value / 100.0;
+            } else {
+                return null;
+            }
+        }
+
+        return round($value, 6);
+    };
+
+    $extractDepositRatioFromArray = static function (array $source) use ($normalizeDepositRatio): ?float {
+        $preferredKeys = [
+            'deposit_ratio',
+            'depositRatio',
+            'deposit.ratio',
+            'deposit.details.ratio',
+            'deposit.percentage',
+            'depositPercentage',
+            'deposit.details.percentage',
+            'deposit_ratio_percentage',
+            'deposit_percentage',
+            'manual.deposit_ratio',
+            'manual.deposit.ratio',
+            'manual.deposit.percentage',
+            'manual.deposit_percentage',
+            'payment_summary.deposit_ratio',
+            'payment_summary.deposit.ratio',
+            'summary.deposit_ratio',
+            'summary.deposit.ratio',
+        ];
+
+        foreach ($preferredKeys as $key) {
+            $candidate = data_get($source, $key);
+            $normalized = $normalizeDepositRatio($candidate);
+
+            if ($normalized !== null) {
+                return $normalized;
+            }
+        }
+
+        foreach (Arr::dot($source) as $dotKey => $dotValue) {
+            if (! is_string($dotKey)) {
+                continue;
+            }
+
+            $normalizedKey = Str::slug($dotKey, '_');
+
+            if ($normalizedKey === '') {
+                continue;
+            }
+
+            if (! Str::contains($normalizedKey, ['deposit_ratio', 'deposit_percentage'])) {
+                continue;
+            }
+
+            $normalized = $normalizeDepositRatio($dotValue);
+
+            if ($normalized !== null) {
+                return $normalized;
+            }
+        }
+
+        return null;
+    };
+
+    $depositRatio = $normalizeDepositRatio($orderPayable?->deposit_ratio ?? null);
+
+    if ($depositRatio === null && is_array($orderPaymentSummary)) {
+        $depositRatio = $extractDepositRatioFromArray($orderPaymentSummary);
+    }
+
+    $orderPaymentPayload = $orderPayable?->payment_payload;
+
+    if ($depositRatio === null && is_array($orderPaymentPayload)) {
+        $depositRatio = $extractDepositRatioFromArray($orderPaymentPayload);
+    }
+
+    $requestMeta = is_array($request->meta) ? $request->meta : [];
+
+    if ($depositRatio === null && $requestMeta !== []) {
+        $depositRatio = $extractDepositRatioFromArray($requestMeta);
+    }
+
+    $depositRatioPercent = $depositRatio !== null
+        ? round($depositRatio * 100, 2)
+        : null;
+
+    $depositRatioPercentDisplay = null;
+
+    if ($depositRatioPercent !== null) {
+        $formattedPercentage = number_format($depositRatioPercent, 2);
+        $depositRatioPercentDisplay = rtrim(rtrim($formattedPercentage, '0'), '.');
+
+        if ($depositRatioPercentDisplay === '') {
+            $depositRatioPercentDisplay = '0';
+        }
+    }
+
+
 @endphp
 
 <div class="manual-payment-review-content py-2">

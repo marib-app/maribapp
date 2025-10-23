@@ -1,6 +1,7 @@
 package com.marib.app
 
-
+import android.content.Context
+import android.hardware.display.DisplayManager
 import android.os.Build
 import android.os.Bundle
 import android.view.Display
@@ -12,6 +13,13 @@ import io.flutter.embedding.android.FlutterFragmentActivity
 
 class MainActivity : FlutterFragmentActivity() {
 
+    private val displayManager: DisplayManager by lazy {
+        getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+    }
+
+    private val displayListener = ActiveDisplayListener()
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         lockPreferredRefreshRate()
@@ -19,8 +27,17 @@ class MainActivity : FlutterFragmentActivity() {
 
     override fun onResume() {
         super.onResume()
+        displayListener.updateActiveDisplayId()
+        displayManager.registerDisplayListener(displayListener, null)
+
         lockPreferredRefreshRate()
     }
+
+    override fun onPause() {
+        displayManager.unregisterDisplayListener(displayListener)
+        super.onPause()
+    }
+
 
     private fun lockPreferredRefreshRate() {
         val targetDisplay = obtainActiveDisplay() ?: return
@@ -112,4 +129,25 @@ class MainActivity : FlutterFragmentActivity() {
     companion object {
         private const val TAG = "MainActivity"
     }
+
+
+
+    private inner class ActiveDisplayListener : DisplayManager.DisplayListener {
+        private var activeDisplayId: Int = Display.INVALID_DISPLAY
+
+        fun updateActiveDisplayId() {
+            activeDisplayId = obtainActiveDisplay()?.displayId ?: Display.INVALID_DISPLAY
+        }
+
+        override fun onDisplayAdded(displayId: Int) = Unit
+
+        override fun onDisplayRemoved(displayId: Int) = Unit
+
+        override fun onDisplayChanged(displayId: Int) {
+            if (displayId == activeDisplayId) {
+                lockPreferredRefreshRate()
+            }
+        }
+    }
+
 }

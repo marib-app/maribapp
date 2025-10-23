@@ -46,127 +46,127 @@ class _EmptyStateMessage {
   final String? illustration;
 }
 
-const _defaultEmptyStateIllustration = AppIcons.no_data_found;
+final String _defaultEmptyStateIllustration = AppIcons.no_data_found;
 
 final Map<EmptyStateCategory, Map<EmptyStateIssue, _EmptyStateMessage>>
 _emptyStateMessages = {
   EmptyStateCategory.general: {
-    EmptyStateIssue.noData: const _EmptyStateMessage(
+    EmptyStateIssue.noData: _EmptyStateMessage(
       titleKey: 'emptyStateGeneralTitle',
       subtitleKey: 'emptyStateGeneralDescription',
       illustration: _defaultEmptyStateIllustration,
     ),
-    EmptyStateIssue.network: const _EmptyStateMessage(
+    EmptyStateIssue.network:  _EmptyStateMessage(
       titleKey: 'emptyStateGeneralNetworkTitle',
       subtitleKey: 'emptyStateGeneralNetworkDescription',
       illustration: AppIcons.no_internet,
     ),
-    EmptyStateIssue.server: const _EmptyStateMessage(
+    EmptyStateIssue.server:  _EmptyStateMessage(
       titleKey: 'emptyStateGeneralServerTitle',
       subtitleKey: 'emptyStateGeneralServerDescription',
       illustration: AppIcons.somethingWentWrong,
     ),
   },
   EmptyStateCategory.favorites: {
-    EmptyStateIssue.noData: const _EmptyStateMessage(
+    EmptyStateIssue.noData:  _EmptyStateMessage(
       titleKey: 'emptyStateFavoritesTitle',
       subtitleKey: 'emptyStateFavoritesDescription',
       illustration: AppIcons.like,
     ),
   },
   EmptyStateCategory.transactions: {
-    EmptyStateIssue.noData: const _EmptyStateMessage(
+    EmptyStateIssue.noData:  _EmptyStateMessage(
       titleKey: 'emptyStateTransactionsTitle',
       subtitleKey: 'emptyStateTransactionsDescription',
       illustration: AppIcons.transaction,
     ),
   },
   EmptyStateCategory.subscriptions: {
-    EmptyStateIssue.noData: const _EmptyStateMessage(
+    EmptyStateIssue.noData:  _EmptyStateMessage(
       titleKey: 'emptyStateSubscriptionsTitle',
       subtitleKey: 'emptyStateSubscriptionsDescription',
       illustration: AppIcons.subscription,
     ),
   },
   EmptyStateCategory.wallet: {
-    EmptyStateIssue.noData: const _EmptyStateMessage(
+    EmptyStateIssue.noData:  _EmptyStateMessage(
       titleKey: 'emptyStateWalletTitle',
       subtitleKey: 'emptyStateWalletDescription',
       illustration: AppIcons.wallet,
     ),
   },
   EmptyStateCategory.chat: {
-    EmptyStateIssue.noData: const _EmptyStateMessage(
+    EmptyStateIssue.noData:  _EmptyStateMessage(
       titleKey: 'emptyStateChatTitle',
       subtitleKey: 'emptyStateChatDescription',
       illustration: AppIcons.message,
     ),
   },
   EmptyStateCategory.blocked: {
-    EmptyStateIssue.noData: const _EmptyStateMessage(
+    EmptyStateIssue.noData:  _EmptyStateMessage(
       titleKey: 'emptyStateBlockedTitle',
       subtitleKey: 'emptyStateBlockedDescription',
       illustration: AppIcons.blockedUserIcon,
     ),
   },
   EmptyStateCategory.faqs: {
-    EmptyStateIssue.noData: const _EmptyStateMessage(
+    EmptyStateIssue.noData:  _EmptyStateMessage(
       titleKey: 'emptyStateFaqsTitle',
       subtitleKey: 'emptyStateFaqsDescription',
       illustration: AppIcons.faqsIcon,
     ),
   },
   EmptyStateCategory.profile: {
-    EmptyStateIssue.noData: const _EmptyStateMessage(
+    EmptyStateIssue.noData:  _EmptyStateMessage(
       titleKey: 'emptyStateProfileTitle',
       subtitleKey: 'emptyStateProfileDescription',
       illustration: AppIcons.profile,
     ),
   },
   EmptyStateCategory.items: {
-    EmptyStateIssue.noData: const _EmptyStateMessage(
+    EmptyStateIssue.noData:  _EmptyStateMessage(
       titleKey: 'emptyStateItemsTitle',
       subtitleKey: 'emptyStateItemsDescription',
       illustration: AppIcons.items,
     ),
   },
   EmptyStateCategory.search: {
-    EmptyStateIssue.noData: const _EmptyStateMessage(
+    EmptyStateIssue.noData:  _EmptyStateMessage(
       titleKey: 'emptyStateSearchTitle',
       subtitleKey: 'emptyStateSearchDescription',
       illustration: AppIcons.search,
     ),
   },
   EmptyStateCategory.notifications: {
-    EmptyStateIssue.noData: const _EmptyStateMessage(
+    EmptyStateIssue.noData:  _EmptyStateMessage(
       titleKey: 'emptyStateNotificationsTitle',
       subtitleKey: 'emptyStateNotificationsDescription',
       illustration: AppIcons.notification,
     ),
   },
   EmptyStateCategory.categories: {
-    EmptyStateIssue.noData: const _EmptyStateMessage(
+    EmptyStateIssue.noData:  _EmptyStateMessage(
       titleKey: 'emptyStateCategoriesTitle',
       subtitleKey: 'emptyStateCategoriesDescription',
       illustration: AppIcons.categoryIcon,
     ),
   },
   EmptyStateCategory.location: {
-    EmptyStateIssue.noData: const _EmptyStateMessage(
+    EmptyStateIssue.noData:  _EmptyStateMessage(
       titleKey: 'emptyStateLocationTitle',
       subtitleKey: 'emptyStateLocationDescription',
       illustration: AppIcons.location,
     ),
   },
   EmptyStateCategory.advertisements: {
-    EmptyStateIssue.noData: const _EmptyStateMessage(
+    EmptyStateIssue.noData:  _EmptyStateMessage(
       titleKey: 'emptyStateAdvertisementsTitle',
       subtitleKey: 'emptyStateAdvertisementsDescription',
       illustration: AppIcons.ads,
     ),
   },
   EmptyStateCategory.reviews: {
-    EmptyStateIssue.noData: const _EmptyStateMessage(
+    EmptyStateIssue.noData:  _EmptyStateMessage(
       titleKey: 'emptyStateReviewsTitle',
       subtitleKey: 'emptyStateReviewsDescription',
       illustration: AppIcons.myReviewIcon,

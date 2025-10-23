@@ -125,6 +125,7 @@ class MyItemTabUI extends StatelessWidget {
                         mainMessage: "noAdsFound".translate(context),
                         subMessage: "noAdsAvailable".translate(context),
                         onTap: onRetry,
+                        category: EmptyStateCategory.profile,
                       ),
                     ),
                   ),

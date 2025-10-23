@@ -74,6 +74,7 @@ class _TransactionHistoryState extends State<TransactionHistory> {
                 onTap: () {
                   context.read<FetchTransactionsCubit>().fetchTransactions();
                 },
+                category: EmptyStateCategory.transactions,
               );
             }
             return Column(

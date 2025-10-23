@@ -144,6 +144,7 @@ extension _SubscriptionPackageListScreenStateUi
                 onTap: () => context
                     .read<FetchAdsListingSubscriptionPackagesCubit>()
                     .fetchPackages(),
+                category: EmptyStateCategory.subscriptions,
               );
             }
 
@@ -242,6 +243,7 @@ extension _SubscriptionPackageListScreenStateUi
                 onTap: () => context
                     .read<FetchFeaturedSubscriptionPackagesCubit>()
                     .fetchPackages(),
+                category: EmptyStateCategory.subscriptions,
               );
             }
 

@@ -80,6 +80,7 @@ class WalletTransactionsSliver extends StatelessWidget {
                 NoDataFound(
                   mainMessage: 'walletEmptyState'.translate(context),
                   subMessage: 'walletEmptyDescription'.translate(context),
+                  category: EmptyStateCategory.wallet,
                 ),
                 const SizedBox(height: 12),
                 OutlinedButton(

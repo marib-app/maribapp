@@ -411,6 +411,7 @@ class _SubscriptionPackageListScreenState
                 onTap: () => context
                     .read<FetchAdsListingSubscriptionPackagesCubit>()
                     .fetchPackages(),
+                category: EmptyStateCategory.subscriptions,
               );
             }
 
@@ -508,6 +509,7 @@ class _SubscriptionPackageListScreenState
                 onTap: () => context
                     .read<FetchFeaturedSubscriptionPackagesCubit>()
                     .fetchPackages(),
+                category: EmptyStateCategory.subscriptions,
               );
             }
 

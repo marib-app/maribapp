@@ -263,6 +263,7 @@ class _CategoryListState extends State<SubCategoryScreen>
                     .read<FetchSubCategoriesCubit>()
                     .fetchSubCategories(categoryId: widget.catId);
               },
+              category: EmptyStateCategory.categories,
             );
           }
           return Column(

@@ -312,6 +312,41 @@ class TransferDetailsResolver implements Arrayable, \JsonSerializable
             $apply('note', Arr::get($meta, 'transfer.note'), 'mpr', true);
             $apply('note', Arr::get($transferMeta, 'note'), 'mpr', true);
 
+            $noteSources = [
+                ['note' => $this->manualPaymentRequest->user_note, 'source' => 'mpr_note'],
+                ['note' => Arr::get($meta, 'user_note'), 'source' => 'mpr_note'],
+                ['note' => Arr::get($meta, 'note'), 'source' => 'mpr_note'],
+                ['note' => Arr::get($meta, 'metadata.user_note'), 'source' => 'mpr_note'],
+                ['note' => Arr::get($meta, 'metadata.customer_note'), 'source' => 'mpr_note'],
+                ['note' => Arr::get($meta, 'metadata.note'), 'source' => 'mpr_note'],
+                ['note' => Arr::get($meta, 'metadata.notes'), 'source' => 'mpr_note'],
+                ['note' => Arr::get($meta, 'transfer.note'), 'source' => 'mpr_note'],
+                ['note' => Arr::get($transferMeta, 'note'), 'source' => 'mpr_note'],
+            ];
+
+            foreach ($noteSources as $candidate) {
+                if (! is_array($candidate) || ! array_key_exists('note', $candidate)) {
+                    continue;
+                }
+
+                if ($values['sender_name'] === null) {
+                    $extractedSender = $this->extractSenderNameFromNote($candidate['note']);
+                    if ($extractedSender !== null) {
+                        $apply('sender_name', $extractedSender, $candidate['source'] ?? 'mpr_note');
+                    }
+                }
+
+                if ($values['transfer_reference'] === null) {
+                    $extractedReference = $this->extractTransferReferenceFromNote($candidate['note']);
+                    if ($extractedReference !== null) {
+                        $apply('transfer_reference', $extractedReference, $candidate['source'] ?? 'mpr_note');
+                    }
+                }
+
+                if ($values['sender_name'] !== null && $values['transfer_reference'] !== null) {
+                    break;
+                }
+            }
 
             $receiptMeta = Arr::get($meta, 'receipt');
             if (is_array($receiptMeta)) {
@@ -422,6 +457,42 @@ class TransferDetailsResolver implements Arrayable, \JsonSerializable
             $apply('note', Arr::get($meta, 'transfer.note'), 'tx_meta', true);
             $apply('note', Arr::get($meta, 'transfer_details.note'), 'tx_meta', true);
 
+
+            $transactionNoteSources = [
+                ['note' => Arr::get($meta, 'manual.note'), 'source' => 'tx_meta_note'],
+                ['note' => Arr::get($meta, 'manual.user_note'), 'source' => 'tx_meta_note'],
+                ['note' => Arr::get($meta, 'manual.metadata.note'), 'source' => 'tx_meta_note'],
+                ['note' => Arr::get($meta, 'manual.metadata.notes'), 'source' => 'tx_meta_note'],
+                ['note' => Arr::get($meta, 'metadata.note'), 'source' => 'tx_meta_note'],
+                ['note' => Arr::get($meta, 'metadata.notes'), 'source' => 'tx_meta_note'],
+                ['note' => Arr::get($meta, 'transfer.note'), 'source' => 'tx_meta_note'],
+                ['note' => Arr::get($meta, 'transfer_details.note'), 'source' => 'tx_meta_note'],
+            ];
+
+            foreach ($transactionNoteSources as $candidate) {
+                if (! is_array($candidate) || ! array_key_exists('note', $candidate)) {
+                    continue;
+                }
+
+                if ($values['sender_name'] === null) {
+                    $extractedSender = $this->extractSenderNameFromNote($candidate['note']);
+                    if ($extractedSender !== null) {
+                        $apply('sender_name', $extractedSender, $candidate['source'] ?? 'tx_meta');
+                    }
+                }
+
+                if ($values['transfer_reference'] === null) {
+                    $extractedReference = $this->extractTransferReferenceFromNote($candidate['note']);
+                    if ($extractedReference !== null) {
+                        $apply('transfer_reference', $extractedReference, $candidate['source'] ?? 'tx_meta');
+                    }
+                }
+
+                if ($values['sender_name'] !== null && $values['transfer_reference'] !== null) {
+                    break;
+                }
+            }
+
             $receiptMeta = Arr::get($meta, 'receipt');
             if (is_array($receiptMeta)) {
                 $setReceiptUrl(Arr::get($receiptMeta, 'url'), 'tx_meta');
@@ -524,6 +595,38 @@ class TransferDetailsResolver implements Arrayable, \JsonSerializable
             $apply('note', Arr::get($meta, 'transfer.note'), 'wallet_tx', true);
             $apply('note', Arr::get($meta, 'transfer_details.note'), 'wallet_tx', true);
 
+
+            $walletNoteSources = [
+                ['note' => Arr::get($meta, 'metadata.note'), 'source' => 'wallet_note'],
+                ['note' => Arr::get($meta, 'note'), 'source' => 'wallet_note'],
+                ['note' => Arr::get($meta, 'transfer.note'), 'source' => 'wallet_note'],
+                ['note' => Arr::get($meta, 'transfer_details.note'), 'source' => 'wallet_note'],
+            ];
+
+            foreach ($walletNoteSources as $candidate) {
+                if (! is_array($candidate) || ! array_key_exists('note', $candidate)) {
+                    continue;
+                }
+
+                if ($values['sender_name'] === null) {
+                    $extractedSender = $this->extractSenderNameFromNote($candidate['note']);
+                    if ($extractedSender !== null) {
+                        $apply('sender_name', $extractedSender, $candidate['source'] ?? 'wallet_tx');
+                    }
+                }
+
+                if ($values['transfer_reference'] === null) {
+                    $extractedReference = $this->extractTransferReferenceFromNote($candidate['note']);
+                    if ($extractedReference !== null) {
+                        $apply('transfer_reference', $extractedReference, $candidate['source'] ?? 'wallet_tx');
+                    }
+                }
+
+                if ($values['sender_name'] !== null && $values['transfer_reference'] !== null) {
+                    break;
+                }
+            }
+
             $receiptMeta = Arr::get($meta, 'receipt');
             if (is_array($receiptMeta)) {
                 $setReceiptUrl(Arr::get($receiptMeta, 'url'), 'wallet_tx');
@@ -581,6 +684,27 @@ class TransferDetailsResolver implements Arrayable, \JsonSerializable
         if ($values['note'] === null) {
             $apply('note', Arr::get($this->row, 'note'), 'tx_columns', true);
         }
+
+
+        if ($values['sender_name'] === null || $values['transfer_reference'] === null) {
+            $rowNoteCandidate = Arr::get($this->row, 'note');
+
+            if ($values['sender_name'] === null) {
+                $rowSender = $this->extractSenderNameFromNote($rowNoteCandidate);
+                if ($rowSender !== null) {
+                    $apply('sender_name', $rowSender, 'tx_columns');
+                }
+            }
+
+            if ($values['transfer_reference'] === null) {
+                $rowReference = $this->extractTransferReferenceFromNote($rowNoteCandidate);
+                if ($rowReference !== null) {
+                    $apply('transfer_reference', $rowReference, 'tx_columns');
+                }
+            }
+        }
+
+
 
         $resolvedSource = 'tx_meta';
         foreach (['mpr', 'tx_meta', 'tx_columns', 'wallet_tx', 'row'] as $candidate) {
@@ -762,5 +886,91 @@ class TransferDetailsResolver implements Arrayable, \JsonSerializable
         } catch (Throwable) {
             return null;
         }
+    }
+
+
+
+    private function extractSenderNameFromNote($note): ?string
+    {
+        return $this->extractValueFromNote($note, [
+            '~(?:اسم\s*المرسل)\s*[:\-]\s*(.+)$~u',
+            '~(?:sender\s*name)\s*[:\-]\s*(.+)$~iu',
+            '~(?:account\s*name)\s*[:\-]\s*(.+)$~iu',
+        ]);
+    }
+
+    private function extractTransferReferenceFromNote($note): ?string
+    {
+        $value = $this->extractValueFromNote($note, [
+            '~(?:رقم\s*(?:الحوالة|التحويل|العملية|المرجع))\s*[:\-#]\s*(.+)$~u',
+            '~(?:reference|transfer\s*(?:number|reference)|transaction\s*(?:number|reference)|payment\s*(?:number|reference)|ref)\s*[:\-#]\s*(.+)$~iu',
+        ]);
+
+        if ($value === null) {
+            return null;
+        }
+
+        return $this->normalizeString(rtrim($value, " .،:-"));
+    }
+
+    private function extractValueFromNote($note, array $patterns): ?string
+    {
+        if ($note instanceof \Stringable) {
+            $note = (string) $note;
+        }
+
+        if (is_array($note)) {
+            $flattened = Arr::flatten($note);
+            $segments = [];
+
+            foreach ($flattened as $segment) {
+                if ($segment instanceof \Stringable) {
+                    $segment = (string) $segment;
+                }
+
+                if (is_scalar($segment)) {
+                    $segments[] = (string) $segment;
+                }
+            }
+
+            $note = $segments === [] ? null : implode("\n", $segments);
+        }
+
+        $normalized = $this->normalizeMultiline($note);
+
+        if ($normalized === null) {
+            return null;
+        }
+
+        $lines = preg_split('/\R/u', $normalized) ?: [$normalized];
+
+        foreach ($lines as $line) {
+            if (! is_string($line)) {
+                continue;
+            }
+
+            $trimmedLine = trim($line);
+
+            if ($trimmedLine === '') {
+                continue;
+            }
+
+            foreach ($patterns as $pattern) {
+                if (@preg_match($pattern, '') === false) {
+                    continue;
+                }
+
+                if (preg_match($pattern, $trimmedLine, $matches)) {
+                    $candidate = $matches[1] ?? null;
+                    $normalizedCandidate = $this->normalizeString($candidate);
+
+                    if ($normalizedCandidate !== null) {
+                        return $normalizedCandidate;
+                    }
+                }
+            }
+        }
+
+        return null;
     }
 }

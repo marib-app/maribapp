@@ -329,14 +329,15 @@ Widget setSellerDetails(BuildContext context, ItemModel model) {
         final seller_category_utils.SellerCategoryIdentifiers sellerCategories =
             _extractSellerCategoryIdentifiers(user);
         final dynamic sellerCategoryPayload = sellerCategories.toRoutePayload();
+        final String storeCategoryId = Constant.storeRootCategoryIdAsString;
 
         Navigator.pushNamed(
           context,
           Routes.section_screen,
           arguments: {
-            'catID': Constant.storeRootCategoryId.toString(),
+            'catID': storeCategoryId,
             'catName': displayName,
-            'categoryIds': [Constant.storeRootCategoryId.toString()],
+            'categoryIds': [storeCategoryId],
             'interfaceType': 'e_store',
             'sellerId': user.id,
             if (sellerCategoryPayload != null)

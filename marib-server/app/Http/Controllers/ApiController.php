@@ -1998,7 +1998,7 @@ class ApiController extends Controller {
                 'items.latitude',
                 'items.longitude',
                 'items.status',
-                'items.type',
+                'items.interface_type',
                 'items.item_type',
                 'items.user_id',
                 'items.category_id',
@@ -2400,8 +2400,12 @@ class ApiController extends Controller {
             $discountSnapshot = $item->discount_snapshot;
             $featuredCount = $item->featured_items_count ?? 0;
             $favouritesCount = $item->favourites_count ?? 0;
-            $isLiked = (bool) ($item->is_favorited ?? $item->getAttribute('is_favorited') ?? false);
+            $isFavorited = $item->getAttribute('is_favorited');
+            if ($isFavorited === null) {
+                $isFavorited = $item->is_favorited ?? null;
+            }
 
+            $isLiked = (bool) ($isFavorited ?? false);
 
             return [
                 'id' => $item->id,
@@ -2422,7 +2426,7 @@ class ApiController extends Controller {
                 'latitude' => $item->latitude,
                 'longitude' => $item->longitude,
                 'status' => $item->status,
-                'type' => $item->type,
+                'type' => $item->getAttribute('type') ?? $item->item_type ?? $item->interface_type,
                 'item_type' => $item->item_type,
                 'user_id' => $item->user_id,
                 'category_id' => $item->category_id,

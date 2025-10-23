@@ -113,6 +113,10 @@ class Constant {
   // navigation to avoid mismatched listings.
   static const int storeRootCategoryId = 3;
 
+  /// Convenience accessor for routing arguments that expect string IDs.
+  static String get storeRootCategoryIdAsString =>
+      storeRootCategoryId.toString();
+
   static const int accountTypeCustomer = 1;
   static const int accountTypeRealEstate = 2;
   static const int accountTypeSeller = 3;

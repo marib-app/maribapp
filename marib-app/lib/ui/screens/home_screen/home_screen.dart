@@ -361,7 +361,7 @@ class HomeScreenState extends State<HomeScreen>
   }
 
   void _goElectronicStore() {
-    final String categoryId = Constant.storeRootCategoryId.toString();
+    final String categoryId = Constant.storeRootCategoryIdAsString;
 
     Navigator.pushNamed(
       context,

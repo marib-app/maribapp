@@ -361,11 +361,14 @@ class ItemsListListState extends State<ItemsListSeller> {
           final String displayName = (businessName?.trim().isNotEmpty ?? false)
               ? businessName!.trim()
               : (seller.name ?? '');
+          final String storeCategoryId =
+              Constant.storeRootCategoryIdAsString;
+
 
           Navigator.pushNamed(context, Routes.section_screen, arguments: {
-            'catID': Constant.storeRootCategoryId.toString(),
+            'catID': storeCategoryId,
             'catName': displayName,
-            'categoryIds': [Constant.storeRootCategoryId.toString()],
+            'categoryIds': [storeCategoryId],
             'interfaceType': 'e_store',
             'sellerId': seller.id,
             if (sellerCategoryPayload != null)

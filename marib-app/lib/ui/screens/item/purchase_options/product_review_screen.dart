@@ -376,10 +376,29 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
   }
 
   Widget _buildBottomBar() {
+    final String status = (_item.status ?? '').trim().toLowerCase();
+    const Set<String> blockedStatuses = <String>{
+      'review',
+      'approved',
+      'active',
+      'published',
+      'enabled',
+      'rejected',
+    };
+
+    final bool hasBlockedStatus = blockedStatuses.contains(status);
+    final bool disablePublish =
+        _publishing || _item.id == null || hasBlockedStatus;
+    final String buttonTitle =
+        hasBlockedStatus ? _resolveDisabledButtonTitle(status) : 'نشر الآن';
+    final String? disabledMessage =
+        hasBlockedStatus ? _resolveDisabledMessage(status) : null;
+
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
               child: OutlinedButton(
@@ -394,22 +413,78 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: UiUtils.buildButton(
-                context,
-                onPressed: () async {
-                  await _publishNow();
-                },
-                buttonTitle: 'نشر الآن',
-                titleWhenProgress: 'جارٍ النشر...',
-                height: 48,
-                isInProgress: _publishing,
-                disabled: _publishing || _item.id == null,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  UiUtils.buildButton(
+                    context,
+                    onPressed: () async {
+                      if (disablePublish) {
+                        return;
+                      }
+                      await _publishNow();
+                    },
+                    buttonTitle: buttonTitle,
+                    titleWhenProgress: 'جارٍ النشر...',
+                    height: 48,
+                    isInProgress: _publishing,
+                    disabled: disablePublish,
+                    onTapDisabledButton: disabledMessage == null
+                        ? null
+                        : () => HelperUtils.showSnackBarMessage(
+                              context,
+                              disabledMessage,
+                            ),
+                  ),
+                  if (disabledMessage != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      disabledMessage,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: context.color.textColor.withOpacity(0.8),
+                          ),
+                    ),
+                  ],
+                ],
               ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  String _resolveDisabledButtonTitle(String status) {
+    switch (status) {
+      case 'review':
+        return 'بانتظار المراجعة';
+      case 'approved':
+      case 'active':
+      case 'published':
+      case 'enabled':
+        return 'منشور بالفعل';
+      case 'rejected':
+        return 'غير متاح للنشر';
+      default:
+        return 'نشر الآن';
+    }
+  }
+
+  String? _resolveDisabledMessage(String status) {
+    switch (status) {
+      case 'review':
+        return 'الإعلان قيد المراجعة بالفعل.';
+      case 'approved':
+      case 'active':
+      case 'published':
+      case 'enabled':
+        return 'الإعلان منشور بالفعل.';
+      case 'rejected':
+        return 'لا يمكن نشر الإعلان وهو مرفوض. يرجى تعديل البيانات وإعادة المحاولة.';
+      default:
+        return null;
+    }
   }
 
   Widget _buildSummaryCard(ItemPurchaseOptions options) {

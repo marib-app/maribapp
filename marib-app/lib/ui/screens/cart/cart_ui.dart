@@ -41,7 +41,7 @@ class CartUI extends StatelessWidget {
   final VoidCallback? onDismissSafetyTip;
 
   final bool selectAll;
-  final Set<int> selectedItemIds;
+  final Set<String> selectedItemIds;
 
   // نفس تموضع زر الواتساب
   final double whatsappBottom;
@@ -50,7 +50,7 @@ class CartUI extends StatelessWidget {
   // ردود الأفعال
   final VoidCallback onTapDeleteAll;
   final VoidCallback onToggleSelectAll;
-  final void Function(int? id) onToggleSelectItem;
+  final void Function(Cart item) onToggleSelectItem;
   final VoidCallback onContinueToPayment;
   final bool showCouponSection;
   final List<dynamic>? deliveryPaymentOptions;
@@ -949,8 +949,8 @@ class CartUI extends StatelessWidget {
                       child: CartHorizontalCard(
                         item: item,
                         showCheckbox: true,
-                        isSelected: selectedItemIds.contains(item.id),
-                        onToggleSelect: () => onToggleSelectItem(item.id),
+                        isSelected: selectedItemIds.contains(item.selectionKey),
+                        onToggleSelect: () => onToggleSelectItem(item),
                         buttonShape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),

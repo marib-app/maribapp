@@ -1,21 +1,16 @@
+import 'dart:async';
 
-
-
-
-// ignore_for_file: public_member_api_docs, sort_constructors_first
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:marib/data/cubits/cart/cart_cubit.dart';
+import 'package:marib/data/model/item/cart_model.dart';
 import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart';
 import 'package:marib/ui/screens/widgets/promoted_widget.dart';
 import 'package:marib/ui/theme/theme.dart';
-import 'package:marib/utils/extensions/extensions.dart';
-import 'package:marib/data/model/item/cart_model.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/currency_utils.dart';
+import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/money_formatter.dart';
-
-
+import 'package:marib/utils/ui_utils.dart';
 
 
 
@@ -61,24 +56,31 @@ class CartHorizontalCard extends StatelessWidget {
     context.color.territoryColor.withOpacity(isDark ? 0.28 : 0.12);
 
     return Dismissible(
-      key: ValueKey('${item.id}-${item.quantity}'),
+      key: ValueKey(item.selectionKey),
       direction: DismissDirection.endToStart,
-      onDismissed: (direction) {
-        UiUtils.showBlurredDialoge(context,
-            dialoge: BlurredDialogBox(
-                // title: "confirmLogoutTitle".translate(context),
-                title: "تأكيد الحذف ",
-                onAccept: () async {
-                  await context.read<CartCubit>().removeItem(
-                    cartItemId: item.cartItemId,
-                    itemId: item.id!,
-                  );
-
-                  },
-                cancelTextColor: context.color.textColorDark,
-                svgImagePath: "assets/lottie/delete_user.json",
-                content:
-                    Text("confirmDeleteProductFromCart".translate(context))));
+      confirmDismiss: (_) async {
+        final bool? confirmed = await UiUtils.showBlurredDialoge(
+          context,
+          dialoge: BlurredDialogBox(
+            title: "تأكيد الحذف ",
+            cancelTextColor: context.color.textColorDark,
+            svgImagePath: "assets/lottie/delete_user.json",
+            content:
+            Text("confirmDeleteProductFromCart".translate(context)),
+          ),
+        ) as bool?;
+        return confirmed == true;
+      },
+      onDismissed: (_) {
+        if (item.id == null) {
+          return;
+        }
+        unawaited(
+          context.read<CartCubit>().removeItem(
+            cartItemId: item.cartItemId,
+            itemId: item.id!,
+          ),
+        );
       },
       background: Container(
         alignment: Alignment.centerRight,

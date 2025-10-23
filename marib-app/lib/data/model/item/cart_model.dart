@@ -101,6 +101,56 @@ class Cart extends ItemModel {
 
 
 
+  /// مفتاح مستقر لتمييز سطور السلة (يُستخدم لتحديد العناصر بشكل فريد).
+  String get selectionKey {
+    final String baseId = cartItemId?.toString() ??
+        id?.toString() ??
+        hashCode.toString();
+    final String? variantIdToken = variantId?.trim();
+    final String? variantKeyToken = variantKey?.trim();
+    final String variantToken = (variantIdToken != null && variantIdToken.isNotEmpty)
+        ? variantIdToken
+        : (variantKeyToken ?? '');
+    final String attributesKey = _normalizedAttributesKey(variantAttributes);
+    final String customFieldsKey =
+    _normalizedCustomFieldsKey(selectedCustomFields);
+
+    return '$baseId::$variantToken::$attributesKey::$customFieldsKey';
+  }
+
+  static String _normalizedAttributesKey(Map<String, dynamic>? attributes) {
+    if (attributes == null || attributes.isEmpty) {
+      return '';
+    }
+    final List<String> keys =
+    attributes.keys.map((dynamic key) => key.toString()).toList()
+      ..sort();
+    final List<String> parts = <String>[];
+    for (final String key in keys) {
+      final dynamic value = attributes[key];
+      parts.add('$key:$value');
+    }
+    return parts.join(';');
+  }
+
+  static String _normalizedCustomFieldsKey(List<Map<String, dynamic>>? fields) {
+    if (fields == null || fields.isEmpty) {
+      return '';
+    }
+    final List<String> parts = <String>[];
+    for (final Map<String, dynamic> field in fields) {
+      final List<String> fieldKeys =
+      field.keys.map((dynamic key) => key.toString()).toList()
+        ..sort();
+      final List<String> entries = <String>[];
+      for (final String key in fieldKeys) {
+        final dynamic value = field[key];
+        entries.add('$key:$value');
+      }
+      parts.add(entries.join('|'));
+    }
+    return parts.join(';');
+  }
 
 
 

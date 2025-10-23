@@ -13,12 +13,6 @@ import 'package:marib/utils/delivery_department.dart';
 import 'package:marib/utils/hive_utils.dart';
 import 'package:meta/meta.dart';
 
-
-
-
-
-
-
 @immutable
 class CartState {
   const CartState({
@@ -61,7 +55,6 @@ class CartState {
   final String? currency;
   final String? currencyCode;
 
-
   CartState copyWith({
     List<Cart>? items,
     List<CartDiscount>? discounts,
@@ -84,20 +77,16 @@ class CartState {
     Object? departmentNotice = _sentinel,
     Object? currency = _sentinel,
     Object? currencyCode = _sentinel,
-
-
   }) {
     return CartState(
       items: items ?? this.items,
       discounts: discounts ?? this.discounts,
       couponInProgress: couponInProgress ?? this.couponInProgress,
-      couponError:
-      clearCouponError ? null : (couponError ?? this.couponError),
+      couponError: clearCouponError ? null : (couponError ?? this.couponError),
       throttleResetAt:
-      clearThrottle ? null : (throttleResetAt ?? this.throttleResetAt),
+          clearThrottle ? null : (throttleResetAt ?? this.throttleResetAt),
       lastUpdated: lastUpdated ?? this.lastUpdated,
-      safetyTips:
-      clearSafetyTips ? null : (safetyTips ?? this.safetyTips),
+      safetyTips: clearSafetyTips ? null : (safetyTips ?? this.safetyTips),
       pendingAddition: identical(pendingAddition, _sentinel)
           ? this.pendingAddition
           : pendingAddition as PendingCartAddition?,
@@ -113,31 +102,26 @@ class CartState {
       blocking: identical(blocking, _sentinel)
           ? this.blocking
           : blocking as Map<String, dynamic>?,
-      deliveryPaymentOptions:
-      identical(deliveryPaymentOptions, _sentinel)
+      deliveryPaymentOptions: identical(deliveryPaymentOptions, _sentinel)
           ? this.deliveryPaymentOptions
           : deliveryPaymentOptions as List<dynamic>?,
-      deliveryPaymentTiming:
-      identical(deliveryPaymentTiming, _sentinel)
+      deliveryPaymentTiming: identical(deliveryPaymentTiming, _sentinel)
           ? this.deliveryPaymentTiming
           : deliveryPaymentTiming as String?,
       checkoutLoading: checkoutLoading ?? this.checkoutLoading,
       departmentNotice: identical(departmentNotice, _sentinel)
           ? this.departmentNotice
           : departmentNotice as String?,
-      currency: identical(currency, _sentinel)
-          ? this.currency
-          : currency as String?,
+      currency:
+          identical(currency, _sentinel) ? this.currency : currency as String?,
       currencyCode: identical(currencyCode, _sentinel)
           ? this.currencyCode
           : currencyCode as String?,
     );
   }
+
   static const Object _sentinel = Object();
-
 }
-
-
 
 @immutable
 class PendingCartAddition {
@@ -172,10 +156,12 @@ class PendingCartAddition {
       vendorLng: cart.vendorLng,
       variantId: cart.variantId,
       variantKey: cart.variantKey,
-      variantAttributes:
-      cart.variantAttributes != null ? Map<String, dynamic>.from(cart.variantAttributes!) : null,
-      stockSnapshot:
-      cart.stockSnapshot != null ? Map<String, dynamic>.from(cart.stockSnapshot!) : null,
+      variantAttributes: cart.variantAttributes != null
+          ? Map<String, dynamic>.from(cart.variantAttributes!)
+          : null,
+      stockSnapshot: cart.stockSnapshot != null
+          ? Map<String, dynamic>.from(cart.stockSnapshot!)
+          : null,
       unitPrice: cart.unitPrice,
       unitPriceLocked: cart.unitPriceLocked,
       currency: cart.currency,
@@ -198,8 +184,8 @@ class PendingCartAddition {
   final String? currency;
 
   static List<Map<String, dynamic>>? _cloneListOfMaps(
-      List<Map<String, dynamic>>? source,
-      ) {
+    List<Map<String, dynamic>>? source,
+  ) {
     if (source == null) {
       return null;
     }
@@ -213,25 +199,21 @@ class CartCubit extends Cubit<CartState> {
   CartCubit({CartRepository? repository, CartTipsRepository? tipsRepository})
       : _repository = repository ?? CartRepository(),
         _tipsRepository = tipsRepository ?? const CartTipsRepository(),
-
-      super(const CartState()) {
+        super(const CartState()) {
     final String? storedSection = HiveUtils.getCartSection();
     _activeSection =
         normalizeDeliveryDepartment(storedSection) ?? storedSection;
-
-
   }
 
   String? _activeSection;
-  String? get activeSection => _activeSection;
 
+  String? get activeSection => _activeSection;
 
   final CartRepository _repository;
   final CartTipsRepository _tipsRepository;
   PendingCartAddition? _pendingAdditionCache;
   bool _checkoutRefreshInProgress = false;
   bool _checkoutRefreshPending = false;
-
 
   Future<void> fetchCart() async {
     final PendingCartAddition? existingPendingAddition =
@@ -254,16 +236,15 @@ class CartCubit extends Cubit<CartState> {
         lastUpdated: DateTime.now(),
         clearSafetyTips: !preservePendingAddition,
         pendingAddition:
-        preservePendingAddition ? existingPendingAddition : null,
-        departmentPolicy:
-        summary.departmentPolicy ?? state.departmentPolicy,
+            preservePendingAddition ? existingPendingAddition : null,
+        departmentPolicy: summary.departmentPolicy ?? state.departmentPolicy,
         support: summary.support ?? state.support,
         deliveryQuote: summary.deliveryQuote ?? state.deliveryQuote,
         blocking: summary.blocking ?? state.blocking,
-        deliveryPaymentOptions: summary.deliveryPaymentOptions ??
-            state.deliveryPaymentOptions,
-        deliveryPaymentTiming: summary.deliveryPaymentTiming ??
-            state.deliveryPaymentTiming,
+        deliveryPaymentOptions:
+            summary.deliveryPaymentOptions ?? state.deliveryPaymentOptions,
+        deliveryPaymentTiming:
+            summary.deliveryPaymentTiming ?? state.deliveryPaymentTiming,
         checkoutLoading: true,
         currency: summary.currency ?? state.currency,
         currencyCode: summary.currencyCode ?? state.currencyCode,
@@ -273,8 +254,6 @@ class CartCubit extends Cubit<CartState> {
     if (preservePendingAddition) {
       _pendingAdditionCache = existingPendingAddition;
     }
-
-
 
     unawaited(refreshCheckoutDetails(force: true));
   }
@@ -298,21 +277,58 @@ class CartCubit extends Cubit<CartState> {
       return;
     }
 
-    if (force) {
-      _checkoutRefreshPending = false;
-    }
-
-    if (!state.checkoutLoading) {
-
-      _checkoutRefreshInProgress = false;
+    if (_checkoutRefreshInProgress) {
+      _checkoutRefreshPending = true;
       return;
     }
+
+    if (!force && !state.checkoutLoading) {
+      _checkoutRefreshPending = false;
+      return;
+    }
+    _checkoutRefreshInProgress = true;
+
     _checkoutRefreshPending = false;
-    _checkoutRefreshInProgress = false;
-
-    emit(state.copyWith(checkoutLoading: false));
+    try {
+      final CartCheckoutDetails checkoutDetails =
+          await _repository.fetchCheckoutInfo();
+      final CartState latestState = state;
+      emit(
+        latestState.copyWith(
+          checkoutLoading: false,
+          departmentPolicy:
+              checkoutDetails.departmentPolicy ?? latestState.departmentPolicy,
+          support: checkoutDetails.support ?? latestState.support,
+          deliveryQuote:
+              checkoutDetails.deliveryQuote ?? latestState.deliveryQuote,
+          blocking: checkoutDetails.blocking ?? latestState.blocking,
+          deliveryPaymentOptions: checkoutDetails.deliveryPaymentOptions ??
+              latestState.deliveryPaymentOptions,
+          deliveryPaymentTiming: checkoutDetails.deliveryPaymentTiming ??
+              latestState.deliveryPaymentTiming,
+          departmentNotice:
+              checkoutDetails.departmentNotice ?? latestState.departmentNotice,
+        ),
+      );
+    } catch (error) {
+      final CartState latestState = state;
+      emit(
+        latestState.copyWith(
+          checkoutLoading: false,
+        ),
+      );
+      _recordTelemetry('cart_checkout.refresh_failed', <String, dynamic>{
+        'error': error.toString(),
+      });
+    } finally {
+      final bool shouldRetry = _checkoutRefreshPending;
+      _checkoutRefreshInProgress = false;
+      if (shouldRetry) {
+        _checkoutRefreshPending = false;
+        unawaited(refreshCheckoutDetails(force: true));
+      }
+    }
   }
-
 
   Future<void> updateDeliveryPaymentTiming(String timing) async {
     final String normalized = timing.trim();
@@ -342,31 +358,27 @@ class CartCubit extends Cubit<CartState> {
           items: summary.items,
           discounts: summary.discounts,
           lastUpdated: DateTime.now(),
-          departmentPolicy:
-          summary.departmentPolicy ?? state.departmentPolicy,
+          departmentPolicy: summary.departmentPolicy ?? state.departmentPolicy,
           support: summary.support ?? state.support,
           deliveryQuote: summary.deliveryQuote ?? state.deliveryQuote,
           blocking: summary.blocking ?? state.blocking,
-          deliveryPaymentOptions: summary.deliveryPaymentOptions ??
-              state.deliveryPaymentOptions,
-          deliveryPaymentTiming:
-          summary.deliveryPaymentTiming ?? normalized,
+          deliveryPaymentOptions:
+              summary.deliveryPaymentOptions ?? state.deliveryPaymentOptions,
+          deliveryPaymentTiming: summary.deliveryPaymentTiming ?? normalized,
           checkoutLoading: true,
           currency: summary.currency ?? state.currency,
           currencyCode: summary.currencyCode ?? state.currencyCode,
         ),
       );
 
-      final bool requiresRefresh =
-          summary.deliveryPaymentOptions == null ||
-              summary.deliveryPaymentOptions!.isEmpty ||
-              summary.deliveryPaymentTiming == null ||
-              summary.deliveryPaymentTiming!.trim().isEmpty;
+      final bool requiresRefresh = summary.deliveryPaymentOptions == null ||
+          summary.deliveryPaymentOptions!.isEmpty ||
+          summary.deliveryPaymentTiming == null ||
+          summary.deliveryPaymentTiming!.trim().isEmpty;
       if (requiresRefresh) {
         await refreshDeliveryPaymentTiming();
       }
       unawaited(refreshCheckoutDetails());
-
     } catch (_) {
       emit(
         state.copyWith(
@@ -404,10 +416,10 @@ class CartCubit extends Cubit<CartState> {
 
     final String? department = normalizedDepartment;
     final String? canonicalDepartment =
-        normalizeDeliveryDepartment(normalizedDepartment) ?? normalizedDepartment;
+        normalizeDeliveryDepartment(normalizedDepartment) ??
+            normalizedDepartment;
     final bool isSheinDepartment = canonicalDepartment != null &&
         canonicalDepartment.toLowerCase().trim() == 'shein';
-
 
     _setActiveSection(department);
 
@@ -418,7 +430,6 @@ class CartCubit extends Cubit<CartState> {
     _pendingAdditionCache = request;
     CartSafetyTipsPayload? safetyTips;
     if (department != null && isSheinDepartment) {
-
       try {
         safetyTips = await _tipsRepository.fetchTips(
           department: department,
@@ -433,13 +444,11 @@ class CartCubit extends Cubit<CartState> {
         safetyTips != null && safetyTips.requiresConfirmation;
 
     if (requiresConfirmation) {
-
       emit(
         state.copyWith(
           safetyTips: safetyTips,
           clearSafetyTips: false,
           pendingAddition: request,
-
         ),
       );
       return;
@@ -447,19 +456,16 @@ class CartCubit extends Cubit<CartState> {
 
     await _commitCartAddition(
       request: request,
-
       safetyTipsOverride:
-      (safetyTips != null && safetyTips.hasTips) ? safetyTips : null,
+          (safetyTips != null && safetyTips.hasTips) ? safetyTips : null,
     );
   }
 
   Future<void> _commitCartAddition({
     required PendingCartAddition request,
-
     CartSafetyTipsPayload? safetyTipsOverride,
     bool skipTipFetch = false,
   }) async {
-
     final String? normalizedDepartment =
         normalizeDeliveryDepartment(request.department) ?? request.department;
     final bool requestIsShein = normalizedDepartment != null &&
@@ -483,17 +489,8 @@ class CartCubit extends Cubit<CartState> {
         currency: request.currency,
       );
 
-
-
-
-
-
-
-
-
-      CartSafetyTipsPayload? resolvedTips =
-      (safetyTipsOverride != null &&
-          safetyTipsOverride.hasDisplayableContent)
+      CartSafetyTipsPayload? resolvedTips = (safetyTipsOverride != null &&
+              safetyTipsOverride.hasDisplayableContent)
           ? safetyTipsOverride
           : null;
 
@@ -508,7 +505,7 @@ class CartCubit extends Cubit<CartState> {
         if (fetchDepartment != null && addedItemId != null) {
           try {
             final CartSafetyTipsPayload? fetched =
-            await _tipsRepository.fetchTips(
+                await _tipsRepository.fetchTips(
               department: fetchDepartment,
               itemId: addedItemId,
             );
@@ -517,10 +514,7 @@ class CartCubit extends Cubit<CartState> {
             }
           } catch (_) {
             // Ignore tip fetch errors; cart addition succeeded.
-
-
           }
-
         }
       }
       _syncSection(summary.items);
@@ -532,15 +526,14 @@ class CartCubit extends Cubit<CartState> {
           safetyTips: skipTipFetch ? null : resolvedTips,
           clearSafetyTips: skipTipFetch || resolvedTips == null,
           pendingAddition: null,
-          departmentPolicy:
-          summary.departmentPolicy ?? state.departmentPolicy,
+          departmentPolicy: summary.departmentPolicy ?? state.departmentPolicy,
           support: summary.support ?? state.support,
           deliveryQuote: summary.deliveryQuote ?? state.deliveryQuote,
           blocking: summary.blocking ?? state.blocking,
-          deliveryPaymentOptions: summary.deliveryPaymentOptions ??
-              state.deliveryPaymentOptions,
-          deliveryPaymentTiming: summary.deliveryPaymentTiming ??
-              state.deliveryPaymentTiming,
+          deliveryPaymentOptions:
+              summary.deliveryPaymentOptions ?? state.deliveryPaymentOptions,
+          deliveryPaymentTiming:
+              summary.deliveryPaymentTiming ?? state.deliveryPaymentTiming,
           checkoutLoading: true,
           currency: summary.currency ?? state.currency,
           currencyCode: summary.currencyCode ?? state.currencyCode,
@@ -564,7 +557,6 @@ class CartCubit extends Cubit<CartState> {
         await refreshDeliveryPaymentTiming();
       }
       unawaited(refreshCheckoutDetails());
-
     } catch (error, _) {
       _recordTelemetry('cart_add.failed', <String, dynamic>{
         'department': normalizedDepartment,
@@ -575,18 +567,18 @@ class CartCubit extends Cubit<CartState> {
     }
   }
 
-
   Future<void> refreshDeliveryPaymentTiming() async {
     try {
-      final CartSummary summary = await _repository.fetchDeliveryPaymentTiming();
+      final CartSummary summary =
+          await _repository.fetchDeliveryPaymentTiming();
       if (summary.items.isNotEmpty) {
         _syncSection(summary.items);
       }
 
       final List<Cart> resolvedItems =
-      summary.items.isNotEmpty ? summary.items : state.items;
+          summary.items.isNotEmpty ? summary.items : state.items;
       final List<CartDiscount> resolvedDiscounts =
-      summary.discounts.isNotEmpty ? summary.discounts : state.discounts;
+          summary.discounts.isNotEmpty ? summary.discounts : state.discounts;
 
       emit(
         state.copyWith(
@@ -598,9 +590,9 @@ class CartCubit extends Cubit<CartState> {
           deliveryQuote: summary.deliveryQuote ?? state.deliveryQuote,
           blocking: summary.blocking ?? state.blocking,
           deliveryPaymentOptions:
-          summary.deliveryPaymentOptions ?? state.deliveryPaymentOptions,
+              summary.deliveryPaymentOptions ?? state.deliveryPaymentOptions,
           deliveryPaymentTiming:
-          summary.deliveryPaymentTiming ?? state.deliveryPaymentTiming,
+              summary.deliveryPaymentTiming ?? state.deliveryPaymentTiming,
           currency: summary.currency ?? state.currency,
           currencyCode: summary.currencyCode ?? state.currencyCode,
           checkoutLoading: true,
@@ -611,7 +603,6 @@ class CartCubit extends Cubit<CartState> {
       // Ignore delivery payment timing fetch failures.
     }
   }
-
 
   Future<void> confirmPendingCartAddition() async {
     final PendingCartAddition? pending =
@@ -646,7 +637,6 @@ class CartCubit extends Cubit<CartState> {
   Future<void> cancelPendingCartAddition() async {
     _clearPendingAddition(clearSafetyTips: true);
     await fetchCart();
-
   }
 
   void _clearPendingAddition({bool clearSafetyTips = false}) {
@@ -663,8 +653,6 @@ class CartCubit extends Cubit<CartState> {
       ),
     );
   }
-
-
 
   Future<void> updateItemQuantity(int id, int quantity) async {
     final Cart? item = _findItem(itemId: id);
@@ -695,22 +683,20 @@ class CartCubit extends Cubit<CartState> {
         discounts: summary.discounts,
         lastUpdated: DateTime.now(),
         clearSafetyTips: true,
-        departmentPolicy:
-        summary.departmentPolicy ?? state.departmentPolicy,
+        departmentPolicy: summary.departmentPolicy ?? state.departmentPolicy,
         support: summary.support ?? state.support,
         deliveryQuote: summary.deliveryQuote ?? state.deliveryQuote,
         blocking: summary.blocking ?? state.blocking,
-        deliveryPaymentOptions: summary.deliveryPaymentOptions ??
-            state.deliveryPaymentOptions,
+        deliveryPaymentOptions:
+            summary.deliveryPaymentOptions ?? state.deliveryPaymentOptions,
         deliveryPaymentTiming:
-        summary.deliveryPaymentTiming ?? state.deliveryPaymentTiming,
+            summary.deliveryPaymentTiming ?? state.deliveryPaymentTiming,
         checkoutLoading: true,
         currency: summary.currency ?? state.currency,
         currencyCode: summary.currencyCode ?? state.currencyCode,
       ),
     );
     unawaited(refreshCheckoutDetails());
-
   }
 
   Future<void> increaseQuantity({int? cartItemId, required int itemId}) async {
@@ -720,7 +706,6 @@ class CartCubit extends Cubit<CartState> {
     );
 
     if (item == null) return;
-
 
     await _updateItemQuantity(item, item.quantity + 1);
   }
@@ -734,8 +719,6 @@ class CartCubit extends Cubit<CartState> {
 
     await _updateItemQuantity(item, item.quantity - 1);
   }
-
-
 
   Future<void> removeItem({int? cartItemId, required int itemId}) async {
     final Cart? item = _findItem(
@@ -757,15 +740,14 @@ class CartCubit extends Cubit<CartState> {
         items: summary.items,
         discounts: summary.discounts,
         lastUpdated: DateTime.now(),
-        departmentPolicy:
-        summary.departmentPolicy ?? state.departmentPolicy,
+        departmentPolicy: summary.departmentPolicy ?? state.departmentPolicy,
         support: summary.support ?? state.support,
         deliveryQuote: summary.deliveryQuote ?? state.deliveryQuote,
         blocking: summary.blocking ?? state.blocking,
-        deliveryPaymentOptions: summary.deliveryPaymentOptions ??
-            state.deliveryPaymentOptions,
+        deliveryPaymentOptions:
+            summary.deliveryPaymentOptions ?? state.deliveryPaymentOptions,
         deliveryPaymentTiming:
-        summary.deliveryPaymentTiming ?? state.deliveryPaymentTiming,
+            summary.deliveryPaymentTiming ?? state.deliveryPaymentTiming,
         checkoutLoading: true,
         currency: summary.currency ?? state.currency,
         currencyCode: summary.currencyCode ?? state.currencyCode,
@@ -783,15 +765,14 @@ class CartCubit extends Cubit<CartState> {
         items: summary.items,
         discounts: summary.discounts,
         lastUpdated: DateTime.now(),
-        departmentPolicy:
-        summary.departmentPolicy ?? state.departmentPolicy,
+        departmentPolicy: summary.departmentPolicy ?? state.departmentPolicy,
         support: summary.support ?? state.support,
         deliveryQuote: summary.deliveryQuote ?? state.deliveryQuote,
         blocking: summary.blocking ?? state.blocking,
-        deliveryPaymentOptions: summary.deliveryPaymentOptions ??
-            state.deliveryPaymentOptions,
+        deliveryPaymentOptions:
+            summary.deliveryPaymentOptions ?? state.deliveryPaymentOptions,
         deliveryPaymentTiming:
-        summary.deliveryPaymentTiming ?? state.deliveryPaymentTiming,
+            summary.deliveryPaymentTiming ?? state.deliveryPaymentTiming,
         checkoutLoading: true,
         currency: summary.currency ?? state.currency,
         currencyCode: summary.currencyCode ?? state.currencyCode,
@@ -835,15 +816,14 @@ class CartCubit extends Cubit<CartState> {
           clearCouponError: true,
           clearThrottle: true,
           lastUpdated: DateTime.now(),
-          departmentPolicy:
-          summary.departmentPolicy ?? state.departmentPolicy,
+          departmentPolicy: summary.departmentPolicy ?? state.departmentPolicy,
           support: summary.support ?? state.support,
           deliveryQuote: summary.deliveryQuote ?? state.deliveryQuote,
           blocking: summary.blocking ?? state.blocking,
-          deliveryPaymentOptions: summary.deliveryPaymentOptions ??
-              state.deliveryPaymentOptions,
+          deliveryPaymentOptions:
+              summary.deliveryPaymentOptions ?? state.deliveryPaymentOptions,
           deliveryPaymentTiming:
-          summary.deliveryPaymentTiming ?? state.deliveryPaymentTiming,
+              summary.deliveryPaymentTiming ?? state.deliveryPaymentTiming,
           checkoutLoading: true,
           currency: summary.currency ?? state.currency,
           currencyCode: summary.currencyCode ?? state.currencyCode,
@@ -856,7 +836,7 @@ class CartCubit extends Cubit<CartState> {
           state.copyWith(
             couponInProgress: false,
             couponError:
-            'تم تجاوز الحد المسموح لمحاولات القسائم. يرجى الانتظار دقيقة قبل المحاولة مجددًا.',
+                'تم تجاوز الحد المسموح لمحاولات القسائم. يرجى الانتظار دقيقة قبل المحاولة مجددًا.',
             throttleResetAt: DateTime.now().add(const Duration(minutes: 1)),
           ),
         );
@@ -878,19 +858,13 @@ class CartCubit extends Cubit<CartState> {
     }
   }
 
-
-
-
   void clearSafetyTips() {
     _clearPendingAddition(clearSafetyTips: true);
   }
 
-
   void _recordTelemetry(String event, [Map<String, dynamic>? context]) {
     AppTelemetry.record(event, context ?? const <String, dynamic>{});
   }
-
-
 
   Future<void> removeCoupon(String rawCode) async {
     final String trimmed = rawCode.trim();
@@ -917,15 +891,14 @@ class CartCubit extends Cubit<CartState> {
           clearCouponError: true,
           clearThrottle: true,
           lastUpdated: DateTime.now(),
-          departmentPolicy:
-          summary.departmentPolicy ?? state.departmentPolicy,
+          departmentPolicy: summary.departmentPolicy ?? state.departmentPolicy,
           support: summary.support ?? state.support,
           deliveryQuote: summary.deliveryQuote ?? state.deliveryQuote,
           blocking: summary.blocking ?? state.blocking,
-          deliveryPaymentOptions: summary.deliveryPaymentOptions ??
-              state.deliveryPaymentOptions,
+          deliveryPaymentOptions:
+              summary.deliveryPaymentOptions ?? state.deliveryPaymentOptions,
           deliveryPaymentTiming:
-          summary.deliveryPaymentTiming ?? state.deliveryPaymentTiming,
+              summary.deliveryPaymentTiming ?? state.deliveryPaymentTiming,
           checkoutLoading: true,
           currency: summary.currency ?? state.currency,
           currencyCode: summary.currencyCode ?? state.currencyCode,
@@ -938,7 +911,7 @@ class CartCubit extends Cubit<CartState> {
           state.copyWith(
             couponInProgress: false,
             couponError:
-            'تم تجاوز الحد المسموح لمحاولات القسائم. يرجى الانتظار دقيقة قبل المحاولة مجددًا.',
+                'تم تجاوز الحد المسموح لمحاولات القسائم. يرجى الانتظار دقيقة قبل المحاولة مجددًا.',
             throttleResetAt: DateTime.now().add(const Duration(minutes: 1)),
           ),
         );
@@ -978,15 +951,14 @@ class CartCubit extends Cubit<CartState> {
         items: summary.items,
         discounts: summary.discounts,
         lastUpdated: DateTime.now(),
-        departmentPolicy:
-        summary.departmentPolicy ?? state.departmentPolicy,
+        departmentPolicy: summary.departmentPolicy ?? state.departmentPolicy,
         support: summary.support ?? state.support,
         deliveryQuote: summary.deliveryQuote ?? state.deliveryQuote,
         blocking: summary.blocking ?? state.blocking,
-        deliveryPaymentOptions: summary.deliveryPaymentOptions ??
-            state.deliveryPaymentOptions,
+        deliveryPaymentOptions:
+            summary.deliveryPaymentOptions ?? state.deliveryPaymentOptions,
         deliveryPaymentTiming:
-        summary.deliveryPaymentTiming ?? state.deliveryPaymentTiming,
+            summary.deliveryPaymentTiming ?? state.deliveryPaymentTiming,
         checkoutLoading: true,
         currency: summary.currency ?? state.currency,
         currencyCode: summary.currencyCode ?? state.currencyCode,
@@ -998,8 +970,6 @@ class CartCubit extends Cubit<CartState> {
   int get totalItems =>
       state.items.fold(0, (int total, Cart item) => total + item.quantity);
 
-
-
   int getQuantityForCartItem({int? cartItemId, required int itemId}) {
     final Cart? item = _findItem(
       cartItemId: cartItemId,
@@ -1010,8 +980,6 @@ class CartCubit extends Cubit<CartState> {
   }
 
   int getQuantityForProduct(int id) => getQuantityForCartItem(itemId: id);
-
-
 
   double get subtotal =>
       state.items.fold(0, (double sum, Cart item) => sum + item.subtotalAmount);
@@ -1026,7 +994,6 @@ class CartCubit extends Cubit<CartState> {
       return null;
     }
 
-
     for (final Cart item in state.items) {
       if (item.id == itemId) {
         return item;
@@ -1034,7 +1001,6 @@ class CartCubit extends Cubit<CartState> {
     }
     return null;
   }
-
 
   void _syncSection(List<Cart> items) {
     final String? newSection = items.isNotEmpty ? items.first.section : null;
@@ -1046,16 +1012,12 @@ class CartCubit extends Cubit<CartState> {
         normalizeDeliveryDepartment(section) ?? section?.trim();
 
     if (_activeSection == normalized) {
-
       return;
     }
 
     _activeSection = normalized;
     unawaited(HiveUtils.setCartSection(normalized));
   }
-
-
-
 
   String? _extractCanonicalDepartment(Map<String, dynamic>? raw) {
     for (final Map<String, dynamic> candidate in _mapCandidates(raw)) {
@@ -1101,7 +1063,8 @@ class CartCubit extends Cubit<CartState> {
     return null;
   }
 
-  Iterable<Map<String, dynamic>> _mapCandidates(Map<String, dynamic>? raw) sync* {
+  Iterable<Map<String, dynamic>> _mapCandidates(
+      Map<String, dynamic>? raw) sync* {
     final List<dynamic> queue = <dynamic>[];
     if (raw != null) {
       queue.add(raw);
@@ -1149,14 +1112,11 @@ class CartCubit extends Cubit<CartState> {
     }
     if (value is Map) {
       return value.map(
-            (dynamic key, dynamic value) => MapEntry(key.toString(), value),
+        (dynamic key, dynamic value) => MapEntry(key.toString(), value),
       );
     }
     return null;
   }
-
-
-
 
   String? _readDepartmentSlug(Map<String, dynamic>? map) {
     final String? value = _extractDepartmentValue(map);
@@ -1179,7 +1139,7 @@ class CartCubit extends Cubit<CartState> {
         continue;
       }
       final String? resolved =
-      _resolveDepartmentValue(map[key], <Map<String, dynamic>>{map});
+          _resolveDepartmentValue(map[key], <Map<String, dynamic>>{map});
       if (resolved != null && resolved.isNotEmpty) {
         return resolved;
       }
@@ -1255,10 +1215,6 @@ class CartCubit extends Cubit<CartState> {
     return trimmed.isEmpty ? null : trimmed;
   }
 
-
-
-
-
   String? _readString(Map<String, dynamic>? map, Iterable<String> keys) {
     if (map == null) return null;
     for (final String key in keys) {
@@ -1306,9 +1262,4 @@ class CartCubit extends Cubit<CartState> {
     }
     return null;
   }
-
-
-
-
-
 }

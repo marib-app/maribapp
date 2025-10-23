@@ -19,9 +19,6 @@ import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/currency_utils.dart';
 
-
-
-
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
 
@@ -37,7 +34,7 @@ class _CartScreenState extends State<CartScreen> {
   bool _loading = true;
 
   bool _selectAll = false;
-  final Set<int> _selectedItems = <int>{};
+  final Set<String> _selectedItems = <String>{};
   final TextEditingController _couponController = TextEditingController();
 
   // نفس القيم الأصلية
@@ -45,7 +42,6 @@ class _CartScreenState extends State<CartScreen> {
   final double _whatsappRight = 340;
   Set<String> _appliedCouponSnapshot = <String>{};
   CartState? _lastCartState;
-
 
   @override
   void initState() {
@@ -83,23 +79,22 @@ class _CartScreenState extends State<CartScreen> {
       _selectAll = !_selectAll;
       _selectedItems.clear();
       if (_selectAll) {
-        _selectedItems.addAll(cartItems.where((e) => e.id != null).map((e) => e.id!));
+        _selectedItems.addAll(cartItems.map((e) => e.selectionKey));
       }
     });
   }
 
-  void _toggleSelectItem(int? id, int totalCount) {
-    if (id == null) return;
+  void _toggleSelectItem(Cart item, int totalCount) {
+    final String key = item.selectionKey;
     setState(() {
-      if (_selectedItems.contains(id)) {
-        _selectedItems.remove(id);
+      if (_selectedItems.contains(key)) {
+        _selectedItems.remove(key);
       } else {
-        _selectedItems.add(id);
+        _selectedItems.add(key);
       }
       _selectAll = (_selectedItems.length == totalCount && totalCount > 0);
     });
   }
-
 
   void _syncCouponSnapshot(List<CartDiscount> discounts) {
     _appliedCouponSnapshot = _extractAppliedCoupons(discounts);
@@ -122,9 +117,9 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   CartDiscount? _findDiscountByNormalizedCode(
-      List<CartDiscount> discounts,
-      String normalizedCode,
-      ) {
+    List<CartDiscount> discounts,
+    String normalizedCode,
+  ) {
     for (final CartDiscount discount in discounts) {
       final String? code = discount.code;
       if (code == null) continue;
@@ -201,6 +196,7 @@ class _CartScreenState extends State<CartScreen> {
       code: info.code,
     );
   }
+
   String? _resolveCartCurrencyCode(CartState state) {
     final CurrencyParseResult info = _resolveCartCurrencyInfo(state);
     return info.code;
@@ -235,10 +231,10 @@ class _CartScreenState extends State<CartScreen> {
   Future<void> _applyCoupon() async {
     await context.read<CartCubit>().applyCoupon(_couponController.text);
   }
+
   Future<void> _updateDeliveryPaymentTiming(String timing) async {
     await context.read<CartCubit>().updateDeliveryPaymentTiming(timing);
   }
-
 
   Future<void> _removeCoupon(CartDiscount discount) async {
     String? code = discount.code;
@@ -306,15 +302,13 @@ class _CartScreenState extends State<CartScreen> {
     final List<Cart> cartItems = cartState.items;
     final double subtotal = context.read<CartCubit>().subtotal;
 
-
-
     Map<String, dynamic>? _castToStringKeyedMap(dynamic value) {
       if (value is Map<String, dynamic>) {
         return value;
       }
       if (value is Map) {
         return value.map(
-              (dynamic key, dynamic value) => MapEntry(key.toString(), value),
+          (dynamic key, dynamic value) => MapEntry(key.toString(), value),
         );
       }
       return null;
@@ -347,7 +341,6 @@ class _CartScreenState extends State<CartScreen> {
       return null;
     }
 
-
     Map<String, dynamic>? _firstMap(dynamic value) {
       final Map<String, dynamic>? direct = _castToStringKeyedMap(value);
       if (direct != null) {
@@ -365,7 +358,7 @@ class _CartScreenState extends State<CartScreen> {
     }
 
     final Map<String, dynamic>? supportMap =
-    _castToStringKeyedMap(cartState.support);
+        _castToStringKeyedMap(cartState.support);
     String? supportWhatsappNumber;
     String? supportWhatsappUrl;
     String? supportWhatsappMessage;
@@ -383,7 +376,6 @@ class _CartScreenState extends State<CartScreen> {
       if (channelsMap != null && whatsappMap == null) {
         whatsappMap = _firstMap(channelsMap['whatsapp']);
         supportWhatsappData ??= channelsMap['whatsapp'];
-
       }
 
       const List<String> numberKeys = <String>[
@@ -436,21 +428,15 @@ class _CartScreenState extends State<CartScreen> {
         'text',
       ];
 
-
-      supportWhatsappNumber =
-          _firstStringValue(whatsappMap, numberKeys) ??
-              _firstStringValue(supportMap, numberKeys);
-      supportWhatsappUrl =
-          _firstStringValue(whatsappMap, urlKeys) ??
-              _firstStringValue(supportMap, urlKeys);
-      supportWhatsappMessage =
-          _firstStringValue(whatsappMap, messageKeys) ??
-              _firstStringValue(supportMap, messageKeys);
-      supportWhatsappLabel =
-          _firstStringValue(whatsappMap, labelKeys) ??
-              _firstStringValue(supportMap, labelKeys);
+      supportWhatsappNumber = _firstStringValue(whatsappMap, numberKeys) ??
+          _firstStringValue(supportMap, numberKeys);
+      supportWhatsappUrl = _firstStringValue(whatsappMap, urlKeys) ??
+          _firstStringValue(supportMap, urlKeys);
+      supportWhatsappMessage = _firstStringValue(whatsappMap, messageKeys) ??
+          _firstStringValue(supportMap, messageKeys);
+      supportWhatsappLabel = _firstStringValue(whatsappMap, labelKeys) ??
+          _firstStringValue(supportMap, labelKeys);
       supportWhatsappData ??= whatsappMap;
-
 
       if (supportWhatsappUrl == null) {
         final dynamic whatsappRaw = supportMap['whatsapp'];
@@ -489,7 +475,8 @@ class _CartScreenState extends State<CartScreen> {
         listener: (BuildContext context, CartState state) {
           final CartState? previousState = _lastCartState;
           final Set<String> previousCoupons = _appliedCouponSnapshot;
-          final Set<String> nextCoupons = _extractAppliedCoupons(state.discounts);
+          final Set<String> nextCoupons =
+              _extractAppliedCoupons(state.discounts);
 
           if (_loading) {
             _appliedCouponSnapshot = nextCoupons;
@@ -501,7 +488,6 @@ class _CartScreenState extends State<CartScreen> {
             if (trimmed.isNotEmpty) {
               final String lower = trimmed.toLowerCase();
               if (nextCoupons.contains(lower)) {
-
                 _couponController.clear();
               }
             }
@@ -514,16 +500,17 @@ class _CartScreenState extends State<CartScreen> {
               trimmedError != previousError) {
             HelperUtils.showSnackBarMessage(context, trimmedError);
           } else if (!state.couponInProgress) {
-            final Set<String> newlyApplied = nextCoupons.difference(previousCoupons);
+            final Set<String> newlyApplied =
+                nextCoupons.difference(previousCoupons);
             if (newlyApplied.isNotEmpty) {
               for (final String normalized in newlyApplied) {
                 final CartDiscount? discount =
-                _findDiscountByNormalizedCode(state.discounts, normalized);
+                    _findDiscountByNormalizedCode(state.discounts, normalized);
                 final String resolvedCode =
-                (discount?.code ?? normalized).trim().toUpperCase();
+                    (discount?.code ?? normalized).trim().toUpperCase();
                 final String title = ((discount?.displayTitle ?? '').trim());
                 final String message = title.isNotEmpty &&
-                    title.toLowerCase() != resolvedCode.toLowerCase()
+                        title.toLowerCase() != resolvedCode.toLowerCase()
                     ? 'تم تطبيق القسيمة $resolvedCode بنجاح: $title'
                     : 'تم تطبيق القسيمة $resolvedCode بنجاح.';
                 HelperUtils.showSnackBarMessage(context, message);
@@ -533,7 +520,6 @@ class _CartScreenState extends State<CartScreen> {
 
           _appliedCouponSnapshot = nextCoupons;
           _lastCartState = state;
-
         },
         child: CartUI(
           isLoading: _loading,
@@ -550,7 +536,6 @@ class _CartScreenState extends State<CartScreen> {
               HelperUtils.showSnackBarMessage(
                 context,
                 "السلة فارغة، لا يوجد عناصر للحذف.",
-
               );
             } else {
               UiUtils.showBlurredDialoge(
@@ -566,10 +551,10 @@ class _CartScreenState extends State<CartScreen> {
             }
           },
           onToggleSelectAll: () => _toggleSelectAll(cartItems),
-          onToggleSelectItem: (int? id) => _toggleSelectItem(id, cartItems.length),
+          onToggleSelectItem: (Cart item) =>
+              _toggleSelectItem(item, cartItems.length),
           onContinueToPayment: () => _continueToPayment(cartItems),
           discounts: cartState.discounts,
-
           supportWhatsappLabel: supportWhatsappLabel,
           supportWhatsappNumber: supportWhatsappNumber,
           supportWhatsappUrl: supportWhatsappUrl,

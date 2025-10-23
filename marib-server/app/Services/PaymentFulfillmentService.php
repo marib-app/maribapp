@@ -501,6 +501,23 @@ class PaymentFulfillmentService
                 $receiptEntry['attachments'] = $receiptMeta['attachments'];
             }
 
+
+            if (isset($receiptMeta['manual_note']) && is_string($receiptMeta['manual_note']) && $receiptMeta['manual_note'] !== '') {
+                $receiptEntry['note'] = $receiptMeta['manual_note'];
+            }
+
+            if (isset($receiptMeta['manual_metadata']) && is_array($receiptMeta['manual_metadata']) && $receiptMeta['manual_metadata'] !== []) {
+                $receiptEntry['metadata'] = $receiptMeta['manual_metadata'];
+            }
+
+            if (isset($receiptMeta['manual_sender_name']) && is_string($receiptMeta['manual_sender_name']) && $receiptMeta['manual_sender_name'] !== '') {
+                $receiptEntry['sender_name'] = $receiptMeta['manual_sender_name'];
+            }
+
+            if (isset($receiptMeta['manual_transfer_code']) && is_string($receiptMeta['manual_transfer_code']) && $receiptMeta['manual_transfer_code'] !== '') {
+                $receiptEntry['transfer_code'] = $receiptMeta['manual_transfer_code'];
+            }
+
             $receipts[] = $receiptEntry;
 
         }
@@ -541,6 +558,65 @@ class PaymentFulfillmentService
             ? $manualRequest->meta
             : [];
         $transactionMeta = is_array($transaction->meta) ? $transaction->meta : [];
+
+
+        $manualNote = $this->firstNonEmptyString([
+            $manualRequest instanceof ManualPaymentRequest ? $manualRequest->user_note : null,
+            Arr::get($manualMeta, 'user_note'),
+            Arr::get($manualMeta, 'note'),
+            Arr::get($manualMeta, 'metadata.note'),
+            Arr::get($manualMeta, 'metadata.notes'),
+            Arr::get($transactionMeta, 'manual.user_note'),
+            Arr::get($transactionMeta, 'manual.note'),
+            Arr::get($transactionMeta, 'manual.metadata.note'),
+            Arr::get($transactionMeta, 'manual.metadata.notes'),
+        ]);
+
+        $manualUserNote = $this->firstNonEmptyString([
+            Arr::get($manualMeta, 'metadata.user_note'),
+            Arr::get($manualMeta, 'metadata.customer_note'),
+            Arr::get($transactionMeta, 'manual.metadata.user_note'),
+            Arr::get($transactionMeta, 'manual.metadata.customer_note'),
+        ]);
+
+        if ($manualNote === null && $manualUserNote !== null) {
+            $manualNote = $manualUserNote;
+        }
+
+        $senderName = $this->firstNonEmptyString([
+            Arr::get($manualMeta, 'metadata.sender_name'),
+            Arr::get($manualMeta, 'metadata.sender'),
+            Arr::get($manualMeta, 'sender_name'),
+            Arr::get($manualMeta, 'sender'),
+            Arr::get($transactionMeta, 'manual.metadata.sender_name'),
+            Arr::get($transactionMeta, 'manual.metadata.sender'),
+            Arr::get($transactionMeta, 'manual.sender_name'),
+            Arr::get($transactionMeta, 'manual.sender'),
+        ]);
+
+        $transferCode = $this->firstNonEmptyString([
+            Arr::get($manualMeta, 'metadata.transfer_code'),
+            Arr::get($manualMeta, 'metadata.transfer_number'),
+            Arr::get($manualMeta, 'metadata.transfer_reference'),
+            Arr::get($manualMeta, 'transfer_code'),
+            Arr::get($manualMeta, 'transfer_number'),
+            Arr::get($transactionMeta, 'manual.metadata.transfer_code'),
+            Arr::get($transactionMeta, 'manual.metadata.transfer_number'),
+            Arr::get($transactionMeta, 'manual.metadata.transfer_reference'),
+            Arr::get($transactionMeta, 'manual.transfer_code'),
+            Arr::get($transactionMeta, 'manual.transfer_number'),
+            Arr::get($transactionMeta, 'manual.reference'),
+            $manualRequest instanceof ManualPaymentRequest ? $manualRequest->reference : null,
+            Arr::get($manualMeta, 'metadata.reference'),
+        ]);
+
+        $manualMetadata = array_filter([
+            'sender_name' => $senderName,
+            'transfer_code' => $transferCode,
+            'user_note' => $manualUserNote ?? $manualNote,
+        ], static fn ($value) => is_string($value) && $value !== '');
+
+
 
         $attachments = $this->normalizeReceiptAttachments([
             data_get($manualMeta, 'attachments'),
@@ -587,6 +663,12 @@ class PaymentFulfillmentService
             'receipt_disk' => $receiptDisk,
             'receipt_url' => $receiptUrl,
             'attachments' => $attachments,
+
+            'manual_note' => $manualNote,
+            'manual_metadata' => $manualMetadata,
+            'manual_sender_name' => $senderName,
+            'manual_transfer_code' => $transferCode,
+
         ];
     }
 

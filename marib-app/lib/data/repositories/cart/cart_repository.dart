@@ -100,10 +100,10 @@ final List<String> _cartApplyCouponEndpointCandidates =
     _buildCartEndpointCandidates(
   override: _cartApplyCouponEndpointOverride,
   defaults: <String>[
-    'api/cart/coupon',
-    'cart/coupon',
     'api/cart/apply-coupon',
     'cart/apply-coupon',
+    'api/cart/coupon',
+    'cart/coupon',
     'cart/coupons/apply',
     'cart/apply-coupon-code',
     'cart/coupons',

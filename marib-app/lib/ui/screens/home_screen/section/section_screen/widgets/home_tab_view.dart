@@ -189,19 +189,52 @@ class _HomeTabViewState extends State<HomeTabView> {
     });
   }
 
-  Set<int> _deriveVisibleCategoryIds(FetchItemSummaryState state) {
-    if (state is! FetchItemSummarySuccess) {
+  Set<int> _deriveVisibleCategoryIds(FetchItemSummarySuccess? state) {
+    if (state == null) {
       return const <int>{};
     }
 
     final Set<int> ids = <int>{};
     for (final ItemSummary item in state.items) {
-      final int? categoryId = item.categoryId;
-      if (categoryId != null && categoryId > 0) {
-        ids.add(categoryId);
+      final int? primaryCategoryId = item.categoryId;
+      if (primaryCategoryId != null && primaryCategoryId > 0) {
+        ids.add(primaryCategoryId);
+      }
+
+      final int? nestedCategoryId = _tryExtractNestedCategoryId(item);
+      if (nestedCategoryId != null && nestedCategoryId > 0) {
+        ids.add(nestedCategoryId);
       }
     }
     return ids;
+  }
+
+  int? _tryExtractNestedCategoryId(ItemSummary item) {
+    try {
+      final dynamic dynamicItem = item;
+      final dynamic nestedCategory = dynamicItem.category;
+      if (nestedCategory is CategoryModel) {
+        return nestedCategory.id;
+      }
+      if (nestedCategory is Map<String, dynamic>) {
+        final dynamic rawId = nestedCategory['id'];
+        if (rawId is int) {
+          return rawId;
+        }
+        if (rawId is num) {
+          return rawId.toInt();
+        }
+        if (rawId is String) {
+          return int.tryParse(rawId);
+        }
+      }
+    } on NoSuchMethodError {
+      // ItemSummary لا يعرّف خاصية category في بعض الردود.
+      return null;
+    } on TypeError {
+      return null;
+    }
+    return null;
   }
 
   List<CategoryModel> _filterCategoriesByAllowedIds(
@@ -829,8 +862,12 @@ class _HomeTabViewState extends State<HomeTabView> {
 
                               final FetchItemSummaryState itemState =
                                   context.watch<FetchItemSummaryCubit>().state;
+                              final FetchItemSummarySuccess? successState =
+                                  itemState is FetchItemSummarySuccess
+                                      ? itemState
+                                      : null;
                               final Set<int> allowedCategoryIds =
-                                  _deriveVisibleCategoryIds(itemState);
+                                  _deriveVisibleCategoryIds(successState);
                               final bool shouldFilterCategories =
                                   allowedCategoryIds.isNotEmpty;
                               final List<CategoryModel> filteredRootChildren =

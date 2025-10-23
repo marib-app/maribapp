@@ -324,7 +324,7 @@ class ItemsListListState extends State<ItemsListSeller> {
         _contactInfoFromAdditional(seller.additionalInfo);
     String? businessLogo;
     String? businessName = seller.name;
-
+    final List<int> sellerCategoryIds = _extractSellerCategoryIds(contactInfo);
     if (contactInfo != null) {
       if (seller.userType == Constant.accountTypeSeller) {
         final dynamic logo = contactInfo['business_logo'];
@@ -361,6 +361,8 @@ class ItemsListListState extends State<ItemsListSeller> {
             'categoryIds': [Constant.storeRootCategoryId.toString()],
             'interfaceType': 'e_store',
             'sellerId': seller.id,
+            if (sellerCategoryIds.isNotEmpty)
+              'sellerCategoryIds': sellerCategoryIds,
           });
           return;
         }
@@ -495,5 +497,79 @@ class ItemsListListState extends State<ItemsListSeller> {
       return contact.map((key, value) => MapEntry(key.toString(), value));
     }
     return null;
+  }
+
+  List<int> _extractSellerCategoryIds(Map<String, dynamic>? contactInfo) {
+    if (contactInfo == null) {
+      return const <int>[];
+    }
+    final dynamic raw = contactInfo['business_categories'];
+    return _normalizeCategoryIdList(raw);
+  }
+
+  List<int> _normalizeCategoryIdList(dynamic raw) {
+    final Set<int> result = <int>{};
+
+    void addValue(dynamic value) {
+      if (value == null) {
+        return;
+      }
+      if (value is int) {
+        if (value > 0) {
+          result.add(value);
+        }
+        return;
+      }
+      if (value is num) {
+        final int normalized = value.toInt();
+        if (normalized > 0) {
+          result.add(normalized);
+        }
+        return;
+      }
+      if (value is String) {
+        final String trimmed = value.trim();
+        if (trimmed.isEmpty) {
+          return;
+        }
+        final int? parsed = int.tryParse(trimmed);
+        if (parsed != null) {
+          if (parsed > 0) {
+            result.add(parsed);
+          }
+          return;
+        }
+        try {
+          final dynamic decoded = json.decode(trimmed);
+          if (decoded is List) {
+            for (final dynamic entry in decoded) {
+              addValue(entry);
+            }
+            return;
+          }
+        } catch (_) {
+          // Not JSON, continue with comma split fallback.
+        }
+        if (trimmed.contains(',')) {
+          for (final String part in trimmed.split(',')) {
+            addValue(part);
+          }
+        }
+        return;
+      }
+      if (value is Iterable) {
+        for (final dynamic entry in value) {
+          addValue(entry);
+        }
+      }
+    }
+
+    addValue(raw);
+
+    if (result.isEmpty) {
+      return const <int>[];
+    }
+
+    return result.toList(growable: false)..sort();
   }
 }

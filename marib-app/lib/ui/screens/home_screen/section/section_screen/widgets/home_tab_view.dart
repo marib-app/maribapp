@@ -62,6 +62,7 @@ class HomeTabView extends StatefulWidget {
   final ItemFilterModel? filter;
   final ValueChanged<bool>? onLoadMore;
   final ValueChanged<bool>? onScrollDirectionChanged;
+  final List<int>? sellerCategoryIds;
 
   const HomeTabView({
     required this.selectedCategoryId,
@@ -72,6 +73,8 @@ class HomeTabView extends StatefulWidget {
     this.bottomPadding = 0.0,
     this.enableAdSlider = false, // افتراضي: مخفي
     this.adInterfaceType,
+    this.sellerCategoryIds,
+
     // NEW 👇
     required this.sliderRefreshToken,
     required this.showShimmer,
@@ -103,6 +106,7 @@ class _HomeTabViewState extends State<HomeTabView> {
   // ✅ قفل تحميل المزيد + تباطؤ بسيط لتجنّب سيل الاستدعاءات
   bool _isLoadingMore = false;
   bool _loadingIndicatorPulseForward = true;
+  Set<int>? _sellerCategoryIdSet;
 
   @override
   void initState() {
@@ -110,6 +114,8 @@ class _HomeTabViewState extends State<HomeTabView> {
     controller = ScrollController();
 
     _lastReportedScrollOffset = controller.initialScrollOffset;
+    _sellerCategoryIdSet =
+        _normalizeSellerCategoryIds(widget.sellerCategoryIds);
 
     widget.selectedCategoryId.addListener(_onSelectedCategoryChanged);
     controller.addListener(_handleScrollDirectionChange);
@@ -133,6 +139,10 @@ class _HomeTabViewState extends State<HomeTabView> {
       oldWidget.selectedCategoryId.removeListener(_onSelectedCategoryChanged);
       widget.selectedCategoryId.addListener(_onSelectedCategoryChanged);
       _onSelectedCategoryChanged();
+    }
+    if (!listEquals(oldWidget.sellerCategoryIds, widget.sellerCategoryIds)) {
+      _sellerCategoryIdSet =
+          _normalizeSellerCategoryIds(widget.sellerCategoryIds);
     }
   }
 
@@ -215,6 +225,22 @@ class _HomeTabViewState extends State<HomeTabView> {
       return null;
     }
     return null;
+  }
+
+  Set<int>? _normalizeSellerCategoryIds(List<int>? ids) {
+    if (ids == null) {
+      return null;
+    }
+    final Set<int> normalized = <int>{};
+    for (final int id in ids) {
+      if (id > 0) {
+        normalized.add(id);
+      }
+    }
+    if (normalized.isEmpty) {
+      return null;
+    }
+    return normalized;
   }
 
   List<CategoryModel> _filterCategoriesByAllowedIds(
@@ -777,18 +803,18 @@ class _HomeTabViewState extends State<HomeTabView> {
                               final FetchCategoryState catState =
                                   catCubit.state;
                               final FetchCategorySuccess? successState =
-                              catState is FetchCategorySuccess
-                                  ? catState
-                                  : null;
+                                  catState is FetchCategorySuccess
+                                      ? catState
+                                      : null;
 
                               final int rootId =
                                   int.tryParse(widget.categoryId) ?? 0;
-                              String? interfaceType = successState?.interfaceType;
-                              interfaceType ??=
-                                  SliderInterfaceMapper.normalize(
+                              String? interfaceType =
+                                  successState?.interfaceType;
+                              interfaceType ??= SliderInterfaceMapper.normalize(
                                     widget.adInterfaceType,
                                   ) ??
-                                      widget.adInterfaceType?.trim();
+                                  widget.adInterfaceType?.trim();
 
                               try {
                                 await catCubit.fetchCategories(
@@ -855,6 +881,25 @@ class _HomeTabViewState extends State<HomeTabView> {
                                   itemState is FetchItemSummarySuccess
                                       ? itemState
                                       : null;
+
+                              final Set<int>? sellerCategorySet =
+                                  _sellerCategoryIdSet;
+                              final bool applySellerFilter =
+                                  sellerCategorySet != null &&
+                                      sellerCategorySet.isNotEmpty;
+                              List<CategoryModel> processedRootChildren =
+                                  rootChildren;
+                              bool sellerFilterApplied = false;
+                              if (applySellerFilter) {
+                                final List<CategoryModel> sellerFiltered =
+                                    _filterCategoriesByAllowedIds(
+                                        rootChildren, sellerCategorySet);
+                                if (sellerFiltered.isNotEmpty) {
+                                  processedRootChildren = sellerFiltered;
+                                  sellerFilterApplied = true;
+                                }
+                              }
+
                               final Set<int> allowedCategoryIds = <int>{};
                               if (successState != null) {
                                 for (final ItemSummary item
@@ -874,17 +919,25 @@ class _HomeTabViewState extends State<HomeTabView> {
                                   }
                                 }
                               }
+
+                              final bool hasItemFilter = successState != null;
+                              if (hasItemFilter) {
+                                processedRootChildren =
+                                    _filterCategoriesByAllowedIds(
+                                        processedRootChildren,
+                                        allowedCategoryIds);
+                              }
+
                               final bool shouldFilterCategories =
-                                  successState != null;
-                              final List<CategoryModel> filteredRootChildren =
+                                  hasItemFilter || sellerFilterApplied;
+                              final List<CategoryModel> effectiveRootChildren =
                                   shouldFilterCategories
-                                      ? _filterCategoriesByAllowedIds(
-                                          rootChildren, allowedCategoryIds)
+                                      ? processedRootChildren
                                       : rootChildren;
                               final CategoryModel effectiveRoot =
                                   shouldFilterCategories
                                       ? _copyCategoryWithChildren(
-                                          root, filteredRootChildren)
+                                          root, effectiveRootChildren)
                                       : root;
 
                               final bool isTopLevel =
@@ -893,7 +946,7 @@ class _HomeTabViewState extends State<HomeTabView> {
                               // إن كان "الكل" → الأب = الجذر، غير ذلك → الأب = التصنيف المختار إن وُجد، وإلا الجذر
                               final CategoryModel currentParent = isTopLevel
                                   ? effectiveRoot
-                                  : (filteredRootChildren.firstWhere(
+                                  : (effectiveRootChildren.firstWhere(
                                       (c) => c.id == selectedId,
                                       orElse: () => effectiveRoot,
                                     ));
@@ -902,12 +955,21 @@ class _HomeTabViewState extends State<HomeTabView> {
                               final List<CategoryModel> subcats =
                                   (currentParent.children?.isNotEmpty ?? false)
                                       ? (currentParent.children!)
-                                      : filteredRootChildren;
-                              final List<CategoryModel> visibleSubcats =
-                                  shouldFilterCategories
-                                      ? _filterCategoriesByAllowedIds(
-                                          subcats, allowedCategoryIds)
-                                      : subcats;
+                                      : effectiveRootChildren;
+                              List<CategoryModel> visibleSubcats = subcats;
+                              if (sellerFilterApplied) {
+                                final List<CategoryModel>
+                                    sellerFilteredSubcats =
+                                    _filterCategoriesByAllowedIds(
+                                        visibleSubcats, sellerCategorySet!);
+                                if (sellerFilteredSubcats.isNotEmpty) {
+                                  visibleSubcats = sellerFilteredSubcats;
+                                }
+                              }
+                              if (hasItemFilter) {
+                                visibleSubcats = _filterCategoriesByAllowedIds(
+                                    visibleSubcats, allowedCategoryIds);
+                              }
                               if (visibleSubcats.isEmpty)
                                 return const SizedBox.shrink();
 

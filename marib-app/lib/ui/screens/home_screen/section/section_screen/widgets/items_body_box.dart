@@ -32,6 +32,7 @@ class ItemsBodyBox extends StatefulWidget {
   final bool showCartAction;
   final VoidCallback? onCartTap;
   final int sliderRefreshToken;
+  final List<int>? sellerCategoryIds;
 
   // جديد: لا تبني شريط التصنيفات/السلايدر إلا إذا true
   final bool enableTopBar;
@@ -65,6 +66,7 @@ class ItemsBodyBox extends StatefulWidget {
     this.specialRequestSectionSlug,
     this.onScrollDirectionChanged,
     this.bottomContentPadding = 0.0,
+    this.sellerCategoryIds,
     super.key,
   });
 
@@ -75,6 +77,7 @@ class ItemsBodyBox extends StatefulWidget {
 class _ItemsBodyBoxState extends State<ItemsBodyBox> {
   // ✅ نحسب الـ categoryId مرة واحدة
   late final int _catId = int.tryParse(widget.categoryId) ?? 0;
+  List<int>? _sellerCategoryIds;
 
   // ✅ وضع العرض (grid/list) مع ValueNotifier لتقليل setState
   final ValueNotifier<ViewMode> _viewMode =
@@ -87,6 +90,8 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
 
   @override
   void initState() {
+    _sellerCategoryIds = _normalizeSellerCategoryIds(widget.sellerCategoryIds);
+
     super.initState();
   }
 
@@ -95,6 +100,15 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
     _debounce?.cancel();
     _viewMode.dispose();
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant ItemsBodyBox oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!listEquals(oldWidget.sellerCategoryIds, widget.sellerCategoryIds)) {
+      _sellerCategoryIds =
+          _normalizeSellerCategoryIds(widget.sellerCategoryIds);
+    }
   }
 
   // =============================
@@ -270,6 +284,7 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
                   bottomPadding: widget.bottomContentPadding,
                   showShimmer: widget.showShimmer,
                   sliderRefreshToken: widget.sliderRefreshToken,
+                  sellerCategoryIds: _sellerCategoryIds,
 
                   // موجودة عندك مسبقًا:
                   currentSortBy: widget.sortBy,
@@ -291,6 +306,23 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
         ),
       ),
     );
+  }
+
+  List<int>? _normalizeSellerCategoryIds(List<int>? ids) {
+    if (ids == null) {
+      return null;
+    }
+    final Set<int> normalized = <int>{};
+    for (final int id in ids) {
+      if (id > 0) {
+        normalized.add(id);
+      }
+    }
+    if (normalized.isEmpty) {
+      return null;
+    }
+    final List<int> sorted = normalized.toList(growable: false)..sort();
+    return sorted;
   }
 
   Widget _buildTopBarShimmerExact() {

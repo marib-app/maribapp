@@ -22,6 +22,7 @@ import 'package:marib/utils/slider_interface_mapper.dart';
 import 'package:marib/utils/featured_section_utils.dart';
 import 'package:marib/utils/logger.dart';
 import 'package:marib/app/routes.dart';
+import 'dart:convert';
 
 class Section_screen extends StatefulWidget {
   final String categoryId; // معرف الفئة الحالية
@@ -29,6 +30,7 @@ class Section_screen extends StatefulWidget {
   final List<String> categoryIds; // قائمة معرفات الفئات
   final String? interfaceType;
   final int? sellerId;
+  final List<int>? sellerCategoryIds;
 
   const Section_screen({
     super.key,
@@ -37,6 +39,7 @@ class Section_screen extends StatefulWidget {
     required this.categoryIds,
     this.interfaceType,
     this.sellerId,
+    this.sellerCategoryIds,
   });
 
   @override
@@ -50,6 +53,8 @@ class Section_screen extends StatefulWidget {
             ? rawInterfaceType.trim()
             : null;
     final int? sellerId = _parseSellerId(arguments?['sellerId']);
+    final List<int>? sellerCategoryIds =
+    _parseSellerCategoryIds(arguments?['sellerCategoryIds']);
     return BlurredRouter(
       builder: (_) => BlocProvider(
         create: (context) => FetchHomeScreenCubit(
@@ -61,6 +66,7 @@ class Section_screen extends StatefulWidget {
           categoryIds: arguments?['categoryIds'],
           interfaceType: interfaceType,
           sellerId: sellerId,
+          sellerCategoryIds: sellerCategoryIds,
         ),
       ),
     );
@@ -82,6 +88,68 @@ class Section_screen extends StatefulWidget {
     }
     return null;
   }
+
+
+  static List<int>? _parseSellerCategoryIds(dynamic raw) {
+    if (raw == null) {
+      return null;
+    }
+
+    Iterable<dynamic>? iterable;
+    if (raw is List) {
+      iterable = raw;
+    } else if (raw is String) {
+      final String trimmed = raw.trim();
+      if (trimmed.isEmpty) {
+        return null;
+      }
+      try {
+        final dynamic decoded = json.decode(trimmed);
+        if (decoded is List) {
+          iterable = decoded;
+        }
+      } catch (_) {
+        iterable = trimmed.split(',');
+      }
+    }
+
+    if (iterable == null) {
+      return null;
+    }
+
+    final Set<int> result = <int>{};
+    for (final dynamic entry in iterable) {
+      if (entry == null) {
+        continue;
+      }
+      if (entry is int) {
+        if (entry > 0) {
+          result.add(entry);
+        }
+        continue;
+      }
+      if (entry is num) {
+        final int normalized = entry.toInt();
+        if (normalized > 0) {
+          result.add(normalized);
+        }
+        continue;
+      }
+      if (entry is String) {
+        final int? parsed = int.tryParse(entry.trim());
+        if (parsed != null && parsed > 0) {
+          result.add(parsed);
+        }
+      }
+    }
+
+    if (result.isEmpty) {
+      return null;
+    }
+
+    return result.toList(growable: false)..sort();
+  }
+
 }
 
 class Section_screenState extends State<Section_screen> {
@@ -106,6 +174,7 @@ class Section_screenState extends State<Section_screen> {
 
   // ✅ حقل البحث + ديباونس
   final TextEditingController searchController = TextEditingController();
+  List<int>? _sellerCategoryIds;
 
   // ✅ تحميل المزيد
   bool _isLoadingMore = false;
@@ -199,6 +268,24 @@ class Section_screenState extends State<Section_screen> {
     }
     return selected;
   }
+
+
+  List<int>? _normalizeSellerCategoryIds(List<int>? ids) {
+    if (ids == null) {
+      return null;
+    }
+    final Set<int> normalized = <int>{};
+    for (final int id in ids) {
+      if (id > 0) {
+        normalized.add(id);
+      }
+    }
+    if (normalized.isEmpty) {
+      return null;
+    }
+    return normalized.toList(growable: false)..sort();
+  }
+
 
   ItemFilterModel _buildEffectiveFilter({
     ItemFilterModel? base,
@@ -311,6 +398,7 @@ class Section_screenState extends State<Section_screen> {
     // إعداد معرف الفئة الأساسي
     // =========================
     _catId = _parseInitialCategoryId(widget.categoryId);
+    _sellerCategoryIds = _normalizeSellerCategoryIds(widget.sellerCategoryIds);
 
     // (اختياري) لو هذه المتغيرات عندك أصلاً — وإلا احذف السطور الثلاثة:
     // searchbody = {};
@@ -733,6 +821,7 @@ class Section_screenState extends State<Section_screen> {
                                     key: ValueKey('items_${widget.categoryId}'),
                                     categoryId: widget.categoryId,
                                     categoryName: widget.categoryName,
+                                    sellerCategoryIds: _sellerCategoryIds,
                                     bottomContentPadding: bottomContentPadding,
 
                                     showCartAction: showCartAction,

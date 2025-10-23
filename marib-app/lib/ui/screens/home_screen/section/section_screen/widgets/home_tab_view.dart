@@ -1177,6 +1177,7 @@ class _HomeTabViewState extends State<HomeTabView> {
                             filter: widget.filter,
                             perPage: FetchItemSummaryCubit.defaultPerPage,
                           ),
+                  category: EmptyStateCategory.items,
                 ),
               ),
             ),

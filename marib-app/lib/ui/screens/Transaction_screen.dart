@@ -230,7 +230,10 @@ class SoonScreenState extends State<TransactionScreen> {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(8),
         children: [
-          NoDataFound(onTap: _handleManualRefresh),
+          NoDataFound(
+            onTap: _handleManualRefresh,
+            category: EmptyStateCategory.transactions,
+          ),
         ],
       );
     }

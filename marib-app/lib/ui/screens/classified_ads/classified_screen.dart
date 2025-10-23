@@ -268,7 +268,9 @@ class _ClassifiedScreenState extends State<ClassifiedScreen> {
                   .toList();
 
               if (activeServices.isEmpty) {
-                return const NoDataFound();
+                return const NoDataFound(
+                  category: EmptyStateCategory.items,
+                );
               }
 
               return Column(

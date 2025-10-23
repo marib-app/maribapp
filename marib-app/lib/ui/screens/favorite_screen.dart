@@ -136,7 +136,12 @@ class _FavoriteScreenState extends State<FavoriteScreen>
               if (state is FavoriteFetchSuccess) {
                 final items = state.favorite;
                 if (items.isEmpty) {
-                  return Center(child: NoDataFound(onTap: _getFavorite));
+                  return Center(
+                    child: NoDataFound(
+                      onTap: _getFavorite,
+                      category: EmptyStateCategory.favorites,
+                    ),
+                  );
                 }
 
                 return Stack(

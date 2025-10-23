@@ -83,7 +83,12 @@ class _FaqsScreenState extends State<FaqsScreen> {
             if (state is FetchFaqsSuccess) {
               final faqs = state.faqModel;
               if (faqs.isEmpty) {
-                return Center(child: NoDataFound(onTap: _refresh));
+                return Center(
+                  child: NoDataFound(
+                    onTap: _refresh,
+                    category: EmptyStateCategory.faqs,
+                  ),
+                );
               }
 
               // نستخدم ExpansionPanelList.radio مرّة واحدة

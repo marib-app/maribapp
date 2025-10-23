@@ -292,6 +292,7 @@ class StatesScreenState extends State<StatesScreen> {
                       search: searchController.text,
                       countryId: widget.countryId);
                 },
+                category: EmptyStateCategory.location,
               ),
             );
           }

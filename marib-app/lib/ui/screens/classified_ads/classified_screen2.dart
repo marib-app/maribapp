@@ -245,7 +245,11 @@ class _ClassifiedScreen2State extends State<ClassifiedScreen2> {
                   .where((e) => e.status == true && e.isMain != true)
                   .toList();
 
-              if (items.isEmpty) return const NoDataFound();
+              if (items.isEmpty) {
+                return const NoDataFound(
+                  category: EmptyStateCategory.items,
+                );
+              }
 
               return Column(
                 children: [

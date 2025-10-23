@@ -94,11 +94,15 @@ class CategoryListPublicScreenState extends State<CategoryListPublic> {
           if (state is FetchSubCategoriesSuccess) {
 
             if (state.categories.isEmpty) {
-              return NoDataFound(onTap: () {
-                 context
-                    .read<FetchSubCategoriesCubit>()
-                    .fetchSubCategories(categoryId: widget.categoryId);
-              });
+              return NoDataFound(
+                onTap: () {
+                  context
+                      .read<FetchSubCategoriesCubit>()
+                      .fetchSubCategories(categoryId: widget.categoryId);
+                },
+                category: EmptyStateCategory.categories,
+              );
+
             }
  
             return GridView.builder(

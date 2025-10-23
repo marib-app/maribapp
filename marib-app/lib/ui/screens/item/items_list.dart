@@ -780,6 +780,7 @@ class ItemsListState extends State<ItemsList> {
         child: Center(
           child: NoDataFound(
             onTap: _retryInitialFetch,
+            category: EmptyStateCategory.items,
           ),
         ),
       ),

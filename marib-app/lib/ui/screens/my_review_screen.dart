@@ -178,6 +178,7 @@ class MyReviewScreenState extends State<MyReviewScreen>
               onTap: () {
                 context.read<FetchMyRatingsCubit>().fetch();
               },
+              category: EmptyStateCategory.reviews,
             ),
           );
         }

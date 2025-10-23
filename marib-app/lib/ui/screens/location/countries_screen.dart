@@ -550,7 +550,13 @@ class CountriesScreenState extends State<CountriesScreen> {
 
               if (state is FetchCountriesSuccess) {
                 if (state.countriesModel.isEmpty) {
-                  return Center(child: SingleChildScrollView(child: NoDataFound()));
+                  return const Center(
+                    child: SingleChildScrollView(
+                      child: NoDataFound(
+                        category: EmptyStateCategory.location,
+                      ),
+                    ),
+                  );
                 }
 
                 return Container(

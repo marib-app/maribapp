@@ -300,6 +300,7 @@ class CitiesScreenState extends CloudState<CitiesScreen> {
                   context.read<FetchCitiesCubit>().fetchCities(
                       search: searchController.text, stateId: widget.stateId);
                 },
+                category: EmptyStateCategory.location,
               ),
             );
           }

@@ -529,6 +529,7 @@ class SearchScreenState extends State<SearchScreen>
             filter: filter,
           );
         },
+        category: EmptyStateCategory.search,
       ),
     );
   }

@@ -3714,6 +3714,7 @@
                       .read<FetchAdsListingSubscriptionPackagesCubit>()
                       .fetchPackages();
                 },
+                category: EmptyStateCategory.subscriptions,
               );
             }
   

@@ -107,7 +107,10 @@ class SelectCategoryUI extends StatelessWidget {
 
     if (state.categories.isEmpty) {
       // نجاح بدون بيانات
-      return NoDataFound(onTap: onRetryFetchRoot);
+      return NoDataFound(
+        onTap: onRetryFetchRoot,
+        category: EmptyStateCategory.categories,
+      );
     }
 
     // نجاح مع بيانات
@@ -475,7 +478,10 @@ class SelectNestedCategoryUI extends StatelessWidget {
     }
 
     if (state.categories.isEmpty) {
-      return NoDataFound(onTap: onRetryFetchSubCategories);
+      return NoDataFound(
+        onTap: onRetryFetchSubCategories,
+        category: EmptyStateCategory.categories,
+      );
     }
 
     return _subcategoriesList(context, state); // ← قائمة محسّنة

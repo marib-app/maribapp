@@ -173,6 +173,7 @@ class NotificationsState extends State<Notifications> {
                 onTap: () => context
                     .read<FetchNotificationsCubit>()
                     .fetchNotifications(),
+                category: EmptyStateCategory.notifications,
               );
             }
             return _buildNotificationList(context, state);

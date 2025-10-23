@@ -248,11 +248,14 @@ class ItemsListListState extends State<ItemsListSeller> {
               if (state.sellers.isEmpty) {
                 return SliverFillRemaining(
                   hasScrollBody: false,
-                  child: NoDataFound(onTap: () {
-                    context
-                        .read<FetchSellersCubit>()
-                        .fetchSellers(accountType: 3);
-                  }),
+                  child: NoDataFound(
+                    onTap: () {
+                      context
+                          .read<FetchSellersCubit>()
+                          .fetchSellers(accountType: 3);
+                    },
+                    category: EmptyStateCategory.profile,
+                  ),
                 );
               }
               return buildCardList(state.sellers);

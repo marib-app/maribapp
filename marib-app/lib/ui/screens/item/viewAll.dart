@@ -103,6 +103,7 @@ class _SectionItemsScreenState extends State<SectionItemsScreen> {
                   return Center(
                     child: NoDataFound(
                       onTap: getAllItems,
+                      category: EmptyStateCategory.items,
                     ),
                   );
                 }

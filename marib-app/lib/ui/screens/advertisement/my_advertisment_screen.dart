@@ -144,6 +144,7 @@ class _MyAdvertisementScreenState extends State<MyAdvertisementScreen> {
                         .fetchMyPromotedItems();
                     setState(() {});
                   },
+                  category: EmptyStateCategory.advertisements,
                 );
               }
 

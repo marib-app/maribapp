@@ -23,6 +23,7 @@ extension _BlockedUserListScreenUi on _BlockedUserListScreenState {
                 onTap: () {
                   context.read<BlockedUsersListCubit>().blockedUsersList();
                 },
+                category: EmptyStateCategory.blocked,
               );
             }
             return Column(

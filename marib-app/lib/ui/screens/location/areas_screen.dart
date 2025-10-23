@@ -289,6 +289,7 @@ class AreasScreenState extends State<AreasScreen> {
                   context.read<FetchAreasCubit>().fetchAreas(
                       search: searchController.text, cityId: widget.cityId);
                 },
+                category: EmptyStateCategory.location,
               ),
             );
           }

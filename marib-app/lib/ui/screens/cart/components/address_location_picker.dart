@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:geocoding/geocoding.dart';
 
 import 'package:flutter/material.dart';
-import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -21,9 +20,9 @@ class CartAddressLocationPicker extends StatefulWidget {
   final Map<String, dynamic>? initial;
 
   static Future<Map<String, dynamic>?> show(
-      BuildContext context, {
-        Map<String, dynamic>? initial,
-      }) {
+    BuildContext context, {
+    Map<String, dynamic>? initial,
+  }) {
     return Navigator.of(context).push<Map<String, dynamic>>(
       BlurredRouter<Map<String, dynamic>>(
         builder: (_) => CartAddressLocationPicker(initial: initial),
@@ -32,7 +31,8 @@ class CartAddressLocationPicker extends StatefulWidget {
   }
 
   @override
-  State<CartAddressLocationPicker> createState() => _CartAddressLocationPickerState();
+  State<CartAddressLocationPicker> createState() =>
+      _CartAddressLocationPickerState();
 }
 
 class _CartAddressLocationPickerState extends State<CartAddressLocationPicker>
@@ -46,6 +46,13 @@ class _CartAddressLocationPickerState extends State<CartAddressLocationPicker>
   bool _serviceDeniedForever = false;
   Placemark? _placemark;
   StreamSubscription<ServiceStatus>? _serviceSubscription;
+  Timer? _reverseGeocodeDebounce;
+  LatLng? _lastReverseGeocodeTarget;
+  DateTime? _lastReverseGeocodeTime;
+
+  static const double _reverseGeocodeMinDistanceMeters = 30;
+  static const Duration _reverseGeocodeMinInterval =
+      Duration(milliseconds: 500);
 
   @override
   void initState() {
@@ -63,6 +70,7 @@ class _CartAddressLocationPickerState extends State<CartAddressLocationPicker>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _serviceSubscription?.cancel();
+    _reverseGeocodeDebounce?.cancel();
     super.dispose();
   }
 
@@ -150,13 +158,28 @@ class _CartAddressLocationPickerState extends State<CartAddressLocationPicker>
   }
 
   void _onCameraIdle() {
-    if (_currentTarget != null) {
-      _reverseGeocode(_currentTarget!);
+    final LatLng? target = _currentTarget;
+    if (target == null) {
+      return;
     }
+    _reverseGeocodeDebounce?.cancel();
+    _reverseGeocodeDebounce = Timer(const Duration(milliseconds: 500), () {
+      if (!mounted) return;
+      if (_shouldSkipReverseGeocode(target)) {
+        return;
+      }
+      _reverseGeocode(target);
+    });
   }
 
   Future<void> _reverseGeocode(LatLng target) async {
     if (!mounted) return;
+
+    _reverseGeocodeDebounce?.cancel();
+    _reverseGeocodeDebounce = null;
+    _lastReverseGeocodeTarget = target;
+    _lastReverseGeocodeTime = DateTime.now();
+
     setState(() => _geocoding = true);
     try {
       final List<Placemark> placemarks = await placemarkFromCoordinates(
@@ -171,6 +194,25 @@ class _CartAddressLocationPickerState extends State<CartAddressLocationPicker>
     } finally {
       if (mounted) setState(() => _geocoding = false);
     }
+  }
+
+  bool _shouldSkipReverseGeocode(LatLng target) {
+    final DateTime? lastTime = _lastReverseGeocodeTime;
+    if (lastTime != null &&
+        DateTime.now().difference(lastTime) < _reverseGeocodeMinInterval) {
+      return true;
+    }
+    final LatLng? lastTarget = _lastReverseGeocodeTarget;
+    if (lastTarget == null) {
+      return false;
+    }
+    final double distance = Geolocator.distanceBetween(
+      lastTarget.latitude,
+      lastTarget.longitude,
+      target.latitude,
+      target.longitude,
+    );
+    return distance < _reverseGeocodeMinDistanceMeters;
   }
 
   Future<void> _goToCurrentLocation() async {
@@ -238,7 +280,11 @@ class _CartAddressLocationPickerState extends State<CartAddressLocationPicker>
         mark.locality,
         mark.administrativeArea,
         mark.country,
-      ].whereType<String>().map((String e) => e.trim()).where((String e) => e.isNotEmpty).join('، ');
+      ]
+          .whereType<String>()
+          .map((String e) => e.trim())
+          .where((String e) => e.isNotEmpty)
+          .join('، ');
       if (composed.isNotEmpty) {
         result['formatted_address'] = composed;
       }
@@ -261,120 +307,122 @@ class _CartAddressLocationPickerState extends State<CartAddressLocationPicker>
       body: _initializing
           ? const Center(child: CircularProgressIndicator())
           : Column(
-        children: [
-          Expanded(
-            child: Stack(
               children: [
-                Positioned.fill(
-                  child: GoogleMap(
-                    mapType: _mapType,
-                    myLocationEnabled: true,
-                    zoomControlsEnabled: false,
-                    initialCameraPosition:
-                    _camera ?? const CameraPosition(target: LatLng(0, 0), zoom: 2),
-                    onMapCreated: (GoogleMapController controller) {
-                      _controller = controller;
-                    },
-                    onCameraMove: _onCameraMove,
-                    onCameraIdle: _onCameraIdle,
-                  ),
-                ),
-                Align(
-                  alignment: Alignment.center,
-                  child: IgnorePointer(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.place,
-                          size: 48,
-                          color: context.color.territoryColor,
-                        ),
-                        if (_geocoding)
-                          const SizedBox(height: 12),
-                        if (_geocoding)
-                          const CircularProgressIndicator(strokeWidth: 2.5),
-                      ],
-                    ),
-                  ),
-                ),
-                PositionedDirectional(
-                  top: 20,
-                  end: 20,
-                  child: Column(
+                Expanded(
+                  child: Stack(
                     children: [
-                      _MapIconButton(
-                        icon: Icons.layers_outlined,
-                        tooltip: 'تبديل نوع الخريطة',
-                        onPressed: () {
-                          setState(() {
-                            _mapType = _mapType == MapType.normal
-                                ? MapType.hybrid
-                                : MapType.normal;
-                          });
-                        },
+                      Positioned.fill(
+                        child: GoogleMap(
+                          mapType: _mapType,
+                          myLocationEnabled: true,
+                          zoomControlsEnabled: false,
+                          initialCameraPosition: _camera ??
+                              const CameraPosition(
+                                  target: LatLng(0, 0), zoom: 2),
+                          onMapCreated: (GoogleMapController controller) {
+                            _controller = controller;
+                          },
+                          onCameraMove: _onCameraMove,
+                          onCameraIdle: _onCameraIdle,
+                        ),
                       ),
-                      const SizedBox(height: 12),
-                      _MapIconButton(
-                        icon: Icons.my_location,
-                        tooltip: 'موقعي الحالي',
-                        onPressed: _goToCurrentLocation,
+                      Align(
+                        alignment: Alignment.center,
+                        child: IgnorePointer(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.place,
+                                size: 48,
+                                color: context.color.territoryColor,
+                              ),
+                              if (_geocoding) const SizedBox(height: 12),
+                              if (_geocoding)
+                                const CircularProgressIndicator(
+                                    strokeWidth: 2.5),
+                            ],
+                          ),
+                        ),
+                      ),
+                      PositionedDirectional(
+                        top: 20,
+                        end: 20,
+                        child: Column(
+                          children: [
+                            _MapIconButton(
+                              icon: Icons.layers_outlined,
+                              tooltip: 'تبديل نوع الخريطة',
+                              onPressed: () {
+                                setState(() {
+                                  _mapType = _mapType == MapType.normal
+                                      ? MapType.hybrid
+                                      : MapType.normal;
+                                });
+                              },
+                            ),
+                            const SizedBox(height: 12),
+                            _MapIconButton(
+                              icon: Icons.my_location,
+                              tooltip: 'موقعي الحالي',
+                              onPressed: _goToCurrentLocation,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: color.surface,
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(24)),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Colors.black26,
+                        blurRadius: 12,
+                        offset: Offset(0, -4),
+                      ),
+                    ],
+                  ),
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'الموقع المختار',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: context.font.larger,
+                          color: context.color.textDefaultColor,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _addressSummary(),
+                        style: TextStyle(
+                          fontSize: context.font.normal,
+                          color: context.color.textLightColor,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      UiUtils.buildButton(
+                        context,
+                        buttonTitle: 'تأكيد الموقع',
+                        height: 54,
+                        radius: 14,
+                        onPressed: () {
+                          Navigator.of(context).pop(_buildResult());
+                        },
                       ),
                     ],
                   ),
                 ),
               ],
             ),
-          ),
-          Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: color.surface,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-              boxShadow: const [
-                BoxShadow(
-                  color: Colors.black26,
-                  blurRadius: 12,
-                  offset: Offset(0, -4),
-                ),
-              ],
-            ),
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'الموقع المختار',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: context.font.larger,
-                    color: context.color.textDefaultColor,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  _addressSummary(),
-                  style: TextStyle(
-                    fontSize: context.font.normal,
-                    color: context.color.textLightColor,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                UiUtils.buildButton(
-                  context,
-                  buttonTitle: 'تأكيد الموقع',
-                  height: 54,
-                  radius: 14,
-                  onPressed: () {
-                    Navigator.of(context).pop(_buildResult());
-                  },
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 

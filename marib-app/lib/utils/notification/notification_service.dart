@@ -39,6 +39,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:convert';
 import 'dart:collection';
 import 'package:flutter/foundation.dart';
+import 'package:marib/utils/chat/conversation_id_utils.dart';
 
 enum UserPresenceEventType { userTyping, userPresenceUpdated }
 
@@ -1561,12 +1562,10 @@ class NotificationService {
     );
   }
 
-
   @visibleForTesting
   static int debugParticipantsCacheSize() {
     return _conversationParticipantsCache.length;
   }
-
 
   static void cacheParticipants({
     required List<ChatParticipant> participants,
@@ -1680,12 +1679,13 @@ class NotificationService {
     String? senderId,
     String? itemId,
   }) {
-    final String trimmedConversation = conversationId.trim();
-    if (trimmedConversation.isNotEmpty) {
+    final String normalizedConversation =
+        normalizeConversationId(conversationId);
+    if (normalizedConversation.isNotEmpty) {
       if (itemOfferId != null && itemOfferId > 0) {
-        return 'c:$trimmedConversation#i:$itemOfferId';
+        return 'c:$normalizedConversation#i:$itemOfferId';
       }
-      return 'c:$trimmedConversation';
+      return 'c:$normalizedConversation';
     }
 
     final String? resolvedSenderId = senderId?.toString();

@@ -42,6 +42,7 @@ import 'package:marib/data/cubits/chat/get_seller_chat_users_cubit.dart';
 import 'dart:async';
 import 'package:marib/utils/chat/chat_sync_controller.dart';
 import 'package:marib/data/model/chat/chat_message_modal.dart';
+import 'package:marib/utils/chat/conversation_id_utils.dart';
 
 part 'chat_screen_ui.dart';
 
@@ -139,9 +140,9 @@ class _ChatScreenState extends State<ChatScreen>
   StreamSubscription<List<ChatMessageModal>>? _chatMessagesSubscription;
 
   String get _effectiveConversationId {
-    final String trimmed = widget.conversationId.trim();
-    if (trimmed.isNotEmpty) {
-      return trimmed;
+    final String normalized = normalizeConversationId(widget.conversationId);
+    if (normalized.isNotEmpty) {
+      return normalized;
     }
     if (widget.itemOfferId > 0) {
       return widget.itemOfferId.toString();

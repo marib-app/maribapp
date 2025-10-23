@@ -78,39 +78,15 @@ class HelperUtils {
     if (parsed != null && hasScheme) {
       if (hostOrigin != null &&
           _isHttpScheme(parsed.scheme) &&
-          _isHttpScheme(hostOrigin.scheme) &&
-          parsed.host == hostOrigin.host) {
+          _isHttpScheme(hostOrigin.scheme)) {
+        final bool sameHost = parsed.host == hostOrigin.host;
         final bool schemeMismatch = parsed.scheme != hostOrigin.scheme;
         final bool portMismatch =
             _effectivePort(parsed) != _effectivePort(hostOrigin);
 
-        if (schemeMismatch || portMismatch) {
-          final StringBuffer rebuilt = StringBuffer()
-            ..write(hostOrigin.scheme)
-            ..write('://')
-            ..write(hostOrigin.host);
-
-          if (hostOrigin.hasPort) {
-            rebuilt
-              ..write(':')
-              ..write(hostOrigin.port);
-          }
-
-          rebuilt.write(parsed.path);
-
-          if (parsed.hasQuery) {
-            rebuilt
-              ..write('?')
-              ..write(parsed.query);
-          }
-
-          if (parsed.fragment.isNotEmpty) {
-            rebuilt
-              ..write('#')
-              ..write(parsed.fragment);
-          }
-
-          return rebuilt.toString();
+        if ((sameHost && (schemeMismatch || portMismatch)) ||
+            _shouldRewriteHost(parsed, hostOrigin)) {
+          return _rebuildUrlWithOrigin(parsed, hostOrigin);
         }
       }
 
@@ -172,6 +148,65 @@ class HelperUtils {
     }
 
     return uri.scheme == 'https' ? 443 : 80;
+  }
+
+
+  static bool _shouldRewriteHost(Uri parsed, Uri hostOrigin) {
+    if (parsed.host == hostOrigin.host) {
+      return false;
+    }
+
+    final String normalizedHost = parsed.host.toLowerCase();
+    const Set<String> loopbackHostnames = <String>{
+      'localhost',
+      '127.0.0.1',
+      '0.0.0.0',
+      '::1',
+      '[::1]',
+    };
+
+    if (loopbackHostnames.contains(normalizedHost)) {
+      return true;
+    }
+
+    final InternetAddress? parsedAddress = InternetAddress.tryParse(parsed.host);
+    if (parsedAddress != null && parsedAddress.isLoopback) {
+      return true;
+    }
+
+    return false;
+  }
+
+  static String _rebuildUrlWithOrigin(Uri original, Uri hostOrigin) {
+    final StringBuffer rebuilt = StringBuffer()
+      ..write(hostOrigin.scheme)
+      ..write('://')
+      ..write(hostOrigin.host);
+
+    if (hostOrigin.hasPort) {
+      rebuilt
+        ..write(':')
+        ..write(hostOrigin.port);
+    }
+
+    final String path = original.path.isEmpty
+        ? '/'
+        : (original.path.startsWith('/') ? original.path : '/${original.path}');
+    rebuilt.write(path);
+
+    if (original.hasQuery) {
+      rebuilt
+        ..write('?')
+        ..write(original.query);
+    }
+
+    if (original.fragment.isNotEmpty) {
+      rebuilt
+        ..write('#')
+        ..write(original.fragment);
+    }
+
+    return rebuilt.toString();
   }
 
 

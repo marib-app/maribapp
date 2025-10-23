@@ -51,7 +51,9 @@ class ChatedUser {
     buyerId = _parseInt(json['buyer_id']);
     itemId = _parseInt(json['item_id']);
     itemOfferId = _parseInt(json['item_offer_id']) ?? _parseInt(json['id']);
-    conversationId = json['conversation_id']?.toString() ?? id?.toString();
+    conversationId =
+        _parseString(json['conversation_id']) ?? id?.toString();
+
     createdAt = json['created_at'];
     updatedAt = json['updated_at'];
     amount = _parseDouble(json['amount']);

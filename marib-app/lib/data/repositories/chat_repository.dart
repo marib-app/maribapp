@@ -5,6 +5,7 @@ import 'package:marib/ui/screens/chat/chat_audio/widgets/chat_widget.dart';
 import 'package:marib/utils/api.dart';
 import 'package:flutter/material.dart';
 import 'package:marib/data/model/chat/chat_message_modal.dart';
+import 'package:marib/utils/chat/conversation_id_utils.dart';
 
 class ChatRepostiory {
   BuildContext? _setContext;
@@ -64,13 +65,14 @@ class ChatRepostiory {
       {required int page,
       required int itemOfferId,
       required String conversationId}) async {
-    final String trimmedConversationId = conversationId.trim();
-
+    final String normalizedConversationId =
+    normalizeConversationId(conversationId);
 
     final Map<String, dynamic> queryParameters = <String, dynamic>{
       'page': page,
       if (itemOfferId > 0) 'item_offer_id': itemOfferId,
-      if (trimmedConversationId.isNotEmpty) 'conversation_id': trimmedConversationId,
+      if (normalizedConversationId.isNotEmpty)
+        'conversation_id': normalizedConversationId,
     };
     Map<String, dynamic> response = await Api.get(
       url: Api.chatMessagesApi,
@@ -220,8 +222,10 @@ class ChatRepostiory {
     int? itemOfferId,
   }) async {
     final Map<String, dynamic> queryParameters = <String, dynamic>{};
-    if (conversationId.isNotEmpty) {
-      queryParameters['conversation_id'] = conversationId;
+    final String normalizedConversationId =
+    normalizeConversationId(conversationId);
+    if (normalizedConversationId.isNotEmpty) {
+      queryParameters['conversation_id'] = normalizedConversationId;
     }
     if (itemOfferId != null && itemOfferId > 0) {
       queryParameters['item_offer_id'] = itemOfferId;
@@ -269,8 +273,9 @@ class ChatRepostiory {
     required Iterable<int> messageIds,
     int? itemOfferId,
   }) async {
-    final String trimmedConversationId = conversationId.trim();
-    if (trimmedConversationId.isEmpty) {
+    final String normalizedConversationId =
+    normalizeConversationId(conversationId);
+    if (normalizedConversationId.isEmpty) {
       return;
     }
 
@@ -282,7 +287,7 @@ class ChatRepostiory {
     }
 
     final Map<String, dynamic> payload = <String, dynamic>{
-      'conversation_id': trimmedConversationId,
+      'conversation_id': normalizedConversationId,
       'message_ids': sanitizedIds,
       if (itemOfferId != null && itemOfferId > 0) 'item_offer_id': itemOfferId,
     };
@@ -298,8 +303,9 @@ class ChatRepostiory {
     required Iterable<int> messageIds,
     int? itemOfferId,
   }) async {
-    final String trimmedConversationId = conversationId.trim();
-    if (trimmedConversationId.isEmpty) {
+    final String normalizedConversationId =
+    normalizeConversationId(conversationId);
+    if (normalizedConversationId.isEmpty) {
       return;
     }
 
@@ -311,7 +317,7 @@ class ChatRepostiory {
     }
 
     final Map<String, dynamic> payload = <String, dynamic>{
-      'conversation_id': trimmedConversationId,
+      'conversation_id': normalizedConversationId,
       'message_ids': sanitizedIds,
       if (itemOfferId != null && itemOfferId > 0) 'item_offer_id': itemOfferId,
     };
@@ -327,8 +333,9 @@ class ChatRepostiory {
     required bool isTyping,
     int? itemOfferId,
   }) async {
-    final String trimmedConversationId = conversationId.trim();
-    if (trimmedConversationId.isEmpty) {
+    final String normalizedConversationId =
+    normalizeConversationId(conversationId);
+    if (normalizedConversationId.isEmpty) {
       return;
     }
 
@@ -338,7 +345,7 @@ class ChatRepostiory {
     };
 
     await Api.post(
-      url: Api.chatConversationTypingApi(trimmedConversationId),
+      url: Api.chatConversationTypingApi(normalizedConversationId),
       parameter: payload,
     );
   }
@@ -348,8 +355,9 @@ class ChatRepostiory {
     required bool isOnline,
     int? itemOfferId,
   }) async {
-    final String trimmedConversationId = conversationId.trim();
-    if (trimmedConversationId.isEmpty) {
+    final String normalizedConversationId =
+    normalizeConversationId(conversationId);
+    if (normalizedConversationId.isEmpty) {
       return;
     }
 
@@ -359,7 +367,7 @@ class ChatRepostiory {
     };
 
     await Api.post(
-      url: Api.chatConversationPresenceApi(trimmedConversationId),
+      url: Api.chatConversationPresenceApi(normalizedConversationId),
       parameter: payload,
     );
   }

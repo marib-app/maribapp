@@ -3,13 +3,14 @@ import 'dart:collection';
 
 import 'package:marib/data/repositories/chat_repository.dart';
 import 'package:marib/utils/logger.dart';
+import 'package:marib/utils/chat/conversation_id_utils.dart';
 
 class ChatSyncController {
   ChatSyncController({
     required String conversationId,
     int? itemOfferId,
   })
-      : _conversationId = conversationId.trim(),
+      : _conversationId = normalizeConversationId(conversationId),
         _itemOfferId = itemOfferId != null && itemOfferId > 0
             ? itemOfferId
             : null;
@@ -30,10 +31,8 @@ class ChatSyncController {
   static const Duration _typingDebounceDuration = Duration(milliseconds: 150);
   static const Duration _typingIdleTimeout = Duration(seconds: 6);
 
-  bool get _hasConversation =>
-      _conversationId
-          .trim()
-          .isNotEmpty;
+  bool get _hasConversation => _conversationId.isNotEmpty;
+
 
   void updateIdentifiers({String? conversationId, int? itemOfferId}) {
     if (_disposed) {
@@ -41,9 +40,9 @@ class ChatSyncController {
     }
 
     if (conversationId != null) {
-      final String trimmed = conversationId.trim();
-      if (trimmed.isNotEmpty && trimmed != _conversationId) {
-        _conversationId = trimmed;
+      final String normalized = normalizeConversationId(conversationId);
+      if (normalized.isNotEmpty && normalized != _conversationId) {
+        _conversationId = normalized;
         _delivered.clear();
         _read.clear();
         _lastPresenceStatus = '';

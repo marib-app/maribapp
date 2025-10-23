@@ -4,6 +4,7 @@ import 'package:marib/data/repositories/chat_repository.dart';
 import 'package:marib/data/model/data_output.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:marib/data/model/chat/chat_message_modal.dart';
+import 'package:marib/utils/chat/conversation_id_utils.dart';
 
 class LoadChatMessagesState {}
 
@@ -70,9 +71,8 @@ class LoadChatMessagesCubit extends Cubit<LoadChatMessagesState> {
       {required int itemOfferId, required String conversationId}) async {
     try {
       emit(LoadChatMessagesInProgress());
-      final String trimmedConversationId = conversationId.trim();
       final String normalizedConversationId =
-          trimmedConversationId.isEmpty ? '' : trimmedConversationId;
+      normalizeConversationId(conversationId);
       final int normalizedItemOfferId = itemOfferId > 0 ? itemOfferId : 0;
 
       DataOutput<ChatMessageModal> result =

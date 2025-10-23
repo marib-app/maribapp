@@ -759,21 +759,22 @@ class NotificationService {
       }
 
       if (orderDetails != null) {
-        _orderDetailsController.add(orderDetails);
+        final OrderDetails resolvedOrderDetails = orderDetails;
+        _orderDetailsController.add(resolvedOrderDetails);
         final BuildContext? navigationContext =
             context ?? Constant.navigatorKey.currentContext;
 
         if (navigationContext != null) {
-          final String label = orderDetails.order.displayLabel;
+          final String label = resolvedOrderDetails.order.displayLabel;
 
           Future<void>.delayed(Duration.zero, () {
             Navigator.pushNamed(
               navigationContext,
               Routes.orderSteps,
               arguments: <String, dynamic>{
-                'order_id': orderDetails.order.id,
-                'order_details': orderDetails,
-                'orderDetails': orderDetails,
+                'order_id': resolvedOrderDetails.order.id,
+                'order_details': resolvedOrderDetails,
+                'orderDetails': resolvedOrderDetails,
                 if (transactionId != null) 'transaction_id': transactionId,
               },
             );

@@ -79,6 +79,7 @@ class _SmartSearchAppBarState extends State<SmartSearchAppBar> {
   final GlobalKey _cartActionKey =
       GlobalKey(debugLabel: 'smartSearchCartAction');
   double _cartActionWidth = 0;
+  bool _cartWidthUpdatePending = false;
 
   late final List<String> _hints;
   late final IconData _hintIcon;
@@ -151,19 +152,32 @@ class _SmartSearchAppBarState extends State<SmartSearchAppBar> {
   }
 
   void _scheduleCartWidthUpdate() {
-    if (!widget.showCartAction) return;
+    if (_cartWidthUpdatePending || !widget.showCartAction) return;
+    _cartWidthUpdatePending = true;
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+      if (!mounted) {
+        _cartWidthUpdatePending = false;
+        return;
+      }
       final context = _cartActionKey.currentContext;
-      if (context == null) return;
+      if (context == null) {
+        _cartWidthUpdatePending = false;
+        return;
+      }
       final renderObject = context.findRenderObject();
-      if (renderObject is! RenderBox || !renderObject.hasSize) return;
+      if (renderObject is! RenderBox || !renderObject.hasSize) {
+        _cartWidthUpdatePending = false;
+        return;
+      }
       final width = renderObject.size.width;
       if ((_cartActionWidth - width).abs() > 0.5) {
         setState(() {
           _cartActionWidth = width;
         });
       }
+      _cartWidthUpdatePending = false;
+
     });
   }
 
@@ -189,7 +203,9 @@ class _SmartSearchAppBarState extends State<SmartSearchAppBar> {
   Widget build(BuildContext context) {
     final showHintOverlay =
         !_focusNode.hasFocus && widget.searchController.text.isEmpty;
-    _scheduleCartWidthUpdate();
+    if (!_cartWidthUpdatePending) {
+      _scheduleCartWidthUpdate();
+    }
 
     return AppBar(
       toolbarHeight: widget.toolbarH,

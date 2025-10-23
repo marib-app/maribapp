@@ -457,6 +457,15 @@ class ServiceRatingsApi {
       Map<String, dynamic> resp) {
     dynamic root = resp;
 
+
+    final dynamic rootRows = resp['rows'];
+    if (rootRows is List) {
+      return rootRows
+          .whereType<Map>()
+          .map((e) => e.cast<String, dynamic>())
+          .toList();
+    }
+
     // شائع: { data: {...} } أو { item: {...} }
     root = root[Api.data] ?? root['data'] ?? root;
 
@@ -481,6 +490,7 @@ class ServiceRatingsApi {
       'feedback',
       'list',
       'items',
+      'rows',
       'result',
     ]) {
       final v = (root is Map) ? root[key] : null;
@@ -554,6 +564,34 @@ class ServiceRatingsApi {
     required List<Map<String, dynamic>> rawRows,
     required String trackerKey,
   }) {
+
+
+    int? parseInt(dynamic value) {
+      if (value is int) {
+        return value;
+      }
+      if (value is num) {
+        return value.toInt();
+      }
+      if (value is String) {
+        return int.tryParse(value);
+      }
+      return null;
+    }
+
+    final int? topCurrent = parseInt(resp['current_page']);
+    final int? topLast = parseInt(resp['last_page']);
+    final int? topPerPage = parseInt(resp['per_page']);
+    final int? topTotal = parseInt(resp['total']);
+
+    if (topCurrent != null && (topLast != null || (topPerPage != null && topPerPage > 0 && topTotal != null))) {
+      final int lastPage = topLast ?? ((topTotal! + topPerPage! - 1) ~/ topPerPage);
+      final bool hasMore = topCurrent < lastPage;
+      _fallbackTrackers.remove(trackerKey);
+      return _Pager(hasMore: hasMore, nextPage: topCurrent + 1);
+    }
+
+
     // 1) Laravel pagination شائع:
     // meta: { current_page, last_page, next_page_url, per_page }
 
@@ -754,10 +792,14 @@ class ServiceRatingsApi {
           }
         }
 
-        if (node.containsKey('total') && node['data'] is List) {
-          final parsed = parse(node['total']);
-          if (parsed != null) {
-            return parsed;
+        if (node.containsKey('total')) {
+          final dynamic iterable =
+              node['data'] ?? node['rows'] ?? node['items'] ?? node['list'];
+          if (iterable is List) {
+            final parsed = parse(node['total']);
+            if (parsed != null) {
+              return parsed;
+            }
           }
         }
 

@@ -23,6 +23,9 @@ class ServiceReviewController extends Controller
             $this->serviceAuthorizationService->ensureUserCanManageService(Auth::user(), $service);
 
             $status = $request->input('status');
+            $perPage = (int) $request->input('per_page', 20);
+            $page = max(1, (int) $request->input('page', 1));
+
 
             $reviewsQuery = $service->reviews()->with('user:id,name,profile')->orderByDesc('created_at');
 
@@ -30,17 +33,17 @@ class ServiceReviewController extends Controller
                 $reviewsQuery->where('status', $status);
             }
 
-            $reviews = $reviewsQuery->get();
+            $reviews = $reviewsQuery->paginate($perPage, ['*'], 'page', $page);
 
-            $rows = $reviews->map(static function (ServiceReview $review) {
+            $reviews->getCollection()->transform(static function (ServiceReview $review) {
                 return [
                     'id'         => $review->id,
                     'rating'     => $review->rating,
                     'status'     => $review->status,
                     'review'     => $review->review,
                     'user'       => $review->user ? [
-                        'id'    => $review->user->id,
-                        'name'  => $review->user->name,
+                        'id'      => $review->user->id,
+                        'name'    => $review->user->name,
                         'profile' => $review->user->profile,
                     ] : null,
                     'created_at' => optional($review->created_at)->toDateTimeString(),
@@ -48,8 +51,12 @@ class ServiceReviewController extends Controller
             });
 
             return response()->json([
-                'total' => $reviews->count(),
-                'rows'  => $rows,
+                'rows'         => $reviews->items(),
+                'total'        => $reviews->total(),
+                'per_page'     => $reviews->perPage(),
+                'current_page' => $reviews->currentPage(),
+                'last_page'    => $reviews->lastPage(),
+                
             ]);
         } catch (Throwable $th) {
             ResponseService::logErrorResponse($th, 'ServiceReviewController -> index');

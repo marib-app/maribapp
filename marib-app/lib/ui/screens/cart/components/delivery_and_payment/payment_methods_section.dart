@@ -661,6 +661,15 @@ class PaymentMethodsSection extends StatelessWidget {
         TextEditingController();
     final ValueNotifier<bool> isUploading = ValueNotifier(false);
     final ValueNotifier<File?> receiptImage = ValueNotifier(null);
+    final ValueNotifier<int> formRevision = ValueNotifier(0);
+
+    void markFormDirty() {
+      formRevision.value++;
+    }
+
+    nameController.addListener(markFormDirty);
+    transferCodeController.addListener(markFormDirty);
+    receiptImage.addListener(markFormDirty);
 
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     final Color fieldColor =
@@ -820,8 +829,14 @@ class PaymentMethodsSection extends StatelessWidget {
                               ],
                             )
                           else
-                            const Text('اختياري',
-                                style: TextStyle(color: Colors.grey)),
+                            const Text(
+                              'مطلوب إرفاق إيصال الحوالة',
+                              style: TextStyle(
+                                color: Colors.red,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                         ],
                       );
                     },
@@ -836,35 +851,54 @@ class PaymentMethodsSection extends StatelessWidget {
             onPressed: () => Navigator.pop(context),
             child: const Text('إلغاء'),
           ),
-          ValueListenableBuilder<bool>(
-            valueListenable: isUploading,
-            builder: (context, uploading, _) {
-              final bool valid = nameController.text.trim().isNotEmpty &&
+          ValueListenableBuilder<int>(
+            valueListenable: formRevision,
+            builder: (context, _, __) {
+              final bool nameFilled = nameController.text.trim().isNotEmpty;
+              final bool codeFilled =
                   transferCodeController.text.trim().isNotEmpty;
-              return ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      (uploading || !valid) ? Colors.grey : mainColor,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                ),
-                onPressed: (uploading || !valid)
-                    ? null
-                    : () async {
-                        final data = ManualTransferSubmissionData(
-                          senderName: nameController.text,
-                          transferCode: transferCodeController.text,
-                          receiptFile: receiptImage.value,
-                        );
-                        Navigator.pop(context);
-                        await onConfirm(data);
-                      },
-                child: const Text('تقديم'),
+              final bool hasReceipt = receiptImage.value != null;
+              final bool formValid = nameFilled && codeFilled && hasReceipt;
+
+              return ValueListenableBuilder<bool>(
+                valueListenable: isUploading,
+                builder: (context, uploading, ___) {
+                  return ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          (uploading || !formValid) ? Colors.grey : mainColor,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    onPressed: (uploading || !formValid)
+                        ? null
+                        : () async {
+                            final data = ManualTransferSubmissionData(
+                              senderName: nameController.text,
+                              transferCode: transferCodeController.text,
+                              receiptFile: receiptImage.value,
+                            );
+                            Navigator.pop(context);
+                            await onConfirm(data);
+                          },
+                    child: const Text('تقديم'),
+                  );
+                },
               );
             },
           ),
         ],
       ),
-    );
+    ).whenComplete(() {
+      nameController.removeListener(markFormDirty);
+      transferCodeController.removeListener(markFormDirty);
+      receiptImage.removeListener(markFormDirty);
+      nameController.dispose();
+      transferCodeController.dispose();
+      isUploading.dispose();
+      receiptImage.dispose();
+      formRevision.dispose();
+    });
   }
 }

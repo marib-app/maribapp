@@ -950,12 +950,16 @@ class CheckoutRepository {
 
     final String? accountName = _asString(_firstValue(map, const [
       ['account_name'],
+      ['beneficiary_name'],
+      ['recipient_name'],
       ['account_holder'],
       ['holder'],
     ]));
 
     final String? accountNumber = _asString(_firstValue(map, const [
       ['account_number'],
+      ['account_no'],
+      ['beneficiary_account'],
       ['number'],
       ['iban'],
     ]));

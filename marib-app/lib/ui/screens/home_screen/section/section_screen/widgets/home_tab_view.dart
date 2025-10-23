@@ -920,7 +920,8 @@ class _HomeTabViewState extends State<HomeTabView> {
                                 }
                               }
 
-                              final bool hasItemFilter = successState != null;
+                              final bool hasItemFilter = successState != null &&
+                                  allowedCategoryIds.isNotEmpty;
                               if (hasItemFilter) {
                                 processedRootChildren =
                                     _filterCategoriesByAllowedIds(

@@ -209,12 +209,9 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
   }
 
   String? _imageOf(ItemModel ad) {
-    final resolver = widget.imageUrlResolver;
-    if (resolver != null) {
-      final resolved = resolver(ad);
-      if (resolved != null && resolved.isNotEmpty) {
-        return resolved;
-      }
+    final resolved = widget.imageUrlResolver?.call(ad)?.trim();
+    if (resolved != null && resolved.isNotEmpty) {
+      return resolved;
     }
 
     final fallbackUrls = [
@@ -226,8 +223,9 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
     ];
 
     for (final url in fallbackUrls) {
-      if (url != null && url.isNotEmpty) {
-        return url;
+      final candidate = url?.trim();
+      if (candidate != null && candidate.isNotEmpty) {
+        return candidate;
       }
     }
 

@@ -1991,6 +1991,23 @@ class ApiController extends Controller {
                 'items.image',
                 'items.created_at',
                 'items.updated_at',
+                'items.city',
+                'items.state',
+                'items.country',
+                'items.address',
+                'items.latitude',
+                'items.longitude',
+                'items.status',
+                'items.type',
+                'items.item_type',
+                'items.user_id',
+                'items.category_id',
+                'items.product_link',
+                'items.discount_type',
+                'items.discount_value',
+                'items.discount_start',
+                'items.discount_end',
+                'items.clicks',
             ];
 
 
@@ -2012,7 +2029,18 @@ class ApiController extends Controller {
                     ->withCount('review as ratings_count')
                     ->select('items.*');
             } else {
-                $sql = Item::query()->select($summarySelectColumns);
+                $sql = Item::query()
+                    ->select($summarySelectColumns)
+                    ->withCount('featured_items as featured_items_count')
+                    ->withCount('favourites as favourites_count');
+
+                if (Auth::check()) {
+                    $sql->withExists([
+                        'favourites as is_favorited' => static function ($query) {
+                            $query->where('user_id', Auth::id());
+                        },
+                    ]);
+                }
 
             }
 
@@ -2368,16 +2396,42 @@ class ApiController extends Controller {
     {
         $transformItem = static function (Item $item): array {
             $thumbnail = $item->thumbnail_url ?? $item->image;
+            $finalPrice = $item->calculateDiscountedPrice();
+            $discountSnapshot = $item->discount_snapshot;
+            $featuredCount = $item->featured_items_count ?? 0;
+            $favouritesCount = $item->favourites_count ?? 0;
+            $isLiked = property_exists($item, 'is_favorited') ? (bool) $item->is_favorited : false;
+
 
             return [
                 'id' => $item->id,
                 'name' => $item->name,
                 'slug' => $item->slug,
                 'price' => $item->price,
+                'final_price' => $finalPrice,
                 'currency' => $item->currency,
                 'thumbnail_url' => $thumbnail,
+                'thumbnail_fallback_url' => $item->image,
+                'image' => $item->image,
                 'created_at' => optional($item->created_at)->toIso8601String(),
                 'updated_at' => optional($item->updated_at)->toIso8601String(),
+                'city' => $item->city,
+                'state' => $item->state,
+                'country' => $item->country,
+                'address' => $item->address,
+                'latitude' => $item->latitude,
+                'longitude' => $item->longitude,
+                'status' => $item->status,
+                'type' => $item->type,
+                'item_type' => $item->item_type,
+                'user_id' => $item->user_id,
+                'category_id' => $item->category_id,
+                'product_link' => $item->product_link,
+                'discount' => $discountSnapshot,
+                'total_likes' => (int) $favouritesCount,
+                'is_liked' => $isLiked,
+                'is_feature' => (int) $featuredCount > 0,
+                'clicks' => $item->clicks,
             ];
 
         };

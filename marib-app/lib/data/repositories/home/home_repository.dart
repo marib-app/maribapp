@@ -3,8 +3,7 @@ import 'package:marib/utils/api.dart';
 import 'package:marib/data/model/data_output.dart';
 import 'package:marib/data/model/item/item_model.dart';
 import 'package:marib/utils/slider_interface_mapper.dart';
-
-
+import 'package:marib/settings.dart';
 
 class HomeRepository {
   Future<List<HomeScreenSection>> fetchHome({
@@ -14,15 +13,11 @@ class HomeRepository {
     String? city,
     String? slug,
     String? rootIdentifier,
-
     int? areaId,
   }) async {
-
-
     try {
       final String? trimmedSlug = slug?.trim();
       final String? trimmedRootIdentifier = rootIdentifier?.trim();
-
 
       final String? normalizedInterfaceType =
           SliderInterfaceMapper.normalize(interfaceType) ??
@@ -34,8 +29,7 @@ class HomeRepository {
           'section_type': normalizedInterfaceType,
           'interface_type': normalizedInterfaceType,
         },
-        if (trimmedSlug != null && trimmedSlug.isNotEmpty)
-          'slug': trimmedSlug,
+        if (trimmedSlug != null && trimmedSlug.isNotEmpty) 'slug': trimmedSlug,
         if (trimmedRootIdentifier != null && trimmedRootIdentifier.isNotEmpty)
           'root_identifier': trimmedRootIdentifier,
         // Location filters kept for future use (currently disabled)
@@ -43,7 +37,6 @@ class HomeRepository {
         // if (areaId != null) 'area_id': areaId,
         // if (country != null && country.isNotEmpty) 'country': country,
         // if (state != null && state.isNotEmpty) 'state': state,
-
       };
 
       Map<String, dynamic> response = await Api.get(
@@ -56,9 +49,7 @@ class HomeRepository {
 
       List<HomeScreenSection> parseSections(dynamic source) {
         if (source is List) {
-          return source
-              .whereType<Map>()
-              .map<HomeScreenSection>((element) {
+          return source.whereType<Map>().map<HomeScreenSection>((element) {
             final map = Map<String, dynamic>.from(element);
             return HomeScreenSection.fromJson(map);
           }).toList();
@@ -92,37 +83,37 @@ class HomeRepository {
 
   Future<DataOutput<ItemModel>> fetchHomeAllItems(
       {required int page,
-        String? country,
-        String? state,
-        String? city,
-        double? latitude,
-        double? longitude,
-        int? areaId,
-        int? radius}) async {
+      String? country,
+      String? state,
+      String? city,
+      double? latitude,
+      double? longitude,
+      int? areaId,
+      int? radius}) async {
     try {
-      Map<String, dynamic> parameters = {
-        "page": page,
-        // Remove location filtering to show all items regardless of location
-        // if (radius == null) ...{
-        //   if (city != null && city != "") 'city': city,
-        //   if (areaId != null && areaId != "") 'area_id': areaId,
-        //   if (country != null && country != "") 'country': country,
-        //   if (state != null && state != "") 'state': state,
-        // },
-        // if (radius != null && radius != "") 'radius': radius,
-        // if (latitude != null && latitude != "") 'latitude': latitude,
-        // if (longitude != null && longitude != "") 'longitude': longitude,
-        "sort_by": "new-to-old"
+      final Map<String, dynamic> parameters = <String, dynamic>{
+        'page': page,
+        'view': 'summary',
+        Api.perPageQuery: AppSettings.apiDataLoadLimit,
+        'sort_by': 'new-to-old',
       };
 
-      Map<String, dynamic> response =
-      await Api.get(url: Api.getItemApi, queryParameters: parameters);
-      List<ItemModel> items = (response['data']['data'] as List)
-          .map((e) => ItemModel.fromJson(e))
-          .toList();
+      final Map<String, dynamic> response = await Api.get(
+        url: Api.getItemApi,
+        queryParameters: parameters,
+        enableEtagCache: true,
+      );
 
-      return DataOutput(
-          total: response['data']['total'] ?? 0, modelList: items);
+      final dynamic data = response['data'] ?? response;
+      final List<Map<String, dynamic>> rawItems = _extractItemsPayload(data);
+      final List<ItemModel> items = rawItems
+          .map(ItemSummary.fromJson)
+          .map((summary) => summary.toItemModelSkeleton())
+          .toList(growable: false);
+
+      final int total = _resolveSummaryTotal(data, items.length);
+
+      return DataOutput(total: total, modelList: items);
     } catch (error) {
       rethrow;
     }
@@ -130,32 +121,106 @@ class HomeRepository {
 
   Future<DataOutput<ItemModel>> fetchSectionItems(
       {required int page,
-        required int sectionId,
-        String? country,
-        String? state,
-        String? city,
-        int? areaId}) async {
+      required int sectionId,
+      String? country,
+      String? state,
+      String? city,
+      int? areaId}) async {
     try {
-      Map<String, dynamic> parameters = {
-        "page": page,
-        "featured_section_id": sectionId,
-        // Remove location filtering to show all section items regardless of location
-        // if (city != null && city != "") 'city': city,
-        // if (areaId != null && areaId != "") 'area_id': areaId,
-        // if (country != null && country != "") 'country': country,
-        // if (state != null && state != "") 'state': state,
+      final Map<String, dynamic> parameters = <String, dynamic>{
+        'page': page,
+        'view': 'summary',
+        Api.perPageQuery: AppSettings.sectionItemsPageSize,
+        'featured_section_id': sectionId,
       };
 
-      Map<String, dynamic> response =
-      await Api.get(url: Api.getItemApi, queryParameters: parameters);
-      List<ItemModel> items = (response['data']['data'] as List)
-          .map((e) => ItemModel.fromJson(e))
-          .toList();
+      final Map<String, dynamic> response = await Api.get(
+        url: Api.getItemApi,
+        queryParameters: parameters,
+        enableEtagCache: true,
+      );
 
-      return DataOutput(
-          total: response['data']['total'] ?? 0, modelList: items);
+      final dynamic data = response['data'] ?? response;
+      final List<Map<String, dynamic>> rawItems = _extractItemsPayload(data);
+      final List<ItemModel> items = rawItems
+          .map(ItemSummary.fromJson)
+          .map((summary) => summary.toItemModelSkeleton())
+          .toList(growable: false);
+
+      final int total = _resolveSummaryTotal(data, items.length);
+
+      return DataOutput(total: total, modelList: items);
     } catch (error) {
       rethrow;
     }
+  }
+
+  List<Map<String, dynamic>> _extractItemsPayload(dynamic payload) {
+    if (payload is Map<String, dynamic>) {
+      final dynamic items = payload['items'];
+      if (items is List) {
+        return items
+            .whereType<Map>()
+            .map((entry) => Map<String, dynamic>.from(entry))
+            .toList(growable: false);
+      }
+
+      final dynamic dataField = payload['data'];
+      if (dataField is List) {
+        return dataField
+            .whereType<Map>()
+            .map((entry) => Map<String, dynamic>.from(entry))
+            .toList(growable: false);
+      }
+
+      if (dataField is Map<String, dynamic>) {
+        return _extractItemsPayload(dataField);
+      }
+    }
+
+    if (payload is List) {
+      return payload
+          .whereType<Map>()
+          .map((entry) => Map<String, dynamic>.from(entry))
+          .toList(growable: false);
+    }
+
+    return const <Map<String, dynamic>>[];
+  }
+
+  int _resolveSummaryTotal(dynamic payload, int fallback) {
+    int? _coerceToInt(dynamic value) {
+      if (value is int) {
+        return value;
+      }
+      if (value is num) {
+        return value.toInt();
+      }
+      if (value is String) {
+        return int.tryParse(value);
+      }
+      return null;
+    }
+
+    if (payload is Map<String, dynamic>) {
+      final dynamic meta = payload['meta'];
+      if (meta is Map<String, dynamic>) {
+        final int? totalFromMeta = _coerceToInt(meta['total']);
+        if (totalFromMeta != null) {
+          return totalFromMeta;
+        }
+      }
+
+      final int? directTotal = _coerceToInt(payload['total']);
+      if (directTotal != null) {
+        return directTotal;
+      }
+
+      if (payload.containsKey('data')) {
+        return _resolveSummaryTotal(payload['data'], fallback);
+      }
+    }
+
+    return fallback;
   }
 }

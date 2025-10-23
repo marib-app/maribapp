@@ -88,18 +88,21 @@ class FetchSectionItemsCubit extends Cubit<FetchSectionItemsState> {
           return;
         }
         emit((state as FetchSectionItemsSuccess).copyWith(isLoadingMore: true));
-        DataOutput<ItemModel> result = await _homeRepository.fetchSectionItems(
-            page: (state as FetchSectionItemsSuccess).page + 1,
-            sectionId: sectionId);
+        final FetchSectionItemsSuccess currentState =
 
-        FetchSectionItemsSuccess itemModelState =
             (state as FetchSectionItemsSuccess);
-        itemModelState.items.addAll(result.modelList);
+        final DataOutput<ItemModel> result =
+        await _homeRepository.fetchSectionItems(
+            page: currentState.page + 1, sectionId: sectionId);
+
+        final List<ItemModel> combinedItems =
+        List<ItemModel>.from(currentState.items)
+          ..addAll(result.modelList);
         emit(FetchSectionItemsSuccess(
             isLoadingMore: false,
             loadingMoreError: false,
-            items: itemModelState.items,
-            page: (state as FetchSectionItemsSuccess).page + 1,
+            items: combinedItems,
+            page: currentState.page + 1,
             total: result.total));
       }
     } catch (e) {

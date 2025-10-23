@@ -2,19 +2,11 @@
 
 @php
     use App\Models\ManualPaymentRequest;
-    use App\Support\ManualPayments\TransferDetailsResolver;
-
     $statusBadge = match ($request->status) {
         ManualPaymentRequest::STATUS_APPROVED => '<span class="badge bg-success">' . __('Approved') . '</span>',
         ManualPaymentRequest::STATUS_REJECTED => '<span class="badge bg-danger">' . __('Rejected') . '</span>',
         default => '<span class="badge bg-warning text-dark">' . __('Pending') . '</span>',
     };
-
-    $resolvedTransferDetails = TransferDetailsResolver::forManualPaymentRequest($request)->toArray();
-    $requestReference = filled($request->reference)
-        ? $request->reference
-        : ($resolvedTransferDetails['transfer_reference'] ?? null);
-
 @endphp
 
 @section('title')
@@ -51,8 +43,7 @@
         <div class="card shadow-sm">
             <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-start gap-3">
                 <div>
-                    <h5 class="card-title mb-1">{{ $requestReference ?? __('Payment Request #:id', ['id' => $request->id]) }}</h5>
-
+                    <h5 class="card-title mb-1">{{ $request->reference ?? __('Payment Request #:id', ['id' => $request->id]) }}</h5>
                     <div class="text-muted small">
                         {{ __('Submitted :date', ['date' => $request->created_at?->format('Y-m-d H:i') ?? __('N/A')]) }}
                         @if($request->user)
@@ -70,7 +61,6 @@
                     'request' => $request,
                     'canReview' => $canReview,
                     'timelineData' => $timelineData ?? [],
-                    'transferDetails' => $resolvedTransferDetails,
 
                     'paymentGatewayKey' => $paymentGatewayKey ?? null,
                     'paymentGatewayCanonical' => $paymentGatewayCanonical ?? null,

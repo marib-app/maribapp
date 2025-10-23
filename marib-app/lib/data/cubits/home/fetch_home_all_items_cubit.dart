@@ -92,17 +92,23 @@ class FetchHomeAllItemsCubit extends Cubit<FetchHomeAllItemsState> {
           return;
         }
         emit((state as FetchHomeAllItemsSuccess).copyWith(isLoadingMore: true));
-        DataOutput<ItemModel> result = await _homeRepository.fetchHomeAllItems(
-            page: (state as FetchHomeAllItemsSuccess).page + 1);
+        final FetchHomeAllItemsSuccess currentState =
 
-        FetchHomeAllItemsSuccess itemModelState =
             (state as FetchHomeAllItemsSuccess);
-        itemModelState.items.addAll(result.modelList);
+        final DataOutput<ItemModel> result =
+        await _homeRepository.fetchHomeAllItems(
+            page: currentState.page + 1);
+
+        final List<ItemModel> combinedItems =
+        List<ItemModel>.from(currentState.items)
+          ..addAll(result.modelList);
+
+
         emit(FetchHomeAllItemsSuccess(
             isLoadingMore: false,
             loadingMoreError: false,
-            items: itemModelState.items,
-            page: (state as FetchHomeAllItemsSuccess).page + 1,
+            items: combinedItems,
+            page: currentState.page + 1,
             total: result.total));
       }
     } catch (e) {

@@ -54,7 +54,7 @@ class Section_screen extends StatefulWidget {
             : null;
     final int? sellerId = _parseSellerId(arguments?['sellerId']);
     final List<int>? sellerCategoryIds =
-    _parseSellerCategoryIds(arguments?['sellerCategoryIds']);
+        _parseSellerCategoryIds(arguments?['sellerCategoryIds']);
     return BlurredRouter(
       builder: (_) => BlocProvider(
         create: (context) => FetchHomeScreenCubit(
@@ -88,7 +88,6 @@ class Section_screen extends StatefulWidget {
     }
     return null;
   }
-
 
   static List<int>? _parseSellerCategoryIds(dynamic raw) {
     if (raw == null) {
@@ -149,7 +148,6 @@ class Section_screen extends StatefulWidget {
 
     return result.toList(growable: false)..sort();
   }
-
 }
 
 class Section_screenState extends State<Section_screen> {
@@ -269,7 +267,6 @@ class Section_screenState extends State<Section_screen> {
     return selected;
   }
 
-
   List<int>? _normalizeSellerCategoryIds(List<int>? ids) {
     if (ids == null) {
       return null;
@@ -286,6 +283,23 @@ class Section_screenState extends State<Section_screen> {
     return normalized.toList(growable: false)..sort();
   }
 
+  bool _areIntListsEqual(List<int>? a, List<int>? b) {
+    if (identical(a, b)) {
+      return true;
+    }
+    if (a == null || b == null) {
+      return a == null && b == null;
+    }
+    if (a.length != b.length) {
+      return false;
+    }
+    for (int i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
 
   ItemFilterModel _buildEffectiveFilter({
     ItemFilterModel? base,
@@ -481,6 +495,16 @@ class Section_screenState extends State<Section_screen> {
     showShimmer = true;
     _showSlider = false;
     _showAdSlider = _hasAdSlider;
+  }
+
+  @override
+  void didUpdateWidget(covariant Section_screen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_areIntListsEqual(
+        oldWidget.sellerCategoryIds, widget.sellerCategoryIds)) {
+      _sellerCategoryIds =
+          _normalizeSellerCategoryIds(widget.sellerCategoryIds);
+    }
   }
 
   String? _resolveRequestSectionSlug() {

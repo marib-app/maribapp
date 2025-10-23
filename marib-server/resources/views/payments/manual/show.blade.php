@@ -30,15 +30,6 @@
         $transferDetails = \App\Support\ManualPayments\TransferDetailsResolver::forManualPaymentRequest($request)->toArray();
     }
 
-    $requestReference = filled($request->reference)
-        ? $request->reference
-        : ($transferDetails['transfer_reference'] ?? null);
-
-    $requestUserNote = filled($request->user_note)
-        ? $request->user_note
-        : ($transferDetails['note'] ?? null);
-
-
     $transferDetailsBankName = $transferDetails['bank_name'] ?? null;
     $transferReceiptUrl = $transferDetails['receipt_url'] ?? null;
 
@@ -257,7 +248,7 @@
                 <div class="card-body">
                     <dl class="row mb-0">
                         <dt class="col-5 text-muted">{{ __('Reference') }}</dt>
-                        <dd class="col-7">{{ $requestReference ?? __('N/A') }}</dd>
+                        <dd class="col-7">{{ $request->reference ?? __('N/A') }}</dd>
 
                         <dt class="col-5 text-muted">{{ __('Amount') }}</dt>
                         <dd class="col-7">{{ number_format($request->amount, 2) }} {{ $request->currency }}</dd>
@@ -416,7 +407,7 @@
         <div class="card-body">
             <div class="mb-3">
                 <strong>{{ __('User Note') }}:</strong>
-                <p class="mb-0">{{ $requestUserNote ?? __('No note provided by the user.') }}</p>
+                <p class="mb-0">{{ $request->user_note ?? __('No note provided by the user.') }}</p>
             </div>
             @if($request->admin_note)
                 <div>
@@ -450,8 +441,7 @@
                                         </div>
                                         <div class="mb-3">
                                             <label for="east-yemen-description" class="form-label">{{ __('Description (optional)') }}</label>
-                                            <input type="text" id="east-yemen-description" name="description" value="{{ $requestReference ?? '' }}" class="form-control" placeholder="{{ __('Voucher description') }}">
-
+                                            <input type="text" id="east-yemen-description" name="description" value="{{ $request->reference }}" class="form-control" placeholder="{{ __('Voucher description') }}">
                                         </div>
                                         <button type="submit" class="btn btn-outline-primary w-100">{{ __('Request Payment') }}</button>
                                     </form>

@@ -258,13 +258,20 @@ class FetchItemSummaryCubit extends Cubit<FetchItemSummaryState> {
         a.longitude == b.longitude &&
         a.currency == b.currency &&
         a.userId == b.userId &&
-        mapEquals(a.customFields ?? const {}, b.customFields ?? const {});
+        mapEquals(
+          a.customFields ?? const <String, dynamic>{},
+          b.customFields ?? const <String, dynamic>{},
+        );
   }
 
   ItemFilterModel? _cloneFilter(ItemFilterModel? filter) {
     if (filter == null) {
       return null;
     }
+
+    final Map<String, dynamic>? clonedCustomFields = filter.customFields == null
+        ? null
+        : Map<String, dynamic>.from(filter.customFields!);
 
     return ItemFilterModel(
       maxPrice: filter.maxPrice,
@@ -281,9 +288,7 @@ class FetchItemSummaryCubit extends Cubit<FetchItemSummaryState> {
       longitude: filter.longitude,
       currency: filter.currency,
       userId: filter.userId,
-      customFields: filter.customFields == null
-          ? null
-          : Map<String, dynamic>.from(filter.customFields!),
+      customFields: clonedCustomFields,
     );
   }
 

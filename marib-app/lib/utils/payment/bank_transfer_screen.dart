@@ -292,6 +292,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
           (settings.eastYemenBank != null && settings.eastYemenBank!.isEnabled)
               ? settings.eastYemenBank
               : null;
+      final List<BankAccount> dedupedBanks = _dedupeBanks(settings.banks);
       final List<BankAccount> displayableBanks =
           _filterBanksForDisplay(dedupedBanks, eastConfigForUi);
 

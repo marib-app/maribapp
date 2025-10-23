@@ -485,7 +485,10 @@ class _BankTransferScreenState extends State<BankTransferScreen>
           _normalizeForComparison(bank.accountNumber, removeWhitespace: true);
       final String normalizedIban =
           _normalizeForComparison(bank.iban, removeWhitespace: true);
-
+      final String normalizedFallbackLabel = _normalizeForComparison(
+        _resolveBankDisplayName(bank),
+        collapseWhitespace: true,
+      );
       final bool hasDisplayableInfo = normalizedName.isNotEmpty ||
           normalizedAccountName.isNotEmpty ||
           normalizedAccountNumber.isNotEmpty ||
@@ -503,6 +506,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         normalizedAccountName,
         normalizedAccountNumber,
         normalizedIban,
+        normalizedFallbackLabel,
       ].join('|');
 
       if (!seenDisplayKeys.add(displayKey)) {

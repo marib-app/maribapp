@@ -177,6 +177,11 @@ class ApiController extends Controller {
         'refunds',
     ];
 
+    /**
+     * Cache of the available columns on the items table.
+     */
+    private static ?array $itemColumnAvailability = null;
+
 
 
     private const CURRENCY_SYNONYMS = [
@@ -1981,7 +1986,7 @@ class ApiController extends Controller {
             }
 
 
-            $summarySelectColumns = [
+            $summarySelectColumns = $this->filterItemSelectColumns([
                 'items.id',
                 'items.name',
                 'items.slug',
@@ -2008,7 +2013,7 @@ class ApiController extends Controller {
                 'items.discount_start',
                 'items.discount_end',
                 'items.clicks',
-            ];
+            ]);
 
 
 
@@ -11406,5 +11411,64 @@ public function storeRequestDevice(Request $request)
         return $this->departmentCategoryMap;
     }
 
+    /**
+     * Filter the item select columns to include only those that are available on the table.
+     */
+    private function filterItemSelectColumns(array $columns): array
+    {
+        $availability = $this->getItemColumnAvailability();
 
+        return array_values(array_filter($columns, static function ($column) use ($availability) {
+            $expression = $column;
+
+            $aliasPosition = stripos($expression, ' as ');
+            if ($aliasPosition !== false) {
+                $expression = substr($expression, 0, $aliasPosition);
+            }
+
+            $expression = trim($expression);
+
+            if ($expression === '') {
+                return false;
+            }
+
+            if (! str_contains($expression, '.')) {
+                return true;
+            }
+
+            [$table, $columnName] = explode('.', $expression, 2);
+
+            if (strcasecmp($table, 'items') !== 0) {
+                return true;
+            }
+
+            return isset($availability[$columnName]);
+        }));
+    }
+
+    /**
+     * Retrieve and cache the available columns on the items table.
+     */
+    private function getItemColumnAvailability(): array
+    {
+        if (self::$itemColumnAvailability !== null) {
+            return self::$itemColumnAvailability;
+        }
+
+        $columns = [];
+
+        try {
+            if (Schema::hasTable('items')) {
+                foreach (Schema::getColumnListing('items') as $column) {
+                    $columns[$column] = true;
+                }
+            }
+        } catch (Throwable $exception) {
+            Log::warning('Failed to inspect items table columns.', [
+                'exception' => $exception->getMessage(),
+            ]);
+        }
+
+        return self::$itemColumnAvailability = $columns;
+    }
 }

@@ -27,7 +27,6 @@ import 'package:marib/data/cubits/chat/send_message.dart';
 import 'package:marib/data/model/chat/chated_user_model.dart';
 import 'package:marib/data/model/data_output.dart';
 import 'package:marib/utils/api.dart';
-import 'dart:io';
 import 'package:marib/data/cubits/wallet/manual_payment_requests_cubit.dart';
 import 'package:marib/data/cubits/wallet/wallet_transfers_cubit.dart';
 import 'package:marib/data/cubits/wallet/wallet_withdrawals_cubit.dart';
@@ -40,6 +39,8 @@ import 'dart:convert';
 import 'dart:collection';
 import 'package:flutter/foundation.dart';
 import 'package:marib/utils/chat/conversation_id_utils.dart';
+import 'package:marib/data/model/orders/user_order.dart';
+import 'package:marib/data/repositories/orders/orders_repository.dart';
 
 enum UserPresenceEventType { userTyping, userPresenceUpdated }
 
@@ -65,6 +66,13 @@ class UserPresenceEvent {
     required this.type,
     required this.status,
   });
+}
+
+class _OrderResolutionResult {
+  const _OrderResolutionResult({this.orderId, this.orders});
+
+  final String? orderId;
+  final List<UserOrder>? orders;
 }
 
 String currentlyChatingWith = "";
@@ -118,9 +126,19 @@ class NotificationService {
   static StreamSubscription<String>? _tokenRefreshSubscription;
   static final StreamController<String> _walletNotificationController =
       StreamController<String>.broadcast();
+  static final StreamController<OrderDetails> _orderDetailsController =
+      StreamController<OrderDetails>.broadcast();
+  static final StreamController<List<UserOrder>> _ordersListController =
+      StreamController<List<UserOrder>>.broadcast();
 
   static Stream<String> get walletNotifications =>
       _walletNotificationController.stream;
+
+  static Stream<OrderDetails> get orderUpdates =>
+      _orderDetailsController.stream;
+
+  static Stream<List<UserOrder>> get ordersListUpdates =>
+      _ordersListController.stream;
 
   static void _ensureLogoutHookRegistered() {
     if (_isLogoutHookRegistered) {
@@ -356,6 +374,191 @@ class NotificationService {
     return normalized;
   }
 
+  static String? _extractOrderId(Map<String, dynamic> data) {
+    return _firstNonEmptyValue([
+      data['order_details'] is Map
+          ? (data['order_details']['id'] ?? data['order_details']['order_id'])
+          : null,
+      data['orderDetails'] is Map
+          ? (data['orderDetails']['id'] ??
+              data['orderDetails']['order_id'] ??
+              data['orderDetails']['orderId'])
+          : null,
+      data['order_id'],
+      data['orderId'],
+      data['order'],
+      data['order_code'],
+      data['orderCode'],
+      data['order_reference'],
+      data['orderReference'],
+      data['payable_id'],
+      data['payableId'],
+      data['id'],
+    ]);
+  }
+
+  static String? _extractTransactionId(Map<String, dynamic> data) {
+    return _firstNonEmptyValue([
+      data['transaction_id'],
+      data['transactionId'],
+      data['payment_transaction_id'],
+      data['paymentTransactionId'],
+      data['transaction_reference'],
+      data['transactionReference'],
+      data['payment_reference'],
+      data['paymentReference'],
+      data['gateway_reference'],
+      data['gatewayReference'],
+    ]);
+  }
+
+  static Future<_OrderResolutionResult> _resolveOrderByTransaction(
+    OrdersRepository repository,
+    String transactionId,
+  ) async {
+    List<UserOrder>? fetched;
+    String? resolvedId;
+
+    try {
+      fetched = await repository.fetchOrders(filters: <String, dynamic>{
+        'transaction_id': transactionId,
+        'payment_transaction_id': transactionId,
+        'transactionId': transactionId,
+      });
+      resolvedId = _matchOrderIdByTransaction(fetched, transactionId);
+    } catch (error, stackTrace) {
+      debugPrint('Failed to fetch orders with transaction filter: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
+
+    if (resolvedId != null) {
+      return _OrderResolutionResult(orderId: resolvedId, orders: fetched);
+    }
+
+    if (fetched != null && fetched.isNotEmpty) {
+      return _OrderResolutionResult(orderId: resolvedId, orders: fetched);
+    }
+
+    try {
+      fetched = await repository.fetchOrders();
+      resolvedId = _matchOrderIdByTransaction(fetched, transactionId);
+    } catch (error, stackTrace) {
+      debugPrint('Failed to fetch orders for transaction resolution: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
+
+    return _OrderResolutionResult(orderId: resolvedId, orders: fetched);
+  }
+
+  static String? _matchOrderIdByTransaction(
+    List<UserOrder>? orders,
+    String transactionId,
+  ) {
+    if (orders == null || orders.isEmpty) {
+      return null;
+    }
+
+    final String normalizedTarget = transactionId.trim().toLowerCase();
+
+    for (final UserOrder order in orders) {
+      if (_orderMatchesTransaction(order, normalizedTarget)) {
+        return order.id;
+      }
+    }
+
+    return null;
+  }
+
+  static bool _orderMatchesTransaction(
+    UserOrder order,
+    String normalizedTransactionId,
+  ) {
+    bool matches(dynamic value) {
+      final String? normalized = _normalizeNotificationValue(value);
+      if (normalized == null) {
+        return false;
+      }
+      return normalized.trim().toLowerCase() == normalizedTransactionId;
+    }
+
+    if (matches(order.id) ||
+        matches(order.code) ||
+        matches(order.displayLabel)) {
+      return true;
+    }
+
+    Map<String, dynamic>? raw = order.raw;
+    if (raw != null && raw.isNotEmpty) {
+      const List<String> candidateKeys = <String>[
+        'transaction_id',
+        'transactionId',
+        'payment_transaction_id',
+        'paymentTransactionId',
+        'payment_reference',
+        'paymentReference',
+        'transaction_reference',
+        'transactionReference',
+        'gateway_reference',
+        'gatewayReference',
+      ];
+
+      for (final String key in candidateKeys) {
+        if (matches(raw[key])) {
+          return true;
+        }
+      }
+
+      final dynamic payment = raw['payment'] ??
+          raw['payment_summary'] ??
+          raw['paymentSummary'] ??
+          raw['payment_transaction'] ??
+          raw['paymentTransaction'] ??
+          raw['latest_payment'] ??
+          raw['latestPayment'];
+
+      if (payment is Map<String, dynamic>) {
+        for (final String key in candidateKeys) {
+          if (matches(payment[key])) {
+            return true;
+          }
+        }
+      }
+    }
+
+    return false;
+  }
+
+  static Future<List<UserOrder>?> _safeFetchOrdersList(
+    OrdersRepository repository,
+  ) async {
+    try {
+      return await repository.fetchOrders();
+    } catch (error, stackTrace) {
+      debugPrint('Failed to refresh orders list: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      return null;
+    }
+  }
+
+  static void _scheduleNotificationsPageNavigation() {
+    final BuildContext? navigationContext =
+        Constant.navigatorKey.currentContext;
+    if (navigationContext == null) {
+      return;
+    }
+
+    Future<void>.delayed(
+      Duration.zero,
+      () {
+        HelperUtils.goToNextPage(
+          Routes.notificationPage,
+          navigationContext,
+          false,
+        );
+      },
+    );
+  }
+
   static String? extractCurrency(Map<String, dynamic> source) {
     const List<String> keys = <String>[
       'currency',
@@ -508,6 +711,91 @@ class NotificationService {
           notificationData: message,
         );
       }
+      return;
+    }
+
+    if (normalizedNotificationType == 'payment') {
+      final Map<String, dynamic> paymentData =
+          Map<String, dynamic>.from(message?.data ?? const <String, dynamic>{});
+      final bool isAuthenticated = HiveUtils.isUserAuthenticated();
+
+      if (!isAuthenticated) {
+        if (message != null) {
+          localNotification.createNotification(
+            isLocked: false,
+            notificationData: message,
+          );
+        }
+        _scheduleNotificationsPageNavigation();
+        return;
+      }
+
+      final OrdersRepository repository = const OrdersRepository();
+      String? orderId = _extractOrderId(paymentData);
+      final String? transactionId = _extractTransactionId(paymentData);
+      List<UserOrder>? refreshedOrders;
+      OrderDetails? orderDetails;
+
+      try {
+        if (orderId == null && transactionId != null) {
+          final _OrderResolutionResult resolution =
+              await _resolveOrderByTransaction(repository, transactionId);
+          orderId = resolution.orderId ?? orderId;
+          refreshedOrders = resolution.orders ?? refreshedOrders;
+        }
+
+        if (orderId != null) {
+          orderDetails = await repository.fetchOrderDetails(orderId);
+        }
+
+        refreshedOrders ??= await _safeFetchOrdersList(repository);
+      } catch (error, stackTrace) {
+        debugPrint('Failed to process payment notification: $error');
+        debugPrintStack(stackTrace: stackTrace);
+      }
+
+      if (refreshedOrders != null) {
+        _ordersListController.add(refreshedOrders);
+      }
+
+      if (orderDetails != null) {
+        _orderDetailsController.add(orderDetails);
+        final BuildContext? navigationContext =
+            context ?? Constant.navigatorKey.currentContext;
+
+        if (navigationContext != null) {
+          final String label = orderDetails.order.displayLabel;
+
+          Future<void>.delayed(Duration.zero, () {
+            Navigator.pushNamed(
+              navigationContext,
+              Routes.orderSteps,
+              arguments: <String, dynamic>{
+                'order_id': orderDetails.order.id,
+                'order_details': orderDetails,
+                'orderDetails': orderDetails,
+                if (transactionId != null) 'transaction_id': transactionId,
+              },
+            );
+            HelperUtils.showSnackBarMessage(
+              navigationContext,
+              'تم تأكيد الدفع بنجاح للطلب $label.',
+              type: MessageType.success,
+            );
+          });
+
+          return;
+        }
+      }
+
+      if (message != null) {
+        localNotification.createNotification(
+          isLocked: false,
+          notificationData: message,
+        );
+      }
+
+      _scheduleNotificationsPageNavigation();
       return;
     }
 

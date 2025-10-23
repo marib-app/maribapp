@@ -288,11 +288,17 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         }
         settingsCurrency = candidate.mergePreferNew(settingsCurrency);
       }
-      final List<BankAccount> dedupedBanks = _dedupeBanks(settings.banks);
+      final EastYemenBankConfig? eastConfigForUi =
+          (settings.eastYemenBank != null && settings.eastYemenBank!.isEnabled)
+              ? settings.eastYemenBank
+              : null;
+      final List<BankAccount> displayableBanks =
+          _filterBanksForDisplay(dedupedBanks, eastConfigForUi);
 
       setState(() {
-        _banks = dedupedBanks;
-        _eastYemenBank = settings.eastYemenBank;
+        _banks = displayableBanks;
+        _eastYemenBank = eastConfigForUi;
+
         _paymentIntentId = settings.paymentIntentId?.trim();
         _paymentTransactionId = settings.paymentTransactionId?.trim();
         _settingsCurrencyInfo = settingsCurrency;
@@ -403,9 +409,10 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         if (notes.isNotEmpty) {
           components.add('notes:${notes.hashCode}');
         }
-        if (components.isEmpty && bank.id > 0) {
-          components.add('id:${bank.id}');
-        }
+      }
+
+      if (components.isEmpty && bank.id > 0) {
+        components.add('id:${bank.id}');
       }
 
       if (components.isEmpty) {
@@ -451,6 +458,155 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     });
 
     return uniqueBanks;
+  }
+
+  List<BankAccount> _filterBanksForDisplay(
+    List<BankAccount> banks,
+    EastYemenBankConfig? eastConfig,
+  ) {
+    if (banks.isEmpty) {
+      return banks;
+    }
+
+    final List<BankAccount> filtered = <BankAccount>[];
+    final Set<String> seenDisplayKeys = <String>{};
+
+    for (final BankAccount bank in banks) {
+      if (!bank.isActive) {
+        continue;
+      }
+
+      final String normalizedName =
+          _normalizeForComparison(bank.bankName, collapseWhitespace: true);
+      final String normalizedAccountName =
+          _normalizeForComparison(bank.accountName, collapseWhitespace: true);
+      final String normalizedAccountNumber =
+          _normalizeForComparison(bank.accountNumber, removeWhitespace: true);
+      final String normalizedIban =
+          _normalizeForComparison(bank.iban, removeWhitespace: true);
+
+      final bool hasDisplayableInfo = normalizedName.isNotEmpty ||
+          normalizedAccountName.isNotEmpty ||
+          normalizedAccountNumber.isNotEmpty ||
+          normalizedIban.isNotEmpty;
+      if (!hasDisplayableInfo) {
+        continue;
+      }
+
+      if (eastConfig != null && _isDuplicateOfEastYemen(bank, eastConfig)) {
+        continue;
+      }
+
+      final String displayKey = <String>[
+        normalizedName,
+        normalizedAccountName,
+        normalizedAccountNumber,
+        normalizedIban,
+      ].join('|');
+
+      if (!seenDisplayKeys.add(displayKey)) {
+        continue;
+      }
+
+      filtered.add(bank);
+    }
+
+    return filtered;
+  }
+
+  String _normalizeForComparison(
+    String? value, {
+    bool removeWhitespace = false,
+    bool collapseWhitespace = false,
+  }) {
+    if (value == null) {
+      return '';
+    }
+    String normalized = value.trim();
+    if (normalized.isEmpty) {
+      return '';
+    }
+    if (collapseWhitespace) {
+      normalized = normalized.replaceAll(RegExp(r'\s+'), ' ');
+    }
+    if (removeWhitespace) {
+      normalized = normalized.replaceAll(RegExp(r'\s+'), '');
+    }
+    return normalized.toLowerCase();
+  }
+
+  bool _isDuplicateOfEastYemen(
+    BankAccount bank,
+    EastYemenBankConfig eastConfig,
+  ) {
+    if (!eastConfig.isEnabled) {
+      return false;
+    }
+
+    final String bankName =
+        _normalizeForComparison(bank.bankName, collapseWhitespace: true);
+    final String eastName = _normalizeForComparison(eastConfig.displayName,
+        collapseWhitespace: true);
+
+    final String bankAccountNumber =
+        _normalizeForComparison(bank.accountNumber, removeWhitespace: true);
+    final String eastAccountNumber = _normalizeForComparison(
+      eastConfig.accountNumber,
+      removeWhitespace: true,
+    );
+
+    final String bankIban =
+        _normalizeForComparison(bank.iban, removeWhitespace: true);
+    final String eastIban = _normalizeForComparison(
+      eastConfig.iban,
+      removeWhitespace: true,
+    );
+
+    final String bankAccountName =
+        _normalizeForComparison(bank.accountName, collapseWhitespace: true);
+    final String eastAccountName = _normalizeForComparison(
+      eastConfig.accountName,
+      collapseWhitespace: true,
+    );
+
+    if (bankName.isNotEmpty && eastName.isNotEmpty && bankName == eastName) {
+      return true;
+    }
+    if (bankAccountNumber.isNotEmpty &&
+        eastAccountNumber.isNotEmpty &&
+        bankAccountNumber == eastAccountNumber) {
+      return true;
+    }
+    if (bankIban.isNotEmpty && eastIban.isNotEmpty && bankIban == eastIban) {
+      return true;
+    }
+    if (bankAccountName.isNotEmpty &&
+        eastAccountName.isNotEmpty &&
+        bankAccountName == eastAccountName) {
+      return true;
+    }
+
+    return false;
+  }
+
+  String _resolveBankDisplayName(BankAccount bank) {
+    final String name = bank.bankName.trim();
+    if (name.isNotEmpty) {
+      return name;
+    }
+    final String? accountName = bank.accountName?.trim();
+    if (accountName != null && accountName.isNotEmpty) {
+      return accountName;
+    }
+    final String? accountNumber = bank.accountNumber?.trim();
+    if (accountNumber != null && accountNumber.isNotEmpty) {
+      return 'حساب رقم $accountNumber';
+    }
+    final String? iban = bank.iban?.trim();
+    if (iban != null && iban.isNotEmpty) {
+      return 'IBAN $iban';
+    }
+    return 'وسيلة دفع';
   }
 
   Future<bool> _ensurePaymentIntent() async {

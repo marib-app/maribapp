@@ -241,7 +241,7 @@ extension _BankTransferScreenUi on _BankTransferScreenState {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                            b.bankName,
+                          _resolveBankDisplayName(b),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(

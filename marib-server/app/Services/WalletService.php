@@ -12,8 +12,10 @@ use App\Models\WalletUsageLimit;
 use App\Models\WalletAccount;
 use App\Models\WalletTransaction;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 use Illuminate\Support\Facades\DB;
 use App\Services\NotificationService;
@@ -198,7 +200,10 @@ class WalletService
             $currency
         );
 
-        return [
+        $meta = $this->sanitizeMetadataForNotification($transaction->meta ?? []);
+
+        $data = [
+
             'title' => $title,
             'body' => $body,
             'type' => 'wallet',
@@ -212,9 +217,17 @@ class WalletService
                 'deeplink' => config('services.mobile.wallet_deeplink', 'eclassify://wallet'),
                 'idempotency_key' => $transaction->idempotency_key,
                 'created_at' => optional($transaction->created_at)->toIso8601String(),
-                'meta' => $transaction->meta ?? [],
             ],
         ];
+
+
+
+        if (!empty($meta)) {
+            $data['data']['meta'] = $meta;
+        }
+
+        return $data;
+
     }
 
     protected function sendWalletNotification(User $user, WalletTransaction $transaction): void
@@ -262,6 +275,51 @@ class WalletService
 
     }
 
+    /**
+     * @param array<string, mixed> $meta
+     * @return array<string, string>
+     */
+    protected function sanitizeMetadataForNotification($meta): array
+    {
+        if (!is_array($meta)) {
+            return [];
+        }
+
+        $scalarKeys = [
+            'context',
+            'order_id',
+            'manual_payment_request_id',
+            'payment_transaction_id',
+            'package_id',
+            'reference',
+            'source',
+            'category',
+        ];
+
+        $sanitized = [];
+
+        foreach ($scalarKeys as $key) {
+            $value = Arr::get($meta, $key);
+
+            if (is_scalar($value) && $value !== '') {
+                $sanitized[$key] = Str::limit((string) $value, 190, '');
+            }
+        }
+
+        $walletMeta = Arr::get($meta, 'wallet');
+
+        if (is_array($walletMeta)) {
+            foreach (['transaction_id', 'idempotency_key', 'reference'] as $walletKey) {
+                $value = $walletMeta[$walletKey] ?? null;
+
+                if (is_scalar($value) && $value !== '') {
+                    $sanitized['wallet_' . $walletKey] = Str::limit((string) $value, 190, '');
+                }
+            }
+        }
+
+        return $sanitized;
+    }
 
     /**
      * @return array<int, array{model: WalletUsageLimit, period_start: Carbon, period: string, projected: float}>

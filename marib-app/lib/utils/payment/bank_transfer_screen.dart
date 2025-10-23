@@ -7,6 +7,7 @@ import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/constant.dart';
+
 // موديلات وخدمات
 import 'package:marib/utils/payment/bank_account.dart';
 import 'package:marib/utils/payment/manual_payment_service.dart';
@@ -27,17 +28,11 @@ import 'package:marib/utils/currency_utils.dart';
 
 import 'package:marib/utils/payment/east_yemen_bank_config.dart';
 
-
-
-
 part 'bank_transfer_screen_ui.dart';
-
-
-
-
 
 class BankTransferScreen extends StatefulWidget {
   final BankTransferArgs args;
+
   const BankTransferScreen({super.key, required this.args});
 
   /// يعرض نافذة التحويل البنكي كنافذة سفلية احترافية.
@@ -93,8 +88,6 @@ class _BankTransferScreenState extends State<BankTransferScreen>
   static const String _walletTopUpPurpose =
       ManualPaymentService.walletTopUpPurpose;
 
-
-
   static const int _eastYemenPressedKey = -1000;
   static const int _walletPressedKey = -1001;
   static const List<String> _allowedReceiptExtensions = <String>[
@@ -103,7 +96,6 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     'png',
     'pdf',
   ]; // Keep in sync with PaymentController::manual MIME validation.
-
 
   // الحقول
   final _senderCtrl = TextEditingController(); // اسم المرسل
@@ -127,11 +119,11 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     )..repeat();
     _walletSummaryCubit = WalletSummaryCubit();
     _walletSummarySub = _walletSummaryCubit.stream.listen(_onWalletState);
-    _walletUpdateSub = NotificationService.walletNotifications.listen(_handleWalletUpdate);
+    _walletUpdateSub =
+        NotificationService.walletNotifications.listen(_handleWalletUpdate);
 
     _loadBanks();
     _loadWalletSummary();
-
   }
 
   @override
@@ -197,9 +189,6 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     await _walletSummaryCubit.fetchSummary(forceReload: forceReload);
   }
 
-
-
-
   String _resolvedPurpose() {
     final explicit = widget.args.purpose?.trim();
     if (explicit != null && explicit.isNotEmpty) {
@@ -211,8 +200,6 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       if (normalized.contains('order')) {
         return 'order';
       }
-
-
 
       if (normalized == 'general') {
         return 'general';
@@ -231,13 +218,11 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       return 'order';
     }
 
-
     if (packageType.isEmpty) {
       return 'general';
     }
     return 'package';
   }
-
 
   bool _isWalletTopUpPurpose(String? purpose) {
     final normalized = purpose?.trim().toLowerCase();
@@ -256,8 +241,6 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     return false;
   }
 
-
-
   Future<void> _loadBanks() async {
     setState(() => _loadingBanks = true);
     try {
@@ -266,8 +249,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
           purpose == _walletTopUpPurpose || purpose == 'wallet';
 
       final bool normalizedWalletTopUp =
-      _isWalletTopUpPurpose(widget.args.normalizedPurpose);
-
+          _isWalletTopUpPurpose(widget.args.normalizedPurpose);
 
       final String? purposeParam;
       if (purpose == 'order' || purpose == 'package') {
@@ -283,19 +265,18 @@ class _BankTransferScreenState extends State<BankTransferScreen>
           ? widget.args.packageId
           : null;
 
-
       final settings = await _service.fetchManualPaymentSettings(
         token: widget.args.token,
         purpose: purposeParam,
-
         currency: currency,
         orderId: orderIdParam,
         paymentMethod:
-        ManualPaymentService.paymentMethodForApi(_manualBankMethod),
+            ManualPaymentService.paymentMethodForApi(_manualBankMethod),
         amount: isWalletTopUp ? widget.args.amount : null,
       );
 
-      final List<CurrencyParseResult> currencyCandidates = <CurrencyParseResult>[
+      final List<CurrencyParseResult> currencyCandidates =
+          <CurrencyParseResult>[
         CurrencyUtils.parseCurrency(settings.paymentIntent),
         CurrencyUtils.parseCurrency(settings.paymentTransaction),
         CurrencyUtils.parseCurrency(settings.raw),
@@ -322,21 +303,17 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         final bool walletPurpose = isWalletTopUp || normalizedWalletTopUp;
         final bool walletOptionAllowed = walletAvailable && !walletPurpose;
 
-
         if (normalizedGateway == _eastYemenMethod && _eastYemenBank != null) {
           _selectedMethod = _eastYemenMethod;
           _selectedBankId = null;
-
         } else if (normalizedGateway == _walletMethod && walletOptionAllowed) {
-
           _selectedMethod = _walletMethod;
           _selectedBankId = null;
-
-        } else if (normalizedGateway == _manualBankMethod && _banks.isNotEmpty) {
+        } else if (normalizedGateway == _manualBankMethod &&
+            _banks.isNotEmpty) {
           _selectedMethod = _manualBankMethod;
           _selectedBankId = _banks.first.id;
         } else if (_eastYemenBank != null) {
-
           _selectedMethod = _eastYemenMethod;
           _selectedBankId = null;
         } else if (walletOptionAllowed) {
@@ -352,11 +329,9 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         if (_selectedMethod == null &&
             normalizedGateway == _walletMethod &&
             walletOptionAllowed) {
-
           _selectedMethod = _walletMethod;
           _selectedBankId = null;
         }
-
 
         if (!walletOptionAllowed && _selectedMethod == _walletMethod) {
           if (_eastYemenBank != null) {
@@ -380,17 +355,25 @@ class _BankTransferScreenState extends State<BankTransferScreen>
   }
 
   List<BankAccount> _dedupeBanks(List<BankAccount> banks) {
-    if (banks.length < 2) {
+    if (banks.isEmpty) {
       return banks;
     }
 
-    String _normalize(String? value, {bool removeWhitespace = false}) {
+    String _normalize(
+      String? value, {
+      bool removeWhitespace = false,
+      bool collapseWhitespace = false,
+    }) {
       if (value == null) return '';
       final trimmed = value.trim();
       if (trimmed.isEmpty) return '';
-      final normalized = removeWhitespace
-          ? trimmed.replaceAll(RegExp(r'\s+'), '')
-          : trimmed;
+      String normalized = trimmed;
+      if (collapseWhitespace) {
+        normalized = normalized.replaceAll(RegExp(r'\s+'), ' ');
+      }
+      if (removeWhitespace) {
+        normalized = normalized.replaceAll(RegExp(r'\s+'), '');
+      }
       return normalized.toLowerCase();
     }
 
@@ -400,14 +383,21 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       }
 
       final buffer = StringBuffer();
-      final bankName = _normalize(bank.bankName);
-      final accountNumber = _normalize(bank.accountNumber, removeWhitespace: true);
+      final bankName = _normalize(bank.bankName, collapseWhitespace: true);
+      final accountName = _normalize(bank.accountName,
+          removeWhitespace: true, collapseWhitespace: true);
+      final accountNumber =
+          _normalize(bank.accountNumber, removeWhitespace: true);
+
       final iban = _normalize(bank.iban, removeWhitespace: true);
       final swift = _normalize(bank.swift, removeWhitespace: true);
-      final branch = _normalize(bank.branch);
+      final branch = _normalize(bank.branch, collapseWhitespace: true);
 
       if (bankName.isNotEmpty) {
         buffer.write('name:$bankName');
+      }
+      if (accountName.isNotEmpty) {
+        buffer.write('|beneficiary:$accountName');
       }
       if (iban.isNotEmpty) {
         buffer.write('|iban:$iban');
@@ -423,7 +413,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       }
 
       if (buffer.isEmpty) {
-        final notes = _normalize(bank.notes);
+        final notes = _normalize(bank.notes, collapseWhitespace: true);
         if (notes.isNotEmpty) {
           buffer.write('notes:${notes.hashCode}');
         }
@@ -439,15 +429,40 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     final seen = <String>{};
     final uniqueBanks = <BankAccount>[];
     for (final bank in banks) {
+      if (!bank.isActive) {
+        continue;
+      }
       final key = _bankIdentity(bank);
       if (seen.add(key)) {
         uniqueBanks.add(bank);
       }
     }
 
+    int orderValue(BankAccount bank) {
+      final order = bank.displayOrder;
+      if (order == null) {
+        return 1 << 20;
+      }
+      return order;
+    }
+
+    int safeCompare(String a, String b) =>
+        a.toLowerCase().compareTo(b.toLowerCase());
+
+    uniqueBanks.sort((a, b) {
+      final orderDiff = orderValue(a).compareTo(orderValue(b));
+      if (orderDiff != 0) {
+        return orderDiff;
+      }
+      final nameDiff = safeCompare(a.bankName, b.bankName);
+      if (nameDiff != 0) {
+        return nameDiff;
+      }
+      return a.id.compareTo(b.id);
+    });
+
     return uniqueBanks;
   }
-
 
   Future<bool> _ensurePaymentIntent() async {
     final currentIntent = _paymentIntentId?.trim();
@@ -467,7 +482,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         purpose == _walletTopUpPurpose || purpose == 'wallet';
 
     final bool normalizedWalletTopUp =
-    _isWalletTopUpPurpose(widget.args.normalizedPurpose);
+        _isWalletTopUpPurpose(widget.args.normalizedPurpose);
     final bool walletPurpose = isWalletTopUp || normalizedWalletTopUp;
 
     final String? purposeParam;
@@ -478,7 +493,6 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     } else {
       purposeParam = null;
     }
-
 
     final currency = widget.args.normalizedCurrency;
 
@@ -504,11 +518,9 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     }
 
     final selectedMethod = (_selectedMethod == null ||
-        (walletPurpose && _selectedMethod == _walletMethod))
+            (walletPurpose && _selectedMethod == _walletMethod))
         ? _manualBankMethod
         : _selectedMethod!;
-
-
 
     final int? orderIdParam = (!isWalletTopUp && widget.args.packageId > 0)
         ? widget.args.packageId
@@ -520,11 +532,8 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         purpose: purposeParam,
         currency: currency,
         orderId: orderIdParam,
-
-        paymentMethod:
-        ManualPaymentService.paymentMethodForApi(selectedMethod),
+        paymentMethod: ManualPaymentService.paymentMethodForApi(selectedMethod),
         amount: isWalletTopUp ? widget.args.amount : null,
-
       );
 
       final updatedIntent = settings.paymentIntentId?.trim();
@@ -556,7 +565,6 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       return false;
     }
   }
-
 
   String? get _paymentCurrencyCode {
     final List<String?> candidates = <String?>[
@@ -636,9 +644,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
 
   bool get _senderOk => _senderCtrl.text.trim().isNotEmpty;
 
-
   bool get _receiptOk => _receiptFile != null;
-
 
   bool get _usingEastYemen => _selectedMethod == _eastYemenMethod;
 
@@ -646,7 +652,8 @@ class _BankTransferScreenState extends State<BankTransferScreen>
 
   bool get _usingWallet => _selectedMethod == _walletMethod;
 
-  bool get _walletSummaryReady => _walletSummary != null && _walletError == null;
+  bool get _walletSummaryReady =>
+      _walletSummary != null && _walletError == null;
 
   bool get _walletHasEnoughBalance {
     final summary = _walletSummary;
@@ -657,9 +664,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     return summary.balance + epsilon >= widget.args.amount;
   }
 
-
   bool get _shouldShowSenderField => _usingManualBank;
-
 
   bool get _readyToSubmit {
     if (_submitting) return false;
@@ -677,7 +682,6 @@ class _BankTransferScreenState extends State<BankTransferScreen>
 
     return false;
   }
-
 
   Future<void> _submit({String? eastYemenCode}) async {
     if (_usingManualBank) {
@@ -701,8 +705,9 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       );
     }
 
-    final bool walletPurpose = _isWalletTopUpPurpose(widget.args.normalizedPurpose) ||
-        _isWalletTopUpPurpose(_resolvedPurpose());
+    final bool walletPurpose =
+        _isWalletTopUpPurpose(widget.args.normalizedPurpose) ||
+            _isWalletTopUpPurpose(_resolvedPurpose());
 
     if (_usingWallet && walletPurpose) {
       _showOverlayMessage(
@@ -711,8 +716,6 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       );
       return;
     }
-
-
 
     if (_usingWallet) {
       if (!_walletSummaryReady) {
@@ -735,10 +738,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       }
     }
 
-
     if (!_readyToSubmit) return;
-
-
 
     final ensured = await _ensurePaymentIntent();
     final resolvedIntentId = _paymentIntentId?.trim();
@@ -750,14 +750,11 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       return;
     }
 
-
-
     setState(() => _submitting = true);
     try {
       final normalizedPurpose = widget.args.normalizedPurpose.toLowerCase();
-      final bool isWalletTopUp =
-          normalizedPurpose == _walletTopUpPurpose ||
-              normalizedPurpose.contains('wallet');
+      final bool isWalletTopUp = normalizedPurpose == _walletTopUpPurpose ||
+          normalizedPurpose.contains('wallet');
 
       String? payableType;
       int? payableId;
@@ -786,9 +783,8 @@ class _BankTransferScreenState extends State<BankTransferScreen>
           }
       }
 
-
       final int? resolvedId =
-      widget.args.packageId > 0 ? widget.args.packageId : null;
+          widget.args.packageId > 0 ? widget.args.packageId : null;
 
       String? purposeForApi;
       int? orderIdForApi;
@@ -799,10 +795,8 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       } else if (normalizedPurpose == 'package') {
         purposeForApi = 'package';
         packageIdForApi = resolvedId;
-
       } else if (isWalletTopUp) {
         purposeForApi = ManualPaymentService.walletTopUpPurpose;
-
       } else if (resolvedId != null) {
         purposeForApi = 'package';
         packageIdForApi = resolvedId;
@@ -822,7 +816,8 @@ class _BankTransferScreenState extends State<BankTransferScreen>
 
       final userNoteSections = <String>[];
       if (notesText.isNotEmpty) userNoteSections.add(notesText);
-      if (senderName.isNotEmpty) userNoteSections.add('اسم المرسل: $senderName');
+      if (senderName.isNotEmpty)
+        userNoteSections.add('اسم المرسل: $senderName');
       final userNote = userNoteSections.join('\n');
 
       final contextMetadata = widget.args.toContext()
@@ -836,15 +831,14 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         if (senderName.isNotEmpty) 'sender_name': senderName,
         if (contextMetadata.isNotEmpty) 'context': contextMetadata,
       }..removeWhere((k, v) {
-        if (v == null) return true;
-        if (v is String) return v.trim().isEmpty;
-        if (v is Map) return v.isEmpty;
-        return false;
-      });
+          if (v == null) return true;
+          if (v is String) return v.trim().isEmpty;
+          if (v is Map) return v.isEmpty;
+          return false;
+        });
 
       final intentId = resolvedIntentId;
       final transactionId = _paymentTransactionId?.trim();
-
 
       final ManualPaymentSubmissionResult result;
       if (_usingEastYemen) {
@@ -860,12 +854,12 @@ class _BankTransferScreenState extends State<BankTransferScreen>
           packageId: packageIdForApi,
           amount: widget.args.amount,
           currency: submissionCurrency,
-          reference:
-          (trimmedCode != null && trimmedCode.isNotEmpty) ? trimmedCode : null,
+          reference: (trimmedCode != null && trimmedCode.isNotEmpty)
+              ? trimmedCode
+              : null,
           userNote: userNote.isEmpty ? null : userNote,
           metadata: metadata.isEmpty ? null : metadata,
         );
-
       } else if (_usingWallet) {
         result = await _service.submitWalletPayment(
           token: widget.args.token,
@@ -881,7 +875,6 @@ class _BankTransferScreenState extends State<BankTransferScreen>
           userNote: userNote.isEmpty ? null : userNote,
           metadata: metadata.isEmpty ? null : metadata,
         );
-
       } else {
         result = await _service.submitManualPayment(
           token: widget.args.token,
@@ -904,11 +897,11 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       }
 
       final updatedIntentId = (result.paymentIntentId != null &&
-          result.paymentIntentId!.trim().isNotEmpty)
+              result.paymentIntentId!.trim().isNotEmpty)
           ? result.paymentIntentId!.trim()
           : null;
       final updatedTransactionId = (result.paymentTransactionId != null &&
-          result.paymentTransactionId!.trim().isNotEmpty)
+              result.paymentTransactionId!.trim().isNotEmpty)
           ? result.paymentTransactionId!.trim()
           : null;
 
@@ -932,7 +925,6 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         }
       }
 
-
       if (!mounted) return;
 
       final bool ok = result.success == true;
@@ -943,9 +935,8 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         return _usingEastYemen
             ? 'تم إكمال الدفع عبر بوابة بنك الشرق بنجاح.'
             : _usingWallet
-            ? 'تم خصم المبلغ من المحفظة وإكمال العملية بنجاح.'
-            : 'تم إرسال طلب الدفع، يتم تحويلك لمتابعة الطلب';
-
+                ? 'تم خصم المبلغ من المحفظة وإكمال العملية بنجاح.'
+                : 'تم إرسال طلب الدفع، يتم تحويلك لمتابعة الطلب';
       })();
 
       final String errorMessage = (() {
@@ -954,10 +945,8 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         return _usingEastYemen
             ? 'تعذّر إكمال الدفع عبر بوابة بنك الشرق. حاول مرة أخرى.'
             : _usingWallet
-            ? 'تعذّر خصم المبلغ من المحفظة. حاول مرة أخرى.'
-            : 'تعذّر إرسال طلب الدفع. حاول مرة أخرى.';
-
-
+                ? 'تعذّر خصم المبلغ من المحفظة. حاول مرة أخرى.'
+                : 'تعذّر إرسال طلب الدفع. حاول مرة أخرى.';
       })();
 
       final String? displayReference = (() {
@@ -979,12 +968,10 @@ class _BankTransferScreenState extends State<BankTransferScreen>
           ? '$successMessage\nرقم العملية: $displayReference'
           : successMessage;
 
-
       _showOverlayMessage(ok ? successMessageWithReference : errorMessage,
           type: ok ? MessageType.success : MessageType.error);
 
       if (ok) {
-
         if (_usingWallet) {
           _loadWalletSummary(forceReload: true);
         }
@@ -992,8 +979,6 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         Future.microtask(() {
           if (!mounted) return;
           _closeWithResult(result);
-
-
         });
       }
     } catch (e) {
@@ -1003,8 +988,6 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       if (mounted) setState(() => _submitting = false);
     }
   }
-
-
 
   Future<void> _handleConfirmPressed() async {
     if (_submitting) return;
@@ -1045,102 +1028,103 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         final padding = MediaQuery.of(sheetContext).viewInsets.bottom + 24;
 
         return SafeArea(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final content = Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'تعليمات الدفع عبر بوابة بنك الشرق الإلكترونية',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: onSurface,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: 'إغلاق',
-                      onPressed: () => Navigator.of(sheetContext).pop(),
-                      icon: Icon(Icons.close_rounded,
-                          color: onSurface.withOpacity(.65)),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'ملاحظة: لإتمام الدفع عبر هذه البوابة، يجب أن يكون لديك حساب مفعل لدى بنك الشرق.',
-                  style: TextStyle(
-                    height: 1.5,
-                    color: onSurface.withOpacity(.8),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                ...[
-                  'افتح تطبيق بنك الشرق اليمني على هاتفك.',
-                  'من الواجهة الرئيسية، اختر أيقونة التسوق.',
-                  'من قائمة التطبيقات، اختر "مارب بين يديك".',
-                  'سيظهر لك كود الشراء الخاص بعملية الدفع.',
-                  'انسخ الكود وأدخله في تطبيق مارب بين يديك لتأكيد العملية.',
-                  'اضغط على زر تأكيد لإكمال عملية الدفع.',
-                ].map(
-                      (step) => Padding(
-                    padding: const EdgeInsetsDirectional.only(bottom: 8),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('• '),
-                        Expanded(
-                          child: Text(
-                            step,
-                            style: TextStyle(
-                              height: 1.5,
-                              color: onSurface.withOpacity(.9),
-                            ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final content = Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'تعليمات الدفع عبر بوابة بنك الشرق الإلكترونية',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: onSurface,
                           ),
                         ),
-                      ],
+                      ),
+                      IconButton(
+                        tooltip: 'إغلاق',
+                        onPressed: () => Navigator.of(sheetContext).pop(),
+                        icon: Icon(Icons.close_rounded,
+                            color: onSurface.withOpacity(.65)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'ملاحظة: لإتمام الدفع عبر هذه البوابة، يجب أن يكون لديك حساب مفعل لدى بنك الشرق.',
+                    style: TextStyle(
+                      height: 1.5,
+                      color: onSurface.withOpacity(.8),
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'تنويه: بمجرد إدخال كود الشراء وتأكيد العملية، سيتم خصم المبلغ مباشرة من حسابك في بنك الشرق، كما سيتم تنفيذ عملية الشراء تلقائياً.',
-                  style: TextStyle(
-                    height: 1.5,
-                    color: onSurface.withOpacity(.85),
+                  const SizedBox(height: 16),
+                  ...[
+                    'افتح تطبيق بنك الشرق اليمني على هاتفك.',
+                    'من الواجهة الرئيسية، اختر أيقونة التسوق.',
+                    'من قائمة التطبيقات، اختر "مارب بين يديك".',
+                    'سيظهر لك كود الشراء الخاص بعملية الدفع.',
+                    'انسخ الكود وأدخله في تطبيق مارب بين يديك لتأكيد العملية.',
+                    'اضغط على زر تأكيد لإكمال عملية الدفع.',
+                  ].map(
+                    (step) => Padding(
+                      padding: const EdgeInsetsDirectional.only(bottom: 8),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('• '),
+                          Expanded(
+                            child: Text(
+                              step,
+                              style: TextStyle(
+                                height: 1.5,
+                                color: onSurface.withOpacity(.9),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.of(sheetContext).pop(),
-                    child: const Text('فهمت التعليمات'),
+                  const SizedBox(height: 16),
+                  Text(
+                    'تنويه: بمجرد إدخال كود الشراء وتأكيد العملية، سيتم خصم المبلغ مباشرة من حسابك في بنك الشرق، كما سيتم تنفيذ عملية الشراء تلقائياً.',
+                    style: TextStyle(
+                      height: 1.5,
+                      color: onSurface.withOpacity(.85),
+                    ),
                   ),
-                ),
-              ],
-                );
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.of(sheetContext).pop(),
+                      child: const Text('فهمت التعليمات'),
+                    ),
+                  ),
+                ],
+              );
 
-                return SingleChildScrollView(
-                  padding: EdgeInsets.fromLTRB(20, 16, 20, padding),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                    child: content,
-                  ),
-                );
-              },
+              return SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(20, 16, 20, padding),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: content,
+                ),
+              );
+            },
           ),
         );
       },
     );
   }
 
-  void _showOverlayMessage(String message, {MessageType type = MessageType.success}) {
+  void _showOverlayMessage(String message,
+      {MessageType type = MessageType.success}) {
     void show(BuildContext c) {
       final m = ScaffoldMessenger.maybeOf(c);
       if (m != null) {
@@ -1162,13 +1146,12 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       Constant.navigatorKey.currentContext,
     ];
     for (final c in ctxs) {
-      if (c != null) { show(c); return; }
+      if (c != null) {
+        show(c);
+        return;
+      }
     }
   }
-
-
-
-
 
   Future<void> _copyValueToClipboard(String value,
       {required String label}) async {
@@ -1181,12 +1164,10 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     HelperUtils.showSnackBarMessage(
       overlayContext,
       'تم نسخ $label',
-    //  type: MessageType.info,
+      //  type: MessageType.info,
       messageDuration: 2,
     );
   }
-
-
 
   String _deviceLabel() {
     if (Platform.isAndroid) return 'android';
@@ -1199,7 +1180,6 @@ class _BankTransferScreenState extends State<BankTransferScreen>
   }
 
   String _sourceLabel() => _deviceLabel();
-
 
   @override
   Future<bool> _onWillPop() async {
@@ -1226,7 +1206,8 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       barrierDismissible: false,
       builder: (dialogContext) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Text(
             'تأكيد الإغلاق',
             style: TextStyle(
@@ -1277,9 +1258,6 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     );
   }
 }
-
-
-
 
 /* ========================= شيمر خفيف بدون باكج ========================= */
 

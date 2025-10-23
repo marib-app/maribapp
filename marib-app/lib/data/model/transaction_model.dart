@@ -26,21 +26,20 @@ class TransactionModel {
     id = json['id'];
     userId = json['user_id'];
     amount = _parseAmount(json['amount'] ?? json['amount_value']) ?? 0.0;
-    paymentGateway =
-        json['payment_gateway'] ?? json['payment_method'] ?? json['gateway'];
+    paymentGateway = _resolvePaymentGateway(json);
+
     orderId = json['order_id'] ??
         json['transaction_reference'] ??
         json['reference'] ??
         json['payment_reference'];
     paymentId = (json['payment_id'] ??
-        json['payment_transaction_id'] ??
-        json['transaction_id'] ??
-        json['transaction_identifier'] ??
-        json['identifier'] ??
-        json['manual_payment_id'] ??
-        json['id'])
+            json['payment_transaction_id'] ??
+            json['transaction_id'] ??
+            json['transaction_identifier'] ??
+            json['identifier'] ??
+            json['manual_payment_id'] ??
+            json['id'])
         ?.toString();
-
 
     paymentSignature = json['payment_signature'];
     paymentStatus =
@@ -50,6 +49,63 @@ class TransactionModel {
     updatedAt = json['updated_at'];
   }
 
+  String _resolvePaymentGateway(Map<String, dynamic> json) {
+    const List<String> labelKeys = <String>[
+      'payment_gateway_label',
+      'gateway_label',
+      'channel_label',
+      'bank_label',
+      'manual_bank_name',
+    ];
+
+    for (final String key in labelKeys) {
+      final String? label = _cleanLabel(json[key]);
+      if (label != null) {
+        return label;
+      }
+    }
+
+    final dynamic rawCandidate =
+        json['payment_gateway'] ?? json['payment_method'] ?? json['gateway'];
+
+    final String? formatted = _formatGatewayName(rawCandidate);
+
+    return formatted ?? '—';
+  }
+
+  String? _cleanLabel(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+    final String label = value.toString().trim();
+    if (label.isEmpty) {
+      return null;
+    }
+    return label;
+  }
+
+  String? _formatGatewayName(dynamic value) {
+    final String? raw = _cleanLabel(value);
+    if (raw == null) {
+      return null;
+    }
+
+    final String lower = raw.toLowerCase();
+    if (lower.contains('wallet')) {
+      return 'المحفظة';
+    }
+
+    final String cleaned = raw
+        .replaceAll(RegExp(r'[_\-]+'), ' ')
+        .replaceAll(RegExp(r'\s{2,}'), ' ')
+        .trim();
+
+    if (cleaned.isNotEmpty) {
+      return cleaned;
+    }
+
+    return raw;
+  }
 
   double? _parseAmount(dynamic value) {
     if (value == null) {
@@ -65,6 +121,10 @@ class TransactionModel {
     return null;
   }
 
+  String get paymentGatewayDisplay {
+    final String? label = _cleanLabel(paymentGateway);
+    return label ?? '—';
+  }
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = new Map<String, dynamic>();

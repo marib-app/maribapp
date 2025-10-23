@@ -103,6 +103,14 @@ class NotificationService {
       _messageStatusController =
       StreamController<ChatMessageStatusUpdate>.broadcast();
 
+
+  static const Set<String> _walletNotificationTypes = <String>{
+    'wallet',
+    'wallet_withdrawal',
+    'wallet_deposit',
+  };
+
+
   static Stream<ParticipantStatus?> get participantStatusStream =>
       _participantStatusController.stream;
 
@@ -607,6 +615,10 @@ class NotificationService {
     final String normalizedNotificationType = rawNotificationType.toLowerCase();
     final String normalizedEventType = rawEventType.toLowerCase();
     final String normalizedActionType = rawActionType.toLowerCase();
+
+    final Map<String, dynamic> notificationData =
+    Map<String, dynamic>.from(message?.data ?? const <String, dynamic>{});
+
     const Set<String> presenceEvents = {'UserTyping', 'UserPresenceUpdated'};
     const Set<String> messageStatusEvents = {
       'MessageDelivered',
@@ -634,83 +646,28 @@ class NotificationService {
     print("@notificaiton data is ${message?.data}****$rawNotificationType");
 
     if (isPresenceEvent) {
-      final Map<String, dynamic> data = Map<String, dynamic>.from(
-        message?.data ?? const <String, dynamic>{},
-      );
-      _handlePresenceNotification(data);
+      _handlePresenceNotification(notificationData);
+
       return;
     }
 
     if (isMessageStatusEvent) {
-      final Map<String, dynamic> data = Map<String, dynamic>.from(
-        message?.data ?? const <String, dynamic>{},
-      );
-      _handleMessageStatusNotification(data);
+      _handleMessageStatusNotification(notificationData);
+
       return;
     }
 
-    if (normalizedNotificationType == 'wallet') {
-      final ctx = context ?? Constant.navigatorKey.currentContext;
-      final summaryCubit =
-          ctx != null ? _maybeReadCubit<WalletSummaryCubit>(ctx) : null;
-      final transactionsCubit =
-          ctx != null ? _maybeReadCubit<WalletTransactionsCubit>(ctx) : null;
-
-      final withdrawalsCubit =
-          ctx != null ? _maybeReadCubit<WalletWithdrawalsCubit>(ctx) : null;
-      final manualPaymentsCubit =
-          ctx != null ? _maybeReadCubit<ManualPaymentRequestsCubit>(ctx) : null;
-      final transfersCubit =
-          ctx != null ? _maybeReadCubit<WalletTransfersCubit>(ctx) : null;
-
-      final idempotencyKey = message?.data['idempotency_key']?.toString();
-      final deeplink = message?.data['deeplink']?.toString();
-
-      final List<Future<void>> futures = [];
-      if (summaryCubit != null) {
-        futures.add(summaryCubit.refresh());
-      }
-
-      Future<void>? transactionsFuture;
-
-      if (transactionsCubit != null) {
-        transactionsFuture = transactionsCubit.refresh();
-        futures.add(transactionsFuture);
-      }
-
-      if (withdrawalsCubit != null) {
-        futures.add(withdrawalsCubit.refresh(includeOptions: false));
-      }
-
-      if (manualPaymentsCubit != null) {
-        futures.add(manualPaymentsCubit.refresh());
-      }
-
-      transfersCubit?.refresh();
-
-      if (futures.isNotEmpty) {
-        try {
-          await Future.wait(futures);
-        } catch (_) {}
-      }
-
-      if (transactionsFuture != null && idempotencyKey != null) {
-        try {
-          transactionsCubit?.markTransactionNotified(
-            idempotencyKey,
-            deeplink: deeplink,
-          );
-        } catch (_) {}
-      }
-
-      _walletNotificationController.add(idempotencyKey ?? '');
-
-      if (message != null) {
-        localNotification.createNotification(
-          isLocked: false,
-          notificationData: message,
-        );
-      }
+    if (_isWalletNotification(
+      notificationType: normalizedNotificationType,
+      eventType: normalizedEventType,
+      actionType: normalizedActionType,
+      data: notificationData,
+    )) {
+      await _handleWalletNotification(
+        data: notificationData,
+        message: message,
+        context: context,
+      );
       return;
     }
 
@@ -961,6 +918,118 @@ class NotificationService {
         notificationData: message!,
       );
     }
+  }
+
+
+  static Future<void> _handleWalletNotification({
+    required Map<String, dynamic> data,
+    RemoteMessage? message,
+    BuildContext? context,
+  }) async {
+    final BuildContext? ctx = context ?? Constant.navigatorKey.currentContext;
+    final WalletSummaryCubit? summaryCubit =
+    ctx != null ? _maybeReadCubit<WalletSummaryCubit>(ctx) : null;
+    final WalletTransactionsCubit? transactionsCubit =
+    ctx != null ? _maybeReadCubit<WalletTransactionsCubit>(ctx) : null;
+    final WalletWithdrawalsCubit? withdrawalsCubit =
+    ctx != null ? _maybeReadCubit<WalletWithdrawalsCubit>(ctx) : null;
+    final ManualPaymentRequestsCubit? manualPaymentsCubit =
+    ctx != null ? _maybeReadCubit<ManualPaymentRequestsCubit>(ctx) : null;
+    final WalletTransfersCubit? transfersCubit =
+    ctx != null ? _maybeReadCubit<WalletTransfersCubit>(ctx) : null;
+
+    final String? idempotencyKey = data['idempotency_key']?.toString();
+    final String? deeplink = data['deeplink']?.toString();
+
+    final List<Future<void>> futures = <Future<void>>[];
+    if (summaryCubit != null) {
+      futures.add(summaryCubit.refresh());
+    }
+
+    Future<void>? transactionsFuture;
+
+    if (transactionsCubit != null) {
+      transactionsFuture = transactionsCubit.refresh();
+      futures.add(transactionsFuture);
+    }
+
+    if (withdrawalsCubit != null) {
+      futures.add(withdrawalsCubit.refresh(includeOptions: false));
+    }
+
+    if (manualPaymentsCubit != null) {
+      futures.add(manualPaymentsCubit.refresh());
+    }
+
+    transfersCubit?.refresh();
+
+    if (futures.isNotEmpty) {
+      try {
+        await Future.wait(futures);
+      } catch (_) {}
+    }
+
+    if (transactionsFuture != null && idempotencyKey != null) {
+      try {
+        transactionsCubit?.markTransactionNotified(
+          idempotencyKey,
+          deeplink: deeplink,
+        );
+      } catch (_) {}
+    }
+
+    _walletNotificationController.add(idempotencyKey ?? '');
+
+    if (message != null) {
+      localNotification.createNotification(
+        isLocked: false,
+        notificationData: message,
+      );
+    }
+  }
+
+  static bool _isWalletNotification({
+    required String notificationType,
+    required String eventType,
+    required String actionType,
+    required Map<String, dynamic> data,
+  }) {
+    final Iterable<String> directCandidates = <String>[
+      notificationType,
+      eventType,
+      actionType,
+    ].where((candidate) => candidate.isNotEmpty);
+
+    for (final String candidate in directCandidates) {
+      if (_walletNotificationTypes.contains(candidate)) {
+        return true;
+      }
+    }
+
+    if (data.isEmpty) {
+      return false;
+    }
+
+    final String? alias = _detectPayableAlias(data);
+    if (alias != null && _walletNotificationTypes.contains(alias)) {
+      return true;
+    }
+
+    final String? fallbackType = _firstNonEmptyValue(<dynamic>[
+      data['type'],
+      data['notification_type'],
+      data['notificationType'],
+      data['event'],
+      data['action'],
+      data['category'],
+    ]);
+
+    if (fallbackType != null &&
+        _walletNotificationTypes.contains(fallbackType.toLowerCase())) {
+      return true;
+    }
+
+    return false;
   }
 
   static void handleRealtimePresenceEvent(Map<String, dynamic> data) {

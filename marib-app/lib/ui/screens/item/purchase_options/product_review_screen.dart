@@ -80,7 +80,7 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
   bool _publishing = false;
 
   final ItemPurchaseOptionsRepository _optionsRepository =
-  ItemPurchaseOptionsRepository();
+      ItemPurchaseOptionsRepository();
   final ItemRepository _itemRepository = ItemRepository();
 
   @override
@@ -125,7 +125,8 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
     });
 
     try {
-      final ItemPurchaseOptions options = await _optionsRepository.fetch(itemId);
+      final ItemPurchaseOptions options =
+          await _optionsRepository.fetch(itemId);
       if (!mounted) {
         return;
       }
@@ -234,7 +235,7 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
       Navigator.pushNamedAndRemoveUntil(
         context,
         Routes.adDetailsScreen,
-            (Route<dynamic> route) => route.isFirst,
+        (Route<dynamic> route) => route.isFirst,
         arguments: <String, dynamic>{'model': _item},
       );
     } catch (error) {
@@ -267,7 +268,7 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
   Future<ItemModel?> _reloadItem(int itemId) async {
     try {
       final DataOutput<ItemModel> response =
-      await _itemRepository.fetchItemFromItemId(itemId);
+          await _itemRepository.fetchItemFromItemId(itemId);
       if (response.modelList.isNotEmpty) {
         return response.modelList.first;
       }
@@ -382,7 +383,8 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
           children: [
             Expanded(
               child: OutlinedButton(
-                onPressed: _publishing ? null : () => Navigator.of(context).pop(),
+                onPressed:
+                    _publishing ? null : () => Navigator.of(context).pop(),
                 style: OutlinedButton.styleFrom(
                   side: BorderSide(color: context.color.borderColor),
                   padding: const EdgeInsets.symmetric(vertical: 14),
@@ -420,7 +422,8 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
 
     if (options.deliverySize != null) {
       rows.add(
-        _SummaryRow('وزن الشحن (كجم)', _formatDeliverySize(options.deliverySize!)),
+        _SummaryRow(
+            'وزن الشحن (كجم)', _formatDeliverySize(options.deliverySize!)),
       );
     }
 
@@ -430,9 +433,9 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: rows
             .map((_SummaryRow row) => Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          child: _buildKeyValueRow(theme, row.label, row.value),
-        ))
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: _buildKeyValueRow(theme, row.label, row.value),
+                ))
             .toList(growable: false),
       ),
     );
@@ -453,9 +456,9 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
       child: Column(
         children: attributes
             .map((ItemPurchaseAttributeOption attribute) => Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: _buildAttributeTile(attribute),
-        ))
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _buildAttributeTile(attribute),
+                ))
             .toList(),
       ),
     );
@@ -475,13 +478,13 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
 
     final List<Widget> metadata = chips.isNotEmpty
         ? [
-      Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: chips,
-      ),
-      const SizedBox(height: 12),
-    ]
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: chips,
+            ),
+            const SizedBox(height: 12),
+          ]
         : <Widget>[];
 
     final bool isColorAttribute = attribute.colorEntries.isNotEmpty ||
@@ -491,8 +494,8 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
     if (isColorAttribute) {
       final List<CustomFieldColorEntry> entries = attribute.colorEntries.isEmpty
           ? attribute.allowedValues
-          .map((String value) => CustomFieldColorEntry(code: value))
-          .toList(growable: false)
+              .map((String value) => CustomFieldColorEntry(code: value))
+              .toList(growable: false)
           : attribute.colorEntries;
 
       if (entries.isEmpty) {
@@ -508,8 +511,8 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
       final List<String> values = attribute.values.isNotEmpty
           ? attribute.values
           : (attribute.allowedValues.isNotEmpty
-          ? attribute.allowedValues
-          : attribute.selectedValues);
+              ? attribute.allowedValues
+              : attribute.selectedValues);
 
       if (values.isEmpty) {
         valuesWidget = const _EmptyState('لم يتم تحديد خيارات لهذه السمة.');
@@ -520,10 +523,10 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
           children: values
               .map(
                 (String value) => Chip(
-              label: Text(value, style: theme.textTheme.bodyMedium),
-              backgroundColor: palette.secondaryColor.withOpacity(0.7),
-            ),
-          )
+                  label: Text(value, style: theme.textTheme.bodyMedium),
+                  backgroundColor: palette.secondaryColor.withOpacity(0.7),
+                ),
+              )
               .toList(),
         );
       }
@@ -570,7 +573,8 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
     }
 
     final List<ItemVariantStockOption> variants = variantStocks
-        .where((ItemVariantStockOption element) => element.variantKey.isNotEmpty)
+        .where(
+            (ItemVariantStockOption element) => element.variantKey.isNotEmpty)
         .toList(growable: false);
 
     final List<Widget> children = <Widget>[];
@@ -632,10 +636,11 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
 
   Widget _buildVariantTile(ItemVariantStockOption option) {
     final ThemeData theme = Theme.of(context);
-    final Map<String, String> attributes = VariantKeyCodec.decode(option.variantKey);
+    final Map<String, String> attributes =
+        VariantKeyCodec.decode(option.variantKey);
     final String label = attributes.entries
         .map((MapEntry<String, String> entry) =>
-    entry.value.isEmpty ? entry.key : '${entry.key}: ${entry.value}')
+            entry.value.isEmpty ? entry.key : '${entry.key}: ${entry.value}')
         .join(' | ');
 
     return Container(
@@ -682,50 +687,50 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
 
   Widget _buildDiscountSection(ItemPurchaseOptions options) {
     final ItemDiscount? discount = options.discount;
-    final bool hasDiscount = discount != null &&
-        ((discount.value ?? 0) > 0 || discount.isActive);
+    final bool hasDiscount =
+        discount != null && ((discount.value ?? 0) > 0 || discount.isActive);
 
     return _SectionCard(
       title: 'الخصومات',
       child: hasDiscount
           ? Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildKeyValueRow(
-            Theme.of(context),
-            'نوع الخصم',
-            discount!.type == 'fixed' ? 'قيمة ثابتة' : 'نسبة مئوية',
-          ),
-          const SizedBox(height: 8),
-          _buildKeyValueRow(
-            Theme.of(context),
-            'قيمة الخصم',
-            discount.type == 'fixed'
-                ? _formatPrice(discount.value ?? 0)
-                : '${NumberFormat('#,##0.##', 'ar').format(discount.value ?? 0)}%',
-          ),
-          if (discount.start != null || discount.end != null) ...[
-            const SizedBox(height: 8),
-            _buildKeyValueRow(
-              Theme.of(context),
-              'بداية الخصم',
-              _formatDate(discount.start) ?? 'غير محدد',
-            ),
-            const SizedBox(height: 8),
-            _buildKeyValueRow(
-              Theme.of(context),
-              'نهاية الخصم',
-              _formatDate(discount.end) ?? 'غير محدد',
-            ),
-          ],
-          const SizedBox(height: 12),
-          _buildKeyValueRow(
-            Theme.of(context),
-            'السعر بعد الخصم',
-            _formatPrice(options.finalPrice),
-          ),
-        ],
-      )
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildKeyValueRow(
+                  Theme.of(context),
+                  'نوع الخصم',
+                  discount!.type == 'fixed' ? 'قيمة ثابتة' : 'نسبة مئوية',
+                ),
+                const SizedBox(height: 8),
+                _buildKeyValueRow(
+                  Theme.of(context),
+                  'قيمة الخصم',
+                  discount.type == 'fixed'
+                      ? _formatPrice(discount.value ?? 0)
+                      : '${NumberFormat('#,##0.##', 'ar').format(discount.value ?? 0)}%',
+                ),
+                if (discount.start != null || discount.end != null) ...[
+                  const SizedBox(height: 8),
+                  _buildKeyValueRow(
+                    Theme.of(context),
+                    'بداية الخصم',
+                    _formatDate(discount.start) ?? 'غير محدد',
+                  ),
+                  const SizedBox(height: 8),
+                  _buildKeyValueRow(
+                    Theme.of(context),
+                    'نهاية الخصم',
+                    _formatDate(discount.end) ?? 'غير محدد',
+                  ),
+                ],
+                const SizedBox(height: 12),
+                _buildKeyValueRow(
+                  Theme.of(context),
+                  'السعر بعد الخصم',
+                  _formatPrice(options.finalPrice),
+                ),
+              ],
+            )
           : const _EmptyState('لم يتم تفعيل أي خصومات حالياً.'),
     );
   }
@@ -761,8 +766,8 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
       label: Text(
         label,
         style: Theme.of(context).textTheme.labelLarge?.copyWith(
-          color: context.color.textAutoAdapt(background),
-        ),
+              color: context.color.textAutoAdapt(background),
+            ),
       ),
       backgroundColor: background,
     );

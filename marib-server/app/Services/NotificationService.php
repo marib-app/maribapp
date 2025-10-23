@@ -177,6 +177,15 @@ class NotificationService {
                 'click_action' => $sanitizedBodyFields['click_action'] ?? $customBodyFields['click_action'] ?? null,
             ];
 
+            $ttl = config('services.fcm.ttl', '3600s');
+            if (!is_string($ttl) || !preg_match('/^\d+s$/', $ttl)) {
+                \Log::warning('NotificationService: Invalid TTL configuration detected, falling back to default.', [
+                    'configured_ttl' => $ttl,
+                ]);
+                $ttl = '3600s';
+            }
+
+
             $dataWithTitle = [
                 ...$sanitizedBodyFields,
                 "title" => $title,
@@ -224,7 +233,7 @@ class NotificationService {
                         "notification" => $notificationPayload,
                         "android"      => [
                             "priority"       => "HIGH",
-                            "ttl"            => "0s",
+                            "ttl"            => $ttl,
                             "direct_boot_ok" => true,
                             "notification"   => [
                                 "title" => $title,

@@ -863,7 +863,7 @@ class _DeliverySizeTabState extends State<_DeliverySizeTab> {
                       const TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: <TextInputFormatter>[
                     FilteringTextInputFormatter.allow(
-                      RegExp(r'[0-9٠-٩۰-۹.,٫]'),
+                      RegExp(r'[0-9٠-٩۰-۹.,٫،]'),
                     ),
                   ],
                   maxLength: 10,

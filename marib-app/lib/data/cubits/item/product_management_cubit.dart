@@ -1033,7 +1033,9 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     )
         .replaceAll('٫', '.');
 
-    final String sanitized = asciiDigits.replaceAll(',', '.');
+    final String sanitized = asciiDigits
+        .replaceAll(',', '.')
+        .replaceAll('،', '.');
 
     final String trimmed = sanitized.trim();
 

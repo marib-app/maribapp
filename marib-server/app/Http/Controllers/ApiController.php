@@ -2811,7 +2811,7 @@ class ApiController extends Controller {
             ResponseService::validationError($validator->errors()->first());
         }
         try {
-            $sql = Category::withCount(['subcategories' => function ($q) {
+            $baseQuery = Category::withCount(['subcategories' => function ($q) {
                 $q->where('status', 1);
             }])->with('translations')->where(['status' => 1])->orderBy('sequence', 'ASC')
                 ->with(['subcategories'          => function ($query) {
@@ -2824,21 +2824,23 @@ class ApiController extends Controller {
                     }]);
                 }]);
             if (!empty($request->category_id)) {
-                $sql = $sql->where('parent_category_id', $request->category_id);
-            // } else if (!empty($request->slug)) {
-                // $parentCategory = Category::where('slug', $request->slug)->firstOrFail();
-                // $sql = $sql->where('parent_category_id', $parentCategory->id);
-            } 
-            else {
-                $sql = $sql->whereNull('parent_category_id');
+                $category = (clone $baseQuery)
+                    ->where('id', $request->category_id)
+                    ->firstOrFail();
+
+                $category->all_items_count = $category->all_items_count;
+
+                ResponseService::successResponse(null, [$category], ['self_category' => $category]);
+
+                return;
             }
 
-            $sql = $sql->paginate();
-            $sql->map(function ($category) {
+            $paginator = $baseQuery->whereNull('parent_category_id')->paginate();
+            $paginator->getCollection()->transform(function ($category) {
                 $category->all_items_count = $category->all_items_count;
                 return $category;
             });
-            ResponseService::successResponse(null, $sql, ['self_category' => $parentCategory ?? null]);
+            ResponseService::successResponse(null, $paginator, ['self_category' => null]);
         } catch (Throwable $th) {
             ResponseService::logErrorResponse($th, 'API Controller -> getCategories');
             ResponseService::errorResponse();

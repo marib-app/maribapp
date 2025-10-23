@@ -203,7 +203,32 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
     return '$formatted $currency';
   }
 
-  String? _imageOf(ItemModel ad) => widget.imageUrlResolver?.call(ad);
+  String? _imageOf(ItemModel ad) {
+    final resolver = widget.imageUrlResolver;
+    if (resolver != null) {
+      final resolved = resolver(ad);
+      if (resolved != null && resolved.isNotEmpty) {
+        return resolved;
+      }
+    }
+
+    final fallbackUrls = [
+      ad.detailImageUrl,
+      ad.image,
+      ad.thumbnailUrl,
+      ad.thumbnailFallbackUrl,
+      ad.detailImageFallbackUrl,
+    ];
+
+    for (final url in fallbackUrls) {
+      if (url != null && url.isNotEmpty) {
+        return url;
+      }
+    }
+
+    return null;
+  }
+
 
   Future<void> _applyMapStyle() async {
     if (!widget.applyAppMapStyle || _controller == null) return;

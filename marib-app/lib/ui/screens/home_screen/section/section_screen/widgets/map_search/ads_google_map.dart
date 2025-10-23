@@ -185,6 +185,15 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
     }
   }
 
+  Future<double> _currentZoomLevel() async {
+    if (_controller == null) return widget.initialCameraPosition.zoom;
+    try {
+      return await _controller!.getZoomLevel();
+    } catch (_) {
+      return widget.initialCameraPosition.zoom;
+    }
+  }
+
   bool _boundsContains(LatLngBounds b, LatLng p) {
     final sw = b.southwest;
     final ne = b.northeast;
@@ -359,6 +368,7 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
     }
 
     final selectedId = _selectedAd?.id;
+    final currentZoom = await _currentZoomLevel();
 
     for (final ad in afterViewport) {
       if (ad.latitude == null || ad.longitude == null) continue;
@@ -372,12 +382,15 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
       }
       used.add(id);
 
-      final priceLabel = _formatPrice(ad).isEmpty ? '—' : _formatPrice(ad);
-      final icon = await _markerFactory.realEstateMarker(
+      final formattedPrice = _formatPrice(ad);
+      final priceLabel = formattedPrice.isEmpty ? '—' : formattedPrice;
+      final icon = await _markerFactory.buildMarkerForAd(
         context: context,
         priceLabel: priceLabel,
-        selected: (selectedId != null && ad.id == selectedId),
+        selected: selectedId != null && ad.id == selectedId,
         brand: brand,
+        sectionLabel: _categoryLabel(ad),
+        zoomLevel: currentZoom,
       );
 
       built.add(Marker(

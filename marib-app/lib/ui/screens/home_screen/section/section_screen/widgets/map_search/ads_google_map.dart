@@ -36,13 +36,10 @@ class AdsGoogleMap extends StatefulWidget {
   // فلاتر/خيارات
   final String? activeCategory; // 'الكل' أو null
   final LatLng? userLatLng; // موقع المستخدم (للتمركز والنطاق)
-  final bool enableViewportSearch; // تفعيل "بحث في هذه المنطقة"
   final bool enableRadiusFilter; // تفعيل "نطاق البحث"
   final double initialRadiusKm; // 0 = غير مفعّل افتراضياً
-  final Function(LatLngBounds)?
-      onSearchThisArea; // (اختياري) نداء API مع bounds
+
   final Future<void> Function()? onLoadMore; // طلب صفحة إضافية
-  final VoidCallback? onViewportFilterCleared; // عند إلغاء مرشح النطاق
   final bool hasMoreAds; // هل يوجد المزيد للتحميل
   final bool isLoadingMore; // مؤشر تحميل المزيد
   final bool applyAppMapStyle; // لو عندك JSON لستايل الخريطة
@@ -60,16 +57,13 @@ class AdsGoogleMap extends StatefulWidget {
     this.markers = const {},
     this.activeCategory,
     this.userLatLng,
-    this.enableViewportSearch = true,
     this.enableRadiusFilter = true,
     this.initialRadiusKm = 0,
-    this.onSearchThisArea,
     this.applyAppMapStyle = true,
     this.priceFormatter,
     this.imageUrlResolver,
     this.onOpenAdDetails,
     this.onLoadMore,
-    this.onViewportFilterCleared,
     this.hasMoreAds = false,
     this.isLoadingMore = false,
   });
@@ -91,15 +85,12 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
   final Set<Circle> _circles = {};
 
   // فلاتر
-  bool _viewportFilterOn = false;
-  LatLngBounds? _lastViewportBounds;
+
 
   bool _radiusOn = false;
   double _radiusKm = 0;
 
-  // حالة إظهار زر "بحث في هذه المنطقة"
-  Timer? _idleTimer;
-  bool _showSearchAreaBtn = false;
+
 
   // Pin مؤقت بالضغط المطوّل
   Marker? _tempPin;
@@ -114,10 +105,8 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
 
   bool get _detailsOpen => _selectedAd != null;
 
-  bool get _horizontalStripEligible {
-    final radiusFilterActive = _radiusOn && widget.userLatLng != null;
-    return (_viewportFilterOn || radiusFilterActive) && _visibleAds.isNotEmpty;
-  }
+  bool get _horizontalStripEligible =>
+      _radiusOn && widget.userLatLng != null && _visibleAds.isNotEmpty;
 
   // ستايل الخريطة
   Brightness? _cachedBrightness;
@@ -142,11 +131,7 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
     }
   }
 
-  @override
-  void dispose() {
-    _idleTimer?.cancel();
-    super.dispose();
-  }
+
 
   // ----------------- Helpers عامة -----------------
   String? _categoryLabel(ItemModel ad) => ad.category?.name ?? ad.type;
@@ -177,13 +162,7 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
     return R * c;
   }
 
-  Future<LatLngBounds?> _getVisibleRegion() async {
-    try {
-      return await _controller?.getVisibleRegion();
-    } catch (_) {
-      return null;
-    }
-  }
+
 
   Future<double> _currentZoomLevel() async {
     if (_controller == null) return widget.initialCameraPosition.zoom;
@@ -194,13 +173,7 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
     }
   }
 
-  bool _boundsContains(LatLngBounds b, LatLng p) {
-    final sw = b.southwest;
-    final ne = b.northeast;
-    final inLat = p.latitude >= sw.latitude && p.latitude <= ne.latitude;
-    final inLng = p.longitude >= sw.longitude && p.longitude <= ne.longitude;
-    return inLat && inLng;
-  }
+
 
   String _formatPrice(ItemModel a) {
     if (widget.priceFormatter != null) return widget.priceFormatter!(a);
@@ -330,14 +303,6 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
     }
 
     // فلتر المنطقة الظاهرة على الشاشة
-    List<ItemModel> afterViewport = afterRadius;
-    if (_viewportFilterOn && _lastViewportBounds != null) {
-      final b = _lastViewportBounds!;
-      afterViewport = afterRadius.where((a) {
-        if (a.latitude == null || a.longitude == null) return false;
-        return _boundsContains(b, LatLng(a.latitude!, a.longitude!));
-      }).toList();
-    }
 
     // بناء الماركرات
     final used = <String>{};

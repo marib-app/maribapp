@@ -7,17 +7,49 @@ import 'package:flutter/material.dart';
 
 class SomethingWentWrong extends StatelessWidget {
   final FlutterErrorDetails? error;
+  final VoidCallback? onReload;
 
-  const SomethingWentWrong({super.key, this.error});
+  const SomethingWentWrong({super.key, this.error, this.onReload});
 
   @override
   Widget build(BuildContext context) {
+
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
+
     return Center(
-      child: Lottie.asset(
-        'assets/lottie/no_internet.json', // Replace with your Lottie file path
-        width: 200, // Adjust the width as needed
-        height: 200, // Adjust the height as needed
-        fit: BoxFit.fill, // Adjust the fit if necessary
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Lottie.asset(
+            'assets/lottie/no_internet.json', // Replace with your Lottie file path
+            width: 200, // Adjust the width as needed
+            height: 200, // Adjust the height as needed
+            fit: BoxFit.fill, // Adjust the fit if necessary
+          ),
+          if (onReload != null) ...[
+            const SizedBox(height: 24),
+            OutlinedButton(
+              onPressed: onReload,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: onSurface,
+                side: BorderSide(
+                  color: onSurface.withOpacity(0.3),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              child: Text(
+                'إعادة تحميل',
+              ).size(context.font.large).bold(weight: FontWeight.w600),
+            ),
+          ],
+        ],
       ),
     );
     // UiUtils.getSvg(

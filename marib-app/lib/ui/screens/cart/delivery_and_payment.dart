@@ -353,6 +353,17 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
         _activeDepartment ??= _normalizeDepartment(_cartItems.first.section);
       }
 
+      String? remoteReturnPolicyText;
+      try {
+        remoteReturnPolicyText = await _checkoutRepository.fetchReturnPolicy(
+          department: _activeDepartment,
+        );
+      } catch (_) {
+        remoteReturnPolicyText = null;
+      }
+      final String? normalizedReturnPolicyText =
+          _stringValue(remoteReturnPolicyText);
+
       _banks = _filterBanksForCurrency(
         result.banks,
         _orderCurrencyCode,
@@ -469,9 +480,14 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
           _resolvePolicyDataFromQuote(_shippingQuote);
 
       void applyQuotePolicy() {
+        if (normalizedReturnPolicyText != null) {
+          _returnPolicyText = normalizedReturnPolicyText;
+        }
+
         final String? quotePolicyText = quotePolicyData.returnPolicyText;
         if (quotePolicyText != null && quotePolicyText.trim().isNotEmpty) {
-          _returnPolicyText = quotePolicyText;
+          _returnPolicyText =
+              normalizedReturnPolicyText ?? quotePolicyText.trim();
         }
         _updateDepositConfiguration(quotePolicyData.depositInfo,
             preserveSelection: true);

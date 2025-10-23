@@ -4,6 +4,7 @@ package com.marib.app
 import android.os.Build
 import android.os.Bundle
 import android.view.Display
+import android.util.Log
 import android.view.Window
 import android.view.WindowManager
 
@@ -63,16 +64,52 @@ class MainActivity : FlutterFragmentActivity() {
     }
 
     private fun lockFrameRateForModernDevices(refreshRate: Float) {
-        val changeStrategy = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            Window.CHANGE_FRAME_RATE_ALWAYS
-        } else {
-            Window.CHANGE_FRAME_RATE_ONLY_IF_SEAMLESS
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            return
         }
 
-        window.setFrameRate(
-            refreshRate,
-            Window.FRAME_RATE_COMPATIBILITY_FIXED_SOURCE,
-            changeStrategy
-        )
+        val changeStrategyFieldName = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            "CHANGE_FRAME_RATE_ALWAYS"
+
+
+        } else {
+            "CHANGE_FRAME_RATE_ONLY_IF_SEAMLESS"
+        }
+
+        try {
+            val windowClass = Window::class.java
+            val setFrameRateMethod = windowClass.getMethod(
+                "setFrameRate",
+                Float::class.javaPrimitiveType,
+                Int::class.javaPrimitiveType,
+                Int::class.javaPrimitiveType
+            )
+
+            val frameRateCompatibility = windowClass
+                .getField("FRAME_RATE_COMPATIBILITY_FIXED_SOURCE")
+                .getInt(null)
+
+            val changeStrategy = windowClass
+                .getField(changeStrategyFieldName)
+                .getInt(null)
+
+            setFrameRateMethod.invoke(window, refreshRate, frameRateCompatibility, changeStrategy)
+        } catch (error: ReflectiveOperationException) {
+            Log.w(
+                TAG,
+                "Unable to lock frame rate via reflection on this device",
+                error
+            )
+        } catch (error: SecurityException) {
+            Log.w(
+                TAG,
+                "Security manager prevented frame rate locking",
+                error
+            )
+        }
+    }
+
+    companion object {
+        private const val TAG = "MainActivity"
     }
 }

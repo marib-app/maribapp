@@ -282,6 +282,7 @@ class CartCubit extends Cubit<CartState> {
   Future<void> refreshCheckoutDetails({bool force = false}) async {
     if (state.items.isEmpty) {
       _checkoutRefreshPending = false;
+      _checkoutRefreshInProgress = false;
       emit(
         state.copyWith(
           checkoutLoading: false,
@@ -297,44 +298,19 @@ class CartCubit extends Cubit<CartState> {
       return;
     }
 
-    if (_checkoutRefreshInProgress) {
-      if (force) {
-        _checkoutRefreshPending = true;
-      }
+    if (force) {
+      _checkoutRefreshPending = false;
+    }
+
+    if (!state.checkoutLoading) {
+
+      _checkoutRefreshInProgress = false;
       return;
     }
+    _checkoutRefreshPending = false;
+    _checkoutRefreshInProgress = false;
 
-    _checkoutRefreshInProgress = true;
-    emit(state.copyWith(checkoutLoading: true));
-
-    try {
-      final CartCheckoutDetails details = await _repository.fetchCheckoutInfo();
-      emit(
-        state.copyWith(
-          checkoutLoading: false,
-          departmentPolicy:
-          details.departmentPolicy ?? state.departmentPolicy,
-          support: details.support ?? state.support,
-          deliveryQuote: details.deliveryQuote ?? state.deliveryQuote,
-          blocking: details.blocking ?? state.blocking,
-          deliveryPaymentOptions: details.deliveryPaymentOptions ??
-              state.deliveryPaymentOptions,
-          deliveryPaymentTiming: details.deliveryPaymentTiming ??
-              state.deliveryPaymentTiming,
-          departmentNotice:
-          details.departmentNotice ?? state.departmentNotice,
-        ),
-      );
-    } catch (_) {
-      emit(state.copyWith(checkoutLoading: false));
-    } finally {
-      _checkoutRefreshInProgress = false;
-      if (_checkoutRefreshPending) {
-        _checkoutRefreshPending = false;
-        unawaited(refreshCheckoutDetails());
-      }
-    }
-
+    emit(state.copyWith(checkoutLoading: false));
   }
 
 

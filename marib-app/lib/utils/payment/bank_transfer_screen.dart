@@ -975,13 +975,8 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         return;
       }
 
-      final userNoteSections = <String>[];
-      if (notesText.isNotEmpty) userNoteSections.add(notesText);
-      if (senderName.isNotEmpty)
-        userNoteSections.add('اسم المرسل: $senderName');
-      if (transferCode.isNotEmpty)
-        userNoteSections.add('رقم الحوالة: $transferCode');
-      final userNote = userNoteSections.join('\n');
+      final userNote = notesText;
+
 
       final contextMetadata = widget.args.toContext()
         ..removeWhere((k, v) => v == null);

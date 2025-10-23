@@ -75,7 +75,13 @@ extension _ChatListScreenUi on _ChatListScreenState {
                 context.read<GetBuyerChatListCubit>().fetch();
               });
             }
-            return const NoChatFound();
+            return NoChatFound(
+              onRetry: () {
+                context.read<GetBuyerChatListCubit>().setContext(context);
+                context.read<GetBuyerChatListCubit>().fetch();
+              },
+            );
+
           }
 
           if (state is GetBuyerChatListInProgress) {
@@ -84,7 +90,13 @@ extension _ChatListScreenUi on _ChatListScreenState {
 
           if (state is GetBuyerChatListSuccess) {
             if (state.chatedUserList.isEmpty) {
-              return const NoChatFound();
+              return NoChatFound(
+                onRetry: () {
+                  context.read<GetBuyerChatListCubit>().setContext(context);
+                  context.read<GetBuyerChatListCubit>().fetch();
+                },
+              );
+
             }
 
             return Column(
@@ -193,7 +205,13 @@ extension _ChatListScreenUi on _ChatListScreenState {
                 context.read<GetSellerChatListCubit>().fetch();
               });
             }
-            return const NoChatFound();
+            return NoChatFound(
+              onRetry: () {
+                context.read<GetSellerChatListCubit>().setContext(context);
+                context.read<GetSellerChatListCubit>().fetch();
+              },
+            );
+
           }
 
           if (state is GetSellerChatListInProgress) {
@@ -202,7 +220,12 @@ extension _ChatListScreenUi on _ChatListScreenState {
 
           if (state is GetSellerChatListSuccess) {
             if (state.chatedUserList.isEmpty) {
-              return const NoChatFound();
+              return NoChatFound(
+                onRetry: () {
+                  context.read<GetSellerChatListCubit>().setContext(context);
+                  context.read<GetSellerChatListCubit>().fetch();
+                },
+              );
             }
 
             return Column(

@@ -6,9 +6,14 @@ namespace App\Console;
 use App\Services\CurrencyDataMonitor;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
+use Illuminate\Support\Facades\Cache;
 
 class Kernel extends ConsoleKernel
 {
+
+    private const CACHE_KEY_SYNC_MANUAL_TRANSFER_DETAILS_CART = 'scheduler:once:sync-manual-transfer-details-cart';
+
+
     protected $commands = [
         \App\Console\Commands\CustomAutoTranslate::class,
         \App\Console\Commands\CustomTranslateMissing::class,
@@ -54,6 +59,14 @@ class Kernel extends ConsoleKernel
             ->withoutOverlapping();
 
             
+        $schedule->command('payments:sync-manual-transfer-details --days=120 --chunk=250')
+            ->name('payments-sync-manual-transfer-details-cart-bootstrap')
+            ->withoutOverlapping()
+            ->onOneServer()
+            ->runInBackground()
+            ->when(static fn () => Cache::get(self::CACHE_KEY_SYNC_MANUAL_TRANSFER_DETAILS_CART, false) !== true)
+            ->onSuccess(static fn () => Cache::forever(self::CACHE_KEY_SYNC_MANUAL_TRANSFER_DETAILS_CART, true));
+
     }
 
     /**

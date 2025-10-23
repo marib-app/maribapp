@@ -2547,10 +2547,6 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
           'order_code': orderCode.trim(),
       };
 
-      final List<String> noteSections = <String>[];
-      if (senderName.isNotEmpty) {
-        noteSections.add('اسم المرسل: $senderName');
-      }
 
       final ManualPaymentSubmissionResult submissionResult =
           await _manualPaymentService.submitManualPayment(
@@ -2563,7 +2559,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
         amount: amount,
         currency: currency,
         reference: transferCode.isNotEmpty ? transferCode : null,
-        userNote: noteSections.isNotEmpty ? noteSections.join('\n') : null,
+            userNote: null,
         transferredAt: DateTime.now().toUtc(),
         metadata: metadata.isEmpty ? null : metadata,
         receiptImagePath: manualTransfer.receiptFile!.path,

@@ -2400,7 +2400,7 @@ class ApiController extends Controller {
             $discountSnapshot = $item->discount_snapshot;
             $featuredCount = $item->featured_items_count ?? 0;
             $favouritesCount = $item->favourites_count ?? 0;
-            $isLiked = property_exists($item, 'is_favorited') ? (bool) $item->is_favorited : false;
+            $isLiked = (bool) ($item->is_favorited ?? $item->getAttribute('is_favorited') ?? false);
 
 
             return [

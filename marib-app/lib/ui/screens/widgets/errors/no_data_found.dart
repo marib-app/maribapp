@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
@@ -45,122 +46,122 @@ _emptyStateMessages = {
     EmptyStateIssue.noData: _EmptyStateMessage(
       titleKey: 'emptyStateGeneralTitle',
       subtitleKey: 'emptyStateGeneralDescription',
-      icon: Icons.inbox_outlined,
+      icon: CupertinoIcons.rectangle_stack,
     ),
     EmptyStateIssue.network: _EmptyStateMessage(
       titleKey: 'emptyStateGeneralNetworkTitle',
       subtitleKey: 'emptyStateGeneralNetworkDescription',
-      icon: Icons.wifi_off_outlined,
+      icon: CupertinoIcons.wifi,
     ),
     EmptyStateIssue.server: _EmptyStateMessage(
       titleKey: 'emptyStateGeneralServerTitle',
       subtitleKey: 'emptyStateGeneralServerDescription',
-      icon: Icons.cloud_off_outlined,
+      icon: CupertinoIcons.cloud,
     ),
   },
   EmptyStateCategory.favorites: {
     EmptyStateIssue.noData: _EmptyStateMessage(
       titleKey: 'emptyStateFavoritesTitle',
       subtitleKey: 'emptyStateFavoritesDescription',
-      icon: Icons.favorite_border,
+      icon: CupertinoIcons.heart,
     ),
   },
   EmptyStateCategory.transactions: {
     EmptyStateIssue.noData: _EmptyStateMessage(
       titleKey: 'emptyStateTransactionsTitle',
       subtitleKey: 'emptyStateTransactionsDescription',
-      icon: Icons.receipt_long_outlined,
+      icon: CupertinoIcons.chart_bar,
     ),
   },
   EmptyStateCategory.subscriptions: {
     EmptyStateIssue.noData: _EmptyStateMessage(
       titleKey: 'emptyStateSubscriptionsTitle',
       subtitleKey: 'emptyStateSubscriptionsDescription',
-      icon: Icons.subscriptions_outlined,
+      icon: CupertinoIcons.mail,
     ),
   },
   EmptyStateCategory.wallet: {
     EmptyStateIssue.noData: _EmptyStateMessage(
       titleKey: 'emptyStateWalletTitle',
       subtitleKey: 'emptyStateWalletDescription',
-      icon: Icons.account_balance_wallet_outlined,
+      icon: CupertinoIcons.money_dollar,
     ),
   },
   EmptyStateCategory.chat: {
     EmptyStateIssue.noData: _EmptyStateMessage(
       titleKey: 'emptyStateChatTitle',
       subtitleKey: 'emptyStateChatDescription',
-      icon: Icons.chat_bubble_outline,
+      icon: CupertinoIcons.chat_bubble,
     ),
   },
   EmptyStateCategory.blocked: {
     EmptyStateIssue.noData: _EmptyStateMessage(
       titleKey: 'emptyStateBlockedTitle',
       subtitleKey: 'emptyStateBlockedDescription',
-      icon: Icons.block_outlined,
+      icon: CupertinoIcons.nosign,
     ),
   },
   EmptyStateCategory.faqs: {
     EmptyStateIssue.noData: _EmptyStateMessage(
       titleKey: 'emptyStateFaqsTitle',
       subtitleKey: 'emptyStateFaqsDescription',
-      icon: Icons.help_outline,
+      icon: CupertinoIcons.question_circle,
     ),
   },
   EmptyStateCategory.profile: {
     EmptyStateIssue.noData: _EmptyStateMessage(
       titleKey: 'emptyStateProfileTitle',
       subtitleKey: 'emptyStateProfileDescription',
-      icon: Icons.person_outline,
+      icon: CupertinoIcons.person_crop_circle,
     ),
   },
   EmptyStateCategory.items: {
     EmptyStateIssue.noData: _EmptyStateMessage(
       titleKey: 'emptyStateItemsTitle',
       subtitleKey: 'emptyStateItemsDescription',
-      icon: Icons.widgets_outlined,
+      icon: CupertinoIcons.cube,
     ),
   },
   EmptyStateCategory.search: {
     EmptyStateIssue.noData: _EmptyStateMessage(
       titleKey: 'emptyStateSearchTitle',
       subtitleKey: 'emptyStateSearchDescription',
-      icon: Icons.search_outlined,
+      icon: CupertinoIcons.search,
     ),
   },
   EmptyStateCategory.notifications: {
     EmptyStateIssue.noData: _EmptyStateMessage(
       titleKey: 'emptyStateNotificationsTitle',
       subtitleKey: 'emptyStateNotificationsDescription',
-      icon: Icons.notifications_none_outlined,
+      icon: CupertinoIcons.bell_slash,
     ),
   },
   EmptyStateCategory.categories: {
     EmptyStateIssue.noData: _EmptyStateMessage(
       titleKey: 'emptyStateCategoriesTitle',
       subtitleKey: 'emptyStateCategoriesDescription',
-      icon: Icons.category_outlined,
+      icon: CupertinoIcons.square_grid_2x2,
     ),
   },
   EmptyStateCategory.location: {
     EmptyStateIssue.noData: _EmptyStateMessage(
       titleKey: 'emptyStateLocationTitle',
       subtitleKey: 'emptyStateLocationDescription',
-      icon: Icons.location_on_outlined,
+      icon: CupertinoIcons.map_pin,
     ),
   },
   EmptyStateCategory.advertisements: {
     EmptyStateIssue.noData: _EmptyStateMessage(
       titleKey: 'emptyStateAdvertisementsTitle',
       subtitleKey: 'emptyStateAdvertisementsDescription',
-      icon: Icons.campaign_outlined,
+      icon: CupertinoIcons.news,
     ),
   },
   EmptyStateCategory.reviews: {
     EmptyStateIssue.noData: _EmptyStateMessage(
       titleKey: 'emptyStateReviewsTitle',
       subtitleKey: 'emptyStateReviewsDescription',
-      icon: Icons.rate_review_outlined,
+      icon: CupertinoIcons.star,
     ),
   },
 };
@@ -217,7 +218,7 @@ class NoDataFound extends StatelessWidget {
     final palette = context.color;
     final theme = Theme.of(context);
     final onSurface = theme.colorScheme.onSurface;
-    final iconColor = theme.colorScheme.onSurface.withOpacity(0.4);
+    final iconColor = theme.colorScheme.onSurface.withOpacity(0.32);
     final titleColor = palette.textDefaultColor;
     final subtitleColor = palette.textLightColor;
     final resolvedTitle = mainMessage ?? message.titleKey.translate(context);
@@ -241,7 +242,7 @@ class NoDataFound extends StatelessWidget {
               )
                   .size(context.font.extraLarge)
                   .color(titleColor)
-                  .bold(weight: FontWeight.w700),
+                  .bold(weight: FontWeight.w600),
               const SizedBox(height: 10),
               Text(
                 resolvedSubtitle,
@@ -277,7 +278,7 @@ class NoDataFound extends StatelessWidget {
       );
     }
 
-    final resolvedSize = height ?? 80;
+    final resolvedSize = height ?? 64;
 
     return Icon(
       message.icon,
@@ -295,7 +296,7 @@ class NoDataFound extends StatelessWidget {
         onPressed: onTap,
         style: OutlinedButton.styleFrom(
           foregroundColor: onSurface,
-          side: BorderSide(color: onSurface.withOpacity(0.4)),
+          side: BorderSide(color: onSurface.withOpacity(0.3)),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),

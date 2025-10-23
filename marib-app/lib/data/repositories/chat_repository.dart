@@ -65,13 +65,12 @@ class ChatRepostiory {
       required int itemOfferId,
       required String conversationId}) async {
     final String trimmedConversationId = conversationId.trim();
-    final int? parsedConversationId =
-    trimmedConversationId.isEmpty ? null : int.tryParse(trimmedConversationId);
+
 
     final Map<String, dynamic> queryParameters = <String, dynamic>{
       'page': page,
       if (itemOfferId > 0) 'item_offer_id': itemOfferId,
-      if (parsedConversationId != null) 'conversation_id': parsedConversationId,
+      if (trimmedConversationId.isNotEmpty) 'conversation_id': trimmedConversationId,
     };
     Map<String, dynamic> response = await Api.get(
       url: Api.chatMessagesApi,

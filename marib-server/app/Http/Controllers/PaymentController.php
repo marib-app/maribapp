@@ -706,6 +706,12 @@ class PaymentController extends Controller
 
         $defaultMethod = $this->resolveDefaultPaymentMethodToken($methodIds);
 
+                $allowedMethodOptions = $this->formatAllowedPaymentMethodOptions(
+            $allowedMethodTokens,
+            $presentable,
+            $defaultMethod
+        );
+
         if ($defaultMethod !== null) {
             foreach ($presentable as &$option) {
                 if (($option['id'] ?? null) === $defaultMethod) {
@@ -720,6 +726,7 @@ class PaymentController extends Controller
             'purpose' => $purpose,
             'allowed_payment_methods' => $allowedMethodTokens,
             'payment_method_tokens' => $allowedMethodTokens,
+            'allowed_payment_method_options' => $allowedMethodOptions,
             'default_payment_method' => $defaultMethod,
             'preferred_payment_method' => $defaultMethod,
             'available_methods' => $presentable,
@@ -727,6 +734,101 @@ class PaymentController extends Controller
             'payment_methods' => $presentable,
         ];
     }
+
+
+    /**
+     * @param array<int, string> $allowedMethodTokens
+     * @param array<int, array<string, mixed>> $presentableOptions
+     * @return array<int, array<string, mixed>>
+     */
+    private function formatAllowedPaymentMethodOptions(
+        array $allowedMethodTokens,
+        array $presentableOptions,
+        ?string $defaultMethod
+    ): array {
+        $optionsByToken = [];
+
+        foreach ($presentableOptions as $option) {
+            $methodId = $option['id'] ?? null;
+
+            if (! is_string($methodId) || $methodId === '') {
+                continue;
+            }
+
+            $methodId = (string) $methodId;
+            $label = isset($option['label']) && is_string($option['label'])
+                ? (string) $option['label']
+                : $this->paymentMethodLabel($methodId);
+            $gateway = isset($option['gateway']) && is_string($option['gateway'])
+                ? (string) $option['gateway']
+                : $this->paymentMethodGatewayLabel($methodId);
+
+            $tokens = $option['tokens'] ?? [];
+
+            if (! is_array($tokens)) {
+                $tokens = [$tokens];
+            }
+
+            $tokens = array_values(array_filter($tokens, static fn ($token) => is_string($token) && $token !== ''));
+
+            foreach ($tokens as $token) {
+                if (! is_string($token) || $token === '') {
+                    continue;
+                }
+
+                $token = (string) $token;
+                $optionsByToken[$token] = [
+                    'token' => $token,
+                    'method' => $methodId,
+                    'payment_method' => $methodId,
+                    'id' => $methodId,
+                    'label' => $label,
+                    'gateway' => $gateway,
+                    'is_default' => $defaultMethod !== null && $methodId === $defaultMethod,
+                    'tokens' => $tokens,
+                ];
+            }
+        }
+
+        foreach ($allowedMethodTokens as $token) {
+            if (! is_string($token) || $token === '') {
+                continue;
+            }
+
+            $token = (string) $token;
+
+            if (isset($optionsByToken[$token])) {
+                continue;
+            }
+
+            $normalized = OrderCheckoutService::normalizePaymentMethod($token);
+
+            if (! is_string($normalized) || $normalized === '') {
+                $normalized = $token;
+            }
+
+            $normalized = mb_strtolower($normalized);
+
+            $optionsByToken[$token] = [
+                'token' => $token,
+                'method' => $normalized,
+                'payment_method' => $normalized,
+                'id' => $normalized,
+                'label' => $this->paymentMethodLabel($normalized),
+                'gateway' => $this->paymentMethodGatewayLabel($normalized),
+                'is_default' => $defaultMethod !== null && $normalized === $defaultMethod,
+                'tokens' => [$token],
+            ];
+        }
+
+        return array_values(array_map(static function (array $option) {
+            $option['is_default'] = (bool) ($option['is_default'] ?? false);
+
+            return $option;
+        }, $optionsByToken));
+    }
+
+
 
     /**
      * @return array<int, array<string, mixed>>
@@ -836,7 +938,7 @@ class PaymentController extends Controller
         };
     }
 
-    
+
     /**
      * @return array<int, string>
      */

@@ -269,6 +269,7 @@ OrderPaymentIntentResult parseOrderPaymentIntent(dynamic response) {
     data['available_methods'],
     data['allowed_payment_methods'],
     data['payment_method_tokens'],
+    data['allowed_payment_method_options'],
     data['methods'],
     data['payment_method_options'],
     data['payment_gateways'],
@@ -277,13 +278,17 @@ OrderPaymentIntentResult parseOrderPaymentIntent(dynamic response) {
     top['payment_methods'],
     top['available_payment_methods'],
     top['allowed_payment_methods'],
+    top['allowed_payment_method_options'],
     top['payment_gateways'],
     intent?['available_payment_methods'],
     intent?['allowed_payment_methods'],
+    intent?['allowed_payment_method_options'],
     intent?['methods'],
     transaction?['available_payment_methods'],
     transaction?['allowed_payment_methods'],
+    transaction?['allowed_payment_method_options'],
   ].whereType<dynamic>().toList();
+
 
   List<OrderPaymentMethod> methods = <OrderPaymentMethod>[];
 
@@ -333,7 +338,8 @@ OrderPaymentIntentResult parseOrderPaymentIntent(dynamic response) {
                 entry['payment_method'] ??
                 entry['method'] ??
                 entry['gateway'] ??
-                entry['code'],
+                entry['code'] ??
+                entry['token'],
             label: entry['label'] ??
                 entry['name'] ??
                 entry['title'] ??
@@ -348,7 +354,8 @@ OrderPaymentIntentResult parseOrderPaymentIntent(dynamic response) {
                 map['payment_method'] ??
                 map['method'] ??
                 map['gateway'] ??
-                map['code'],
+                map['code'] ??
+                map['token'],
             label: map['label'] ??
                 map['name'] ??
                 map['title'] ??
@@ -372,7 +379,8 @@ OrderPaymentIntentResult parseOrderPaymentIntent(dynamic response) {
                   map['payment_method'] ??
                   map['method'] ??
                   map['gateway'] ??
-                  map['code'],
+                  map['code'] ??
+                  map['token'],
               label: map['label'] ??
                   map['name'] ??
                   map['title'] ??
@@ -397,6 +405,8 @@ OrderPaymentIntentResult parseOrderPaymentIntent(dynamic response) {
                   map['payment_method'] ??
                   map['method'] ??
                   map['gateway'] ??
+                  map['code'] ??
+                  map['token'] ??
                   key,
               label: map['label'] ??
                   map['name'] ??
@@ -425,6 +435,8 @@ OrderPaymentIntentResult parseOrderPaymentIntent(dynamic response) {
                 nested['payment_method'] ??
                 nested['method'] ??
                 nested['gateway'] ??
+                nested['code'] ??
+                nested['token'] ??
                 key,
             label: nested['label'] ??
                 nested['name'] ??
@@ -442,6 +454,36 @@ OrderPaymentIntentResult parseOrderPaymentIntent(dynamic response) {
     if (candidate is String) {
       addMethod(id: candidate, label: candidate);
     }
+  }
+
+  if (methods.isNotEmpty) {
+    final Map<String, OrderPaymentMethod> byId = <String, OrderPaymentMethod>{};
+    final List<String> order = <String>[];
+
+    for (final OrderPaymentMethod method in methods) {
+      final String key = method.id.toLowerCase();
+      if (byId.containsKey(key)) {
+        final OrderPaymentMethod existing = byId[key]!;
+        final Map<String, dynamic>? mergedRaw = existing.raw == null && method.raw == null
+            ? null
+            : <String, dynamic>{
+          ...?existing.raw,
+          ...?method.raw,
+        };
+        byId[key] = existing.copyWith(
+          label: existing.label.trim().isNotEmpty ? existing.label : method.label,
+          gateway: existing.gateway ?? method.gateway,
+          isDefault: existing.isDefault || method.isDefault,
+          isManual: existing.isManual || method.isManual,
+          raw: mergedRaw,
+        );
+      } else {
+        order.add(key);
+        byId[key] = method;
+      }
+    }
+
+    methods = order.map((String key) => byId[key]!).toList();
   }
 
   final String? defaultMethodId = _stringify(

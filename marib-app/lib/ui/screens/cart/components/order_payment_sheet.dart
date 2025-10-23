@@ -120,6 +120,19 @@ class _OrderPaymentSheetState extends State<OrderPaymentSheet> {
             final OrderPaymentMethod? selectedMethod = state.selectedMethod;
             final bool isBusy = state.isBusy || state.status == OrderPaymentStatus.actionRequired;
 
+
+            final OrderPaymentMethod? effectiveSelectedMethod = selectedMethod ?? () {
+              if (methods.isEmpty) {
+                return null;
+              }
+              try {
+                return methods.firstWhere((OrderPaymentMethod method) => method.isDefault);
+              } catch (_) {
+                return methods.first;
+              }
+            }();
+
+
             return Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               decoration: BoxDecoration(
@@ -193,8 +206,8 @@ class _OrderPaymentSheetState extends State<OrderPaymentSheet> {
                           ...methods.map(
                                 (OrderPaymentMethod method) => RadioListTile<OrderPaymentMethod>(
                               value: method,
-                              groupValue: selectedMethod,
-                              onChanged: isBusy
+                                  groupValue: effectiveSelectedMethod,
+                                  onChanged: isBusy
                                   ? null
                                   : (OrderPaymentMethod? value) {
                                 if (value != null) {

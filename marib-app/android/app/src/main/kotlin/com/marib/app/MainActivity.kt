@@ -4,12 +4,13 @@ import android.content.Context
 import android.hardware.display.DisplayManager
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
+import android.os.ThermalManager
 import android.view.Display
 import android.util.Log
 import android.view.Window
 import android.view.WindowManager
-
-import io.flutter.embedding.android.FlutterFragmentActivity
+import kotlin.math.abs
 
 class MainActivity : FlutterFragmentActivity() {
 
@@ -18,6 +19,30 @@ class MainActivity : FlutterFragmentActivity() {
     }
 
     private val displayListener = ActiveDisplayListener()
+
+    private val powerManager: PowerManager by lazy {
+        getSystemService(Context.POWER_SERVICE) as PowerManager
+    }
+
+    private val thermalManager: ThermalManager? by lazy {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            getSystemService(Context.THERMAL_SERVICE) as ThermalManager
+        } else {
+            null
+        }
+    }
+
+    private val thermalStatusListener: ThermalManager.OnThermalStatusChangedListener? by lazy {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            ThermalManager.OnThermalStatusChangedListener {
+                lockPreferredRefreshRate()
+            }
+        } else {
+            null
+        }
+    }
+
+    private var isThermalListenerRegistered: Boolean = false
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -29,11 +54,13 @@ class MainActivity : FlutterFragmentActivity() {
         super.onResume()
         displayListener.updateActiveDisplayId()
         displayManager.registerDisplayListener(displayListener, null)
+        registerThermalStatusListenerIfNeeded()
 
         lockPreferredRefreshRate()
     }
 
     override fun onPause() {
+        unregisterThermalStatusListenerIfNeeded()
         displayManager.unregisterDisplayListener(displayListener)
         super.onPause()
     }
@@ -48,18 +75,31 @@ class MainActivity : FlutterFragmentActivity() {
         }
 
         val highestRefreshRateMode = supportedModes.maxByOrNull { it.refreshRate } ?: return
+        val targetMode = resolveTargetRefreshRate(supportedModes, highestRefreshRateMode)
 
         val currentAttributes = window.attributes
         var attributesUpdated = false
 
-        if (currentAttributes.preferredDisplayModeId != highestRefreshRateMode.modeId) {
-            currentAttributes.preferredDisplayModeId = highestRefreshRateMode.modeId
-            attributesUpdated = true
-        }
+        if (targetMode != null) {
+            if (currentAttributes.preferredDisplayModeId != targetMode.modeId) {
+                currentAttributes.preferredDisplayModeId = targetMode.modeId
+                attributesUpdated = true
+            }
 
-        if (currentAttributes.preferredRefreshRate != highestRefreshRateMode.refreshRate) {
-            currentAttributes.preferredRefreshRate = highestRefreshRateMode.refreshRate
-            attributesUpdated = true
+            if (currentAttributes.preferredRefreshRate != targetMode.refreshRate) {
+                currentAttributes.preferredRefreshRate = targetMode.refreshRate
+                attributesUpdated = true
+            }
+        } else {
+            if (currentAttributes.preferredDisplayModeId != 0) {
+                currentAttributes.preferredDisplayModeId = 0
+                attributesUpdated = true
+            }
+
+            if (currentAttributes.preferredRefreshRate != 0f) {
+                currentAttributes.preferredRefreshRate = 0f
+                attributesUpdated = true
+            }
         }
 
         if (attributesUpdated) {
@@ -67,9 +107,84 @@ class MainActivity : FlutterFragmentActivity() {
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            lockFrameRateForModernDevices(highestRefreshRateMode.refreshRate)
+            lockFrameRateForModernDevices(targetMode?.refreshRate)
         }
     }
+
+    private fun resolveTargetRefreshRate(
+        supportedModes: Array<Display.Mode>,
+        highestRefreshRateMode: Display.Mode
+    ): Display.Mode? {
+        if (!shouldReduceRefreshRate()) {
+            return highestRefreshRateMode
+        }
+
+        val fallbackMode = supportedModes
+            .filter { it.refreshRate < highestRefreshRateMode.refreshRate }
+            .minByOrNull { abs(it.refreshRate - SUSTAINED_REFRESH_RATE) }
+
+        return fallbackMode
+    }
+
+    private fun shouldReduceRefreshRate(): Boolean {
+        if (powerManager.isPowerSaveMode) {
+            return true
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val manager = thermalManager
+            if (manager != null) {
+                val thermalStatus = manager.getCurrentThermalStatus()
+                if (thermalStatus >= ThermalManager.THERMAL_STATUS_MODERATE) {
+                    return true
+                }
+            }
+        }
+
+        return false
+    }
+
+    private fun registerThermalStatusListenerIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            return
+        }
+
+        val manager = thermalManager ?: return
+        val listener = thermalStatusListener ?: return
+
+        if (isThermalListenerRegistered) {
+            return
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            manager.registerThermalStatusListener(mainExecutor, listener)
+        } else {
+            @Suppress("DEPRECATION")
+            manager.registerThermalStatusListener(listener)
+        }
+
+        isThermalListenerRegistered = true
+    }
+
+    private fun unregisterThermalStatusListenerIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            return
+        }
+
+        if (!isThermalListenerRegistered) {
+            return
+        }
+
+        val manager = thermalManager
+        val listener = thermalStatusListener
+
+        if (manager != null && listener != null) {
+            manager.unregisterThermalStatusListener(listener)
+        }
+
+        isThermalListenerRegistered = false
+    }
+
 
     private fun obtainActiveDisplay(): Display? {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -80,7 +195,7 @@ class MainActivity : FlutterFragmentActivity() {
         }
     }
 
-    private fun lockFrameRateForModernDevices(refreshRate: Float) {
+    private fun lockFrameRateForModernDevices(refreshRate: Float?) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
             return
         }
@@ -102,15 +217,25 @@ class MainActivity : FlutterFragmentActivity() {
                 Int::class.javaPrimitiveType
             )
 
+            val frameRateCompatibilityFieldName = if (refreshRate != null && refreshRate > 0f) {
+                "FRAME_RATE_COMPATIBILITY_FIXED_SOURCE"
+            } else {
+                "FRAME_RATE_COMPATIBILITY_DEFAULT"
+            }
+
+
             val frameRateCompatibility = windowClass
-                .getField("FRAME_RATE_COMPATIBILITY_FIXED_SOURCE")
+                .getField(frameRateCompatibilityFieldName)
                 .getInt(null)
 
             val changeStrategy = windowClass
                 .getField(changeStrategyFieldName)
                 .getInt(null)
 
-            setFrameRateMethod.invoke(window, refreshRate, frameRateCompatibility, changeStrategy)
+            val targetRefreshRate = refreshRate ?: 0f
+
+            setFrameRateMethod.invoke(window, targetRefreshRate, frameRateCompatibility, changeStrategy)
+
         } catch (error: ReflectiveOperationException) {
             Log.w(
                 TAG,
@@ -128,6 +253,8 @@ class MainActivity : FlutterFragmentActivity() {
 
     companion object {
         private const val TAG = "MainActivity"
+        private const val SUSTAINED_REFRESH_RATE = 60f
+
     }
 
 

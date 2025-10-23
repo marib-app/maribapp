@@ -1369,6 +1369,19 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     );
   }
 
+  Future<SubmissionOutcome> submitAllAndReview() async {
+    final SubmissionOutcome outcome = await submitAll();
+
+    if (!outcome.success && outcome.message.isEmpty) {
+      return const SubmissionOutcome(
+        success: false,
+        message: 'تعذر حفظ الإعدادات. حاول مرة أخرى.',
+      );
+    }
+
+    return outcome;
+  }
+
   void _applyOptions(ItemPurchaseOptions options, {double? finalPrice}) {
     final Map<String, ItemPurchaseAttributeOption> rawAttributes =
         <String, ItemPurchaseAttributeOption>{

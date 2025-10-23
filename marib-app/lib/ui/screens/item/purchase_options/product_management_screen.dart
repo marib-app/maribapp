@@ -235,13 +235,6 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
 
     final bool isSaving =
         state.attributesSaving || state.stockSaving || state.discountSaving;
-    final String saveLabel = <int, String>{
-          0: 'حفظ السمات',
-          1: 'حفظ الحجم',
-          2: 'حفظ المخزون',
-          3: 'حفظ الخصم',
-        }[_currentTabIndex] ??
-        'حفظ';
 
     return SafeArea(
       child: Padding(
@@ -252,7 +245,7 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
               child: UiUtils.buildButton(
                 context,
                 onPressed: () => _onSavePressed(context, cubit),
-                buttonTitle: saveLabel,
+                buttonTitle: 'حفظ ومتابعة',
                 titleWhenProgress: 'جارٍ الحفظ...',
                 isInProgress: isSaving,
                 height: 48.rh(context),
@@ -263,10 +256,10 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
             Expanded(
               child: UiUtils.buildButton(
                 context,
-                onPressed: () async {
-                  await _finish(context);
+                onPressed: () {
+                  Navigator.of(context).maybePop();
                 },
-                buttonTitle: 'إنهاء',
+                buttonTitle: 'عودة',
                 height: 48.rh(context),
                 fontSize: context.font.large,
                 buttonColor: context.color.secondaryColor,
@@ -284,37 +277,10 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
 
   Future<void> _onSavePressed(
       BuildContext context, ProductManagementCubit cubit) async {
-    SubmissionOutcome outcome;
-    switch (_currentTabIndex) {
-      case 0:
-      case 1:
-        outcome = await cubit.saveAttributes();
-        break;
-      case 2:
-        outcome = await cubit.saveStock();
-        break;
-      case 3:
-        outcome = await cubit.saveDiscount();
-        break;
-      default:
-        outcome = const SubmissionOutcome(
-            success: false, message: 'إجراء غير معروف.');
-    }
-
-    if (outcome.success) {
-      HelperUtils.showSnackBarMessage(context, outcome.message);
-    } else {
-      HelperUtils.showSnackBarMessage(context, outcome.message);
-    }
-  }
-
-  Future<void> _finish(BuildContext context) async {
-    final ProductManagementCubit cubit = context.read<ProductManagementCubit>();
-
     Widgets.showLoader(context);
     SubmissionOutcome outcome;
     try {
-      outcome = await cubit.submitAll();
+      outcome = await cubit.submitAllAndReview();
     } finally {
       if (mounted) {
         Widgets.hideLoder(context);
@@ -325,8 +291,15 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
       return;
     }
 
+    final String message = outcome.message.isNotEmpty
+        ? outcome.message
+        : outcome.success
+            ? 'تم حفظ جميع الإعدادات بنجاح.'
+            : 'تعذر حفظ الإعدادات. حاول مرة أخرى.';
+
+    HelperUtils.showSnackBarMessage(context, message);
+
     if (!outcome.success) {
-      HelperUtils.showSnackBarMessage(context, outcome.message);
       return;
     }
 
@@ -336,7 +309,7 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
       arguments: <String, dynamic>{
         'item': cubit.state.item,
         'options': cubit.state.options,
-        'message': outcome.message,
+        'message': message,
       },
     );
   }

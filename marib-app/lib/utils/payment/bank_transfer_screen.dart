@@ -407,8 +407,6 @@ class _BankTransferScreenState extends State<BankTransferScreen>
             components.add('notes:${notes.hashCode}');
           }
         }
-      } else if (bank.id > 0) {
-        components.add('id:${bank.id}');
       }
 
       if (components.isEmpty) {

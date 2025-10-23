@@ -187,33 +187,6 @@ List<CustomFieldColorEntry> _normalizeColorEntries(
 }
 
 
-const Map<String, String> _easternToWesternDigits = <String, String>{
-  '٠': '0',
-  '١': '1',
-  '٢': '2',
-  '٣': '3',
-  '٤': '4',
-  '٥': '5',
-  '٦': '6',
-  '٧': '7',
-  '٨': '8',
-  '٩': '9',
-};
-
-String _normalizeLocalizedNumberInput(String value) {
-  final StringBuffer buffer = StringBuffer();
-  for (int index = 0; index < value.length; index++) {
-    final String character = value[index];
-    if (_easternToWesternDigits.containsKey(character)) {
-      buffer.write(_easternToWesternDigits[character]);
-    } else if (character == ',' || character == '٫') {
-      buffer.write('.');
-    } else {
-      buffer.write(character);
-    }
-  }
-  return buffer.toString();
-}
 
 
 double? _normalizeDeliverySize(dynamic value) {
@@ -226,7 +199,7 @@ double? _normalizeDeliverySize(dynamic value) {
   if (value is num) {
     parsed = value.toDouble();
   } else if (value is String) {
-    final String normalized = _normalizeLocalizedNumberInput(value).trim();
+    final String normalized = value.replaceAll(',', '.').trim();
     if (normalized.isEmpty) {
       return null;
     }
@@ -1049,7 +1022,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       return;
     }
 
-    final String sanitized = _normalizeLocalizedNumberInput(value);
+    final String sanitized = value.replaceAll(',', '.');
     final String trimmed = sanitized.trim();
 
     if (trimmed.isEmpty) {

@@ -166,7 +166,8 @@ class TransferDetailsResolver implements Arrayable, \JsonSerializable
     }
 
     /**
-     * @return array{bank_name: ?string, sender_name: ?string, transfer_reference: ?string, note: ?string, receipt_url: ?string, source: string}
+     * @return array{bank_name: ?string, sender_name: ?string, transfer_reference: ?string, note: ?string, receipt_url: ?string, receipt_path: ?string, source: string}
+
      */
     public function toArray(): array
     {
@@ -176,6 +177,7 @@ class TransferDetailsResolver implements Arrayable, \JsonSerializable
             'transfer_reference' => null,
             'note' => null,
             'receipt_url' => null,
+            'receipt_path' => null,
         ];
 
         $sources = [
@@ -184,6 +186,7 @@ class TransferDetailsResolver implements Arrayable, \JsonSerializable
             'transfer_reference' => null,
             'note' => null,
             'receipt_url' => null,
+            'receipt_path' => null,
         ];
 
         $apply = function (string $field, $value, string $source, bool $allowMultiline = false) use (&$values, &$sources): void {
@@ -207,7 +210,7 @@ class TransferDetailsResolver implements Arrayable, \JsonSerializable
             $sources[$field] = $source;
         };
 
-        $setReceipt = function (?string $url, string $source) use (&$values, &$sources): void {
+        $setReceiptUrl = function (?string $url, string $source) use (&$values, &$sources): void {
             if ($values['receipt_url'] !== null) {
                 return;
             }
@@ -222,6 +225,31 @@ class TransferDetailsResolver implements Arrayable, \JsonSerializable
             $sources['receipt_url'] = $source;
         };
 
+        $setReceiptPath = function ($path, $disk, string $source) use (&$values, &$sources, $setReceiptUrl): void {
+            $normalizedPath = $this->normalizeString($path);
+
+            if ($normalizedPath === null) {
+                return;
+            }
+
+            $isUrl = filter_var($normalizedPath, FILTER_VALIDATE_URL) !== false;
+
+            if ($isUrl) {
+                $setReceiptUrl($normalizedPath, $source);
+            }
+
+            if ($values['receipt_path'] === null && ! $isUrl) {
+                $values['receipt_path'] = $normalizedPath;
+                $sources['receipt_path'] = $source;
+            }
+
+            if (! $isUrl) {
+                $resolvedUrl = $this->generateStorageUrl($normalizedPath, $disk);
+                $setReceiptUrl($resolvedUrl, $source);
+            }
+        };
+
+
         // Manual payment request data takes precedence.
         if ($this->manualPaymentRequest instanceof ManualPaymentRequest) {
             $meta = $this->manualPaymentRequestMeta();
@@ -233,10 +261,8 @@ class TransferDetailsResolver implements Arrayable, \JsonSerializable
             $apply('bank_name', $manualBank?->name, 'mpr');
             $apply('bank_name', Arr::get($meta, 'manual_bank.name'), 'mpr');
             $apply('bank_name', Arr::get($meta, 'manual_bank.bank_name'), 'mpr');
-            $apply('bank_name', Arr::get($meta, 'manual_bank.beneficiary_name'), 'mpr');
             $apply('bank_name', Arr::get($meta, 'bank.name'), 'mpr');
             $apply('bank_name', Arr::get($meta, 'bank.bank_name'), 'mpr');
-            $apply('bank_name', Arr::get($meta, 'bank.beneficiary_name'), 'mpr');
 
             $apply('sender_name', Arr::get($meta, 'metadata.sender_name'), 'mpr');
             $apply('sender_name', Arr::get($meta, 'metadata.sender'), 'mpr');
@@ -266,23 +292,25 @@ class TransferDetailsResolver implements Arrayable, \JsonSerializable
 
             $receiptMeta = Arr::get($meta, 'receipt');
             if (is_array($receiptMeta)) {
-                $setReceipt(Arr::get($receiptMeta, 'url'), 'mpr');
-                if ($values['receipt_url'] === null) {
-                    $setReceipt($this->generateStorageUrl(
+                $setReceiptUrl(Arr::get($receiptMeta, 'url'), 'mpr');
+                if ($values['receipt_url'] === null || $values['receipt_path'] === null) {
+                    $setReceiptPath(
                         Arr::get($receiptMeta, 'path'),
-                        Arr::get($receiptMeta, 'disk')
-                    ), 'mpr');
+                        Arr::get($receiptMeta, 'disk'),
+                        'mpr'
+                    );
                 }
             }
 
-            $setReceipt(Arr::get($meta, 'receipt_url'), 'mpr');
-            $setReceipt(Arr::get($meta, 'receiptPath'), 'mpr');
+            $setReceiptUrl(Arr::get($meta, 'receipt_url'), 'mpr');
+            $setReceiptPath(Arr::get($meta, 'receiptPath'), Arr::get($meta, 'receipt.disk'), 'mpr');
 
             if ($values['receipt_url'] === null) {
-                $setReceipt($this->generateStorageUrl(
+                $setReceiptPath(
                     $this->manualPaymentRequest->receipt_path,
-                    'public'
-                ), 'mpr');
+                    'public',
+                    'mpr'
+                );
             }
 
             $attachments = Arr::get($meta, 'attachments');
@@ -292,7 +320,7 @@ class TransferDetailsResolver implements Arrayable, \JsonSerializable
                         continue;
                     }
 
-                    $setReceipt(Arr::get($attachment, 'url'), 'mpr');
+                    $setReceiptUrl(Arr::get($attachment, 'url'), 'mpr');
 
                     if ($values['receipt_url'] !== null) {
                         break;
@@ -300,7 +328,7 @@ class TransferDetailsResolver implements Arrayable, \JsonSerializable
 
                     $attachmentPath = Arr::get($attachment, 'path');
                     $attachmentDisk = Arr::get($attachment, 'disk');
-                    $setReceipt($this->generateStorageUrl($attachmentPath, $attachmentDisk), 'mpr');
+                    $setReceiptPath($attachmentPath, $attachmentDisk, 'mpr');
 
                     if ($values['receipt_url'] !== null) {
                         break;
@@ -315,10 +343,8 @@ class TransferDetailsResolver implements Arrayable, \JsonSerializable
 
             $apply('bank_name', Arr::get($meta, 'manual_bank.name'), 'tx_meta');
             $apply('bank_name', Arr::get($meta, 'manual_bank.bank_name'), 'tx_meta');
-            $apply('bank_name', Arr::get($meta, 'manual_bank.beneficiary_name'), 'tx_meta');
             $apply('bank_name', Arr::get($meta, 'manual.bank.name'), 'tx_meta');
             $apply('bank_name', Arr::get($meta, 'manual.bank.bank_name'), 'tx_meta');
-            $apply('bank_name', Arr::get($meta, 'manual.bank.beneficiary_name'), 'tx_meta');
             $apply('bank_name', Arr::get($meta, 'payload.bank_name'), 'tx_meta');
             $apply('bank_name', Arr::get($meta, 'payload.manual_bank_name'), 'tx_meta');
 
@@ -342,16 +368,17 @@ class TransferDetailsResolver implements Arrayable, \JsonSerializable
 
             $receiptMeta = Arr::get($meta, 'receipt');
             if (is_array($receiptMeta)) {
-                $setReceipt(Arr::get($receiptMeta, 'url'), 'tx_meta');
-                if ($values['receipt_url'] === null) {
-                    $setReceipt($this->generateStorageUrl(
+                $setReceiptUrl(Arr::get($receiptMeta, 'url'), 'tx_meta');
+                if ($values['receipt_url'] === null || $values['receipt_path'] === null) {
+                    $setReceiptPath(
                         Arr::get($receiptMeta, 'path'),
-                        Arr::get($receiptMeta, 'disk')
-                    ), 'tx_meta');
+                        Arr::get($receiptMeta, 'disk'),
+                        'tx_meta'
+                    );
                 }
             }
 
-            $setReceipt(Arr::get($meta, 'receipt_url'), 'tx_meta');
+            $setReceiptUrl(Arr::get($meta, 'receipt_url'), 'tx_meta');
 
             if ($values['receipt_url'] === null) {
                 $attachments = Arr::get($meta, 'attachments');
@@ -361,7 +388,7 @@ class TransferDetailsResolver implements Arrayable, \JsonSerializable
                             continue;
                         }
 
-                        $setReceipt(Arr::get($attachment, 'url'), 'tx_meta');
+                        $setReceiptUrl(Arr::get($attachment, 'url'), 'tx_meta');
 
                         if ($values['receipt_url'] !== null) {
                             break;
@@ -369,7 +396,7 @@ class TransferDetailsResolver implements Arrayable, \JsonSerializable
 
                         $attachmentPath = Arr::get($attachment, 'path');
                         $attachmentDisk = Arr::get($attachment, 'disk');
-                        $setReceipt($this->generateStorageUrl($attachmentPath, $attachmentDisk), 'tx_meta');
+                        $setReceiptPath($attachmentPath, $attachmentDisk, 'tx_meta');
 
                         if ($values['receipt_url'] !== null) {
                             break;
@@ -379,7 +406,7 @@ class TransferDetailsResolver implements Arrayable, \JsonSerializable
             }
 
             if ($values['receipt_url'] === null) {
-                $setReceipt($this->generateStorageUrl($this->paymentTransaction->receipt_path, 'public'), 'tx_columns');
+                $setReceiptPath($this->paymentTransaction->receipt_path, 'public', 'tx_columns');
             }
 
             if ($values['transfer_reference'] === null) {
@@ -389,11 +416,11 @@ class TransferDetailsResolver implements Arrayable, \JsonSerializable
         }
 
         if ($values['receipt_url'] === null && isset($this->row['receipt_url'])) {
-            $setReceipt($this->row['receipt_url'], 'tx_columns');
+            $setReceiptUrl($this->row['receipt_url'], 'tx_columns');
         }
 
         if ($values['receipt_url'] === null && isset($this->row['receipt_path'])) {
-            $setReceipt($this->generateStorageUrl($this->row['receipt_path'], 'public'), 'tx_columns');
+            $setReceiptPath($this->row['receipt_path'], 'public', 'tx_columns');
         }
 
         if ($this->walletTransaction instanceof WalletTransaction) {
@@ -419,16 +446,17 @@ class TransferDetailsResolver implements Arrayable, \JsonSerializable
 
             $receiptMeta = Arr::get($meta, 'receipt');
             if (is_array($receiptMeta)) {
-                $setReceipt(Arr::get($receiptMeta, 'url'), 'wallet_tx');
-                if ($values['receipt_url'] === null) {
-                    $setReceipt($this->generateStorageUrl(
+                $setReceiptUrl(Arr::get($receiptMeta, 'url'), 'wallet_tx');
+                if ($values['receipt_url'] === null || $values['receipt_path'] === null) {
+                    $setReceiptPath(
                         Arr::get($receiptMeta, 'path'),
-                        Arr::get($receiptMeta, 'disk')
-                    ), 'wallet_tx');
+                        Arr::get($receiptMeta, 'disk'),
+                        'wallet_tx'
+                    );
                 }
             }
 
-            $setReceipt(Arr::get($meta, 'receipt_url'), 'wallet_tx');
+            $setReceiptUrl(Arr::get($meta, 'receipt_url'), 'wallet_tx');
         }
 
         if ($values['bank_name'] === null) {
@@ -463,6 +491,7 @@ class TransferDetailsResolver implements Arrayable, \JsonSerializable
             'transfer_reference' => $values['transfer_reference'],
             'note' => $values['note'],
             'receipt_url' => $values['receipt_url'],
+            'receipt_path' => $values['receipt_path'],
             'source' => $resolvedSource,
         ];
     }

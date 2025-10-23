@@ -7,6 +7,7 @@ use App\Models\ManualPaymentRequest;
 use App\Models\PaymentTransaction;
 use App\Models\Order;
 use App\Models\User;
+use App\Support\ManualPayments\TransferDetailsResolver;
 use Illuminate\Support\Arr;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Log;
@@ -914,7 +915,172 @@ class ManualPaymentRequestService
 
         $this->syncTransactionManualBankPayload($transaction, $manualPaymentRequest);
 
-        return $manualPaymentRequest;
+        return $this->syncTransferDetails($manualPaymentRequest);
+    }
+
+
+    public function syncTransferDetails(ManualPaymentRequest $manualPaymentRequest): ManualPaymentRequest
+    {
+        $manualPaymentRequest->loadMissing(['manualBank', 'paymentTransaction.walletTransaction']);
+
+        $transferDetails = TransferDetailsResolver::forManualPaymentRequest($manualPaymentRequest)->toArray();
+
+        $meta = $manualPaymentRequest->meta;
+        if (! is_array($meta)) {
+            $meta = [];
+        }
+
+        $transferMeta = array_filter([
+            'sender_name' => $transferDetails['sender_name'] ?? null,
+            'transfer_reference' => $transferDetails['transfer_reference'] ?? null,
+            'note' => $transferDetails['note'] ?? null,
+            'receipt_url' => $transferDetails['receipt_url'] ?? null,
+            'receipt_path' => $transferDetails['receipt_path'] ?? null,
+            'source' => $transferDetails['source'] ?? null,
+        ], static fn ($value) => $value !== null && $value !== '');
+
+        $senderName = $transferMeta['sender_name'] ?? null;
+        $transferReference = $transferMeta['transfer_reference'] ?? null;
+        $note = $transferMeta['note'] ?? null;
+        $receiptUrl = $transferMeta['receipt_url'] ?? null;
+        $receiptPath = $transferMeta['receipt_path'] ?? null;
+
+        if ($transferMeta !== []) {
+            data_set($meta, 'transfer_details', $transferMeta);
+            data_set($meta, 'transfer', $transferMeta);
+            data_set($meta, 'metadata.transfer_details', $transferMeta);
+            data_set($meta, 'metadata.transfer', $transferMeta);
+        }
+
+        if ($senderName !== null) {
+            data_set($meta, 'manual.sender_name', $senderName);
+            data_set($meta, 'manual.metadata.sender_name', $senderName);
+            data_set($meta, 'metadata.sender_name', $senderName);
+        }
+
+        if ($transferReference !== null) {
+            data_set($meta, 'manual.transfer_reference', $transferReference);
+            data_set($meta, 'manual.metadata.transfer_reference', $transferReference);
+            data_set($meta, 'metadata.transfer_reference', $transferReference);
+        }
+
+        if ($note !== null) {
+            data_set($meta, 'manual.note', $note);
+            data_set($meta, 'manual.metadata.note', $note);
+            data_set($meta, 'metadata.note', $note);
+        }
+
+        if ($receiptUrl !== null) {
+            data_set($meta, 'receipt_url', $receiptUrl);
+        }
+
+        if ($receiptPath !== null) {
+            data_set($meta, 'receipt.path', $receiptPath);
+            if (data_get($meta, 'receipt.disk') === null) {
+                data_set($meta, 'receipt.disk', 'public');
+            }
+            data_set($meta, 'receipt_path', $receiptPath);
+        }
+
+        $manualPaymentRequest->fill(array_filter([
+            'reference' => $transferReference,
+            'receipt_path' => $receiptPath,
+        ], static fn ($value) => $value !== null && $value !== ''));
+
+        $manualPaymentRequest->meta = $this->filterArrayRecursive($meta);
+        $manualPaymentRequest->saveQuietly();
+
+        $transaction = $manualPaymentRequest->paymentTransaction instanceof PaymentTransaction
+            ? $manualPaymentRequest->paymentTransaction
+            : null;
+
+        if ($transaction instanceof PaymentTransaction) {
+            $transactionMeta = $transaction->meta;
+            if (! is_array($transactionMeta)) {
+                $transactionMeta = [];
+            }
+
+            if ($transferMeta !== []) {
+                data_set($transactionMeta, 'transfer_details', $transferMeta);
+                data_set($transactionMeta, 'manual.transfer_details', $transferMeta);
+            }
+
+            if ($senderName !== null) {
+                data_set($transactionMeta, 'manual.sender_name', $senderName);
+                data_set($transactionMeta, 'manual.metadata.sender_name', $senderName);
+            }
+
+            if ($transferReference !== null) {
+                data_set($transactionMeta, 'manual.transfer_reference', $transferReference);
+                data_set($transactionMeta, 'manual.metadata.transfer_reference', $transferReference);
+            }
+
+            if ($note !== null) {
+                data_set($transactionMeta, 'manual.note', $note);
+            }
+
+            if ($receiptUrl !== null) {
+                data_set($transactionMeta, 'receipt_url', $receiptUrl);
+            }
+
+            if ($receiptPath !== null) {
+                data_set($transactionMeta, 'receipt.path', $receiptPath);
+                if (data_get($transactionMeta, 'receipt.disk') === null) {
+                    data_set($transactionMeta, 'receipt.disk', 'public');
+                }
+                data_set($transactionMeta, 'receipt_path', $receiptPath);
+            }
+
+            $transaction->forceFill([
+                'meta' => $this->filterArrayRecursive($transactionMeta),
+            ])->saveQuietly();
+
+            $walletTransaction = $transaction->walletTransaction;
+            if ($walletTransaction instanceof \App\Models\WalletTransaction) {
+                $walletMeta = $walletTransaction->meta;
+                if (! is_array($walletMeta)) {
+                    $walletMeta = [];
+                }
+
+                if ($transferMeta !== []) {
+                    data_set($walletMeta, 'transfer_details', $transferMeta);
+                }
+
+                if ($senderName !== null) {
+                    data_set($walletMeta, 'sender_name', $senderName);
+                    data_set($walletMeta, 'metadata.sender_name', $senderName);
+                }
+
+                if ($transferReference !== null) {
+                    data_set($walletMeta, 'transfer_reference', $transferReference);
+                    data_set($walletMeta, 'metadata.transfer_reference', $transferReference);
+                }
+
+                if ($note !== null) {
+                    data_set($walletMeta, 'note', $note);
+                    data_set($walletMeta, 'metadata.note', $note);
+                }
+
+                if ($receiptUrl !== null) {
+                    data_set($walletMeta, 'receipt_url', $receiptUrl);
+                }
+
+                if ($receiptPath !== null) {
+                    data_set($walletMeta, 'receipt.path', $receiptPath);
+                    if (data_get($walletMeta, 'receipt.disk') === null) {
+                        data_set($walletMeta, 'receipt.disk', 'public');
+                    }
+                    data_set($walletMeta, 'receipt_path', $receiptPath);
+                }
+
+                $walletTransaction->forceFill([
+                    'meta' => $this->filterArrayRecursive($walletMeta),
+                ])->saveQuietly();
+            }
+        }
+
+        return $manualPaymentRequest->fresh(['manualBank', 'paymentTransaction.walletTransaction']);
+    
     }
 
 

@@ -219,18 +219,14 @@ trait ManualPaymentPresentationHelpers
 
             data_get($row, 'meta.manual.bank.name'),
             data_get($row, 'meta.manual.bank.bank_name'),
-            data_get($row, 'meta.manual.bank.beneficiary_name'),
 
             data_get($row, 'meta.manual_bank.name'),
             data_get($row, 'meta.manual_bank.bank_name'),
-            data_get($row, 'meta.manual_bank.beneficiary_name'),
             data_get($row, 'meta.bank.name'),
             data_get($row, 'meta.bank.bank_name'),
-            data_get($row, 'meta.bank.beneficiary_name'),
             data_get($row, 'meta.payload.bank_name'),
             data_get($row, 'meta.payload.bank.name'),
             data_get($row, 'manualBank.name'),
-            data_get($row, 'manualBank.beneficiary_name'),
         ];
 
         foreach ($candidates as $candidate) {
@@ -283,7 +279,6 @@ trait ManualPaymentPresentationHelpers
             if ($manualBank !== null) {
                 $lookupCandidates = [
                     data_get($manualBank, 'name'),
-                    data_get($manualBank, 'beneficiary_name'),
                 ];
 
                 foreach ($lookupCandidates as $lookupCandidate) {
@@ -324,7 +319,6 @@ trait ManualPaymentPresentationHelpers
             if ($manualPaymentRequest instanceof ManualPaymentRequest) {
                 $lookupCandidates = [
                     data_get($manualPaymentRequest, 'manualBank.name'),
-                    data_get($manualPaymentRequest, 'manualBank.beneficiary_name'),
                 ];
 
                 foreach ($lookupCandidates as $lookupCandidate) {

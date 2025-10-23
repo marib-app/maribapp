@@ -2830,17 +2830,37 @@ class ApiController extends Controller {
 
                 $category->all_items_count = $category->all_items_count;
 
-                ResponseService::successResponse(null, [$category], ['self_category' => $category]);
+                $childrenPaginator = (clone $baseQuery)
+                    ->where('parent_category_id', $request->category_id)
+                    ->paginate();
+
+                $childrenPaginator->getCollection()->transform(function ($category) {
+                    $category->all_items_count = $category->all_items_count;
+                    return $category;
+                });
+
+                ResponseService::successResponse(null, $childrenPaginator, [
+                    'self_category'  => $category,
+                    'append_to_data' => ['self_category' => $category],
+                ]);
 
                 return;
+
+
             }
 
             $paginator = $baseQuery->whereNull('parent_category_id')->paginate();
             $paginator->getCollection()->transform(function ($category) {
+
+
                 $category->all_items_count = $category->all_items_count;
                 return $category;
             });
-            ResponseService::successResponse(null, $paginator, ['self_category' => null]);
+            ResponseService::successResponse(null, $paginator, [
+                'self_category'  => null,
+                'append_to_data' => ['self_category' => null],
+            ]);
+        
         } catch (Throwable $th) {
             ResponseService::logErrorResponse($th, 'API Controller -> getCategories');
             ResponseService::errorResponse();

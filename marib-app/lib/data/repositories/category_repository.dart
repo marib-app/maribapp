@@ -4,8 +4,6 @@ import 'package:marib/utils/api.dart';
 import 'dart:collection';
 import 'package:marib/utils/hive_utils.dart';
 
-
-
 class CategoryRepository {
   Future<DataOutput<CategoryModel>> fetchCategories({
     required int page,
@@ -15,7 +13,6 @@ class CategoryRepository {
     bool onlyAllowed = false,
     Iterable<int> ensureCategoryIds = const <int>[],
     Iterable<int> allowedCategoryIds = const <int>[],
-
   }) async {
     try {
       Map<String, dynamic> parameters = {
@@ -34,10 +31,29 @@ class CategoryRepository {
       Map<String, dynamic> response =
           await Api.get(url: Api.getCategoriesApi, queryParameters: parameters);
 
-      final _ParsedPaginatedData<CategoryModel> parsed =
-      _parseCategoryResponse(response['data']);
+      final CategoryModel? selfCategory =
+          _parseSelfCategory(response, categoryId: categoryId);
 
-      List<CategoryModel> items = parsed.items;
+      final _ParsedPaginatedData<CategoryModel> parsed =
+          _parseCategoryResponse(response['data']);
+
+      List<CategoryModel> items = List<CategoryModel>.from(parsed.items);
+
+      if (selfCategory != null) {
+        final int? targetId = selfCategory.id;
+        if (targetId != null) {
+          final int existingIndex =
+              items.indexWhere((CategoryModel c) => c.id == targetId);
+          if (existingIndex >= 0) {
+            items[existingIndex] = selfCategory;
+          } else {
+            items = <CategoryModel>[selfCategory, ...items];
+          }
+        } else {
+          items = <CategoryModel>[selfCategory, ...items];
+        }
+      }
+
       if (onlyAllowed) {
         final Set<int> required = _normalizeCategoryIds(ensureCategoryIds);
         final Set<int> allowed = _normalizeCategoryIds(allowedCategoryIds);
@@ -55,7 +71,6 @@ class CategoryRepository {
       rethrow;
     }
   }
-
 
   _ParsedPaginatedData<CategoryModel> _parseCategoryResponse(dynamic data) {
     if (data == null) {
@@ -76,14 +91,13 @@ class CategoryRepository {
           .whereType<Map<String, dynamic>>()
           .toList();
 
-      final Map<String, dynamic>? meta =
-      data['meta'] is Map<String, dynamic>
+      final Map<String, dynamic>? meta = data['meta'] is Map<String, dynamic>
           ? data['meta'] as Map<String, dynamic>
           : null;
-      final Map<String, dynamic>? pagination = data['pagination']
-      is Map<String, dynamic>
-          ? data['pagination'] as Map<String, dynamic>
-          : null;
+      final Map<String, dynamic>? pagination =
+          data['pagination'] is Map<String, dynamic>
+              ? data['pagination'] as Map<String, dynamic>
+              : null;
 
       total = _parseTotal(data['total']) ??
           _parseTotal(meta?['total']) ??
@@ -99,7 +113,7 @@ class CategoryRepository {
     }
 
     final List<CategoryModel> modelList =
-    rawItems.map(CategoryModel.fromJson).toList();
+        rawItems.map(CategoryModel.fromJson).toList();
 
     return _ParsedPaginatedData<CategoryModel>(
       items: modelList,
@@ -108,6 +122,27 @@ class CategoryRepository {
     );
   }
 
+  CategoryModel? _parseSelfCategory(Map<String, dynamic> response,
+      {int? categoryId}) {
+    final dynamic topLevel = response['self_category'];
+    final dynamic nested = (response['data'] is Map<String, dynamic>)
+        ? (response['data'] as Map<String, dynamic>)['self_category']
+        : null;
+
+    final dynamic raw = topLevel ?? nested;
+    if (raw is! Map<String, dynamic>) {
+      return null;
+    }
+
+    final CategoryModel candidate = CategoryModel.fromJson(raw);
+    if (categoryId != null &&
+        candidate.id != null &&
+        candidate.id != categoryId) {
+      // إذا أرجع الخادم فئة مختلفة بشكل غير متوقع، تجاهلها
+      return null;
+    }
+    return candidate;
+  }
 
   int? _parseTotal(dynamic source) {
     if (source == null) {
@@ -124,6 +159,7 @@ class CategoryRepository {
 
     return null;
   }
+
   Set<int> _normalizeCategoryIds(Iterable<int> rawIds) {
     final LinkedHashSet<int> normalized = LinkedHashSet<int>();
     for (final int id in rawIds) {
@@ -136,10 +172,10 @@ class CategoryRepository {
   }
 
   List<CategoryModel> _filterAllowedCategories(
-      Iterable<CategoryModel> categories,
-      Set<int> ensureCategoryIds,
-      Set<int> allowedCategoryIds,
-      ) {
+    Iterable<CategoryModel> categories,
+    Set<int> ensureCategoryIds,
+    Set<int> allowedCategoryIds,
+  ) {
     final List<CategoryModel> filtered = <CategoryModel>[];
     final bool restrictByAllowed = allowedCategoryIds.isNotEmpty;
 
@@ -154,10 +190,10 @@ class CategoryRepository {
       final bool isRequired = id != null && ensureCategoryIds.contains(id);
       final bool childRetained = children.isNotEmpty;
       final bool interfaceAllowed = _isInterfaceAllowed(category.interfaceType);
-      final bool explicitlyAllowed = !restrictByAllowed ||
-          (id != null && allowedCategoryIds.contains(id));
-      final bool isAllowed = interfaceAllowed ||
-          (restrictByAllowed && explicitlyAllowed);
+      final bool explicitlyAllowed =
+          !restrictByAllowed || (id != null && allowedCategoryIds.contains(id));
+      final bool isAllowed =
+          interfaceAllowed || (restrictByAllowed && explicitlyAllowed);
       if (!(isAllowed || isRequired || childRetained)) {
         continue;
       }

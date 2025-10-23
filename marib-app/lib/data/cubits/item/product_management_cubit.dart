@@ -47,6 +47,85 @@ class SubmissionOutcome {
   final String message;
 }
 
+class _AttributesPayloadResult {
+  const _AttributesPayloadResult.success({
+    required this.payload,
+    required this.deliverySize,
+  }) : outcome = null;
+
+  const _AttributesPayloadResult.failure(this.outcome)
+      : payload = const <Map<String, dynamic>>[],
+        deliverySize = null;
+
+  final List<Map<String, dynamic>> payload;
+  final double? deliverySize;
+  final SubmissionOutcome? outcome;
+
+  bool get isSuccess => outcome == null;
+}
+
+class _StockRowsResult {
+  const _StockRowsResult.success(this.rows) : outcome = null;
+
+  const _StockRowsResult.failure(this.outcome)
+      : rows = const <Map<String, dynamic>>[];
+
+  final List<Map<String, dynamic>> rows;
+  final SubmissionOutcome? outcome;
+
+  bool get isSuccess => outcome == null;
+}
+
+class _DiscountPayloadResult {
+  const _DiscountPayloadResult.success(this.payload) : outcome = null;
+
+  const _DiscountPayloadResult.failure(this.outcome)
+      : payload = const <String, dynamic>{};
+
+  final Map<String, dynamic> payload;
+  final SubmissionOutcome? outcome;
+
+  bool get isSuccess => outcome == null;
+}
+
+class _VariantSnapshotEntry {
+  const _VariantSnapshotEntry({
+    required this.stock,
+    required this.hidden,
+    this.lastVisibleStock,
+  });
+
+  final int stock;
+  final bool hidden;
+  final int? lastVisibleStock;
+}
+
+class _VariantFormsSnapshot {
+  const _VariantFormsSnapshot({
+    required this.entries,
+    required this.generalStock,
+  });
+
+  final Map<String, _VariantSnapshotEntry> entries;
+  final int? generalStock;
+
+  bool get hasEntries => entries.isNotEmpty;
+}
+
+class _SignaturePartMeta {
+  _SignaturePartMeta({
+    required this.type,
+    required this.name,
+    required this.value,
+    required this.originalIndex,
+  });
+
+  final String type;
+  final String name;
+  final String value;
+  final int originalIndex;
+}
+
 ManagedAttributeType _resolveManagedAttributeType(
   ItemPurchaseAttributeOption attribute,
 ) {
@@ -1025,110 +1104,17 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       );
     }
 
-    if (state.deliverySizeError != null) {
-      return SubmissionOutcome(
-        success: false,
-        message: state.deliverySizeError!,
-      );
-    }
-
-    if (state.deliverySize == null) {
-      emit(state.copyWith(
-        deliverySizeError: 'يرجى إدخال وزن المنتج بالكيلوجرام.',
-        clearDeliverySizeError: false,
-      ));
-      return const SubmissionOutcome(
-        success: false,
-        message: 'يرجى إدخال وزن المنتج بالكيلوجرام قبل الحفظ.',
-      );
+    final _AttributesPayloadResult buildResult = _buildAttributesPayload();
+    if (!buildResult.isSuccess) {
+      return buildResult.outcome!;
     }
 
     emit(state.copyWith(attributesSaving: true, error: null));
 
     try {
-      final List<Map<String, dynamic>> attributesPayload =
-          <Map<String, dynamic>>[];
-
-      for (int index = 0; index < state.managedAttributes.length; index++) {
-        final ManagedPurchaseAttribute attribute =
-            state.managedAttributes[index];
-        final String trimmedName = attribute.name.trim().isEmpty
-            ? _defaultAttributeName(attribute.type)
-            : attribute.name.trim();
-
-        switch (attribute.type) {
-          case ManagedAttributeType.color:
-            final List<CustomFieldColorEntry> entries =
-                state.colorSelections[attribute.key] ?? attribute.colorEntries;
-            if ((attribute.requiredForCheckout || attribute.affectsStock) &&
-                entries.isEmpty) {
-              emit(state.copyWith(attributesSaving: false));
-              return SubmissionOutcome(
-                success: false,
-                message:
-                    'يرجى إضافة لون واحد على الأقل للسمة $trimmedName قبل الحفظ.',
-              );
-            }
-
-            attributesPayload.add(<String, dynamic>{
-              if (attribute.id != null) 'id': attribute.id,
-              'key': attribute.key,
-              'name': trimmedName,
-              'type': 'color',
-              'required_for_checkout': attribute.requiredForCheckout,
-              'affects_stock': attribute.affectsStock,
-              'position': index,
-              'values': entries
-                  .map((CustomFieldColorEntry entry) => entry.toJson())
-                  .toList(growable: false),
-              if (attribute.metadata.isNotEmpty) 'metadata': attribute.metadata,
-            });
-            break;
-          case ManagedAttributeType.size:
-          case ManagedAttributeType.custom:
-            final List<String> options = attribute.options;
-            if ((attribute.requiredForCheckout || attribute.affectsStock) &&
-                options.isEmpty) {
-              emit(state.copyWith(attributesSaving: false));
-              return SubmissionOutcome(
-                success: false,
-                message:
-                    'يرجى إضافة خيار واحد على الأقل للسمة $trimmedName قبل الحفظ.',
-              );
-            }
-
-            attributesPayload.add(<String, dynamic>{
-              if (attribute.id != null) 'id': attribute.id,
-              'key': attribute.key,
-              'name': trimmedName,
-              'type': attribute.type.name,
-              'required_for_checkout': attribute.requiredForCheckout,
-              'affects_stock': attribute.affectsStock,
-              'position': index,
-              'values': options,
-              if (attribute.metadata.isNotEmpty) 'metadata': attribute.metadata,
-            });
-            break;
-        }
-      }
-
-      final PurchaseOptionsUpdateResult result =
-          await _repository.saveAttributes(
-        itemId: item.id!,
-        attributes: attributesPayload,
-        deliverySize: state.deliverySize,
-      );
-
-      _applyOptions(result.options, finalPrice: result.finalPrice);
-
+      return await _persistAttributes(buildResult);
+    } finally {
       emit(state.copyWith(attributesSaving: false));
-
-      return SubmissionOutcome(success: true, message: result.message);
-    } catch (error) {
-      final String message =
-          ErrorFilter.check(error).error?.toString() ?? error.toString();
-      emit(state.copyWith(attributesSaving: false));
-      return SubmissionOutcome(success: false, message: message);
     }
   }
 
@@ -1201,51 +1187,17 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
           success: false, message: 'معرّف المنتج غير معروف.');
     }
 
-    if (state.hasStockVariants && state.variantForms.isEmpty) {
-      return const SubmissionOutcome(
-        success: false,
-        message:
-            'يرجى تحديد قيم السمات المؤثرة على المخزون ثم توليد التوليفات قبل الحفظ.',
-      );
+    final _StockRowsResult rowsResult = _buildStockRows();
+    if (!rowsResult.isSuccess) {
+      return rowsResult.outcome!;
     }
 
     emit(state.copyWith(stockSaving: true, error: null));
 
     try {
-      final List<Map<String, dynamic>> rows = <Map<String, dynamic>>[];
-
-      if (state.hasStockVariants) {
-        final SplayTreeMap<String, VariantStockFormState> ordered =
-            SplayTreeMap<String, VariantStockFormState>.from(
-                state.variantForms);
-        ordered.forEach((String key, VariantStockFormState value) {
-          rows.add(<String, dynamic>{
-            'variant_key': key,
-            'stock': value.hidden ? 0 : value.stock,
-          });
-        });
-      } else {
-        rows.add(<String, dynamic>{
-          'variant_key': '',
-          'stock': (state.generalStock ?? 0),
-        });
-      }
-
-      final PurchaseOptionsUpdateResult result = await _repository.saveStock(
-        itemId: item.id!,
-        rows: rows,
-      );
-
-      _applyOptions(result.options, finalPrice: result.finalPrice);
-
+      return await _persistStock(rowsResult.rows);
+    } finally {
       emit(state.copyWith(stockSaving: false));
-
-      return SubmissionOutcome(success: true, message: result.message);
-    } catch (error) {
-      final String message =
-          ErrorFilter.check(error).error?.toString() ?? error.toString();
-      emit(state.copyWith(stockSaving: false));
-      return SubmissionOutcome(success: false, message: message);
     }
   }
 
@@ -1278,40 +1230,212 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
           success: false, message: 'معرّف المنتج غير معروف.');
     }
 
+    final _DiscountPayloadResult payloadResult = _buildDiscountPayload();
+    if (!payloadResult.isSuccess) {
+      return payloadResult.outcome!;
+    }
+
     emit(state.copyWith(discountSaving: true, error: null));
 
     try {
-      final Map<String, dynamic> payload = <String, dynamic>{
-        'enabled': state.discountEnabled,
-      };
+      return await _persistDiscount(payloadResult.payload);
+    } finally {
+      emit(state.copyWith(discountSaving: false));
+    }
+  }
 
-      if (state.discountEnabled) {
-        if (state.discountValue == null) {
-          emit(state.copyWith(discountSaving: false));
-          return const SubmissionOutcome(
-            success: false,
-            message: 'أدخل قيمة الخصم قبل الحفظ.',
-          );
-        }
+  _AttributesPayloadResult _buildAttributesPayload() {
+    if (state.deliverySizeError != null) {
+      return _AttributesPayloadResult.failure(SubmissionOutcome(
+        success: false,
+        message: state.deliverySizeError!,
+      ));
+    }
 
-        if (state.discountStart == null || state.discountEnd == null) {
-          emit(state.copyWith(discountSaving: false));
-          return const SubmissionOutcome(
-            success: false,
-            message: 'حدد فترة الخصم قبل الحفظ.',
-          );
-        }
+    if (state.deliverySize == null) {
+      emit(state.copyWith(
+        deliverySizeError: 'يرجى إدخال وزن المنتج بالكيلوجرام.',
+        clearDeliverySizeError: false,
+      ));
+      return const _AttributesPayloadResult.failure(SubmissionOutcome(
+        success: false,
+        message: 'يرجى إدخال وزن المنتج بالكيلوجرام قبل الحفظ.',
+      ));
+    }
 
-        final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
+    final List<Map<String, dynamic>> attributesPayload =
+        <Map<String, dynamic>>[];
 
-        payload['discount_type'] = state.discountType;
-        payload['discount_value'] = state.discountType == 'percent'
-            ? math.min(state.discountValue!, 90)
-            : math.max(state.discountValue!, 0);
-        payload['discount_start'] = formatter.format(state.discountStart!);
-        payload['discount_end'] = formatter.format(state.discountEnd!);
+    for (int index = 0; index < state.managedAttributes.length; index++) {
+      final ManagedPurchaseAttribute attribute = state.managedAttributes[index];
+      final String trimmedName = attribute.name.trim().isEmpty
+          ? _defaultAttributeName(attribute.type)
+          : attribute.name.trim();
+
+      switch (attribute.type) {
+        case ManagedAttributeType.color:
+          final List<CustomFieldColorEntry> entries =
+              state.colorSelections[attribute.key] ?? attribute.colorEntries;
+          if ((attribute.requiredForCheckout || attribute.affectsStock) &&
+              entries.isEmpty) {
+            return _AttributesPayloadResult.failure(SubmissionOutcome(
+              success: false,
+              message:
+                  'يرجى إضافة لون واحد على الأقل للسمة $trimmedName قبل الحفظ.',
+            ));
+          }
+
+          attributesPayload.add(<String, dynamic>{
+            if (attribute.id != null) 'id': attribute.id,
+            'key': attribute.key,
+            'name': trimmedName,
+            'type': 'color',
+            'required_for_checkout': attribute.requiredForCheckout,
+            'affects_stock': attribute.affectsStock,
+            'position': index,
+            'values': entries
+                .map((CustomFieldColorEntry entry) => entry.toJson())
+                .toList(growable: false),
+            if (attribute.metadata.isNotEmpty) 'metadata': attribute.metadata,
+          });
+          break;
+        case ManagedAttributeType.size:
+        case ManagedAttributeType.custom:
+          final List<String> options = attribute.options;
+          if ((attribute.requiredForCheckout || attribute.affectsStock) &&
+              options.isEmpty) {
+            return _AttributesPayloadResult.failure(SubmissionOutcome(
+              success: false,
+              message:
+                  'يرجى إضافة خيار واحد على الأقل للسمة $trimmedName قبل الحفظ.',
+            ));
+          }
+
+          attributesPayload.add(<String, dynamic>{
+            if (attribute.id != null) 'id': attribute.id,
+            'key': attribute.key,
+            'name': trimmedName,
+            'type': attribute.type.name,
+            'required_for_checkout': attribute.requiredForCheckout,
+            'affects_stock': attribute.affectsStock,
+            'position': index,
+            'values': options,
+            if (attribute.metadata.isNotEmpty) 'metadata': attribute.metadata,
+          });
+          break;
+      }
+    }
+
+    return _AttributesPayloadResult.success(
+      payload: attributesPayload,
+      deliverySize: state.deliverySize,
+    );
+  }
+
+  Future<SubmissionOutcome> _persistAttributes(
+      _AttributesPayloadResult result) async {
+    try {
+      final PurchaseOptionsUpdateResult response =
+          await _repository.saveAttributes(
+        itemId: item.id!,
+        attributes: result.payload,
+        deliverySize: result.deliverySize,
+      );
+
+      _applyOptions(response.options, finalPrice: response.finalPrice);
+
+      return SubmissionOutcome(success: true, message: response.message);
+    } catch (error) {
+      final String message =
+          ErrorFilter.check(error).error?.toString() ?? error.toString();
+      return SubmissionOutcome(success: false, message: message);
+    }
+  }
+
+  _StockRowsResult _buildStockRows() {
+    if (state.hasStockVariants && state.variantForms.isEmpty) {
+      return const _StockRowsResult.failure(SubmissionOutcome(
+        success: false,
+        message:
+            'يرجى تحديد قيم السمات المؤثرة على المخزون ثم توليد التوليفات قبل الحفظ.',
+      ));
+    }
+
+    final List<Map<String, dynamic>> rows = <Map<String, dynamic>>[];
+
+    if (state.hasStockVariants) {
+      final SplayTreeMap<String, VariantStockFormState> ordered =
+          SplayTreeMap<String, VariantStockFormState>.from(state.variantForms);
+      ordered.forEach((String key, VariantStockFormState value) {
+        rows.add(<String, dynamic>{
+          'variant_key': key,
+          'stock': value.hidden ? 0 : value.stock,
+        });
+      });
+    } else {
+      rows.add(<String, dynamic>{
+        'variant_key': '',
+        'stock': (state.generalStock ?? 0),
+      });
+    }
+
+    return _StockRowsResult.success(rows);
+  }
+
+  Future<SubmissionOutcome> _persistStock(
+      List<Map<String, dynamic>> rows) async {
+    try {
+      final PurchaseOptionsUpdateResult result = await _repository.saveStock(
+        itemId: item.id!,
+        rows: rows,
+      );
+
+      _applyOptions(result.options, finalPrice: result.finalPrice);
+
+      return SubmissionOutcome(success: true, message: result.message);
+    } catch (error) {
+      final String message =
+          ErrorFilter.check(error).error?.toString() ?? error.toString();
+      return SubmissionOutcome(success: false, message: message);
+    }
+  }
+
+  _DiscountPayloadResult _buildDiscountPayload() {
+    final Map<String, dynamic> payload = <String, dynamic>{
+      'enabled': state.discountEnabled,
+    };
+
+    if (state.discountEnabled) {
+      if (state.discountValue == null) {
+        return const _DiscountPayloadResult.failure(SubmissionOutcome(
+          success: false,
+          message: 'أدخل قيمة الخصم قبل الحفظ.',
+        ));
       }
 
+      if (state.discountStart == null || state.discountEnd == null) {
+        return const _DiscountPayloadResult.failure(SubmissionOutcome(
+          success: false,
+          message: 'حدد فترة الخصم قبل الحفظ.',
+        ));
+      }
+
+      final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
+
+      payload['discount_type'] = state.discountType;
+      payload['discount_value'] = state.discountType == 'percent'
+          ? math.min(state.discountValue!, 90)
+          : math.max(state.discountValue!, 0);
+      payload['discount_start'] = formatter.format(state.discountStart!);
+      payload['discount_end'] = formatter.format(state.discountEnd!);
+    }
+
+    return _DiscountPayloadResult.success(payload);
+  }
+
+  Future<SubmissionOutcome> _persistDiscount(
+      Map<String, dynamic> payload) async {
+    try {
       final PurchaseOptionsUpdateResult result = await _repository.saveDiscount(
         itemId: item.id!,
         payload: payload,
@@ -1319,15 +1443,148 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
 
       _applyOptions(result.options, finalPrice: result.finalPrice);
 
-      emit(state.copyWith(discountSaving: false));
-
       return SubmissionOutcome(success: true, message: result.message);
     } catch (error) {
       final String message =
           ErrorFilter.check(error).error?.toString() ?? error.toString();
-      emit(state.copyWith(discountSaving: false));
       return SubmissionOutcome(success: false, message: message);
     }
+  }
+
+  _VariantFormsSnapshot _captureVariantSnapshot() {
+    final List<ManagedPurchaseAttribute> affecting = state.managedAttributes
+        .where((ManagedPurchaseAttribute attribute) => attribute.affectsStock)
+        .toList(growable: false);
+
+    if (affecting.isEmpty || state.variantForms.isEmpty) {
+      return _VariantFormsSnapshot(
+        entries: const <String, _VariantSnapshotEntry>{},
+        generalStock: state.generalStock,
+      );
+    }
+
+    final Map<String, _VariantSnapshotEntry> entries =
+        <String, _VariantSnapshotEntry>{};
+
+    state.variantForms.forEach((String _, VariantStockFormState form) {
+      final String signature =
+          _buildVariantValueSignature(form.attributes, affecting);
+      entries[signature] = _VariantSnapshotEntry(
+        stock: form.stock,
+        hidden: form.hidden,
+        lastVisibleStock: form.lastVisibleStock,
+      );
+    });
+
+    return _VariantFormsSnapshot(
+        entries: entries, generalStock: state.generalStock);
+  }
+
+  void _restoreVariantSnapshot(_VariantFormsSnapshot snapshot) {
+    Map<String, VariantStockFormState>? nextForms;
+    bool formsChanged = false;
+    int? nextGeneralStock;
+    bool generalChanged = false;
+    bool setGeneralStockNull = false;
+
+    if (state.hasStockVariants) {
+      if (snapshot.hasEntries) {
+        final List<ManagedPurchaseAttribute> affecting = state.managedAttributes
+            .where(
+                (ManagedPurchaseAttribute attribute) => attribute.affectsStock)
+            .toList(growable: false);
+
+        if (affecting.isNotEmpty) {
+          nextForms = <String, VariantStockFormState>{};
+          state.variantForms.forEach((String key, VariantStockFormState form) {
+            final String signature =
+                _buildVariantValueSignature(form.attributes, affecting);
+            final _VariantSnapshotEntry? entry = snapshot.entries[signature];
+
+            if (entry != null) {
+              final VariantStockFormState updated = form.copyWith(
+                stock: entry.stock,
+                hidden: entry.hidden,
+                lastVisibleStock: entry.lastVisibleStock,
+              );
+              nextForms![key] = updated;
+              if (updated != form) {
+                formsChanged = true;
+              }
+            } else {
+              nextForms![key] = form;
+            }
+          });
+        }
+      }
+    } else {
+      final int? snapshotGeneral = snapshot.generalStock;
+      if (snapshotGeneral == null && state.generalStock != null) {
+        setGeneralStockNull = true;
+        generalChanged = true;
+      } else if (snapshotGeneral != null &&
+          snapshotGeneral != state.generalStock) {
+        nextGeneralStock = snapshotGeneral;
+        generalChanged = true;
+      }
+    }
+
+    if (formsChanged || generalChanged) {
+      emit(state.copyWith(
+        variantForms: formsChanged ? nextForms : null,
+        generalStock:
+            (!setGeneralStockNull && generalChanged) ? nextGeneralStock : null,
+        setGeneralStockNull: setGeneralStockNull,
+      ));
+    }
+  }
+
+  String _buildVariantValueSignature(
+    Map<String, String> attributes,
+    List<ManagedPurchaseAttribute> affecting,
+  ) {
+    if (affecting.isEmpty) {
+      return '';
+    }
+
+    final List<_SignaturePartMeta> metas = <_SignaturePartMeta>[];
+    for (int index = 0; index < affecting.length; index++) {
+      final ManagedPurchaseAttribute attribute = affecting[index];
+      final String normalizedName = attribute.name.trim().toLowerCase();
+      final String normalizedType = attribute.type.name;
+      final String normalizedValue =
+          (attributes[attribute.key] ?? '').trim().toLowerCase();
+      metas.add(_SignaturePartMeta(
+        type: normalizedType,
+        name: normalizedName,
+        value: normalizedValue,
+        originalIndex: index,
+      ));
+    }
+
+    metas.sort((_SignaturePartMeta a, _SignaturePartMeta b) {
+      final int nameCompare = a.name.compareTo(b.name);
+      if (nameCompare != 0) {
+        return nameCompare;
+      }
+      final int typeCompare = a.type.compareTo(b.type);
+      if (typeCompare != 0) {
+        return typeCompare;
+      }
+      return a.originalIndex.compareTo(b.originalIndex);
+    });
+
+    final Map<String, int> counters = <String, int>{};
+    final List<String> parts = <String>[];
+
+    for (final _SignaturePartMeta meta in metas) {
+      final String key = '${meta.type}|${meta.name}';
+      final int counter = (counters[key] ?? 0) + 1;
+      counters[key] = counter;
+      parts.add('${meta.type}|${meta.name}|$counter|${meta.value}');
+    }
+
+    return parts.join('||');
   }
 
   Future<SubmissionOutcome> submitAll() async {
@@ -1339,21 +1596,76 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       );
     }
 
+    if (item.id == null) {
+      return const SubmissionOutcome(
+        success: false,
+        message: 'معرّف المنتج غير معروف.',
+      );
+    }
+
+    final _AttributesPayloadResult attributesResult = _buildAttributesPayload();
+    if (!attributesResult.isSuccess) {
+      return attributesResult.outcome!;
+    }
+
+    if (state.hasStockVariants && state.variantForms.isEmpty) {
+      return const SubmissionOutcome(
+        success: false,
+        message:
+            'يرجى تحديد قيم السمات المؤثرة على المخزون ثم توليد التوليفات قبل الحفظ.',
+      );
+    }
+
+    final _DiscountPayloadResult discountResult = _buildDiscountPayload();
+    if (!discountResult.isSuccess) {
+      return discountResult.outcome!;
+    }
+
+    final _VariantFormsSnapshot snapshot = _captureVariantSnapshot();
+
     SubmissionOutcome? lastOutcome;
 
-    final List<Future<SubmissionOutcome> Function()> tasks =
-        <Future<SubmissionOutcome> Function()>[
-      saveAttributes,
-      saveStock,
-      saveDiscount,
-    ];
-
-    for (final Future<SubmissionOutcome> Function() task in tasks) {
-      final SubmissionOutcome outcome = await task();
-      if (!outcome.success) {
-        return outcome;
+    emit(state.copyWith(attributesSaving: true, error: null));
+    try {
+      final SubmissionOutcome attributesOutcome =
+          await _persistAttributes(attributesResult);
+      if (!attributesOutcome.success) {
+        return attributesOutcome;
       }
-      lastOutcome = outcome;
+      lastOutcome = attributesOutcome;
+    } finally {
+      emit(state.copyWith(attributesSaving: false));
+    }
+
+    _restoreVariantSnapshot(snapshot);
+
+    final _StockRowsResult stockResult = _buildStockRows();
+    if (!stockResult.isSuccess) {
+      return stockResult.outcome!;
+    }
+
+    emit(state.copyWith(stockSaving: true, error: null));
+    try {
+      final SubmissionOutcome stockOutcome =
+          await _persistStock(stockResult.rows);
+      if (!stockOutcome.success) {
+        return stockOutcome;
+      }
+      lastOutcome = stockOutcome;
+    } finally {
+      emit(state.copyWith(stockSaving: false));
+    }
+
+    emit(state.copyWith(discountSaving: true, error: null));
+    try {
+      final SubmissionOutcome discountOutcome =
+          await _persistDiscount(discountResult.payload);
+      if (!discountOutcome.success) {
+        return discountOutcome;
+      }
+      lastOutcome = discountOutcome;
+    } finally {
+      emit(state.copyWith(discountSaving: false));
     }
 
     if (lastOutcome == null) {

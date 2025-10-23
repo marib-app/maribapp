@@ -7,13 +7,26 @@ use App\Http\Resources\ItemCollection;
 use App\Models\FeatureSection;
 use App\Models\Item;
 use Carbon\Carbon;
+use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Stringable;
 use Illuminate\Http\Resources\Json\JsonResource;
 use App\Services\CachingService;
 use App\Services\FeatureSectionCategoryService;
 use App\Support\FeaturedSectionQueryHelper;
+use JsonException;
+use JsonSerializable;
+
+
+
+
+
+
+
+
 class FeaturedSectionService
 {
     public const MAX_SECTION_LIMIT = 100;
@@ -291,7 +304,75 @@ class FeaturedSectionService
 
     private function hashForSummary(array $summary): string
     {
-        return sha1(json_encode($summary, JSON_THROW_ON_ERROR));
+        $normalized = $this->normalizeHashableValue($summary);
+
+        try {
+            $encoded = json_encode($normalized, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
+        } catch (JsonException $exception) {
+            Log::warning('Failed to encode featured section summary for hashing, using fallback.', [
+                'exception' => $exception->getMessage(),
+            ]);
+
+            $encoded = json_encode($normalized, JSON_UNESCAPED_UNICODE);
+
+            if ($encoded === false) {
+                $encoded = serialize($normalized);
+            }
+        }
+
+        return sha1($encoded);
+    }
+
+    private function normalizeHashableValue(mixed $value): mixed
+    {
+        if ($value instanceof JsonSerializable) {
+            $value = $value->jsonSerialize();
+        } elseif ($value instanceof Arrayable) {
+            $value = $value->toArray();
+        } elseif ($value instanceof JsonResource) {
+            $value = $value->resolve();
+        } elseif ($value instanceof Stringable) {
+            $value = (string) $value;
+        }
+
+        if (is_array($value)) {
+            foreach ($value as $key => $item) {
+                $value[$key] = $this->normalizeHashableValue($item);
+            }
+
+            return $value;
+        }
+
+        if (is_string($value)) {
+            return $this->cleanInvalidUtf8($value);
+        }
+
+        return $value;
+    }
+
+    private function cleanInvalidUtf8(string $value): string
+    {
+        $isValidUtf8 = !function_exists('mb_check_encoding') || mb_check_encoding($value, 'UTF-8');
+
+        if ($isValidUtf8) {
+            return $value;
+        }
+
+        $converted = @iconv('UTF-8', 'UTF-8//IGNORE', $value);
+
+        if ($converted !== false) {
+            return $converted;
+        }
+
+        $converted = function_exists('utf8_encode') ? utf8_encode($value) : false;
+
+        if ($converted !== false) {
+            return $converted;
+        }
+
+        return preg_replace('/[^\x09\x0A\x0D\x20-\x7E]/', '', $value) ?? '';
+    
+    
     }
 
     private function cacheKey(string $sectionType, string $slug): string

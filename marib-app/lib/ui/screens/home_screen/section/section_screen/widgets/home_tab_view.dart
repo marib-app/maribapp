@@ -772,18 +772,31 @@ class _HomeTabViewState extends State<HomeTabView> {
                             shimmerBuilder: subcatShimmerBuilder,
                             // انتظر نجاح جلب التصنيفات (أو اكتمال مؤقت)
                             onDeferLoad: () async {
-                              final catCubit =
+                              final FetchCategoryCubit catCubit =
                                   context.read<FetchCategoryCubit>();
-                              if (catCubit.state is! FetchCategorySuccess) {
-                                catCubit.fetchCategories();
-                                try {
-                                  await catCubit.stream
-                                      .firstWhere(
-                                          (s) => s is FetchCategorySuccess)
-                                      .timeout(const Duration(seconds: 2));
-                                } catch (_) {
-                                  // تجاهل في حال انتهاء المهلة، سيستمر الشيمر حتى تتوفر البيانات
-                                }
+                              final FetchCategoryState catState =
+                                  catCubit.state;
+                              final FetchCategorySuccess? successState =
+                              catState is FetchCategorySuccess
+                                  ? catState
+                                  : null;
+
+                              final int rootId =
+                                  int.tryParse(widget.categoryId) ?? 0;
+                              String? interfaceType = successState?.interfaceType;
+                              interfaceType ??=
+                                  SliderInterfaceMapper.normalize(
+                                    widget.adInterfaceType,
+                                  ) ??
+                                      widget.adInterfaceType?.trim();
+
+                              try {
+                                await catCubit.fetchCategories(
+                                  categoryId: rootId > 0 ? rootId : null,
+                                  interfaceType: interfaceType,
+                                );
+                              } catch (_) {
+                                // تجاهل أي أخطاء عابرة، سيستمر الشيمر حتى تتوفر البيانات
                               }
                             },
                             // المحتوى الحقيقي بعد الجاهزية

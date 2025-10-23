@@ -74,10 +74,24 @@ class _PcSliderWidgetState extends State<PcSliderWidget> {
 
   void _kickoffCategoriesFetchIfNeeded({bool force = false}) {
     final catCubit = context.read<FetchCategoryCubit>();
-    final state = catCubit.state;
-    if (force || state is! FetchCategorySuccess) {
-      catCubit.fetchCategories();
+    final FetchCategoryState state = catCubit.state;
+    final FetchCategorySuccess? success =
+    state is FetchCategorySuccess ? state : null;
+
+    final int parentId = widget.parentId;
+    final bool shouldFetch = force ||
+        success == null ||
+        success.categoryId != parentId ||
+        success.categories.every((category) => category.id != parentId);
+
+    if (!shouldFetch) {
+      return;
     }
+    catCubit.fetchCategories(
+      forceRefresh: force ? true : null,
+      categoryId: parentId,
+      interfaceType: success?.interfaceType,
+    );
   }
 
   void _onTapCategory(int id) {

@@ -862,7 +862,10 @@ class _DeliverySizeTabState extends State<_DeliverySizeTab> {
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: <TextInputFormatter>[
-                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+                    FilteringTextInputFormatter.allow(
+                      RegExp(r'[0-9٠-٩.,٫]'),
+                    ),
+
                   ],
                   maxLength: 10,
                   onChanged: cubit.setDeliverySize,

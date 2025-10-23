@@ -21,29 +21,29 @@ class NotificationService {
 
     public static function validateHttpV1Configuration(): array
     {
-        $projectIdSetting = Setting::select('value')->where('name', 'firebase_project_id')->first();
+        $projectId = self::resolveFirebaseProjectId();
 
-        if (empty($projectIdSetting?->value)) {
+        if (empty($projectId)) {
             return [
                 'error'   => true,
                 'message' => 'Firebase project ID is not configured.',
             ];
         }
 
-        $serviceFileSetting = Setting::select('value')->where('name', 'service_file')->first();
+        $serviceFileValue = self::resolveServiceFileValue();
 
-        if (empty($serviceFileSetting?->value)) {
+        if (empty($serviceFileValue)) {
             return [
                 'error'   => true,
                 'message' => 'FCM service account file is not configured.',
             ];
         }
 
-        $serviceFilePath = self::resolveServiceFilePath($serviceFileSetting->value ?? null);
+        $serviceFilePath = self::resolveServiceFilePath($serviceFileValue);
 
         if (empty($serviceFilePath)) {
             \Log::error('NotificationService: FCM service account file path could not be resolved.', [
-                'stored_value' => $serviceFileSetting->value ?? null,
+                'stored_value' => $serviceFileValue,
             ]);
 
 
@@ -124,7 +124,7 @@ class NotificationService {
                 return $configurationState;
             }
 
-            $project_id = Setting::where('name', 'firebase_project_id')->value('value');
+            $project_id = self::resolveFirebaseProjectId();
 
             if (empty($project_id)) {
 
@@ -501,7 +501,7 @@ class NotificationService {
         try {
             // \Log::info('NotificationService: Starting getAccessToken process');
             
-            $file_name = Setting::select('value')->where('name', 'service_file')->first();
+            $file_name = self::resolveServiceFileValue();
             // \Log::info('NotificationService: Service file check', [
             //     'service_file_exists' => !empty($file_name),
             //     'service_file_value' => $file_name->value ?? 'NULL'
@@ -514,7 +514,6 @@ class NotificationService {
                     'message' => 'FCM Configuration not found'
                 ];
             }
-            $file_name = $file_name->value;
             $file_path = self::resolveServiceFilePath($file_name);
             \Log::info('NotificationService: Service file path check', [
                 'file_name' => $file_name,
@@ -906,8 +905,57 @@ class NotificationService {
         }
 
         return false;
-    
+
+
     }
 
+    protected static function resolveFirebaseProjectId(): ?string
+    {
+        $projectId = Setting::query()
+            ->where('name', 'firebase_project_id')
+            ->value('value');
+
+        if (is_string($projectId) && trim($projectId) !== '') {
+            return trim($projectId);
+        }
+
+        $candidates = [
+            config('services.fcm.project_id'),
+            env('FIREBASE_PROJECT_ID'),
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (is_string($candidate) && trim($candidate) !== '') {
+                return trim($candidate);
+            }
+        }
+
+        return null;
+
+    }
+    protected static function resolveServiceFileValue(): ?string
+    {
+        $settingValue = Setting::query()
+            ->where('name', 'service_file')
+            ->value('value');
+
+        if (is_string($settingValue) && trim($settingValue) !== '') {
+            return trim($settingValue);
+        }
+
+        $candidates = [
+            config('services.fcm.service_file'),
+            env('FIREBASE_SERVICE_ACCOUNT'),
+            env('GOOGLE_APPLICATION_CREDENTIALS'),
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (is_string($candidate) && trim($candidate) !== '') {
+                return trim($candidate);
+            }
+        }
+
+        return null;
+    }
 
 }

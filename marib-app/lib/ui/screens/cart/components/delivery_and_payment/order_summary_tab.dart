@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:marib/data/model/item/cart_model.dart';
+import 'package:marib/data/model/cart/cart_discount.dart';
 import 'package:marib/data/model/cart/checkout_models.dart';
 import 'package:marib/utils/app_icon.dart';
 
@@ -17,7 +18,9 @@ class CartOrderSummaryTab extends StatelessWidget {
     required this.freeShippingApplied,
     required this.shippingAmount,
     required this.shippingCurrency,
-
+    required this.discounts,
+    required this.onRemoveCoupon,
+    required this.couponInProgress,
     this.initiallyExpanded = true,
   });
 
@@ -46,6 +49,17 @@ class CartOrderSummaryTab extends StatelessWidget {
 
   /// التحكم في ما إذا كان التبويب مفتوحًا افتراضيًا.
   final bool initiallyExpanded;
+
+  /// الخصومات المطبقة على السلة.
+  final List<CartDiscount> discounts;
+
+  /// الاستدعاء المستخدم لإزالة القسائم من السلة.
+  final ValueChanged<CartDiscount> onRemoveCoupon;
+
+  /// تحديد ما إذا كانت عملية تطبيق القسيمة قيد التنفيذ حاليًا.
+  final bool couponInProgress;
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -89,7 +103,9 @@ class CartOrderSummaryTab extends StatelessWidget {
               freeShippingApplied: freeShippingApplied,
               shippingAmount: shippingAmount,
               shippingCurrency: shippingCurrency,
-
+              discounts: discounts,
+              onRemoveCoupon: onRemoveCoupon,
+              couponInProgress: couponInProgress,
             ),
           ],
         ),

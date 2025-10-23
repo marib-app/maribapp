@@ -9402,17 +9402,18 @@ public function storeRequestDevice(Request $request)
         }
 
 
-        $meta = [];
+        $manualBank = null;
 
-        if ($paymentMethod === 'east_yemen_bank') {
-            $meta['gateway'] = 'east_yemen_bank';
+        if ($paymentMethod === 'manual_bank' && $request->filled('manual_bank_id')) {
+            $manualBank = ManualBank::query()->find((int) $request->input('manual_bank_id'));
         }
 
-        if ($isWalletTopUp) {
-            $meta['wallet'] = [
-                'purpose' => ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP,
-            ];
-        }
+        $metaUpdates = $this->buildManualPaymentMetaUpdates(
+            $request,
+            is_string($paymentMethod) ? $paymentMethod : 'manual_bank',
+            $isWalletTopUp,
+            $manualBank
+        );
 
 
 
@@ -9488,9 +9489,13 @@ public function storeRequestDevice(Request $request)
 
             }
 
-            $metaPayload = $existingManualPaymentRequest
-                ? array_replace_recursive($existingManualPaymentRequest->meta ?? [], $meta)
-                : $meta;
+            $metaUpdates = $this->appendManualPaymentReceiptMeta($metaUpdates, $receiptPath);
+
+            $existingMeta = $existingManualPaymentRequest?->meta;
+            $metaPayload = $this->mergeManualPaymentMeta(
+                is_array($existingMeta) ? $existingMeta : [],
+                $metaUpdates
+            );
 
 
             $department = $this->resolveManualPaymentDepartment(
@@ -9970,6 +9975,458 @@ public function storeRequestDevice(Request $request)
     }
 
 
+    private function buildManualPaymentMetaUpdates(
+        Request $request,
+        string $paymentMethod,
+        bool $isWalletTopUp,
+        ?ManualBank $manualBank
+    ): array {
+        $meta = [
+            'source' => 'api.manual_payment_request',
+            'submitted_at' => now()->toIso8601String(),
+        ];
+
+        $normalizedGateway = strtolower(trim($paymentMethod));
+        if ($normalizedGateway !== '') {
+            $meta['gateway'] = $normalizedGateway;
+        }
+
+        if ($isWalletTopUp) {
+            $meta['wallet'] = [
+                'purpose' => ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP,
+            ];
+        }
+
+        $metadataPayload = $this->extractManualPaymentMetadataPayload($request);
+        if ($metadataPayload !== null) {
+            $meta['metadata'] = $metadataPayload;
+            data_set($meta, 'manual.metadata', $metadataPayload);
+        }
+
+        $reference = $this->normalizeManualPaymentString($request->input('reference'));
+        if ($reference !== null) {
+            $meta['reference'] = $reference;
+            data_set($meta, 'manual.reference', $reference);
+            if (data_get($meta, 'metadata.reference') === null) {
+                data_set($meta, 'metadata.reference', $reference);
+            }
+            if (data_get($meta, 'metadata.transfer_reference') === null) {
+                data_set($meta, 'metadata.transfer_reference', $reference);
+            }
+        }
+
+        $userNote = $this->normalizeManualPaymentString($request->input('user_note'));
+        if ($userNote !== null) {
+            $meta['note'] = $userNote;
+            $meta['user_note'] = $userNote;
+            data_set($meta, 'manual.note', $userNote);
+            data_set($meta, 'manual.user_note', $userNote);
+            if (data_get($meta, 'metadata.user_note') === null) {
+                data_set($meta, 'metadata.user_note', $userNote);
+            }
+        }
+
+        $transferredAt = $this->normalizeManualPaymentDateValue($request->input('transferred_at'));
+        if ($transferredAt !== null) {
+            if (data_get($meta, 'metadata.transferred_at') === null) {
+                data_set($meta, 'metadata.transferred_at', $transferredAt);
+            }
+            data_set($meta, 'manual.transferred_at', $transferredAt);
+        }
+
+        $manualBankId = null;
+        if ($manualBank instanceof ManualBank) {
+            $manualBankId = $manualBank->getKey();
+        } elseif ($request->filled('manual_bank_id')) {
+            $manualBankId = (int) $request->input('manual_bank_id');
+        }
+
+        if ($manualBankId !== null && $manualBankId !== 0) {
+            data_set($meta, 'bank.id', $manualBankId);
+            data_set($meta, 'manual_bank.id', $manualBankId);
+        }
+
+        if ($manualBank instanceof ManualBank) {
+            $bankName = $this->normalizeManualPaymentString($manualBank->name);
+            $beneficiary = $this->normalizeManualPaymentString($manualBank->beneficiary_name);
+            $accountNumber = $this->normalizeManualPaymentString($manualBank->account_number ?? $manualBank->iban);
+            $currency = $this->normalizeManualPaymentString($manualBank->currency);
+
+            if ($bankName !== null) {
+                data_set($meta, 'bank.name', $bankName);
+                data_set($meta, 'manual_bank.name', $bankName);
+            }
+
+            if ($beneficiary !== null) {
+                data_set($meta, 'bank.beneficiary_name', $beneficiary);
+                data_set($meta, 'manual_bank.beneficiary_name', $beneficiary);
+            }
+
+            if ($accountNumber !== null && data_get($meta, 'bank.account_number') === null) {
+                data_set($meta, 'bank.account_number', $accountNumber);
+            }
+
+            if ($currency !== null && data_get($meta, 'bank.currency') === null) {
+                data_set($meta, 'bank.currency', $currency);
+            }
+        }
+
+        return $this->cleanupManualPaymentMeta($meta);
+    }
+
+    private function appendManualPaymentReceiptMeta(array $meta, ?string $receiptPath): array
+    {
+        if (! is_string($receiptPath) || trim($receiptPath) === '') {
+            return $this->cleanupManualPaymentMeta($meta);
+        }
+
+        $normalizedPath = trim($receiptPath);
+
+        $attachment = $this->sanitizeManualPaymentAttachment([
+            'name' => 'receipt',
+            'path' => $normalizedPath,
+            'disk' => 'public',
+        ]);
+
+        if ($attachment !== []) {
+            $attachments = $this->mergeManualPaymentAttachmentCollections(
+                is_array(data_get($meta, 'attachments')) ? data_get($meta, 'attachments') : [],
+                [$attachment]
+            );
+            if ($attachments !== []) {
+                data_set($meta, 'attachments', $attachments);
+            }
+
+            $manualAttachments = $this->mergeManualPaymentAttachmentCollections(
+                is_array(data_get($meta, 'manual.attachments')) ? data_get($meta, 'manual.attachments') : [],
+                [$attachment]
+            );
+            if ($manualAttachments !== []) {
+                data_set($meta, 'manual.attachments', $manualAttachments);
+            }
+
+            data_set($meta, 'receipt', array_filter([
+                'path' => $normalizedPath,
+                'disk' => 'public',
+            ], static fn ($value) => $value !== null && $value !== ''));
+
+            data_set($meta, 'manual.receipt', array_filter([
+                'path' => $normalizedPath,
+                'disk' => 'public',
+            ], static fn ($value) => $value !== null && $value !== ''));
+        }
+
+        return $this->cleanupManualPaymentMeta($meta);
+    }
+
+    private function mergeManualPaymentMeta(array $existingMeta, array $updates): array
+    {
+        if ($updates === []) {
+            return $this->cleanupManualPaymentMeta($existingMeta);
+        }
+
+        $merged = array_replace_recursive($existingMeta, $updates);
+
+        $mergedAttachments = $this->mergeManualPaymentAttachmentCollections(
+            is_array(data_get($existingMeta, 'attachments')) ? data_get($existingMeta, 'attachments') : [],
+            is_array(data_get($updates, 'attachments')) ? data_get($updates, 'attachments') : []
+        );
+
+        if ($mergedAttachments !== []) {
+            data_set($merged, 'attachments', $mergedAttachments);
+        } else {
+            Arr::forget($merged, 'attachments');
+        }
+
+        $mergedManualAttachments = $this->mergeManualPaymentAttachmentCollections(
+            is_array(data_get($existingMeta, 'manual.attachments')) ? data_get($existingMeta, 'manual.attachments') : [],
+            is_array(data_get($updates, 'manual.attachments')) ? data_get($updates, 'manual.attachments') : []
+        );
+
+        if ($mergedManualAttachments !== []) {
+            data_set($merged, 'manual.attachments', $mergedManualAttachments);
+        } else {
+            Arr::forget($merged, 'manual.attachments');
+        }
+
+        return $this->cleanupManualPaymentMeta($merged);
+    }
+
+    private function mergeManualPaymentAttachmentCollections(array $existing, array $additional): array
+    {
+        $collection = [];
+
+        $push = static function (array $source) use (&$collection): void {
+            foreach ($source as $item) {
+                if (! is_array($item)) {
+                    continue;
+                }
+
+                $sanitized = array_filter($item, static function ($value) {
+                    if ($value === null) {
+                        return false;
+                    }
+
+                    if (is_string($value)) {
+                        return trim($value) !== '';
+                    }
+
+                    if (is_array($value)) {
+                        return $value !== [];
+                    }
+
+                    return true;
+                });
+
+                if ($sanitized === []) {
+                    continue;
+                }
+
+                $path = array_key_exists('path', $sanitized)
+                    ? trim((string) $sanitized['path'])
+                    : '';
+                $url = array_key_exists('url', $sanitized)
+                    ? trim((string) $sanitized['url'])
+                    : '';
+
+                if ($path === '' && $url === '') {
+                    continue;
+                }
+
+                $disk = array_key_exists('disk', $sanitized)
+                    ? trim((string) $sanitized['disk'])
+                    : '';
+
+                $key = implode('|', array_filter([$disk, $path, $url]));
+
+                $sanitized['path'] = $path;
+                if ($disk !== '') {
+                    $sanitized['disk'] = $disk;
+                } else {
+                    unset($sanitized['disk']);
+                }
+
+                if ($url !== '') {
+                    $sanitized['url'] = $url;
+                } else {
+                    unset($sanitized['url']);
+                }
+
+                if ($path === '') {
+                    unset($sanitized['path']);
+                }
+
+                if (! array_key_exists($key, $collection)) {
+                    $collection[$key] = $sanitized;
+                    continue;
+                }
+
+                $collection[$key] = array_replace($collection[$key], $sanitized);
+            }
+        };
+
+        $push($existing);
+        $push($additional);
+
+        return array_values(array_filter($collection, static fn ($item) => is_array($item) && $item !== []));
+    }
+
+    private function sanitizeManualPaymentAttachment(array $attachment): array
+    {
+        return array_filter($attachment, static function ($value) {
+            if ($value === null) {
+                return false;
+            }
+
+            if (is_string($value)) {
+                return trim($value) !== '';
+            }
+
+            if (is_array($value)) {
+                return $value !== [];
+            }
+
+            return true;
+        });
+    }
+
+    private function extractManualPaymentMetadataPayload(Request $request): ?array
+    {
+        $metadata = $request->input('metadata');
+
+        if ($metadata instanceof Collection) {
+            $metadata = $metadata->toArray();
+        }
+
+        if (is_string($metadata) && $metadata !== '') {
+            try {
+                $decoded = json_decode($metadata, true, 512, JSON_THROW_ON_ERROR);
+                if (is_array($decoded)) {
+                    $metadata = $decoded;
+                }
+            } catch (Throwable) {
+                $metadata = [];
+            }
+        }
+
+        if (! is_array($metadata)) {
+            $metadata = [];
+        }
+
+        $metaInput = $request->input('meta');
+        if ($metaInput instanceof Collection) {
+            $metaInput = $metaInput->toArray();
+        }
+
+        if (is_array($metaInput)) {
+            $metaMetadata = data_get($metaInput, 'metadata');
+            if (is_array($metaMetadata)) {
+                $metadata = array_replace_recursive($metaMetadata, $metadata);
+            }
+        }
+
+        $normalized = $this->sanitizeManualPaymentMetadataArray($metadata);
+
+        return $normalized === [] ? null : $normalized;
+    }
+
+    private function sanitizeManualPaymentMetadataArray($value): array
+    {
+        if ($value instanceof Collection) {
+            $value = $value->toArray();
+        }
+
+        if (is_string($value)) {
+            try {
+                $decoded = json_decode($value, true, 512, JSON_THROW_ON_ERROR);
+                if (is_array($decoded)) {
+                    $value = $decoded;
+                }
+            } catch (Throwable) {
+                return [];
+            }
+        }
+
+        if (! is_array($value)) {
+            return [];
+        }
+
+        $result = [];
+
+        foreach ($value as $key => $item) {
+            $normalizedKey = is_string($key) ? trim($key) : $key;
+
+            if ($normalizedKey === '' || $normalizedKey === null) {
+                continue;
+            }
+
+            if ($item instanceof Collection) {
+                $item = $item->toArray();
+            }
+
+            if (is_array($item)) {
+                $nested = $this->sanitizeManualPaymentMetadataArray($item);
+                if ($nested !== []) {
+                    $result[$normalizedKey] = $nested;
+                }
+                continue;
+            }
+
+            if ($item instanceof DateTimeInterface) {
+                $result[$normalizedKey] = Carbon::createFromInterface($item)->toIso8601String();
+                continue;
+            }
+
+            if (is_string($item)) {
+                $trimmed = trim($item);
+                if ($trimmed !== '') {
+                    $result[$normalizedKey] = $trimmed;
+                }
+                continue;
+            }
+
+            if (is_numeric($item) || is_bool($item)) {
+                $result[$normalizedKey] = $item;
+                continue;
+            }
+
+            if ($item === null) {
+                continue;
+            }
+
+            $stringified = trim((string) $item);
+            if ($stringified !== '') {
+                $result[$normalizedKey] = $stringified;
+            }
+        }
+
+        return $result;
+    }
+
+    private function cleanupManualPaymentMeta(array $meta): array
+    {
+        foreach ($meta as $key => $value) {
+            if (is_array($value)) {
+                $normalized = $this->cleanupManualPaymentMeta($value);
+                if ($normalized === []) {
+                    unset($meta[$key]);
+                } else {
+                    $meta[$key] = $normalized;
+                }
+                continue;
+            }
+
+            if ($value === null) {
+                unset($meta[$key]);
+                continue;
+            }
+
+            if (is_string($value)) {
+                $trimmed = trim($value);
+                if ($trimmed === '') {
+                    unset($meta[$key]);
+                } else {
+                    $meta[$key] = $trimmed;
+                }
+            }
+        }
+
+        return $meta;
+    }
+
+    private function normalizeManualPaymentString($value): ?string
+    {
+        if (! is_string($value)) {
+            return null;
+        }
+
+        $trimmed = trim($value);
+
+        return $trimmed === '' ? null : $trimmed;
+    }
+
+    private function normalizeManualPaymentDateValue($value): ?string
+    {
+        if ($value instanceof DateTimeInterface) {
+            return Carbon::createFromInterface($value)->toIso8601String();
+        }
+
+        if (! is_string($value)) {
+            return null;
+        }
+
+        $trimmed = trim($value);
+
+        if ($trimmed === '') {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($trimmed)->toIso8601String();
+        } catch (Throwable) {
+            return $trimmed;
+        }
+    }
 
 
     private function normalizeManualPaymentRequestFilters(array $input): array

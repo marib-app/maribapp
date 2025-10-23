@@ -154,6 +154,7 @@ class FetchItemSummaryCubit extends Cubit<FetchItemSummaryState> {
     if (currentState is! FetchItemSummarySuccess) return;
     if (currentState.isLoadingMore) return;
     if (currentState.items.length >= currentState.total) return;
+    final ItemFilterModel? clonedFilter = _cloneFilter(currentState.filter);
 
     emit(currentState.copyWith(isLoadingMore: true, loadingMoreError: false));
 
@@ -164,7 +165,7 @@ class FetchItemSummaryCubit extends Cubit<FetchItemSummaryState> {
         page: currentState.page + 1,
         search: currentState.search,
         sortBy: currentState.sortBy,
-        filter: currentState.filter,
+            filter: clonedFilter,
         perPage: currentState.perPage,
       );
 
@@ -178,6 +179,7 @@ class FetchItemSummaryCubit extends Cubit<FetchItemSummaryState> {
           total: result.total,
           isLoadingMore: false,
           loadingMoreError: false,
+          filter: clonedFilter,
         ),
       );
     } catch (_) {

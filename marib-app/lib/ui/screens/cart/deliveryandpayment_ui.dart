@@ -233,6 +233,9 @@ class DeliveryAndPaymentUI extends StatelessWidget {
                   freeShippingApplied: freeShippingApplied,
                   shippingAmount: shippingAmount,
                   shippingCurrency: shippingCurrency,
+                  discounts: discounts,
+                  onRemoveCoupon: onRemoveCoupon,
+                  couponInProgress: couponInProgress,
                   initiallyExpanded: true,
                 ),
                 const SizedBox(height: 11),
@@ -300,12 +303,11 @@ class DeliveryAndPaymentUI extends StatelessWidget {
     final bool hasCouponError =
         couponError != null && couponError!.trim().isNotEmpty;
 
-    final List<CartDiscount> appliedCoupons = discounts
-        .where((CartDiscount discount) =>
-            discount.isApplied && (discount.code?.trim().isNotEmpty ?? false))
-        .toList();
+    final Iterable<CartDiscount> appliedDiscounts = discounts.where(
+      (CartDiscount discount) => discount.isApplied,
+    );
 
-    final double totalDiscountAmount = discounts.fold<double>(
+    final double totalDiscountAmount = appliedDiscounts.fold<double>(
       0,
       (double sum, CartDiscount discount) {
         if (!discount.isApplied) {
@@ -374,41 +376,6 @@ class DeliveryAndPaymentUI extends StatelessWidget {
                 icon: Icon(Icons.close, color: accent),
               ),
           ],
-        ),
-      );
-    }
-
-    Widget buildAppliedCouponChip(CartDiscount discount) {
-      final String code = (discount.code ?? discount.displayTitle).trim();
-      final String displayCode =
-          code.isEmpty ? discount.displayTitle : code.toUpperCase();
-      final String? amount = discount.amountDisplay;
-      final String labelText = amount != null && amount.trim().isNotEmpty
-          ? '$displayCode — $amount'
-          : displayCode;
-
-      return InputChip(
-        avatar: Icon(
-          Icons.local_offer_outlined,
-          color: Theme.of(context).colorScheme.primary,
-          size: 18,
-        ),
-        label: Text(
-          labelText,
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: isDark ? Colors.white : Colors.blueGrey.shade800,
-          ),
-        ),
-        onDeleted: couponInProgress ? null : () => onRemoveCoupon(discount),
-        deleteIconColor: isDark ? Colors.white70 : Colors.black54,
-        backgroundColor:
-            isDark ? const Color(0xFF2C2C2E) : const Color(0xFFF6F8FB),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(
-            color: isDark ? Colors.white12 : Colors.blueGrey.shade100,
-          ),
         ),
       );
     }
@@ -614,29 +581,6 @@ class DeliveryAndPaymentUI extends StatelessWidget {
                           ),
                         ],
                       ),
-                      if (appliedCoupons.isNotEmpty) ...[
-                        const SizedBox(height: 12),
-                        Align(
-                          alignment: AlignmentDirectional.centerStart,
-                          child: Text(
-                            'القسائم المفعّلة',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: isDark
-                                  ? Colors.white70
-                                  : Colors.blueGrey.shade700,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: appliedCoupons
-                              .map(buildAppliedCouponChip)
-                              .toList(),
-                        ),
-                      ],
                     ],
                   ),
                 ),

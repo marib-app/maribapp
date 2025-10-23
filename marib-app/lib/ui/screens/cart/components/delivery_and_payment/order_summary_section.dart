@@ -5,12 +5,10 @@ import 'package:marib/data/model/item/cart_model.dart';
 import 'shared_widgets.dart';
 import 'package:marib/utils/currency_utils.dart';
 import 'package:marib/utils/money_formatter.dart';
-
-
+import 'package:marib/data/model/cart/cart_discount.dart';
 
 /// ويدجت يقدم ملخص الطلب مع تفاصيل الأسعار والعملة والتنبيهات.
 class OrderSummarySection extends StatelessWidget {
-
   const OrderSummarySection({
     super.key,
     required this.loading,
@@ -20,13 +18,13 @@ class OrderSummarySection extends StatelessWidget {
     required this.freeShippingApplied,
     required this.shippingAmount,
     required this.shippingCurrency,
+    required this.discounts,
+    required this.onRemoveCoupon,
+    required this.couponInProgress,
   });
 
   // حالة التحميل لعرض قوالب الانتظار.
   final bool loading;
-
-
-
 
   /// عناصر السلة التي سيتم عرضها داخل الجدول.
   final List<Cart> cartItems;
@@ -46,6 +44,16 @@ class OrderSummarySection extends StatelessWidget {
   /// العملة المرتبطة بقيمة الشحن.
   final String? shippingCurrency;
 
+  /// قائمة الخصومات المطبقة على السلة.
+  final List<CartDiscount> discounts;
+
+  /// رد الفعل عند إزالة إحدى القسائم.
+  final ValueChanged<CartDiscount> onRemoveCoupon;
+
+  /// حالة انشغال واجهة القسائم (لمنع التفاعل أثناء التحديث).
+  final bool couponInProgress;
+
+  static const double _discountEpsilon = 0.0001;
 
   CurrencyParseResult _resolveCurrencyInfo() {
     String? display;
@@ -60,6 +68,7 @@ class OrderSummarySection extends StatelessWidget {
         display = trimmed;
       }
     }
+
     void considerCode(String? candidate) {
       if (code != null) {
         return;
@@ -85,11 +94,10 @@ class OrderSummarySection extends StatelessWidget {
       considerCode(item.currencyCode);
       considerCode(item.currency);
 
-
       final String? trimmedCurrency = item.currency?.trim();
       final String? trimmedCode = item.currencyCode?.trim();
       final String? normalizedCode =
-      CurrencyUtils.normalizeCurrencyCode(trimmedCode ?? trimmedCurrency);
+          CurrencyUtils.normalizeCurrencyCode(trimmedCode ?? trimmedCurrency);
 
       if ((trimmedCurrency != null && trimmedCurrency.isNotEmpty) ||
           (normalizedCode != null && normalizedCode.isNotEmpty)) {
@@ -117,9 +125,10 @@ class OrderSummarySection extends StatelessWidget {
       }
 
       final String? currentDisplayNormalized =
-      CurrencyUtils.normalizeCurrencyCode(display);
+          CurrencyUtils.normalizeCurrencyCode(display);
       if (code != null &&
-          (currentDisplayNormalized == null || currentDisplayNormalized != code)) {
+          (currentDisplayNormalized == null ||
+              currentDisplayNormalized != code)) {
         for (final CurrencyParseResult candidate in itemCandidates) {
           final String? candidateDisplay = candidate.display?.trim();
           if (candidateDisplay == null || candidateDisplay.isEmpty) {
@@ -144,7 +153,6 @@ class OrderSummarySection extends StatelessWidget {
           display = displays.first;
         }
       }
-
     }
 
     if (code == null) {
@@ -152,9 +160,7 @@ class OrderSummarySection extends StatelessWidget {
     }
 
     return CurrencyParseResult(code: code, display: display?.trim());
-
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -163,7 +169,7 @@ class OrderSummarySection extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: List<Widget>.generate(
           5,
-              (int index) => Padding(
+          (int index) => Padding(
             padding: const EdgeInsets.symmetric(vertical: 6),
             child: buildShimmerLine(
               context,
@@ -179,11 +185,15 @@ class OrderSummarySection extends StatelessWidget {
     final bool isDark = theme.brightness == Brightness.dark;
 
     final Color borderColor = isDark ? Colors.white24 : const Color(0xFFE0E6ED);
-    final Color tableBackground = isDark ? const Color(0xFF1F1F23) : Colors.white;
-    final Color headerColor = isDark ? const Color(0xFF2C2C30) : const Color(0xFFE9EEF3);
+    final Color tableBackground =
+        isDark ? const Color(0xFF1F1F23) : Colors.white;
+    final Color headerColor =
+        isDark ? const Color(0xFF2C2C30) : const Color(0xFFE9EEF3);
     final Color evenRowColor = isDark ? const Color(0xFF232327) : Colors.white;
-    final Color oddRowColor = isDark ? const Color(0xFF1B1B1D) : const Color(0xFFF7FAFC);
-    final Color totalRowColor = isDark ? const Color(0xFF2C2C30) : const Color(0xFFE6F2FF);
+    final Color oddRowColor =
+        isDark ? const Color(0xFF1B1B1D) : const Color(0xFFF7FAFC);
+    final Color totalRowColor =
+        isDark ? const Color(0xFF2C2C30) : const Color(0xFFE6F2FF);
     final Color textColor = isDark ? Colors.white : const Color(0xFF1C1C1C);
 
     final BorderRadius borderRadius = BorderRadius.circular(14);
@@ -197,29 +207,74 @@ class OrderSummarySection extends StatelessWidget {
 
     String formatAmount(double amount) {
       return moneyFormatter.format(amount);
-
     }
-
 
     final double itemsTotal = cartItems.fold<double>(
       0,
-          (double sum, Cart item) => sum + item.subtotalAmount,
+      (double sum, Cart item) => sum + item.subtotalAmount,
     );
     final double shippingFee = _resolveShippingFeeValue();
     const double taxAmount = 0.0;
-    const double discountAmount = 0.0;
-    final double grandTotal = itemsTotal + shippingFee + taxAmount - discountAmount;
+    final List<CartDiscount> appliedDiscounts =
+        discounts.where((CartDiscount discount) => discount.isApplied).toList();
+
+    final double totalDiscountAmount = appliedDiscounts.fold<double>(
+      0,
+      (double sum, CartDiscount discount) =>
+          sum + _normalizeDiscountAmount(discount),
+    );
+
+    final double normalizedDiscountTotal =
+        totalDiscountAmount <= _discountEpsilon ? 0 : totalDiscountAmount;
+
+    final double rawGrandTotal =
+        itemsTotal + shippingFee + taxAmount - normalizedDiscountTotal;
+    final double grandTotal = rawGrandTotal < 0 ? 0 : rawGrandTotal;
 
     final String shippingLabel = _resolveShippingLabel(
       shippingFee,
       formatAmount,
     );
 
+    final Color removeIconColor =
+        isDark ? Colors.white60 : Colors.blueGrey.shade400;
+
     final List<_SummaryRowData> rows = <_SummaryRowData>[
-      _SummaryRowData(title: 'إجمالي سعر المنتجات', value: formatAmount(itemsTotal)),
+      _SummaryRowData(
+          title: 'إجمالي سعر المنتجات', value: formatAmount(itemsTotal)),
       _SummaryRowData(title: 'رسوم الشحن', value: shippingLabel),
       _SummaryRowData(title: 'الضريبة', value: formatAmount(taxAmount)),
-      _SummaryRowData(title: 'تخفيض', value: formatAmount(-discountAmount)),
+      _SummaryRowData(
+        title: 'تخفيض',
+        value: normalizedDiscountTotal <= _discountEpsilon
+            ? formatAmount(0)
+            : formatAmount(-normalizedDiscountTotal),
+      ),
+      ...appliedDiscounts.map((CartDiscount discount) {
+        final double? signedAmount = _resolveDiscountSignedAmount(discount);
+        final String discountValue = signedAmount == null
+            ? '—'
+            : formatAmount(
+                signedAmount.abs() <= _discountEpsilon ? 0 : signedAmount,
+              );
+        final bool removalDisabled = couponInProgress;
+        final Color iconColor = removalDisabled
+            ? removeIconColor.withOpacity(0.45)
+            : removeIconColor;
+        return _SummaryRowData(
+          title: _buildDiscountTitle(discount),
+          value: discountValue,
+          trailing: IconButton(
+            onPressed: removalDisabled ? null : () => onRemoveCoupon(discount),
+            icon: Icon(Icons.close, size: 18, color: iconColor),
+            tooltip: 'إزالة القسيمة',
+            splashRadius: 18,
+            padding: EdgeInsets.zero,
+            visualDensity: VisualDensity.compact,
+            constraints: const BoxConstraints(minHeight: 32, minWidth: 32),
+          ),
+        );
+      }),
     ];
 
     Widget buildRow({
@@ -230,17 +285,18 @@ class OrderSummarySection extends StatelessWidget {
       bool showDivider = true,
       FontWeight titleWeight = FontWeight.w600,
       double fontSize = 13.5,
+      Widget? trailing,
     }) {
       return Container(
         decoration: BoxDecoration(
           color: backgroundColor,
           border: showDivider
               ? Border(
-            bottom: BorderSide(
-              color: borderColor,
-              width: 0.7,
-            ),
-          )
+                  bottom: BorderSide(
+                    color: borderColor,
+                    width: 0.7,
+                  ),
+                )
               : null,
         ),
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
@@ -259,26 +315,41 @@ class OrderSummarySection extends StatelessWidget {
                 ),
               ),
             ),
-      Expanded(
-      child: Align(
-      alignment: AlignmentDirectional.centerEnd,
-      child: Text(
-      value,
-      style: TextStyle(
-      color: emphasizeValue ? theme.colorScheme.primary : textColor,
-      fontSize: fontSize,
-      fontWeight: emphasizeValue ? FontWeight.w700 : FontWeight.w600,
-                  ),
-                  textAlign: TextAlign.end,
-
+            Expanded(
+              child: Align(
+                alignment: AlignmentDirectional.centerEnd,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: <Widget>[
+                    Flexible(
+                      child: Text(
+                        value,
+                        style: TextStyle(
+                          color: emphasizeValue
+                              ? theme.colorScheme.primary
+                              : textColor,
+                          fontSize: fontSize,
+                          fontWeight: emphasizeValue
+                              ? FontWeight.w700
+                              : FontWeight.w600,
+                        ),
+                        textAlign: TextAlign.end,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (trailing != null) ...<Widget>[
+                      const SizedBox(width: 4),
+                      trailing,
+                    ],
+                  ],
                 ),
               ),
-      ),
+            ),
           ],
         ),
       );
     }
-
 
     if (cartItems.isEmpty) {
       return DecoratedBox(
@@ -324,12 +395,14 @@ class OrderSummarySection extends StatelessWidget {
               final int index = entry.key;
               final _SummaryRowData data = entry.value;
               final bool isLast = index == rows.length - 1;
-              final Color background = index.isEven ? evenRowColor : oddRowColor;
+              final Color background =
+                  index.isEven ? evenRowColor : oddRowColor;
               return buildRow(
                 title: data.title,
                 value: data.value,
                 backgroundColor: background,
                 showDivider: !isLast,
+                trailing: data.trailing,
               );
             }),
             buildRow(
@@ -340,21 +413,71 @@ class OrderSummarySection extends StatelessWidget {
               showDivider: false,
               fontSize: 14,
             ),
-
           ],
         ),
       ),
     );
   }
 
+  double _normalizeDiscountAmount(CartDiscount discount) {
+    final num? amount = discount.amount;
+    if (amount == null) {
+      return 0;
+    }
+    final double value = amount.toDouble();
+    if (value.isNaN || value.isInfinite) {
+      return 0;
+    }
+    return value < 0 ? -value : value;
+  }
 
+  double? _resolveDiscountSignedAmount(CartDiscount discount) {
+    final num? amount = discount.amount;
+    if (amount == null) {
+      return null;
+    }
+    final double value = amount.toDouble();
+    if (value.isNaN || value.isInfinite) {
+      return 0;
+    }
+    if (value < 0) {
+      return value;
+    }
+    return -value;
+  }
 
+  String _buildDiscountTitle(CartDiscount discount) {
+    final String? rawLabel = discount.label?.trim();
+    final String? rawCode = discount.code?.trim();
 
+    final String label = rawLabel ?? '';
+    final String code = rawCode ?? '';
+
+    if (label.isEmpty && code.isEmpty) {
+      return discount.displayTitle;
+    }
+
+    if (label.isEmpty) {
+      return code.toUpperCase();
+    }
+
+    if (code.isEmpty) {
+      return label;
+    }
+
+    final String normalizedLabel = label.toLowerCase();
+    final String normalizedCode = code.toLowerCase();
+    if (normalizedLabel.contains(normalizedCode)) {
+      return label;
+    }
+
+    return '$label (${code.toUpperCase()})';
+  }
 
   String _resolveShippingLabel(
-      double shippingFee,
-      String Function(double value) formatAmount,
-      ) {
+    double shippingFee,
+    String Function(double value) formatAmount,
+  ) {
     final String trimmedOverride = deliveryFeeLabel.trim();
     if (trimmedOverride.isNotEmpty && trimmedOverride != '—') {
       return trimmedOverride;
@@ -404,8 +527,7 @@ class OrderSummarySection extends StatelessWidget {
         .replaceAll('٬', '')
         .replaceAll('،', '')
         .replaceAll(',', '');
-    final String sanitized =
-    normalized.replaceAll(RegExp(r'[^0-9.\-]'), '');
+    final String sanitized = normalized.replaceAll(RegExp(r'[^0-9.\-]'), '');
     if (sanitized.isEmpty) {
       return null;
     }
@@ -415,21 +537,21 @@ class OrderSummarySection extends StatelessWidget {
   String _normalizeLocalizedDigits(String value) {
     return value.replaceAllMapped(RegExp(r'[٠-٩۰-۹]'), (Match match) {
       final int codeUnit = match.group(0)!.codeUnitAt(0);
-      final int base = (codeUnit >= 0x06F0 && codeUnit <= 0x06F9) ? 0x06F0 : 0x0660;
+      final int base =
+          (codeUnit >= 0x06F0 && codeUnit <= 0x06F9) ? 0x06F0 : 0x0660;
       return (codeUnit - base).toString();
     });
   }
-
-
-
 }
 
 class _SummaryRowData {
   const _SummaryRowData({
     required this.title,
     required this.value,
+    this.trailing,
   });
 
   final String title;
   final String value;
+  final Widget? trailing;
 }

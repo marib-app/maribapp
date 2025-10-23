@@ -203,6 +203,7 @@ class NotificationService {
             
 
             $failedDeliveries = [];
+            $invalidatedTokens = [];
             $successfulDeliveries = 0;
 
             foreach ($registrationIDs as $index => $registrationID) {
@@ -377,8 +378,29 @@ class NotificationService {
                         'message' => $errorMessage,
                     ]);
 
+                    $tokenRemoved = false;
+
                     if (self::shouldRemoveFcmToken($errorCode, $errorStatus)) {
                         self::removeInvalidFcmToken($registrationID);
+                        $tokenRemoved = true;
+
+                        $invalidatedTokens[] = [
+                            'token' => $registrationID,
+                            'http_code' => $httpCode,
+                            'status' => $errorStatus,
+                            'error_code' => $errorCode,
+                        ];
+                    }
+
+                    if ($tokenRemoved && self::shouldIgnoreFcmFailure($errorCode, $errorStatus, $httpCode)) {
+                        \Log::info('NotificationService: Ignoring FCM failure for invalid token', [
+                            'token' => $registrationID,
+                            'http_code' => $httpCode,
+                            'status' => $errorStatus,
+                            'error_code' => $errorCode,
+                        ]);
+
+                        continue;
                     }
 
                     $failedDeliveries[] = [
@@ -408,6 +430,9 @@ class NotificationService {
                         'success' => $successfulDeliveries,
                         'failure' => count($failedDeliveries),
                         'failures' => $failedDeliveries,
+                        'invalid_tokens_removed' => $invalidatedTokens,
+                        'invalid_tokens_removed_count' => count($invalidatedTokens),
+
                     ],
                 ];
             }
@@ -421,6 +446,8 @@ class NotificationService {
                 'data'    => [
                     'success' => $successfulDeliveries,
                     'failure' => 0,
+                    'invalid_tokens_removed' => $invalidatedTokens,
+                    'invalid_tokens_removed_count' => count($invalidatedTokens),
                 ],
             ];
         } catch (Throwable $th) {
@@ -644,6 +671,28 @@ class NotificationService {
 
         return false;
     }
+
+    protected static function shouldIgnoreFcmFailure(?string $errorCode, ?string $status, ?int $httpCode): bool
+    {
+        $invalidErrorCodes = ['UNREGISTERED'];
+        $invalidStatuses = ['NOT_FOUND'];
+        $invalidHttpCodes = [404, 410];
+
+        if ($errorCode && in_array($errorCode, $invalidErrorCodes, true)) {
+            return true;
+        }
+
+        if ($status && in_array($status, $invalidStatuses, true)) {
+            return true;
+        }
+
+        if ($httpCode && in_array($httpCode, $invalidHttpCodes, true)) {
+            return true;
+        }
+
+        return false;
+    }
+
 
     protected static function removeInvalidFcmToken(string $token): void
     {

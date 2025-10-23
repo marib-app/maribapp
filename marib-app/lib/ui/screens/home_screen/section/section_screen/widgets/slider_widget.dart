@@ -5,6 +5,7 @@ import 'package:shimmer/shimmer.dart';
 
 import 'package:marib/data/cubits/category/fetch_category_cubit.dart';
 import 'package:marib/utils/slider_interface_mapper.dart';
+import 'package:flutter/foundation.dart';
 
 const _shimmerBaseColor = Color(0xFFB8BEC9);
 const _shimmerHighlightColor = Color(0xFFE4E8F0);

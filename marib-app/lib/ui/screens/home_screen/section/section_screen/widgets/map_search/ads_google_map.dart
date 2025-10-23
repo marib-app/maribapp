@@ -24,8 +24,6 @@ export 'components/map_search_types.dart';
 // واجهة الاستخدام العامة
 // ===================================================================
 
-
-
 class AdsGoogleMap extends StatefulWidget {
   // الأساسيات
   final CameraPosition initialCameraPosition;
@@ -542,7 +540,6 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
         if ((_viewportFilterOn || (_radiusOn && widget.userLatLng != null)) &&
             _visibleAds.isNotEmpty &&
             !_detailsOpen)
-
           SafeArea(
             child: Align(
               alignment: Alignment.bottomCenter,
@@ -588,99 +585,108 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
         ),
 
         // أزرار يمين-أسفل: نوع الخريطة، موقعي، نطاق البحث
-        SafeArea(
-          child: Align(
-            alignment: Alignment.bottomRight,
-            child: Padding(
-              padding: const EdgeInsets.only(right: 12, bottom: 12),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  MiniFab(
-                    icon: Icons.layers_rounded,
-                    tooltip: 'نوع الخريطة',
-                    onTap: () {
-                      setState(() {
-                        switch (_mapType) {
-                          case MapType.normal:
-                            _mapType = MapType.hybrid;
-                            break;
-                          case MapType.hybrid:
-                            _mapType = MapType.terrain;
-                            break;
-                          case MapType.terrain:
-                            _mapType = MapType.normal;
-                            break;
-                          default:
-                            _mapType = MapType.normal;
-                        }
-                      });
-                      HelperUtils.showSnackBarMessage(
-                          context, "تم تغيير نوع الخريطة");
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  MiniFab(
-                    icon: Icons.my_location_rounded,
-                    tooltip: 'العودة لموقعي',
-                    onTap: _animateToUser,
-                  ),
-                  if (widget.enableRadiusFilter &&
-                      widget.userLatLng != null) ...[
-                    const SizedBox(height: 8),
-                    MiniFab(
-                      icon: Icons.radio_button_checked_rounded,
-                      tooltip:
-                          _radiusOn ? 'تعديل نطاق البحث' : 'تفعيل نطاق البحث',
-                      onTap: () async {
-                        setState(() {
-                          _radiusOn = true;
-                          _selectedAd = null;
-                        });
-
-                        await showModalBottomSheet(
-                          context: context,
-                          isScrollControlled: true,
-                          backgroundColor:
-                              Theme.of(context).scaffoldBackgroundColor,
-                          shape: const RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.vertical(top: Radius.circular(18)),
-                          ),
-                          builder: (_) => RadiusSheet(
-                            radiusKm: _radiusKm,
-                            onChanged: (v) => setState(() => _radiusKm = v),
-                            onDisable: () {
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 200),
+          child: _detailsOpen
+              ? const SizedBox.shrink()
+              : SafeArea(
+                  key: const ValueKey('map_controls'),
+                  child: Align(
+                    alignment: Alignment.bottomRight,
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 12, bottom: 12),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          MiniFab(
+                            icon: Icons.layers_rounded,
+                            tooltip: 'نوع الخريطة',
+                            onTap: () {
                               setState(() {
-                                _radiusOn = false;
-                                _selectedAd = null;
+                                switch (_mapType) {
+                                  case MapType.normal:
+                                    _mapType = MapType.hybrid;
+                                    break;
+                                  case MapType.hybrid:
+                                    _mapType = MapType.terrain;
+                                    break;
+                                  case MapType.terrain:
+                                    _mapType = MapType.normal;
+                                    break;
+                                  default:
+                                    _mapType = MapType.normal;
+                                }
                               });
 
-                              Navigator.pop(context);
-                              _rebuildMarkers();
                               HelperUtils.showSnackBarMessage(
-                                  context, "تم تعطيل نطاق البحث");
-                            },
-                            onApply: () {
-                              Navigator.pop(context);
-                              setState(() => _selectedAd = null);
-                              _rebuildMarkers();
-                              HelperUtils.showSnackBarMessage(
-                                context,
-                                "تم تطبيق نطاق ${_radiusKm.toStringAsFixed(0)} كم • المعروض: $_currentShownCount / $_totalValidAds\n"
-                                "النتائج الآن حسب النطاق المحدد. لإلغاء، استخدم زر (إلغاء) بجوار العداد.",
-                                messageDuration: 4,
-                              );
+                                  context, "تم تغيير نوع الخريطة");
                             },
                           ),
-                        );
-                      },
+                          const SizedBox(height: 8),
+                          MiniFab(
+                            icon: Icons.my_location_rounded,
+                            tooltip: 'العودة لموقعي',
+                            onTap: _animateToUser,
+                          ),
+                          if (widget.enableRadiusFilter &&
+                              widget.userLatLng != null) ...[
+                            const SizedBox(height: 8),
+                            MiniFab(
+                              icon: Icons.radio_button_checked_rounded,
+                              tooltip: _radiusOn
+                                  ? 'تعديل نطاق البحث'
+                                  : 'تفعيل نطاق البحث',
+                              onTap: () async {
+                                setState(() {
+                                  _radiusOn = true;
+                                  _selectedAd = null;
+                                });
+
+                                await showModalBottomSheet(
+                                  context: context,
+                                  isScrollControlled: true,
+                                  backgroundColor:
+                                      Theme.of(context).scaffoldBackgroundColor,
+                                  shape: const RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.vertical(
+                                        top: Radius.circular(18)),
+                                  ),
+                                  builder: (_) => RadiusSheet(
+                                    radiusKm: _radiusKm,
+                                    onChanged: (v) =>
+                                        setState(() => _radiusKm = v),
+                                    onDisable: () {
+                                      setState(() {
+                                        _radiusOn = false;
+                                        _selectedAd = null;
+                                      });
+
+                                      Navigator.pop(context);
+                                      _rebuildMarkers();
+                                      HelperUtils.showSnackBarMessage(
+                                          context, "تم تعطيل نطاق البحث");
+                                    },
+                                    onApply: () {
+                                      Navigator.pop(context);
+                                      setState(() => _selectedAd = null);
+                                      _rebuildMarkers();
+                                      HelperUtils.showSnackBarMessage(
+                                        context,
+                                        "تم تطبيق نطاق ${_radiusKm.toStringAsFixed(0)} كم • المعروض: $_currentShownCount / $_totalValidAds\n"
+                                        "النتائج الآن حسب النطاق المحدد. لإلغاء، استخدم زر (إلغاء) بجوار العداد.",
+                                        messageDuration: 4,
+                                      );
+                                    },
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
-                  ],
-                ],
-              ),
-            ),
-          ),
+                  ),
+                ),
         ),
       ],
     );

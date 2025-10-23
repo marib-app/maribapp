@@ -114,6 +114,11 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
 
   bool get _detailsOpen => _selectedAd != null;
 
+  bool get _horizontalStripEligible {
+    final radiusFilterActive = _radiusOn && widget.userLatLng != null;
+    return (_viewportFilterOn || radiusFilterActive) && _visibleAds.isNotEmpty;
+  }
+
   // ستايل الخريطة
   Brightness? _cachedBrightness;
 
@@ -228,7 +233,6 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
 
     return null;
   }
-
 
   Future<void> _applyMapStyle() async {
     if (!widget.applyAppMapStyle || _controller == null) return;
@@ -470,6 +474,9 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
     final hasResults =
         (widget.ads != null) ? _currentShownCount > 0 : _markers.isNotEmpty;
 
+    final horizontalStripVisible = _horizontalStripEligible && !_detailsOpen;
+    final showControls = !horizontalStripVisible && !_detailsOpen;
+
     return Stack(
       children: [
         GoogleMap(
@@ -562,9 +569,7 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
         if (!hasResults) const NoResultsOverlay(),
 
         // بطاقات أفقية عند تفعيل أي نطاق/منطقة
-        if ((_viewportFilterOn || (_radiusOn && widget.userLatLng != null)) &&
-            _visibleAds.isNotEmpty &&
-            !_detailsOpen)
+        if (horizontalStripVisible)
           SafeArea(
             child: Align(
               alignment: Alignment.bottomCenter,
@@ -612,9 +617,8 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
         // أزرار يمين-أسفل: نوع الخريطة، موقعي، نطاق البحث
         AnimatedSwitcher(
           duration: const Duration(milliseconds: 200),
-          child: _detailsOpen
-              ? const SizedBox.shrink()
-              : SafeArea(
+          child: showControls
+              ? SafeArea(
                   key: const ValueKey('map_controls'),
                   child: Align(
                     alignment: Alignment.bottomRight,
@@ -711,7 +715,8 @@ class _AdsGoogleMapState extends State<AdsGoogleMap> {
                       ),
                     ),
                   ),
-                ),
+                )
+              : const SizedBox.shrink(),
         ),
       ],
     );

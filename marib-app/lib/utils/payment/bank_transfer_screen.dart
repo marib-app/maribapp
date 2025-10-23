@@ -99,6 +99,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
 
   // الحقول
   final _senderCtrl = TextEditingController(); // اسم المرسل
+  final _transferCodeCtrl = TextEditingController(); // رقم الحوالة
   final _notesCtrl = TextEditingController(); // ملاحظات
   bool _allowRoutePop = false; // للسماح بإغلاق النافذة عند التأكيد فقط
 
@@ -129,6 +130,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
   @override
   void dispose() {
     _senderCtrl.dispose();
+    _transferCodeCtrl.dispose();
     _notesCtrl.dispose();
     _shimmerCtl.dispose();
     _walletSummarySub?.cancel();
@@ -816,6 +818,11 @@ class _BankTransferScreenState extends State<BankTransferScreen>
 
   bool get _shouldShowSenderField => _usingManualBank;
 
+  bool get _shouldShowTransferCodeField => _usingManualBank;
+
+  bool get _transferCodeOk =>
+      !_shouldShowTransferCodeField || _transferCodeCtrl.text.trim().isNotEmpty;
+
   bool get _readyToSubmit {
     if (_submitting) return false;
     if (_usingEastYemen) {
@@ -823,6 +830,9 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     }
     if (_usingManualBank) {
       if (!_senderOk) return false;
+      if (!_transferCodeOk) return false;
+
+
       return _selectedBankId != null && _receiptOk;
     }
 
@@ -954,7 +964,8 @@ class _BankTransferScreenState extends State<BankTransferScreen>
 
       final notesText = _notesCtrl.text.trim();
       final senderName = _shouldShowSenderField ? _senderCtrl.text.trim() : '';
-
+      final transferCode =
+      _shouldShowTransferCodeField ? _transferCodeCtrl.text.trim() : '';
       final String? submissionCurrency = _paymentCurrencyCode;
       if (submissionCurrency == null || submissionCurrency.isEmpty) {
         _showOverlayMessage(
@@ -968,6 +979,8 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       if (notesText.isNotEmpty) userNoteSections.add(notesText);
       if (senderName.isNotEmpty)
         userNoteSections.add('اسم المرسل: $senderName');
+      if (transferCode.isNotEmpty)
+        userNoteSections.add('رقم الحوالة: $transferCode');
       final userNote = userNoteSections.join('\n');
 
       final contextMetadata = widget.args.toContext()
@@ -979,6 +992,10 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         if (payableType != null) 'payable_type': payableType,
         if (payableId != null) 'payable_id': payableId,
         if (senderName.isNotEmpty) 'sender_name': senderName,
+
+        if (_usingManualBank && transferCode.isNotEmpty)
+          'transfer_code': transferCode,
+
         if (contextMetadata.isNotEmpty) 'context': contextMetadata,
       }..removeWhere((k, v) {
           if (v == null) return true;
@@ -1038,7 +1055,9 @@ class _BankTransferScreenState extends State<BankTransferScreen>
           packageId: packageIdForApi,
           amount: widget.args.amount,
           currency: submissionCurrency,
-          reference: null,
+          reference:
+          transferCode.isNotEmpty ? transferCode : null,
+
           userNote: userNote.isEmpty ? null : userNote,
           transferredAt: DateTime.now().toUtc(),
           metadata: metadata.isEmpty ? null : metadata,

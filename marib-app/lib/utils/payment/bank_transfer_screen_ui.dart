@@ -432,6 +432,18 @@ extension _BankTransferScreenUi on _BankTransferScreenState {
           ),
           const SizedBox(height: 12),
 
+    ],
+        if (_shouldShowTransferCodeField) ...[
+          _inputField(
+            controller: _transferCodeCtrl,
+            hint: 'رقم الحوالة',
+            onSurface: onSurface,
+            showError: _attempted && !_transferCodeOk,
+
+          ),
+          const SizedBox(height: 12),
+
+
         ],
     _inputField(
     controller: _notesCtrl,

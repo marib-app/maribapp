@@ -243,6 +243,25 @@ class _HomeTabViewState extends State<HomeTabView> {
     return normalized;
   }
 
+  bool _treeContainsCategoryId(
+    List<CategoryModel> categories,
+    int target,
+  ) {
+    for (final CategoryModel category in categories) {
+      final int? categoryId = category.id;
+      if (categoryId != null && categoryId == target) {
+        return true;
+      }
+      final List<CategoryModel>? children = category.children;
+      if (children != null && children.isNotEmpty) {
+        if (_treeContainsCategoryId(children, target)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   List<CategoryModel> _filterCategoriesByAllowedIds(
     List<CategoryModel> categories,
     Set<int> allowedIds,
@@ -941,6 +960,33 @@ class _HomeTabViewState extends State<HomeTabView> {
                                           root, effectiveRootChildren)
                                       : root;
 
+                              if (shouldFilterCategories &&
+                                  selectedId != null &&
+                                  selectedId > 0) {
+                                final bool selectedAllowed =
+                                    _treeContainsCategoryId(
+                                  effectiveRootChildren,
+                                  selectedId,
+                                );
+                                if (!selectedAllowed) {
+                                  WidgetsBinding.instance
+                                      .addPostFrameCallback((_) {
+                                    if (!mounted) {
+                                      return;
+                                    }
+                                    if (widget.selectedCategoryId.value ==
+                                        selectedId) {
+                                      widget.selectedCategoryId.value = 0;
+                                      if (_activeSubcatId != null) {
+                                        setState(() {
+                                          _activeSubcatId = null;
+                                        });
+                                      }
+                                    }
+                                  });
+                                }
+                              }
+
                               final bool isTopLevel =
                                   (selectedId == null || selectedId == 0);
 
@@ -973,6 +1019,24 @@ class _HomeTabViewState extends State<HomeTabView> {
                               }
                               if (visibleSubcats.isEmpty)
                                 return const SizedBox.shrink();
+
+                              final int? activeSubcatId = _activeSubcatId;
+                              if (activeSubcatId != null &&
+                                  activeSubcatId > 0 &&
+                                  !visibleSubcats.any((category) =>
+                                      category.id == activeSubcatId)) {
+                                WidgetsBinding.instance
+                                    .addPostFrameCallback((_) {
+                                  if (!mounted) {
+                                    return;
+                                  }
+                                  if (_activeSubcatId == activeSubcatId) {
+                                    setState(() {
+                                      _activeSubcatId = null;
+                                    });
+                                  }
+                                });
+                              }
 
                               final brand =
                                   Theme.of(context).colorScheme.primary;

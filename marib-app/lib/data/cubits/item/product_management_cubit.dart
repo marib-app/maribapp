@@ -1022,7 +1022,19 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       return;
     }
 
-    final String sanitized = value.replaceAll(',', '.');
+    final String asciiDigits = value
+        .replaceAllMapped(
+      RegExp('[٠-٩۰-۹]'),
+          (Match match) {
+        final int codeUnit = match.group(0)!.codeUnitAt(0);
+        final int base = codeUnit >= 0x06F0 ? 0x06F0 : 0x0660;
+        return (codeUnit - base).toString();
+      },
+    )
+        .replaceAll('٫', '.');
+
+    final String sanitized = asciiDigits.replaceAll(',', '.');
+
     final String trimmed = sanitized.trim();
 
     if (trimmed.isEmpty) {

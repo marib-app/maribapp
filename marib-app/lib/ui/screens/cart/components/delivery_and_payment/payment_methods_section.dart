@@ -806,37 +806,48 @@ class PaymentMethodsSection extends StatelessWidget {
                             child: const Text('📎 صورة الإشعار'),
                           ),
                           const SizedBox(width: 12),
-                          if (uploading)
-                            const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          else if (file != null)
-                            Row(
-                              children: [
-                                const Icon(Icons.check_circle,
-                                    color: Colors.green, size: 20),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: Text(
-                                    'تم إرفاق ${file.path.split(RegExp(r'[\\/]')).last}',
-                                    style: const TextStyle(
-                                        fontSize: 12, color: Colors.green),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            )
-                          else
-                            const Text(
-                              'مطلوب إرفاق إيصال الحوالة',
-                              style: TextStyle(
-                                color: Colors.red,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
+                          Expanded(
+                            child: uploading
+                                ? const Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2),
+                                    ),
+                                  )
+                                : file != null
+                                    ? Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(
+                                            Icons.check_circle,
+                                            color: Colors.green,
+                                            size: 20,
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Expanded(
+                                            child: Text(
+                                              'تم إرفاق ${file.path.split(RegExp(r'[\\/]')).last}',
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.green,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
+                                      )
+                                    : const Text(
+                                        'مطلوب إرفاق إيصال الحوالة',
+                                        style: TextStyle(
+                                          color: Colors.red,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                          ),
                         ],
                       );
                     },

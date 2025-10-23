@@ -244,6 +244,11 @@ class FetchItemSummaryCubit extends Cubit<FetchItemSummaryState> {
     if (identical(a, b)) return true;
     if (a == null || b == null) return a == b;
 
+    final Map<String, dynamic> aCustomFields =
+        a.customFields ?? const <String, dynamic>{};
+    final Map<String, dynamic> bCustomFields =
+        b.customFields ?? const <String, dynamic>{};
+
     return a.maxPrice == b.maxPrice &&
         a.minPrice == b.minPrice &&
         a.categoryId == b.categoryId &&
@@ -258,10 +263,7 @@ class FetchItemSummaryCubit extends Cubit<FetchItemSummaryState> {
         a.longitude == b.longitude &&
         a.currency == b.currency &&
         a.userId == b.userId &&
-        mapEquals(
-          a.customFields ?? const <String, dynamic>{},
-          b.customFields ?? const <String, dynamic>{},
-        );
+        mapEquals(aCustomFields, bCustomFields);
   }
 
   ItemFilterModel? _cloneFilter(ItemFilterModel? filter) {

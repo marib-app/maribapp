@@ -58,14 +58,12 @@ class OwnerActionBar extends StatelessWidget {
 
     /// لو الإعلان مميز بالفعل نخفي زر "تمييز"
     this.isFeatured,
-
     this.padding = const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
     this.spacing = 8,
     this.useCard = true,
-
     this.routes = const OwnerActionRoutes(),
-    this.promotePackages = '/subscription-packages',this.stats, // التمييز
-
+    this.promotePackages = '/subscription-packages',
+    this.stats, // التمييز
 
     this.onPausePressed,
     this.onResumePressed,
@@ -95,32 +93,23 @@ class OwnerActionBar extends StatelessWidget {
   final String? stats;
   final OwnerActionRoutes routes;
 
-
   final Future<bool> Function()? onPausePressed;
-  final Future<bool> Function()? onResumePressed;
-
-
-
+  final Future<void> Function()? onResumePressed;
 
   bool get _hasAny =>
       onEdit != null ||
-          onPromote != null ||
-          onPause != null ||
-          onResume != null ||
-          onMarkSold != null ||
-          onUnmarkSold != null ||
-          onRenew != null ||
-          onOpenStats != null ||
-          onCopyLink != null ||
-          onDelete != null ||
-          buildShareSlug != null;
+      onPromote != null ||
+      onPause != null ||
+      onResume != null ||
+      onMarkSold != null ||
+      onUnmarkSold != null ||
+      onRenew != null ||
+      onOpenStats != null ||
+      onCopyLink != null ||
+      onDelete != null ||
+      buildShareSlug != null;
 
   bool get _canShowPromote => onPromote != null && (isFeatured != true);
-
-
-
-
-
 
 /*
   void _defaultPromote(BuildContext context) {
@@ -136,33 +125,23 @@ class OwnerActionBar extends StatelessWidget {
 
  */
 
-
   void _defaultPromote(BuildContext context) {
     FocusScope.of(context).unfocus();
     Navigator.of(context, rootNavigator: true).pushNamed(
       Routes.promoteAdScreen,
       arguments: {
         "model": model,
-        "pricePerDay": 3000.0,     // عدّلها براحتك
-        "currencySymbol": "ر.ي",   // أو Constant.currencySymbol
+        "pricePerDay": 3000.0, // عدّلها براحتك
+        "currencySymbol": "ر.ي", // أو Constant.currencySymbol
         "minDays": 1,
         "maxDays": 30,
       },
     );
   }
 
-
-
-
-
-
   @override
   Widget build(BuildContext context) {
     if (!_hasAny) return const SizedBox.shrink();
-
-
-
-
 
     final row = Row(
       textDirection: TextDirection.rtl,
@@ -170,38 +149,32 @@ class OwnerActionBar extends StatelessWidget {
         _ActionBtn(
           icon: Icons.edit_outlined,
           label: 'تعديل',
-          onPressed: onEdit ?? () {
-            FocusScope.of(context).unfocus();
-            final categoryIds = buildItemCategoryIds(model);
+          onPressed: onEdit ??
+              () {
+                FocusScope.of(context).unfocus();
+                final categoryIds = buildItemCategoryIds(model);
 
-            Navigator.of(context, rootNavigator: true).pushNamed(
-              Routes.addMoreDetailsScreen,
-              arguments: {
-                "isEdit": true,
-                "model": model, // 👈 مهم
-                "item": model, // 👈 احتياطي للتوافق القديم
-                "id": model.id, // اختياري
-                "categoryId": model.categoryId, // اختياري
-                "breadCrumbItems": null,
-                "categoryIds": categoryIds.isEmpty ? null : categoryIds,
+                Navigator.of(context, rootNavigator: true).pushNamed(
+                  Routes.addMoreDetailsScreen,
+                  arguments: {
+                    "isEdit": true,
+                    "model": model, // 👈 مهم
+                    "item": model, // 👈 احتياطي للتوافق القديم
+                    "id": model.id, // اختياري
+                    "categoryId": model.categoryId, // اختياري
+                    "breadCrumbItems": null,
+                    "categoryIds": categoryIds.isEmpty ? null : categoryIds,
+                  },
+                );
               },
-            );
-          },
         ),
         const SizedBox(width: 8),
-
-
-
-
-
-
-
         if (_canShowPromote)
           _ActionBtn(
             icon: Icons.local_fire_department_outlined,
             label: 'تمييز',
             onPressed: onPromote ??
-                    () {
+                () {
                   Navigator.pushNamed(
                     context,
                     Routes.promoteAdScreen, // 👈 مسار جديد
@@ -210,35 +183,47 @@ class OwnerActionBar extends StatelessWidget {
                 },
           ),
         if (_canShowPromote) const SizedBox(width: 8),
-
-
-
-
-
-
-
-
         if (onPause != null)
-          _ActionBtn(icon: Icons.pause_circle_outline, label: 'إيقاف', onPressed: () { onPause!.call(); }),
+          _ActionBtn(
+              icon: Icons.pause_circle_outline,
+              label: 'إيقاف',
+              onPressed: () {
+                onPause!.call();
+              }),
         if (onPause != null) SizedBox(width: spacing),
-
         if (onResume != null)
-          _ActionBtn(icon: Icons.play_circle_outline, label: 'استئناف', onPressed: () { onResume!.call(); }),
+          _ActionBtn(
+            icon: Icons.rate_review_outlined,
+            label: 'مراجعة قبل النشر',
+            onPressed: () {
+              onResume!.call();
+            },
+          ),
         if (onResume != null) SizedBox(width: spacing),
-
         if (onMarkSold != null)
-          _ActionBtn(icon: Icons.check_circle_outline, label: 'وسم مباع', onPressed: () { onMarkSold!.call(); }),
+          _ActionBtn(
+              icon: Icons.check_circle_outline,
+              label: 'وسم مباع',
+              onPressed: () {
+                onMarkSold!.call();
+              }),
         if (onMarkSold != null) SizedBox(width: spacing),
-
         if (onUnmarkSold != null)
-          _ActionBtn(icon: Icons.undo, label: 'إلغاء مباع', onPressed: () { onUnmarkSold!.call(); }),
+          _ActionBtn(
+              icon: Icons.undo,
+              label: 'إلغاء مباع',
+              onPressed: () {
+                onUnmarkSold!.call();
+              }),
         if (onUnmarkSold != null) SizedBox(width: spacing),
-
         if (onRenew != null)
-          _ActionBtn(icon: Icons.update, label: 'تجديد', onPressed: () { onRenew!.call(); }),
+          _ActionBtn(
+              icon: Icons.update,
+              label: 'تجديد',
+              onPressed: () {
+                onRenew!.call();
+              }),
         if (onRenew != null) SizedBox(width: spacing),
-
-
         if (buildShareSlug != null)
           _ActionBtn(
             icon: Icons.share_outlined,
@@ -249,10 +234,14 @@ class OwnerActionBar extends StatelessWidget {
             },
           ),
         if (buildShareSlug != null) SizedBox(width: spacing),
-
-
         if (onDelete != null)
-          _ActionBtn(icon: Icons.delete_outline, label: 'حذف', destructive: true, onPressed: () { onDelete!.call(); }),
+          _ActionBtn(
+              icon: Icons.delete_outline,
+              label: 'حذف',
+              destructive: true,
+              onPressed: () {
+                onDelete!.call();
+              }),
       ],
     );
 
@@ -286,8 +275,6 @@ class OwnerActionBar extends StatelessWidget {
     );
   }
 }
-
-
 
 class _ActionBtn extends StatelessWidget {
   const _ActionBtn({
@@ -344,12 +331,16 @@ class _ActionBtn extends StatelessWidget {
 
     Color _bg(Set<MaterialState> states) {
       if (destructive) {
-        if (states.contains(MaterialState.disabled)) return cs.errorContainer.withOpacity(.6);
-        if (states.contains(MaterialState.pressed))  return cs.error.withOpacity(.95);
+        if (states.contains(MaterialState.disabled))
+          return cs.errorContainer.withOpacity(.6);
+        if (states.contains(MaterialState.pressed))
+          return cs.error.withOpacity(.95);
         return cs.errorContainer;
       } else {
-        if (states.contains(MaterialState.disabled)) return cs.primaryContainer.withOpacity(.4);
-        if (states.contains(MaterialState.pressed))  return cs.primary.withOpacity(.95);
+        if (states.contains(MaterialState.disabled))
+          return cs.primaryContainer.withOpacity(.4);
+        if (states.contains(MaterialState.pressed))
+          return cs.primary.withOpacity(.95);
         return cs.primaryContainer;
       }
     }
@@ -365,7 +356,8 @@ class _ActionBtn extends StatelessWidget {
       style: ButtonStyle(
         elevation: const MaterialStatePropertyAll(0),
         minimumSize: MaterialStatePropertyAll(Size(0, height)),
-        padding: MaterialStatePropertyAll(EdgeInsets.symmetric(horizontal: horizontalPadding)),
+        padding: MaterialStatePropertyAll(
+            EdgeInsets.symmetric(horizontal: horizontalPadding)),
         backgroundColor: MaterialStateProperty.resolveWith(_bg),
         foregroundColor: MaterialStateProperty.resolveWith(_fg),
         shape: MaterialStatePropertyAll(
@@ -380,26 +372,26 @@ class _ActionBtn extends StatelessWidget {
         switchOutCurve: Curves.easeIn,
         child: isBusy
             ? SizedBox(
-          key: const ValueKey('busy'),
-          width: iconSize,
-          height: iconSize,
-          child: const CircularProgressIndicator(strokeWidth: 2),
-        )
+                key: const ValueKey('busy'),
+                width: iconSize,
+                height: iconSize,
+                child: const CircularProgressIndicator(strokeWidth: 2),
+              )
             : Row(
-          key: const ValueKey('content'),
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: iconSize),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                key: const ValueKey('content'),
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: iconSize),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
-        ),
       ),
     );
 
@@ -407,14 +399,13 @@ class _ActionBtn extends StatelessWidget {
       button: true,
       enabled: !disabled,
       label: label,
-      child: tooltip != null ? Tooltip(message: tooltip!, child: button) : button,
+      child:
+          tooltip != null ? Tooltip(message: tooltip!, child: button) : button,
     );
 
     return wrapped;
   }
 }
-
-
 
 class OwnerActionRoutes {
   final String? editItem;
@@ -427,5 +418,3 @@ class OwnerActionRoutes {
     this.stats = '/ad-stats',
   });
 }
-
-

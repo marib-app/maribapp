@@ -9264,6 +9264,24 @@ public function storeRequestDevice(Request $request)
 
                 $bankData = $bank->toArray();
 
+                if (empty($bankData['bank_name']) && isset($bankData['name'])) {
+                    $bankData['bank_name'] = $bankData['name'];
+                }
+
+                if ((empty($bankData['account_name']) || ! is_string($bankData['account_name']))
+                    && ! empty($bankData['beneficiary_name'])) {
+                    $bankData['account_name'] = $bankData['beneficiary_name'];
+                }
+
+                if ((empty($bankData['beneficiary_name']) || ! is_string($bankData['beneficiary_name']))
+                    && ! empty($bankData['account_name'])) {
+                    $bankData['beneficiary_name'] = $bankData['account_name'];
+                }
+
+                if (empty($bankData['account_number']) && ! empty($bankData['iban'])) {
+                    $bankData['account_number'] = $bankData['iban'];
+                }
+
                 foreach ($bankData as $key => $value) {
                     if (!is_string($value) || $value === '') {
                         continue;

@@ -249,12 +249,8 @@ class FetchItemSummaryCubit extends Cubit<FetchItemSummaryState> {
     final Map<String, dynamic> bCustomFields =
         b.customFields ?? const <String, dynamic>{};
 
-    if (a.userId != b.userId) {
-      return false;
-    }
-
-
-    return a.maxPrice == b.maxPrice &&
+    return a.userId == b.userId &&
+        a.maxPrice == b.maxPrice &&
         a.minPrice == b.minPrice &&
         a.categoryId == b.categoryId &&
         a.postedSince == b.postedSince &&

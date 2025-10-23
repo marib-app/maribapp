@@ -1171,7 +1171,62 @@ class CartRepository {
       }
       final Map<String, dynamic>? map = _castToStringKeyedMap(value);
       if (map != null) {
-        addDiscount(map);
+        final List<String> nestedKeys = <String>[
+          'coupons',
+          'discounts',
+          'items',
+          'rows',
+          'entries',
+          'values',
+          'list',
+          'applied',
+          'applied_discounts',
+          'appliedCoupon',
+          'appliedCoupons',
+        ];
+
+        bool handledNested = false;
+        for (final String nestedKey in nestedKeys) {
+          if (!map.containsKey(nestedKey)) continue;
+          handledNested = true;
+          absorb(map[nestedKey]);
+        }
+
+        if (handledNested) {
+          return;
+        }
+
+        const Set<String> discountSignals = <String>{
+          'code',
+          'coupon',
+          'coupon_code',
+          'id',
+          'message',
+          'description',
+          'status',
+          'result',
+          'label',
+          'title',
+          'name',
+          'amount',
+          'value',
+          'discount',
+          'total',
+        };
+
+        final bool looksLikeDiscount = map.keys.any(
+          (String key) => discountSignals.contains(key.toLowerCase()),
+        );
+
+        if (looksLikeDiscount) {
+          addDiscount(map);
+          return;
+        }
+
+        // Explore nested maps even if they don't contain obvious discount keys.
+        for (final dynamic entry in map.values) {
+          absorb(entry);
+        }
         return;
       }
       final String? text = value is String

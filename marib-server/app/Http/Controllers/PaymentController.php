@@ -13,6 +13,7 @@ use App\Models\ManualBank;
 use App\Models\ManualPaymentRequest;
 use App\Services\OrderCheckoutService;
 use ReflectionClass;
+use Illuminate\Support\Str;
 
 use App\Models\PaymentConfiguration;
 use App\Models\WalletAccount;
@@ -52,23 +53,20 @@ class PaymentController extends Controller
             $request->merge(['bank_id' => $request->input('manual_bank_id')]);
         }
 
-        $rawMethod = $request->input('payment_method', 'manual');
-        $normalizedForRequest = OrderCheckoutService::normalizePaymentMethod(is_string($rawMethod) ? $rawMethod : null);
-        $sanitizedMethod = is_string($normalizedForRequest) && $normalizedForRequest !== ''
-            ? $normalizedForRequest
-            : (is_string($rawMethod) ? trim($rawMethod) : 'manual');
 
-        $request->merge(['payment_method' => $sanitizedMethod]);
 
         $allowedMethods = $this->allowedPaymentMethodTokens($purpose);
-
+        $methodOptionsPayload = $this->paymentMethodOptionsPayload($purpose, $allowedMethods);
+        if ($request->filled('payment_method') && is_string($request->input('payment_method'))) {
+            $request->merge(['payment_method' => trim((string) $request->input('payment_method'))]);
+        }
 
 
         $rules = [
             'purpose' => ['nullable', 'string', Rule::in(['order', 'package', ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP])],
 
 
-            'payment_method' => ['required', 'string', 'max:191', Rule::in($allowedMethods)],
+            'payment_method' => ['nullable', 'string', 'max:191', Rule::in($allowedMethods)],
 
             'notes' => ['nullable', 'string'],
             'metadata' => ['nullable', 'array'],
@@ -91,7 +89,38 @@ class PaymentController extends Controller
 
         $validated = $request->validate($rules);
 
-        $validated['payment_method'] = $this->normalizePaymentMethodForPurpose($validated['payment_method'], $purpose);
+        $selectedMethod = null;
+
+        if (isset($validated['payment_method']) && is_string($validated['payment_method'])) {
+            $candidate = trim($validated['payment_method']);
+            $selectedMethod = $candidate !== '' ? $candidate : null;
+        }
+
+        if ($selectedMethod === null) {
+            return response()->json(array_merge(
+                $methodOptionsPayload,
+                [
+                    'message' => __('يرجى اختيار وسيلة الدفع لإكمال العملية.'),
+                    'status' => 'requires_payment_method',
+                    'requires_payment_method' => true,
+                    'selected_payment_method' => null,
+                    'payment_method' => null,
+                ]
+            ));
+        }
+
+        $validated['payment_method'] = $this->normalizePaymentMethodForPurpose($selectedMethod, $purpose);
+
+        $methodResponsePayload = array_merge(
+            $methodOptionsPayload,
+            [
+                'requires_payment_method' => false,
+                'payment_method' => $validated['payment_method'],
+                'selected_payment_method' => $validated['payment_method'],
+                'preferred_payment_method' => $validated['payment_method'],
+            ]
+        );
+
 
         if (!isset($validated['note']) && $request->filled('notes')) {
             $validated['note'] = $request->input('notes');
@@ -119,10 +148,19 @@ class PaymentController extends Controller
                 $validated
             );
 
-            return response()->json([
-                'message' => __('تم إنشاء عملية الدفع بنجاح.'),
-                'transaction' => $transaction->fresh(),
-            ]);
+            $freshTransaction = $transaction->fresh();
+
+            return response()->json(array_merge(
+                $methodResponsePayload,
+                [
+                    'message' => __('تم إنشاء عملية الدفع بنجاح.'),
+                    'status' => $freshTransaction?->payment_status,
+                    'payment_transaction_id' => $freshTransaction?->getKey(),
+                    'payment_intent_id' => $freshTransaction?->idempotency_key,
+                    'transaction' => $freshTransaction,
+                    'payment_transaction' => $freshTransaction,
+                ]
+            ));
         }
 
         $order = Order::query()
@@ -137,10 +175,19 @@ class PaymentController extends Controller
             $validated
         );
 
-        return response()->json([
-            'message' => __('تم إنشاء عملية الدفع بنجاح.'),
-            'transaction' => $transaction->fresh(),
-        ]);
+        $freshTransaction = $transaction->fresh();
+
+        return response()->json(array_merge(
+            $methodResponsePayload,
+            [
+                'message' => __('تم إنشاء عملية الدفع بنجاح.'),
+                'status' => $freshTransaction?->payment_status,
+                'payment_transaction_id' => $freshTransaction?->getKey(),
+                'payment_intent_id' => $freshTransaction?->idempotency_key,
+                'transaction' => $freshTransaction,
+                'payment_transaction' => $freshTransaction,
+            ]
+        ));
     }
 
     public function confirm(Request $request): JsonResponse
@@ -644,7 +691,152 @@ class PaymentController extends Controller
     }
 
 
+    /**
+     * @param array<int, string> $allowedMethodTokens
+     * @return array<string, mixed>
+     */
+    private function paymentMethodOptionsPayload(string $purpose, array $allowedMethodTokens): array
+    {
+        $presentable = $this->presentPaymentMethodsForPurpose($purpose);
 
+        $methodIds = array_values(array_filter(array_map(
+            static fn (array $option) => $option['id'] ?? null,
+            $presentable
+        )));
+
+        $defaultMethod = $this->resolveDefaultPaymentMethodToken($methodIds);
+
+        if ($defaultMethod !== null) {
+            foreach ($presentable as &$option) {
+                if (($option['id'] ?? null) === $defaultMethod) {
+                    $option['is_default'] = true;
+                    break;
+                }
+            }
+            unset($option);
+        }
+
+        return [
+            'purpose' => $purpose,
+            'allowed_payment_methods' => $allowedMethodTokens,
+            'payment_method_tokens' => $allowedMethodTokens,
+            'default_payment_method' => $defaultMethod,
+            'preferred_payment_method' => $defaultMethod,
+            'available_methods' => $presentable,
+            'available_payment_methods' => $presentable,
+            'payment_methods' => $presentable,
+        ];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function presentPaymentMethodsForPurpose(string $purpose): array
+    {
+        $supported = $this->supportedPaymentMethodsForPurpose($purpose);
+        $aliasesByCanonical = $this->groupPaymentMethodAliasesByCanonical();
+
+        $presentable = [];
+
+        foreach ($supported as $method) {
+            if (! is_string($method) || $method === '') {
+                continue;
+            }
+
+            $method = (string) $method;
+            $aliasTokens = $aliasesByCanonical[$method] ?? [];
+            $tokens = array_values(array_unique(array_filter(array_merge([$method], $aliasTokens), static fn ($token) => is_string($token) && $token !== '')));
+
+            $presentable[] = array_filter([
+                'id' => $method,
+                'label' => $this->paymentMethodLabel($method),
+                'gateway' => $this->paymentMethodGatewayLabel($method),
+                'is_default' => false,
+                'tokens' => $tokens,
+            ], static fn ($value) => $value !== null);
+        }
+
+        return $presentable;
+    }
+
+    /**
+     * @param array<int, string> $methodIds
+     */
+    private function resolveDefaultPaymentMethodToken(array $methodIds): ?string
+    {
+        $methodIds = array_values(array_filter($methodIds, static fn ($value) => is_string($value) && $value !== ''));
+
+        if ($methodIds === []) {
+            return null;
+        }
+
+        $preferredOrder = [
+            'manual_bank',
+            'east_yemen_bank',
+            'wallet',
+            'cash',
+        ];
+
+        foreach ($preferredOrder as $preferred) {
+            if (in_array($preferred, $methodIds, true)) {
+                return $preferred;
+            }
+        }
+
+        return $methodIds[0] ?? null;
+    }
+
+    /**
+     * @return array<string, array<int, string>>
+     */
+    private function groupPaymentMethodAliasesByCanonical(): array
+    {
+        $aliases = $this->extractPaymentMethodAliases();
+        $grouped = [];
+
+        foreach ($aliases as $alias => $canonical) {
+            if (! is_string($canonical) || $canonical === '') {
+                continue;
+            }
+
+            if (! isset($grouped[$canonical])) {
+                $grouped[$canonical] = [];
+            }
+
+            $grouped[$canonical][] = (string) $alias;
+        }
+
+        foreach ($grouped as &$entries) {
+            $entries = array_values(array_filter($entries, static fn ($value) => is_string($value) && $value !== ''));
+        }
+        unset($entries);
+
+        return $grouped;
+    }
+
+    private function paymentMethodLabel(string $method): string
+    {
+        return match ($method) {
+            'manual_bank' => __('الدفع عبر التحويل البنكي اليدوي'),
+            'east_yemen_bank' => __('الدفع عبر بنك الشرق اليمني'),
+            'wallet' => __('الدفع عبر المحفظة'),
+            'cash' => __('الدفع عند الاستلام'),
+            default => Str::headline(str_replace(['_', '-'], ' ', (string) $method)),
+        };
+    }
+
+    private function paymentMethodGatewayLabel(string $method): ?string
+    {
+        return match ($method) {
+            'manual_bank' => __('التحويل البنكي اليدوي'),
+            'east_yemen_bank' => __('بنك الشرق اليمني'),
+            'wallet' => __('المحفظة'),
+            'cash' => __('الدفع عند الاستلام'),
+            default => null,
+        };
+    }
+
+    
     /**
      * @return array<int, string>
      */

@@ -3,9 +3,6 @@ import 'package:marib/utils/api.dart';
 import 'package:marib/utils/payment/manual_payment_service.dart';
 import 'package:meta/meta.dart';
 
-
-
-
 class OrderPaymentsRepository {
   const OrderPaymentsRepository();
 
@@ -16,11 +13,10 @@ class OrderPaymentsRepository {
     String? currency,
     Map<String, dynamic>? extraData,
   }) async {
-
     final String? normalizedCurrency =
-    currency != null && currency.trim().isNotEmpty
-        ? currency.trim().toUpperCase()
-        : null;
+        currency != null && currency.trim().isNotEmpty
+            ? currency.trim().toUpperCase()
+            : null;
 
     final String? sanitizedMethod = paymentMethod?.trim();
     final String? normalizedMethod =
@@ -29,14 +25,12 @@ class OrderPaymentsRepository {
     final bool requestingOptionsOnly =
         normalizedMethod == null || normalizedMethod.isEmpty;
 
-
     final Map<String, dynamic> body = <String, dynamic>{
       'purpose': 'order',
       'order_id': orderId,
       'payable_type': 'order',
       'payable_id': _tryParseInt(orderId) ?? orderId,
       if (!requestingOptionsOnly) 'payment_method': normalizedMethod,
-
       if (normalizedCurrency != null) 'currency': normalizedCurrency,
       if (amount != null)
         'amount': _formatAmount(
@@ -58,14 +52,13 @@ class OrderPaymentsRepository {
 
     if (requestingOptionsOnly && parsed.availableMethods.isEmpty) {
       final List<OrderPaymentMethod> fallback =
-      _fallbackMethodsFromResponse(parsed, response);
+          _fallbackMethodsFromResponse(parsed, response);
       if (fallback.isNotEmpty) {
         return parsed.copyWith(availableMethods: fallback);
       }
     }
 
     return parsed;
-
   }
 
   Future<OrderPaymentIntentResult> confirmPayment({
@@ -78,11 +71,10 @@ class OrderPaymentsRepository {
     String? currency,
     Map<String, dynamic>? additionalData,
   }) async {
-
     final String? normalizedCurrency =
-    currency != null && currency.trim().isNotEmpty
-        ? currency.trim().toUpperCase()
-        : null;
+        currency != null && currency.trim().isNotEmpty
+            ? currency.trim().toUpperCase()
+            : null;
 
     final Map<String, dynamic> body = <String, dynamic>{
       'purpose': 'order',
@@ -94,11 +86,13 @@ class OrderPaymentsRepository {
         'intent_id': intentId.trim(),
         'payment_intent_id': intentId.trim(),
       },
-      if (transactionId != null && transactionId.trim().isNotEmpty) ...<String, dynamic>{
+      if (transactionId != null &&
+          transactionId.trim().isNotEmpty) ...<String, dynamic>{
         'transaction_id': transactionId.trim(),
         'payment_transaction_id': transactionId.trim(),
       },
-      if (reference != null && reference.trim().isNotEmpty) ...<String, dynamic>{
+      if (reference != null &&
+          reference.trim().isNotEmpty) ...<String, dynamic>{
         'reference': reference.trim(),
         'gateway_reference': reference.trim(),
         'payment_reference': reference.trim(),
@@ -110,8 +104,6 @@ class OrderPaymentsRepository {
           amount,
           currency: normalizedCurrency,
         ),
-
-
       if (additionalData != null) ...additionalData,
     };
 
@@ -132,9 +124,9 @@ class OrderPaymentsRepository {
 
   @visibleForTesting
   String formatAmountForTesting(
-      double amount, {
-        String? currency,
-      }) {
+    double amount, {
+    String? currency,
+  }) {
     return _formatAmount(
       amount,
       currency: currency,
@@ -142,11 +134,11 @@ class OrderPaymentsRepository {
   }
 
   String _formatAmount(
-      double amount, {
-        String? currency,
-      }) {
+    double amount, {
+    String? currency,
+  }) {
     final String? normalizedCurrency =
-    currency != null && currency.trim().isNotEmpty ? currency : null;
+        currency != null && currency.trim().isNotEmpty ? currency : null;
 
     if (normalizedCurrency == null) {
       return amount.toStringAsFixed(2);
@@ -159,9 +151,9 @@ class OrderPaymentsRepository {
   }
 
   List<OrderPaymentMethod> _fallbackMethodsFromResponse(
-      OrderPaymentIntentResult result,
-      Map<String, dynamic> response,
-      ) {
+    OrderPaymentIntentResult result,
+    Map<String, dynamic> response,
+  ) {
     final dynamic allowed = result.raw['allowed_payment_methods'] ??
         response['allowed_payment_methods'] ??
         result.raw['payment_method_tokens'] ??
@@ -182,7 +174,7 @@ class OrderPaymentsRepository {
     final String? normalizedDefault = defaultToken == null
         ? null
         : ManualPaymentService.paymentMethodForApiOrNull(defaultToken) ??
-        defaultToken.trim();
+            defaultToken.trim();
 
     final Set<String> seen = <String>{};
     final List<OrderPaymentMethod> methods = <OrderPaymentMethod>[];
@@ -193,16 +185,17 @@ class OrderPaymentsRepository {
         continue;
       }
 
-      final String? canonical =
+      final String? canonicalCandidate =
           ManualPaymentService.paymentMethodForApiOrNull(resolvedToken) ??
               resolvedToken;
-      if (canonical.isEmpty || !seen.add(canonical)) {
+      final String? canonical =
+          canonicalCandidate != null ? canonicalCandidate.trim() : null;
+      if (canonical == null || canonical.isEmpty || !seen.add(canonical)) {
         continue;
       }
 
-      final bool isDefault =
-          normalizedDefault != null &&
-              normalizedDefault.toLowerCase() == canonical.toLowerCase();
+      final bool isDefault = normalizedDefault != null &&
+          normalizedDefault.toLowerCase() == canonical.toLowerCase();
       final String label = _labelForPaymentMethod(canonical);
       final String? gateway = _gatewayForPaymentMethod(canonical);
 
@@ -241,8 +234,8 @@ class OrderPaymentsRepository {
             label: label,
             gateway: gateway,
             isDefault: true,
-            isManual: normalized.contains('manual') ||
-                normalized.contains('bank'),
+            isManual:
+                normalized.contains('manual') || normalized.contains('bank'),
             raw: <String, dynamic>{
               'id': normalized,
               'label': label,
@@ -301,10 +294,7 @@ class OrderPaymentsRepository {
     if (token is Map) {
       final Map<String, dynamic> map = Map<String, dynamic>.from(token);
       return _stringify(
-        map['id'] ??
-            map['payment_method'] ??
-            map['method'] ??
-            map['gateway'],
+        map['id'] ?? map['payment_method'] ?? map['method'] ?? map['gateway'],
       );
     }
     return _stringify(token);
@@ -322,8 +312,7 @@ class OrderPaymentsRepository {
       return labels[method]!;
     }
 
-    final String sanitized =
-    method.replaceAll(RegExp(r'[_-]+'), ' ').trim();
+    final String sanitized = method.replaceAll(RegExp(r'[_-]+'), ' ').trim();
     if (sanitized.isEmpty) {
       return method.toUpperCase();
     }
@@ -331,8 +320,9 @@ class OrderPaymentsRepository {
     return sanitized
         .split(' ')
         .where((String part) => part.isNotEmpty)
-        .map((String part) =>
-    part.length == 1 ? part.toUpperCase() : '${part[0].toUpperCase()}${part.substring(1)}')
+        .map((String part) => part.length == 1
+            ? part.toUpperCase()
+            : '${part[0].toUpperCase()}${part.substring(1)}')
         .join(' ');
   }
 

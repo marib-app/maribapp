@@ -361,11 +361,17 @@ class HomeScreenState extends State<HomeScreen>
   }
 
   void _goElectronicStore() {
-    Navigator.pushNamed(context, Routes.itemsListSeller, arguments: {
-      'catID': "3",
-      'catName': "electronicStore".translate(context),
-      "categoryIds": ["3"],
-    });
+    final String categoryId = Constant.storeRootCategoryId.toString();
+
+    Navigator.pushNamed(
+      context,
+      Routes.itemsListSeller,
+      arguments: {
+        'catID': categoryId,
+        'catName': "electronicStore".translate(context),
+        "categoryIds": [categoryId],
+      },
+    );
   }
 
   void _goShein() {

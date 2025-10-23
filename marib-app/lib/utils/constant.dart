@@ -109,6 +109,8 @@ class Constant {
   static const int sheinRootCategoryId = 4;
   static const int computerRootCategoryId = 5;
   static const int publicRootCategoryId = 6;
+  // Electronic store root category must stay aligned with `_goElectronicStore`
+  // navigation to avoid mismatched listings.
   static const int storeRootCategoryId = 3;
 
   static const int accountTypeCustomer = 1;

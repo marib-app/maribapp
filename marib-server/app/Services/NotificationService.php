@@ -10,6 +10,8 @@ use App\Models\WifiNetwork;
 use App\Models\WifiPlan;
 use Google\Client;
 use Google\Exception;
+use Illuminate\Filesystem\FilesystemAdapter;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use GuzzleHttp\Client as GuzzleClient;
 use Illuminate\Support\Str;
@@ -710,13 +712,27 @@ class NotificationService {
             return null;
         }
 
-        $candidateValues = [];
 
         $trimmedValue = trim($serviceFileValue);
+
+                if ($trimmedValue === '') {
+            return null;
+        }
+
+        if (self::looksLikeJson($trimmedValue)) {
+            return self::storeTemporaryServiceFile($trimmedValue, 'inline');
+        }
+
+        $decodedInlineJson = self::tryDecodeBase64Json($trimmedValue);
+        if (!empty($decodedInlineJson)) {
+            return self::storeTemporaryServiceFile($decodedInlineJson, 'base64');
+        }
+
 
         if (self::isAbsolutePath($trimmedValue) && is_file($trimmedValue) && is_readable($trimmedValue)) {
             return realpath($trimmedValue) ?: $trimmedValue;
         }
+        $originalValue = $trimmedValue;
 
         if (Str::startsWith($trimmedValue, ['http://', 'https://'])) {
             $parsedPath = parse_url($trimmedValue, PHP_URL_PATH);
@@ -726,7 +742,7 @@ class NotificationService {
             }
         }
 
-        $normalizedValue = ltrim($trimmedValue, '/');
+        $normalizedValue = ltrim(str_replace('\\', '/', $trimmedValue), '/');
 
         foreach (['storage/', 'public/', 'app/public/'] as $prefix) {
             if (Str::startsWith($normalizedValue, $prefix)) {
@@ -734,34 +750,208 @@ class NotificationService {
             }
         }
 
+
+        $relativeCandidates = array_filter(array_unique([
+            $originalValue,
+            $normalizedValue,
+            !empty($normalizedValue) ? 'storage/' . $normalizedValue : null,
+            !empty($normalizedValue) ? 'public/' . $normalizedValue : null,
+            !empty($normalizedValue) ? 'app/public/' . $normalizedValue : null,
+        ]));
+
+        foreach ($relativeCandidates as $candidate) {
+            $absolutePath = self::resolveAbsolutePath($candidate);
+
+            if (is_file($absolutePath) && is_readable($absolutePath)) {
+                return realpath($absolutePath) ?: $absolutePath;
+            }
+        }
+
+
+
         if (!empty($normalizedValue)) {
+
+            $absoluteCandidates = array_filter(array_unique([
+                storage_path($normalizedValue),
+                storage_path('app/' . $normalizedValue),
+                storage_path('app/public/' . $normalizedValue),
+                public_path($normalizedValue),
+                public_path('storage/' . $normalizedValue),
+                base_path($normalizedValue),
+            ]));
+
+            foreach ($absoluteCandidates as $path) {
+                if (is_file($path) && is_readable($path)) {
+                    return realpath($path) ?: $path;
+                }
+            }
+        }
+
+        $basePathCandidate = base_path($originalValue);
+        if (is_file($basePathCandidate) && is_readable($basePathCandidate)) {
+            return realpath($basePathCandidate) ?: $basePathCandidate;
+        }
+
+        foreach ($relativeCandidates as $candidate) {
+            if (is_file($candidate) && is_readable($candidate)) {
+                return realpath($candidate) ?: $candidate;
+            }
+        }
+
+        $resolvedFromDisk = self::resolvePathFromPublicDisk($normalizedValue ?: $originalValue);
+        if (!empty($resolvedFromDisk)) {
+            return $resolvedFromDisk;
+        }
+
+        return null;
+    }
+
+    protected static function resolvePathFromPublicDisk(string $path): ?string
+    {
+        $path = ltrim(str_replace('\\', '/', $path), '/');
+
+        if ($path === '') {
+            return null;
+        }
+
+        try {
+            $disk = Storage::disk('public');
+        } catch (Throwable $exception) {
+            \Log::warning('NotificationService: Unable to access public storage disk while resolving service file.', [
+                'exception' => $exception->getMessage(),
+            ]);
+
+            return null;
+        }
+
+        $diskPaths = array_filter(array_unique([
+            $path,
+            'public/' . $path,
+            'storage/' . $path,
+            'app/public/' . $path,
+        ]));
+
+        foreach ($diskPaths as $diskPath) {
+            if (!$disk->exists($diskPath)) {
+                continue;
+            }
+
+
             try {
-                $candidateValues[] = Storage::disk('public')->path($normalizedValue);
+                $diskResolvedPath = $disk->path($diskPath);
+
+                if (is_file($diskResolvedPath) && is_readable($diskResolvedPath)) {
+                    return realpath($diskResolvedPath) ?: $diskResolvedPath;
+                }
+
             } catch (Throwable $exception) {
+
+                                $cachedPath = self::cacheDiskFile($disk, $diskPath);
+
+                if (!empty($cachedPath)) {
+                    return $cachedPath;
+                }
+
+
                 \Log::warning('NotificationService: Failed to resolve service file path via storage disk.', [
-                    'stored_value' => $serviceFileValue,
-                    'normalized_value' => $normalizedValue,
+                    'stored_value' => $path,
+                    'disk_path' => $diskPath,
+
+
                     'exception' => $exception->getMessage(),
                 ]);
             }
 
-            $candidateValues[] = storage_path('app/public/' . $normalizedValue);
-            $candidateValues[] = public_path('storage/' . $normalizedValue);
-        }
-
-        $candidateValues[] = $trimmedValue;
-
-        foreach ($candidateValues as $path) {
-            if (empty($path)) {
-                continue;
-            }
-
-            if (is_file($path) && is_readable($path)) {
-                return realpath($path) ?: $path;
-            }
         }
 
         return null;
+    }
+
+    protected static function cacheDiskFile(FilesystemAdapter $disk, string $diskPath): ?string
+    {
+        try {
+            $contents = $disk->get($diskPath);
+        } catch (Throwable $exception) {
+            \Log::warning('NotificationService: Failed to read service file contents from storage disk.', [
+                'disk_path' => $diskPath,
+                'exception' => $exception->getMessage(),
+            ]);
+
+            return null;
+        }
+
+
+        if ($contents === '' || $contents === null) {
+            return null;
+        }
+
+        $extension = pathinfo($diskPath, PATHINFO_EXTENSION) ?: 'json';
+
+
+        return self::storeTemporaryServiceFile($contents, 'disk-' . sha1($diskPath), $extension);
+    }
+
+    protected static function storeTemporaryServiceFile(string $contents, string $identifier, ?string $extension = null): ?string
+    {
+        $contents = trim($contents);
+
+        if ($contents === '') {
+            return null;
+        }
+
+        $extension = $extension ?: 'json';
+        $directory = storage_path('app/tmp/fcm');
+
+        try {
+            if (!File::isDirectory($directory)) {
+                File::makeDirectory($directory, 0755, true);
+
+            }
+
+            $filename = sprintf('%s-%s.%s', $identifier, sha1($contents), $extension);
+            $fullPath = $directory . DIRECTORY_SEPARATOR . $filename;
+
+            File::put($fullPath, $contents);
+
+            return $fullPath;
+        } catch (Throwable $exception) {
+            \Log::warning('NotificationService: Failed to persist temporary service file.', [
+                'identifier' => $identifier,
+                'exception' => $exception->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
+
+    protected static function looksLikeJson(string $value): bool
+    {
+        $value = ltrim($value);
+
+        if ($value === '') {
+            return false;
+
+        }
+
+        return (Str::startsWith($value, '{') && Str::endsWith(rtrim($value), '}'))
+            || (Str::startsWith($value, '[') && Str::endsWith(rtrim($value), ']'));
+    }
+
+    protected static function tryDecodeBase64Json(string $value): ?string
+    {
+        $decoded = base64_decode($value, true);
+
+        if ($decoded === false) {
+            return null;
+        }
+
+        $decoded = trim($decoded);
+
+        if (!self::looksLikeJson($decoded)) {
+            return null;
+        }
+
+        return $decoded;
     }
 
 

@@ -382,6 +382,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
 
       final accountNumber =
           _normalize(bank.accountNumber, removeWhitespace: true);
+      final swift = _normalize(bank.swift, removeWhitespace: true);
 
       final accountName = _normalize(
         bank.accountName,

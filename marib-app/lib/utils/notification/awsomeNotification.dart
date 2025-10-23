@@ -27,9 +27,6 @@ import 'package:marib/utils/helper_utils.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:marib/data/model/chat/chated_user_model.dart';
 
-
-
-
 class LocalAwsomeNotification {
   AwesomeNotifications notification = AwesomeNotifications();
 
@@ -74,9 +71,21 @@ class LocalAwsomeNotification {
     required bool isLocked,
   }) async {
     try {
-      bool isChat = notificationData.data["type"] == "chat";
-      bool hasImage = notificationData.data["image"] != null ||
-          notificationData.data["image"] != "";
+      final Map<String, dynamic> payload = notificationData.data;
+      final bool isChat = payload["type"] == "chat";
+      final String? rawImage = payload["image"]?.toString();
+      final bool hasImage =
+          rawImage != null && rawImage.trim().isNotEmpty && rawImage != "null";
+      final String? title =
+          (payload["title"]?.toString().trim().isNotEmpty ?? false)
+              ? payload["title"].toString()
+              : notificationData.notification?.title;
+      final String? body =
+          (payload["body"]?.toString().trim().isNotEmpty ?? false)
+              ? payload["body"].toString()
+              : notificationData.notification?.body;
+      final String resolvedTitle = title ?? '';
+      final String resolvedBody = body ?? '';
 
       if (isChat) {
         int chatId = int.parse(notificationData.data['sender_id']) +
@@ -86,15 +95,15 @@ class LocalAwsomeNotification {
           await notification.createNotification(
             content: NotificationContent(
               id: isChat ? chatId : Random().nextInt(5000),
-              title: notificationData.data["title"],
+              title: resolvedTitle,
               // icon: AppIcons.aboutUs,
               hideLargeIconOnExpand: true,
               summary: "${notificationData.data['user_name']}",
               locked: isLocked,
-              payload: Map.from(notificationData.data),
+              payload: Map.from(payload),
               autoDismissible: true,
 
-              body: notificationData.data["body"],
+              body: resolvedBody,
               wakeUpScreen: true,
 
               notificationLayout: NotificationLayout.MessagingGroup,
@@ -105,23 +114,23 @@ class LocalAwsomeNotification {
         }
       } else {
         if (hasImage) {
-          String? imageUrl = notificationData.data["image"];
+          final String imageUrl = rawImage!.trim();
 
           if (Platform.isAndroid) {
             await notification.createNotification(
               content: NotificationContent(
                 id: Random().nextInt(5000),
-                title: notificationData.data["title"],
+                title: resolvedTitle,
                 bigPicture: imageUrl,
                 hideLargeIconOnExpand: true,
                 summary: null,
                 locked: isLocked,
-                payload: Map.from(notificationData.data),
+                payload: Map.from(payload),
                 autoDismissible: true,
-                body: notificationData.data["body"],
+                body: resolvedBody,
                 wakeUpScreen: true,
                 notificationLayout: NotificationLayout.BigPicture,
-                groupKey: notificationData.data["item_id"],
+                groupKey: payload["item_id"],
                 channelKey: Constant.notificationChannel,
               ),
             );
@@ -131,16 +140,16 @@ class LocalAwsomeNotification {
             await notification.createNotification(
               content: NotificationContent(
                 id: Random().nextInt(5000),
-                title: notificationData.data["title"],
+                title: resolvedTitle,
                 hideLargeIconOnExpand: true,
                 summary: null,
                 locked: isLocked,
-                payload: Map.from(notificationData.data),
+                payload: Map.from(payload),
                 autoDismissible: true,
-                body: notificationData.data["body"],
+                body: resolvedBody,
                 wakeUpScreen: true,
                 notificationLayout: NotificationLayout.Default,
-                groupKey: notificationData.data["item_id"],
+                groupKey: payload["item_id"],
                 channelKey: Constant.notificationChannel,
               ),
             );
@@ -240,21 +249,22 @@ class NotificationController {
                 ],
                 child: Builder(builder: (context) {
                   final Map<String, dynamic> notificationData =
-                  Map<String, dynamic>.from(payload ?? {});
+                      Map<String, dynamic>.from(payload ?? {});
                   final String? currency =
-                  NotificationService.extractCurrency(notificationData);
-                  final String? currencySymbol = NotificationService
-                      .extractCurrencySymbol(notificationData);
+                      NotificationService.extractCurrency(notificationData);
+                  final String? currencySymbol =
+                      NotificationService.extractCurrencySymbol(
+                          notificationData);
                   final List<ChatParticipant>? participants =
                       NotificationService.getCachedParticipants(
-                        (conversationId ?? '').toString(),
-                        itemOfferId:
-                        itemOfferIdParsed > 0 ? itemOfferIdParsed : null,
-                        senderId: senderId?.toString(),
-                        itemId: itemId?.toString(),
-                      ) ??
-                          NotificationService
-                              .buildParticipantsFromNotification(
+                            (conversationId ?? '').toString(),
+                            itemOfferId: itemOfferIdParsed > 0
+                                ? itemOfferIdParsed
+                                : null,
+                            senderId: senderId?.toString(),
+                            itemId: itemId?.toString(),
+                          ) ??
+                          NotificationService.buildParticipantsFromNotification(
                             data: notificationData,
                           );
                   return ChatScreen(
@@ -267,7 +277,6 @@ class NotificationController {
                     date: date ?? "",
                     itemOfferId: itemOfferIdParsed,
                     conversationId: (conversationId ?? '').toString(),
-
                     itemPrice: NotificationService.getPrice(itemPrice!)!,
                     itemOfferPrice:
                         NotificationService.getPrice(itemOfferPrice),
@@ -298,7 +307,6 @@ class NotificationController {
         var itemOfferPrice = payload?['item_offer_amount'];
         final String? itemOfferIdRaw = payload?['item_offer_id'];
 
-
         final int itemOfferIdParsed =
             int.tryParse(itemOfferIdRaw?.toString() ?? '') ?? 0;
 
@@ -322,21 +330,23 @@ class NotificationController {
                   ],
                   child: Builder(builder: (context) {
                     final Map<String, dynamic> notificationData =
-                    Map<String, dynamic>.from(payload ?? {});
-                    final String? currency = NotificationService.extractCurrency(
+                        Map<String, dynamic>.from(payload ?? {});
+                    final String? currency =
+                        NotificationService.extractCurrency(
                       notificationData,
                     );
-                    final String? currencySymbol = NotificationService
-                        .extractCurrencySymbol(notificationData);
+                    final String? currencySymbol =
+                        NotificationService.extractCurrencySymbol(
+                            notificationData);
                     final List<ChatParticipant>? participants =
                         NotificationService.getCachedParticipants(
-                          (conversationId ?? '').toString(),
-                          itemOfferId: itemOfferIdParsed > 0
-                              ? itemOfferIdParsed
-                              : null,
-                          senderId: senderId?.toString(),
-                          itemId: itemId?.toString(),
-                        ) ??
+                              (conversationId ?? '').toString(),
+                              itemOfferId: itemOfferIdParsed > 0
+                                  ? itemOfferIdParsed
+                                  : null,
+                              senderId: senderId?.toString(),
+                              itemId: itemId?.toString(),
+                            ) ??
                             NotificationService
                                 .buildParticipantsFromNotification(
                               data: notificationData,
@@ -353,14 +363,13 @@ class NotificationController {
                       conversationId: (conversationId ?? '').toString(),
                       itemPrice: NotificationService.getPrice(itemPrice!)!,
                       itemOfferPrice:
-                      NotificationService.getPrice(itemOfferPrice),
+                          NotificationService.getPrice(itemOfferPrice),
                       buyerId: HiveUtils.getUserId(),
                       alreadyReview: false,
                       isPurchased: 0,
                       participants: participants,
                       currency: currency,
                       currencySymbol: currencySymbol,
-
                     );
                   }),
                 );

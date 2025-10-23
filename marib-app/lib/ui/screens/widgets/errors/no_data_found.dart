@@ -125,7 +125,7 @@ _emptyStateMessages = {
     EmptyStateIssue.noData: _EmptyStateMessage(
       titleKey: 'emptyStateSearchTitle',
       subtitleKey: 'emptyStateSearchDescription',
-      icon: Icons.search,
+      icon: Icons.search_outlined,
     ),
   },
   EmptyStateCategory.notifications: {
@@ -217,7 +217,7 @@ class NoDataFound extends StatelessWidget {
     final palette = context.color;
     final theme = Theme.of(context);
     final onSurface = theme.colorScheme.onSurface;
-    final iconColor = theme.colorScheme.onSurfaceVariant.withOpacity(0.72);
+    final iconColor = theme.colorScheme.onSurface.withOpacity(0.4);
     final titleColor = palette.textDefaultColor;
     final subtitleColor = palette.textLightColor;
     final resolvedTitle = mainMessage ?? message.titleKey.translate(context);
@@ -277,21 +277,12 @@ class NoDataFound extends StatelessWidget {
       );
     }
 
-    final resolvedSize = height ?? 72;
+    final resolvedSize = height ?? 80;
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.2),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Icon(
-          message.icon,
-          size: resolvedSize,
-          color: iconColor,
-        ),
-      ),
+    return Icon(
+      message.icon,
+      size: resolvedSize,
+      color: iconColor,
     );
   }
 

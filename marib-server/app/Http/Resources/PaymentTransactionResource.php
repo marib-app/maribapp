@@ -2,6 +2,8 @@
 
 namespace App\Http\Resources;
 
+
+use App\Support\ManualPayments\TransferDetailsResolver;
 use App\Support\Payments\PaymentLabelService;
 use Illuminate\Database\Eloquent\Model as EloquentModel;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -32,6 +34,12 @@ class PaymentTransactionResource extends JsonResource
                 'channel_label' => null,
                 'bank_label' => null,
             ];
+
+        if ($resource instanceof EloquentModel) {
+            $transferDetails = TransferDetailsResolver::forPaymentTransaction($resource)->toArray();
+        } else {
+            $transferDetails = TransferDetailsResolver::forRow($resource)->toArray();
+        }
 
         return [
             'id' => $this->id,
@@ -65,6 +73,9 @@ class PaymentTransactionResource extends JsonResource
                     'logo_url' => $manualBank->logo_url ?? null,
                 ] : null,
             ] : null,
+            'transfer_details' => $transferDetails,
+
+
         ];
     }
 }

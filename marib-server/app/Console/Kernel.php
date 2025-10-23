@@ -21,6 +21,7 @@ class Kernel extends ConsoleKernel
         \App\Console\Commands\CaptureCurrencyRateSnapshotsCommand::class,
         \App\Console\Commands\NormalizeOrderPaymentMethodsCommand::class,
         \App\Console\Commands\BackfillManualBankPaymentRequestsCommand::class,
+        \App\Console\Commands\BackfillTransferDetailsCommand::class,
 
     ];
     /**

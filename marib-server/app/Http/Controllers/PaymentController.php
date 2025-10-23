@@ -26,13 +26,18 @@ use Illuminate\Validation\ValidationException;
 use Throwable;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use App\Services\Payments\CreateOrLinkManualPaymentRequest;
+
+
+
+
 class PaymentController extends Controller
 {
     public function __construct(
         private readonly OrderPaymentService $orderPaymentService,
         private readonly PackagePaymentService $packagePaymentService,
-        private readonly ManualPaymentRequestService $manualPaymentRequestService
-        
+        private readonly ManualPaymentRequestService $manualPaymentRequestService,
+        private readonly CreateOrLinkManualPaymentRequest $manualPaymentLinker        
         )
     {
     }
@@ -570,7 +575,12 @@ class PaymentController extends Controller
                 'user_id' => $user->getKey(),
             ]);
 
-            $manualPaymentRequest = $this->manualPaymentRequestService->createOrUpdateForManualTransaction(
+            if (! isset($validated['bank.name']) && isset($validated['bank_name'])) {
+                data_set($validated, 'bank.name', $validated['bank_name']);
+            }
+
+            $manualPaymentRequest = $this->manualPaymentLinker->handle(
+                
                 $user,
                 ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP,
                 $walletAccount->getKey(),

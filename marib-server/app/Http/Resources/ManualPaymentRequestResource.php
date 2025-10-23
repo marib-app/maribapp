@@ -7,6 +7,7 @@ use App\Models\ManualPaymentRequest;
 use App\Models\PaymentTransaction;
 use App\Models\WalletTransaction;
 use App\Support\Payments\PaymentLabelService;
+use App\Support\ManualPayments\TransferDetailsResolver;
 use Illuminate\Database\Eloquent\Model as EloquentModel;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Storage;
@@ -125,6 +126,14 @@ class ManualPaymentRequestResource extends JsonResource
             ], $walletSnapshot);
         }
 
+        if ($manualPaymentRequestModel instanceof ManualPaymentRequest) {
+            $transferDetails = TransferDetailsResolver::forManualPaymentRequest($manualPaymentRequestModel)->toArray();
+        } elseif ($paymentTransaction instanceof PaymentTransaction) {
+            $transferDetails = TransferDetailsResolver::forPaymentTransaction($paymentTransaction)->toArray();
+        } else {
+            $transferDetails = TransferDetailsResolver::forRow($this->resource)->toArray();
+        }
+
 
         $manualPaymentSnapshot = array_filter([
             'id' => $this->id,
@@ -149,6 +158,9 @@ class ManualPaymentRequestResource extends JsonResource
             'payable_type' => $this->payable_type,
             'payable_id' => $this->payable_id,
             'payment_transaction_id' => $paymentTransaction?->id,
+            'transfer_details' => $transferDetails,
+
+
         ], static fn ($value) => $value !== null && $value !== '');
 
 
@@ -195,6 +207,7 @@ class ManualPaymentRequestResource extends JsonResource
             'metadata' => $meta,
             'context' => is_array($meta) ? ($meta['context'] ?? null) : null,
             'manual_payment' => $manualPaymentSnapshot !== [] ? $manualPaymentSnapshot : null,
+            'transfer_details' => $transferDetails,
 
             'payable' => $payable ? [
                 'id' => $this->payable_id,

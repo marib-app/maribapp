@@ -23,6 +23,16 @@
 
     $paymentGatewayLabel = $paymentGatewayLabel ?? ($manualBankName ?? '—');
     $manualBankName = $manualBankName ?? null;
+
+    $transferDetails = $transferDetails ?? null;
+
+    if (! is_array($transferDetails)) {
+        $transferDetails = \App\Support\ManualPayments\TransferDetailsResolver::forManualPaymentRequest($request)->toArray();
+    }
+
+    $transferDetailsBankName = $transferDetails['bank_name'] ?? null;
+    $transferReceiptUrl = $transferDetails['receipt_url'] ?? null;
+
     $departmentLabel = $departmentLabel ?? __('Unknown Department');
 
 
@@ -298,226 +308,61 @@
                 </div>
                 <div class="card-body">
                     @php
-                        $rawMeta = is_array($request->meta) ? $request->meta : [];
-                        $metadataSources = array_values(array_filter([
-                            Arr::get($rawMeta, 'metadata'),
-                            Arr::get($rawMeta, 'manual.metadata'),
-                            Arr::get($rawMeta, 'manual.transfer'),
-                            Arr::get($rawMeta, 'transfer'),
-                            Arr::get($rawMeta, 'manual'),
-                            $rawMeta,
-                        ], static fn ($value) => is_array($value)));
+                        $resolvedTransferDetails = is_array($transferDetails) ? $transferDetails : [];
+                        $transferDisplay = [];
 
-                        if ($metadataSources === []) {
-                            $metadataSources[] = [];
-
-
+                        $resolvedBankName = is_string($transferDetailsBankName) ? trim($transferDetailsBankName) : null;
+                        if ($resolvedBankName !== null && $resolvedBankName !== '') {
+                            $transferDisplay[__('Bank Name')] = $resolvedBankName;
                         }
 
-                        $normalizedFlattened = [];
-
-                        foreach ($metadataSources as $source) {
-                            foreach (Arr::dot($source) as $dotKey => $dotValue) {
-                                $normalizedKey = Str::slug((string) $dotKey, '_');
-
-                                if ($normalizedKey === '') {
-                                    continue;
-                                }
-
-                                if (! array_key_exists($normalizedKey, $normalizedFlattened)) {
-                                    $normalizedFlattened[$normalizedKey] = $dotValue;
-                                }
-                            }
-                        }
-
-                        $valueFromMetadata = static function (array $keys) use ($metadataSources, $normalizedFlattened) {
-                            
-                            foreach ($keys as $key) {
-                                foreach ($metadataSources as $source) {
-                                    $value = data_get($source, $key);
-
-                                    if ($value instanceof \DateTimeInterface) {
-                                        return $value;
-                                    }
-
-                                    if (is_string($value)) {
-                                        $value = trim($value);
-                                    } elseif (is_numeric($value)) {
-                                        $value = trim((string) $value);
-                                    } else {
-                                        continue;
-                                    }
-
-                                    if ($value !== '') {
-                                        return $value;
-                                    }
-                                }
-
-                                $normalizedKey = Str::slug((string) $key, '_');
-
-                                if ($normalizedKey === '') {
-                                    continue;
-                                }
-
-                                if (! array_key_exists($normalizedKey, $normalizedFlattened)) {
-                                    continue;
-                                }
-
-                                $candidateValue = $normalizedFlattened[$normalizedKey];
-
-                                if ($candidateValue instanceof \DateTimeInterface) {
-                                    return $candidateValue;
-                                }
-
-                                if (is_string($candidateValue)) {
-                                    $candidateValue = trim($candidateValue);
-                                } elseif (is_numeric($candidateValue)) {
-                                    $candidateValue = trim((string) $candidateValue);
-
-
-                                } else {
-                                    continue;
-                                }
-
-                                if ($candidateValue !== '') {
-                                    return $candidateValue;
-                                }
-                            }
-
-                            return null;
-                        };
-
-                        $senderName = $valueFromMetadata([
-                            'sender_name',
-                            'sender',
-                            'senderName',
-                            'transfer.sender_name',
-                            'transfer.sender',
-                            'transfer.senderName',
-                            'transfer_details.sender_name',
-                            'transfer_details.sender',
-                            'transfer_details.senderName',
-                        ]);
-
-                        $rawUserNote = is_string($request->user_note) ? $request->user_note : '';
-                        $noteLines = [];
-                        $senderFromNote = null;
-
-                        if ($rawUserNote !== '') {
-                            $lines = preg_split("/\r\n|\n|\r/", $rawUserNote) ?: [];
-
-                            foreach ($lines as $line) {
-                                $trimmedLine = trim($line);
-
-                                if ($trimmedLine === '') {
-                                    continue;
-                                }
-
-                                if ($senderFromNote === null) {
-                                    $normalizedLine = Str::lower($trimmedLine);
-
-                                    if (Str::contains($normalizedLine, 'اسم المرسل')) {
-                                        $parts = preg_split('/[:：]/u', $trimmedLine, 2);
-
-                                        if (isset($parts[1])) {
-                                            $candidate = trim($parts[1]);
-
-                                            if ($candidate !== '') {
-                                                $senderFromNote = $candidate;
-                                                continue;
-                                            }
-                                        }
-                                    }
-                                }
-
-                                $noteLines[] = $trimmedLine;
-                            }
-                        }
-
-                        if (! $senderName && $senderFromNote) {
-                            $senderName = $senderFromNote;
-                        }
-
-                        $transferReference = $valueFromMetadata([
-                            'transfer_reference',
-                            'transferReference',
-                            'transfer_number',
-                            'transferNumber',
-                            'transfer.reference',
-                            'transfer.number',
-                            'transfer_details.transfer_reference',
-                            'transfer_details.transfer_number',
-                            'reference_number',
-                            'referenceNumber',
-                            'transaction_reference',
-                            'transactionReference',
-                            'reference',
-                            'referenceCode',
-                            'voucher_number',
-                            'voucherNumber',
-                        ]);
-
-                        if (! $transferReference && filled($request->reference)) {
-                            $transferReference = trim((string) $request->reference);
-                        }
-
-                        $transferDate = $valueFromMetadata(['transferred_at', 'transfer_date']);
-
-                        if ($transferDate instanceof \DateTimeInterface) {
-                            $transferDate = $transferDate->format('Y-m-d H:i');
-                        } elseif (is_string($transferDate) && $transferDate !== '') {
-                            try {
-                                $parsedDate = \Carbon\Carbon::parse($transferDate);
-                                $transferDate = $parsedDate->format('Y-m-d H:i');
-                            } catch (\Exception $exception) {
-                                // Keep the original string when parsing fails.
-                            }
+                        $senderName = $resolvedTransferDetails['sender_name'] ?? null;
+                        if (is_numeric($senderName) && ! is_string($senderName)) {
+                            $senderName = (string) $senderName;
+                        } elseif (is_string($senderName)) {
+                            $senderName = trim($senderName);
                         } else {
-                            $transferDate = null;
+                            $senderName = null;
+
                         }
 
-                        $noteFromMetadata = $valueFromMetadata([
-                            'notes',
-                            'note',
-                            'additional_note',
-                            'message',
-                            'transfer.notes',
-                            'transfer.note',
-                            'transfer.message',
-                            'transfer_details.notes',
-                            'transfer_details.note',
-                            'transfer_details.message',
-                        ]);
-
-                        
-                        if (! $noteFromMetadata) {
-                            $noteFromMetadata = $noteLines !== []
-                                ? implode("\n", $noteLines)
-                                : ($rawUserNote !== '' ? $rawUserNote : null);
+                        if ($senderName !== null && $senderName !== '') {
+                            $transferDisplay[__('Sender Name')] = $senderName;
                         }
 
-                        $transferDetails = [];
+                        $transferReference = $resolvedTransferDetails['transfer_reference'] ?? null;
+                        if (is_numeric($transferReference) && ! is_string($transferReference)) {
+                            $transferReference = (string) $transferReference;
+                        } elseif (is_string($transferReference)) {
+                            $transferReference = trim($transferReference);
+                        } else {
+                            $transferReference = null;
 
-                        if ($senderName) {
-                            $transferDetails[__('Sender Name')] = $senderName;
+
                         }
 
-                        if ($transferReference) {
-                            $transferDetails[__('Transfer Reference')] = $transferReference;
+                        if ($transferReference !== null && $transferReference !== '') {
+                            $transferDisplay[__('Transfer Reference')] = $transferReference;
                         }
 
-                        if ($transferDate) {
-                            $transferDetails[__('Transfer Date')] = $transferDate;
+                        $transferNote = $resolvedTransferDetails['note'] ?? null;
+                        if (is_numeric($transferNote) && ! is_string($transferNote)) {
+                            $transferNote = (string) $transferNote;
+                        } elseif (is_string($transferNote)) {
+                            $transferNote = trim($transferNote);
+                        } else {
+                            $transferNote = null;
+
                         }
 
-                        if ($noteFromMetadata) {
-                            $transferDetails[__('Additional Notes')] = $noteFromMetadata;
+                        if ($transferNote !== null && $transferNote !== '') {
+                            $transferDisplay[__('Additional Notes')] = $transferNote;
                         }
                     @endphp
 
-                    @if($transferDetails !== [])
+                    @if($transferDisplay !== [])
                         <dl class="row mb-0">
-                            @foreach($transferDetails as $label => $value)
+                            @foreach($transferDisplay as $label => $value)
                                 <dt class="col-5 text-muted">{{ $label }}</dt>
                                 <dd class="col-7">
                                     @php
@@ -550,7 +395,7 @@
             <h6 class="mb-0"><i class="fa fa-file-invoice-dollar me-2"></i>{{ __('Receipt') }}</h6>
         </div>
         <div class="card-body">
-            @include('payments.manual.partials.receipt', ['request' => $request])
+            @include('payments.manual.partials.receipt', ['request' => $request, 'receiptUrl' => $transferReceiptUrl])
         </div>
     </div>
 

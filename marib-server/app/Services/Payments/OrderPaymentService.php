@@ -14,6 +14,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use App\Services\Payments\TransactionAmountResolver;
+use App\Services\Payments\CreateOrLinkManualPaymentRequest;
 
 use RuntimeException;
 
@@ -44,7 +45,8 @@ class OrderPaymentService
         private readonly DatabaseManager $db,
         private readonly WalletService $walletService,
         private readonly PaymentFulfillmentService $fulfillmentService,
-        private readonly ManualPaymentRequestService $manualPaymentRequestService
+        private readonly ManualPaymentRequestService $manualPaymentRequestService,
+        private readonly CreateOrLinkManualPaymentRequest $manualPaymentLinker
         
         ) {
     }
@@ -233,50 +235,17 @@ class OrderPaymentService
             $manualPaymentRequest = $transaction->manualPaymentRequest;
 
             $manualBankIdentifier = Arr::get($data, 'manual_bank_id') ?? Arr::get($data, 'bank_id');
-            $manualRequestMeta = Arr::get($data, 'meta');
-            if (! is_array($manualRequestMeta)) {
-                $manualRequestMeta = [];
+            if ($bankName !== null) {
+                data_set($data, 'bank.name', $bankName);
             }
 
-            if (! $manualPaymentRequest) {
-                $manualRequestPayload = [
-                    'payment_gateway' => $method,
-                    'currency' => $transactionCurrency,
-                    'reference' => Arr::get($data, 'reference'),
-                    'note' => Arr::get($data, 'note'),
-                    'manual_bank_id' => $manualBankIdentifier,
-                    'receipt_path' => Arr::get($data, 'receipt_path'),
-                    'idempotency_key' => $transaction->idempotency_key ?? $idempotencyKey,
-                    'meta' => $manualRequestMeta,
-                ];
-
-                if ($bankName !== null) {
-                    $manualRequestPayload['bank'] = ['name' => $bankName];
-                }
-
-                $manualPaymentRequest = $this->manualPaymentRequestService->createFromTransaction(
-                    $user,
-                    Order::class,
-                    $order->getKey(),
-                    $transaction,
-                    $manualRequestPayload
-                );
-
-                $transaction->manual_payment_request_id = $manualPaymentRequest->getKey();
-                $transaction->save();
-            }
-
-            $shouldUpdateManualPaymentRequest = $manualBankIdentifier !== null && $manualBankIdentifier !== '';
-
-            if ($shouldUpdateManualPaymentRequest) {
-                $manualPaymentRequest = $this->manualPaymentRequestService->createOrUpdateForManualTransaction(
-                    $user,
-                    Order::class,
-                    $order->getKey(),
-                    $transaction,
-                    $data
-                );
-            }
+            $manualPaymentRequest = $this->manualPaymentLinker->handle(
+                $user,
+                Order::class,
+                $order->getKey(),
+                $transaction,
+                $data
+            );
 
 
 

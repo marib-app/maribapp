@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Database\Eloquent\Model;
 use App\Queries\PaymentRequestTableQuery;
 use App\Support\Payments\PaymentLabelService;
+use App\Support\ManualPayments\TransferDetailsResolver;
 
 use App\Models\UserFcmToken;
 use App\Services\BootstrapTableService;
@@ -781,6 +782,10 @@ class ManualPaymentRequestController extends Controller
         }
 
         $presentation = $this->manualPaymentRequestPresentationData($manualPaymentRequest);
+        if (! isset($presentation['transferDetails'])) {
+            $presentation['transferDetails'] = TransferDetailsResolver::forRow($paymentTransaction)->toArray();
+        }
+
 
         return view(
             'payments.manual.review-transaction',
@@ -816,13 +821,17 @@ class ManualPaymentRequestController extends Controller
 
         
         $departmentLabel = $this->paymentRequestDepartmentLabel($manualPaymentRequest->department ?? null);
+        $transferDetails = TransferDetailsResolver::forManualPaymentRequest($manualPaymentRequest)->toArray();
 
         return compact(
             'paymentGatewayKey',
             'paymentGatewayCanonical',
             'paymentGatewayLabel',
             'departmentLabel'
-        ) + ['manualBankName' => $manualBankName];
+        ) + [
+            'manualBankName' => $manualBankName,
+            'transferDetails' => $transferDetails,
+        ];
     }
 
     public function timeline(ManualPaymentRequest $manualPaymentRequest)

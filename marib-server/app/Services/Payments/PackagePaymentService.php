@@ -4,6 +4,7 @@ namespace App\Services\Payments;
 
 
 use App\Services\Payments\Concerns\HandlesManualBankConfirmation;
+use App\Services\Payments\CreateOrLinkManualPaymentRequest;
 use App\Models\Package;
 use App\Services\OrderCheckoutService;
 use App\Models\PaymentTransaction;
@@ -40,7 +41,9 @@ class PackagePaymentService
         private readonly DatabaseManager $db,
         private readonly WalletService $walletService,
         private readonly PaymentFulfillmentService $fulfillmentService,
-        private readonly ManualPaymentRequestService $manualPaymentRequestService
+        private readonly ManualPaymentRequestService $manualPaymentRequestService,
+        private readonly CreateOrLinkManualPaymentRequest $manualPaymentLinker
+        
         
         ) {
     }
@@ -215,50 +218,19 @@ class PackagePaymentService
 
             $manualPaymentRequest = $transaction->manualPaymentRequest;
             $manualBankIdentifier = Arr::get($data, 'manual_bank_id') ?? Arr::get($data, 'bank_id');
-            $manualRequestMeta = Arr::get($data, 'meta');
-            if (! is_array($manualRequestMeta)) {
-                $manualRequestMeta = [];
+            if ($bankName !== null) {
+                data_set($data, 'bank.name', $bankName);
+
+
             }
 
-            if (! $manualPaymentRequest) {
-                $manualRequestPayload = [
-                    'payment_gateway' => $method,
-                    'currency' => $transactionCurrency,
-                    'reference' => Arr::get($data, 'reference'),
-                    'note' => Arr::get($data, 'note'),
-                    'manual_bank_id' => $manualBankIdentifier,
-                    'receipt_path' => Arr::get($data, 'receipt_path'),
-                    'idempotency_key' => $transaction->idempotency_key ?? $idempotencyKey,
-                    'meta' => $manualRequestMeta,
-                ];
-
-                if ($bankName !== null) {
-                    $manualRequestPayload['bank'] = ['name' => $bankName];
-                }
-
-                $manualPaymentRequest = $this->manualPaymentRequestService->createFromTransaction(
-                    $user,
-                    Package::class,
-                    $package->getKey(),
-                    $transaction,
-                    $manualRequestPayload
-                );
-
-                $transaction->manual_payment_request_id = $manualPaymentRequest->getKey();
-                $transaction->save();
-            }
-
-            $shouldUpdateManualPaymentRequest = $manualBankIdentifier !== null && $manualBankIdentifier !== '';
-
-            if ($shouldUpdateManualPaymentRequest) {
-                $manualPaymentRequest = $this->manualPaymentRequestService->createOrUpdateForManualTransaction(
-                    $user,
-                    Package::class,
-                    $package->getKey(),
-                    $transaction,
-                    $data
-                );
-            }
+            $manualPaymentRequest = $this->manualPaymentLinker->handle(
+                $user,
+                Package::class,
+                $package->getKey(),
+                $transaction,
+                $data
+            );
 
             $manualMeta = array_filter(
                 Arr::only($data, ['note', 'reference', 'attachments', 'receipt_path']),

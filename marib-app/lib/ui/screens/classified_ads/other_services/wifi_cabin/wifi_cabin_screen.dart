@@ -467,6 +467,8 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
       bodyBuilder: (_) => WifiAddNetworkSheet(
         repository: _repository,
       ),
+      headerBuilder: (_) => const SizedBox.shrink(),
+      headerPadding: EdgeInsets.zero,
       showHandle: false,
       showCloseButton: false,
       showDivider: false,

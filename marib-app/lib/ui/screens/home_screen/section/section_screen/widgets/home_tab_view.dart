@@ -298,6 +298,81 @@ class _HomeTabViewState extends State<HomeTabView> {
     return result;
   }
 
+
+  bool _categoryMatchesAllowed(
+      CategoryModel category,
+      Set<int> allowedIds,
+      ) {
+    final int? categoryId = category.id;
+    if (categoryId != null && allowedIds.contains(categoryId)) {
+      return true;
+    }
+
+    final List<CategoryModel>? children = category.children;
+    if (children == null || children.isEmpty) {
+      return false;
+    }
+
+    for (final CategoryModel child in children) {
+      if (_categoryMatchesAllowed(child, allowedIds)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  List<CategoryModel> _prioritizeCategoriesByAllowedIds(
+      List<CategoryModel> categories,
+      Set<int> allowedIds,
+      ) {
+    if (categories.isEmpty || allowedIds.isEmpty) {
+      return categories;
+    }
+
+    final List<CategoryModel> prioritized = <CategoryModel>[];
+    final List<CategoryModel> remainder = <CategoryModel>[];
+
+    for (final CategoryModel category in categories) {
+      final List<CategoryModel>? children = category.children;
+      final List<CategoryModel>? reorderedChildren =
+      (children == null || children.isEmpty)
+          ? children
+          : _prioritizeCategoriesByAllowedIds(children, allowedIds);
+
+      final CategoryModel normalizedCategory =
+      (reorderedChildren == null || identical(reorderedChildren, category.children))
+          ? category
+          : CategoryModel(
+        id: category.id,
+        name: category.name,
+        url: category.url,
+        description: category.description,
+        interfaceType: category.interfaceType,
+        subcategoriesCount: category.subcategoriesCount,
+        children: reorderedChildren,
+      );
+
+      final bool matches =
+      _categoryMatchesAllowed(normalizedCategory, allowedIds);
+      if (matches) {
+        prioritized.add(normalizedCategory);
+      } else {
+        remainder.add(normalizedCategory);
+      }
+    }
+
+    if (prioritized.isEmpty) {
+      return remainder;
+    }
+    if (remainder.isEmpty) {
+      return prioritized;
+    }
+
+    return <CategoryModel>[...prioritized, ...remainder];
+  }
+
+
   CategoryModel _copyCategoryWithChildren(
     CategoryModel source,
     List<CategoryModel> children,
@@ -939,28 +1014,27 @@ class _HomeTabViewState extends State<HomeTabView> {
                                 }
                               }
 
-                              final bool hasItemFilter = successState != null &&
+                              final bool hasAllowedHints =
                                   allowedCategoryIds.isNotEmpty;
-                              if (hasItemFilter) {
-                                processedRootChildren =
-                                    _filterCategoriesByAllowedIds(
-                                        processedRootChildren,
-                                        allowedCategoryIds);
-                              }
+                              final List<CategoryModel> prioritizedRootChildren =
+                              hasAllowedHints
+                                  ? _prioritizeCategoriesByAllowedIds(
+                                  processedRootChildren,
+                                  allowedCategoryIds)
+                                  : processedRootChildren;
 
-                              final bool shouldFilterCategories =
-                                  hasItemFilter || sellerFilterApplied;
+                              final bool needsSyntheticRoot =
+                                  sellerFilterApplied || hasAllowedHints;
                               final List<CategoryModel> effectiveRootChildren =
-                                  shouldFilterCategories
-                                      ? processedRootChildren
-                                      : rootChildren;
+                                  prioritizedRootChildren;
+
                               final CategoryModel effectiveRoot =
-                                  shouldFilterCategories
+                              needsSyntheticRoot
                                       ? _copyCategoryWithChildren(
                                           root, effectiveRootChildren)
                                       : root;
 
-                              if (shouldFilterCategories &&
+                              if (sellerFilterApplied  &&
                                   selectedId != null &&
                                   selectedId > 0) {
                                 final bool selectedAllowed =
@@ -1013,9 +1087,10 @@ class _HomeTabViewState extends State<HomeTabView> {
                                   visibleSubcats = sellerFilteredSubcats;
                                 }
                               }
-                              if (hasItemFilter) {
-                                visibleSubcats = _filterCategoriesByAllowedIds(
-                                    visibleSubcats, allowedCategoryIds);
+                              if (hasAllowedHints) {
+                                visibleSubcats =
+                                    _prioritizeCategoriesByAllowedIds(
+                                        visibleSubcats, allowedCategoryIds);
                               }
                               if (visibleSubcats.isEmpty)
                                 return const SizedBox.shrink();

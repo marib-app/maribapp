@@ -1732,44 +1732,51 @@ class _SoftSnackBarWidgetState extends State<_SoftSnackBarWidget>
           opacity: _fadeAnimation,
           child: SlideTransition(
             position: _slideAnimation,
-            child: Material(
-              color: Colors.transparent,
-              child: IntrinsicWidth(
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: widget.backgroundColor,
-                    borderRadius: BorderRadius.circular(22),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(100),
-                        child: Image.asset(
-                          widget.iconPath,
-                          width: 30,
-                          height: 30,
-                          fit: BoxFit.cover,
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: () {
+                dismiss();
+              },
+              child: Material(
+                color: Colors.transparent,
+                child: IntrinsicWidth(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 12, horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: widget.backgroundColor,
+                      borderRadius: BorderRadius.circular(22),
+                    ),
+                    child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                    ClipRRect(
+                    borderRadius: BorderRadius.circular(100),
+                    child: Image.asset(
+                      widget.iconPath,
+                      width: 30,
+                      height: 30,
+                      fit: BoxFit.cover,
+                    ),
                         ),
+                  const SizedBox(width: 10),
+                  Flexible(
+                    child: Text(
+                      widget.message,
+                      style: TextStyle(
+                        color: widget.textColor,
+                        fontSize: widget.fontSize,
+                        fontWeight: widget.fontWeight,
                       ),
-                      const SizedBox(width: 10),
-                      Flexible(
-                        child: Text(
-                          widget.message,
-                          style: TextStyle(
-                            color: widget.textColor,
-                            fontSize: widget.fontSize,
-                            fontWeight: widget.fontWeight,
+                      textAlign: TextAlign.start,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
                           ),
-                          textAlign: TextAlign.start,
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
+
                         ),
-                      ),
-                    ],
+                        ],
+                    ),
                   ),
                 ),
               ),

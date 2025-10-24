@@ -54,7 +54,11 @@ class CreateOrLinkManualPaymentRequest
             Arr::get($data, 'sender_name')
                 ?? Arr::get($data, 'transfer.sender_name')
                 ?? Arr::get($data, 'metadata.sender_name')
+                ?? Arr::get($data, 'metadata.transfer.sender_name')
+                ?? Arr::get($data, 'metadata.transfer_details.sender_name')
                 ?? Arr::get($data, 'manual.sender_name')
+                ?? Arr::get($data, 'manual.metadata.sender_name')
+                ?? Arr::get($data, 'manual.transfer_details.sender_name')
         );
 
         $transferReference = null;
@@ -63,23 +67,32 @@ class CreateOrLinkManualPaymentRequest
             'transfer_reference',
             'transfer_code',
             'reference',
+            'reference_number',
             'metadata.transfer_reference',
             'metadata.transfer_code',
             'metadata.reference',
+            'metadata.reference_number',
             'metadata.transfer.transfer_reference',
             'metadata.transfer.transfer_code',
+            'metadata.transfer.reference_number',
             'metadata.transfer_details.transfer_reference',
             'metadata.transfer_details.transfer_code',
+            'metadata.transfer_details.reference_number',
             'transfer.transfer_reference',
             'transfer.transfer_code',
+            'transfer.reference_number',
             'transfer_details.transfer_reference',
             'transfer_details.transfer_code',
+            'transfer_details.reference_number',
             'manual.transfer_reference',
             'manual.transfer_code',
+            'manual.reference_number',
             'manual.metadata.transfer_reference',
             'manual.metadata.transfer_code',
+            'manual.metadata.reference_number',
             'manual.transfer_details.transfer_reference',
             'manual.transfer_details.transfer_code',
+            'manual.transfer_details.reference_number',
         ];
 
         foreach ($transferReferenceKeys as $key) {
@@ -103,7 +116,7 @@ class CreateOrLinkManualPaymentRequest
             data_set($transactionMeta, 'manual.metadata.sender_name', $senderName);
         }
 
-        
+
         if ($transferReference !== null) {
             data_set($manualMeta, 'manual.transfer_reference', $transferReference);
             data_set($manualMeta, 'manual.metadata.transfer_reference', $transferReference);

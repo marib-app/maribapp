@@ -674,18 +674,272 @@ class OrderApiController extends Controller
         );
         $note = $this->normalizeNullableMultiline($value['note'] ?? null);
 
-        $normalized = array_filter([
-            'sender_name' => $senderName,
-            'transfer_reference' => $transferReference,
-            'note' => $note,
-        ], static fn ($entry) => $entry !== null && $entry !== '');
+        $normalized = [];
 
-        if ($normalized === []) {
-            return null;
+
+        if ($senderName !== null) {
+            $normalized['sender_name'] = $senderName;
+        }
+
+        if ($transferReference !== null) {
+            $normalized['transfer_reference'] = $transferReference;
+        }
+
+        if ($note !== null) {
+            $normalized['note'] = $note;
+        }
+
+        $receiptData = $value['receipt'] ?? null;
+        $receiptUrl = null;
+        $receiptPath = $this->normalizeNullableString($value['receipt_path'] ?? null);
+        $receiptDisk = $this->normalizeNullableString($value['receipt_disk'] ?? null);
+        $providedUrl = $this->normalizeNullableString($value['url'] ?? null);
+
+        if (is_array($receiptData)) {
+            $sanitizedReceipt = $this->normalizeManualTransferArrayValue($receiptData);
+
+            if ($sanitizedReceipt !== []) {
+                $normalized['receipt'] = $sanitizedReceipt;
+                $receiptUrl = $this->normalizeNullableString($sanitizedReceipt['receipt_url'] ?? $sanitizedReceipt['url'] ?? null);
+
+                $receiptPathFromReceipt = $this->normalizeNullableString($sanitizedReceipt['receipt_path'] ?? $sanitizedReceipt['path'] ?? null);
+                if ($receiptPathFromReceipt !== null) {
+                    $receiptPath = $receiptPathFromReceipt;
+                }
+
+                $receiptDiskFromReceipt = $this->normalizeNullableString($sanitizedReceipt['receipt_disk'] ?? $sanitizedReceipt['disk'] ?? null);
+                if ($receiptDiskFromReceipt !== null) {
+                    $receiptDisk = $receiptDiskFromReceipt;
+                }
+
+                if (! isset($normalized['attachments']) && isset($sanitizedReceipt['attachments'])) {
+                    $receiptAttachments = $this->normalizeManualTransferAttachments($sanitizedReceipt['attachments']);
+                    if ($receiptAttachments !== []) {
+                        $normalized['attachments'] = $receiptAttachments;
+                    }
+                }
+            }
+        } else {
+            $receiptString = $this->normalizeNullableString($receiptData);
+            if ($receiptString !== null) {
+                $normalized['receipt'] = $receiptString;
+                $receiptUrl = $receiptString;
+            }
+        }
+
+        $directAttachments = $this->normalizeManualTransferAttachments($value['attachments'] ?? null);
+        if ($directAttachments !== []) {
+            $normalized['attachments'] = $directAttachments;
+        }
+
+        $explicitReceiptUrl = $this->normalizeNullableString(
+            $value['receipt_url']
+                ?? Arr::get($value, 'receipt.url')
+                ?? Arr::get($value, 'receipt.receipt_url')
+        );
+
+        if ($explicitReceiptUrl !== null) {
+            $receiptUrl = $explicitReceiptUrl;
+        }
+
+        if ($receiptUrl !== null) {
+            $normalized['receipt_url'] = $receiptUrl;
+
+            if (! isset($normalized['url'])) {
+                $normalized['url'] = $receiptUrl;
+            }
+
+            if (! isset($normalized['receipt']) || $normalized['receipt'] === []) {
+                $normalized['receipt'] = $receiptUrl;
+            }
+        }
+
+        if ($providedUrl !== null) {
+            $normalized['url'] = $providedUrl;
+
+            if (! isset($normalized['receipt_url'])) {
+                $normalized['receipt_url'] = $providedUrl;
+            }
+
+            if (! isset($normalized['receipt'])) {
+                $normalized['receipt'] = $providedUrl;
+            }
+        }
+
+        if ($receiptPath !== null) {
+            $normalized['receipt_path'] = $receiptPath;
+        }
+
+        if ($receiptDisk !== null) {
+            $normalized['receipt_disk'] = $receiptDisk;
+        }
+
+        foreach ($value as $rawKey => $rawEntry) {
+            if (! is_int($rawKey) && ! is_string($rawKey)) {
+                continue;
+            }
+
+            $key = is_int($rawKey) ? (string) $rawKey : $rawKey;
+
+            if (in_array($key, ['sender_name', 'transfer_reference', 'transfer_code', 'note', 'receipt', 'receipt_url', 'url', 'receipt_path', 'receipt_disk', 'attachments'], true)) {
+                continue;
+            }
+
+            if (array_key_exists($key, $normalized)) {
+                continue;
+            }
+
+            if ($rawEntry === null) {
+                continue;
+            }
+
+            if (is_string($rawEntry)) {
+                $trimmed = trim($rawEntry);
+                if ($trimmed === '') {
+                    continue;
+                }
+
+                $normalized[$key] = $trimmed;
+                continue;
+            }
+
+            if (is_array($rawEntry)) {
+                $sanitized = $this->normalizeManualTransferArrayValue($rawEntry);
+                if ($sanitized !== []) {
+                    $normalized[$key] = $sanitized;
+                }
+
+                continue;
+            }
+
+            if (is_scalar($rawEntry)) {
+                $normalized[$key] = $rawEntry;
+            }
+
         }
 
         if ($transferReference !== null) {
             $normalized['transfer_code'] = $transferReference;
+        }
+
+        return $normalized === [] ? null : $normalized;
+    }
+
+    /**
+     * @param mixed $value
+     * @return array<int, array<int|string, mixed>>
+     */
+    private function normalizeManualTransferAttachments($value): array
+    {
+        if ($value === null) {
+            return [];
+        }
+
+        if (is_array($value) && Arr::isAssoc($value)) {
+            $value = [$value];
+        }
+
+        if (! is_iterable($value)) {
+            return [];
+        }
+
+        $normalized = [];
+
+        foreach ($value as $attachment) {
+            if (! is_array($attachment)) {
+                continue;
+            }
+
+            $sanitized = [];
+
+            foreach ($attachment as $rawKey => $rawEntry) {
+                if (! is_int($rawKey) && ! is_string($rawKey)) {
+                    continue;
+                }
+
+                $key = is_int($rawKey) ? (string) $rawKey : $rawKey;
+
+                if ($rawEntry === null) {
+                    continue;
+                }
+
+                if (is_string($rawEntry)) {
+                    $trimmed = trim($rawEntry);
+                    if ($trimmed === '') {
+                        continue;
+                    }
+
+                    $sanitized[$key] = $trimmed;
+                    continue;
+                }
+
+                if (is_scalar($rawEntry) || is_array($rawEntry)) {
+                    $sanitized[$key] = $rawEntry;
+                }
+            }
+
+            if ($sanitized !== []) {
+                $normalized[] = $sanitized;
+            }
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * @param mixed $value
+     * @return array<int|string, mixed>
+     */
+    private function normalizeManualTransferArrayValue($value): array
+    {
+        if (! is_array($value)) {
+            return [];
+        }
+
+        $normalized = [];
+
+        foreach ($value as $rawKey => $rawEntry) {
+            if (! is_int($rawKey) && ! is_string($rawKey)) {
+                continue;
+            }
+
+            $key = is_int($rawKey) ? (string) $rawKey : $rawKey;
+
+            if ($rawEntry === null) {
+                continue;
+            }
+
+            if (is_string($rawEntry)) {
+                $trimmed = trim($rawEntry);
+                if ($trimmed === '') {
+                    continue;
+                }
+
+                $normalized[$key] = $trimmed;
+                continue;
+            }
+
+            if (is_array($rawEntry)) {
+                if ($key === 'attachments') {
+                    $attachments = $this->normalizeManualTransferAttachments($rawEntry);
+                    if ($attachments !== []) {
+                        $normalized[$key] = $attachments;
+                    }
+
+                    continue;
+                }
+
+                $nested = $this->normalizeManualTransferArrayValue($rawEntry);
+                if ($nested !== []) {
+                    $normalized[$key] = $nested;
+                }
+
+                continue;
+            }
+
+            if (is_scalar($rawEntry)) {
+                $normalized[$key] = $rawEntry;
+            }
         }
 
         return $normalized;

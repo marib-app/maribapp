@@ -54,6 +54,8 @@ class BlurredDialogBox extends StatelessWidget implements BlurDialoge {
   @override
   Widget build(BuildContext context) {
     bool isBack = true;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     ///This backAllowedButton will help us to prevent back presses from sensitive dialoges
     return AnnotatedRegion(
@@ -90,163 +92,107 @@ class BlurredDialogBox extends StatelessWidget implements BlurDialoge {
               return true;
             },*/
 
-            child: LayoutBuilder(builder: (context, constraints) {
-              return AlertDialog(
-                backgroundColor: context.color.secondaryColor ??
-                    makeColorDark(
-                      context.color.primaryColor,
-                    ),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15)),
-                title: Column(
-                  children: [
-                    if (svgImagePath != null) ...[
+            child: LayoutBuilder(
+              builder: (dialogContext, constraints) {
+                final List<Widget> titleWidgets = [];
+
+                if (svgImagePath != null) {
+                  titleWidgets
+                    ..add(
                       CircleAvatar(
-                        radius: 186 / 2,
+                        radius: 93,
                         backgroundColor:
                             context.color.territoryColor.withOpacity(0.1),
                         child: SizedBox(
-                            // width: 87 / 2,
-                            // height: 87 / 2,
-                        //     child: UiUtils.getSvg(
-                        //   svgImagePath!,
-                        //   color: svgImageColor,
-                        // )
-
-                        child:  Lottie.asset(
-                              // Replace with your Lottie file path
-                               svgImagePath!,
-                              width: 500, // Adjust the width as needed
-                              height: 370, // Adjust the height as needed
-                              fit: BoxFit.cover, // Adjust the fit if necessary
-                            ),
-                        ),
-                      ),
-                      const SizedBox(
-                        height: 20,
-                      ),
-                    ],
-                    title != null
-                        ? Text(title!.firstUpperCase(),
-                            textAlign: TextAlign.center)
-                        : SizedBox.shrink(),
-                    if (divider == true) Divider(),
-                  ],
-                ),
-                content: content,
-                actionsOverflowAlignment: OverflowBarAlignment.center,
-                actionsAlignment: MainAxisAlignment.center,
-                actions: [
-                  if (showCancleButton ?? true) ...[
-                    button(
-                      context,
-                      constraints: constraints,
-                      buttonColor:
-                          cancelButtonColor ?? context.color.primaryColor,
-                      buttonName:
-                          cancelButtonName ?? "cancelBtnLbl".translate(context),
-                      textColor: cancelTextColor ?? context.color.textColorDark,
-                      onTap: () {
-                        onCancel?.call();
-                        Navigator.pop(context);
-                      },
-                    ),
-
-                    // const Spacer(),
-                  ],
-                  Builder(builder: (context) {
-                    if (showCancleButton == false) {
-                      return Center(
-                        child: SizedBox(
-                          width: context.screenWidth / 2,
-                          child: button(
-                            context,
-                            constraints: constraints,
-                            buttonColor: acceptButtonColor ??
-                                context.color.territoryColor,
-                            buttonName:
-                                acceptButtonName ?? "ok".translate(context),
-                            textColor:
-                                acceptTextColor ?? context.color.textColorDark,
-                            onTap: () async {
-                              await onAccept?.call();
-
-                              if (isAcceptContainesPush == false ||
-                                  isAcceptContainesPush == null) {
-                                Future.delayed(
-                                  Duration.zero,
-                                  () {
-                                    Navigator.pop(context, true);
-                                  },
-                                );
-                              }
-                            },
+                          child: Lottie.asset(
+                            svgImagePath!,
+                            width: 500,
+                            height: 370,
+                            fit: BoxFit.cover,
                           ),
                         ),
-                      );
-                    }
-                    return button(
-                      context,
-                      constraints: constraints,
-                      buttonColor:
-                          acceptButtonColor ?? context.color.territoryColor,
-                      buttonName: acceptButtonName ?? "ok".translate(context),
-                      textColor: acceptTextColor ??
-                          const Color.fromARGB(255, 255, 255, 255),
-                      onTap: () async {
+                      ),
+                    )
+                    ..add(const SizedBox(height: 20));
+                }
+
+                if (title != null) {
+                  titleWidgets.add(
+                    Text(
+                      title!.firstUpperCase(),
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: colorScheme.onSurface,
+                      ),
+                    ),
+                  );
+                }
+                if (divider == true) {
+                  if (titleWidgets.isNotEmpty) {
+                    titleWidgets.add(const SizedBox(height: 16));
+                  }
+                  titleWidgets.add(const Divider());
+                }
+
+                return AlertDialog(
+                  backgroundColor: colorScheme.surface,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  title: titleWidgets.isEmpty
+                      ? null
+                      : Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: titleWidgets,
+                        ),
+                  content: content,
+                  actionsAlignment: MainAxisAlignment.end,
+                  actions: [
+                    if (showCancleButton ?? true)
+                      TextButton(
+                        style: TextButton.styleFrom(
+                          foregroundColor:
+                              cancelTextColor ?? colorScheme.onSurface,
+                          backgroundColor: cancelButtonColor,
+                        ),
+                        onPressed: () {
+                          onCancel?.call();
+                          Navigator.of(dialogContext).pop();
+                        },
+                        child: Text(
+                          cancelButtonName ??
+                              "cancelBtnLbl".translate(dialogContext),
+                        ),
+                      ),
+                    FilledButton(
+                      style: FilledButton.styleFrom(
+                        foregroundColor: acceptTextColor,
+                        backgroundColor: acceptButtonColor,
+                      ),
+                      onPressed: () async {
                         await onAccept?.call();
                         if (isAcceptContainesPush == false ||
                             isAcceptContainesPush == null) {
                           Future.delayed(
                             Duration.zero,
                             () {
-                              Navigator.pop(context, true);
+                              Navigator.of(dialogContext).pop(true);
                             },
                           );
                         }
                       },
-                    );
-                  }),
-                ],
-              );
-            }),
+                      child: Text(
+                        acceptButtonName ?? "ok".translate(dialogContext),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
           ),
         ],
-      ),
-    );
-  }
-
-  Color makeColorDark(Color color) {
-    Color color0 = color;
-
-    int red = color0.red - 10;
-    int green = color0.green - 10;
-    int blue = color0.blue - 10;
-
-    return Color.fromARGB(color0.alpha, red.clamp(0, 255), green.clamp(0, 255),
-        blue.clamp(0, 255));
-  }
-
-  Widget button(BuildContext context,
-      {required BoxConstraints constraints,
-      required Color buttonColor,
-      required String buttonName,
-      required Color textColor,
-      required VoidCallback onTap}) {
-    return SizedBox(
-      width: (constraints.maxWidth / 3),
-      child: MaterialButton(
-        elevation: 0,
-
-        height: 39.rh(context),
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-            side: BorderSide(color: context.color.borderColor)),
-        color: buttonColor,
-        // minWidth: (constraints.maxWidth / 2) - 10,
-
-        onPressed: onTap,
-        child: Text(buttonName).color(textColor),
       ),
     );
   }

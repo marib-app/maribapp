@@ -76,6 +76,7 @@ class AddItemDetails extends StatefulWidget {
   CloudState<AddItemDetails> createState() => _AddItemDetailsState();
 }
 
+
 class _AddItemDetailsState extends CloudState<AddItemDetails>
     with ImageSectionMixin, WidgetsBindingObserver {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();

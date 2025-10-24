@@ -116,6 +116,31 @@ class _AddMoreDetailsScreenState extends CloudState<AddMoreDetailsScreen> {
 
   bool _rebuildScheduled = false;
 
+
+  List<CategoryModel>? _resolveCategoryPath() {
+    if (widget.breadCrumbItems != null) {
+      return List<CategoryModel>.from(widget.breadCrumbItems!);
+    }
+
+    final dynamic stored = getCloudData('breadCrumb');
+    if (stored is List<CategoryModel>) {
+      return List<CategoryModel>.from(stored);
+    }
+
+    return null;
+  }
+
+  Map<String, dynamic> _buildAddItemDetailsArguments() {
+    final List<CategoryModel>? categoryPath = _resolveCategoryPath();
+
+    return <String, dynamic>{
+      'categoryPath': categoryPath,
+      'breadCrumbItems': categoryPath,
+      'isEdit': widget.isEdit == true,
+    };
+  }
+
+
   @override
   void initState() {
     super.initState();
@@ -312,12 +337,8 @@ class _AddMoreDetailsScreenState extends CloudState<AddMoreDetailsScreen> {
     Navigator.pushNamed(
       context,
       Routes.addItemDetails,
-      arguments: AdCreationWizardScreen.buildArguments(
-        categoryPath: (widget.breadCrumbItems ??
-            (getCloudData("breadCrumb") as List<CategoryModel>?))
-            ?.toList(),
-        isEdit: widget.isEdit == true,
-      ),
+      arguments: _buildAddItemDetailsArguments(),
+
     ).then((value) {
       screenStack--;
       if (value == "success") {
@@ -520,12 +541,8 @@ class _AddMoreDetailsScreenState extends CloudState<AddMoreDetailsScreen> {
               Navigator.pushReplacementNamed(
                 context,
                 Routes.addItemDetails,
-                arguments: AdCreationWizardScreen.buildArguments(
-                  categoryPath: (widget.breadCrumbItems ??
-                      (getCloudData("breadCrumb") as List<CategoryModel>?))
-                      ?.toList(),
-                  isEdit: widget.isEdit == true,
-                ),
+                arguments: _buildAddItemDetailsArguments(),
+
               );
             });
           } else {
@@ -540,13 +557,8 @@ class _AddMoreDetailsScreenState extends CloudState<AddMoreDetailsScreen> {
                 Navigator.pushReplacementNamed(
                   context,
                   Routes.addItemDetails,
-                  arguments: AdCreationWizardScreen.buildArguments(
-                    categoryPath: (widget.breadCrumbItems ??
-                        (getCloudData("breadCrumb")
-                        as List<CategoryModel>?))
-                        ?.toList(),
-                    isEdit: widget.isEdit == true,
-                  ),
+                  arguments: _buildAddItemDetailsArguments(),
+
                 );
               });
               return;

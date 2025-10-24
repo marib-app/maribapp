@@ -14,6 +14,7 @@ use App\Support\ManualPayments\TransferDetailsResolver;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use App\Services\Payments\TransactionAmountResolver;
 use App\Services\Payments\CreateOrLinkManualPaymentRequest;
@@ -470,12 +471,16 @@ class OrderPaymentService
             ],
         ]);
 
+        $orderReference = $this->resolveUniqueOrderReference($order, $method, $idempotencyKey, $data);
+
+
+
         return PaymentTransaction::create([
             'user_id' => $user->getKey(),
             'amount' => $amount,
             'currency' => $transactionCurrency,
             'payment_gateway' => $method,
-            'order_id' => (string) $order->getKey(),
+            'order_id' => $orderReference,
 
             'payment_status' => 'pending',
             'payable_type' => Order::class,
@@ -486,7 +491,68 @@ class OrderPaymentService
     }
 
 
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function resolveUniqueOrderReference(
+        Order $order,
+        string $method,
+        string $idempotencyKey,
+        array $data
+    ): ?string {
+        $rawReference = Arr::get($data, 'order_id');
 
+        if (! is_string($rawReference)) {
+            $rawReference = null;
+        }
+
+        $normalizedReference = $rawReference !== null ? trim($rawReference) : '';
+        $hasCustomReference = $normalizedReference !== '';
+
+        if (! $hasCustomReference) {
+            $normalizedReference = (string) $order->getKey();
+        }
+
+        if ($normalizedReference === '') {
+            return null;
+        }
+
+        if (! $hasCustomReference) {
+            return $this->buildUniqueOrderReference($method, $normalizedReference, $idempotencyKey);
+        }
+
+        if (! $this->orderReferenceExists($method, $normalizedReference)) {
+            return $normalizedReference;
+        }
+
+        return $this->buildUniqueOrderReference($method, $normalizedReference, $idempotencyKey);
+    }
+
+    private function buildUniqueOrderReference(string $method, string $baseReference, string $idempotencyKey): string
+    {
+        $suffixKey = trim($idempotencyKey) !== '' ? $idempotencyKey : (string) Str::uuid();
+        $candidate = sprintf('%s:%s', $baseReference, $suffixKey);
+        $attempt = 1;
+
+        while ($this->orderReferenceExists($method, $candidate)) {
+            $candidate = sprintf('%s:%s:%d', $baseReference, $suffixKey, $attempt);
+            $attempt++;
+        }
+
+        return $candidate;
+    }
+
+    private function orderReferenceExists(string $method, string $reference): bool
+    {
+        return PaymentTransaction::query()
+            ->where('payment_gateway', $method)
+            ->where('order_id', $reference)
+            ->lockForUpdate()
+            ->exists();
+    }
+
+
+    
     /**
      * @param array<string, mixed> $data
      */

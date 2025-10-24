@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:marib/data/model/wifi/wifi_network.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/ui/theme/theme.dart';
-import 'package:marib/utils/extensions/extensions.dart';
 
 import 'common_states.dart';
 

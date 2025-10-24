@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
+import 'package:marib/data/model/wifi/wifi_purchase.dart';
 import 'package:flutter/foundation.dart';
 
-import 'package:marib/data/model/wifi/wifi_purchase.dart';
-import 'package:marib/utils/extensions/extensions.dart';
 
 class WifiCodeTile extends StatelessWidget {
   const WifiCodeTile({super.key, required this.code, required this.onCopy});

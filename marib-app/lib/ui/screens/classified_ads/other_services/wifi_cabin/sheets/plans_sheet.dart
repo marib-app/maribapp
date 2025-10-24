@@ -2,15 +2,12 @@ import 'dart:async';
 
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
-
 import 'package:flutter/material.dart';
-
 import 'package:marib/data/model/wifi/wifi_network.dart';
 import 'package:marib/data/model/wifi/wifi_plan.dart';
 import 'package:marib/data/model/wifi/wifi_purchase.dart';
 import 'package:marib/data/model/wifi/wifi_purchase_result.dart';
 import 'package:marib/data/wifi/wifi_repository.dart';
-import 'package:marib/utils/extensions/extensions.dart';
 
 import 'checkout_sheet.dart';
 

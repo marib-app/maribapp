@@ -1,25 +1,27 @@
-import 'package:marib/utils/api.dart';
-import 'package:flutter/services.dart';
-import 'package:marib/data/wifi/wifi_repository.dart';
-import 'package:marib/data/model/wifi/wifi_purchase.dart';
-import 'package:marib/data/model/wifi/wifi_network.dart';
-import 'package:shimmer/shimmer.dart';
-import 'package:flutter/material.dart';
 import 'dart:async';
-import 'widgets/service_overview.dart';
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import 'package:shimmer/shimmer.dart';
+import 'package:marib/data/model/wifi/wifi_network.dart';
+import 'package:marib/data/model/wifi/wifi_purchase.dart';
+import 'package:marib/data/wifi/wifi_repository.dart';
+import 'package:marib/ui/theme/theme.dart';
+import 'package:marib/utils/api.dart';
 
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'add_network/add_network_sheet.dart';
+import 'add_network/plan_configuration_screen.dart';
+
 import 'sheets/plans_sheet.dart';
 import 'sheets/purchases_sheet.dart';
 import 'wifi_cabin_controller.dart';
 import 'widgets/common_states.dart';
 import 'widgets/header_filter_bar.dart';
 import 'widgets/network_grid.dart';
-import 'package:marib/ui/theme/theme.dart';
-import 'package:flutter/foundation.dart';
-import 'add_network/plan_configuration_screen.dart';
+import 'widgets/service_overview.dart';
 
 class WifiCabinScreen extends StatefulWidget {
   const WifiCabinScreen({super.key});

@@ -83,7 +83,7 @@ import 'package:marib/ui/screens/item/add_item_screen/widgets/success_item_scree
 import 'package:marib/ui/screens/item/add_item_screen/select_category.dart';
 
 //
-import 'package:marib/ui/screens/item/add_item_screen/ad_creation_wizard_screen.dart';
+
 
 import 'package:marib/ui/screens/item/ad_details_screen/ad_details_screen.dart';
 import 'package:marib/ui/screens/user_profile/show_profile.dart';
@@ -487,8 +487,7 @@ class Routes {
         return SelectCategoryScreen.route(routeSettings);
       case selectNestedCategoryScreen:
         return SelectNestedCategory.route(routeSettings);
-      case addItemDetails:
-        return AdCreationWizardScreen.route(routeSettings);
+
 
       case addMoreDetailsScreen:
         return AddMoreDetailsScreen.route(routeSettings);

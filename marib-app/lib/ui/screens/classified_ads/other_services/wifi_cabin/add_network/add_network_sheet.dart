@@ -35,7 +35,6 @@ class WifiAddNetworkSheetState
 
   @override
   WifiRepository get repository => widget.repository;
-  final theme = Theme.of(context);
 
   @override
   void handleCompletion(Map<String, dynamic> result) {
@@ -44,6 +43,8 @@ class WifiAddNetworkSheetState
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return StandardBottomSheetScaffold(
       header: StandardBottomSheetHeader(
         showCloseButton: true,

@@ -2539,8 +2539,8 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       final String senderName = manualTransfer.trimmedSenderName;
       final String transferCode = manualTransfer.trimmedTransferCode;
       final String? transferReference =
-      transferCode.isNotEmpty ? transferCode : null;
 
+      transferCode.isNotEmpty ? transferCode : null;
 
       final Map<String, dynamic> metadata = <String, dynamic>{
         'source': 'checkout_manual_bank_dialog',
@@ -2548,6 +2548,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
         if (transferReference != null) ...{
           'transfer_code': transferReference,
           'transfer_reference': transferReference,
+          'transfer_number': transferReference,
         },
 
         if (orderCode != null && orderCode.trim().isNotEmpty)

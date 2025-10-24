@@ -1023,6 +1023,7 @@ class ManualPaymentService {
 
       ensureValue('transfer_reference');
       ensureValue('transfer_code');
+      ensureValue('transfer_number');
     }
 
     return normalized.isEmpty ? null : normalized;

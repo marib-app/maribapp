@@ -88,7 +88,6 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
 
         final backgroundColor = context.color.backgroundColor;
 
-
         return Scaffold(
           backgroundColor: backgroundColor,
           appBar: UiUtils.buildAppBar(
@@ -108,8 +107,9 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
                       WifiSearchHeaderBar(
                         controller: _searchController,
                         focusNode: _searchFocusNode,
-                        isLoading: state.status == WifiCabinLoadStatus.loading &&
-                            !state.hasData,
+                        isLoading:
+                            state.status == WifiCabinLoadStatus.loading &&
+                                !state.hasData,
                         onChanged: (value) => _controller.updateQuery(value),
                         onSubmitted: (value) =>
                             _controller.updateQuery(value, immediate: true),
@@ -134,14 +134,17 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
                     layoutBuilder: (currentChild, previousChildren) {
                       return Stack(
                         alignment: Alignment.topCenter,
+                        fit: StackFit.passthrough,
+                        clipBehavior: Clip.none,
                         children: <Widget>[
-                          ...previousChildren,
-                          if (currentChild != null) currentChild,
+                          for (final child in previousChildren)
+                            Positioned.fill(child: child),
+                          if (currentChild != null)
+                            Positioned.fill(child: currentChild),
                         ],
                       );
                     },
                     child: _buildBodyForState(context, state),
-
                   ),
                 ),
               ),

@@ -20,7 +20,9 @@ import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart';
 import 'package:marib/ui/screens/widgets/custom_drop_down.dart';
 import 'package:marib/ui/screens/widgets/custom_text_form_field.dart';
-import 'package:marib/ui/screens/widgets/dynamic_field/dynamic_field.dart';
+import 'package:marib/ui/screens/widgets/dynamic_field/dynamic_field.dart'
+    show AbstractField;
+
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/cloudState/cloud_state.dart';
 import 'package:marib/utils/extensions/extensions.dart';
@@ -28,86 +30,16 @@ import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/utils/imagePicker.dart';
 import 'package:marib/utils/responsiveSize.dart';
-import 'package:marib/utils/item_category_ids.dart';
-import 'dart:io';
-import 'package:url_launcher/url_launcher.dart';
 import 'dart:async';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:html/parser.dart' as html;
-import 'dart:io';
-import 'dart:typed_data';
 
-import 'package:dotted_border/dotted_border.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:http/http.dart' as http;
-import 'package:image/image.dart' as img;
-import 'package:image_picker/image_picker.dart';
-import 'package:path_provider/path_provider.dart';
 
-import 'package:marib/app/routes.dart';
-import 'package:marib/data/cubits/custom_field/fetch_custom_fields_cubit.dart';
-import 'package:marib/ui/screens/widgets/dynamic_field/dynamic_field.dart';
 import 'package:marib/data/cubits/item/manage_item_cubit.dart';
 import 'package:marib/data/helper/widgets.dart';
-import 'package:marib/data/model/category_model.dart';
-import 'package:marib/data/model/custom_field/custom_field_model.dart';
-import 'package:marib/data/model/item/item_model.dart';
-import 'package:marib/ui/screens/item/add_item_screen/image_section.dart';
-import 'package:marib/ui/screens/item/add_item_screen/select_category.dart';
-import 'package:marib/ui/screens/item/add_item_screen/shein_grabber_page.dart';
 import 'package:marib/ui/screens/user_profile/my_item_tab.dart';
-import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
-import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart';
-import 'package:marib/ui/screens/widgets/custom_text_form_field.dart';
-import 'package:marib/ui/screens/widgets/custom_drop_down.dart';
 import 'package:marib/utils/constant.dart';
-import 'package:marib/ui/screens/item/add_item_screen/select_category.dart';
-import 'package:marib/ui/screens/widgets/custom_text_form_field.dart';
 import 'package:marib/ui/screens/widgets/dynamic_field/dynamic_field.dart';
-import 'package:marib/ui/theme/theme.dart';
-import 'package:marib/utils/cloudState/cloud_state.dart';
-import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/errorFilter.dart';
-import 'package:marib/utils/extensions/extensions.dart';
-import 'package:marib/data/model/item/item_model.dart';
 import 'package:marib/utils/geo_rules.dart';
-import 'package:marib/utils/helper_utils.dart';
-import 'package:marib/utils/hive_utils.dart';
-import 'package:marib/utils/imagePicker.dart';
-import 'package:marib/utils/responsiveSize.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:dropdown_search/dropdown_search.dart';
-import 'image_section.dart';
-// لنماذج الحقول المخصصة
-import 'package:marib/data/model/custom_field/custom_field_model.dart';
-import 'package:marib/ui/screens/widgets/dynamic_field/dynamic_field.dart'; // فيه CustomTextFieldDynamic
-import 'package:marib/data/model/custom_field/custom_field_model.dart';
-
-// ويدجت الحقول المخصصة
-import 'package:marib/ui/screens/widgets/dynamic_field/dynamic_field.dart';
-import 'dart:typed_data';
-
-
-import 'package:marib/utils/ui_utils.dart';
-
-import 'package:marib/data/model/category_model.dart';
-import 'package:path_provider/path_provider.dart';
-
-import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
-import 'package:html/parser.dart' as html;
-import 'package:html/dom.dart' as dom;
-import 'package:html/parser.dart' as html; // مكرر مرتين
-import 'package:html/dom.dart' as dom;
-import 'package:image/image.dart' as img;
-
-import 'shein_grabber_page.dart';
-
 
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/ecommerce_department.dart';
@@ -129,11 +61,8 @@ class AddItemDetails extends StatefulWidget {
     settings.arguments as Map<String, dynamic>?;
     return BlurredRouter(
       builder: (context) {
-        return MultiBlocProvider(
-          providers: [
-            BlocProvider(create: (_) => FetchCustomFieldsCubit()),
-            BlocProvider(create: (_) => ManageItemCubit()),
-          ],
+        return BlocProvider(
+          create: (_) => ManageItemCubit(),
           child: AddItemDetails(
             breadCrumbItems: arguments?['breadCrumbItems'],
             isEdit: arguments?['isEdit'],
@@ -187,8 +116,8 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
   final List<int> selectedCategoryIds = <int>[];
 
   ItemModel? item;
-  List<CustomFieldModel> customFields = <CustomFieldModel>[];
-  bool isLoadingCustomFields = false;
+  final List<CustomFieldModel> _legacyCustomFields = <CustomFieldModel>[];
+
   bool _isSubmittingWithoutLocation = false;
 
   double? latitude;
@@ -211,6 +140,7 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
     WidgetsBinding.instance.addObserver(this);
     AbstractField.fieldsData.clear();
     AbstractField.files.clear();
+    _resetLegacyCustomFieldState();
 
     _coverImagePicker.listener((data) {
       coverImageUrl = '';
@@ -273,18 +203,6 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
       return;
     }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final ids = (item!.allCategoryIds?.isNotEmpty ?? false)
-          ? item!.allCategoryIds!
-          : (item!.categoryId?.toString() ?? item!.category?.id?.toString() ?? '');
-      if (ids.isNotEmpty) {
-        context.read<FetchCustomFieldsCubit>().fetchCustomFields(
-          categoryIds: ids,
-        );
-      }
-    });
-
     adTitleController.text = item?.name ?? '';
     adDescriptionController.text = item?.description ?? '';
     final String? initialPrice = _initialPriceText(item);
@@ -346,16 +264,61 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
       ..clear()
       ..addAll(ids);
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      context
-          .read<FetchCustomFieldsCubit>()
-          .fetchCustomFields(categoryIds: ids.join(','));
-    });
 
     _updateSheinCategoryFlag(ids, notify: false);
     adPhoneNumberController.text =
         HiveUtils.getUserDetails().mobile ?? adPhoneNumberController.text;
+  }
+
+
+
+  void _resetLegacyCustomFieldState() {
+    if (_legacyCustomFields.isNotEmpty) {
+      _legacyCustomFields.clear();
+    }
+  }
+
+  Map<String, dynamic> _sanitizeMoreDetailsPayload(
+      Map<String, dynamic>? rawData) {
+    if (rawData == null || rawData.isEmpty) {
+      return <String, dynamic>{};
+    }
+
+    final Map<String, dynamic> sanitized = <String, dynamic>{};
+    rawData.forEach((key, value) {
+      if (value == null) {
+        return;
+      }
+
+      if (value is String) {
+        final String trimmed = value.trim();
+        if (trimmed.isEmpty || trimmed == '{}' || trimmed == '[]') {
+          return;
+        }
+        sanitized[key] = trimmed;
+        return;
+      }
+
+      if (value is Iterable) {
+        if (value.isEmpty) {
+          return;
+        }
+        sanitized[key] = value;
+        return;
+      }
+
+      if (value is Map) {
+        if (value.isEmpty) {
+          return;
+        }
+        sanitized[key] = value;
+        return;
+      }
+
+      sanitized[key] = value;
+    });
+
+    return sanitized;
   }
 
 
@@ -1040,50 +1003,7 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
       ),
     );
   }
-  Widget _buildDynamicFields(BuildContext context) {
-    if (isLoadingCustomFields) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 12),
-        child: LinearProgressIndicator(),
-      );
-    }
 
-    if (customFields.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 12),
-        Text('الحقول الإضافية', style: theme.textTheme.titleMedium),
-        const SizedBox(height: 8),
-        ...customFields.map((field) => Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: _buildKeyboardAwareField(
-            child: CustomTextFieldDynamic(
-              initController: true,
-              value: _initialCustomFieldValue(field),
-              id: field.id,
-              hintText: (field.name ?? 'حقل مخصص').firstUpperCase(),
-              keyboardType: _keyboardTypeForField(field),
-              action: TextInputAction.next,
-              inputFormatters: _inputFormattersForField(field),
-              required: field.required == 1,
-              validator: CustomTextFieldValidator.minAndMixLen,
-              minLen: field.minLength,
-              maxLen: field.maxLength,
-              minLine: _isTextArea(field) ? 4 : 1,
-              maxLine: _isTextArea(field) ? 6 : 1,
-              capitalization: TextCapitalization.sentences,
-            ),
-          ),
-        )),
-      ],
-    );
-  }
 
   Widget _buildPurchaseOptionsShortcut(BuildContext context) {
     final ItemModel? currentItem = item;
@@ -1161,34 +1081,6 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
   }
 
 
-  TextInputType? _keyboardTypeForField(CustomFieldModel field) {
-    final type = (field.type ?? '').toLowerCase();
-    if (type == 'number') {
-      return TextInputType.number;
-    }
-    if (type == 'email') {
-      return TextInputType.emailAddress;
-    }
-    if (type == 'phone') {
-      return TextInputType.phone;
-    }
-    return TextInputType.text;
-  }
-
-  List<TextInputFormatter>? _inputFormattersForField(CustomFieldModel field) {
-    final type = (field.type ?? '').toLowerCase();
-    if (type == 'number') {
-      return [FilteringTextInputFormatter.digitsOnly];
-    }
-    return null;
-  }
-
-  bool _isTextArea(CustomFieldModel field) {
-    final type = (field.type ?? '').toLowerCase();
-    return type == 'textarea' || type == 'long_text';
-  }
-
-
   String? _normalizeString(dynamic value) {
     if (value == null) {
       return null;
@@ -1215,18 +1107,6 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
     return int.tryParse(value.toString());
   }
 
-
-  String _initialCustomFieldValue(CustomFieldModel field) {
-    final dynamic stored =
-        AbstractField.fieldsData[field.id.toString()] ?? field.value;
-    if (stored == null) {
-      return '';
-    }
-    if (stored is List) {
-      return stored.join(', ');
-    }
-    return stored.toString();
-  }
 
   Widget _buildLocationPreview(BuildContext context) {
     if (latitude == null || longitude == null || locationAddress == null) {
@@ -1274,6 +1154,7 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
     if (!(_formKey.currentState?.validate() ?? false)) {
       return;
     }
+    _resetLegacyCustomFieldState();
 
 
     final List<File> galleryFiles = <File>[];
@@ -1345,10 +1226,17 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
           : selectedCategoryIds.join(','),
     }..removeWhere((key, value) => value == null || (value is String && value.isEmpty));
 
-    final Map<String, dynamic>? moreDetailsData =
+    final Map<String, dynamic>? rawMoreDetails =
     getCloudData('more_details_data') as Map<String, dynamic>?;
-    if (moreDetailsData != null) {
-      data.addAll(moreDetailsData);
+    final Map<String, dynamic> sanitizedMoreDetails =
+    _sanitizeMoreDetailsPayload(rawMoreDetails);
+
+    if (sanitizedMoreDetails.isNotEmpty) {
+      addCloudData('more_details_data', sanitizedMoreDetails);
+      data.addAll(sanitizedMoreDetails);
+    } else if (rawMoreDetails != null && rawMoreDetails.isNotEmpty) {
+      clearCloudData('more_details_data');
+
     }
     if (isShein) {
       final reviewLink = reviewLinkController.text.trim();
@@ -1788,22 +1676,7 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
           ),
           body: MultiBlocListener(
             listeners: [
-              BlocListener<FetchCustomFieldsCubit, FetchCustomFieldState>(
-                listener: (context, state) {
-                  if (state is FetchCustomFieldInProgress) {
-                    setState(() => isLoadingCustomFields = true);
-                  } else if (state is FetchCustomFieldSuccess) {
-                    setState(() {
-                      isLoadingCustomFields = false;
-                      customFields = state.fields;
-                    });
-                  } else if (state is FetchCustomFieldFail) {
-                    setState(() => isLoadingCustomFields = false);
-                    HelperUtils.showSnackBarMessage(
-                        context, state.error.toString());
-                  }
-                },
-              ),
+
               BlocListener<ManageItemCubit, ManageItemState>(
                 listener: _handleManageItemState,
               ),
@@ -1838,7 +1711,6 @@ class _AddItemDetailsState extends CloudState<AddItemDetails>
                     const SizedBox(height: 20),
                     _buildContactSection(context),
                     _buildSheinSection(context),
-                    _buildDynamicFields(context),
                     if (widget.isEdit == true && (item?.id ?? 0) > 0)
                       _buildPurchaseOptionsShortcut(context),
                     _buildLocationPreview(context),

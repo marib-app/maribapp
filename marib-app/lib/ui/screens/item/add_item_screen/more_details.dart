@@ -30,9 +30,6 @@ import 'more_details_ui.dart';
 import 'package:marib/ui/screens/widgets/dynamic_field/dynamic_field.dart';
 import 'package:marib/data/constants/color_catalog.dart';
 
-
-
-
 int screenStack = 0;
 
 class AddMoreDetailsScreen extends StatefulWidget {
@@ -67,7 +64,7 @@ class AddMoreDetailsScreen extends StatefulWidget {
         (args?['model'] as ItemModel?) ?? (args?['item'] as ItemModel?);
 
     final FetchCustomFieldsCubit? injected =
-    args?['customFieldsCubit'] as FetchCustomFieldsCubit?;
+        args?['customFieldsCubit'] as FetchCustomFieldsCubit?;
 
     return BlurredRouter(
       builder: (context) {
@@ -92,7 +89,8 @@ class AddMoreDetailsScreen extends StatefulWidget {
         if (existing != null) {
           return BlocProvider.value(value: existing, child: screen);
         } else {
-          return BlocProvider(create: (_) => FetchCustomFieldsCubit(), child: screen);
+          return BlocProvider(
+              create: (_) => FetchCustomFieldsCubit(), child: screen);
         }
       },
     );
@@ -115,7 +113,6 @@ class _AddMoreDetailsScreenState extends CloudState<AddMoreDetailsScreen> {
   String _lastFetchedIds = '';
 
   bool _rebuildScheduled = false;
-
 
   List<CategoryModel>? _resolveCategoryPath() {
     if (widget.breadCrumbItems != null) {
@@ -140,7 +137,6 @@ class _AddMoreDetailsScreenState extends CloudState<AddMoreDetailsScreen> {
     };
   }
 
-
   @override
   void initState() {
     super.initState();
@@ -151,15 +147,19 @@ class _AddMoreDetailsScreenState extends CloudState<AddMoreDetailsScreen> {
       setCloudData("breadCrumb", widget.breadCrumbItems);
     }
 
-    _prepareTargetIdsAndFetchSafely();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _prepareTargetIdsAndFetchSafely();
+    });
+
     _scrollController.addListener(_onScroll);
   }
 
   @override
   void didUpdateWidget(covariant AddMoreDetailsScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final changedCats =
-        (widget.categoryIds?.join(',') ?? '') != (oldWidget.categoryIds?.join(',') ?? '');
+    final changedCats = (widget.categoryIds?.join(',') ?? '') !=
+        (oldWidget.categoryIds?.join(',') ?? '');
     final changedEdit = (widget.isEdit ?? false) != (oldWidget.isEdit ?? false);
     if (changedCats || changedEdit) {
       _fieldsBuiltOnce = false;
@@ -185,7 +185,8 @@ class _AddMoreDetailsScreenState extends CloudState<AddMoreDetailsScreen> {
       return ids.join(',');
     }
     final s = source.toString();
-    final matches = RegExp(r'\d+').allMatches(s).map((m) => m.group(0)!).toList();
+    final matches =
+        RegExp(r'\d+').allMatches(s).map((m) => m.group(0)!).toList();
     if (matches.isEmpty) return '';
     final seen = <String>{};
     final cleaned = <String>[];
@@ -202,7 +203,9 @@ class _AddMoreDetailsScreenState extends CloudState<AddMoreDetailsScreen> {
     final fromAll = _normalizeIdsCsv(item.allCategoryIds);
     if (fromAll.isNotEmpty) return fromAll;
     final single = _normalizeIdsCsv(item.categoryId) +
-        (item.category?.id != null ? ',${_normalizeIdsCsv(item.category?.id)}' : '');
+        (item.category?.id != null
+            ? ',${_normalizeIdsCsv(item.category?.id)}'
+            : '');
     return _normalizeIdsCsv(single);
   }
 
@@ -240,8 +243,17 @@ class _AddMoreDetailsScreenState extends CloudState<AddMoreDetailsScreen> {
   /// الأنواع المدعومة فقط
   bool _isLikelySupportedType(String t) {
     const known = <String>{
-      'text', 'textarea', 'number', 'select', 'radio', 'checkbox',
-      'switch', 'file', 'image', 'date', 'time',
+      'text',
+      'textarea',
+      'number',
+      'select',
+      'radio',
+      'checkbox',
+      'switch',
+      'file',
+      'image',
+      'date',
+      'time',
       'color',
     };
     return known.contains(t);
@@ -264,6 +276,18 @@ class _AddMoreDetailsScreenState extends CloudState<AddMoreDetailsScreen> {
       }
     } else {
       _targetIds = _normalizeIdsCsv(widget.categoryIds);
+      if (_targetIds.isEmpty) {
+        final List<CategoryModel>? path = _resolveCategoryPath();
+        if (path != null && path.isNotEmpty) {
+          final ids = path
+              .map((e) => e.id)
+              .whereType<int>()
+              .map((e) => e.toString())
+              .toSet()
+              .join(',');
+          _targetIds = ids;
+        }
+      }
     }
 
     if (_targetIds.isEmpty) {
@@ -303,13 +327,12 @@ class _AddMoreDetailsScreenState extends CloudState<AddMoreDetailsScreen> {
       return;
     }
 
-
     if (AbstractField.fieldsData.isNotEmpty) {
       AbstractField.fieldsData.forEach((key, value) {
         final keyStr = key.toString();
         if (!CustomField.fieldsData.containsKey(keyStr)) {
           CustomField.fieldsData[keyStr] =
-          value is List ? List.from(value) : value;
+              value is List ? List.from(value) : value;
         }
       });
     }
@@ -320,8 +343,6 @@ class _AddMoreDetailsScreenState extends CloudState<AddMoreDetailsScreen> {
         CustomField.files.putIfAbsent(keyStr, () => value);
       });
     }
-
-
 
     // ✅ استخدم CustomField (وليس AbstractField)
     final Map<String, dynamic> customFieldsData = {
@@ -338,7 +359,6 @@ class _AddMoreDetailsScreenState extends CloudState<AddMoreDetailsScreen> {
       context,
       Routes.addItemDetails,
       arguments: _buildAddItemDetailsArguments(),
-
     ).then((value) {
       screenStack--;
       if (value == "success") {
@@ -352,7 +372,6 @@ class _AddMoreDetailsScreenState extends CloudState<AddMoreDetailsScreen> {
 
   void _seedFieldData(dynamic keyOrId, dynamic prevValRaw,
       {bool isColor = false}) {
-
     try {
       final key = _idStr(keyOrId);
       if (key.isEmpty) return;
@@ -362,11 +381,12 @@ class _AddMoreDetailsScreenState extends CloudState<AddMoreDetailsScreen> {
 
       if (prevVal is List) {
         if (isColor) {
-
           final bool hasColorMaps = prevVal.any((element) {
             if (element is Map) {
-              final dynamic code = element['code'] ?? element['hex'] ?? element['value'];
-              if (code is String && hexRegExp.hasMatch(ColorCatalog.sanitizeHex(code))) {
+              final dynamic code =
+                  element['code'] ?? element['hex'] ?? element['value'];
+              if (code is String &&
+                  hexRegExp.hasMatch(ColorCatalog.sanitizeHex(code))) {
                 return true;
               }
             }
@@ -388,7 +408,6 @@ class _AddMoreDetailsScreenState extends CloudState<AddMoreDetailsScreen> {
         } else {
           CustomField.fieldsData[key] = List.from(prevVal);
         }
-
       } else {
         if (isColor) {
           if (prevVal is Map) {
@@ -402,8 +421,6 @@ class _AddMoreDetailsScreenState extends CloudState<AddMoreDetailsScreen> {
         } else {
           CustomField.fieldsData[key] = [prevVal];
         }
-
-
       }
     } catch (_) {}
   }
@@ -412,11 +429,10 @@ class _AddMoreDetailsScreenState extends CloudState<AddMoreDetailsScreen> {
     if (_fieldsBuiltOnce) return;
 
     final Map? args = ModalRoute.of(context)?.settings.arguments as Map?;
-    final ItemModel? item =
-        (getCloudData('edit_request') as ItemModel?) ??
-            (args?['model'] as ItemModel?) ??
-            (args?['item'] as ItemModel?) ??
-            widget.editingItem;
+    final ItemModel? item = (getCloudData('edit_request') as ItemModel?) ??
+        (args?['model'] as ItemModel?) ??
+        (args?['item'] as ItemModel?) ??
+        widget.editingItem;
 
     final Map<String, dynamic> prevById = <String, dynamic>{};
     if (widget.isEdit == true &&
@@ -437,7 +453,8 @@ class _AddMoreDetailsScreenState extends CloudState<AddMoreDetailsScreen> {
       data['type'] = type;
 
       if (!_isLikelySupportedType(type)) {
-        debugPrint('[AddMoreDetails] Skip unsupported field type: $type (id=${field.id})');
+        debugPrint(
+            '[AddMoreDetails] Skip unsupported field type: $type (id=${field.id})');
         continue;
       }
 
@@ -456,7 +473,7 @@ class _AddMoreDetailsScreenState extends CloudState<AddMoreDetailsScreen> {
         data['value'] = prevVal;
 
         final seedKey =
-        (type == 'color') ? (data['key']?.toString() ?? fid) : fid;
+            (type == 'color') ? (data['key']?.toString() ?? fid) : fid;
 
         _seedFieldData(seedKey, prevVal, isColor: type == 'color');
       }
@@ -542,7 +559,6 @@ class _AddMoreDetailsScreenState extends CloudState<AddMoreDetailsScreen> {
                 context,
                 Routes.addItemDetails,
                 arguments: _buildAddItemDetailsArguments(),
-
               );
             });
           } else {
@@ -558,7 +574,6 @@ class _AddMoreDetailsScreenState extends CloudState<AddMoreDetailsScreen> {
                   context,
                   Routes.addItemDetails,
                   arguments: _buildAddItemDetailsArguments(),
-
                 );
               });
               return;

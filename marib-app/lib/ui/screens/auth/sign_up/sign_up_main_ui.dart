@@ -131,8 +131,9 @@ class SignUpMainUI extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
-    final statusBarHeight = MediaQuery.of(context).padding.top;
+    final mediaQuery = MediaQuery.of(context);
+    final double bottomInset = mediaQuery.viewInsets.bottom;
+    final double statusBarHeight = mediaQuery.viewPadding.top;
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -199,6 +200,7 @@ class _SignUpStatusBarHeader extends SliverPersistentHeaderDelegate {
     return LoginStatusBar.topSpacer(
       context,
       baseColor: baseColor,
+      height: height,
     );
   }
 

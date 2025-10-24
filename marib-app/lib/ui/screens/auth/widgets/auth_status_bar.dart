@@ -36,15 +36,22 @@ class LoginStatusBar {
   static Widget topSpacer(
       BuildContext context, {
         Color? baseColor,
+        double? height,
       }) {
-    final height = MediaQuery.of(context).padding.top;
-    if (height <= 0) {
+    final mediaQuery = MediaQuery.of(context);
+    final resolvedHeight = height ?? mediaQuery.viewPadding.top;
+
+    if (resolvedHeight <= 0) {
+
       return const SizedBox.shrink();
     }
 
-    return Container(
-      height: height,
-      color: resolveBaseColor(context, override: baseColor),
+    return SizedBox(
+      height: resolvedHeight,
+      width: double.infinity,
+      child: ColoredBox(
+        color: resolveBaseColor(context, override: baseColor),
+      ),
     );
   }
 }

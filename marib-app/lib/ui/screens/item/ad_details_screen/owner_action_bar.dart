@@ -132,7 +132,7 @@ class OwnerActionBar extends StatelessWidget {
       arguments: {
         "model": model,
         "pricePerDay": 3000.0, // عدّلها براحتك
-        "currencySymbol": "ر.ي", // أو Constant.currencySymbol
+        "currencySymbol": CurrencyUtils.preferredDisplayFor('YER') ?? 'ر.ي', // أو Constant.currencySymbol
         "minDays": 1,
         "maxDays": 30,
       },

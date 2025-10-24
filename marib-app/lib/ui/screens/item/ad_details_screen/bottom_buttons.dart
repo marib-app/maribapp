@@ -314,7 +314,7 @@ Widget bottomButtonWidget({
                 arguments: {
                   "model": model,
                   "pricePerDay": 3000.0,
-                  "currencySymbol": "ر.ي",
+                  "currencySymbol": CurrencyUtils.preferredDisplayFor('YER') ?? 'ر.ي',
                   "minDays": 1,
                   "maxDays": 30,
                 },

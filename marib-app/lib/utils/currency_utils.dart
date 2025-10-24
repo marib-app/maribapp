@@ -100,6 +100,7 @@ class CurrencyUtils {
     'جنيه مصري': 'EGP',
     'ج.م': 'EGP',
     'usd': 'USD',
+    'أ.ر': 'USD',
     'دولار': 'USD',
     'دولار امريكي': 'USD',
     '\$': 'USD',
@@ -272,6 +273,15 @@ class CurrencyUtils {
     'USD': 'أ.ر',
   };
 
+
+  static String? preferredDisplayFor(String? currency) {
+    final String? normalized = normalizeCurrencyCode(currency);
+    if (normalized == null) {
+      return null;
+    }
+    return _preferredDisplayTokens[normalized];
+  }
+
   static String? displayToken({String? label, String? symbol, String? fallback, String? code}) {
     final String? normalizedLabel = _stringify(label);
     if (normalizedLabel != null) {
@@ -283,8 +293,8 @@ class CurrencyUtils {
       return normalizedSymbol;
     }
 
-    final String? override = _preferredDisplayTokens[normalizeCurrencyCode(code)] ??
-        _preferredDisplayTokens[normalizeCurrencyCode(fallback)];
+    final String? override = preferredDisplayFor(code) ?? preferredDisplayFor(fallback);
+
     if (override != null) {
       return override;
     }

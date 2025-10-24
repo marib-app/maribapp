@@ -39,7 +39,7 @@ class Constant {
   static String nativeAdIdAndroid = '';
   static String nativeAdIdIOS = '';
 
-  static String currencySymbol = "";
+  static String currencySymbol = "ر.ي";
   static String defaultLatitude = "";
   static String defaultLongitude = "";
   static String mobileAuthentication = "";

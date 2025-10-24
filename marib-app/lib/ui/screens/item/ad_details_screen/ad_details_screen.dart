@@ -113,6 +113,7 @@
   import 'widgets/discount_details_card.dart';
   import 'widgets/quantity_selector.dart';
   import 'widgets/variant_stock_info.dart';
+  import 'package:marib/utils/currency_utils.dart';
 
 
 
@@ -3914,16 +3915,16 @@
   
     // اختصارات العملة
     String _getCurrencySymbol(String? currency) {
-      switch (currency) {
-        case 'USD':
-          return 'د.أ'; // الدولار الأمريكي
-        case 'SAR':
-          return 'ر.س'; // الريال السعودي
-        case 'YER':
-          return 'ر.ي'; // الريال اليمني
-        default:
-          return currency ?? Constant.currencySymbol;
+      final String? preferred = CurrencyUtils.preferredDisplayFor(currency);
+      if (preferred != null) {
+        return preferred;
       }
+
+      final String? upper = currency?.toUpperCase();
+      if (upper == 'YRI' || upper == 'YERR') {
+        return CurrencyUtils.preferredDisplayFor('YER') ?? Constant.currencySymbol;
+      }
+      return currency ?? Constant.currencySymbol;
     }
   }
   

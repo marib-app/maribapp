@@ -14,6 +14,7 @@ import 'package:marib/data/model/social_link_model.dart';
 import 'package:marib/data/repositories/delegate/delegate_sections_repository.dart';
 import 'package:marib/utils/hive_utils.dart';
 import 'package:flutter/widgets.dart';
+import 'package:marib/utils/currency_utils.dart';
 
 
 abstract class FetchSystemSettingsState {}
@@ -282,11 +283,16 @@ class FetchSystemSettingsCubit extends Cubit<FetchSystemSettingsState> {
 
 
   FetchSystemSettingsSuccess _processFetchedSettings(Map settings) {
-    Constant.currencySymbol = _getSettingString(
+    final String rawCurrencySymbol = _getSettingString(
       settings,
       SystemSetting.currencySymbol,
       fallback: Constant.currencySymbol,
     );
+    Constant.currencySymbol =
+        CurrencyUtils.preferredDisplayFor(rawCurrencySymbol) ??
+            (rawCurrencySymbol.isNotEmpty
+                ? rawCurrencySymbol
+                : CurrencyUtils.preferredDisplayFor('YER') ?? Constant.currencySymbol);
     Constant.maintenanceMode = _getSettingString(
       settings,
       SystemSetting.maintenanceMode,

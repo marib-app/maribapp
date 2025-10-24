@@ -11,6 +11,7 @@ import 'dart:ui';
 import 'package:flutter/widgets.dart';
 import 'dart:ui' as ui;
 import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
+import 'package:marib/utils/currency_utils.dart';
 
 class AdInfoSectionShimmer extends StatelessWidget {
   final bool isOwner;
@@ -395,10 +396,17 @@ class AdInfoSection {
   /// ✅ أدوات مساعدة
 
   String _getCurrencySymbol(String? currency) {
-    if (currency == "usd") return "دولار";
-    if (currency == "sar") return "ر.س";
-    if (currency == "yer") return "ر.ي";
-    return currency ?? "";
+    final String? preferred = CurrencyUtils.preferredDisplayFor(currency);
+    if (preferred != null) {
+      return preferred;
+    }
+
+    final String? upper = currency?.toUpperCase();
+    if (upper == 'YRI' || upper == 'YERR') {
+      return CurrencyUtils.preferredDisplayFor('YER') ?? '';
+    }
+
+    return currency ?? '';
   }
 
   String? _getStatusText(String? status) {

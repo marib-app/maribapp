@@ -18,6 +18,7 @@ import 'package:marib/utils/ui_utils.dart';
 
 // (اختياري) لفتح روابط الدفع الخارجية إن كانت متوفرة
 import 'package:url_launcher/url_launcher.dart';
+import 'package:marib/utils/currency_utils.dart';
 
 class ServicePaymentPage extends StatefulWidget {
   const ServicePaymentPage({super.key, this.args = const {}});
@@ -100,23 +101,37 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
   // ======== Helpers ========
 
   String _currencyLabelFromCode(String? code) {
-    final c = (code ?? '').toUpperCase();
-    switch (c) {
-      case 'USD': return 'أ.ر';
-      case 'EUR': return 'EUR €';
-      case 'SAR': return 'ر.س';
-      case 'AED': return 'AED د.إ';
-      case 'KWD': return 'KWD د.ك';
-      case 'OMR': return 'OMR ر.ع';
-      case 'QAR': return 'QAR ر.ق';
-      case 'BHD': return 'BHD د.ب';
-      case 'TRY': return 'TRY ₺';
-      case 'GBP': return 'GBP £';
-      case 'YER':
+    final String trimmed = (code ?? '').trim();
+    final String? preferred = CurrencyUtils.preferredDisplayFor(trimmed);
+    if (preferred != null) {
+      return preferred;
+    }
+
+    final String upper = trimmed.toUpperCase();
+    switch (upper) {
+      case 'EUR':
+        return 'EUR €';
+      case 'AED':
+        return 'AED د.إ';
+      case 'KWD':
+        return 'KWD د.ك';
+      case 'OMR':
+        return 'OMR ر.ع';
+      case 'QAR':
+        return 'QAR ر.ق';
+      case 'BHD':
+        return 'BHD د.ب';
+      case 'TRY':
+        return 'TRY ₺';
+      case 'GBP':
+        return 'GBP £';
       case 'YRI':
       case 'YERR':
-      return 'ر.ي';
-      default: return c.isEmpty ? 'أ.ر' : c;
+      return CurrencyUtils.preferredDisplayFor('YER') ?? upper;
+      default:
+        return upper.isEmpty
+            ? CurrencyUtils.preferredDisplayFor('YER') ?? 'YER'
+            : upper;
     }
   }
 

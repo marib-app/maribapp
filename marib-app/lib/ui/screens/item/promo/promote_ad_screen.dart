@@ -753,7 +753,8 @@ class _PromoteAdScreenState extends State<PromoteAdScreen> {
     final s = v.round().toString();
     final withSep = s.replaceAllMapped(
         RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
-    return '$withSep ر.ي';
+    final String symbol = CurrencyUtils.preferredDisplayFor('YER') ?? 'ر.ي';
+    return '$withSep $symbol';
   }
 
 

@@ -12,6 +12,7 @@ import 'package:marib/data/wifi/wifi_repository.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/helper_utils.dart';
+import 'package:marib/utils/currency_utils.dart';
 
 import 'add_network_form.dart';
 
@@ -639,16 +640,20 @@ class WifiPlanConfigurationScreenState
   }
 
   String _resolveCurrencyLabel(String currency) {
+
+    final String? preferred = CurrencyUtils.preferredDisplayFor(currency);
+    if (preferred != null) {
+      return preferred;
+    }
+
     switch (currency.toUpperCase()) {
-      case 'SAR':
-        return 'ر.س';
-      case 'USD':
-        return 'دولار';
+
       case 'OMR':
         return 'ر.ع';
-      case 'YER':
+      case 'AED':
+        return 'د.إ';
       default:
-        return 'ر.ي';
+        return CurrencyUtils.preferredDisplayFor('YER') ?? 'YER';
     }
   }
 

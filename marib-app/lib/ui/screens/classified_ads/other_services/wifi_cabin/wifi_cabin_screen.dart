@@ -85,40 +85,48 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
             ),
           );
         }
+
+        final backgroundColor = context.color.backgroundColor;
+
+
         return Scaffold(
-          backgroundColor: Colors.transparent,
+          backgroundColor: backgroundColor,
           appBar: UiUtils.buildAppBar(
             context,
             showBackButton: true,
             title: 'wifiCabin'.translate(context),
           ),
           body: CustomScrollView(
+            physics: const BouncingScrollPhysics(),
             slivers: [
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                sliver: SliverList(
-                  delegate: SliverChildListDelegate.fixed([
-                    WifiSearchHeaderBar(
-                      controller: _searchController,
-                      focusNode: _searchFocusNode,
-                      isLoading: state.status == WifiCabinLoadStatus.loading &&
-                          !state.hasData,
-                      onChanged: (value) => _controller.updateQuery(value),
-                      onSubmitted: (value) =>
-                          _controller.updateQuery(value, immediate: true),
-                      onClear: _controller.clearQuery,
-                      onRefresh: () => _controller.refreshNetworks(force: true),
-                    ),
-                    const SizedBox(height: 12),
-                    WifiServiceOverview(),
-                    const SizedBox(height: 16),
-                  ]),
+                sliver: SliverToBoxAdapter(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      WifiSearchHeaderBar(
+                        controller: _searchController,
+                        focusNode: _searchFocusNode,
+                        isLoading: state.status == WifiCabinLoadStatus.loading &&
+                            !state.hasData,
+                        onChanged: (value) => _controller.updateQuery(value),
+                        onSubmitted: (value) =>
+                            _controller.updateQuery(value, immediate: true),
+                        onClear: _controller.clearQuery,
+                        onRefresh: () =>
+                            _controller.refreshNetworks(force: true),
+                      ),
+                      const SizedBox(height: 12),
+                      const WifiServiceOverview(),
+                      const SizedBox(height: 16),
+                    ],
+                  ),
                 ),
               ),
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                sliver: SliverFillRemaining(
-                  hasScrollBody: false,
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                sliver: SliverToBoxAdapter(
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 220),
                     switchInCurve: Curves.easeOut,
@@ -132,10 +140,8 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
                         ],
                       );
                     },
-                    child: Align(
-                      alignment: Alignment.topCenter,
-                      child: _buildBodyForState(context, state),
-                    ),
+                    child: _buildBodyForState(context, state),
+
                   ),
                 ),
               ),

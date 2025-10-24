@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:marib/ui/theme/theme.dart';
 
 import 'package:marib/utils/extensions/extensions.dart';
 
@@ -38,12 +39,14 @@ class StandardBottomSheetScaffold extends StatelessWidget {
     ];
 
     if (footer != null) {
+      final resolvedSafeAreaMinimum =
+          safeAreaMinimum.resolve(Directionality.of(context));
       final footerWidget = useSafeArea
           ? SafeArea(
-        top: false,
-        minimum: safeAreaMinimum,
-        child: footer!,
-      )
+              top: false,
+              minimum: resolvedSafeAreaMinimum,
+              child: footer!,
+            )
           : footer!;
       children.add(footerWidget);
     }
@@ -80,7 +83,7 @@ class StandardBottomSheetHeader extends StatelessWidget {
     this.spacingBetweenContentAndClose = 12,
     this.backgroundColor,
   }) : assert(!showCloseButton || onClosePressed != null,
-  'onClosePressed must be provided when showCloseButton is true.');
+            'onClosePressed must be provided when showCloseButton is true.');
 
   final Widget content;
   final bool showHandle;

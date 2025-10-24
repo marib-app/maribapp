@@ -136,13 +136,10 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
                     layoutBuilder: (currentChild, previousChildren) {
                       return Stack(
                         alignment: Alignment.topCenter,
-                        fit: StackFit.passthrough,
                         clipBehavior: Clip.none,
                         children: <Widget>[
-                          for (final child in previousChildren)
-                            Positioned.fill(child: child),
-                          if (currentChild != null)
-                            Positioned.fill(child: currentChild),
+                          ...previousChildren,
+                          if (currentChild != null) currentChild,
                         ],
                       );
                     },

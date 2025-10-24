@@ -66,7 +66,7 @@ class ChatRepostiory {
       required int itemOfferId,
       required String conversationId}) async {
     final String normalizedConversationId =
-    normalizeConversationId(conversationId);
+        normalizeConversationId(conversationId);
 
     final Map<String, dynamic> queryParameters = <String, dynamic>{
       'page': page,
@@ -77,18 +77,13 @@ class ChatRepostiory {
     Map<String, dynamic> response = await Api.get(
       url: Api.chatMessagesApi,
       queryParameters: queryParameters,
-
     );
 
-    final Map<String, dynamic> responseData =
-        (response['data'] as Map<String, dynamic>?) ?? <String, dynamic>{};
+    final _ParsedPaginatedMap parsed = _parsePaginatedMap(response['data']);
 
-    final List<dynamic> resultList =
-        (responseData['data'] as List<dynamic>?) ?? <dynamic>[];
-
-    List<ChatMessageModal> modelList = resultList.map((result) {
-      final Map<String, dynamic> resultMap =
-          Map<String, dynamic>.from(result as Map);
+    final List<ChatMessageModal> modelList =
+        parsed.items.map((Map<String, dynamic> item) {
+      final Map<String, dynamic> resultMap = Map<String, dynamic>.from(item);
 
       final dynamic senderIdRaw = resultMap['sender_id'];
       final int senderId = senderIdRaw is int
@@ -146,12 +141,19 @@ class ChatRepostiory {
       );
     }).toList();
 
-    final dynamic totalRaw = responseData['total'];
-    final int total = totalRaw is int
-        ? totalRaw
-        : int.tryParse(totalRaw?.toString() ?? '') ?? modelList.length;
+    final int total = parsed.total;
+    final int? currentPage = parsed.page ??
+        _parseInt(
+          response['data'] is Map<String, dynamic>
+              ? (response['data'] as Map<String, dynamic>)['current_page']
+              : null,
+        );
 
-    return DataOutput(total: total, modelList: modelList);
+    return DataOutput(
+      total: total,
+      modelList: modelList,
+      page: currentPage ?? page,
+    );
   }
 
   Future<Map<String, dynamic>> sendMessageApi(
@@ -223,7 +225,7 @@ class ChatRepostiory {
   }) async {
     final Map<String, dynamic> queryParameters = <String, dynamic>{};
     final String normalizedConversationId =
-    normalizeConversationId(conversationId);
+        normalizeConversationId(conversationId);
     if (normalizedConversationId.isNotEmpty) {
       queryParameters['conversation_id'] = normalizedConversationId;
     }
@@ -274,7 +276,7 @@ class ChatRepostiory {
     int? itemOfferId,
   }) async {
     final String normalizedConversationId =
-    normalizeConversationId(conversationId);
+        normalizeConversationId(conversationId);
     if (normalizedConversationId.isEmpty) {
       return;
     }
@@ -304,7 +306,7 @@ class ChatRepostiory {
     int? itemOfferId,
   }) async {
     final String normalizedConversationId =
-    normalizeConversationId(conversationId);
+        normalizeConversationId(conversationId);
     if (normalizedConversationId.isEmpty) {
       return;
     }
@@ -334,7 +336,7 @@ class ChatRepostiory {
     int? itemOfferId,
   }) async {
     final String normalizedConversationId =
-    normalizeConversationId(conversationId);
+        normalizeConversationId(conversationId);
     if (normalizedConversationId.isEmpty) {
       return;
     }
@@ -356,7 +358,7 @@ class ChatRepostiory {
     int? itemOfferId,
   }) async {
     final String normalizedConversationId =
-    normalizeConversationId(conversationId);
+        normalizeConversationId(conversationId);
     if (normalizedConversationId.isEmpty) {
       return;
     }

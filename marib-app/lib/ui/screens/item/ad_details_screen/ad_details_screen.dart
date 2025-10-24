@@ -1863,6 +1863,7 @@
       final int? stockLimit = _selectedVariantStock?.availableStock;
       final bool isOutOfStock = stockLimit != null && stockLimit <= 0;
       final bool canIncrement;
+      final bool canDecrement = _selectedQuantity > 1 && !isOutOfStock;
       if (stockLimit == null) {
         canIncrement = true;
       } else if (stockLimit <= 0) {

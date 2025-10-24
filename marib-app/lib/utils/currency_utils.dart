@@ -265,7 +265,41 @@ class CurrencyUtils {
     return trimmedA == trimmedB;
   }
 
+
+  static const Map<String, String> _preferredDisplayTokens = <String, String>{
+    'YER': 'ر.ي',
+    'SAR': 'ر.س',
+    'USD': 'أ.ر',
+  };
+
   static String? displayToken({String? label, String? symbol, String? fallback, String? code}) {
-    return label ?? symbol ?? fallback ?? code;
+    final String? normalizedLabel = _stringify(label);
+    if (normalizedLabel != null) {
+      return normalizedLabel;
+    }
+
+    final String? normalizedSymbol = _stringify(symbol);
+    if (normalizedSymbol != null) {
+      return normalizedSymbol;
+    }
+
+    final String? override = _preferredDisplayTokens[normalizeCurrencyCode(code)] ??
+        _preferredDisplayTokens[normalizeCurrencyCode(fallback)];
+    if (override != null) {
+      return override;
+    }
+
+    final String? normalizedFallback = _stringify(fallback);
+    if (normalizedFallback != null) {
+      return normalizedFallback;
+    }
+
+    final String? normalizedCode = _stringify(code);
+    if (normalizedCode != null) {
+      return normalizedCode;
+    }
+
+    return null;
+
   }
 }

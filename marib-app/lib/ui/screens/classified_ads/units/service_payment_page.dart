@@ -102,9 +102,9 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
   String _currencyLabelFromCode(String? code) {
     final c = (code ?? '').toUpperCase();
     switch (c) {
-      case 'USD': return 'USD \$';
+      case 'USD': return 'أ.ر';
       case 'EUR': return 'EUR €';
-      case 'SAR': return 'SAR ر.س';
+      case 'SAR': return 'ر.س';
       case 'AED': return 'AED د.إ';
       case 'KWD': return 'KWD د.ك';
       case 'OMR': return 'OMR ر.ع';
@@ -115,8 +115,8 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
       case 'YER':
       case 'YRI':
       case 'YERR':
-        return 'YER ﷼';
-      default: return c.isEmpty ? 'USD \$' : c;
+      return 'ر.ي';
+      default: return c.isEmpty ? 'أ.ر' : c;
     }
   }
 

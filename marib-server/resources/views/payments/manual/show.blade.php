@@ -553,19 +553,28 @@
                     <h6 class="mb-0"><i class="fa fa-user me-2"></i>{{ __('User Details') }}</h6>
                 </div>
                 <div class="card-body">
-                    <dl class="row mb-0">
-                        <dt class="col-5 text-muted">{{ __('Name') }}</dt>
-                        <dd class="col-7">{{ $request->user?->name ?? __('N/A') }}</dd>
-
-                        <dt class="col-5 text-muted">{{ __('Email') }}</dt>
-                        <dd class="col-7">{{ $request->user?->email ?? __('N/A') }}</dd>
-
-                        <dt class="col-5 text-muted">{{ __('Mobile') }}</dt>
-                        <dd class="col-7">{{ $request->user?->mobile ?? __('N/A') }}</dd>
-
-                        <dt class="col-5 text-muted">{{ __('Submitted At') }}</dt>
-                        <dd class="col-7">{{ $request->created_at?->format('Y-m-d H:i') ?? __('N/A') }}</dd>
-                    </dl>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-borderless align-middle mb-0">
+                            <tbody>
+                                <tr>
+                                    <th class="text-muted w-50">{{ __('Name') }}</th>
+                                    <td class="text-break text-body">{{ $request->user?->name ?? __('N/A') }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted w-50">{{ __('Email') }}</th>
+                                    <td class="text-break text-body">{{ $request->user?->email ?? __('N/A') }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted w-50">{{ __('Mobile') }}</th>
+                                    <td class="text-break text-body">{{ $request->user?->mobile ?? __('N/A') }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-muted w-50">{{ __('Submitted At') }}</th>
+                                    <td class="text-break text-body">{{ $request->created_at?->format('Y-m-d H:i') ?? __('N/A') }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -592,7 +601,7 @@
                                         @endphp
                                         <tr>
                                             <th class="text-muted w-50">{{ $row['label'] ?? __('N/A') }}</th>
-                                            <td class="text-break text-dark">
+                                            <td class="text-break text-body">
                                                 @if($format === 'multiline')
                                                     @if($value === null || $value === '')
                                                         {{ __('N/A') }}
@@ -673,21 +682,27 @@
                     @endphp
 
                     @if($transferDisplay !== [])
-                        <dl class="row mb-0">
-                            @foreach($transferDisplay as $label => $value)
-                                <dt class="col-5 text-muted">{{ $label }}</dt>
-                                <dd class="col-7">
-                                    @php
-                                        $stringValue = is_string($value) ? $value : (is_numeric($value) ? (string) $value : '');
-                                    @endphp
-                                    @if($stringValue !== '' && Str::contains($stringValue, "\n"))
-                                        {!! nl2br(e($stringValue)) !!}
-                                    @else
-                                        {{ $stringValue !== '' ? $stringValue : __('N/A') }}
-                                    @endif
-                                </dd>
-                            @endforeach
-                        </dl>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-borderless align-middle mb-0">
+                                <tbody>
+                                    @foreach($transferDisplay as $label => $value)
+                                        @php
+                                            $stringValue = is_string($value) ? $value : (is_numeric($value) ? (string) $value : '');
+                                        @endphp
+                                        <tr>
+                                            <th class="text-muted w-50">{{ $label }}</th>
+                                            <td class="text-break text-body">
+                                                @if($stringValue !== '' && Str::contains($stringValue, "\n"))
+                                                    {!! nl2br(e($stringValue)) !!}
+                                                @else
+                                                    {{ $stringValue !== '' ? $stringValue : __('N/A') }}
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
                     @else
                         <p class="text-muted mb-0">{{ __('No transfer information provided.') }}</p>
                     @endif

@@ -217,6 +217,7 @@ class BlurredDialogBuilderBox extends StatelessWidget implements BlurDialoge {
   final bool? backAllowedButton;
   final bool? showCancleButton;
   final bool? isAcceptContainesPush;
+  final bool? divider;
 
   const BlurredDialogBuilderBox({
     super.key,
@@ -235,11 +236,14 @@ class BlurredDialogBuilderBox extends StatelessWidget implements BlurDialoge {
     this.svgImagePath,
     this.svgImageColor,
     this.isAcceptContainesPush,
+    this.divider,
   });
 
   @override
   Widget build(BuildContext context) {
     bool isBack = true;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     ///This backAllowedButton will help us to prevent back presses from sensitive dialoges
     return AnnotatedRegion(
@@ -264,141 +268,102 @@ class BlurredDialogBuilderBox extends StatelessWidget implements BlurDialoge {
               return;
             },
             child: LayoutBuilder(builder: (context, constraints) {
+              final List<Widget> titleWidgets = [];
+
+              if (svgImagePath != null) {
+                titleWidgets
+                  ..add(
+                    CircleAvatar(
+                      radius: 49,
+                      backgroundColor:
+                      context.color.territoryColor.withOpacity(0.1),
+                      child: SizedBox(
+                        width: 43.5,
+                        height: 43.5,
+                        child: UiUtils.getSvg(
+                          svgImagePath!,
+                          color: svgImageColor,
+                        ),
+                      ),
+                    ),
+                  )
+                  ..add(const SizedBox(height: 20));
+              }
+
+              titleWidgets.add(
+                Text(
+                  title.firstUpperCase(),
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+              );
+
+              if (divider == true) {
+                if (titleWidgets.isNotEmpty) {
+                  titleWidgets.add(const SizedBox(height: 16));
+                }
+                titleWidgets.add(const Divider());
+              }
+
               return AlertDialog(
-                backgroundColor: makeColorDark(context.color.primaryColor),
+                backgroundColor: colorScheme.surface,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15)),
+                  borderRadius: BorderRadius.circular(16),
+                ),
                 title: Column(
-                  children: [
-                    if (svgImagePath != null) ...[
-                      CircleAvatar(
-                        radius: 98 / 2,
-                        backgroundColor:
-                            context.color.territoryColor.withOpacity(0.1),
-                        child: SizedBox(
-                            width: 87 / 2,
-                            height: 87 / 2,
-                            child: UiUtils.getSvg(svgImagePath!,
-                                color: svgImageColor)),
-                      ),
-                      const SizedBox(
-                        height: 20,
-                      ),
-                    ],
-                    Text(title.firstUpperCase(), textAlign: TextAlign.center),
-                  ],
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: titleWidgets,
                 ),
                 content: contentBuilder.call(context, constraints),
-                actionsOverflowAlignment: OverflowBarAlignment.center,
-                actionsAlignment: MainAxisAlignment.center,
+                actionsAlignment: MainAxisAlignment.end,
+
                 actions: [
-                  if (showCancleButton ?? true) ...[
-                    button(
-                      context,
-                      constraints: constraints,
-                      buttonColor: cancelButtonColor ??
-                          context.color.territoryColor.withOpacity(.10),
-                      buttonName:
-                          cancelButtonName ?? "cancelBtnLbl".translate(context),
-                      textColor: cancelTextColor ?? context.color.textColorDark,
-                      onTap: () {
+                  if (showCancleButton ?? true)
+                    TextButton(
+                      style: TextButton.styleFrom(
+                        foregroundColor:
+                        cancelTextColor ?? colorScheme.onSurface,
+                        backgroundColor: cancelButtonColor,
+                      ),
+                      onPressed: () {
                         onCancel?.call();
                         Navigator.pop(context);
                       },
+                      child: Text(
+                        cancelButtonName ??
+                            "cancelBtnLbl".translate(context),
+                      ),
                     ),
-
-                    // const Spacer(),
-                  ],
-                  Builder(builder: (context) {
-                    if (showCancleButton == false) {
-                      return Center(
-                        child: SizedBox(
-                          width: context.screenWidth / 2,
-                          child: button(
-                            context,
-                            constraints: constraints,
-                            buttonColor: acceptButtonColor ??
-                                context.color.territoryColor,
-                            buttonName:
-                                acceptButtonName ?? "ok".translate(context),
-                            textColor:
-                                acceptTextColor ?? context.color.textColorDark,
-                            onTap: () async {
-                              await onAccept?.call();
-
-                              if (isAcceptContainesPush == false ||
-                                  isAcceptContainesPush == null) {
-                                Future.delayed(
-                                  Duration.zero,
-                                  () {
-                                    Navigator.pop(context, true);
-                                  },
-                                );
-                              }
-                            },
-                          ),
-                        ),
-                      );
-                    }
-                    return button(
-                      context,
-                      constraints: constraints,
-                      buttonColor:
-                          acceptButtonColor ?? context.color.territoryColor,
-                      buttonName: acceptButtonName ?? "ok".translate(context),
-                      textColor: acceptTextColor ??
-                          const Color.fromARGB(255, 255, 255, 255),
-                      onTap: () async {
-                        await onAccept?.call();
-                        if (isAcceptContainesPush == false ||
-                            isAcceptContainesPush == null) {
-                          Future.delayed(
-                            Duration.zero,
-                            () {
-                              Navigator.pop(context, true);
-                            },
-                          );
-                        }
-                      },
-                    );
-                  }),
+                  FilledButton(
+                    style: FilledButton.styleFrom(
+                      foregroundColor: acceptTextColor,
+                      backgroundColor: acceptButtonColor,
+                    ),
+                    onPressed: () async {
+                      await onAccept?.call();
+                      if (isAcceptContainesPush == false ||
+                          isAcceptContainesPush == null) {
+                        Future.delayed(
+                          Duration.zero,
+                              () {
+                            Navigator.pop(context, true);
+                          },
+                        );
+                      }
+                    },
+                    child: Text(
+                      acceptButtonName ?? "ok".translate(context),
+                    ),
+                  ),
                 ],
               );
             }),
           ),
         ],
-      ),
-    );
-  }
-
-  Color makeColorDark(Color color) {
-    Color color0 = color;
-
-    int red = color0.red - 10;
-    int green = color0.green - 10;
-    int blue = color0.blue - 10;
-
-    return Color.fromARGB(color0.alpha, red.clamp(0, 255), green.clamp(0, 255),
-        blue.clamp(0, 255));
-  }
-
-  Widget button(BuildContext context,
-      {required BoxConstraints constraints,
-      required Color buttonColor,
-      required String buttonName,
-      required Color textColor,
-      required VoidCallback onTap}) {
-    return SizedBox(
-      width: (constraints.maxWidth / 3),
-      child: MaterialButton(
-        elevation: 0,
-        height: 39.rh(context),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        color: buttonColor,
-        // minWidth: (constraints.maxWidth / 2) - 10,
-
-        onPressed: onTap,
-        child: Text(buttonName).color(textColor),
       ),
     );
   }

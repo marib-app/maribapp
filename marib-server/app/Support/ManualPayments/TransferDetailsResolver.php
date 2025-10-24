@@ -878,9 +878,24 @@ class TransferDetailsResolver implements Arrayable, \JsonSerializable
 
         try {
             $diskInstance = Storage::disk($diskName);
-            $url = method_exists($diskInstance, 'temporaryUrl')
-                ? $diskInstance->temporaryUrl($normalizedPath, now()->addMinutes(10))
-                : $diskInstance->url($normalizedPath);
+
+            $url = null;
+
+            if (method_exists($diskInstance, 'temporaryUrl')) {
+                try {
+                    $url = $diskInstance->temporaryUrl($normalizedPath, now()->addMinutes(10));
+                } catch (Throwable $temporaryUrlError) {
+                    $url = null;
+                }
+            }
+
+            if (! is_string($url) || trim($url) === '') {
+                try {
+                    $url = $diskInstance->url($normalizedPath);
+                } catch (Throwable $directUrlError) {
+                    $url = null;
+                }
+            }
 
             return $this->normalizeString($url);
         } catch (Throwable) {

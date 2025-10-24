@@ -300,7 +300,6 @@ class NotificationService {
                 ];
                 if (!empty($navigationPayload['deeplink'])) {
                     $data['message']['apns']['payload']['deeplink'] = $navigationPayload['deeplink'];
-                    $data['message']['fcm_options']['link'] = $navigationPayload['deeplink'];
                     $data['message']['webpush']['fcm_options']['link'] = $navigationPayload['deeplink'];
 
 
@@ -313,7 +312,10 @@ class NotificationService {
 
                 }
 
-                $data['message']['fcm_options']['analytics_label'] = $type === 'chat' ? 'chat_message' : 'general_notification';
+                $data['message']['fcm_options'] = [
+                    'analytics_label' => $type === 'chat' ? 'chat_message' : 'general_notification',
+                ];
+                
 
                 if (is_string($platformType) && strcasecmp($platformType, 'Android') === 0) {
                     $data['message']['android']['notification']['title'] = $title;

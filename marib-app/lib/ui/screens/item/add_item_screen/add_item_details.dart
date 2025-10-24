@@ -31,7 +31,6 @@ import 'package:marib/utils/imagePicker.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/ui/theme/theme.dart';
 
-
 class AddItemDetails extends StatefulWidget {
   const AddItemDetails({
     super.key,
@@ -44,14 +43,14 @@ class AddItemDetails extends StatefulWidget {
 
   static Route route(RouteSettings settings) {
     final Map<String, dynamic>? arguments =
-    settings.arguments as Map<String, dynamic>?;
+        settings.arguments as Map<String, dynamic>?;
     return BlurredRouter(
       builder: (BuildContext context) {
         return BlocProvider<ManageItemCubit>(
           create: (_) => ManageItemCubit(),
           child: AddItemDetails(
             breadCrumbItems:
-            arguments?['breadCrumbItems'] as List<CategoryModel>?,
+                arguments?['breadCrumbItems'] as List<CategoryModel>?,
             isEdit: arguments?['isEdit'] as bool?,
           ),
         );
@@ -220,70 +219,71 @@ class AddItemDetailsState extends CloudState<AddItemDetails>
       if (!Navigator.of(context).canPop()) {
         break;
       }
+      Navigator.of(context).pop();
     }
+  }
 
-    Widget _buildGallerySection({
-      required BuildContext context,
-      required List<dynamic> mixedItemImageList,
-      required bool isUploadingExtra,
-      required PickImage itemImagePicker,
-      required void Function(ImageSource source) onPick,
-      required void Function(int index) onRemove,
-    }) {
-      return itemImagesListener(
+  Widget _buildGallerySection({
+    required BuildContext context,
+    required List<dynamic> mixedItemImageList,
+    required bool isUploadingExtra,
+    required PickImage itemImagePicker,
+    required void Function(ImageSource source) onPick,
+    required void Function(int index) onRemove,
+  }) {
+    return itemImagesListener(
+      context: context,
+      mixedItemImageList: mixedItemImageList,
+      isUploadingExtra: isUploadingExtra,
+      itemImagePicker: itemImagePicker,
+      onPick: onPick,
+      onRemove: onRemove,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: UiUtils.getSystemUiOverlayStyle(
         context: context,
-        mixedItemImageList: mixedItemImageList,
-        isUploadingExtra: isUploadingExtra,
-        itemImagePicker: itemImagePicker,
-        onPick: onPick,
-        onRemove: onRemove,
-      );
-    }
-
-    @override
-    Widget build(BuildContext context) {
-      return AnnotatedRegion<SystemUiOverlayStyle>(
-        value: UiUtils.getSystemUiOverlayStyle(
-          context: context,
-          statusBarColor: context.color.secondaryColor,
-        ),
-        child: MultiBlocListener(
-          listeners: <BlocListener<dynamic, dynamic>>[
-            BlocListener<ManageItemCubit, ManageItemState>(
-              listener: _handleManageItemState,
-            ),
-          ],
-          child: AddItemDetailsView(
-            model: model,
-            keyboardManager: keyboardManager,
-            submissionService: submissionService,
-            sheinService: sheinService,
-            galleryBuilder: ({
-              required BuildContext context,
-              required List<dynamic> mixedItemImageList,
-              required bool isUploadingExtra,
-              required dynamic itemImagePicker,
-              required void Function(ImageSource source) onPick,
-              required void Function(int index) onRemove,
-            }) {
-              return _buildGallerySection(
-                context: context,
-                mixedItemImageList: mixedItemImageList,
-                isUploadingExtra: isUploadingExtra,
-                itemImagePicker: itemImagePicker as PickImage,
-                onPick: onPick,
-                onRemove: onRemove,
-              );
-            },
-            onSubmit: _handleSubmit,
-            onRefresh: _refresh,
-            onPickCoverImage: _pickCoverImage,
-            onPickGalleryImage: _pickGalleryImage,
-            onRemoveGalleryImage: _removeGalleryImage,
-            onBreadcrumbTap: _onBreadcrumbTap,
+        statusBarColor: context.color.secondaryColor,
+      ),
+      child: MultiBlocListener(
+        listeners: <BlocListener<dynamic, dynamic>>[
+          BlocListener<ManageItemCubit, ManageItemState>(
+            listener: _handleManageItemState,
           ),
+        ],
+        child: AddItemDetailsView(
+          model: model,
+          keyboardManager: keyboardManager,
+          submissionService: submissionService,
+          sheinService: sheinService,
+          galleryBuilder: ({
+            required BuildContext context,
+            required List<dynamic> mixedItemImageList,
+            required bool isUploadingExtra,
+            required dynamic itemImagePicker,
+            required void Function(ImageSource source) onPick,
+            required void Function(int index) onRemove,
+          }) {
+            return _buildGallerySection(
+              context: context,
+              mixedItemImageList: mixedItemImageList,
+              isUploadingExtra: isUploadingExtra,
+              itemImagePicker: itemImagePicker as PickImage,
+              onPick: onPick,
+              onRemove: onRemove,
+            );
+          },
+          onSubmit: _handleSubmit,
+          onRefresh: _refresh,
+          onPickCoverImage: _pickCoverImage,
+          onPickGalleryImage: _pickGalleryImage,
+          onRemoveGalleryImage: _removeGalleryImage,
+          onBreadcrumbTap: _onBreadcrumbTap,
         ),
-      );
-    }
+      ),
+    );
   }
 }

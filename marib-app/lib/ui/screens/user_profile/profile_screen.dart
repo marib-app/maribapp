@@ -221,7 +221,12 @@ mixin ProfileScreenLogic<T extends StatefulWidget> on State<T> {
           }
         }
       } else {
-        throw HelperUtils.showSnackBarMessage(context, '${error.message}');
+        final rawMessage = error.message?.trim();
+        final errorMessage = (rawMessage != null && rawMessage.isNotEmpty)
+            ? rawMessage
+            : 'somethingWentWrong'.translate(context);
+        HelperUtils.showSnackBarMessage(context, errorMessage);
+
       }
     } catch (e) {
       debugPrint("unable to delete user - ${e.toString()}");

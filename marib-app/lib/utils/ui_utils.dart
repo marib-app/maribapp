@@ -132,9 +132,8 @@ class _AdaptiveNetworkImageState extends State<_AdaptiveNetworkImage> {
 }
 
 class UiUtils {
-
   static final Map<OverlayState, _SoftSnackBarHandle> _activeSoftSnackBars =
-  <OverlayState, _SoftSnackBarHandle>{};
+      <OverlayState, _SoftSnackBarHandle>{};
 
   // دالة التحكم في عرض الوقت والتاريخ
 
@@ -299,9 +298,8 @@ class UiUtils {
     Color textColor = Colors.white,
     double fontSize = 15,
     FontWeight fontWeight = FontWeight.w500,
-        VoidCallback? onClosed,
-
-      }) {
+    VoidCallback? onClosed,
+  }) {
     final overlay = Overlay.of(context);
     if (overlay == null) return;
 
@@ -310,11 +308,10 @@ class UiUtils {
 
     void insertSnackBar() {
       final GlobalKey<_SoftSnackBarWidgetState> key =
-      GlobalKey<_SoftSnackBarWidgetState>();
+          GlobalKey<_SoftSnackBarWidgetState>();
       late OverlayEntry entry;
 
       final Color baseColor = backgroundColor ??
-
           (theme.brightness == Brightness.dark
               ? Colors.grey[800]
               : Colors.grey[900])!;
@@ -337,7 +334,7 @@ class UiUtils {
               entry.remove();
             }
             final _SoftSnackBarHandle? activeHandle =
-            _activeSoftSnackBars[overlayState];
+                _activeSoftSnackBars[overlayState];
             if (activeHandle != null && identical(activeHandle.entry, entry)) {
               _activeSoftSnackBars.remove(overlayState);
             }
@@ -1028,8 +1025,8 @@ class UiUtils {
 
     // لون النص/الأيقونات/السبينر
     final Color fg = textColor ?? context.color.textAutoAdapt(bg);
-    final Color disabledForeground = disabledTextColor ??
-        theme.colorScheme.onSurface.withOpacity(0.6);
+    final Color disabledForeground =
+        disabledTextColor ?? theme.colorScheme.onSurface.withOpacity(0.6);
 
     final Color contentColor = blockInput ? disabledForeground : fg;
 
@@ -1111,8 +1108,7 @@ class UiUtils {
                     Icon(Icons.check_circle, color: contentColor, size: 22),
                   if (isError == true)
                     Icon(Icons.error_outline, color: contentColor, size: 22),
-                  if (showStatusIcon)
-                    SizedBox(width: statusGap),
+                  if (showStatusIcon) SizedBox(width: statusGap),
                   if (isInProgress == true && (showProgressTitle ?? false))
                     buildText(title, contentColor),
                   if (isInProgress != true &&
@@ -1604,7 +1600,6 @@ class RoundedBorderOnSomeSidesWidget extends StatelessWidget {
 }
 
 class _SoftSnackBarWidget extends StatefulWidget {
-
   const _SoftSnackBarWidget({
     super.key,
     required this.message,
@@ -1616,6 +1611,7 @@ class _SoftSnackBarWidget extends StatefulWidget {
     required this.fontWeight,
     required this.onFinish,
   });
+
   final String message;
   final String iconPath;
   final Duration duration;
@@ -1624,8 +1620,6 @@ class _SoftSnackBarWidget extends StatefulWidget {
   final double fontSize;
   final FontWeight fontWeight;
   final VoidCallback onFinish;
-
-
 
   @override
   State<_SoftSnackBarWidget> createState() => _SoftSnackBarWidgetState();
@@ -1642,8 +1636,6 @@ class _SoftSnackBarWidgetState extends State<_SoftSnackBarWidget>
   Completer<void>? _dismissCompleter;
   bool _hasCompletedExit = false;
 
-
-
   @override
   void initState() {
     super.initState();
@@ -1651,74 +1643,82 @@ class _SoftSnackBarWidgetState extends State<_SoftSnackBarWidget>
       vsync: this,
       duration: _animationDuration,
       reverseDuration: _animationDuration,
-    )..value = 1.0;
+    );
 
     final Animation<double> curved = CurvedAnimation(
       parent: _controller,
       curve: Curves.easeInOutCubic,
     );
 
-    _fadeAnimation = ReverseAnimation(curved);
+    _fadeAnimation = curved;
     _slideAnimation = Tween<Offset>(
-      begin: Offset.zero,
-      end: const Offset(0, 0.08),
+      begin: const Offset(0, 0.08),
+      end: Offset.zero,
     ).animate(curved);
 
     _controller.addStatusListener(_handleStatusChange);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-
-        _autoDismissTimer = Timer(widget.duration, dismiss);
+      if (!mounted) {
+        return;
       }
-
-      void _handleStatusChange(AnimationStatus status) {
-        if (status == AnimationStatus.dismissed) {
-          _hasCompletedExit = false;
-        }
-
-        if (status == AnimationStatus.completed && !_hasCompletedExit) {
-          _hasCompletedExit = true;
-          widget.onFinish();
-          if (_dismissCompleter != null && !_dismissCompleter!.isCompleted) {
-            _dismissCompleter!.complete();
-          }
-          _dismissCompleter = null;
-        }
-      }
-
-      Future<void> dismiss() {
-        if (!mounted) {
-          return Future.value();
-        }
-
-        if (_hasCompletedExit &&
-            (_controller.status == AnimationStatus.completed ||
-                _controller.value == 1.0)) {
-          return Future.value();
-        }
-
-        _autoDismissTimer?.cancel();
-        _dismissCompleter ??= Completer<void>();
-
-        if (_controller.status != AnimationStatus.forward) {
-          _controller.forward();
-        }
-
-        return _dismissCompleter!.future;
-      }
-
-      @override
-      void dispose() {
-        _autoDismissTimer?.cancel();
-        _controller.removeStatusListener(_handleStatusChange);
-        _controller.dispose();
-        if (_dismissCompleter != null && !_dismissCompleter!.isCompleted) {
-          _dismissCompleter!.complete();
-        }
-        super.dispose();
-      }
+      _controller.forward();
+      _autoDismissTimer = Timer(widget.duration, dismiss);
     });
+  }
+
+  void _handleStatusChange(AnimationStatus status) {
+    if (status == AnimationStatus.completed) {
+      _hasCompletedExit = false;
+      return;
+    }
+
+    if (status == AnimationStatus.dismissed && !_hasCompletedExit) {
+      _hasCompletedExit = true;
+      widget.onFinish();
+      if (_dismissCompleter != null && !_dismissCompleter!.isCompleted) {
+        _dismissCompleter!.complete();
+      }
+      _dismissCompleter = null;
+    }
+  }
+
+  Future<void> dismiss() {
+    if (!mounted) {
+      return Future.value();
+    }
+
+    if (_hasCompletedExit) {
+      return _dismissCompleter?.future ?? Future.value();
+    }
+
+    _autoDismissTimer?.cancel();
+    _dismissCompleter ??= Completer<void>();
+
+    if (_controller.status == AnimationStatus.dismissed ||
+        _controller.value == 0.0) {
+      if (!_dismissCompleter!.isCompleted) {
+        _dismissCompleter!.complete();
+      }
+      return _dismissCompleter!.future;
+    }
+
+    if (_controller.status != AnimationStatus.reverse) {
+      _controller.reverse();
+    }
+
+    return _dismissCompleter!.future;
+  }
+
+  @override
+  void dispose() {
+    _autoDismissTimer?.cancel();
+    _controller.removeStatusListener(_handleStatusChange);
+    _controller.dispose();
+    if (_dismissCompleter != null && !_dismissCompleter!.isCompleted) {
+      _dismissCompleter!.complete();
+    }
+    super.dispose();
   }
 
   @override
@@ -1736,41 +1736,40 @@ class _SoftSnackBarWidgetState extends State<_SoftSnackBarWidget>
               color: Colors.transparent,
               child: IntrinsicWidth(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      vertical: 12, horizontal: 16),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                   decoration: BoxDecoration(
                     color: widget.backgroundColor,
                     borderRadius: BorderRadius.circular(22),
                   ),
                   child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                  ClipRRect(
-                  borderRadius: BorderRadius.circular(100),
-                  child: Image.asset(
-                    widget.iconPath,
-                    width: 30,
-                    height: 30,
-                    fit: BoxFit.cover,
-                  ),
-                      ),
-                const SizedBox(width: 10),
-                Flexible(
-                  child: Text(
-                    widget.message,
-                    style: TextStyle(
-                      color: widget.textColor,
-                      fontSize: widget.fontSize,
-                      fontWeight: widget.fontWeight,
-                    ),
-                    textAlign: TextAlign.start,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(100),
+                        child: Image.asset(
+                          widget.iconPath,
+                          width: 30,
+                          height: 30,
+                          fit: BoxFit.cover,
                         ),
-
                       ),
-                      ],
+                      const SizedBox(width: 10),
+                      Flexible(
+                        child: Text(
+                          widget.message,
+                          style: TextStyle(
+                            color: widget.textColor,
+                            fontSize: widget.fontSize,
+                            fontWeight: widget.fontWeight,
+                          ),
+                          textAlign: TextAlign.start,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -1781,7 +1780,6 @@ class _SoftSnackBarWidgetState extends State<_SoftSnackBarWidget>
     );
   }
 }
-
 
 class _SoftSnackBarHandle {
   const _SoftSnackBarHandle({

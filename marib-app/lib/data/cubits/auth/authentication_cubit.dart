@@ -111,10 +111,14 @@ class AuthenticationCubit extends Cubit<AuthenticationState> {
           User? user = credential.user;
           if (user != null && !user.emailVerified) {
             // Handle the case when the user's email is not verified
-            emit(AuthenticationFail(HelperUtils.showSnackBarMessage(
-                Constant.navigatorKey.currentContext,
-                "pleaseFirstVerifyUser"
-                    .translate(Constant.navigatorKey.currentContext!))));
+            final context = Constant.navigatorKey.currentContext;
+            if (context != null) {
+              final message = "pleaseFirstVerifyUser".translate(context);
+              HelperUtils.showSnackBarMessage(context, message);
+              emit(AuthenticationFail(message));
+            } else {
+              emit(AuthenticationFail("pleaseFirstVerifyUser"));
+            }
           } else {
             emit(AuthenticationSuccess(type!, credential, payload!));
           }

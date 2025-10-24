@@ -30,6 +30,8 @@ import 'package:marib/ui/screens/wallet/components/wallet_transactions_sliver.da
 import 'package:marib/ui/screens/wallet/components/wallet_actions_card.dart';
 import 'package:marib/utils/api.dart';
 
+import 'package:marib/data/cubits/wallet/manual_payment_requests_cubit.dart';
+import 'package:marib/utils/notification/notification_service.dart';
 
 
 class WalletScreenUI extends StatefulWidget {
@@ -46,15 +48,32 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
   final NumberFormat _numberFormat =
       NumberFormat.currency(decimalDigits: 2, symbol: '');
   final DateFormat _dateTimeFormat = DateFormat('dd MMM yyyy, HH:mm');
+  WalletNotificationRegistration? _walletScopeRegistration;
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      _walletScopeRegistration = NotificationService.registerWalletScope(
+        summaryCubit: context.read<WalletSummaryCubit>(),
+        transactionsCubit: context.read<WalletTransactionsCubit>(),
+        withdrawalsCubit: context.read<WalletWithdrawalsCubit>(),
+        manualPaymentsCubit: context.read<ManualPaymentRequestsCubit>(),
+        transfersCubit: context.read<WalletTransfersCubit>(),
+      );
+    });
+
+
   }
 
   @override
   void dispose() {
+    _walletScopeRegistration?.dispose();
+
     _pageController.dispose();
 
     _scrollController.removeListener(_onScroll);

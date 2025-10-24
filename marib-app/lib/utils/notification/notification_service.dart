@@ -75,6 +75,55 @@ class _OrderResolutionResult {
   final List<UserOrder>? orders;
 }
 
+class WalletNotificationRegistration {
+  WalletNotificationRegistration._(this._onDispose);
+
+  final VoidCallback _onDispose;
+  bool _isDisposed = false;
+
+  void dispose() {
+    if (_isDisposed) {
+      return;
+    }
+    _isDisposed = true;
+    _onDispose();
+  }
+}
+
+class _WalletScopeEntry {
+  const _WalletScopeEntry({
+    this.context,
+    this.summaryCubit,
+    this.transactionsCubit,
+    this.withdrawalsCubit,
+    this.manualPaymentsCubit,
+    this.transfersCubit,
+  });
+
+  final BuildContext? context;
+  final WalletSummaryCubit? summaryCubit;
+  final WalletTransactionsCubit? transactionsCubit;
+  final WalletWithdrawalsCubit? withdrawalsCubit;
+  final ManualPaymentRequestsCubit? manualPaymentsCubit;
+  final WalletTransfersCubit? transfersCubit;
+}
+
+class _ResolvedWalletScope {
+  const _ResolvedWalletScope({
+    this.summaryCubits = const <WalletSummaryCubit>[],
+    this.transactionsCubits = const <WalletTransactionsCubit>[],
+    this.withdrawalsCubits = const <WalletWithdrawalsCubit>[],
+    this.manualPaymentsCubits = const <ManualPaymentRequestsCubit>[],
+    this.transfersCubits = const <WalletTransfersCubit>[],
+  });
+
+  final List<WalletSummaryCubit> summaryCubits;
+  final List<WalletTransactionsCubit> transactionsCubits;
+  final List<WalletWithdrawalsCubit> withdrawalsCubits;
+  final List<ManualPaymentRequestsCubit> manualPaymentsCubits;
+  final List<WalletTransfersCubit> transfersCubits;
+}
+
 String currentlyChatingWith = "";
 String currentlyChatItemId = "";
 
@@ -103,14 +152,12 @@ class NotificationService {
       _messageStatusController =
       StreamController<ChatMessageStatusUpdate>.broadcast();
 
-
   static const Set<String> _walletNotificationTypes = <String>{
     'wallet',
     'wallet_withdrawal',
     'wallet_deposit',
     'wallet_top_up',
   };
-
 
   static Stream<ParticipantStatus?> get participantStatusStream =>
       _participantStatusController.stream;
@@ -140,6 +187,9 @@ class NotificationService {
   static final StreamController<List<UserOrder>> _ordersListController =
       StreamController<List<UserOrder>>.broadcast();
 
+  static final List<_WalletScopeEntry> _walletScopeEntries =
+      <_WalletScopeEntry>[];
+
   static Stream<String> get walletNotifications =>
       _walletNotificationController.stream;
 
@@ -148,6 +198,40 @@ class NotificationService {
 
   static Stream<List<UserOrder>> get ordersListUpdates =>
       _ordersListController.stream;
+
+  static WalletNotificationRegistration registerWalletScope({
+    BuildContext? context,
+    WalletSummaryCubit? summaryCubit,
+    WalletTransactionsCubit? transactionsCubit,
+    WalletWithdrawalsCubit? withdrawalsCubit,
+    ManualPaymentRequestsCubit? manualPaymentsCubit,
+    WalletTransfersCubit? transfersCubit,
+  }) {
+    assert(
+      context != null ||
+          summaryCubit != null ||
+          transactionsCubit != null ||
+          withdrawalsCubit != null ||
+          manualPaymentsCubit != null ||
+          transfersCubit != null,
+      'At least one wallet cubit or a context must be provided for registration.',
+    );
+
+    final _WalletScopeEntry entry = _WalletScopeEntry(
+      context: context,
+      summaryCubit: summaryCubit,
+      transactionsCubit: transactionsCubit,
+      withdrawalsCubit: withdrawalsCubit,
+      manualPaymentsCubit: manualPaymentsCubit,
+      transfersCubit: transfersCubit,
+    );
+
+    _walletScopeEntries.add(entry);
+
+    return WalletNotificationRegistration._(() {
+      _walletScopeEntries.remove(entry);
+    });
+  }
 
   static void _ensureLogoutHookRegistered() {
     if (_isLogoutHookRegistered) {
@@ -618,7 +702,7 @@ class NotificationService {
     final String normalizedActionType = rawActionType.toLowerCase();
 
     final Map<String, dynamic> notificationData =
-    Map<String, dynamic>.from(message?.data ?? const <String, dynamic>{});
+        Map<String, dynamic>.from(message?.data ?? const <String, dynamic>{});
 
     const Set<String> presenceEvents = {'UserTyping', 'UserPresenceUpdated'};
     const Set<String> messageStatusEvents = {
@@ -921,48 +1005,178 @@ class NotificationService {
     }
   }
 
+  static _ResolvedWalletScope _resolveWalletScope(
+      {BuildContext? explicitContext}) {
+    final Set<WalletSummaryCubit> summaryCubits = <WalletSummaryCubit>{};
+    final Set<WalletTransactionsCubit> transactionsCubits =
+        <WalletTransactionsCubit>{};
+    final Set<WalletWithdrawalsCubit> withdrawalsCubits =
+        <WalletWithdrawalsCubit>{};
+    final Set<ManualPaymentRequestsCubit> manualPaymentsCubits =
+        <ManualPaymentRequestsCubit>{};
+    final Set<WalletTransfersCubit> transfersCubits = <WalletTransfersCubit>{};
+
+    final List<_WalletScopeEntry> entriesSnapshot =
+        List<_WalletScopeEntry>.from(_walletScopeEntries);
+
+    if (entriesSnapshot.isNotEmpty) {
+      for (final _WalletScopeEntry entry in entriesSnapshot.reversed) {
+        if (entry.summaryCubit != null) {
+          summaryCubits.add(entry.summaryCubit!);
+        }
+        if (entry.transactionsCubit != null) {
+          transactionsCubits.add(entry.transactionsCubit!);
+        }
+        if (entry.withdrawalsCubit != null) {
+          withdrawalsCubits.add(entry.withdrawalsCubit!);
+        }
+        if (entry.manualPaymentsCubit != null) {
+          manualPaymentsCubits.add(entry.manualPaymentsCubit!);
+        }
+        if (entry.transfersCubit != null) {
+          transfersCubits.add(entry.transfersCubit!);
+        }
+
+        final BuildContext? entryContext = entry.context;
+        if (entryContext != null) {
+          _collectWalletCubitsFromContext(
+            entryContext,
+            summaryCubits: summaryCubits,
+            transactionsCubits: transactionsCubits,
+            withdrawalsCubits: withdrawalsCubits,
+            manualPaymentsCubits: manualPaymentsCubits,
+            transfersCubits: transfersCubits,
+          );
+        }
+      }
+
+      if (explicitContext != null) {
+        _collectWalletCubitsFromContext(
+          explicitContext,
+          summaryCubits: summaryCubits,
+          transactionsCubits: transactionsCubits,
+          withdrawalsCubits: withdrawalsCubits,
+          manualPaymentsCubits: manualPaymentsCubits,
+          transfersCubits: transfersCubits,
+        );
+      }
+
+      return _ResolvedWalletScope(
+        summaryCubits: summaryCubits.toList(growable: false),
+        transactionsCubits: transactionsCubits.toList(growable: false),
+        withdrawalsCubits: withdrawalsCubits.toList(growable: false),
+        manualPaymentsCubits: manualPaymentsCubits.toList(growable: false),
+        transfersCubits: transfersCubits.toList(growable: false),
+      );
+    }
+
+    final BuildContext? fallbackContext =
+        explicitContext ?? Constant.navigatorKey.currentContext;
+
+    if (fallbackContext != null) {
+      _collectWalletCubitsFromContext(
+        fallbackContext,
+        summaryCubits: summaryCubits,
+        transactionsCubits: transactionsCubits,
+        withdrawalsCubits: withdrawalsCubits,
+        manualPaymentsCubits: manualPaymentsCubits,
+        transfersCubits: transfersCubits,
+      );
+    }
+
+    return _ResolvedWalletScope(
+      summaryCubits: summaryCubits.toList(growable: false),
+      transactionsCubits: transactionsCubits.toList(growable: false),
+      withdrawalsCubits: withdrawalsCubits.toList(growable: false),
+      manualPaymentsCubits: manualPaymentsCubits.toList(growable: false),
+      transfersCubits: transfersCubits.toList(growable: false),
+    );
+  }
+
+  static void _collectWalletCubitsFromContext(
+    BuildContext context, {
+    required Set<WalletSummaryCubit> summaryCubits,
+    required Set<WalletTransactionsCubit> transactionsCubits,
+    required Set<WalletWithdrawalsCubit> withdrawalsCubits,
+    required Set<ManualPaymentRequestsCubit> manualPaymentsCubits,
+    required Set<WalletTransfersCubit> transfersCubits,
+  }) {
+    final WalletSummaryCubit? summaryCubit =
+        _maybeReadCubit<WalletSummaryCubit>(context);
+    if (summaryCubit != null) {
+      summaryCubits.add(summaryCubit);
+    }
+
+    final WalletTransactionsCubit? transactionsCubit =
+        _maybeReadCubit<WalletTransactionsCubit>(context);
+    if (transactionsCubit != null) {
+      transactionsCubits.add(transactionsCubit);
+    }
+    final WalletWithdrawalsCubit? withdrawalsCubit =
+        _maybeReadCubit<WalletWithdrawalsCubit>(context);
+    if (withdrawalsCubit != null) {
+      withdrawalsCubits.add(withdrawalsCubit);
+    }
+    final ManualPaymentRequestsCubit? manualPaymentsCubit =
+        _maybeReadCubit<ManualPaymentRequestsCubit>(context);
+    if (manualPaymentsCubit != null) {
+      manualPaymentsCubits.add(manualPaymentsCubit);
+    }
+    final WalletTransfersCubit? transfersCubit =
+        _maybeReadCubit<WalletTransfersCubit>(context);
+    if (transfersCubit != null) {
+      transfersCubits.add(transfersCubit);
+    }
+  }
 
   static Future<void> _handleWalletNotification({
     required Map<String, dynamic> data,
     RemoteMessage? message,
     BuildContext? context,
   }) async {
-    final BuildContext? ctx = context ?? Constant.navigatorKey.currentContext;
-    final WalletSummaryCubit? summaryCubit =
-    ctx != null ? _maybeReadCubit<WalletSummaryCubit>(ctx) : null;
-    final WalletTransactionsCubit? transactionsCubit =
-    ctx != null ? _maybeReadCubit<WalletTransactionsCubit>(ctx) : null;
-    final WalletWithdrawalsCubit? withdrawalsCubit =
-    ctx != null ? _maybeReadCubit<WalletWithdrawalsCubit>(ctx) : null;
-    final ManualPaymentRequestsCubit? manualPaymentsCubit =
-    ctx != null ? _maybeReadCubit<ManualPaymentRequestsCubit>(ctx) : null;
-    final WalletTransfersCubit? transfersCubit =
-    ctx != null ? _maybeReadCubit<WalletTransfersCubit>(ctx) : null;
+    final _ResolvedWalletScope scope =
+        _resolveWalletScope(explicitContext: context);
 
     final String? idempotencyKey = data['idempotency_key']?.toString();
     final String? deeplink = data['deeplink']?.toString();
 
     final List<Future<void>> futures = <Future<void>>[];
-    if (summaryCubit != null) {
-      futures.add(summaryCubit.refresh());
+    final List<WalletTransactionsCubit> refreshedTransactionsCubits =
+        <WalletTransactionsCubit>[];
+
+    for (final WalletSummaryCubit summaryCubit in scope.summaryCubits) {
+      try {
+        futures.add(summaryCubit.refresh());
+      } catch (_) {}
     }
 
-    Future<void>? transactionsFuture;
-
-    if (transactionsCubit != null) {
-      transactionsFuture = transactionsCubit.refresh();
-      futures.add(transactionsFuture);
+    for (final WalletTransactionsCubit transactionsCubit
+        in scope.transactionsCubits) {
+      try {
+        futures.add(transactionsCubit.refresh());
+        refreshedTransactionsCubits.add(transactionsCubit);
+      } catch (_) {}
     }
 
-    if (withdrawalsCubit != null) {
-      futures.add(withdrawalsCubit.refresh(includeOptions: false));
+    for (final WalletWithdrawalsCubit withdrawalsCubit
+        in scope.withdrawalsCubits) {
+      try {
+        futures.add(withdrawalsCubit.refresh(includeOptions: false));
+      } catch (_) {}
     }
 
-    if (manualPaymentsCubit != null) {
-      futures.add(manualPaymentsCubit.refresh());
+    for (final ManualPaymentRequestsCubit manualPaymentsCubit
+        in scope.manualPaymentsCubits) {
+      try {
+        futures.add(manualPaymentsCubit.refresh());
+      } catch (_) {}
     }
 
-    transfersCubit?.refresh();
+    for (final WalletTransfersCubit transfersCubit in scope.transfersCubits) {
+      try {
+        transfersCubit.refresh();
+      } catch (_) {}
+    }
 
     if (futures.isNotEmpty) {
       try {
@@ -970,13 +1184,16 @@ class NotificationService {
       } catch (_) {}
     }
 
-    if (transactionsFuture != null && idempotencyKey != null) {
-      try {
-        transactionsCubit?.markTransactionNotified(
-          idempotencyKey,
-          deeplink: deeplink,
-        );
-      } catch (_) {}
+    if (idempotencyKey != null && idempotencyKey.isNotEmpty) {
+      for (final WalletTransactionsCubit transactionsCubit
+          in refreshedTransactionsCubits) {
+        try {
+          transactionsCubit.markTransactionNotified(
+            idempotencyKey,
+            deeplink: deeplink,
+          );
+        } catch (_) {}
+      }
     }
 
     _walletNotificationController.add(idempotencyKey ?? '');

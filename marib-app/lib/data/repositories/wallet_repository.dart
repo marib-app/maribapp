@@ -18,10 +18,15 @@ class WalletRepository {
     final summary = WalletSummary.fromJson(summaryPayload);
 
     final filters = WalletFilter.fromResponse(
-      response['filters'] ?? response['available_filters'] ?? summaryPayload['filters'],
+      response['filters'] ??
+          response['available_filters'] ??
+          summaryPayload['filters'],
     );
 
-    return summary.copyWith(availableFilters: summary.availableFilters.isEmpty ? filters : summary.availableFilters);
+    return summary.copyWith(
+        availableFilters: summary.availableFilters.isEmpty
+            ? filters
+            : summary.availableFilters);
   }
 
   Future<DataOutput<WalletTransaction>> fetchTransactions({
@@ -45,7 +50,10 @@ class WalletRepository {
 
     final metaMap = _unwrapMeta(response);
     final filters = WalletFilter.fromResponse(
-      response['filters'] ?? response['available_filters'] ?? metaMap['filters'],
+      response['filters'] ??
+          response['available_filters'] ??
+          metaMap['filters'] ??
+          _extractNestedValue(response, const ['data', 'filters']),
     );
 
     final meta = WalletTransactionsMeta(
@@ -75,10 +83,47 @@ class WalletRepository {
     return Map<String, dynamic>.from(response);
   }
 
-  List<Map<String, dynamic>> _unwrapTransactions(Map<String, dynamic> response) {
+  List<Map<String, dynamic>> _unwrapTransactions(
+      Map<String, dynamic> response) {
+    List<Map<String, dynamic>>? parseCandidate(dynamic candidate) {
+      if (candidate == null) {
+        return null;
+      }
+      if (candidate is List) {
+        return candidate
+            .whereType<dynamic>()
+            .map((e) => e is Map<String, dynamic>
+                ? e
+                : Map<String, dynamic>.from(e as Map))
+            .toList();
+      }
+      if (candidate is Map) {
+        final map = Map<String, dynamic>.from(candidate as Map);
+        const nestedKeys = [
+          'transactions',
+          'data',
+          'items',
+          'results',
+          'rows',
+          'payload',
+          'list',
+          'records',
+        ];
+
+        for (final key in nestedKeys) {
+          final nested = map[key];
+          final parsed = parseCandidate(nested);
+          if (parsed != null && parsed.isNotEmpty) {
+            return parsed;
+          }
+        }
+      }
+      return null;
+    }
+
     final candidates = [
-      response['data'],
       response['transactions'],
+      response['data'],
       response['items'],
       response['results'],
       response['rows'],
@@ -86,25 +131,9 @@ class WalletRepository {
     ];
 
     for (final candidate in candidates) {
-      if (candidate is List) {
-        return candidate
-            .whereType<dynamic>()
-            .map((e) => e is Map<String, dynamic>
-            ? e
-            : Map<String, dynamic>.from(e as Map))
-            .toList();
-      }
-      if (candidate is Map) {
-        final map = Map<String, dynamic>.from(candidate as Map);
-        final nested = map['data'] ?? map['items'];
-        if (nested is List) {
-          return nested
-              .whereType<dynamic>()
-              .map((e) => e is Map<String, dynamic>
-              ? e
-              : Map<String, dynamic>.from(e as Map))
-              .toList();
-        }
+      final parsed = parseCandidate(candidate);
+      if (parsed != null && parsed.isNotEmpty) {
+        return parsed;
       }
     }
 
@@ -112,25 +141,88 @@ class WalletRepository {
   }
 
   Map<String, dynamic> _unwrapMeta(Map<String, dynamic> response) {
+    Map<String, dynamic>? parseMeta(dynamic candidate) {
+      if (candidate == null) {
+        return null;
+      }
+      if (candidate is Map) {
+        final map = Map<String, dynamic>.from(candidate as Map);
+        const metaIndicators = {
+          'current_page',
+          'last_page',
+          'per_page',
+          'total',
+          'next_page_url',
+          'prev_page_url',
+          'has_more',
+          'has_more_pages',
+          'links',
+        };
+
+        if (map.keys.any(metaIndicators.contains)) {
+          return map;
+        }
+
+        for (final key in const ['meta', 'pagination', 'links', 'pager']) {
+          final nested = parseMeta(map[key]);
+          if (nested != null && nested.isNotEmpty) {
+            return nested;
+          }
+        }
+      }
+      return null;
+    }
+
     final metaCandidates = [
       response['meta'],
       response['pagination'],
       response['links'],
       response['pager'],
+      response['data'],
     ];
 
-    for (final meta in metaCandidates) {
-      if (meta is Map) {
-        return Map<String, dynamic>.from(meta as Map);
+    for (final candidate in metaCandidates) {
+      final parsed = parseMeta(candidate);
+      if (parsed != null && parsed.isNotEmpty) {
+        return parsed;
       }
     }
 
-    final total = response['total'];
+    final total = _extractNestedValue(response, const ['total']) ??
+        _extractNestedValue(response, const ['data', 'total']);
     if (total != null) {
-      return {'total': total, 'current_page': response['page'] ?? 1};
+      final currentPage = _extractNestedValue(response, const ['page']) ??
+          _extractNestedValue(response, const ['data', 'page']) ??
+          1;
+      return {
+        'total': total,
+        'current_page': currentPage,
+      };
     }
 
     return const {};
+  }
+
+  dynamic _extractNestedValue(Map<String, dynamic> source, List<String> path) {
+    dynamic current = source;
+    for (final segment in path) {
+      if (current is Map) {
+        final map = Map<String, dynamic>.from(current as Map);
+        current = map[segment];
+      } else {
+        return null;
+      }
+    }
+    if (current != null) {
+      return current;
+    }
+    if (path.length > 1) {
+      final nestedSource = source[path.first];
+      if (nestedSource is Map<String, dynamic>) {
+        return _extractNestedValue(nestedSource, path.sublist(1));
+      }
+    }
+    return null;
   }
 
   bool _parseHasMore(Map<String, dynamic> meta, int page, int rowCount) {
@@ -149,7 +241,8 @@ class WalletRepository {
       return rowCount >= perPage;
     }
 
-    final nextPage = _tryParseInt(meta['next_page']) ?? _tryParseInt(meta['next']);
+    final nextPage =
+        _tryParseInt(meta['next_page']) ?? _tryParseInt(meta['next']);
     if (nextPage != null) {
       return nextPage > page;
     }

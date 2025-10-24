@@ -11,6 +11,9 @@ import 'package:marib/utils/string_extenstion.dart';
 import 'package:marib/data/model/item/item_model.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/helper_utils.dart';
+import 'package:marib/utils/currency_utils.dart';
+import 'package:marib/utils/constant.dart';
+
 
 /// ---------------------------
 ///  شارة حالة الإعلان
@@ -247,7 +250,8 @@ class ItemImageSection extends StatelessWidget {
 /// ---------------------------
 class _PriceInline extends StatelessWidget {
   final num? price;
-  final String currency;
+  final String? currency;
+  final String? currencyCode;
   final Color textColor;
   final Color priceColor;
   final TextStyle style;
@@ -256,6 +260,7 @@ class _PriceInline extends StatelessWidget {
   const _PriceInline({
     required this.price,
     required this.currency,
+    this.currencyCode,
     required this.textColor,
     required this.priceColor,
     required this.style,
@@ -270,7 +275,7 @@ class _PriceInline extends StatelessWidget {
         Text(_priceLabel, style: style.copyWith(color: priceColor)).bold(),
         SizedBox(width: spacing),
         Text(
-          currency,
+          _currencyLabel,
           style: style.copyWith(
             fontSize: style.fontSize != null ? style.fontSize! * 0.75 : null,
             color: textColor.withOpacity(0.6),
@@ -288,6 +293,24 @@ class _PriceInline extends StatelessWidget {
     return formatted;
   }
 
+  String get _currencyLabel {
+    final String? preferred =
+    CurrencyUtils.preferredDisplayFor(currencyCode ?? currency);
+    if (preferred != null && preferred.trim().isNotEmpty) {
+      return preferred.trim();
+    }
+
+    final String? trimmed = currency?.trim();
+    if (trimmed != null && trimmed.isNotEmpty) {
+      final String? normalized =
+          CurrencyUtils.preferredDisplayFor(trimmed) ?? trimmed;
+      if (normalized.trim().isNotEmpty) {
+        return normalized.trim();
+      }
+    }
+
+    return CurrencyUtils.preferredDisplayFor('YER') ?? Constant.currencySymbol;
+  }
 
 }
 
@@ -403,7 +426,8 @@ class ItemDetailsSection extends StatelessWidget {
         // السعر
         _PriceInline(
           price: item.price,
-          currency: item.currency ?? "",
+          currency: item.currency,
+          currencyCode: item.currencyCode,
           textColor: context.color.textDefaultColor,
           priceColor: context.color.territoryColor,
           style: TextStyle(fontSize: context.font.normal),
@@ -515,7 +539,8 @@ class ProfileItemCard extends StatelessWidget {
                       // السعر + العملة
                       _PriceInline(
                         price: item.price,
-                        currency: item.currency ?? "",
+                        currency: item.currency,
+                        currencyCode: item.currencyCode,
                         textColor: context.color.textDefaultColor,
                         priceColor: context.color.territoryColor,
                         style: TextStyle(fontSize: context.font.normal),

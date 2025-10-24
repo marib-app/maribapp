@@ -711,5 +711,15 @@
     "Transfer Reference": "رقم الحوالة",
     "Transfer Date": "تاريخ التحويل",
     "Additional Notes": "ملاحظات إضافية",
-    "No transfer information provided.": "لا توجد معلومات تحويل مقدمة."
+    "No transfer information provided.": "لا توجد معلومات تحويل مقدمة.",
+    "Wallet updated": "تم تحديث رصيد المحفظة",
+    "Your wallet was": "تم",
+    "credited": "إيداع",
+    "debited": "خصم",
+    "New balance:": "الرصيد الجديد:",
+    "Wallet withdrawal request updated": "تم تحديث طلب سحب المحفظة",
+    "Wallet credited successfully.": "تم إضافة المبلغ إلى المحفظة بنجاح.",
+    "Wallet transfer processed successfully": "تم تنفيذ تحويل المحفظة بنجاح.",
+    "Wallet Top-up #:id": "شحن المحفظة رقم :id"
+
 }

@@ -19,6 +19,7 @@ import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/constant.dart';
 
 import 'package:timeago/timeago.dart' as timeago;
+import 'package:marib/utils/currency_utils.dart';
 
 
 
@@ -500,7 +501,7 @@ class _ItemCardState extends State<ICard> {
 
 
 
-    final currency = widget.item?.currency?.trim() ?? '';
+    final currency = _resolveCurrency(widget.item);
 
     return Align(
       alignment: Alignment.centerRight, // ✅ إرجاع السعر لليمين
@@ -530,7 +531,31 @@ class _ItemCardState extends State<ICard> {
   }
 
 
+  String _resolveCurrency(ItemModel? item) {
+    final String? raw = item?.currency;
+    final String? code = item?.currencyCode ??
+        CurrencyUtils.normalizeCurrencyCode(raw);
 
+    final String? preferred =
+    CurrencyUtils.preferredDisplayFor(code ?? raw);
+    if (preferred != null && preferred.trim().isNotEmpty) {
+      return preferred.trim();
+    }
+
+    final String? normalizedFromRaw =
+    raw != null ? CurrencyUtils.preferredDisplayFor(raw) : null;
+    if (normalizedFromRaw != null &&
+        normalizedFromRaw.trim().isNotEmpty) {
+      return normalizedFromRaw.trim();
+    }
+
+    final String? trimmed = raw?.trim();
+    if (trimmed != null && trimmed.isNotEmpty) {
+      return trimmed;
+    }
+
+    return CurrencyUtils.preferredDisplayFor('YER') ?? Constant.currencySymbol;
+  }
 
   Widget favButton({required ItemModel item, required double size}) {
     bool isLike = context.read<FavoriteCubit>().isItemFavorite(item.id!);

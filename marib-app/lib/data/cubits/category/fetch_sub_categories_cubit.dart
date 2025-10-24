@@ -91,6 +91,7 @@ class FetchSubCategoriesCubit extends Cubit<FetchSubCategoriesState> {
   FetchSubCategoriesCubit() : super(FetchSubCategoriesInitial());
 
   final CategoryRepository _categoryRepository = CategoryRepository();
+  int? _activeCategoryId;
 
   Future<void> fetchSubCategories(
       {bool? forceRefresh,
@@ -98,17 +99,23 @@ class FetchSubCategoriesCubit extends Cubit<FetchSubCategoriesState> {
       required int categoryId}) async {
     try {
       emit(FetchSubCategoriesInProgress());
+      _activeCategoryId = categoryId;
 
       DataOutput<CategoryModel> categories = await _categoryRepository
           .fetchCategories(page: 1, categoryId: categoryId);
 
+
+      final List<CategoryModel> sanitizedCategories =
+      _sanitizeCategoryList(categories.modelList);
+
       emit(FetchSubCategoriesSuccess(
           total: categories.total,
-          categories: categories.modelList,
+          categories: sanitizedCategories,
           page: 1,
           hasError: false,
           isLoadingMore: false));
     } catch (e) {
+      _activeCategoryId = null;
       emit(FetchSubCategoriesFailure(e.toString()));
     }
   }
@@ -132,20 +139,24 @@ class FetchSubCategoriesCubit extends Cubit<FetchSubCategoriesState> {
         DataOutput<CategoryModel> result =
             await _categoryRepository.fetchCategories(
           page: (state as FetchSubCategoriesSuccess).page + 1,
-        );
+              categoryId: _activeCategoryId,
+            );
 
         FetchSubCategoriesSuccess categoryState =
             (state as FetchSubCategoriesSuccess);
-        categoryState.categories.addAll(result.modelList);
+        final List<CategoryModel> updatedCategories =
+        List<CategoryModel>.from(categoryState.categories)
+          ..addAll(_sanitizeCategoryList(result.modelList));
 
-        List<String> list =
-            categoryState.categories.map((e) => e.url!).toList();
+        final List<String> list =
+        updatedCategories.map((e) => e.url).whereType<String>().toList();
+
         await HelperUtils.precacheSVG(list);
 
         emit(FetchSubCategoriesSuccess(
             isLoadingMore: false,
             hasError: false,
-            categories: categoryState.categories,
+            categories: updatedCategories,
             page: (state as FetchSubCategoriesSuccess).page + 1,
             total: result.total));
       }
@@ -154,6 +165,33 @@ class FetchSubCategoriesCubit extends Cubit<FetchSubCategoriesState> {
           .copyWith(isLoadingMore: false, hasError: true));
     }
   }
+
+
+  List<CategoryModel> _sanitizeCategoryList(List<CategoryModel> raw) {
+    if (raw.isEmpty) {
+      return const <CategoryModel>[];
+    }
+
+    final List<CategoryModel> sanitized = <CategoryModel>[];
+    final Set<int?> seenIds = <int?>{};
+
+    for (final CategoryModel category in raw) {
+      final int? id = category.id;
+
+      if (id != null && _activeCategoryId != null && id == _activeCategoryId) {
+        continue;
+      }
+
+      if (!seenIds.add(id)) {
+        continue;
+      }
+
+      sanitized.add(category);
+    }
+
+    return sanitized;
+  }
+
 
   bool hasMoreData() {
     if (state is FetchSubCategoriesSuccess) {

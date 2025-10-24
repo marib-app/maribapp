@@ -502,8 +502,8 @@ class LoginScreenUI extends StatelessWidget {
   final VoidCallback onChangeLoginMode;
   final VoidCallback onResendOtp;
   final VoidCallback onVerifyOtp;
-  final void Function(String input, String pass, bool asPhone)
-      onSubmitCredentials;
+  final void Function(String input, String pass) onSubmitCredentials;
+
   final VoidCallback onGoogleLogin;
   final VoidCallback onAppleLogin;
   final VoidCallback onTapContinue;
@@ -591,7 +591,6 @@ class LoginScreenUI extends StatelessWidget {
                     onSubmitEmailPassword: () => onSubmitCredentials(
                       emailController.text,
                       passwordController.text,
-                      false,
                     ),
                     onSkip: onSkip,
                     onChangeLoginMode: onChangeLoginMode,
@@ -613,7 +612,6 @@ class LoginScreenUI extends StatelessWidget {
                     onSubmit: () => onSubmitCredentials(
                       emailController.text,
                       passwordController.text,
-                      isMobileNumberField,
                     ),
                     showMobileAuth: showMobileAuth,
                     showEmailAuth: showEmailAuth,

@@ -62,9 +62,9 @@ class CategoryRepository {
       }
 
       return DataOutput(
-        total: items.length,
+        total: parsed.total,
         modelList: items,
-        page: parsed.page,
+        page: parsed.page ?? page,
       );
       // return (total: response['total'] ?? 0, modelList: modelList);
     } catch (e) {

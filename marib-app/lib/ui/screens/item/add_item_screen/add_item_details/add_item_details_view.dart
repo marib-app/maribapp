@@ -17,6 +17,9 @@ import 'package:marib/ui/screens/widgets/custom_text_form_field.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/responsiveSize.dart';
 import 'package:marib/utils/ui_utils.dart';
+import 'package:marib/ui/theme/theme.dart';
+
+
 
 typedef GallerySectionBuilder = Widget Function({
 required BuildContext context,

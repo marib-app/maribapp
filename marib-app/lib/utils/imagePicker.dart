@@ -122,12 +122,20 @@ class PickImage {
   }
 
   void listener(void Function(dynamic)? onData) {
+    subscription?.cancel();
     subscription = imageStream.listen((data) {
       if ((subscription?.isPaused == false)) {
         onData?.call(data['file']);
       }
     });
   }
+
+
+  void removeListener([void Function(dynamic)? onData]) {
+    subscription?.cancel();
+    subscription = null;
+  }
+
 
   void pauseSubscription() {
     subscription?.pause();
@@ -146,6 +154,7 @@ class PickImage {
     if (!_imageStreamController.isClosed) {
       _imageStreamController.close();
     }
+    subscription?.cancel();
   }
 }
 

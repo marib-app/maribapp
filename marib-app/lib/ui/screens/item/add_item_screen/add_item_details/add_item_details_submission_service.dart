@@ -33,6 +33,8 @@ class AddItemDetailsSubmissionService {
   final VoidCallback refresh;
   final void Function(Iterable<int> ids, {bool notify}) onSheinCategoryChanged;
 
+  int _screenStack = 0;
+
   final List<Map<String, String>> arabCountries = const <Map<String, String>>[
     {'name': 'اليمن', 'code': '+967'},
     {'name': 'السعودية', 'code': '+966'},
@@ -173,7 +175,8 @@ class AddItemDetailsSubmissionService {
       return;
     }
 
-    screenStack++;
+    _screenStack++;
+
     Navigator.pushNamed(
       context,
       Routes.confirmLocationScreen,
@@ -183,7 +186,8 @@ class AddItemDetailsSubmissionService {
         'otherImage': galleryFiles,
       },
     ).then((dynamic value) {
-      screenStack--;
+      _screenStack--;
+
       if (value is Map) {
         model.latitude = value['lat'] as double?;
         model.longitude = value['lng'] as double?;

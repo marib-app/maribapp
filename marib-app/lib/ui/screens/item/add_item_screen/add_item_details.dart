@@ -17,6 +17,7 @@ import 'package:marib/ui/screens/item/add_item_screen/add_item_details/add_item_
 import 'package:marib/ui/screens/item/add_item_screen/add_item_details/add_item_details_shein_service.dart';
 import 'package:marib/ui/screens/item/add_item_screen/add_item_details/add_item_details_submission_service.dart';
 import 'package:marib/ui/screens/item/add_item_screen/add_item_details/add_item_details_view.dart';
+import 'package:marib/ui/screens/item/add_item_screen/image_section.dart';
 
 import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 
@@ -28,6 +29,8 @@ import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/imagePicker.dart';
 
 import 'package:marib/utils/ui_utils.dart';
+import 'package:marib/ui/theme/theme.dart';
+
 
 class AddItemDetails extends StatefulWidget {
   const AddItemDetails({
@@ -41,14 +44,14 @@ class AddItemDetails extends StatefulWidget {
 
   static Route route(RouteSettings settings) {
     final Map<String, dynamic>? arguments =
-        settings.arguments as Map<String, dynamic>?;
+    settings.arguments as Map<String, dynamic>?;
     return BlurredRouter(
       builder: (BuildContext context) {
         return BlocProvider<ManageItemCubit>(
           create: (_) => ManageItemCubit(),
           child: AddItemDetails(
             breadCrumbItems:
-                arguments?['breadCrumbItems'] as List<CategoryModel>?,
+            arguments?['breadCrumbItems'] as List<CategoryModel>?,
             isEdit: arguments?['isEdit'] as bool?,
           ),
         );
@@ -157,116 +160,65 @@ class AddItemDetailsState extends CloudState<AddItemDetails>
 
   Future<void> _pickGalleryImage(ImageSource source) async {
     setState(() => model.isUploadingGallery = true);
-    await model.galleryPicker.pick(
-      context: context,
-      pickMultiple: true,
-      source: source,
-      imageLimit: 25,
-      maxLength: model.galleryItems.length,
-    );
-
-    Widget _buildPricingSection(BuildContext context) {
-      final theme = Theme.of(context);
-      final color = Theme.of(context).colorScheme;
-      const currencies = <String, String>{
-        'YER': 'ريال يمني',
-        'SAR': 'ريال سعودي',
-        'USD': 'دولار أمريكي',
-      };
-
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('التسعير', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                flex: 3,
-                child: _buildKeyboardAwareField(
-                  child: CustomTextFormField(
-                    controller: adPriceController,
-                    hintText: 'السعر',
-                    keyboard: TextInputType.number,
-                    action: TextInputAction.next,
-                    validator: CustomTextFieldValidator.nullCheck,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                flex: 2,
-                child: CustomDropdownFormField<String>(
-                  items: currencies.keys.toList(growable: false),
-                  value: currencies.keys.contains(_selectedCurrency)
-                      ? _selectedCurrency
-                      : 'YER',
-                  onChanged: (value) {
-                    if (value == null) return;
-                    setState(() => _selectedCurrency = value);
-                  },
-                  hintText: 'العملة',
-                  dense: true,
-                  fillColor: color.secondaryColor,
-                  borderColor: color.borderColor,
-                ),
-              ),
-            ],
-          ),
-        ],
+    try {
+      await model.galleryPicker.pick(
+        context: context,
+        pickMultiple: true,
+        source: source,
+        imageLimit: 25,
+        maxLength: model.galleryItems.length,
       );
-      Future.microtask(() {
-        if (mounted) {
-          setState(() => model.isUploadingGallery = false);
-        }
-      });
-    }
-
-    void _removeGalleryImage(int index) {
-      setState(() {
-        final dynamic removed = model.galleryItems[index];
-        if (removed is Map) {
-          final dynamic rawId = removed['id'];
-          final int? imageId = rawId is int
-              ? rawId
-              : (rawId is String ? int.tryParse(rawId) : null);
-          if (imageId != null && !model.deletedImageIds.contains(imageId)) {
-            model.deletedImageIds.add(imageId);
-          }
-          if (removed['isMain'] == true ||
-              removed['url'] == model.coverImageUrl) {
-            model.coverImageUrl = '';
-          }
-        } else if (removed is File &&
-            model.coverImagePicker.pickedFile == removed) {
-          model.coverImagePicker.pickedFile = null;
-        }
-        model.galleryItems.removeAt(index);
-      });
-    }
-
-    void _handleSubmit() {
-      submissionService.handleSubmit(context);
-    }
-
-    void _handleManageItemState(BuildContext context, ManageItemState state) {
-      submissionService.handleManageItemState(context, state);
-    }
-
-    void _onBreadcrumbTap(int index) {
-      final List<CategoryModel> items = model.breadcrumbItems;
-      if (items.isEmpty) {
+    } finally {
+      if (!mounted) {
+        model.isUploadingGallery = false;
         return;
       }
-      final int safeIndex = index.clamp(0, items.length - 1);
-      final int popTimes = (items.length - 1) - safeIndex;
-      final int totalPops = popTimes <= 0 ? 1 : popTimes;
-      for (int i = 0; i < totalPops; i++) {
-        if (!Navigator.of(context).canPop()) {
-          break;
+      setState(() => model.isUploadingGallery = false);
+    }
+  }
+
+  void _removeGalleryImage(int index) {
+    setState(() {
+      final dynamic removed = model.galleryItems[index];
+      if (removed is Map) {
+        final dynamic rawId = removed['id'];
+        final int? imageId = rawId is int
+            ? rawId
+            : (rawId is String ? int.tryParse(rawId) : null);
+        if (imageId != null && !model.deletedImageIds.contains(imageId)) {
+          model.deletedImageIds.add(imageId);
         }
-        Navigator.of(context).pop();
+        if (removed['isMain'] == true ||
+            removed['url'] == model.coverImageUrl) {
+          model.coverImageUrl = '';
+        }
+      } else if (removed is File &&
+          model.coverImagePicker.pickedFile == removed) {
+        model.coverImagePicker.pickedFile = null;
+      }
+      model.galleryItems.removeAt(index);
+    });
+  }
+
+  void _handleSubmit() {
+    submissionService.handleSubmit(context);
+  }
+
+  void _handleManageItemState(BuildContext context, ManageItemState state) {
+    submissionService.handleManageItemState(context, state);
+  }
+
+  void _onBreadcrumbTap(int index) {
+    final List<CategoryModel> items = model.breadcrumbItems;
+    if (items.isEmpty) {
+      return;
+    }
+    final int safeIndex = index.clamp(0, items.length - 1);
+    final int popTimes = (items.length - 1) - safeIndex;
+    final int totalPops = popTimes <= 0 ? 1 : popTimes;
+    for (int i = 0; i < totalPops; i++) {
+      if (!Navigator.of(context).canPop()) {
+        break;
       }
     }
 

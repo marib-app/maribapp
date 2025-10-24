@@ -844,7 +844,10 @@ class CartCubit extends Cubit<CartState> {
         emit(
           state.copyWith(
             couponInProgress: false,
-            couponError: error.toString(),
+            couponError: _resolveCouponErrorMessage(
+              error,
+              fallback: 'تعذر إزالة القسيمة. يرجى المحاولة مرة أخرى لاحقًا.',
+            ),
           ),
         );
       }
@@ -852,7 +855,10 @@ class CartCubit extends Cubit<CartState> {
       emit(
         state.copyWith(
           couponInProgress: false,
-          couponError: error.toString(),
+          couponError: _formatGenericCouponError(
+            error,
+            fallback: 'تعذر إزالة القسيمة. يرجى المحاولة مرة أخرى لاحقًا.',
+          ),
         ),
       );
     }
@@ -872,7 +878,7 @@ class CartCubit extends Cubit<CartState> {
 
     final bool hasCode = trimmed != null && trimmed.isNotEmpty;
     final bool hasAppliedDiscount = state.discounts.any(
-          (CartDiscount discount) => discount.isApplied,
+      (CartDiscount discount) => discount.isApplied,
     );
 
     if (!hasCode && !hasAppliedDiscount) {
@@ -890,7 +896,6 @@ class CartCubit extends Cubit<CartState> {
       final CartSummary summary = await _repository.removeCoupon(
         code: hasCode ? trimmed : null,
         couponCode: hasCode ? trimmed : null,
-
       );
       _syncSection(summary.items);
       emit(
@@ -929,7 +934,7 @@ class CartCubit extends Cubit<CartState> {
         emit(
           state.copyWith(
             couponInProgress: false,
-            couponError: error.toString(),
+            couponError: _resolveCouponErrorMessage(error),
           ),
         );
       }
@@ -937,7 +942,7 @@ class CartCubit extends Cubit<CartState> {
       emit(
         state.copyWith(
           couponInProgress: false,
-          couponError: error.toString(),
+          couponError: _formatGenericCouponError(error),
         ),
       );
     }
@@ -953,6 +958,165 @@ class CartCubit extends Cubit<CartState> {
       );
     }
   }
+
+  String _resolveCouponErrorMessage(
+    ApiHttpException error, {
+    String fallback = 'تعذر تطبيق القسيمة. يرجى المحاولة مرة أخرى لاحقًا.',
+  }) {
+    final String? payloadMessage = _extractCouponMessage(error.payload);
+    if (payloadMessage != null) {
+      return payloadMessage;
+    }
+
+    final String? explicitMessage = _extractCouponMessage(error.errorMessage);
+    if (explicitMessage != null) {
+      return explicitMessage;
+    }
+
+    final String? inferredMessage = _extractCouponMessage(error.toString());
+    if (inferredMessage != null) {
+      return inferredMessage;
+    }
+
+    return fallback;
+  }
+
+  String _formatGenericCouponError(
+    dynamic error, {
+    String fallback = 'تعذر تطبيق القسيمة. يرجى المحاولة مرة أخرى لاحقًا.',
+  }) {
+    final String? directMessage = _extractCouponMessage(error);
+    if (directMessage != null) {
+      return directMessage;
+    }
+
+    if (error != null) {
+      final String? stringMessage = _extractCouponMessage(error.toString());
+      if (stringMessage != null) {
+        return stringMessage;
+      }
+    }
+
+    return fallback;
+  }
+
+  String? _extractCouponMessage(dynamic source) {
+    if (source == null) {
+      return null;
+    }
+
+    if (source is String) {
+      final String trimmed = source.trim();
+      if (trimmed.isEmpty) {
+        return null;
+      }
+
+      final String lower = trimmed.toLowerCase();
+      if (lower == 'request-failed' ||
+          lower.startsWith('something went wrong with error')) {
+        return null;
+      }
+
+      final String? codeMessage = _mapCouponErrorCode(trimmed);
+      if (codeMessage != null) {
+        return codeMessage;
+      }
+
+      return trimmed;
+    }
+
+    if (source is Iterable) {
+      for (final dynamic element in source) {
+        final String? message = _extractCouponMessage(element);
+        if (message != null) {
+          return message;
+        }
+      }
+      return null;
+    }
+
+    if (source is Map) {
+      final Map<dynamic, dynamic> map = source;
+
+      for (final dynamic key in const [
+        'message',
+        'error',
+        'detail',
+        'title',
+        'description',
+      ]) {
+        if (map.containsKey(key)) {
+          final String? message = _extractCouponMessage(map[key]);
+          if (message != null) {
+            return message;
+          }
+        }
+      }
+
+      if (map.containsKey('code')) {
+        final String? codeMessage = _mapCouponErrorCode(map['code']);
+        if (codeMessage != null) {
+          return codeMessage;
+        }
+      }
+
+      if (map.containsKey('errors')) {
+        final String? message = _extractCouponMessage(map['errors']);
+        if (message != null) {
+          return message;
+        }
+      }
+
+      if (map.containsKey('data')) {
+        final String? message = _extractCouponMessage(map['data']);
+        if (message != null) {
+          return message;
+        }
+      }
+
+      for (final MapEntry<dynamic, dynamic> entry in map.entries) {
+        if (entry.key == 'code' ||
+            entry.key == 'message' ||
+            entry.key == 'error' ||
+            entry.key == 'errors' ||
+            entry.key == 'data') {
+          continue;
+        }
+
+        final String? message = _extractCouponMessage(entry.value);
+        if (message != null) {
+          return message;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  String? _mapCouponErrorCode(dynamic rawCode) {
+    if (rawCode == null) {
+      return null;
+    }
+
+    final String normalized = rawCode.toString().trim().toLowerCase();
+    if (normalized.isEmpty) {
+      return null;
+    }
+
+    return _couponErrorMessagesByCode[normalized];
+  }
+
+  static const Map<String, String> _couponErrorMessagesByCode =
+      <String, String>{
+    'invalid_coupon': 'رمز القسيمة غير صالح.',
+    'inactive_coupon': 'هذه القسيمة غير متاحة حالياً.',
+    'usage_limit_reached': 'تم تجاوز الحد الأقصى لاستخدام هذه القسيمة.',
+    'min_order_not_met':
+        'قيمة الطلب أقل من الحد الأدنى المطلوب لاستخدام هذه القسيمة.',
+    'empty_cart': 'لا يمكن تطبيق قسيمة على سلة فارغة.',
+    'multiple_departments':
+        'لا يمكن أن تحتوي السلة على أكثر من قسم واحد في نفس الوقت.',
+  };
 
   void replaceWithSummary(CartSummary summary) {
     _syncSection(summary.items);

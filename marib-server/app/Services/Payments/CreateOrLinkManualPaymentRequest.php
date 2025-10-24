@@ -57,12 +57,38 @@ class CreateOrLinkManualPaymentRequest
                 ?? Arr::get($data, 'manual.sender_name')
         );
 
-        $transferReference = $this->normalizeString(
-            Arr::get($data, 'transfer_reference')
-                ?? Arr::get($data, 'reference')
-                ?? Arr::get($data, 'metadata.transfer_reference')
-                ?? Arr::get($data, 'metadata.reference')
-        );
+        $transferReference = null;
+
+        $transferReferenceKeys = [
+            'transfer_reference',
+            'transfer_code',
+            'reference',
+            'metadata.transfer_reference',
+            'metadata.transfer_code',
+            'metadata.reference',
+            'metadata.transfer.transfer_reference',
+            'metadata.transfer.transfer_code',
+            'metadata.transfer_details.transfer_reference',
+            'metadata.transfer_details.transfer_code',
+            'transfer.transfer_reference',
+            'transfer.transfer_code',
+            'transfer_details.transfer_reference',
+            'transfer_details.transfer_code',
+            'manual.transfer_reference',
+            'manual.transfer_code',
+            'manual.metadata.transfer_reference',
+            'manual.metadata.transfer_code',
+            'manual.transfer_details.transfer_reference',
+            'manual.transfer_details.transfer_code',
+        ];
+
+        foreach ($transferReferenceKeys as $key) {
+            $transferReference = $this->normalizeString(Arr::get($data, $key));
+
+            if ($transferReference !== null) {
+                break;
+            }
+        }
 
         $note = $this->normalizeMultiline(
             Arr::get($data, 'note')
@@ -77,11 +103,16 @@ class CreateOrLinkManualPaymentRequest
             data_set($transactionMeta, 'manual.metadata.sender_name', $senderName);
         }
 
+        
         if ($transferReference !== null) {
             data_set($manualMeta, 'manual.transfer_reference', $transferReference);
             data_set($manualMeta, 'manual.metadata.transfer_reference', $transferReference);
+            data_set($manualMeta, 'manual.transfer_code', $transferReference);
+            data_set($manualMeta, 'manual.metadata.transfer_code', $transferReference);
             data_set($transactionMeta, 'manual.transfer_reference', $transferReference);
             data_set($transactionMeta, 'manual.metadata.transfer_reference', $transferReference);
+            data_set($transactionMeta, 'manual.transfer_code', $transferReference);
+            data_set($transactionMeta, 'manual.metadata.transfer_code', $transferReference);
         }
 
         if ($note !== null) {

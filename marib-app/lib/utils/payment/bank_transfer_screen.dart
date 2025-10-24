@@ -989,7 +989,10 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         if (senderName.isNotEmpty) 'sender_name': senderName,
 
         if (_usingManualBank && transferCode.isNotEmpty)
-          'transfer_code': transferCode,
+          ...{
+            'transfer_code': transferCode,
+            'transfer_reference': transferCode,
+          },
 
         if (contextMetadata.isNotEmpty) 'context': contextMetadata,
       }..removeWhere((k, v) {

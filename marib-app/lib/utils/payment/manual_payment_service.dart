@@ -983,6 +983,52 @@ class ManualPaymentService {
     }
   }
 
+  static Map<String, dynamic>? _mergeTransferReferenceMetadata(
+      Map<String, dynamic>? metadata, String? referenceValue) {
+    final String? trimmedReference = referenceValue?.trim();
+    final bool hasReference =
+        trimmedReference != null && trimmedReference.isNotEmpty;
+
+    if (!hasReference && (metadata == null || metadata.isEmpty)) {
+      return metadata;
+    }
+
+    final Map<String, dynamic> normalized = metadata == null
+        ? <String, dynamic>{}
+        : Map<String, dynamic>.from(metadata);
+
+    if (hasReference) {
+      void ensureValue(String key) {
+        if (!normalized.containsKey(key)) {
+          normalized[key] = trimmedReference!;
+          return;
+        }
+
+        final dynamic existing = normalized[key];
+        if (existing == null) {
+          normalized[key] = trimmedReference!;
+          return;
+        }
+
+        if (existing is String && existing.trim().isEmpty) {
+          normalized[key] = trimmedReference!;
+          return;
+        }
+
+        final String existingString = existing.toString().trim();
+        if (existingString.isEmpty) {
+          normalized[key] = trimmedReference!;
+        }
+      }
+
+      ensureValue('transfer_reference');
+      ensureValue('transfer_code');
+    }
+
+    return normalized.isEmpty ? null : normalized;
+  }
+
+
   static void _writeMetadataFields(Map<String, dynamic> target,
       Map<String, dynamic>? metadata) {
     if (metadata == null || metadata.isEmpty) return;
@@ -1378,6 +1424,9 @@ class ManualPaymentService {
     final formattedAmount =
     formatManualPaymentAmount(amount, normalizedCurrency);
 
+    final Map<String, dynamic>? metadataPayload =
+    _mergeTransferReferenceMetadata(metadata, referenceValue);
+
 
     final Map<String, dynamic> formMap = {
       'payment_method': ManualPaymentService.paymentMethodForApi('manual_bank'),
@@ -1413,7 +1462,7 @@ class ManualPaymentService {
     };
 
 
-    _writeMetadataFields(formMap, metadata);
+    _writeMetadataFields(formMap, metadataPayload);
 
 
     if (receiptImagePath.isEmpty) {
@@ -1514,6 +1563,9 @@ class ManualPaymentService {
     final String normalizedMethod =
 
     ManualPaymentService.paymentMethodForApi('east_yemen_bank');
+    final Map<String, dynamic>? metadataPayload =
+    _mergeTransferReferenceMetadata(metadata, referenceValue);
+
     final Map<String, dynamic> formMap = {
       'payment_method': normalizedMethod,
       'amount': formattedAmount,
@@ -1536,7 +1588,7 @@ class ManualPaymentService {
       if (payableId != null) 'payable_id': payableId,
     };
 
-    _writeMetadataFields(formMap, metadata);
+    _writeMetadataFields(formMap, metadataPayload);
 
     final response = await Api.post(
         url: Api.submitManualPaymentApi,

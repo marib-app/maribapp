@@ -930,9 +930,14 @@ class ManualPaymentRequestService
             $meta = [];
         }
 
+
+        $transferReferenceValue = $transferDetails['transfer_reference'] ?? null;
+
+
         $transferMeta = array_filter([
             'sender_name' => $transferDetails['sender_name'] ?? null,
-            'transfer_reference' => $transferDetails['transfer_reference'] ?? null,
+            'transfer_reference' => $transferReferenceValue,
+            'transfer_code' => $transferReferenceValue,
             'note' => $transferDetails['note'] ?? null,
             'receipt_url' => $transferDetails['receipt_url'] ?? null,
             'receipt_path' => $transferDetails['receipt_path'] ?? null,
@@ -960,8 +965,11 @@ class ManualPaymentRequestService
 
         if ($transferReference !== null) {
             data_set($meta, 'manual.transfer_reference', $transferReference);
+            data_set($meta, 'manual.transfer_code', $transferReference);
             data_set($meta, 'manual.metadata.transfer_reference', $transferReference);
+            data_set($meta, 'manual.metadata.transfer_code', $transferReference);
             data_set($meta, 'metadata.transfer_reference', $transferReference);
+            data_set($meta, 'metadata.transfer_code', $transferReference);
         }
 
         if ($note !== null) {
@@ -1012,7 +1020,9 @@ class ManualPaymentRequestService
 
             if ($transferReference !== null) {
                 data_set($transactionMeta, 'manual.transfer_reference', $transferReference);
+                data_set($transactionMeta, 'manual.transfer_code', $transferReference);
                 data_set($transactionMeta, 'manual.metadata.transfer_reference', $transferReference);
+                data_set($transactionMeta, 'manual.metadata.transfer_code', $transferReference);
             }
 
             if ($note !== null) {
@@ -1053,7 +1063,9 @@ class ManualPaymentRequestService
 
                 if ($transferReference !== null) {
                     data_set($walletMeta, 'transfer_reference', $transferReference);
+                    data_set($walletMeta, 'transfer_code', $transferReference);
                     data_set($walletMeta, 'metadata.transfer_reference', $transferReference);
+                    data_set($walletMeta, 'metadata.transfer_code', $transferReference);
                 }
 
                 if ($note !== null) {

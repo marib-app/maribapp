@@ -2543,6 +2543,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
         'source': 'checkout_manual_bank_dialog',
         if (senderName.isNotEmpty) 'sender_name': senderName,
         if (transferCode.isNotEmpty) 'transfer_code': transferCode,
+        if (transferCode.isNotEmpty) 'transfer_reference': transferCode,
         if (orderCode != null && orderCode.trim().isNotEmpty)
           'order_code': orderCode.trim(),
       };

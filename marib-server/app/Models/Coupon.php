@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builders\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -57,7 +58,7 @@ class Coupon extends Model
     public function isWithinUsageLimits(?int $userId = null): bool
     {
         if ($this->max_uses !== null) {
-            $totalUses = Order::query()->where('coupon_id', $this->getKey())->count();
+            $totalUses = $this->activeUsageQuery()->count();
 
             if ($totalUses >= $this->max_uses) {
                 return false;
@@ -65,8 +66,8 @@ class Coupon extends Model
         }
 
         if ($userId !== null && $this->max_uses_per_user !== null) {
-            $userUses = Order::query()
-                ->where('coupon_id', $this->getKey())
+            $userUses = $this->activeUsageQuery()
+
                 ->where('user_id', $userId)
                 ->count();
 
@@ -152,5 +153,44 @@ class Coupon extends Model
             ->where('order_id', $orderId)
             ->update($payload);
     }
+
+
+    public function releaseUsage(?int $orderId = null, ?int $userId = null): void
+    {
+        $query = DB::table('coupon_usages')
+            ->where('coupon_id', $this->getKey());
+
+        if ($orderId !== null) {
+            $query->where('order_id', $orderId);
+        }
+
+        if ($userId !== null) {
+            $query->where('user_id', $userId);
+        }
+
+        $query->delete();
+    }
+
+    protected function activeUsageQuery(): QueryBuilder
+    {
+        return DB::table('coupon_usages')
+            ->where('coupon_id', $this->getKey())
+            ->where(function (QueryBuilder $builder): void {
+                $builder
+                    ->whereNull('order_id')
+                    ->orWhereExists(function (QueryBuilder $subquery): void {
+                        $subquery
+                            ->selectRaw('1')
+                            ->from('orders')
+                            ->whereColumn('orders.id', 'coupon_usages.order_id')
+                            ->whereNull('orders.deleted_at')
+                            ->whereNotIn('orders.order_status', [
+                                Order::STATUS_CANCELED,
+                                Order::STATUS_FAILED,
+                            ]);
+                    });
+            });
+    }
+
 
 }

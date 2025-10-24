@@ -251,10 +251,14 @@ class Order extends Model
     protected ?Carbon $statusTransitionRecordedAt = null;
 
     protected ?array $statusHistoryContext = null;
+    protected ?int $couponReleaseId = null;
 
     protected static function booted(): void
     {
         static::updating(function (self $order): void {
+            $order->couponReleaseId = null;
+
+
             if (! $order->isDirty('order_status')) {
                 return;
             }
@@ -273,6 +277,13 @@ class Order extends Model
 
 
             $previousStatus = $order->getOriginal('order_status');
+
+
+            if (in_array($newStatus, [self::STATUS_CANCELED, self::STATUS_FAILED], true)) {
+                $order->couponReleaseId = $order->getOriginal('coupon_id');
+            }
+
+
 
             if (! self::isValidStatusTransition($previousStatus, $newStatus)) {
                 throw new InvalidArgumentException(sprintf(
@@ -319,6 +330,11 @@ class Order extends Model
                 $order->order_status,
                 $recordedAt
             ));
+
+            if ($order->couponReleaseId !== null) {
+                $order->releaseCouponReservation($order->couponReleaseId);
+            }
+
         });
     }
 
@@ -1302,6 +1318,48 @@ class Order extends Model
         ];
     }
     
+
+
+    protected function releaseCouponReservation(?int $couponId): void
+    {
+        if ($couponId === null) {
+            $this->couponReleaseId = null;
+            return;
+        }
+
+        $orderId = $this->getKey();
+        $userId = $this->user_id;
+
+        $coupon = Coupon::query()->find($couponId);
+
+        if ($coupon !== null) {
+            $coupon->releaseUsage($orderId, $userId);
+        } else {
+            $usageQuery = DB::table('coupon_usages')
+                ->where('coupon_id', $couponId)
+                ->where('order_id', $orderId);
+
+            if ($userId !== null) {
+                $usageQuery->where('user_id', $userId);
+            }
+
+            $usageQuery->delete();
+        }
+
+        static::withoutEvents(function () use ($orderId): void {
+            self::query()
+                ->whereKey($orderId)
+                ->update([
+                    'coupon_id' => null,
+                    'coupon_code' => null,
+                ]);
+        });
+
+        $this->coupon_id = null;
+        $this->coupon_code = null;
+        $this->couponReleaseId = null;
+    }
+
     /**
      * التحقق مما إذا كان الطلب في حالة معينة
      */

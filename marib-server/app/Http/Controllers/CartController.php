@@ -605,13 +605,6 @@ class CartController extends Controller
 
         $departmentKey = $departments->first();
 
-        try {
-            $this->cartShippingQuoteService->ensureUserHasValidAddress($user, $departmentKey);
-        } catch (ValidationException $exception) {
-            return $this->addressRequiredResponse($exception);
-        }
-
-
         $normalizedCode = Str::upper(trim((string) $couponCode));
 
 
@@ -667,14 +660,9 @@ class CartController extends Controller
     public function removeCoupon(Request $request): JsonResponse
     {
         $user = $request->user();
-                $cartItems = $this->userCartItems($user);
-        $departmentKey = $cartItems->pluck('department')->filter()->unique()->values()->first();
+        $cartItems = $this->userCartItems($user);
 
-        try {
-            $this->cartShippingQuoteService->ensureUserHasValidAddress($user, $departmentKey);
-        } catch (ValidationException $exception) {
-            return $this->addressRequiredResponse($exception);
-        }
+
         $selection = $user->cartCouponSelection()->first();
 
         if ($selection) {
@@ -1140,26 +1128,34 @@ class CartController extends Controller
             return $discounts;
         }
 
-        $status = 'applied';
-        $amount = 0.0;
-
         if (! $coupon->isCurrentlyActive()) {
-            $status = 'inactive_coupon';
-        } elseif (! $coupon->isWithinUsageLimits($user->getKey())) {
-            $status = 'usage_limit_reached';
-        } elseif (! $coupon->meetsMinimumOrder($subtotal)) {
-            $status = 'min_order_not_met';
-        } else {
-            $amount = round($coupon->calculateDiscount($subtotal), 2);
-            $discounts['total'] += $amount;
+            $selection->delete();
+
+            return $discounts;
         }
+
+        if (! $coupon->isWithinUsageLimits($user->getKey())) {
+            $selection->delete();
+
+            return $discounts;
+        }
+
+        if (! $coupon->meetsMinimumOrder($subtotal)) {
+            $selection->delete();
+
+            return $discounts;
+        }
+
+        $amount = round($coupon->calculateDiscount($subtotal), 2);
+        $discounts['total'] += $amount;
+
 
         $discounts['coupons'][] = [
             'id' => $coupon->getKey(),
             'code' => $coupon->code,
             'name' => $coupon->name,
             'amount' => $amount,
-            'status' => $status,
+            'status' => 'applied',
             'discount_type' => $coupon->discount_type,
             'discount_value' => $coupon->discount_value,
             'minimum_order_amount' => $coupon->minimum_order_amount !== null ? (float) $coupon->minimum_order_amount : null,

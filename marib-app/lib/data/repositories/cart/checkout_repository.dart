@@ -304,7 +304,7 @@ class CheckoutRepository {
     String? deliveryPaymentNote,
     bool depositEnabled = false,
     Map<String, dynamic>? manualTransferData,
-
+    String? couponCode,
   }) async {
     final List<Map<String, dynamic>> items = cartItems.map((Cart item) {
       return <String, dynamic>{
@@ -433,7 +433,7 @@ class CheckoutRepository {
 
       final String? senderName = trimmed(manualTransferData['sender_name']);
       final String? transferReference =
-      trimmed(manualTransferData['transfer_reference']);
+          trimmed(manualTransferData['transfer_reference']);
       final String? note = trimmed(manualTransferData['note']);
 
       final Map<String, dynamic> sanitized = <String, dynamic>{

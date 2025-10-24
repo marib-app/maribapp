@@ -853,6 +853,7 @@ class ManualPaymentRequestController extends Controller
             'user',
             'manualBank',
             'paymentTransaction.order.user',
+            'paymentTransaction.order.coupon',
             'paymentTransaction.walletTransaction.walletAccount.user',
             'paymentTransaction.payable',
             'histories.user',
@@ -874,7 +875,7 @@ class ManualPaymentRequestController extends Controller
         }
 
         if ($payable instanceof Order) {
-            $payable->loadMissing(['user', 'seller']);
+            $payable->loadMissing(['user', 'seller', 'coupon']);
         } elseif ($payable instanceof Item) {
             $payable->loadMissing(['user', 'category']);
         } elseif ($payable instanceof WalletTransaction) {

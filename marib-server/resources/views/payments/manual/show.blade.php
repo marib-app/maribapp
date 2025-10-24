@@ -212,6 +212,337 @@
     }
 
 
+    $normalizeDisplayString = static function ($value): ?string {
+        if ($value instanceof \Stringable) {
+            $value = (string) $value;
+        }
+
+        if (is_string($value)) {
+            $trimmed = trim($value);
+
+            if ($trimmed === '') {
+                return null;
+            }
+
+            return $trimmed;
+        }
+
+        if (is_numeric($value)) {
+            return (string) $value;
+        }
+
+        return null;
+    };
+
+    $normalizeNumeric = static function ($value): ?float {
+        if ($value instanceof \Stringable) {
+            $value = (string) $value;
+        }
+
+        if (is_string($value)) {
+            $trimmed = trim($value);
+
+            if ($trimmed === '' || ! is_numeric($trimmed)) {
+                return null;
+            }
+
+            $value = (float) $trimmed;
+        } elseif (! is_numeric($value)) {
+            return null;
+        } else {
+            $value = (float) $value;
+        }
+
+        if (! is_finite($value)) {
+            return null;
+        }
+
+        return $value;
+    };
+
+    $formatMoney = static function ($value, ?string $currency = null): string {
+        if ($value instanceof \Stringable) {
+            $value = (string) $value;
+        }
+
+        if (is_string($value)) {
+            $trimmed = trim($value);
+
+            if ($trimmed === '') {
+                return __('N/A');
+            }
+
+            if (! is_numeric($trimmed)) {
+                return $trimmed;
+            }
+
+            $value = (float) $trimmed;
+        }
+
+        if (is_numeric($value)) {
+            $formatted = number_format((float) $value, 2);
+
+            return $currency ? $formatted . ' ' . $currency : $formatted;
+        }
+
+        return __('N/A');
+    };
+
+    $paymentAmountDisplay = is_numeric($request->amount)
+        ? number_format((float) $request->amount, 2) . ' ' . $request->currency
+        : ($normalizeDisplayString($request->amount) ?? __('N/A'));
+
+    $paymentInfoRows = [
+        [
+            'label' => __('Reference'),
+            'value' => $normalizeDisplayString($request->reference) ?? __('N/A'),
+        ],
+        [
+            'label' => __('Amount'),
+            'value' => $paymentAmountDisplay,
+        ],
+    ];
+
+    if ($depositPaidAmount > 0) {
+        $paymentInfoRows[] = [
+            'label' => __('Manual Payment Advance Paid'),
+            'value' => $formatMoney($depositPaidAmount, $orderCurrency),
+        ];
+    }
+
+    if ($depositRemainingAmount > 0) {
+        $paymentInfoRows[] = [
+            'label' => __('Manual Payment Advance Remaining'),
+            'value' => $formatMoney($depositRemainingAmount, $orderCurrency),
+        ];
+    }
+
+    if ($depositRatioPercentDisplay !== null) {
+        $paymentInfoRows[] = [
+            'label' => __('Manual Payment Deposit Ratio'),
+            'value' => $depositRatioPercentDisplay . '%',
+        ];
+    }
+
+    if ($orderRemainingBalance > 0) {
+        $paymentInfoRows[] = [
+            'label' => __('Manual Payment Outstanding Balance'),
+            'value' => $formatMoney($orderRemainingBalance, $orderCurrency),
+        ];
+    }
+
+    $payableTypeDisplay = filled($request->payable_type)
+        ? Str::title(class_basename($request->payable_type))
+        : __('N/A');
+
+    $paymentInfoRows[] = [
+        'label' => __('Payable Type'),
+        'value' => $payableTypeDisplay,
+    ];
+
+    $paymentGatewayDisplay = $normalizeDisplayString($paymentGatewayLabel) ?? __('N/A');
+
+    if (! empty($manualBankName) && $paymentGatewayLabel !== trans('المحفظة')) {
+        $paymentGatewayDisplay .= ' — ' . $manualBankName;
+    }
+
+    $paymentInfoRows[] = [
+        'label' => __('Payment Gateway'),
+        'value' => $paymentGatewayDisplay,
+    ];
+
+    if ($paymentGatewayCanonical === 'wallet') {
+        $paymentInfoRows[] = [
+            'label' => __('Wallet Transaction ID'),
+            'value' => $normalizeDisplayString($walletTransaction?->id) ?? __('N/A'),
+        ];
+
+        $paymentInfoRows[] = [
+            'label' => __('Wallet Account Owner'),
+            'value' => $normalizeDisplayString($walletOwner?->name) ?? __('N/A'),
+        ];
+    }
+
+    $paymentInfoRows[] = [
+        'label' => __('Department'),
+        'value' => $normalizeDisplayString($departmentLabel) ?? __('N/A'),
+    ];
+
+    $transactionIdentifier = $normalizeDisplayString($request->paymentTransaction?->id);
+
+    if ($transactionIdentifier === null) {
+        $transactionIdentifier = __('Not generated');
+    }
+
+    $paymentInfoRows[] = [
+        'label' => __('Transaction ID'),
+        'value' => $transactionIdentifier,
+    ];
+
+    $coupon = $orderPayable?->coupon;
+    $couponCode = $normalizeDisplayString($orderPayable?->coupon_code) ?? $normalizeDisplayString($coupon?->code);
+
+    if ($couponCode === null && is_array($orderPaymentSummary)) {
+        $couponCode = $normalizeDisplayString(data_get($orderPaymentSummary, 'coupon.code'))
+            ?? $normalizeDisplayString(data_get($orderPaymentSummary, 'coupon_code'));
+    }
+
+    if ($couponCode === null && $requestMeta !== []) {
+        $couponCode = $normalizeDisplayString(data_get($requestMeta, 'coupon.code'))
+            ?? $normalizeDisplayString(data_get($requestMeta, 'coupon_code'));
+    }
+
+    $couponName = $normalizeDisplayString($coupon?->name);
+
+    if ($couponName === null && $requestMeta !== []) {
+        $couponName = $normalizeDisplayString(data_get($requestMeta, 'coupon.name'));
+    }
+
+    $couponDescription = $normalizeDisplayString($coupon?->description);
+
+    if ($couponDescription === null && $requestMeta !== []) {
+        $couponDescription = $normalizeDisplayString(data_get($requestMeta, 'coupon.description'));
+    }
+
+    $couponDiscountType = $normalizeDisplayString($coupon?->discount_type);
+
+    if ($couponDiscountType === null && $requestMeta !== []) {
+        $couponDiscountType = $normalizeDisplayString(data_get($requestMeta, 'coupon.discount_type'));
+    }
+
+    if ($couponDiscountType === null && is_array($orderPaymentSummary)) {
+        $couponDiscountType = $normalizeDisplayString(data_get($orderPaymentSummary, 'coupon.discount_type'));
+    }
+
+    $couponDiscountTypeNormalized = null;
+
+    if ($couponDiscountType !== null) {
+        $couponDiscountTypeNormalized = Str::slug($couponDiscountType, '_');
+    }
+
+    $couponDiscountValue = $normalizeNumeric($coupon?->discount_value);
+
+    if ($couponDiscountValue === null && $requestMeta !== []) {
+        $couponDiscountValue = $normalizeNumeric(data_get($requestMeta, 'coupon.discount_value'));
+    }
+
+    if ($couponDiscountValue === null && is_array($orderPaymentSummary)) {
+        $couponDiscountValue = $normalizeNumeric(data_get($orderPaymentSummary, 'coupon.discount_value'));
+    }
+
+    $couponMinimumOrder = $normalizeNumeric($coupon?->minimum_order_amount);
+
+    if ($couponMinimumOrder === null && $requestMeta !== []) {
+        $couponMinimumOrder = $normalizeNumeric(data_get($requestMeta, 'coupon.minimum_order_amount'));
+    }
+
+    $couponAppliedAmount = $normalizeNumeric($orderPayable?->discount_amount);
+
+    if ($couponAppliedAmount === null && is_array($orderPaymentSummary)) {
+        $couponAppliedAmount = $normalizeNumeric(data_get($orderPaymentSummary, 'coupon_discount'));
+    }
+
+    if ($couponAppliedAmount === null && $requestMeta !== []) {
+        $couponAppliedAmount = $normalizeNumeric(data_get($requestMeta, 'coupon.discount_applied'));
+    }
+
+    $couponDiscountTypeLabel = null;
+
+    if (in_array($couponDiscountTypeNormalized, ['percentage', 'percent'], true)) {
+        $couponDiscountTypeLabel = __('Manual Payment Coupon Type Percentage');
+    } elseif (in_array($couponDiscountTypeNormalized, ['fixed', 'fixed_amount'], true)) {
+        $couponDiscountTypeLabel = __('Manual Payment Coupon Type Fixed');
+    } elseif ($couponDiscountType !== null) {
+        $couponDiscountTypeLabel = Str::headline($couponDiscountType);
+    }
+
+    $couponDiscountValueDisplay = null;
+
+    if ($couponDiscountValue !== null) {
+        if (in_array($couponDiscountTypeNormalized, ['percentage', 'percent'], true)) {
+            $formattedCouponPercentage = number_format($couponDiscountValue, 2);
+            $percentageDisplay = rtrim(rtrim($formattedCouponPercentage, '0'), '.');
+            $couponDiscountValueDisplay = ($percentageDisplay === '' ? '0' : $percentageDisplay) . '%';
+        } else {
+            $couponDiscountValueDisplay = $formatMoney($couponDiscountValue, $orderCurrency);
+        }
+    }
+
+    $couponMinimumOrderDisplay = null;
+
+    if ($couponMinimumOrder !== null && $couponMinimumOrder > 0) {
+        $couponMinimumOrderDisplay = $formatMoney($couponMinimumOrder, $orderCurrency);
+    }
+
+    $couponAppliedAmountDisplay = null;
+
+    if ($couponAppliedAmount !== null && $couponAppliedAmount > 0) {
+        $couponAppliedAmountDisplay = $formatMoney($couponAppliedAmount, $orderCurrency);
+    }
+
+    $couponRows = [];
+
+    if ($couponCode !== null) {
+        $couponRows[] = [
+            'label' => __('Manual Payment Coupon Code'),
+            'value' => $couponCode,
+        ];
+    }
+
+    if ($couponName !== null) {
+        $couponRows[] = [
+            'label' => __('Manual Payment Coupon Name'),
+            'value' => $couponName,
+        ];
+    }
+
+    if ($couponDiscountTypeLabel !== null) {
+        $couponRows[] = [
+            'label' => __('Manual Payment Coupon Type'),
+            'value' => $couponDiscountTypeLabel,
+        ];
+    }
+
+    if ($couponDiscountValueDisplay !== null) {
+        $couponRows[] = [
+            'label' => __('Manual Payment Coupon Value'),
+            'value' => $couponDiscountValueDisplay,
+        ];
+    }
+
+    if ($couponAppliedAmountDisplay !== null) {
+        $couponRows[] = [
+            'label' => __('Manual Payment Coupon Applied Discount'),
+            'value' => $couponAppliedAmountDisplay,
+        ];
+    }
+
+    if ($couponMinimumOrderDisplay !== null) {
+        $couponRows[] = [
+            'label' => __('Manual Payment Coupon Minimum Order'),
+            'value' => $couponMinimumOrderDisplay,
+        ];
+    }
+
+    if ($couponDescription !== null) {
+        $couponRows[] = [
+            'label' => __('Manual Payment Coupon Description'),
+            'value' => $couponDescription,
+            'format' => 'multiline',
+        ];
+    }
+
+    if ($couponRows !== []) {
+        $paymentInfoRows[] = [
+            'section' => __('Manual Payment Coupon Details'),
+        ];
+
+        foreach ($couponRows as $couponRow) {
+            $paymentInfoRows[] = $couponRow;
+        }
+    }
+
+
 @endphp
 
 <div class="manual-payment-review-content py-2">
@@ -246,57 +577,38 @@
                     {!! $statusHtml !!}
                 </div>
                 <div class="card-body">
-                    <dl class="row mb-0">
-                        <dt class="col-5 text-muted">{{ __('Reference') }}</dt>
-                        <dd class="col-7">{{ $request->reference ?? __('N/A') }}</dd>
-
-                        <dt class="col-5 text-muted">{{ __('Amount') }}</dt>
-                        <dd class="col-7">{{ number_format($request->amount, 2) }} {{ $request->currency }}</dd>
-
-                        @if($depositPaidAmount > 0)
-                            <dt class="col-5 text-muted">{{ __('Manual Payment Advance Paid') }}</dt>
-                            <dd class="col-7">{{ number_format($depositPaidAmount, 2) }} {{ $orderCurrency }}</dd>
-                        @endif
-
-                        @if($orderRemainingBalance > 0)
-                            <dt class="col-5 text-muted">{{ __('Manual Payment Outstanding Balance') }}</dt>
-                            <dd class="col-7">{{ number_format($orderRemainingBalance, 2) }} {{ $orderCurrency }}</dd>
-                        @endif
-
-
-                        <dt class="col-5 text-muted">{{ __('Payable Type') }}</dt>
-                        <dd class="col-7">
-                            {{ filled($request->payable_type)
-                                ? Str::title(class_basename($request->payable_type))
-                                : __('N/A') }}
-                        </dd>
-
-
-
-
-                        <dt class="col-5 text-muted">{{ __('Payment Gateway') }}</dt>
-                        <dd class="col-7">
-                            {{ $paymentGatewayLabel }}
-                            @if(!empty($manualBankName) && $paymentGatewayLabel !== trans('المحفظة'))
-                                <span class="text-muted">— {{ $manualBankName }}</span>
-                            @endif
-                        </dd>
-                        @if($paymentGatewayCanonical === 'wallet')
-                            <dt class="col-5 text-muted">{{ __('Wallet Transaction ID') }}</dt>
-                            <dd class="col-7">{{ $walletTransaction?->id ?? __('N/A') }}</dd>
-
-                            <dt class="col-5 text-muted">{{ __('Wallet Account Owner') }}</dt>
-                            <dd class="col-7">{{ $walletOwner?->name ?? __('N/A') }}</dd>
-                        @endif
-
-                        
-                        <dt class="col-5 text-muted">{{ __('Department') }}</dt>
-                        <dd class="col-7">{{ $departmentLabel }}</dd>
-
-
-                        <dt class="col-5 text-muted">{{ __('Transaction ID') }}</dt>
-                        <dd class="col-7">{{ $request->paymentTransaction?->id ?? __('Not generated') }}</dd>
-                    </dl>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-borderless align-middle mb-0">
+                            <tbody>
+                                @foreach($paymentInfoRows as $row)
+                                    @if(isset($row['section']))
+                                        <tr class="table-light">
+                                            <th colspan="2" class="small text-uppercase text-muted fw-semibold">{{ $row['section'] }}</th>
+                                        </tr>
+                                    @else
+                                        @php
+                                            $value = $row['value'] ?? null;
+                                            $format = $row['format'] ?? null;
+                                        @endphp
+                                        <tr>
+                                            <th class="text-muted w-50">{{ $row['label'] ?? __('N/A') }}</th>
+                                            <td class="text-break text-dark">
+                                                @if($format === 'multiline')
+                                                    @if($value === null || $value === '')
+                                                        {{ __('N/A') }}
+                                                    @else
+                                                        {!! nl2br(e($value)) !!}
+                                                    @endif
+                                                @else
+                                                    {{ $value ?? __('N/A') }}
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    @endif
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>

@@ -10,6 +10,7 @@ use App\Services\FileService;
 use App\Services\HelperService;
 use App\Services\ResponseService;
 use File;
+use App\Support\Currency;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Validator;
@@ -140,6 +141,14 @@ class SettingController extends Controller {
         try {
 
             $inputs = $request->input();
+
+            if (array_key_exists('currency_symbol', $inputs)) {
+                $inputs['currency_symbol'] = Currency::preferredSymbol(
+                    $inputs['currency_symbol'],
+                    $inputs['currency_code'] ?? config('app.currency')
+                );
+            }
+
 
             unset($inputs['_token']);
             if (config('app.demo_mode')) {

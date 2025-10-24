@@ -21,6 +21,7 @@ import 'package:marib/data/model/item/item_model.dart';
 import 'dart:async';
 import 'package:marib/ui/screens/widgets/promoted_widget.dart';
 import 'package:marib/data/cubits/profile/profile_stats_cubit.dart';
+import 'package:marib/utils/currency_utils.dart';
 
 
 

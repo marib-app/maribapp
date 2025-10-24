@@ -10,6 +10,7 @@ use App\Queries\PaymentRequestTableQuery;
 use App\Support\ManualPayments\ManualPaymentPresentationHelpers;
 use App\Models\UserPurchasedPackage;
 use App\Services\BootstrapTableService;
+use App\Support\Currency;
 use App\Services\CachingService;
 use App\Services\FileService;
 use App\Services\ResponseService;
@@ -36,7 +37,10 @@ class PackageController extends Controller {
     public function index() {
         ResponseService::noAnyPermissionThenRedirect(['item-listing-package-list', 'item-listing-package-create', 'item-listing-package-update', 'item-listing-package-delete']);
         $category = Category::select(['id', 'name'])->where('status', 1)->get();
-        $currency_symbol = CachingService::getSystemSettings('currency_symbol');
+        $currencySymbolSetting = CachingService::getSystemSettings('currency_symbol');
+        $currencyCodeSetting = CachingService::getSystemSettings('currency_code');
+        $currency_symbol = Currency::preferredSymbol($currencySymbolSetting, $currencyCodeSetting ?: config('app.currency'));
+        
         return view('packages.item-listing', compact('category', 'currency_symbol'));
     }
 
@@ -152,7 +156,10 @@ class PackageController extends Controller {
     public function advertisementIndex() {
         ResponseService::noAnyPermissionThenRedirect(['advertisement-package-list', 'advertisement-package-create', 'advertisement-package-update', 'advertisement-package-delete']);
         $category = Category::select(['id', 'name'])->where('status', 1)->get();
-        $currency_symbol = CachingService::getSystemSettings('currency_symbol');
+        $currencySymbolSetting = CachingService::getSystemSettings('currency_symbol');
+        $currencyCodeSetting = CachingService::getSystemSettings('currency_code');
+        $currency_symbol = Currency::preferredSymbol($currencySymbolSetting, $currencyCodeSetting ?: config('app.currency'));
+        
         return view('packages.advertisement', compact('category', 'currency_symbol'));
     }
 

@@ -211,6 +211,7 @@ class ApiController extends Controller {
         'جنيه مصري' => 'EGP',
         'ج.م' => 'EGP',
         'usd' => 'USD',
+        'أ.ر' => 'USD',
         'دولار' => 'USD',
         'دولار امريكي' => 'USD',
         '$' => 'USD',

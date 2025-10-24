@@ -9,6 +9,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use App\Support\Currency;
 
 
 class InvoicePdfService
@@ -150,12 +151,22 @@ class InvoicePdfService
         $paymentBankName = $paymentLabels['bank_name'] ?? null;
 
 
+        $currencySymbolSetting = $settings['currency_symbol'] ?? null;
+        $currencyCodeSetting = $settings['currency_code']
+            ?? $settings['currency']
+            ?? $settings['default_currency']
+            ?? config('app.currency');
+        $currencySymbol = Currency::preferredSymbol($currencySymbolSetting, $currencyCodeSetting);
+
+
+
+
         return [
             'order' => $order,
             'items' => $items,
             'summary' => $summary,
             'company' => $company,
-            'currency' => $settings['currency_symbol'] ?? 'ر.س',
+            'currency' => $currencySymbol,
             'customer' => $order->user,
             'issued_at' => $order->created_at ? Carbon::parse($order->created_at) : null,
             'generated_at' => Carbon::now(),

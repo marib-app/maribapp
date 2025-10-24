@@ -76,7 +76,7 @@
                                 </div>
                                 <div class="form-group col-sm-12 col-md-6 col-xs-12 mandatory">
                                     <label for="currency_symbol" class="form-label">{{ __('Currency Symbol') }}</label>
-                                    <input id="currency_symbol" name="currency_symbol" type="text" class="form-control" placeholder="{{ __('Currency Symbol') }}" value="{{ $settings['currency_symbol'] ?? '' }}" required="">
+                                    <input id="currency_symbol" name="currency_symbol" type="text" class="form-control" placeholder="{{ __('Currency Symbol (e.g. ر.ي / ر.س / أ.ر)') }}" value="{{ \App\Support\Currency::preferredSymbol($settings['currency_symbol'] ?? null, $settings['currency_code'] ?? ($settings['currency'] ?? ($settings['default_currency'] ?? config('app.currency')))) }}" required="">
                                 </div>
 
                                 <div class="form-group col-sm-12 col-md-6">

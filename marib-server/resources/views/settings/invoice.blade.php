@@ -69,7 +69,7 @@
                                 </div>
                                 <div class="col-sm-12 form-group">
                                     <label for="currency_symbol" class="form-label">{{ __('رمز العملة الافتراضي') }}</label>
-                                    <input type="text" id="currency_symbol" name="currency_symbol" class="form-control" value="{{ $settings['currency_symbol'] ?? 'ر.س' }}" placeholder="{{ __('مثال: ر.س أو $') }}">
+                                    <input type="text" id="currency_symbol" name="currency_symbol" class="form-control" value="{{ \App\Support\Currency::preferredSymbol($settings['currency_symbol'] ?? null, $settings['currency_code'] ?? ($settings['currency'] ?? ($settings['default_currency'] ?? config('app.currency')))) }}" placeholder="{{ __('مثال: ر.ي أو ر.س أو أ.ر') }}">
                                 </div>
                             </div>
                         </div>

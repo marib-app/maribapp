@@ -21,7 +21,7 @@ return [
         'SETTINGS' => 'settings'
     ],
     'DEFAULT_SETTINGS' => [
-        ['name' => 'currency_symbol', 'value' => '$', 'type' => 'string'],
+        ['name' => 'currency_symbol', 'value' => 'ر.ي', 'type' => 'string'],
         ['name' => 'ios_version', 'value' => '1.0.0', 'type' => 'string'],
         ['name' => 'default_language', 'value' => 'ar', 'type' => 'string'],
         ['name' => 'force_update', 'value' => '0', 'type' => 'string'],

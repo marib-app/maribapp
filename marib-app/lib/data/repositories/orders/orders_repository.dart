@@ -251,10 +251,19 @@ class OrdersRepository {
           normalized['deliveryPaymentSummary'],
     );
 
-    final Map<String, dynamic>? depositReceipts = _wrapDepositReceipts(
+    Map<String, dynamic>? depositReceipts = _wrapDepositReceipts(
             normalized['deposit_receipts'] ?? normalized['depositReceipts']) ??
         _wrapDepositReceipts(
             response['deposit_receipts'] ?? response['depositReceipts']);
+
+    final Map<String, dynamic>? manualTransferReceipt =
+        _extractManualTransferReceipt(normalized, response);
+    if (manualTransferReceipt != null && manualTransferReceipt.isNotEmpty) {
+      depositReceipts = _attachManualTransferReceipt(
+        depositReceipts,
+        manualTransferReceipt,
+      );
+    }
 
     final Map<String, dynamic>? depositSummary = _mapify(
       normalized['deposit_summary'] ?? normalized['depositSummary'],
@@ -491,6 +500,345 @@ class OrdersRepository {
     if (value is Map) return Map<String, dynamic>.from(value as Map);
     return null;
   }
+
+  static Map<String, dynamic>? _extractManualTransferReceipt(
+    Map<String, dynamic> normalized,
+    Map<String, dynamic> response,
+  ) {
+    final List<Map<String, dynamic>> sources = <Map<String, dynamic>>[];
+    final Set<int> visited = <int>{};
+
+    void collect(dynamic candidate, {int depth = 0}) {
+      if (depth > 5) {
+        return;
+      }
+      final Map<String, dynamic>? map = _mapify(candidate);
+      if (map == null) {
+        return;
+      }
+      final int identity = identityHashCode(map);
+      if (!visited.add(identity)) {
+        return;
+      }
+      sources.add(map);
+
+      for (final String key in _manualTransferSourceKeys) {
+        if (!map.containsKey(key)) {
+          continue;
+        }
+        collect(map[key], depth: depth + 1);
+      }
+    }
+
+    collect(normalized);
+    collect(response);
+    for (final String key in const <String>[
+      'data',
+      'order',
+      'result',
+      'payload'
+    ]) {
+      if (response.containsKey(key)) {
+        collect(response[key]);
+      }
+    }
+
+    for (final Map<String, dynamic> source in sources) {
+      final Map<String, dynamic>? manual =
+          _extractManualTransferFromSource(source);
+      if (manual != null && manual.isNotEmpty) {
+        return manual;
+      }
+    }
+
+    return null;
+  }
+
+  static Map<String, dynamic>? _extractManualTransferFromSource(
+    Map<String, dynamic> source,
+  ) {
+    final dynamic value = _findValueByPaths(source, _manualTransferPaths);
+    return _normalizeManualTransferPayload(value);
+  }
+
+  static Map<String, dynamic>? _normalizeManualTransferPayload(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+
+    Map<String, dynamic>? map = _mapify(value);
+    if (map == null && value is String) {
+      try {
+        final dynamic decoded = jsonDecode(value);
+        map = _mapify(decoded);
+      } catch (_) {
+        map = null;
+      }
+    }
+
+    if (map == null || map.isEmpty) {
+      return null;
+    }
+
+    final Map<String, dynamic> sanitized = <String, dynamic>{};
+    map.forEach((dynamic rawKey, dynamic rawValue) {
+      if (rawKey == null || rawValue == null) {
+        return;
+      }
+      final String key = rawKey.toString();
+      if (rawValue is String) {
+        final String trimmed = rawValue.trim();
+        if (trimmed.isEmpty) {
+          return;
+        }
+        sanitized[key] = trimmed;
+      } else {
+        sanitized[key] = rawValue;
+      }
+    });
+
+    if (sanitized.isEmpty) {
+      return null;
+    }
+
+    final Map<String, dynamic> result = Map<String, dynamic>.from(sanitized);
+
+    final String? senderName = _firstManualTransferString(
+      result,
+      const <String>[
+        'sender_name',
+        'senderName',
+        'customer_name',
+        'customerName',
+        'name',
+        'sender',
+      ],
+    );
+    if (senderName != null) {
+      result['sender_name'] = senderName;
+    }
+
+    final String? transferReference = _firstManualTransferString(
+      result,
+      const <String>[
+        'transfer_reference',
+        'transferReference',
+        'transfer_code',
+        'transferCode',
+        'reference',
+        'reference_number',
+        'referenceNumber',
+        'manual_reference',
+        'manualReference',
+        'number',
+        'code',
+      ],
+    );
+    if (transferReference != null) {
+      result['transfer_reference'] = transferReference;
+      result.putIfAbsent('transfer_code', () => transferReference);
+      result.putIfAbsent('reference', () => transferReference);
+    }
+
+    final String? note = _firstManualTransferString(
+      result,
+      const <String>[
+        'note',
+        'notes',
+        'memo',
+        'message',
+        'customer_note',
+        'customerNote',
+        'user_note',
+        'userNote',
+        'description',
+        'comment',
+      ],
+    );
+    if (note != null) {
+      result['note'] = note;
+    }
+
+    final String? timestamp = _firstManualTransferString(
+      result,
+      const <String>[
+        'submitted_at',
+        'submittedAt',
+        'created_at',
+        'createdAt',
+        'timestamp',
+        'time',
+        'reported_at',
+        'reportedAt',
+      ],
+    );
+    if (timestamp != null) {
+      result.putIfAbsent('submitted_at', () => timestamp);
+    }
+
+    final String? title = _firstManualTransferString(
+      result,
+      const <String>['title', 'label', 'name'],
+    );
+    result['title'] = title ?? 'تفاصيل التحويل اليدوي';
+
+    final String? status = _firstManualTransferString(
+      result,
+      const <String>['status', 'state', 'result'],
+    );
+    if (status == null || status.isEmpty) {
+      result['status'] = 'تم التبليغ';
+    } else {
+      result['status'] = status;
+    }
+
+    result['type'] = _asTrimmedString(result['type']) ?? 'manual_transfer';
+
+    final bool hasCoreField = _asTrimmedString(result['sender_name']) != null ||
+        _asTrimmedString(result['transfer_reference']) != null ||
+        _asTrimmedString(result['transfer_code']) != null ||
+        _asTrimmedString(result['note']) != null;
+
+    if (!hasCoreField) {
+      return null;
+    }
+
+    return result;
+  }
+
+  static String? _firstManualTransferString(
+    Map<String, dynamic> map,
+    List<String> keys,
+  ) {
+    for (final String key in keys) {
+      if (!map.containsKey(key)) {
+        continue;
+      }
+      final String? candidate = _asTrimmedString(map[key]);
+      if (candidate != null) {
+        return candidate;
+      }
+    }
+    return null;
+  }
+
+  static String? _asTrimmedString(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+    if (value is String) {
+      final String trimmed = value.trim();
+      return trimmed.isEmpty ? null : trimmed;
+    }
+    if (value is num || value is bool) {
+      return value.toString();
+    }
+    return null;
+  }
+
+  static Map<String, dynamic> _attachManualTransferReceipt(
+    Map<String, dynamic>? existing,
+    Map<String, dynamic> manualTransfer,
+  ) {
+    final Map<String, dynamic> result = existing != null
+        ? Map<String, dynamic>.from(existing)
+        : <String, dynamic>{};
+
+    final Map<String, dynamic> receipt =
+        Map<String, dynamic>.from(manualTransfer);
+
+    final dynamic rawItems = result['items'];
+    final List<Map<String, dynamic>> items = <Map<String, dynamic>>[];
+    var inserted = false;
+
+    if (rawItems is Iterable) {
+      for (final dynamic element in rawItems) {
+        final Map<String, dynamic>? map = _mapify(element);
+        if (map == null) {
+          continue;
+        }
+        if (_isManualTransferReceiptMap(map)) {
+          if (!inserted) {
+            items.add(Map<String, dynamic>.from(receipt));
+            inserted = true;
+          }
+        } else {
+          items.add(Map<String, dynamic>.from(map));
+        }
+      }
+    }
+
+    if (!inserted) {
+      items.add(Map<String, dynamic>.from(receipt));
+      inserted = true;
+    }
+
+    result['items'] = items;
+    result['manual_transfer_receipt'] = Map<String, dynamic>.from(receipt);
+
+    return result;
+  }
+
+  static bool _isManualTransferReceiptMap(Map<String, dynamic> map) {
+    final String? type = _asTrimmedString(map['type']);
+    if (type != null && type.toLowerCase().contains('manual_transfer')) {
+      return true;
+    }
+
+    final String? title = _asTrimmedString(map['title'] ?? map['label']);
+    if (title != null) {
+      final String lowerTitle = title.toLowerCase();
+      if (lowerTitle.contains('manual') || lowerTitle.contains('تحويل')) {
+        return true;
+      }
+    }
+
+    final String? status = _asTrimmedString(map['status'] ?? map['state']);
+    if (status != null) {
+      final String lowerStatus = status.toLowerCase();
+      if (lowerStatus.contains('manual') || lowerStatus.contains('تحويل')) {
+        return true;
+      }
+    }
+
+    final bool hasSender =
+        _asTrimmedString(map['sender_name'] ?? map['senderName']) != null;
+    final bool hasReference = _asTrimmedString(
+                map['transfer_reference'] ?? map['transferReference']) !=
+            null ||
+        _asTrimmedString(map['transfer_code'] ?? map['transferCode']) != null;
+
+    return hasSender && hasReference;
+  }
+
+  static const List<List<String>> _manualTransferPaths = <List<String>>[
+    <String>['manual_transfer'],
+    <String>['manualTransfer'],
+    <String>['manual_transfer_data'],
+    <String>['manualTransferData'],
+    <String>['manual_transfer_payload'],
+    <String>['manualTransferPayload'],
+    <String>['metadata', 'manual_transfer'],
+    <String>['metadata', 'manualTransfer'],
+    <String>['metadata', 'transfer'],
+  ];
+
+  static const List<String> _manualTransferSourceKeys = <String>[
+    'manual_transfer',
+    'manualTransfer',
+    'manual_transfer_data',
+    'manualTransferData',
+    'payment_payload',
+    'paymentPayload',
+    'payment_intent',
+    'paymentIntent',
+    'default_intent',
+    'defaultIntent',
+    'metadata',
+    'context',
+    'payment',
+    'payload',
+  ];
 
   static Map<String, dynamic>? _wrapDepositReceipts(dynamic value) {
     if (value == null) {

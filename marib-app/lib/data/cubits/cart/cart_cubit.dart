@@ -866,10 +866,18 @@ class CartCubit extends Cubit<CartState> {
     AppTelemetry.record(event, context ?? const <String, dynamic>{});
   }
 
-  Future<void> removeCoupon(String rawCode) async {
-    final String trimmed = rawCode.trim();
-    if (trimmed.isEmpty) return;
+  Future<void> removeCoupon([String? rawCode]) async {
+    final String? trimmed = rawCode?.trim();
     if (state.couponInProgress) return;
+
+    final bool hasCode = trimmed != null && trimmed.isNotEmpty;
+    final bool hasAppliedDiscount = state.discounts.any(
+          (CartDiscount discount) => discount.isApplied,
+    );
+
+    if (!hasCode && !hasAppliedDiscount) {
+      return;
+    }
 
     emit(
       state.copyWith(
@@ -880,7 +888,9 @@ class CartCubit extends Cubit<CartState> {
 
     try {
       final CartSummary summary = await _repository.removeCoupon(
-        code: trimmed,
+        code: hasCode ? trimmed : null,
+        couponCode: hasCode ? trimmed : null,
+
       );
       _syncSection(summary.items);
       emit(

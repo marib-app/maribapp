@@ -241,9 +241,7 @@ class _CartScreenState extends State<CartScreen> {
     code ??= discount.raw?['coupon_code']?.toString();
     code ??= discount.raw?['coupon']?.toString();
     code ??= discount.raw?['code']?.toString();
-    if (code == null || code.trim().isEmpty) {
-      return;
-    }
+
     await context.read<CartCubit>().removeCoupon(code);
   }
 

@@ -136,9 +136,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     code ??= discount.raw?['coupon_code']?.toString();
     code ??= discount.raw?['coupon']?.toString();
     code ??= discount.raw?['code']?.toString();
-    if (code == null || code.trim().isEmpty) {
-      return;
-    }
+
     await context.read<CartCubit>().removeCoupon(code);
   }
 
@@ -740,6 +738,25 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
         return discount;
       }
     }
+    return null;
+  }
+
+  String? _resolvePrimaryCouponCode() {
+    final List<CartDiscount> sourceDiscounts =
+        _latestCartState.discounts.isNotEmpty
+            ? _latestCartState.discounts
+            : _discounts;
+
+    for (final CartDiscount discount in sourceDiscounts) {
+      final String? code = discount.code?.trim();
+      if (code == null || code.isEmpty) {
+        continue;
+      }
+      if (discount.isApplied) {
+        return code;
+      }
+    }
+
     return null;
   }
 
@@ -2310,13 +2327,12 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
 
     setState(() => _submitting = true);
 
-
     Map<String, dynamic>? manualTransferPayload;
     if (manualTransfer != null) {
       final String senderName = manualTransfer.trimmedSenderName;
       final String transferCode = manualTransfer.trimmedTransferCode;
       final String? transferReference =
-      transferCode.isNotEmpty ? transferCode : null;
+          transferCode.isNotEmpty ? transferCode : null;
       final String? note = manualTransfer.trimmedNote;
 
       final Map<String, dynamic> payload = <String, dynamic>{
@@ -2329,7 +2345,6 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
         manualTransferPayload = payload;
       }
     }
-
 
     try {
       final OrderSubmissionResult result =
@@ -2346,10 +2361,9 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
         deliveryPaymentTiming: paymentTimingMeta.value,
         deliveryPaymentNote: paymentTimingMeta.note,
         depositEnabled: _isDepositApplied,
-            manualTransferData: manualTransferPayload,
-
-
-          );
+        couponCode: _resolvePrimaryCouponCode(),
+        manualTransferData: manualTransferPayload,
+      );
 
       final CartCubit cartCubit = context.read<CartCubit>();
       try {
@@ -2396,16 +2410,12 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     final _ResolvedPaymentMeta paymentMeta =
         _resolvePaymentMeta(result, payloadCandidates);
 
-
-    final String manualSenderName =
-        manualTransfer?.trimmedSenderName ?? '';
-    final String manualTransferCode =
-        manualTransfer?.trimmedTransferCode ?? '';
-    final bool manualTransferInfoProvided =
-        manualTransfer != null &&
-            (manualSenderName.isNotEmpty ||
-                manualTransferCode.isNotEmpty ||
-                (manualTransfer.trimmedNote?.isNotEmpty ?? false));
+    final String manualSenderName = manualTransfer?.trimmedSenderName ?? '';
+    final String manualTransferCode = manualTransfer?.trimmedTransferCode ?? '';
+    final bool manualTransferInfoProvided = manualTransfer != null &&
+        (manualSenderName.isNotEmpty ||
+            manualTransferCode.isNotEmpty ||
+            (manualTransfer.trimmedNote?.isNotEmpty ?? false));
 
     OrderDetails? refreshedDetails = result.details;
 
@@ -2486,7 +2496,6 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
         refreshedDetails = refreshedDetails ?? result.details;
       }
     }
-
 
     HelperUtils.showSnackBarMessage(context, confirmationMessage);
     final OrderDetails? navigationDetails = refreshedDetails ?? result.details;
@@ -2599,24 +2608,21 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       final String senderName = manualTransfer.trimmedSenderName;
       final String transferCode = manualTransfer.trimmedTransferCode;
       final String? transferReference =
-      transferCode.isNotEmpty ? transferCode : null;
+          transferCode.isNotEmpty ? transferCode : null;
       final String? userNote = manualTransfer.trimmedNote;
 
       final Map<String, dynamic> metadata = <String, dynamic>{
         'source': 'checkout_manual_bank_dialog',
         if (senderName.isNotEmpty) 'sender_name': senderName,
-        if (transferReference != null)
-          ...{
-            'transfer_code': transferReference,
-            'transfer_reference': transferReference,
-            'transfer_number': transferReference,
-          },
+        if (transferReference != null) ...{
+          'transfer_code': transferReference,
+          'transfer_reference': transferReference,
+          'transfer_number': transferReference,
+        },
         if (userNote != null) 'note': userNote,
-
         if (orderCode != null && orderCode.trim().isNotEmpty)
           'order_code': orderCode.trim(),
       };
-
 
       final ManualPaymentSubmissionResult submissionResult =
           await _manualPaymentService.submitManualPayment(

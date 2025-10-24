@@ -30,8 +30,6 @@ import 'package:marib/utils/ui_utils.dart';
 import 'package:flutter/services.dart';
 import '../widgets/auth_status_bar.dart';
 
-
-
 class SignUpVM {
   // Inputs/controllers
   final GlobalKey<FormState> formKey;
@@ -53,8 +51,6 @@ class SignUpVM {
   final bool isSystemSettingsReady;
   final bool isSystemSettingsLoading;
 
-
-
   const SignUpVM({
     required this.formKey,
     required this.mobileCtrl,
@@ -70,20 +66,10 @@ class SignUpVM {
     required this.isObscure,
     required this.agreed,
     required this.selectedAccountType,
-
     required this.isSystemSettingsReady,
     required this.isSystemSettingsLoading,
-
-
-
-
-
-
   });
 }
-
-
-
 
 class SignUpCallbacks {
   final VoidCallback onToggleObscure;
@@ -95,9 +81,7 @@ class SignUpCallbacks {
   final VoidCallback onGoogleAuth;
   final VoidCallback onAppleAuth;
   final Future<void> Function({required String title, required String param})
-  onOpenStaticContent;
-
-
+      onOpenStaticContent;
 
   const SignUpCallbacks({
     required this.onToggleObscure,
@@ -109,13 +93,8 @@ class SignUpCallbacks {
     required this.onGoogleAuth,
     required this.onAppleAuth,
     required this.onOpenStaticContent,
-
-
   });
 }
-
-
-
 
 class SignUpMainUI extends StatelessWidget {
   final SignUpVM vm;
@@ -171,7 +150,6 @@ class SignUpMainUI extends StatelessWidget {
   }
 }
 
-
 class _SignUpStatusBarHeader extends SliverPersistentHeaderDelegate {
   const _SignUpStatusBarHeader({
     required this.height,
@@ -189,10 +167,10 @@ class _SignUpStatusBarHeader extends SliverPersistentHeaderDelegate {
 
   @override
   Widget build(
-      BuildContext context,
-      double shrinkOffset,
-      bool overlapsContent,
-      ) {
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     if (height <= 0) {
       return const SizedBox.shrink();
     }
@@ -210,10 +188,9 @@ class _SignUpStatusBarHeader extends SliverPersistentHeaderDelegate {
   }
 }
 
-
-
 class _HeaderAppBar extends StatelessWidget {
   const _HeaderAppBar({required this.vm});
+
   final SignUpVM vm;
 
   @override
@@ -272,11 +249,9 @@ class _HeaderAppBar extends StatelessWidget {
   }
 }
 
-
-
-
 class _FormCard extends StatelessWidget {
   const _FormCard({required this.vm, required this.callbacks});
+
   final SignUpVM vm;
   final SignUpCallbacks callbacks;
 
@@ -301,7 +276,9 @@ class _FormCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // عنوان رئيسي
-          Text(vm.isFromGoogleLogin ? "إكمال حساب Google" : "welcome".translate(context))
+          Text(vm.isFromGoogleLogin
+                  ? "إكمال حساب Google"
+                  : "welcome".translate(context))
               .size(context.font.extraLarge)
               .color(context.color.textDefaultColor),
 
@@ -313,29 +290,29 @@ class _FormCard extends StatelessWidget {
                 child: LinearProgressIndicator(
                   minHeight: 3,
                   backgroundColor:
-                  context.color.secondaryColor.withOpacity(0.5),
+                      context.color.secondaryColor.withOpacity(0.5),
                 ),
               ),
             ),
-
 
           // سطر توضيحي متبدّل بسلاسة
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 180),
             child: vm.isFromGoogleLogin
                 ? Padding(
-              key: const ValueKey('google_note'),
-              padding: const EdgeInsets.only(top: 6.0),
-              child: Text("يرجى إكمال معلومات الحساب لإنهاء التسجيل")
-                  .size(context.font.normal)
-                  .color(context.color.textLightColor),
-            )
+                    key: const ValueKey('google_note'),
+                    padding: const EdgeInsets.only(top: 6.0),
+                    child: Text("يرجى إكمال معلومات الحساب لإنهاء التسجيل")
+                        .size(context.font.normal)
+                        .color(context.color.textLightColor),
+                  )
                 : const SizedBox.shrink(key: ValueKey('empty_note')),
           ),
 
           const SizedBox(height: 14),
 
-          if (Constant.mobileAuthentication == "1" || Constant.emailAuthentication == "1")
+          if (Constant.mobileAuthentication == "1" ||
+              Constant.emailAuthentication == "1")
             _MobileAndEmailSection(vm: vm, callbacks: callbacks),
 
           const SizedBox(height: 16),
@@ -363,16 +340,6 @@ class _FormCard extends StatelessWidget {
   }
 }
 
-
-
-
-
-
-
-
-
-
-
 class _MobileAndEmailSection extends StatelessWidget {
   final SignUpVM vm;
   final SignUpCallbacks callbacks;
@@ -399,7 +366,6 @@ class _MobileAndEmailSection extends StatelessWidget {
         CustomTextFormField(
           controller: vm.usernameCtrl,
           isReadOnly: vm.isFromGoogleLogin,
-
           fillColor: context.color.secondaryColor,
           validator: CustomTextFieldValidator.nullCheck,
           hintText: "userName".translate(context),
@@ -421,7 +387,8 @@ class _MobileAndEmailSection extends StatelessWidget {
               child: GestureDetector(
                 onTap: callbacks.onShowCountryPicker,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8),
                   child: Center(
                     child: Text("+${vm.countryCode ?? ''}")
                         .size(context.font.large)
@@ -491,7 +458,8 @@ class _MobileAndEmailSection extends StatelessWidget {
                 spacing: 1,
                 runSpacing: 2,
                 children: [
-                  Text("bySigningUpLoggingIn".translate(context)).size(context.font.small),
+                  Text("bySigningUpLoggingIn".translate(context))
+                      .size(context.font.small),
                   InkWell(
                     onTap: () => callbacks.onOpenStaticContent(
                       title: "termsConditions".translate(context),
@@ -502,7 +470,8 @@ class _MobileAndEmailSection extends StatelessWidget {
                         .color(context.color.territoryColor)
                         .size(context.font.smaller),
                   ),
-                  Text(" ${"and".translate(context)} ").size(context.font.smaller),
+                  Text(" ${"and".translate(context)} ")
+                      .size(context.font.smaller),
                   InkWell(
                     onTap: () => callbacks.onOpenStaticContent(
                       title: "privacyPolicy".translate(context),
@@ -552,16 +521,15 @@ class _MobileAndEmailSection extends StatelessWidget {
                       // مؤشر تحميل داخل الزر أثناء الانشغال
                       prefixWidget: _busy
                           ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
                           : null,
                       buttonTitle: "continue".translate(context),
                       radius: 10,
                       disabledColor: const Color.fromARGB(255, 104, 102, 106),
                     ),
-
                     const SizedBox(height: 16),
                   ],
                 );
@@ -573,20 +541,6 @@ class _MobileAndEmailSection extends StatelessWidget {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // ================== Extracted Widgets ==================
 
@@ -608,7 +562,8 @@ class ReferralCodeField extends StatelessWidget {
       isRequired: false,
       controller: controller,
       fillColor: context.color.secondaryColor,
-      hintText: "referralCode".translate(context), // أو "code"
+      hintText: "referralCode".translate(context),
+      // أو "code"
       borderColor: context.color.borderColor.darken(10),
       keyboard: TextInputType.text,
 
@@ -634,13 +589,12 @@ class ReferralCodeField extends StatelessWidget {
         ),
         onPressed: () {
           final locale = Localizations.maybeLocaleOf(context);
-          final isArabic =
-              locale != null && locale.languageCode.toLowerCase().startsWith('ar');
+          final isArabic = locale != null &&
+              locale.languageCode.toLowerCase().startsWith('ar');
           final titleKey =
-          isArabic ? 'referralCodeInfoTitle_ar' : 'referralCodeInfoTitle';
-          final messageKey = isArabic
-              ? 'referralCodeInfoMarib_ar'
-              : 'referralCodeInfoMarib';
+              isArabic ? 'referralCodeInfoTitle_ar' : 'referralCodeInfoTitle';
+          final messageKey =
+              isArabic ? 'referralCodeInfoMarib_ar' : 'referralCodeInfoMarib';
           UiUtils.showBlurredDialoge(
             context,
             dialoge: BlurredDialogBox(
@@ -663,19 +617,7 @@ class ReferralCodeField extends StatelessWidget {
   }
 }
 
-
-
-
-
-
-
-
 ///////
-
-
-
-
-
 
 // Dropdown احترافي لاختيار "نوع الحساب"
 // - يتحقق تلقائياً أن المستخدم اختار قيمة.
@@ -684,9 +626,6 @@ class ReferralCodeField extends StatelessWidget {
 //
 // - يمكن تمرير عناصر مخصّصة (id -> label).
 // - زر معلومات اختياري يستدعي كولباك خارجي (بدون أي bottom sheet داخل الكلاس).
-
-
-
 
 class AccountTypeDropdown extends StatelessWidget {
   const AccountTypeDropdown({
@@ -710,16 +649,19 @@ class AccountTypeDropdown extends StatelessWidget {
   final VoidCallback? onInfoTap;
 
   /// العناصر الافتراضية مع الأيقونات
-  Map<String, (String label, IconData icon)> _defaultItems(BuildContext context) => {
-    "1": ("individual".translate(context), Icons.person),
-    "2": ("realEstate".translate(context), Icons.home_work_outlined),
-    "3": ("commercial".translate(context), Icons.storefront_outlined),
-  };
+  Map<String, (String label, IconData icon)> _defaultItems(
+          BuildContext context) =>
+      {
+        "1": ("individual".translate(context), Icons.person),
+        "2": ("realEstate".translate(context), Icons.home_work_outlined),
+        "3": ("commercial".translate(context), Icons.storefront_outlined),
+      };
 
   @override
   Widget build(BuildContext context) {
     final accountTypes = items != null
-        ? items!.map((k, v) => MapEntry(k, (v, Icons.circle))) // لو جاب من برا وما عطينا أيقونات
+        ? items!.map((k, v) =>
+            MapEntry(k, (v, Icons.circle))) // لو جاب من برا وما عطينا أيقونات
         : _defaultItems(context);
 
     return Column(
@@ -732,7 +674,6 @@ class AccountTypeDropdown extends StatelessWidget {
                 .size(context.font.large)
                 .color(context.color.textDefaultColor),
           ),
-
         DropdownButtonFormField<String>(
           value: value,
           isExpanded: true,
@@ -753,31 +694,39 @@ class AccountTypeDropdown extends StatelessWidget {
             enabled: enabled,
             fillColor: context.color.secondaryColor,
             isDense: true,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
             suffixIcon: onInfoTap != null
                 ? IconButton(
-              tooltip: "info".translate(context),
-              icon: Icon(
-                Icons.info_outline,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-              ),
-              onPressed: onInfoTap,
-            )
+                    tooltip: "info".translate(context),
+                    icon: Icon(
+                      Icons.info_outline,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withOpacity(0.6),
+                    ),
+                    onPressed: onInfoTap,
+                  )
                 : null,
             focusedBorder: OutlineInputBorder(
-              borderSide: BorderSide(width: 1.5, color: context.color.territoryColor),
+              borderSide:
+                  BorderSide(width: 1.5, color: context.color.territoryColor),
               borderRadius: BorderRadius.circular(10),
             ),
             enabledBorder: OutlineInputBorder(
-              borderSide: BorderSide(width: 1.5, color: context.color.borderColor.darken(50)),
+              borderSide: BorderSide(
+                  width: 1.5, color: context.color.borderColor.darken(50)),
               borderRadius: BorderRadius.circular(10),
             ),
             disabledBorder: OutlineInputBorder(
-              borderSide: BorderSide(width: 1.5, color: context.color.borderColor.darken(70)),
+              borderSide: BorderSide(
+                  width: 1.5, color: context.color.borderColor.darken(70)),
               borderRadius: BorderRadius.circular(10),
             ),
             border: OutlineInputBorder(
-              borderSide: BorderSide(width: 1.5, color: context.color.borderColor),
+              borderSide:
+                  BorderSide(width: 1.5, color: context.color.borderColor),
               borderRadius: BorderRadius.circular(10),
             ),
           ),
@@ -810,13 +759,12 @@ class AccountTypeDropdown extends StatelessWidget {
           }).toList(),
           onChanged: enabled
               ? (newVal) {
-            if (newVal == null) return;
-            HapticFeedback.selectionClick();
-            onChanged(newVal);
-          }
+                  if (newVal == null) return;
+                  HapticFeedback.selectionClick();
+                  onChanged(newVal);
+                }
               : null,
         ),
-
         if (helperKey != null)
           Padding(
             padding: const EdgeInsetsDirectional.only(top: 6, start: 4),
@@ -828,6 +776,3 @@ class AccountTypeDropdown extends StatelessWidget {
     );
   }
 }
-
-
-

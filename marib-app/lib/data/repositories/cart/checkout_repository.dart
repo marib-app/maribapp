@@ -340,6 +340,17 @@ class CheckoutRepository {
             ? ManualPaymentService.paymentMethodForApi(trimmedPaymentMethod)
             : null;
 
+    final String? sanitizedCouponCode = () {
+      if (couponCode == null) {
+        return null;
+      }
+      final String trimmed = couponCode.trim();
+      if (trimmed.isEmpty) {
+        return null;
+      }
+      return trimmed.toUpperCase();
+    }();
+
     final Map<String, dynamic> payload = <String, dynamic>{
       'items': jsonEncode(items),
       if (departmentCode != null) 'department': departmentCode,
@@ -350,6 +361,7 @@ class CheckoutRepository {
       'deposit_enabled': depositEnabled ? 1 : 0,
       if (apiPaymentMethod != null) 'payment_method': apiPaymentMethod,
       if (subtotal != null) 'subtotal': subtotal,
+      if (sanitizedCouponCode != null) 'coupon_code': sanitizedCouponCode,
     };
 
     if (address != null && address.isNotEmpty) {
@@ -519,6 +531,7 @@ class CheckoutRepository {
     String? department,
     int? addressId,
     bool depositEnabled = false,
+    String? couponCode,
     bool forceRefresh = false,
     Map<String, dynamic>? extra,
   }) async {

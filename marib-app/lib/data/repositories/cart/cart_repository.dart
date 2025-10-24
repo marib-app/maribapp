@@ -551,6 +551,7 @@ class CartRepository {
     final Map<String, dynamic> payload = _buildCouponPayload(
       code: code,
       couponCode: couponCode,
+      require: false,
     );
 
     Map<String, dynamic>? response;
@@ -601,14 +602,40 @@ class CartRepository {
       couponCode: couponCode,
     );
 
-    Map<String, dynamic>? response = await _tryDeleteDirect(
+    Map<String, dynamic>? response;
+
+    try {
+      response = await _postWithFallback(
+        _cartRemoveCouponEndpointCandidates,
+        payload,
+      );
+    } on ApiHttpException catch (error) {
+      if (error.statusCode != 404 && error.statusCode != 405) {
+        rethrow;
+      }
+    }
+
+    response ??= await _tryDeleteDirect(
+
       _cartRemoveCouponEndpointCandidates,
+    parameters: payload,
     );
 
-    response ??= await _postWithFallback(
-      _cartRemoveCouponEndpointCandidates,
-      payload,
+
+    response ??= await _tryPostDirect(
+    _cartRemoveCouponEndpointCandidates
+        .map<_DirectCartRequest>(
+    (String endpoint) => _DirectCartRequest(
+    endpoint: endpoint,
+    parameters: payload,
+    ),
+    )
+        .toList(growable: false),
     );
+    if (response == null) {
+    throw ApiException('تعذر إزالة القسيمة من الخادم.');
+    }
+
 
     final CartSummary summary = _parseCartSummary(response);
     _shippingQuoteService.invalidateCache();
@@ -734,7 +761,15 @@ class CartRepository {
     return null;
   }
 
-  Future<Map<String, dynamic>?> _tryDeleteDirect(List<String> endpoints) async {
+  Future<Map<String, dynamic>?> _tryDeleteDirect(
+      List<String> endpoints, {
+        Map<String, dynamic>? parameters,
+      }) async {
+    final Map<String, dynamic>? filteredParameters = parameters == null
+        ? null
+        : (Map<String, dynamic>.from(parameters)
+      ..removeWhere((String key, dynamic value) => value == null));
+
     for (final String endpointRaw in endpoints) {
       final String? endpoint = _normalizeCartEndpoint(endpointRaw);
       if (endpoint == null) continue;
@@ -742,6 +777,9 @@ class CartRepository {
       try {
         return await Api.delete(
           url: endpoint,
+          queryParameters: filteredParameters != null && filteredParameters.isNotEmpty
+              ? filteredParameters
+              : null,
           useBaseUrl: _shouldUseBaseUrl(endpoint),
         );
       } on ApiHttpException catch (error) {
@@ -758,6 +796,7 @@ class CartRepository {
   Map<String, dynamic> _buildCouponPayload({
     String? code,
     String? couponCode,
+    bool require = true,
   }) {
     String? normalize(dynamic value) {
       if (value == null) return null;
@@ -780,7 +819,7 @@ class CartRepository {
       payload.putIfAbsent('code', () => normalizedCouponCode);
     }
 
-    if (payload.isEmpty) {
+    if (payload.isEmpty && require) {
       throw ApiException('يرجى إدخال رمز قسيمة صالح.');
     }
 

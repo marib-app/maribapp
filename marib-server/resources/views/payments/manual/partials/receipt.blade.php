@@ -1,5 +1,5 @@
 @php
-    $receiptUrl = $request->receipt_url;
+    $receiptUrl = $receiptUrl ?? $request->receipt_url;
     $receiptName = null;
     $receiptMime = null;
     $receiptSize = null;

@@ -303,6 +303,8 @@ class CheckoutRepository {
     required String deliveryPaymentTiming,
     String? deliveryPaymentNote,
     bool depositEnabled = false,
+    Map<String, dynamic>? manualTransferData,
+
   }) async {
     final List<Map<String, dynamic>> items = cartItems.map((Cart item) {
       return <String, dynamic>{
@@ -404,6 +406,37 @@ class CheckoutRepository {
 
     if (payment.isNotEmpty) {
       payload['payment'] = jsonEncode(payment);
+    }
+
+    Map<String, dynamic>? manualTransferPayload;
+    if (manualTransferData != null && manualTransferData.isNotEmpty) {
+      String? trimmed(dynamic value) {
+        final String? raw = _asString(value);
+        if (raw == null) {
+          return null;
+        }
+        final String normalized = raw.trim();
+        return normalized.isEmpty ? null : normalized;
+      }
+
+      final String? senderName = trimmed(manualTransferData['sender_name']);
+      final String? transferReference =
+      trimmed(manualTransferData['transfer_reference']);
+      final String? note = trimmed(manualTransferData['note']);
+
+      final Map<String, dynamic> sanitized = <String, dynamic>{
+        if (senderName != null) 'sender_name': senderName,
+        if (transferReference != null) 'transfer_reference': transferReference,
+        if (note != null) 'note': note,
+      };
+
+      if (sanitized.isNotEmpty) {
+        manualTransferPayload = sanitized;
+      }
+    }
+
+    if (manualTransferPayload != null && manualTransferPayload.isNotEmpty) {
+      payload['manual_transfer'] = jsonEncode(manualTransferPayload);
     }
 
     final Map<String, dynamic> response = await _apiPostHandler(

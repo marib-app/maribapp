@@ -104,6 +104,8 @@ class OrderApiController extends Controller
                 ],
                 'delivery_user_note' => ['nullable', 'string'],
                 'deposit_enabled' => ['sometimes', 'boolean'],
+                'payment' => ['nullable'],
+                'manual_transfer' => ['nullable'],
 
             ], [
                 'address_id.required' => __('يجب اختيار عنوان صالح لإتمام الطلب.'),
@@ -126,10 +128,38 @@ class OrderApiController extends Controller
             );
         }
 
+        $paymentPayload = $this->normalizePaymentPayload(
+            $this->coerceJsonObject($request->input('payment'))
+        );
+
+        if ($paymentPayload !== null) {
+            $validated['payment'] = $paymentPayload;
+        } else {
+            unset($validated['payment']);
+        }
+
+        $manualTransferPayload = $this->normalizeManualTransferPayload(
+            $this->coerceJsonObject($request->input('manual_transfer'))
+        );
+
+        if ($manualTransferPayload !== null) {
+            $validated['manual_transfer'] = $manualTransferPayload;
+        } else {
+            unset($validated['manual_transfer']);
+        }
+
+
         $user = $request->user();
         $idempotencyKey = $this->resolveIdempotencyKey($request);
 
-        return DB::transaction(function () use ($user, $validated, $idempotencyKey) {
+        return DB::transaction(function () use (
+            $user,
+            $validated,
+            $idempotencyKey,
+            $paymentPayload,
+            $manualTransferPayload
+        ) {
+
             $existingKey = OrderIdempotencyKey::query()
                 ->where('key', $idempotencyKey)
                 ->lockForUpdate()
@@ -153,7 +183,16 @@ class OrderApiController extends Controller
                     ]);
                 }
 
-                $paymentIntent = $this->createDefaultPaymentIntent($user, $order, $idempotencyKey);
+                $paymentIntent = $this->createDefaultPaymentIntent(
+                    $user,
+                    $order,
+                    $idempotencyKey,
+                    [
+                        'payment' => $paymentPayload,
+                        'manual_transfer' => $manualTransferPayload,
+                    ]
+                );
+
 
                 $order = $order->fresh(['items']);
                 $policy = $this->departmentPolicyService->policyFor($order->department);
@@ -201,7 +240,16 @@ class OrderApiController extends Controller
                 'order_id' => $order->getKey(),
             ]);
 
-            $paymentIntent = $this->createDefaultPaymentIntent($user, $order, $idempotencyKey);
+            $paymentIntent = $this->createDefaultPaymentIntent(
+                $user,
+                $order,
+                $idempotencyKey,
+                [
+                    'payment' => $paymentPayload,
+                    'manual_transfer' => $manualTransferPayload,
+                ]
+            );
+
 
             $order = $order->fresh(['items']);
             $policy = $this->departmentPolicyService->policyFor($order->department);
@@ -531,7 +579,265 @@ class OrderApiController extends Controller
 
         return trim($key);
     }
-    private function createDefaultPaymentIntent(User $user, Order $order, string $idempotencyKey): ?PaymentTransaction
+
+    /**
+     * @param mixed $value
+     */
+    private function coerceJsonObject($value): ?array
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if ($value instanceof \Stringable) {
+            $value = (string) $value;
+        }
+
+        if (is_array($value)) {
+            return $value;
+        }
+
+        if (! is_string($value)) {
+            return null;
+        }
+
+        $trimmed = trim($value);
+
+        if ($trimmed === '') {
+            return null;
+        }
+
+        $decoded = json_decode($trimmed, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE || ! is_array($decoded)) {
+            return null;
+        }
+
+        return $decoded;
+    }
+
+    /**
+     * @param mixed $value
+     */
+    private function normalizePaymentPayload($value): ?array
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (! is_array($value)) {
+            return null;
+        }
+
+        $method = $this->normalizeNullableString($value['method'] ?? $value['payment_method'] ?? null);
+        $bankId = $this->normalizeNullableInt($value['bank_id'] ?? $value['manual_bank_id'] ?? null);
+        $bankName = $this->normalizeNullableString($value['bank_name'] ?? null);
+        $accountNumber = $this->normalizeNullableString($value['account_number'] ?? null);
+
+        $normalized = array_filter([
+            'method' => $method,
+            'bank_id' => $bankId,
+            'manual_bank_id' => $bankId,
+            'bank_name' => $bankName,
+            'account_number' => $accountNumber,
+        ], static fn ($entry) => $entry !== null && $entry !== '');
+
+        if ($normalized === []) {
+            return null;
+        }
+
+        if ($bankId === null) {
+            unset($normalized['manual_bank_id']);
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * @param mixed $value
+     */
+    private function normalizeManualTransferPayload($value): ?array
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (! is_array($value)) {
+            return null;
+        }
+
+        $senderName = $this->normalizeNullableString($value['sender_name'] ?? null);
+        $transferReference = $this->normalizeNullableString(
+            $value['transfer_reference']
+                ?? $value['transfer_code']
+                ?? $value['reference']
+        );
+        $note = $this->normalizeNullableMultiline($value['note'] ?? null);
+
+        $normalized = array_filter([
+            'sender_name' => $senderName,
+            'transfer_reference' => $transferReference,
+            'note' => $note,
+        ], static fn ($entry) => $entry !== null && $entry !== '');
+
+        if ($normalized === []) {
+            return null;
+        }
+
+        if ($transferReference !== null) {
+            $normalized['transfer_code'] = $transferReference;
+        }
+
+        return $normalized;
+    }
+
+    private function buildDefaultPaymentInitiationContext(
+        Order $order,
+        array $paymentContext,
+        array $manualTransferContext,
+        string $idempotencyKey
+    ): array {
+        $context = [];
+
+        if ($paymentContext !== []) {
+            $context['payment'] = $paymentContext;
+        }
+
+        if ($manualTransferContext !== []) {
+            $context['manual_transfer'] = $manualTransferContext;
+        }
+
+        $bankId = $paymentContext['bank_id'] ?? $paymentContext['manual_bank_id'] ?? null;
+
+        if ($bankId !== null) {
+            $context['bank_id'] = $bankId;
+            $context['manual_bank_id'] = $bankId;
+        }
+
+        if (isset($paymentContext['bank_name'])) {
+            $context['bank_name'] = $paymentContext['bank_name'];
+        }
+
+        if (isset($paymentContext['account_number'])) {
+            $context['account_number'] = $paymentContext['account_number'];
+        }
+
+        if (isset($manualTransferContext['sender_name'])) {
+            $context['sender_name'] = $manualTransferContext['sender_name'];
+        }
+
+        if (isset($manualTransferContext['transfer_reference'])) {
+            $reference = $manualTransferContext['transfer_reference'];
+            $context['reference'] = $reference;
+            $context['transfer_reference'] = $reference;
+            $context['transfer_code'] = $reference;
+        }
+
+        if (isset($manualTransferContext['note'])) {
+            $context['note'] = $manualTransferContext['note'];
+        }
+
+        if ($manualTransferContext !== []) {
+            $context['metadata'] = array_filter([
+                'manual_transfer' => $manualTransferContext,
+                'transfer' => $manualTransferContext,
+            ]);
+        }
+
+        $context['idempotency_key'] = $idempotencyKey;
+
+        return $context;
+    }
+
+    /**
+     * @param mixed $value
+     */
+    private function normalizeNullableString($value): ?string
+    {
+        if ($value instanceof \Stringable) {
+            $value = (string) $value;
+        }
+
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_bool($value) || is_array($value)) {
+            return null;
+        }
+
+        if (! is_string($value)) {
+            if (is_numeric($value)) {
+                $value = (string) $value;
+            } else {
+                return null;
+            }
+        }
+
+        $trimmed = trim($value);
+
+        return $trimmed === '' ? null : $trimmed;
+    }
+
+    /**
+     * @param mixed $value
+     */
+    private function normalizeNullableMultiline($value): ?string
+    {
+        if ($value instanceof \Stringable) {
+            $value = (string) $value;
+        }
+
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_bool($value) || is_array($value)) {
+            return null;
+        }
+
+        if (! is_string($value)) {
+            if (is_numeric($value)) {
+                return (string) $value;
+            }
+
+            return null;
+        }
+
+        $trimmed = trim($value);
+
+        return $trimmed === '' ? null : $value;
+    }
+
+    /**
+     * @param mixed $value
+     */
+    private function normalizeNullableInt($value): ?int
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (is_int($value)) {
+            return $value > 0 ? $value : null;
+        }
+
+        if (is_numeric($value) && ! is_bool($value)) {
+            $intValue = (int) $value;
+
+            return $intValue > 0 ? $intValue : null;
+        }
+
+        return null;
+    }
+    private function createDefaultPaymentIntent(
+        User $user,
+        Order $order,
+        string $idempotencyKey,
+        array $context = []
+    ): ?PaymentTransaction
+    
+    
     {
         $defaultIntent = $order->payment_payload['default_intent'] ?? [];
         $existingTransactionId = data_get($defaultIntent, 'transaction_id');
@@ -540,6 +846,16 @@ class OrderApiController extends Controller
         $shouldForceUniqueIdempotencyKey = false;
         $existingTransactionIsReusable = false;
         $logMethod = null;
+
+
+        $paymentContext = $this->normalizePaymentPayload($context['payment'] ?? null) ?? [];
+        $manualTransferContext = $this->normalizeManualTransferPayload($context['manual_transfer'] ?? null) ?? [];
+        $initiationContext = $this->buildDefaultPaymentInitiationContext(
+            $order,
+            $paymentContext,
+            $manualTransferContext,
+            $idempotencyKey
+        );
 
 
         if ($existingTransactionId) {
@@ -611,13 +927,15 @@ class OrderApiController extends Controller
             );
 
 
+            $initiationContext['idempotency_key'] = $intentIdempotencyKey;
 
 
             $transaction = $this->orderPaymentService->initiate(
                 $user,
                 $order,
                 $method,
-                $intentIdempotencyKey
+                $intentIdempotencyKey,
+                $initiationContext
             );
 
             if ($transaction->payment_gateway === 'wallet') {
@@ -817,7 +1135,17 @@ class OrderApiController extends Controller
 
             if ($user) {
                 $refreshIdempotencyKey = $idempotencyKey ?? Str::uuid()->toString();
-                $transaction = $this->createDefaultPaymentIntent($user, $order, $refreshIdempotencyKey);
+                $transaction = $this->createDefaultPaymentIntent(
+                    $user,
+                    $order,
+                    $refreshIdempotencyKey,
+                    [
+                        'payment' => data_get($order->payment_payload, 'payment'),
+                        'manual_transfer' => data_get($order->payment_payload, 'manual_transfer'),
+                    ]
+                );
+                
+                
                 $order->refresh();
                 $defaultIntent = $order->payment_payload['default_intent'] ?? [];
                 $transactionId = $transaction?->getKey();

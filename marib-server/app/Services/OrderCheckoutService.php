@@ -275,6 +275,10 @@ class OrderCheckoutService
 
             $this->telemetry->record('checkout.begin_checkout', $telemetryContext);
 
+            $paymentDetails = $this->normalizePaymentPayload($data['payment'] ?? null);
+            $manualTransferDetails = $this->normalizeManualTransferPayload($data['manual_transfer'] ?? null);
+
+
             $addressSnapshot = $this->addressToArray($address);
             $deliveryPaymentTiming = $deliveryPaymentSnapshot['timing'] ?? null;
             $deliveryPaymentStatus = $deliveryPaymentSnapshot['delivery_payment_status'] ?? null;
@@ -375,7 +379,8 @@ class OrderCheckoutService
                     'delivery_payment_timing' => $deliveryPaymentSnapshot['timing'] ?? null,
                     'delivery_note_snapshot' => $deliveryPaymentSnapshot['note_snapshot'] ?? null,
                     'deposit' => $depositPayload,
-
+                    'payment' => $paymentDetails,
+                    'manual_transfer' => $manualTransferDetails,
 
                 ], static fn ($value) => $value !== null),
 
@@ -1427,8 +1432,143 @@ class OrderCheckoutService
 
 
 
+    private function normalizePaymentPayload($value): ?array
+    {
+        if ($value === null || ! is_array($value)) {
+            return null;
+        }
+
+        $method = $this->normalizeNullableString($value['method'] ?? $value['payment_method'] ?? null);
+        $bankId = $this->normalizeNullableInt($value['bank_id'] ?? $value['manual_bank_id'] ?? null);
+        $bankName = $this->normalizeNullableString($value['bank_name'] ?? null);
+        $accountNumber = $this->normalizeNullableString($value['account_number'] ?? null);
+
+        $normalized = array_filter([
+            'method' => $method,
+            'bank_id' => $bankId,
+            'manual_bank_id' => $bankId,
+            'bank_name' => $bankName,
+            'account_number' => $accountNumber,
+        ], static fn ($entry) => $entry !== null && $entry !== '');
+
+        if ($normalized === []) {
+            return null;
+        }
+
+        if ($bankId === null) {
+            unset($normalized['manual_bank_id']);
+        }
+
+        return $normalized;
+    }
+
+    private function normalizeManualTransferPayload($value): ?array
+    {
+        if ($value === null || ! is_array($value)) {
+            return null;
+        }
+
+        $senderName = $this->normalizeNullableString($value['sender_name'] ?? null);
+        $transferReference = $this->normalizeNullableString(
+            $value['transfer_reference']
+                ?? $value['transfer_code']
+                ?? $value['reference']
+        );
+        $note = $this->normalizeNullableMultiline($value['note'] ?? null);
+
+        $normalized = array_filter([
+            'sender_name' => $senderName,
+            'transfer_reference' => $transferReference,
+            'note' => $note,
+        ], static fn ($entry) => $entry !== null && $entry !== '');
+
+        if ($normalized === []) {
+            return null;
+        }
+
+        if ($transferReference !== null) {
+            $normalized['transfer_code'] = $transferReference;
+        }
+
+        return $normalized;
+    }
+
+    private function normalizeNullableString($value): ?string
+    {
+        if ($value instanceof \Stringable) {
+            $value = (string) $value;
+        }
+
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_bool($value) || is_array($value)) {
+            return null;
+        }
+
+        if (! is_string($value)) {
+            if (is_numeric($value)) {
+                $value = (string) $value;
+            } else {
+                return null;
+            }
+        }
+
+        $trimmed = trim($value);
+
+        return $trimmed === '' ? null : $trimmed;
+    }
+
+    private function normalizeNullableInt($value): ?int
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (is_int($value)) {
+            return $value > 0 ? $value : null;
+        }
+
+        if (is_numeric($value) && ! is_bool($value)) {
+            $intValue = (int) $value;
+
+            return $intValue > 0 ? $intValue : null;
+        }
+
+        return null;
+    }
+
+    private function normalizeNullableMultiline($value): ?string
+    {
+        if ($value instanceof \Stringable) {
+            $value = (string) $value;
+        }
+
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_bool($value) || is_array($value)) {
+            return null;
+        }
+
+        if (! is_string($value)) {
+            if (is_numeric($value)) {
+                return (string) $value;
+            }
+
+            return null;
+        }
+
+        $trimmed = trim($value);
+
+        return $trimmed === '' ? null : $value;
+    }
+
     private function normalizeTiming(?string $timing): ?string
 
+    
 
     {
         return self::normalizeTimingToken($timing);

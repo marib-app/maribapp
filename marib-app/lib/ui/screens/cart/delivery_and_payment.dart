@@ -33,6 +33,7 @@ import 'components/delivery_and_payment/delivery_payment_timing_selector.dart';
 import 'package:marib/utils/currency_utils.dart';
 import 'package:marib/utils/money_formatter.dart';
 import 'dart:math' as math;
+import 'package:marib/data/repositories/orders/orders_repository.dart';
 
 class DeliveryandpaymentScreen extends StatefulWidget {
   const DeliveryandpaymentScreen({super.key});
@@ -50,6 +51,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
   bool _loading = true;
 
   bool _submitting = false;
+  final OrdersRepository _ordersRepository = OrdersRepository();
 
   final CheckoutRepository _checkoutRepository = CheckoutRepository();
   late final CartCubit _cartCubit;
@@ -2308,6 +2310,27 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
 
     setState(() => _submitting = true);
 
+
+    Map<String, dynamic>? manualTransferPayload;
+    if (manualTransfer != null) {
+      final String senderName = manualTransfer.trimmedSenderName;
+      final String transferCode = manualTransfer.trimmedTransferCode;
+      final String? transferReference =
+      transferCode.isNotEmpty ? transferCode : null;
+      final String? note = manualTransfer.trimmedNote;
+
+      final Map<String, dynamic> payload = <String, dynamic>{
+        if (senderName.isNotEmpty) 'sender_name': senderName,
+        if (transferReference != null) 'transfer_reference': transferReference,
+        if (note != null && note.isNotEmpty) 'note': note,
+      };
+
+      if (payload.isNotEmpty) {
+        manualTransferPayload = payload;
+      }
+    }
+
+
     try {
       final OrderSubmissionResult result =
           await _checkoutRepository.submitOrder(
@@ -2323,7 +2346,10 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
         deliveryPaymentTiming: paymentTimingMeta.value,
         deliveryPaymentNote: paymentTimingMeta.note,
         depositEnabled: _isDepositApplied,
-      );
+            manualTransferData: manualTransferPayload,
+
+
+          );
 
       final CartCubit cartCubit = context.read<CartCubit>();
       try {
@@ -2369,6 +2395,19 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     final String? orderId = _resolveOrderIdentifier(result, payloadCandidates);
     final _ResolvedPaymentMeta paymentMeta =
         _resolvePaymentMeta(result, payloadCandidates);
+
+
+    final String manualSenderName =
+        manualTransfer?.trimmedSenderName ?? '';
+    final String manualTransferCode =
+        manualTransfer?.trimmedTransferCode ?? '';
+    final bool manualTransferInfoProvided =
+        manualTransfer != null &&
+            (manualSenderName.isNotEmpty ||
+                manualTransferCode.isNotEmpty ||
+                (manualTransfer.trimmedNote?.isNotEmpty ?? false));
+
+    OrderDetails? refreshedDetails = result.details;
 
     final String paymentMethod =
         (selectedBank?.paymentMethod ?? _selectedPaymentMethod ?? '')
@@ -2435,12 +2474,33 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       confirmationMessage = '$confirmationMessage\n$feedback';
     }
 
+    final bool shouldRefreshDetails =
+        (manualTransferInfoProvided || manualAttempt.success) &&
+            orderId != null &&
+            orderId.isNotEmpty;
+
+    if (shouldRefreshDetails) {
+      try {
+        refreshedDetails = await _ordersRepository.fetchOrderDetails(orderId!);
+      } catch (_) {
+        refreshedDetails = refreshedDetails ?? result.details;
+      }
+    }
+
+
     HelperUtils.showSnackBarMessage(context, confirmationMessage);
+    final OrderDetails? navigationDetails = refreshedDetails ?? result.details;
 
     final Map<String, dynamic> orderStepArguments = <String, dynamic>{
       'order_id': orderId,
-      if (result.order != null) 'order': result.order,
-      if (result.details != null) 'orderDetails': result.details,
+      if (navigationDetails?.order.raw != null)
+        'order': navigationDetails!.order.raw
+      else if (result.order != null)
+        'order': result.order,
+      if (navigationDetails != null) ...{
+        'orderDetails': navigationDetails,
+        'order_details': navigationDetails,
+      },
     };
 
     Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
@@ -2539,8 +2599,8 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       final String senderName = manualTransfer.trimmedSenderName;
       final String transferCode = manualTransfer.trimmedTransferCode;
       final String? transferReference =
-
       transferCode.isNotEmpty ? transferCode : null;
+      final String? userNote = manualTransfer.trimmedNote;
 
       final Map<String, dynamic> metadata = <String, dynamic>{
         'source': 'checkout_manual_bank_dialog',
@@ -2551,6 +2611,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
             'transfer_reference': transferReference,
             'transfer_number': transferReference,
           },
+        if (userNote != null) 'note': userNote,
 
         if (orderCode != null && orderCode.trim().isNotEmpty)
           'order_code': orderCode.trim(),
@@ -2567,8 +2628,8 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
         orderId: numericOrderId,
         amount: amount,
         currency: currency,
-            reference: transferReference,
-            userNote: null,
+        reference: transferReference,
+        userNote: userNote,
         transferredAt: DateTime.now().toUtc(),
         metadata: metadata.isEmpty ? null : metadata,
         receiptImagePath: manualTransfer.receiptFile!.path,

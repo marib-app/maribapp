@@ -17,6 +17,7 @@ use App\Services\Payments\TransactionAmountResolver;
 use App\Services\Payments\CreateOrLinkManualPaymentRequest;
 
 use RuntimeException;
+use Throwable;
 
 class OrderPaymentService
 {
@@ -61,7 +62,14 @@ class OrderPaymentService
         $data['payment_method'] = $method;
 
         return $this->db->transaction(function () use ($user, $order, $method, $idempotencyKey, $data) {
-            return $this->findOrCreateTransaction($user, $order, $method, $idempotencyKey, $data);
+            $transaction = $this->findOrCreateTransaction($user, $order, $method, $idempotencyKey, $data);
+
+            if ($transaction instanceof PaymentTransaction && $method === 'manual_bank') {
+                $this->attachManualTransferData($user, $order, $transaction, $method, $idempotencyKey, $data);
+            }
+
+            return $transaction;
+
 
         });
     }
@@ -432,6 +440,176 @@ class OrderPaymentService
             'idempotency_key' => $idempotencyKey,
             'meta' => $meta,
         ]);
+    }
+
+
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function attachManualTransferData(
+        User $user,
+        Order $order,
+        PaymentTransaction $transaction,
+        string $method,
+        string $idempotencyKey,
+        array $data
+    ): void {
+        $manualTransfer = Arr::get($data, 'manual_transfer');
+
+        if (! is_array($manualTransfer)) {
+            $manualTransfer = [];
+        }
+
+        $senderName = $this->normalizeManualString(
+            $manualTransfer['sender_name']
+                ?? Arr::get($data, 'sender_name')
+        );
+
+        $transferReference = $this->normalizeManualString(
+            $manualTransfer['transfer_reference']
+                ?? Arr::get($data, 'transfer_reference')
+                ?? Arr::get($data, 'reference')
+        );
+
+        $note = $this->normalizeManualNote(
+            $manualTransfer['note']
+                ?? Arr::get($data, 'note')
+        );
+
+        $bankId = Arr::get($data, 'manual_bank_id')
+            ?? Arr::get($data, 'bank_id')
+            ?? Arr::get($data, 'payment.bank_id');
+
+        $normalizedBankId = $this->normalizeManualBankId($bankId);
+
+        $hasTransferDetails = $senderName !== null
+            || $transferReference !== null
+            || $note !== null
+            || $manualTransfer !== [];
+
+        if ($normalizedBankId === null || ! $hasTransferDetails) {
+            return;
+        }
+
+        $bankName = $this->normalizeManualString(
+            Arr::get($data, 'bank_name')
+                ?? Arr::get($data, 'payment.bank_name')
+        );
+
+        $payload = array_filter([
+            'manual_bank_id' => $normalizedBankId,
+            'bank_id' => $normalizedBankId,
+            'bank_name' => $bankName,
+            'sender_name' => $senderName,
+            'reference' => $transferReference,
+            'note' => $note,
+            'manual_transfer' => $manualTransfer !== [] ? $manualTransfer : null,
+            'metadata' => $manualTransfer !== [] ? ['manual_transfer' => $manualTransfer] : null,
+        ], static fn ($value) => $value !== null && $value !== '');
+
+        if ($manualTransfer !== []) {
+            $payload['transfer'] = $manualTransfer;
+
+            if ($transferReference !== null) {
+                $payload['transfer_reference'] = $transferReference;
+                $payload['transfer_code'] = $transferReference;
+            }
+        }
+
+        $payload['payment_gateway'] = $method;
+        $payload['idempotency_key'] = $transaction->idempotency_key ?? $idempotencyKey;
+
+        try {
+            $this->manualPaymentLinker->handle(
+                $user,
+                Order::class,
+                $order->getKey(),
+                $transaction,
+                $payload
+            );
+        } catch (ValidationException $exception) {
+            Log::info('order_payment.manual_linker.skipped', [
+                'order_id' => $order->getKey(),
+                'transaction_id' => $transaction->getKey(),
+                'message' => $exception->getMessage(),
+            ]);
+        } catch (Throwable $throwable) {
+            Log::warning('order_payment.manual_linker.failed', [
+                'order_id' => $order->getKey(),
+                'transaction_id' => $transaction->getKey(),
+                'message' => $throwable->getMessage(),
+            ]);
+        }
+    }
+
+    private function normalizeManualString($value): ?string
+    {
+        if ($value instanceof \Stringable) {
+            $value = (string) $value;
+        }
+
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_bool($value) || is_array($value)) {
+            return null;
+        }
+
+        if (! is_string($value)) {
+            if (is_numeric($value)) {
+                $value = (string) $value;
+            } else {
+                return null;
+            }
+        }
+
+        $trimmed = trim($value);
+
+        return $trimmed === '' ? null : $trimmed;
+    }
+
+    private function normalizeManualNote($value): ?string
+    {
+        if ($value instanceof \Stringable) {
+            $value = (string) $value;
+        }
+
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_bool($value) || is_array($value)) {
+            return null;
+        }
+
+        if (! is_string($value)) {
+            if (is_numeric($value)) {
+                return (string) $value;
+            }
+
+            return null;
+        }
+
+        $trimmed = trim($value);
+
+        return $trimmed === '' ? null : $value;
+    }
+
+    private function normalizeManualBankId($value): ?int
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (is_numeric($value) && ! is_bool($value)) {
+            $intValue = (int) $value;
+
+            return $intValue > 0 ? $intValue : null;
+        }
+
+        return null;
     }
 
     private function resolveAmountDue(Order $order, ?float $overallDue = null, ?float $depositDue = null): float    {

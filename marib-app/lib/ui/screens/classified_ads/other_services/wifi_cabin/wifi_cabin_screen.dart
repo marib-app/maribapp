@@ -138,8 +138,10 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
                         alignment: Alignment.topCenter,
                         clipBehavior: Clip.none,
                         children: <Widget>[
-                          ...previousChildren,
-                          if (currentChild != null) currentChild,
+                          ...previousChildren
+                              .map((child) => Positioned.fill(child: child)),
+                          if (currentChild != null)
+                            Positioned.fill(child: currentChild),
                         ],
                       );
                     },

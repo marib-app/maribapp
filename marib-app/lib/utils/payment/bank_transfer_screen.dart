@@ -27,6 +27,7 @@ import 'package:intl/intl.dart';
 import 'package:marib/utils/currency_utils.dart';
 
 import 'package:marib/utils/payment/east_yemen_bank_config.dart';
+import 'package:marib/ui/widgets/standard_bottom_sheet_scaffold.dart';
 
 part 'bank_transfer_screen_ui.dart';
 

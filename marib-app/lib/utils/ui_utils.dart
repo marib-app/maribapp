@@ -43,6 +43,7 @@ import 'package:flutter/gestures.dart';
 import 'dart:collection';
 
 import 'package:flutter/foundation.dart';
+import 'package:marib/ui/widgets/standard_bottom_sheet_scaffold.dart';
 
 class _AdaptiveNetworkImage extends StatefulWidget {
   const _AdaptiveNetworkImage({
@@ -1170,27 +1171,157 @@ class UiUtils {
     });
   }
 
-  static Future<void> openBottomSheet({
+  static Future<T?> openBottomSheet<T>({
     required BuildContext context,
-    required Widget child,
+    Widget? body,
+    WidgetBuilder? bodyBuilder,
+    Widget? footer,
+    WidgetBuilder? footerBuilder,
+    WidgetBuilder? headerBuilder,
+    String? title,
+    TextStyle? titleStyle,
+    String? subtitle,
+    TextStyle? subtitleStyle,
+    String? description,
+    TextStyle? descriptionStyle,
+    bool showHandle = true,
+    bool showCloseButton = true,
+    bool enableDrag = true,
+    bool isDismissible = true,
+    bool useSafeArea = true,
+    bool expandBody = false,
+    bool showDivider = true,
+    double borderRadius = 28,
+    Color? backgroundColor,
+    EdgeInsetsGeometry headerPadding =
+        const EdgeInsets.fromLTRB(20, 16, 20, 12),
+    EdgeInsetsGeometry safeAreaMinimum = EdgeInsets.zero,
+    VoidCallback? onClosePressed,
+    String closeTooltip = 'إغلاق',
+    Widget? closeIcon,
+    Color? closeButtonBackgroundColor,
+    Color? closeIconColor,
+    Color? handleColor,
   }) {
-    return showModalBottomSheet(
+    assert(body != null || bodyBuilder != null,
+        'Either body or bodyBuilder must be provided.');
+
+    return showModalBottomSheet<T>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent, // يجعل الخلفية شفافة
-      builder: (_) {
-        return ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            child: child,
+      useSafeArea: useSafeArea,
+      backgroundColor: Colors.transparent,
+      enableDrag: enableDrag,
+      isDismissible: isDismissible,
+      builder: (sheetContext) {
+        final resolvedBody = bodyBuilder?.call(sheetContext) ?? body!;
+        final resolvedFooter = footerBuilder?.call(sheetContext) ?? footer;
+
+        Widget headerContent;
+        if (headerBuilder != null) {
+          headerContent = headerBuilder(sheetContext);
+        } else {
+          headerContent = _buildDefaultBottomSheetHeaderContent(
+            sheetContext: sheetContext,
+            title: title,
+            titleStyle: titleStyle,
+            subtitle: subtitle,
+            subtitleStyle: subtitleStyle,
+            description: description,
+            descriptionStyle: descriptionStyle,
+          );
+        }
+
+        final closeAction = showCloseButton
+            ? (onClosePressed ?? () => Navigator.of(sheetContext).maybePop())
+            : null;
+
+        return StandardBottomSheetScaffold(
+          header: StandardBottomSheetHeader(
+            showHandle: showHandle,
+            showCloseButton: showCloseButton,
+            onClosePressed: closeAction,
+            closeTooltip: closeTooltip,
+            closeIcon: closeIcon,
+            closeButtonBackgroundColor: closeButtonBackgroundColor,
+            closeIconColor: closeIconColor,
+            handleColor: handleColor,
+            padding: headerPadding,
+            content: headerContent,
           ),
+          body: resolvedBody,
+          footer: resolvedFooter,
+          backgroundColor: backgroundColor,
+          borderRadius: borderRadius,
+          showDivider: showDivider,
+          expandBody: expandBody,
+          useSafeArea: useSafeArea,
+          safeAreaMinimum: safeAreaMinimum,
         );
       },
+    );
+  }
+
+  static Widget _buildDefaultBottomSheetHeaderContent({
+    required BuildContext sheetContext,
+    String? title,
+    TextStyle? titleStyle,
+    String? subtitle,
+    TextStyle? subtitleStyle,
+    String? description,
+    TextStyle? descriptionStyle,
+  }) {
+    final theme = Theme.of(sheetContext);
+    final onSurface = theme.colorScheme.onSurface;
+
+    final resolvedTitleStyle = titleStyle ??
+        TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w800,
+          color: onSurface,
+        );
+
+    final resolvedSubtitleStyle = subtitleStyle ??
+        TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: onSurface.withOpacity(.7),
+        );
+
+    final resolvedDescriptionStyle = descriptionStyle ??
+        TextStyle(
+          fontSize: 12,
+          height: 1.4,
+          color: onSurface.withOpacity(.6),
+        );
+
+    final contentChildren = <Widget>[];
+
+    if (title != null && title.trim().isNotEmpty) {
+      contentChildren.add(Text(title, style: resolvedTitleStyle));
+    }
+
+    if (subtitle != null && subtitle.trim().isNotEmpty) {
+      if (contentChildren.isNotEmpty) {
+        contentChildren.add(const SizedBox(height: 6));
+      }
+      contentChildren.add(Text(subtitle, style: resolvedSubtitleStyle));
+    }
+
+    if (description != null && description.trim().isNotEmpty) {
+      if (contentChildren.isNotEmpty) {
+        contentChildren.add(const SizedBox(height: 4));
+      }
+      contentChildren.add(Text(description, style: resolvedDescriptionStyle));
+    }
+
+    if (contentChildren.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: contentChildren,
     );
   }
 
@@ -1748,34 +1879,33 @@ class _SoftSnackBarWidgetState extends State<_SoftSnackBarWidget>
                       borderRadius: BorderRadius.circular(22),
                     ),
                     child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                    ClipRRect(
-                    borderRadius: BorderRadius.circular(100),
-                    child: Image.asset(
-                      widget.iconPath,
-                      width: 30,
-                      height: 30,
-                      fit: BoxFit.cover,
-                    ),
-                        ),
-                  const SizedBox(width: 10),
-                  Flexible(
-                    child: Text(
-                      widget.message,
-                      style: TextStyle(
-                        color: widget.textColor,
-                        fontSize: widget.fontSize,
-                        fontWeight: widget.fontWeight,
-                      ),
-                      textAlign: TextAlign.start,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(100),
+                          child: Image.asset(
+                            widget.iconPath,
+                            width: 30,
+                            height: 30,
+                            fit: BoxFit.cover,
                           ),
-
                         ),
-                        ],
+                        const SizedBox(width: 10),
+                        Flexible(
+                          child: Text(
+                            widget.message,
+                            style: TextStyle(
+                              color: widget.textColor,
+                              fontSize: widget.fontSize,
+                              fontWeight: widget.fontWeight,
+                            ),
+                            textAlign: TextAlign.start,
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),

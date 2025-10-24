@@ -992,6 +992,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
           ...{
             'transfer_code': transferCode,
             'transfer_reference': transferCode,
+            'transfer_number': transferCode,
           },
 
         if (contextMetadata.isNotEmpty) 'context': contextMetadata,

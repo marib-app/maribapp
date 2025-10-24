@@ -546,170 +546,213 @@
 @endphp
 
 <div class="manual-payment-review-content py-2">
-    <div class="row g-4">
-        <div class="col-lg-4 col-md-6">
-            <div class="card h-100 shadow-sm">
-                <div class="card-header bg-light">
-                    <h6 class="mb-0"><i class="fa fa-user me-2"></i>{{ __('User Details') }}</h6>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-sm table-borderless align-middle mb-0">
-                            <tbody>
-                                <tr>
-                                    <th class="text-muted w-50">{{ __('Name') }}</th>
-                                    <td class="text-break text-body">{{ $request->user?->name ?? __('N/A') }}</td>
-                                </tr>
-                                <tr>
-                                    <th class="text-muted w-50">{{ __('Email') }}</th>
-                                    <td class="text-break text-body">{{ $request->user?->email ?? __('N/A') }}</td>
-                                </tr>
-                                <tr>
-                                    <th class="text-muted w-50">{{ __('Mobile') }}</th>
-                                    <td class="text-break text-body">{{ $request->user?->mobile ?? __('N/A') }}</td>
-                                </tr>
-                                <tr>
-                                    <th class="text-muted w-50">{{ __('Submitted At') }}</th>
-                                    <td class="text-break text-body">{{ $request->created_at?->format('Y-m-d H:i') ?? __('N/A') }}</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <h6 class="mb-0"><i class="fa fa-user me-2"></i>{{ __('User Details') }}</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="text-muted text-uppercase small">{{ __('Name') }}</th>
+                            <th class="text-muted text-uppercase small">{{ __('Email') }}</th>
+                            <th class="text-muted text-uppercase small">{{ __('Mobile') }}</th>
+                            <th class="text-muted text-uppercase small">{{ __('Submitted At') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="text-break text-body">{{ $request->user?->name ?? __('N/A') }}</td>
+                            <td class="text-break text-body">{{ $request->user?->email ?? __('N/A') }}</td>
+                            <td class="text-break text-body">{{ $request->user?->mobile ?? __('N/A') }}</td>
+                            <td class="text-break text-body">{{ $request->created_at?->format('Y-m-d H:i') ?? __('N/A') }}</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
+    </div>
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h6 class="mb-0"><i class="fa fa-info-circle me-2"></i>{{ __('Payment Information') }}</h6>
+            {!! $statusHtml !!}
+        </div>
+        <div class="card-body">
+            @php
+                $groupedPaymentInfo = [];
+                $currentSectionKey = '__default';
 
-        <div class="col-lg-4 col-md-6">
-            <div class="card h-100 shadow-sm">
-                <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0"><i class="fa fa-info-circle me-2"></i>{{ __('Payment Information') }}</h6>
-                    {!! $statusHtml !!}
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-sm table-borderless align-middle mb-0">
-                            <tbody>
-                                @foreach($paymentInfoRows as $row)
-                                    @if(isset($row['section']))
-                                        <tr class="table-light">
-                                            <th colspan="2" class="small text-uppercase text-muted fw-semibold">{{ $row['section'] }}</th>
-                                        </tr>
-                                    @else
-                                        @php
-                                            $value = $row['value'] ?? null;
-                                            $format = $row['format'] ?? null;
-                                        @endphp
-                                        <tr>
-                                            <th class="text-muted w-50">{{ $row['label'] ?? __('N/A') }}</th>
-                                            <td class="text-break text-body">
-                                                @if($format === 'multiline')
-                                                    @if($value === null || $value === '')
-                                                        {{ __('N/A') }}
-                                                    @else
-                                                        {!! nl2br(e($value)) !!}
-                                                    @endif
-                                                @else
-                                                    {{ $value ?? __('N/A') }}
-                                                @endif
-                                            </td>
-                                        </tr>
-                                    @endif
+
+                foreach ($paymentInfoRows as $row) {
+                    if (isset($row['section'])) {
+                        $sectionLabel = is_string($row['section']) ? trim($row['section']) : '';
+                        $currentSectionKey = $sectionLabel !== '' ? $sectionLabel : '__default';
+
+                        if (! array_key_exists($currentSectionKey, $groupedPaymentInfo)) {
+                            $groupedPaymentInfo[$currentSectionKey] = [];
+                        }
+
+                        continue;
+                    }
+
+                    if (! array_key_exists($currentSectionKey, $groupedPaymentInfo)) {
+                        $groupedPaymentInfo[$currentSectionKey] = [];
+                    }
+
+                    $groupedPaymentInfo[$currentSectionKey][] = $row;
+                }
+
+                $defaultSectionLabel = __('General Details');
+            @endphp
+
+            @foreach($groupedPaymentInfo as $sectionLabel => $rows)
+                @php
+                    $resolvedSectionLabel = $sectionLabel === '__default' ? $defaultSectionLabel : $sectionLabel;
+                    $filteredRows = array_values(array_filter($rows, static function ($item) {
+                        return is_array($item) && array_key_exists('label', $item);
+                    }));
+                @endphp
+
+
+                @if($filteredRows === [])
+                    @continue
+                @endif
+
+                @if($sectionLabel !== '__default')
+                    <h6 class="fw-semibold text-primary mb-2">{{ $resolvedSectionLabel }}</h6>
+                @elseif(! $loop->first)
+                    <h6 class="fw-semibold text-primary mb-2">{{ $resolvedSectionLabel }}</h6>
+                @endif
+
+                <div class="table-responsive{{ $loop->last ? '' : ' mb-4' }}">
+                    <table class="table table-sm table-bordered align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                @foreach($filteredRows as $row)
+                                    <th class="text-muted text-uppercase small">{{ $row['label'] ?? __('N/A') }}</th>
                                 @endforeach
-                            </tbody>
-                        </table>
-                    </div>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                @foreach($filteredRows as $row)
+                                    @php
+                                        $value = $row['value'] ?? null;
+                                        $format = $row['format'] ?? null;
+                                    @endphp
+                                    <td class="text-break text-body">
+                                        @if($format === 'multiline')
+                                            @if($value === null || $value === '')
+                                                {{ __('N/A') }}
+                                            @else
+                                                {!! nl2br(e($value)) !!}
+                                            @endif
+                                        @else
+                                            {{ $value ?? __('N/A') }}
+                                        @endif
+                                    </td>
+                                @endforeach
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
-            </div>
+            @endforeach
         </div>
+    </div>
 
-        <div class="col-lg-4 col-md-12">
-            <div class="card h-100 shadow-sm">
-                <div class="card-header bg-light">
-                    <h6 class="mb-0"><i class="fa fa-exchange-alt me-2"></i>{{ __('Transfer Information') }}</h6>
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <h6 class="mb-0"><i class="fa fa-exchange-alt me-2"></i>{{ __('Transfer Information') }}</h6>
+        </div>
+        <div class="card-body">
+            @php
+                $resolvedTransferDetails = is_array($transferDetails) ? $transferDetails : [];
+                $transferDisplay = [];
+
+                $resolvedBankName = is_string($transferDetailsBankName) ? trim($transferDetailsBankName) : null;
+                if ($resolvedBankName !== null && $resolvedBankName !== '') {
+                    $transferDisplay[__('Bank Name')] = $resolvedBankName;
+                }
+
+                $senderName = $resolvedTransferDetails['sender_name'] ?? null;
+                if (is_numeric($senderName) && ! is_string($senderName)) {
+                    $senderName = (string) $senderName;
+                } elseif (is_string($senderName)) {
+                    $senderName = trim($senderName);
+                } else {
+                    $senderName = null;
+
+                }
+
+                if ($senderName !== null && $senderName !== '') {
+                    $transferDisplay[__('Sender Name')] = $senderName;
+                }
+
+                $transferReference = $resolvedTransferDetails['transfer_reference'] ?? null;
+                if (is_numeric($transferReference) && ! is_string($transferReference)) {
+                    $transferReference = (string) $transferReference;
+                } elseif (is_string($transferReference)) {
+                    $transferReference = trim($transferReference);
+                } else {
+                    $transferReference = null;
+
+
+                }
+
+                if ($transferReference !== null && $transferReference !== '') {
+                    $transferDisplay[__('Transfer Reference')] = $transferReference;
+                }
+
+                $transferNote = $resolvedTransferDetails['note'] ?? null;
+                if (is_numeric($transferNote) && ! is_string($transferNote)) {
+                    $transferNote = (string) $transferNote;
+                } elseif (is_string($transferNote)) {
+                    $transferNote = trim($transferNote);
+                } else {
+                    $transferNote = null;
+
+                }
+
+                if ($transferNote !== null && $transferNote !== '') {
+                    $transferDisplay[__('Additional Notes')] = $transferNote;
+                }
+            @endphp
+
+            @if($transferDisplay !== [])
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                @foreach($transferDisplay as $label => $value)
+                                    <th class="text-muted text-uppercase small">{{ $label }}</th>
+                                @endforeach
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                @foreach($transferDisplay as $label => $value)
+                                    @php
+                                        $stringValue = is_string($value) ? $value : (is_numeric($value) ? (string) $value : '');
+                                    @endphp
+                                    <td class="text-break text-body">
+                                        @if($stringValue !== '' && Str::contains($stringValue, "\n"))
+                                            {!! nl2br(e($stringValue)) !!}
+                                        @else
+                                            {{ $stringValue !== '' ? $stringValue : __('N/A') }}
+                                        @endif
+                                    </td>
+                                @endforeach
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
-                <div class="card-body">
-                    @php
-                        $resolvedTransferDetails = is_array($transferDetails) ? $transferDetails : [];
-                        $transferDisplay = [];
-
-                        $resolvedBankName = is_string($transferDetailsBankName) ? trim($transferDetailsBankName) : null;
-                        if ($resolvedBankName !== null && $resolvedBankName !== '') {
-                            $transferDisplay[__('Bank Name')] = $resolvedBankName;
-                        }
-
-                        $senderName = $resolvedTransferDetails['sender_name'] ?? null;
-                        if (is_numeric($senderName) && ! is_string($senderName)) {
-                            $senderName = (string) $senderName;
-                        } elseif (is_string($senderName)) {
-                            $senderName = trim($senderName);
-                        } else {
-                            $senderName = null;
-
-                        }
-
-                        if ($senderName !== null && $senderName !== '') {
-                            $transferDisplay[__('Sender Name')] = $senderName;
-                        }
-
-                        $transferReference = $resolvedTransferDetails['transfer_reference'] ?? null;
-                        if (is_numeric($transferReference) && ! is_string($transferReference)) {
-                            $transferReference = (string) $transferReference;
-                        } elseif (is_string($transferReference)) {
-                            $transferReference = trim($transferReference);
-                        } else {
-                            $transferReference = null;
+            @else
+                <p class="text-muted mb-0">{{ __('No transfer information provided.') }}</p>
+            @endif
 
 
-                        }
 
-                        if ($transferReference !== null && $transferReference !== '') {
-                            $transferDisplay[__('Transfer Reference')] = $transferReference;
-                        }
-
-                        $transferNote = $resolvedTransferDetails['note'] ?? null;
-                        if (is_numeric($transferNote) && ! is_string($transferNote)) {
-                            $transferNote = (string) $transferNote;
-                        } elseif (is_string($transferNote)) {
-                            $transferNote = trim($transferNote);
-                        } else {
-                            $transferNote = null;
-
-                        }
-
-                        if ($transferNote !== null && $transferNote !== '') {
-                            $transferDisplay[__('Additional Notes')] = $transferNote;
-                        }
-                    @endphp
-
-                    @if($transferDisplay !== [])
-                        <div class="table-responsive">
-                            <table class="table table-sm table-borderless align-middle mb-0">
-                                <tbody>
-                                    @foreach($transferDisplay as $label => $value)
-                                        @php
-                                            $stringValue = is_string($value) ? $value : (is_numeric($value) ? (string) $value : '');
-                                        @endphp
-                                        <tr>
-                                            <th class="text-muted w-50">{{ $label }}</th>
-                                            <td class="text-break text-body">
-                                                @if($stringValue !== '' && Str::contains($stringValue, "\n"))
-                                                    {!! nl2br(e($stringValue)) !!}
-                                                @else
-                                                    {{ $stringValue !== '' ? $stringValue : __('N/A') }}
-                                                @endif
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-                    @else
-                        <p class="text-muted mb-0">{{ __('No transfer information provided.') }}</p>
-                    @endif
-
-
-                </div>
-            </div>
         </div>
     </div>
 

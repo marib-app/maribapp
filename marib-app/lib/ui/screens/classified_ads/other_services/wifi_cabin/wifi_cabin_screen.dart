@@ -462,20 +462,14 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
   }
 
   Future<void> _openAddNetworkSheet(BuildContext context) async {
-    final dynamic result = await UiUtils.openBottomSheet<dynamic>(
+    final dynamic result = await showModalBottomSheet<dynamic>(
       context: context,
-      bodyBuilder: (_) => WifiAddNetworkSheet(
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: context.color.backgroundColor,
+      builder: (_) => WifiAddNetworkSheet(
         repository: _repository,
       ),
-      headerBuilder: (_) => const SizedBox.shrink(),
-      headerPadding: EdgeInsets.zero,
-      showHandle: false,
-      showCloseButton: false,
-      showDivider: false,
-      expandBody: false,
-      useSafeArea: false,
-      backgroundColor: Colors.transparent,
-      borderRadius: 0,
     );
 
     if (result == null) {

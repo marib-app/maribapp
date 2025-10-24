@@ -223,60 +223,70 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
     final base = color.withOpacity(0.35);
     final highlight = color.withOpacity(0.18);
 
-    return GridView.builder(
-      key: const ValueKey('loading_shimmer'),
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-        childAspectRatio: 0.9,
-      ),
-      itemCount: 6,
-      itemBuilder: (context, _) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(18),
-              child: Shimmer.fromColors(
-                baseColor: base,
-                highlightColor: highlight,
-                child: Container(
-                  height: 70,
-                  width: double.infinity,
-                  color: base,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final layout = resolveWifiGridLayout(
+          constraints.maxWidth.isFinite
+              ? constraints.maxWidth
+              : MediaQuery.of(context).size.width,
+        );
+
+        return GridView.builder(
+          key: const ValueKey('loading_shimmer'),
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: layout.crossAxisCount,
+            mainAxisSpacing: layout.spacing,
+            crossAxisSpacing: layout.spacing,
+            childAspectRatio: layout.childAspectRatio,
+          ),
+          itemCount: 6,
+          itemBuilder: (context, _) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(18),
+                  child: Shimmer.fromColors(
+                    baseColor: base,
+                    highlightColor: highlight,
+                    child: Container(
+                      height: 70,
+                      width: double.infinity,
+                      color: base,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Shimmer.fromColors(
-              baseColor: base,
-              highlightColor: highlight,
-              child: Container(
-                height: 12,
-                width: 90,
-                decoration: BoxDecoration(
-                  color: base,
-                  borderRadius: BorderRadius.circular(6),
+                const SizedBox(height: 8),
+                Shimmer.fromColors(
+                  baseColor: base,
+                  highlightColor: highlight,
+                  child: Container(
+                    height: 12,
+                    width: 90,
+                    decoration: BoxDecoration(
+                      color: base,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 6),
-            Shimmer.fromColors(
-              baseColor: base,
-              highlightColor: highlight,
-              child: Container(
-                height: 10,
-                width: 60,
-                decoration: BoxDecoration(
-                  color: base,
-                  borderRadius: BorderRadius.circular(6),
+                const SizedBox(height: 6),
+                Shimmer.fromColors(
+                  baseColor: base,
+                  highlightColor: highlight,
+                  child: Container(
+                    height: 10,
+                    width: 60,
+                    decoration: BoxDecoration(
+                      color: base,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          ],
+              ],
+            );
+          },
         );
       },
     );

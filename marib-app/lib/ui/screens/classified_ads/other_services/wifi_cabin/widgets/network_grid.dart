@@ -35,30 +35,40 @@ class WifiNetworksGrid extends StatelessWidget {
       );
     }
 
-    return GridView.builder(
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-        childAspectRatio: 0.9,
-      ),
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: networks.length,
-      itemBuilder: (context, index) {
-        final WifiNetwork network = networks[index];
-        final String subtitle = network.planCount > 0
-            ? 'عدد الفئات: ${network.planCount}'
-            : 'اطلع على تفاصيل الشبكة';
-        final String? currencyBadge =
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final WifiGridLayout layout = resolveWifiGridLayout(
+          constraints.maxWidth.isFinite
+              ? constraints.maxWidth
+              : MediaQuery.of(context).size.width,
+        );
+
+        return GridView.builder(
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: layout.crossAxisCount,
+            mainAxisSpacing: layout.spacing,
+            crossAxisSpacing: layout.spacing,
+            childAspectRatio: layout.childAspectRatio,
+          ),
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: networks.length,
+          itemBuilder: (context, index) {
+            final WifiNetwork network = networks[index];
+            final String subtitle = network.planCount > 0
+                ? 'عدد الفئات: ${network.planCount}'
+                : 'اطلع على تفاصيل الشبكة';
+            final String? currencyBadge =
             network.currencies.isNotEmpty ? network.currencies.first : null;
 
-        return WifiNetworkCard(
-          name: network.name,
-          subtitle: subtitle,
-          imageUrl: network.iconUrl ?? network.loginScreenshotUrl,
-          currencyBadge: currencyBadge,
-          onTap: () => onSelect(network),
+            return WifiNetworkCard(
+              name: network.name,
+              subtitle: subtitle,
+              imageUrl: network.iconUrl ?? network.loginScreenshotUrl,
+              currencyBadge: currencyBadge,
+              onTap: () => onSelect(network),
+            );
+          },
         );
       },
     );
@@ -194,4 +204,32 @@ class WifiNetworkCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class WifiGridLayout {
+  const WifiGridLayout({
+    required this.crossAxisCount,
+    required this.childAspectRatio,
+    this.spacing = 12,
+  });
+
+  final int crossAxisCount;
+  final double childAspectRatio;
+  final double spacing;
+}
+
+WifiGridLayout resolveWifiGridLayout(double maxWidth) {
+  if (maxWidth >= 1280) {
+    return const WifiGridLayout(crossAxisCount: 5, childAspectRatio: 0.9);
+  }
+  if (maxWidth >= 1024) {
+    return const WifiGridLayout(crossAxisCount: 4, childAspectRatio: 0.95);
+  }
+  if (maxWidth >= 768) {
+    return const WifiGridLayout(crossAxisCount: 3, childAspectRatio: 1.0);
+  }
+  if (maxWidth >= 560) {
+    return const WifiGridLayout(crossAxisCount: 2, childAspectRatio: 1.18);
+  }
+  return const WifiGridLayout(crossAxisCount: 1, childAspectRatio: 2.35);
 }

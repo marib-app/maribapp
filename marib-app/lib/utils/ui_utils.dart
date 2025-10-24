@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -131,6 +132,10 @@ class _AdaptiveNetworkImageState extends State<_AdaptiveNetworkImage> {
 }
 
 class UiUtils {
+
+  static final Map<OverlayState, _SoftSnackBarHandle> _activeSoftSnackBars =
+  <OverlayState, _SoftSnackBarHandle>{};
+
   // دالة التحكم في عرض الوقت والتاريخ
 
   static String formatSmartTime(String? dateString) {
@@ -294,30 +299,74 @@ class UiUtils {
     Color textColor = Colors.white,
     double fontSize = 15,
     FontWeight fontWeight = FontWeight.w500,
-  }) {
+        VoidCallback? onClosed,
+
+      }) {
     final overlay = Overlay.of(context);
-    final theme = Theme.of(context);
+    if (overlay == null) return;
 
-    late OverlayEntry entry;
+    final OverlayState overlayState = overlay;
+    final ThemeData theme = Theme.of(context);
 
-    final widget = _SoftSnackBarWidget(
-      message: message,
-      iconPath: iconPath,
-      duration: duration,
-      backgroundColor: backgroundColor ??
+    void insertSnackBar() {
+      final GlobalKey<_SoftSnackBarWidgetState> key =
+      GlobalKey<_SoftSnackBarWidgetState>();
+      late OverlayEntry entry;
+
+      final Color baseColor = backgroundColor ??
+
           (theme.brightness == Brightness.dark
-                  ? Colors.grey[800]
-                  : Colors.grey[900])!
-              .withOpacity(backgroundOpacity),
-      textColor: textColor,
-      fontSize: fontSize,
-      fontWeight: fontWeight,
-      onFinish: () => entry.remove(),
-    );
+              ? Colors.grey[800]
+              : Colors.grey[900])!;
+      final Color resolvedBackgroundColor = backgroundColor != null
+          ? baseColor
+          : baseColor.withOpacity(backgroundOpacity);
 
-    entry = OverlayEntry(builder: (_) => widget);
+      entry = OverlayEntry(
+        builder: (_) => _SoftSnackBarWidget(
+          key: key,
+          message: message,
+          iconPath: iconPath,
+          duration: duration,
+          backgroundColor: resolvedBackgroundColor,
+          textColor: textColor,
+          fontSize: fontSize,
+          fontWeight: fontWeight,
+          onFinish: () {
+            if (entry.mounted) {
+              entry.remove();
+            }
+            final _SoftSnackBarHandle? activeHandle =
+            _activeSoftSnackBars[overlayState];
+            if (activeHandle != null && identical(activeHandle.entry, entry)) {
+              _activeSoftSnackBars.remove(overlayState);
+            }
+            onClosed?.call();
+          },
+        ),
+      );
 
-    overlay.insert(entry);
+      _activeSoftSnackBars[overlayState] =
+          _SoftSnackBarHandle(entry: entry, key: key);
+
+      overlayState.insert(entry);
+    }
+
+    final _SoftSnackBarHandle? active = _activeSoftSnackBars[overlayState];
+    if (active != null) {
+      final _SoftSnackBarWidgetState? state = active.key.currentState;
+      if (state != null) {
+        state.dismiss().whenComplete(insertSnackBar);
+        return;
+      }
+
+      if (active.entry.mounted) {
+        active.entry.remove();
+      }
+      _activeSoftSnackBars.remove(overlayState);
+    }
+
+    insertSnackBar();
   }
 
   static PreferredSizeWidget buildAppBar(
@@ -1555,16 +1604,9 @@ class RoundedBorderOnSomeSidesWidget extends StatelessWidget {
 }
 
 class _SoftSnackBarWidget extends StatefulWidget {
-  final String message;
-  final String iconPath;
-  final Duration duration;
-  final Color backgroundColor;
-  final Color textColor;
-  final double fontSize;
-  final FontWeight fontWeight;
-  final VoidCallback onFinish;
 
   const _SoftSnackBarWidget({
+    super.key,
     required this.message,
     required this.iconPath,
     required this.duration,
@@ -1574,6 +1616,16 @@ class _SoftSnackBarWidget extends StatefulWidget {
     required this.fontWeight,
     required this.onFinish,
   });
+  final String message;
+  final String iconPath;
+  final Duration duration;
+  final Color backgroundColor;
+  final Color textColor;
+  final double fontSize;
+  final FontWeight fontWeight;
+  final VoidCallback onFinish;
+
+
 
   @override
   State<_SoftSnackBarWidget> createState() => _SoftSnackBarWidgetState();
@@ -1581,18 +1633,90 @@ class _SoftSnackBarWidget extends StatefulWidget {
 
 class _SoftSnackBarWidgetState extends State<_SoftSnackBarWidget>
     with SingleTickerProviderStateMixin {
-  double opacity = 0.0;
+  static const Duration _animationDuration = Duration(milliseconds: 250);
+
+  late final AnimationController _controller;
+  late final Animation<double> _fadeAnimation;
+  late final Animation<Offset> _slideAnimation;
+  Timer? _autoDismissTimer;
+  Completer<void>? _dismissCompleter;
+  bool _hasCompletedExit = false;
+
+
 
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(milliseconds: 50), () {
-      if (mounted) setState(() => opacity = 1);
-    });
-    Future.delayed(widget.duration, () {
+    _controller = AnimationController(
+      vsync: this,
+      duration: _animationDuration,
+      reverseDuration: _animationDuration,
+    )..value = 1.0;
+
+    final Animation<double> curved = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOutCubic,
+    );
+
+    _fadeAnimation = ReverseAnimation(curved);
+    _slideAnimation = Tween<Offset>(
+      begin: Offset.zero,
+      end: const Offset(0, 0.08),
+    ).animate(curved);
+
+    _controller.addStatusListener(_handleStatusChange);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        setState(() => opacity = 0);
-        Future.delayed(const Duration(milliseconds: 300), widget.onFinish);
+
+        _autoDismissTimer = Timer(widget.duration, dismiss);
+      }
+
+      void _handleStatusChange(AnimationStatus status) {
+        if (status == AnimationStatus.dismissed) {
+          _hasCompletedExit = false;
+        }
+
+        if (status == AnimationStatus.completed && !_hasCompletedExit) {
+          _hasCompletedExit = true;
+          widget.onFinish();
+          if (_dismissCompleter != null && !_dismissCompleter!.isCompleted) {
+            _dismissCompleter!.complete();
+          }
+          _dismissCompleter = null;
+        }
+      }
+
+      Future<void> dismiss() {
+        if (!mounted) {
+          return Future.value();
+        }
+
+        if (_hasCompletedExit &&
+            (_controller.status == AnimationStatus.completed ||
+                _controller.value == 1.0)) {
+          return Future.value();
+        }
+
+        _autoDismissTimer?.cancel();
+        _dismissCompleter ??= Completer<void>();
+
+        if (_controller.status != AnimationStatus.forward) {
+          _controller.forward();
+        }
+
+        return _dismissCompleter!.future;
+      }
+
+      @override
+      void dispose() {
+        _autoDismissTimer?.cancel();
+        _controller.removeStatusListener(_handleStatusChange);
+        _controller.dispose();
+        if (_dismissCompleter != null && !_dismissCompleter!.isCompleted) {
+          _dismissCompleter!.complete();
+        }
+        super.dispose();
       }
     });
   }
@@ -1604,51 +1728,50 @@ class _SoftSnackBarWidgetState extends State<_SoftSnackBarWidget>
       left: 0,
       right: 0,
       child: Center(
-        child: AnimatedOpacity(
-          duration: const Duration(milliseconds: 300),
-          opacity: opacity,
-          child: Material(
-            color: Colors.transparent,
-            child: IntrinsicWidth(
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                decoration: BoxDecoration(
-                  color: widget.backgroundColor,
-                  borderRadius: BorderRadius.circular(22),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // ✅ الأيقونة على اليمين
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(100),
-                      child: Image.asset(
-                        widget.iconPath,
-                        width: 30,
-                        height: 30,
-                        fit: BoxFit.cover,
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: SlideTransition(
+            position: _slideAnimation,
+            child: Material(
+              color: Colors.transparent,
+              child: IntrinsicWidth(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      vertical: 12, horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: widget.backgroundColor,
+                    borderRadius: BorderRadius.circular(22),
+                  ),
+                  child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                  ClipRRect(
+                  borderRadius: BorderRadius.circular(100),
+                  child: Image.asset(
+                    widget.iconPath,
+                    width: 30,
+                    height: 30,
+                    fit: BoxFit.cover,
+                  ),
                       ),
+                const SizedBox(width: 10),
+                Flexible(
+                  child: Text(
+                    widget.message,
+                    style: TextStyle(
+                      color: widget.textColor,
+                      fontSize: widget.fontSize,
+                      fontWeight: widget.fontWeight,
                     ),
-
-                    const SizedBox(width: 10),
-
-                    // ✅ النص يتمدد ولكن يظل ضمن الحجم الطبيعي
-                    Flexible(
-                      child: Text(
-                        widget.message,
-                        style: TextStyle(
-                          color: widget.textColor,
-                          fontSize: widget.fontSize,
-                          fontWeight: widget.fontWeight,
+                    textAlign: TextAlign.start,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
                         ),
-                        textAlign: TextAlign.start,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
+
                       ),
-                    ),
-                  ],
+                      ],
+                  ),
                 ),
               ),
             ),
@@ -1657,6 +1780,17 @@ class _SoftSnackBarWidgetState extends State<_SoftSnackBarWidget>
       ),
     );
   }
+}
+
+
+class _SoftSnackBarHandle {
+  const _SoftSnackBarHandle({
+    required this.entry,
+    required this.key,
+  });
+
+  final OverlayEntry entry;
+  final GlobalKey<_SoftSnackBarWidgetState> key;
 }
 
 // لو BlurDialoge معرفة عندك في ملف ثاني، تأكد من import لها

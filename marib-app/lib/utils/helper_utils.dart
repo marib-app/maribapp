@@ -26,6 +26,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:marib/utils/constant.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:marib/utils/ui_utils.dart';
 
 
 
@@ -54,16 +55,7 @@ extension StringCasingExtension on String {
 class HelperUtils {
 
 
-  static final Map<OverlayState, OverlayEntry> _activeSnackBars =
-  <OverlayState, OverlayEntry>{};
 
-  static void _dismissActiveSnackBar(OverlayState? overlay) {
-    if (overlay == null) return;
-    final OverlayEntry? entry = _activeSnackBars.remove(overlay);
-    if (entry != null && entry.mounted) {
-      entry.remove();
-    }
-  }
 
   static String absoluteImage(String? path) {
     final String value = (path ?? '').trim();
@@ -667,7 +659,7 @@ ${locationText.isNotEmpty ? "📍 الموقع: $locationText" : ""}
 
 
 
-  static showSnackBarMessage(
+  static void showSnackBarMessage(
       BuildContext? context,
       String message, {
         int messageDuration = 3,
@@ -677,32 +669,13 @@ ${locationText.isNotEmpty ? "📍 الموقع: $locationText" : ""}
       }) {
     if (context == null) return;
 
-    final overlay = Overlay.of(context);
-    final theme = Theme.of(context);
-
-    late OverlayEntry entry;
-
-    final widget = _SoftSnackBarWidget(
+    UiUtils.showSoftSnackBar(
+      context,
       message: message,
-      iconPath: 'assets/image/showSoftSnackBar.png',
       duration: Duration(seconds: messageDuration),
-      backgroundColor: type?.value ??
-          (theme.brightness == Brightness.dark
-              ? Colors.grey[800]
-              : Colors.grey[900])!
-              .withOpacity(0.9),
-      textColor: Colors.white,
-      fontSize: 15,
-      fontWeight: FontWeight.w500,
-      onFinish: () {
-        entry.remove();
-        onClose?.call();
-      },
+      backgroundColor: type?.value,
+      onClosed: onClose,
     );
-
-    entry = OverlayEntry(builder: (_) => widget);
-
-    overlay.insert(entry);
   }
 
   static bool isConnectivityOrServerError(dynamic error) {
@@ -1013,107 +986,5 @@ ${locationText.isNotEmpty ? "📍 الموقع: $locationText" : ""}
 
 
 
-class _SoftSnackBarWidget extends StatefulWidget {
-  final String message;
-  final String iconPath;
-  final Duration duration;
-  final Color backgroundColor;
-  final Color textColor;
-  final double fontSize;
-  final FontWeight fontWeight;
-  final VoidCallback onFinish;
 
-  const _SoftSnackBarWidget({
-    required this.message,
-    required this.iconPath,
-    required this.duration,
-    required this.backgroundColor,
-    required this.textColor,
-    required this.fontSize,
-    required this.fontWeight,
-    required this.onFinish,
-  });
-
-  @override
-  State<_SoftSnackBarWidget> createState() => _SoftSnackBarWidgetState();
-}
-
-class _SoftSnackBarWidgetState extends State<_SoftSnackBarWidget>
-    with SingleTickerProviderStateMixin {
-  double opacity = 0.0;
-
-  @override
-  void initState() {
-    super.initState();
-    Future.delayed(const Duration(milliseconds: 50), () {
-      if (mounted) setState(() => opacity = 1);
-    });
-    Future.delayed(widget.duration, () {
-      if (mounted) {
-        setState(() => opacity = 0);
-        Future.delayed(const Duration(milliseconds: 300), widget.onFinish);
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Positioned(
-      bottom: 80,
-      left: 0,
-      right: 0,
-      child: Center(
-        child: AnimatedOpacity(
-          duration: const Duration(milliseconds: 300),
-          opacity: opacity,
-          child: Material(
-            color: Colors.transparent,
-            child: IntrinsicWidth(
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                decoration: BoxDecoration(
-                  color: widget.backgroundColor,
-                  borderRadius: BorderRadius.circular(22),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // ✅ الأيقونة على اليمين
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(100),
-                      child: Image.asset(
-                        widget.iconPath,
-                        width: 30,
-                        height: 30,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-
-                    const SizedBox(width: 10),
-
-                    // ✅ النص يتمدد ولكن يظل ضمن الحجم الطبيعي
-                    Flexible(
-                      child: Text(
-                        widget.message,
-                        style: TextStyle(
-                          color: widget.textColor,
-                          fontSize: widget.fontSize,
-                          fontWeight: widget.fontWeight,
-                        ),
-                        textAlign: TextAlign.start,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
 

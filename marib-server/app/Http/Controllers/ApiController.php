@@ -76,6 +76,8 @@ use App\Policies\SectionDelegatePolicy;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Http\UploadedFile;
 use App\Models\CurrencyRateQuote;
+use App\Events\CurrencyCreated;
+use App\Events\CurrencyRatesUpdated;
 use App\Models\Governorate;
 use App\Models\CurrencyRate;
 use App\Models\Challenge;
@@ -7775,6 +7777,8 @@ private function formatServiceFieldValueForApi(ServiceCustomField $field, ?Servi
                 ]
             );
 
+            $wasRecentlyCreated = $currencyRate->wasRecentlyCreated;
+
             $governorate = null;
 
             if ($request->filled('governorate_code')) {
@@ -7852,6 +7856,53 @@ private function formatServiceFieldValueForApi(ServiceCustomField $field, ?Servi
             }
 
             $currencyRate->load('quotes.governorate');
+
+
+
+            $quotesPayload = $currencyRate->quotes
+                ->map(static function ($quote) {
+                    $governorate = $quote->relationLoaded('governorate')
+                        ? $quote->governorate
+                        : $quote->governorate()->first();
+
+                    return [
+                        'governorate_id' => (int) $quote->governorate_id,
+                        'governorate_code' => $governorate?->code
+                            ? Str::upper((string) $governorate->code)
+                            : null,
+                        'governorate_name' => $governorate?->name,
+                        'sell_price' => $quote->sell_price !== null
+                            ? (string) $quote->sell_price
+                            : null,
+                        'buy_price' => $quote->buy_price !== null
+                            ? (string) $quote->buy_price
+                            : null,
+                        'is_default' => (bool) $quote->is_default,
+                    ];
+                })
+                ->values()
+                ->all();
+
+            if ($wasRecentlyCreated) {
+                $defaultGovernorateId = (int) ($currencyRate->quotes
+                        ->firstWhere('is_default', true)?->governorate_id
+                    ?? $currencyRate->quotes->first()?->governorate_id
+                    ?? 0);
+
+                if ($defaultGovernorateId > 0) {
+                    CurrencyCreated::dispatch(
+                        $currencyRate->id,
+                        $defaultGovernorateId
+                    );
+                }
+            }
+
+            if (!empty($quotesPayload)) {
+                CurrencyRatesUpdated::dispatch(
+                    $currencyRate->id,
+                    $quotesPayload
+                );
+            }
 
             ResponseService::successResponse("Currency rate updated successfully.", $currencyRate);
         } catch (Throwable $th) {

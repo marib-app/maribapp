@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Events\MetalRateUpdated;
 use App\Services\MetalRateQuoteService;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Collections\Collection;
@@ -108,6 +109,46 @@ class MetalRate extends Model
         );
 
         $update->markApplied();
+
+
+        $this->load('quotes.governorate');
+
+        $quotesPayload = $this->quotes
+            ->map(static function ($quote) {
+                $governorate = $quote->relationLoaded('governorate')
+                    ? $quote->governorate
+                    : $quote->governorate()->first();
+
+                return [
+                    'governorate_id' => (int) $quote->governorate_id,
+                    'governorate_code' => $governorate?->code
+                        ? Str::upper((string) $governorate->code)
+                        : null,
+                    'governorate_name' => $governorate?->name,
+                    'sell_price' => $quote->sell_price !== null
+                        ? (string) $quote->sell_price
+                        : null,
+                    'buy_price' => $quote->buy_price !== null
+                        ? (string) $quote->buy_price
+                        : null,
+                    'is_default' => (bool) $quote->is_default,
+                ];
+            })
+            ->values()
+            ->all();
+
+        $eventGovernorateId = (int) ($this->quotes->firstWhere('is_default', true)?->governorate_id
+            ?? $this->quotes->first()?->governorate_id
+            ?? $defaultGovernorateId);
+
+        if (!empty($quotesPayload) && $eventGovernorateId > 0) {
+            MetalRateUpdated::dispatch(
+                $this->getKey(),
+                $quotesPayload,
+                $eventGovernorateId
+            );
+        }
+
     }
 
     public function getDisplayNameAttribute(): string

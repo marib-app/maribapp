@@ -304,8 +304,11 @@ class _PriceInline extends StatelessWidget {
     if (trimmed != null && trimmed.isNotEmpty) {
       final String? normalized =
           CurrencyUtils.preferredDisplayFor(trimmed) ?? trimmed;
-      if (normalized.trim().isNotEmpty) {
-        return normalized.trim();
+      if (normalized != null) {
+        final String normalizedTrimmed = normalized.trim();
+        if (normalizedTrimmed.isNotEmpty) {
+          return normalizedTrimmed;
+        }
       }
     }
 

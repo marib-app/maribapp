@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\MetalRateCreated;
+use App\Events\MetalRateUpdated;
 use App\Http\Controllers\Concerns\ValidatesMetalRates;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\MetalRateResource;
@@ -11,8 +13,10 @@ use App\Services\MetalRateQuoteService;
 use App\Models\MetalRateUpdate;
 use App\Services\ResponseService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
+
 
 class MetalRateManagementController extends Controller
 {
@@ -68,6 +72,17 @@ class MetalRateManagementController extends Controller
         $rate->refresh();
         $rate->load('quotes.governorate');
 
+        $quotesPayload = $this->buildQuoteEventPayload($rate);
+        $defaultGovernorateId = $this->resolveDefaultGovernorateId($rate);
+
+        if ($defaultGovernorateId !== null) {
+            MetalRateCreated::dispatch(
+                $rate->getKey(),
+                $quotesPayload,
+                $defaultGovernorateId
+            );
+        }
+
 
         return ResponseService::successResponse(
             __('تم إضافة سعر المعدن بنجاح.'),
@@ -114,6 +129,18 @@ class MetalRateManagementController extends Controller
         $metalRate->load(['pendingUpdates', 'quotes.governorate']);
 
         
+        $quotesPayload = $this->buildQuoteEventPayload($metalRate);
+        $defaultGovernorateId = $this->resolveDefaultGovernorateId($metalRate);
+
+        if ($defaultGovernorateId !== null) {
+            MetalRateUpdated::dispatch(
+                $metalRate->getKey(),
+                $quotesPayload,
+                $defaultGovernorateId
+            );
+        }
+
+
         return ResponseService::successResponse(
             __('تم تحديث سعر المعدن بنجاح.'),
             new MetalRateResource($metalRate)
@@ -146,5 +173,53 @@ class MetalRateManagementController extends Controller
         $metalRateUpdate->cancel();
 
         return ResponseService::successResponse(__('تم إلغاء الجدولة بنجاح.'));
+    }
+
+
+
+    
+    /**
+     * @return array<int, array{
+     *     governorate_id: int,
+     *     governorate_code: string|null,
+     *     governorate_name: string|null,
+     *     sell_price: string|null,
+     *     buy_price: string|null,
+     *     is_default: bool
+     * }>
+     */
+    private function buildQuoteEventPayload(MetalRate $metalRate): array
+    {
+        return $metalRate->quotes
+            ->map(static function ($quote) {
+                $governorate = $quote->relationLoaded('governorate')
+                    ? $quote->governorate
+                    : $quote->governorate()->first();
+
+                return [
+                    'governorate_id' => (int) $quote->governorate_id,
+                    'governorate_code' => $governorate?->code
+                        ? Str::upper((string) $governorate->code)
+                        : null,
+                    'governorate_name' => $governorate?->name,
+                    'sell_price' => $quote->sell_price !== null
+                        ? (string) $quote->sell_price
+                        : null,
+                    'buy_price' => $quote->buy_price !== null
+                        ? (string) $quote->buy_price
+                        : null,
+                    'is_default' => (bool) $quote->is_default,
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    private function resolveDefaultGovernorateId(MetalRate $metalRate): ?int
+    {
+        $defaultQuote = $metalRate->quotes->firstWhere('is_default', true)
+            ?? $metalRate->quotes->first();
+
+        return $defaultQuote ? (int) $defaultQuote->governorate_id : null;
     }
 }

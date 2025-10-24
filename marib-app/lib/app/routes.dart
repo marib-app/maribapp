@@ -35,6 +35,7 @@ import 'package:marib/ui/screens/my_review_screen.dart';
 import 'package:marib/ui/screens/sold_out_bought_screen.dart';
 import 'package:marib/ui/screens/support_screen.dart';
 import 'package:marib/ui/screens/user_profile/edit_profile.dart';
+import 'package:marib/ui/screens/item/add_item_screen/add_item_details.dart';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -487,7 +488,8 @@ class Routes {
         return SelectCategoryScreen.route(routeSettings);
       case selectNestedCategoryScreen:
         return SelectNestedCategory.route(routeSettings);
-
+      case addItemDetails:
+        return AddItemDetails.route(routeSettings);
 
       case addMoreDetailsScreen:
         return AddMoreDetailsScreen.route(routeSettings);

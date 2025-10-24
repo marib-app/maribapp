@@ -3,12 +3,14 @@
 namespace App\Services\Payments;
 use App\Services\Payments\ManualPaymentRequestService;
 use App\Models\Order;
+use App\Models\ManualPaymentRequest;
 use App\Services\OrderCheckoutService;
 use App\Services\Payments\Concerns\HandlesManualBankConfirmation;
 use App\Models\PaymentTransaction;
 use App\Models\User;
 use App\Services\PaymentFulfillmentService;
 use App\Services\WalletService;
+use App\Support\ManualPayments\TransferDetailsResolver;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
@@ -247,6 +249,30 @@ class OrderPaymentService
                 data_set($data, 'bank.name', $bankName);
             }
 
+
+            $receiptContext = $this->resolveManualReceiptContext($data);
+
+            if ($receiptContext['attachments'] !== []) {
+                $data['attachments'] = $receiptContext['attachments'];
+            }
+
+            if ($receiptContext['receipt_path'] !== null) {
+                $data['receipt_path'] = $receiptContext['receipt_path'];
+            }
+
+            if ($receiptContext['receipt_url'] !== null) {
+                $data['receipt_url'] = $receiptContext['receipt_url'];
+            }
+
+            if ($receiptContext['receipt_path'] !== null || $receiptContext['receipt_url'] !== null) {
+                $data['receipt'] = array_filter([
+                    'path' => $receiptContext['receipt_path'],
+                    'disk' => 'public',
+                    'url' => $receiptContext['receipt_url'],
+                ], static fn ($value) => $value !== null && $value !== '');
+            }
+
+
             $manualPaymentRequest = $this->manualPaymentLinker->handle(
                 $user,
                 Order::class,
@@ -258,7 +284,14 @@ class OrderPaymentService
 
 
             $manualMeta = array_filter(
-                Arr::only($data, ['note', 'reference', 'attachments', 'receipt_path']),
+                [
+                    'note' => Arr::get($data, 'note'),
+                    'reference' => Arr::get($data, 'reference'),
+                    'attachments' => $receiptContext['attachments'],
+                    'receipt_path' => $receiptContext['receipt_path'],
+                    'receipt_url' => $receiptContext['receipt_url'],
+                ],
+                
                 static function ($value) {
                     if (is_array($value)) {
                         return $value !== [];
@@ -267,6 +300,15 @@ class OrderPaymentService
                     return $value !== null && $value !== '';
                 }
             );
+
+
+            if ($receiptContext['receipt_path'] !== null || $receiptContext['receipt_url'] !== null) {
+                $manualMeta['receipt'] = array_filter([
+                    'path' => $receiptContext['receipt_path'],
+                    'disk' => 'public',
+                    'url' => $receiptContext['receipt_url'],
+                ], static fn ($value) => $value !== null && $value !== '');
+            }
 
 
             $resolvedBankName = $bankName
@@ -336,9 +378,10 @@ class OrderPaymentService
             ]);
             $transaction->save();
 
+            $manualPaymentRequest = $this->syncOrderManualTransferPayload($order, $manualPaymentRequest);
 
 
-            $transaction->setRelation('manualPaymentRequest', $manualPaymentRequest->fresh(['manualBank']));
+            $transaction->setRelation('manualPaymentRequest', $manualPaymentRequest->loadMissing('manualBank'));
 
             if (Arr::get($data, 'auto_confirm')) {
                 $dataWithManualRequest = $data;
@@ -517,17 +560,44 @@ class OrderPaymentService
             }
         }
 
+
+        $receiptContext = $this->resolveManualReceiptContext($data);
+
+        if ($receiptContext['attachments'] !== []) {
+            $payload['attachments'] = $receiptContext['attachments'];
+        }
+
+        if ($receiptContext['receipt_path'] !== null) {
+            $payload['receipt_path'] = $receiptContext['receipt_path'];
+        }
+
+        if ($receiptContext['receipt_url'] !== null) {
+            $payload['receipt_url'] = $receiptContext['receipt_url'];
+        }
+
+        if ($receiptContext['receipt_path'] !== null || $receiptContext['receipt_url'] !== null) {
+            $payload['receipt'] = array_filter([
+                'path' => $receiptContext['receipt_path'],
+                'disk' => 'public',
+                'url' => $receiptContext['receipt_url'],
+            ], static fn ($value) => $value !== null && $value !== '');
+        }
+
+
         $payload['payment_gateway'] = $method;
         $payload['idempotency_key'] = $transaction->idempotency_key ?? $idempotencyKey;
 
         try {
-            $this->manualPaymentLinker->handle(
+            $manualPaymentRequest = $this->manualPaymentLinker->handle(
                 $user,
                 Order::class,
                 $order->getKey(),
                 $transaction,
                 $payload
             );
+            $this->syncOrderManualTransferPayload($order, $manualPaymentRequest);
+
+
         } catch (ValidationException $exception) {
             Log::info('order_payment.manual_linker.skipped', [
                 'order_id' => $order->getKey(),
@@ -542,6 +612,167 @@ class OrderPaymentService
             ]);
         }
     }
+
+
+    private function syncOrderManualTransferPayload(Order $order, ManualPaymentRequest $manualPaymentRequest): ManualPaymentRequest
+    {
+        try {
+            $syncedManualRequest = $this->manualPaymentRequestService->syncTransferDetails($manualPaymentRequest);
+
+            $transferDetails = TransferDetailsResolver::forManualPaymentRequest($syncedManualRequest)->toArray();
+            $meta = $syncedManualRequest->meta;
+
+            if (! is_array($meta)) {
+                $meta = [];
+            }
+
+            $attachments = $this->normalizeManualTransferAttachments(Arr::get($meta, 'attachments'));
+
+            if ($attachments !== []) {
+                $transferDetails['attachments'] = $attachments;
+            }
+
+            $receiptPath = $transferDetails['receipt_path'] ?? null;
+            $receiptUrl = $transferDetails['receipt_url'] ?? null;
+            $receiptDisk = 'public';
+
+            $receiptMeta = Arr::get($meta, 'receipt');
+            if (is_array($receiptMeta)) {
+                $candidateDisk = Arr::get($receiptMeta, 'disk');
+
+                if (is_string($candidateDisk) && trim($candidateDisk) !== '') {
+                    $receiptDisk = trim($candidateDisk);
+                }
+            }
+
+            if ((is_string($receiptPath) && $receiptPath !== '') || (is_string($receiptUrl) && $receiptUrl !== '')) {
+                $transferDetails['receipt'] = array_filter([
+                    'path' => is_string($receiptPath) && $receiptPath !== '' ? $receiptPath : null,
+                    'disk' => $receiptDisk,
+                    'url' => is_string($receiptUrl) && $receiptUrl !== '' ? $receiptUrl : null,
+                ], static fn ($value) => $value !== null && $value !== '');
+            }
+
+            $filteredDetails = array_filter($transferDetails, static function ($value) {
+                if (is_array($value)) {
+                    return $value !== [];
+                }
+
+                return $value !== null && $value !== '';
+            });
+
+            if ($filteredDetails !== []) {
+                $order->mergePaymentPayload([
+                    'manual_transfer' => $filteredDetails,
+                ]);
+
+                if ($order->isDirty('payment_payload')) {
+                    $order->save();
+                }
+            }
+
+            return $syncedManualRequest;
+        } catch (Throwable $throwable) {
+            Log::warning('order_payment.manual_transfer.sync_failed', [
+                'order_id' => $order->getKey(),
+                'manual_payment_request_id' => $manualPaymentRequest->getKey(),
+                'message' => $throwable->getMessage(),
+            ]);
+
+            return $manualPaymentRequest->loadMissing('manualBank', 'paymentTransaction.walletTransaction');
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     * @return array{attachments: array<int, array<string, mixed>>, receipt_path: ?string, receipt_url: ?string}
+     */
+    private function resolveManualReceiptContext(array $data): array
+    {
+        $attachments = $this->normalizeManualTransferAttachments(Arr::get($data, 'attachments'));
+
+        $receiptPath = Arr::get($data, 'receipt_path');
+        if (! is_string($receiptPath) || trim($receiptPath) === '') {
+            $receiptPath = null;
+        } else {
+            $receiptPath = trim($receiptPath);
+        }
+
+        $receiptUrl = Arr::get($data, 'receipt_url');
+        if (! is_string($receiptUrl) || trim($receiptUrl) === '') {
+            $receiptUrl = null;
+        } else {
+            $receiptUrl = trim($receiptUrl);
+        }
+
+        if ($receiptUrl === null) {
+            foreach ($attachments as $attachment) {
+                $candidate = Arr::get($attachment, 'url');
+
+                if (! is_string($candidate)) {
+                    continue;
+                }
+
+                $trimmed = trim($candidate);
+
+                if ($trimmed === '') {
+                    continue;
+                }
+
+                $receiptUrl = $trimmed;
+                break;
+            }
+        }
+
+        if ($receiptPath === null) {
+            foreach ($attachments as $attachment) {
+                $candidate = Arr::get($attachment, 'path');
+
+                if (! is_string($candidate)) {
+                    continue;
+                }
+
+                $trimmed = trim($candidate);
+
+                if ($trimmed === '') {
+                    continue;
+                }
+
+                $receiptPath = $trimmed;
+                break;
+            }
+        }
+
+        return [
+            'attachments' => $attachments,
+            'receipt_path' => $receiptPath,
+            'receipt_url' => $receiptUrl,
+        ];
+    }
+
+    /**
+     * @param mixed $attachments
+     * @return array<int, array<string, mixed>>
+     */
+    private function normalizeManualTransferAttachments(mixed $attachments): array
+    {
+        if (! is_iterable($attachments)) {
+            return [];
+        }
+
+        $normalized = [];
+
+        foreach ($attachments as $attachment) {
+            if (! is_array($attachment)) {
+                continue;
+            }
+
+            $normalized[] = $attachment;
+        }
+
+        return array_values($normalized);
+    }
+
 
     private function normalizeManualString($value): ?string
     {

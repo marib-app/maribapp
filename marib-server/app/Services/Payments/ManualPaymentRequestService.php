@@ -720,6 +720,49 @@ class ManualPaymentRequestService
         }
 
 
+
+        if ($existingRequest instanceof ManualPaymentRequest) {
+            $linkedTransactionId = $existingRequest->payment_transaction_id;
+
+            if ($linkedTransactionId === null) {
+                $linkedTransactionId = PaymentTransaction::query()
+                    ->where('manual_payment_request_id', $existingRequest->getKey())
+                    ->value('id');
+            }
+
+            if ($linkedTransactionId !== null && $linkedTransactionId !== $transaction->getKey()) {
+                if (! $manualBank instanceof ManualBank) {
+                    $candidateManualBank = $existingRequest->relationLoaded('manualBank')
+                        ? $existingRequest->getRelation('manualBank')
+                        : $existingRequest->manualBank;
+
+                    if ($candidateManualBank instanceof ManualBank) {
+                        $manualBank = $candidateManualBank;
+                        $manualBankId = $manualBank->getKey();
+                        $manualBankMissing = false;
+
+                        if ($bankName === null) {
+                            $bankName = $normalizeString($manualBank->name);
+                        }
+
+                        if ($bankBeneficiary === null && $manualBank->beneficiary_name) {
+                            $bankBeneficiary = $normalizeString($manualBank->beneficiary_name);
+                        }
+                    }
+                }
+
+                Log::info('Manual payment request already linked to a different transaction. Skipping reuse.', [
+                    'payment_transaction_id' => $transaction->getKey(),
+                    'manual_payment_request_id' => $existingRequest->getKey(),
+                    'existing_payment_transaction_id' => $linkedTransactionId,
+                ]);
+
+                $existingRequest = null;
+            }
+        }
+
+
+
         if ($manualBankMissing && $existingRequest instanceof ManualPaymentRequest) {
             $existingManualBank = $existingRequest->relationLoaded('manualBank')
                 ? $existingRequest->getRelation('manualBank')

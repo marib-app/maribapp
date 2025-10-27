@@ -190,7 +190,7 @@ class PaymentLabelService
                     'manual_payment_request_id' => data_get($data, 'manual_payment_request_id'),
                 ]);
 
-                return null;
+                return ManualBank::defaultDisplayName();
 
 
             }
@@ -287,34 +287,111 @@ class PaymentLabelService
             }
         }
 
-        if ($gatewayKey === 'manual_banks' && data_get($data, 'manual_payment_request_id')) {
-            $manualPaymentRequestId = (int) data_get($data, 'manual_payment_request_id');
+        if ($gatewayKey === 'manual_banks') {
+            if (data_get($data, 'manual_payment_request_id')) {
+                $manualPaymentRequestId = (int) data_get($data, 'manual_payment_request_id');
 
             $manualBankColumns = ManualBank::relationSelectColumns();
 
-            $manualPaymentRequest = ManualPaymentRequest::query()
-                ->with([
-                    'manualBank' => static function (Builder $query) use ($manualBankColumns): void {
-                        $query->select($manualBankColumns);
-                    },
-                ])
-                ->find($manualPaymentRequestId);
+                $manualPaymentRequest = ManualPaymentRequest::query()
+                    ->with([
+                        'manualBank' => static function (Builder $query) use ($manualBankColumns): void {
+                            $query->select($manualBankColumns);
+                        },
+                    ])
+                    ->find($manualPaymentRequestId);
 
-            if ($manualPaymentRequest instanceof ManualPaymentRequest) {
-                $manualPaymentRequest->loadMissing('manualBank');
+                if ($manualPaymentRequest instanceof ManualPaymentRequest) {
+                    $manualPaymentRequest->loadMissing('manualBank');
 
-                $candidate = $manualPaymentRequest->manualBank?->name
-                    ?? $manualPaymentRequest->manualBank?->bank_name;
+                    $candidate = $manualPaymentRequest->manualBank?->name
+                        ?? $manualPaymentRequest->manualBank?->bank_name;
+
+                    if (is_string($candidate) && trim($candidate) !== '') {
+                        return trim($candidate);
+                    }
+                }
+            }
+
+            $manualBankId = self::resolveManualBankId($data);
 
 
-                if (is_string($candidate) && trim($candidate) !== '') {
-                    return trim($candidate);
+
+            if ($manualBankId !== null) {
+                $manualBankColumns = ManualBank::relationSelectColumns();
+
+                $manualBank = ManualBank::query()
+                    ->select($manualBankColumns)
+                    ->find($manualBankId);
+
+                if ($manualBank instanceof ManualBank) {
+                    $candidate = $manualBank->name ?? $manualBank->bank_name;
+
+                    if (is_string($candidate) && trim($candidate) !== '') {
+                        return trim($candidate);
+                    }
+                }
+            }
+              return ManualBank::defaultDisplayName();
+
+        }
+
+        return null;
+    }
+
+    private static function resolveManualBankId(array $data): ?int
+    {
+        $candidatePaths = [
+            'manual_bank_id',
+            'manual_bank.id',
+            'manual_bank.manual_bank_id',
+            'manual_payment_request.manual_bank_id',
+            'manual_payment_request.manual_bank.id',
+            'manual_payment_request.manual_bank.manual_bank_id',
+            'manual_payment_request.manualBank.id',
+            'manual_payment_request.manualBank.manual_bank_id',
+            'manual_payment_request.meta.manual_bank_id',
+            'manual_payment_request.meta.manual_bank.id',
+            'manual_payment_request.meta.manual_bank.manual_bank_id',
+            'manual_payment_request.meta.manual_payment_request.manual_bank_id',
+            'manual_payment_request.meta.manual_payment_request.manual_bank.id',
+            'manual_payment_request.meta.manual_payment_request.manual_bank.manual_bank_id',
+            'meta.manual_bank_id',
+            'meta.manual_bank.id',
+            'meta.manual_bank.manual_bank_id',
+            'meta.manual.bank_id',
+            'meta.manual.bank.id',
+            'meta.manual.bank.manual_bank_id',
+            'meta.payload.manual_bank_id',
+            'meta.payload.manual_bank.id',
+            'meta.payload.manual_bank.manual_bank_id',
+            'meta.bank_id',
+            'meta.bank.id',
+            'meta.bank.manual_bank_id',
+            'transaction_meta.manual_bank_id',
+            'transaction_meta.manual_bank.id',
+            'transaction_meta.manual_bank.manual_bank_id',
+            'transaction_meta.manual.bank_id',
+            'transaction_meta.manual.bank.id',
+            'transaction_meta.manual.bank.manual_bank_id',
+            'transaction_meta.payload.manual_bank_id',
+            'transaction_meta.payload.manual_bank.id',
+            'transaction_meta.payload.manual_bank.manual_bank_id',
+        ];
+
+        foreach ($candidatePaths as $path) {
+            $value = data_get($data, $path);
+
+            if (is_numeric($value)) {
+                $normalized = (int) $value;
+
+                if ($normalized > 0) {
+                    return $normalized;
                 }
             }
         }
 
         return null;
-
     }
 
     private static function normalizeGatewayKey(?string $gateway): ?string

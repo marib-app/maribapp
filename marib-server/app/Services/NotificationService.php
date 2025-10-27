@@ -855,18 +855,62 @@ class NotificationService {
         }
 
         if (!empty($normalizedValue)) {
+
+
+            $disksToInspect = ['public'];
+
+            $defaultDisk = config('filesystems.default');
+            if (is_string($defaultDisk) && $defaultDisk !== '' && !in_array($defaultDisk, $disksToInspect, true)) {
+                $disksToInspect[] = $defaultDisk;
+            }
+
+            if (!in_array('local', $disksToInspect, true)) {
+                $disksToInspect[] = 'local';
+            }
+
+            foreach ($disksToInspect as $disk) {
+                try {
+                    $resolved = Storage::disk($disk)->path($normalizedValue);
+
+                    if (!in_array($resolved, $candidateValues, true)) {
+                        $candidateValues[] = $resolved;
+                    }
+                } catch (Throwable $exception) {
+                    \Log::notice('NotificationService: Failed to resolve service file path via storage disk.', [
+                        'disk' => $disk,
+                        'stored_value' => $serviceFileValue,
+                        'normalized_value' => $normalizedValue,
+                        'exception' => $exception->getMessage(),
+                    ]);
+                }
+            }
+
+
             try {
-                $candidateValues[] = Storage::disk('public')->path($normalizedValue);
+                $defaultStoragePath = Storage::path($normalizedValue);
+
+                if (!in_array($defaultStoragePath, $candidateValues, true)) {
+                    $candidateValues[] = $defaultStoragePath;
+                }
+            
+            
             } catch (Throwable $exception) {
-                \Log::warning('NotificationService: Failed to resolve service file path via storage disk.', [
+                \Log::notice('NotificationService: Failed to resolve service file path via default storage disk.', [
                     'stored_value' => $serviceFileValue,
                     'normalized_value' => $normalizedValue,
                     'exception' => $exception->getMessage(),
                 ]);
             }
 
-            $candidateValues[] = storage_path('app/public/' . $normalizedValue);
-            $candidateValues[] = public_path('storage/' . $normalizedValue);
+            foreach ([
+                storage_path('app/' . $normalizedValue),
+                storage_path('app/public/' . $normalizedValue),
+                public_path('storage/' . $normalizedValue),
+            ] as $pathCandidate) {
+                if (!in_array($pathCandidate, $candidateValues, true)) {
+                    $candidateValues[] = $pathCandidate;
+                }
+            }
         }
 
         $candidateValues[] = $trimmedValue;

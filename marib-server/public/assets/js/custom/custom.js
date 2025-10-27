@@ -852,64 +852,22 @@ $('#verification_status').change(function () {
     }
 });
 function customValidation() {
-    if (typeof window.updateSliderTargetId === 'function') {
-        window.updateSliderTargetId();
-    }
-
-    const targetType = $('#target_type').val();
-    const targetId = $('#slider_target_id').val();
-    const actionType = $('#action_type').val();
-    const linkField = ($("input[name=link]").val() || '').trim();
-    const actionLinkField = ($('#action_link_url').val() || '').trim();
-
-    const hasTarget = targetType && targetType !== 'none' && targetId;
-    const hasAction = actionType && actionType !== 'none';
-    const hasLink = !!(linkField || actionLinkField);
-
-    const errorContainer = $('.invalid-form-error-message');
-
-    function showError(message) {
-        errorContainer.html(message).addClass('text-danger');
-    }
-
-    if (!hasTarget && !hasAction && !hasLink) {
-        showError('Please select a target, action, or link for the slider.');
+    let item = $("select[name=item]").val();
+    let category = $("select[name=category_id]").val();
+    let link = $("input[name=link]").val();
+    if (item == "" && category == "" && link == "") {
+        // Display an error message
+        $('.invalid-form-error-message').html("Please select either Item, Category, or Add Link").addClass("text-danger");
         return false;
     }
 
-    if (targetType && targetType !== 'none' && !targetId) {
-        showError('Please select a valid target for the chosen target type.');
-
+    if ((item != "" && category != "") || (item != "" && link != "") || (category != "" && link != "")) {
+        $('.invalid-form-error-message').html("Please select only one field: Item, Category, or Link").addClass("text-danger");
         return false;
     }
 
-    if (actionType === 'open_chat') {
-        const chatUserId = ($('#action_chat_user_id').val() || '').trim();
-        const canUseTargetUser = !!(hasTarget && targetType === 'user');
+    $('.invalid-form-error-message').html('');
 
-        if (!chatUserId && !canUseTargetUser) {
-            showError('Please choose a user to start a chat.');
-            return false;
-        }
-    } else if (actionType === 'apply_coupon') {
-        const couponCode = ($('#action_coupon_code').val() || '').trim();
-
-        if (!couponCode) {
-            showError('Please enter a coupon code.');
-            return false;
-        }
-    } else if (actionType === 'open_link') {
-        const effectiveLink = actionLinkField || linkField;
-
-        if (!effectiveLink) {
-            showError('Please provide a valid link for the slider action.');
-            return false;
-        }
-    }
-
-    errorContainer.html('').removeClass('text-danger');
-
-    
     return true;
 }
 $(function () {

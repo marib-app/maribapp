@@ -2,36 +2,21 @@ $(function () {
     const tableSelector = '#table_list';
     const createForm = $('.create-form');
     const editForm = $('.edit-form');
-    const editIconInput = $('#edit_icon');
-    const editIconAltInput = $('#edit_icon_alt');
-    const editRemoveIconInput = $('#edit_remove_icon');
-
-    const editOriginalIconUrl = editForm.length ? (editForm.data('original-icon-url') || '') : '';
-    const editOriginalIconAlt = editForm.length ? (editForm.data('original-icon-alt') || '') : '';
-    let editRemovalPending = false;
-
+    const editModal = $('#editModal');
 
     function refreshTable() {
-        const table = $(tableSelector);
-        if (table.length && table.data('bootstrap.table')) {
-            table.bootstrapTable('refresh');
-        }
-    
+        $(tableSelector).bootstrapTable('refresh');
     }
 
     function resetCreateForm() {
-        if (!createForm.length) {
-            return;
-        }
-
         createForm.trigger('reset');
         togglePreview('create', null, null);
     }
 
     function togglePreview(context, imageUrl, altText) {
         const wrapper = $(`.currency-icon-preview[data-preview="${context}"]`);
-        const input = context === 'create' ? $('#create_icon') : editIconInput;
-        const altInput = context === 'create' ? createForm.find('input[name="icon_alt"]') : editIconAltInput;
+        const input = context === 'create' ? $('#create_icon') : $('#edit_icon');
+        const altInput = context === 'create' ? createForm.find('input[name="icon_alt"]') : $('#edit_icon_alt');
 
         if (imageUrl) {
             wrapper.removeClass('d-none');
@@ -49,40 +34,27 @@ $(function () {
             altInput.val(altText || '');
         }
 
+        if (context === 'edit') {
+            if (!imageUrl) {
+                $('#edit_remove_icon').val('0');
+            }
+            editModal.data('has-existing-icon', Boolean(imageUrl));
+        }
+
         if (context === 'create' && !imageUrl) {
             input.val('');
         }
     }
 
-    function setEditRemovalPending(pending) {
-        editRemovalPending = Boolean(pending);
-
-        if (editRemoveIconInput.length) {
-            editRemoveIconInput.val(editRemovalPending ? '1' : '0');
-        }
-    }
-
-    function getEditPreviewState() {
-        if (editRemovalPending) {
-            return { url: null, alt: '' };
-        }
-
-        return {
-            url: editOriginalIconUrl || null,
-            alt: editOriginalIconAlt || ''
-        };
-    }
-
-
     function readFilePreview(input, context) {
         if (!input.files || !input.files.length) {
             if (context === 'create') {
-                togglePreview('create', null, null);
-            } else if (context === 'edit') {
-                const baseline = getEditPreviewState();
-                togglePreview('edit', baseline.url, baseline.alt);
+                togglePreview(context, null, null);
+            } else {
+                const original = editModal.data('currency-row') || {};
+                togglePreview('edit', original.icon_url || null, original.icon_alt ?? '');
             }
-            return;
+                        return;
         }
 
 
@@ -94,7 +66,7 @@ $(function () {
         reader.readAsDataURL(file);
 
         if (context === 'edit') {
-            setEditRemovalPending(false);
+            $('#edit_remove_icon').val('0');
         }
     }
 
@@ -120,7 +92,8 @@ $(function () {
                     showSuccessToast(response.message || 'تم الحفظ بنجاح');
                     if ($form.is(createForm)) {
                         resetCreateForm();
-
+                    } else {
+                        editModal.modal('hide');
                     }
                 }
             },
@@ -136,24 +109,26 @@ $(function () {
                 }
             }
         });
-    }
-    if (createForm.length) {
-        createForm.on('submit', function (e) {
-            e.preventDefault();
-            submitForm(this, 'POST');
-        });
-    }
+
+            }
+
+    createForm.on('submit', function (e) {
+        e.preventDefault();
+        submitForm(this, 'POST');
+    });
+
+    editForm.on('submit', function (e) {
+        e.preventDefault();
+        submitForm(this, 'POST');
+    });
 
     $('#create_icon').on('change', function () {
         readFilePreview(this, 'create');
     });
 
-    if (editIconInput.length) {
-        editIconInput.on('change', function () {
-            readFilePreview(this, 'edit');
-        });
-    }
-
+    $('#edit_icon').on('change', function () {
+        readFilePreview(this, 'edit');
+    });
 
     $(document).on('click', '.clear-icon', function () {
         const target = $(this).data('target');
@@ -163,47 +138,55 @@ $(function () {
             return;
         }
 
-        if (!editForm.length) {
+        const originalRow = editModal.data('currency-row') || {};
+        const fileInput = $('#edit_icon')[0];
 
+        if (fileInput.files && fileInput.files.length) {
+            $('#edit_icon').val('');
+            togglePreview('edit', originalRow.icon_url || null, originalRow.icon_alt || null);
             return;
         }
 
-        const fileInput = editIconInput.get(0);
-
-        if (fileInput && fileInput.files && fileInput.files.length) {
-            editIconInput.val('');
-            const baseline = getEditPreviewState();
-            togglePreview('edit', baseline.url, baseline.alt);
-
-
+        if (!originalRow.icon_url) {
+            togglePreview('edit', null, null);
             return;
         }
-
-        if (editRemovalPending) {
-            setEditRemovalPending(false);
-            togglePreview('edit', editOriginalIconUrl || null, editOriginalIconAlt || '');
-            editIconAltInput.val(editOriginalIconAlt || '');
-            
-            return;
-        }
-
-        if (!editOriginalIconUrl) {
-            togglePreview('edit', null, '');
-            return;
-        }
-
 
         if (!confirm('هل أنت متأكد من حذف الأيقونة الحالية؟')) {
             return;
         }
 
-        editIconInput.val('');
-        setEditRemovalPending(true);
-        togglePreview('edit', null, '');
-        editIconAltInput.val('');
+        const currencyId = originalRow.id;
+
+        $.ajax({
+            url: `/currency/${currencyId}/icon`,
+            type: 'DELETE',
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+            success(response) {
+                if (response.success) {
+                    showSuccessToast(response.message || 'تم حذف الأيقونة.');
+                    editModal.data('currency-row', Object.assign({}, originalRow, { icon_url: null, icon_alt: null }));
+                    togglePreview('edit', null, null);
+                    refreshTable();
+                }
+            },
+            error() {
+                showErrorToast('تعذر حذف الأيقونة، حاول مرة أخرى.');
+            }
+        });
     });
 
-    if (editRemoveIconInput.length) {
-        setEditRemovalPending(false);
-    }
+    $(document).on('currency:edit-open', function (_event, row) {
+        editModal.data('currency-row', row);
+        togglePreview('edit', row.icon_url || null, row.icon_alt || null);
+    });
+
+    editModal.on('hidden.bs.modal', function () {
+        $('#edit_icon').val('');
+        $('#edit_remove_icon').val('0');
+        togglePreview('edit', null, null);
+        editModal.data('currency-row', null);
+    });
 });

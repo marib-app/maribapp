@@ -179,6 +179,10 @@ String? _normalizePurposeForApi(String? purpose) {
     return manualPaymentWalletTopUpPurpose;
   }
 
+  if (value == 'service' || value.contains('service')) {
+    return 'service';
+  }
+
   return null;
 }
 

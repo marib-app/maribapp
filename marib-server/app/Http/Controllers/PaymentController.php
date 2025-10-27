@@ -442,6 +442,34 @@ class PaymentController extends Controller
         }
 
 
+        if ($purpose === 'service') {
+            $service = Service::findOrFail($validated['service_id']);
+
+            $transaction = $this->servicePaymentService->createManual(
+                $request->user(),
+                $service,
+                $idempotencyKey,
+                $validated
+            );
+
+            $transaction->loadMissing('manualPaymentRequest.manualBank');
+
+            $manualRequest = $transaction->manualPaymentRequest?->loadMissing('paymentTransaction.payable', 'manualBank');
+
+            $transactionResource = PaymentTransactionResource::make($transaction)->resolve();
+            $manualRequestResource = $manualRequest
+                ? ManualPaymentRequestResource::make($manualRequest)->resolve()
+                : null;
+
+            return response()->json([
+                'message' => __('تم تسجيل الدفع اليدوي.'),
+                'transaction' => $transactionResource,
+                'payment_transaction' => $transactionResource,
+                'manual_payment_request' => $manualRequestResource,
+            ], $transaction->payment_status === 'succeed' ? 200 : 202);
+        }
+
+
         if ($purpose === 'package') {
             $package = Package::findOrFail($validated['package_id']);
 

@@ -37,7 +37,8 @@ class AppServiceProvider extends ServiceProvider
     public function boot()
     {
 
-        DB::connection()->getDoctrineSchemaManager()->getDatabasePlatform()->registerDoctrineTypeMapping('enum', 'string');
+        $this->registerEnumTypeMapping();
+
         Schema::defaultStringLength(191);
 
 
@@ -59,6 +60,23 @@ class AppServiceProvider extends ServiceProvider
         $this->ensurePublicStorageSymlink();
 
     }
+
+
+    private function registerEnumTypeMapping(): void
+    {
+        try {
+            DB::connection()
+                ->getDoctrineSchemaManager()
+                ->getDatabasePlatform()
+                ->registerDoctrineTypeMapping('enum', 'string');
+        } catch (Throwable $exception) {
+            Log::warning('Failed to register Doctrine enum mapping', [
+                'exception' => $exception->getMessage(),
+            ]);
+        }
+    }
+
+
 
     private function ensurePublicStorageSymlink(): void
     {

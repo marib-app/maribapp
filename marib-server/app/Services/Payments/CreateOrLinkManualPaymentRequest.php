@@ -6,6 +6,7 @@ use App\Models\ManualPaymentRequest;
 use App\Models\PaymentTransaction;
 use App\Models\User;
 use Illuminate\Support\Arr;
+use Illuminate\Database\QueryException;
 
 class CreateOrLinkManualPaymentRequest
 {
@@ -26,7 +27,23 @@ class CreateOrLinkManualPaymentRequest
         $manualRequest = $transaction->manualPaymentRequest;
 
         if (! $manualRequest instanceof ManualPaymentRequest) {
-            $manualRequest = $this->manualPaymentRequestService->createFromTransaction(
+            $manualRequest = $this->manualPaymentRequestService->findOpenManualPaymentRequestForPayable(
+                $payableType,
+                $payableId
+            );
+
+            if ($manualRequest instanceof ManualPaymentRequest) {
+                $transaction->forceFill([
+                    'manual_payment_request_id' => $manualRequest->getKey(),
+                ])->saveQuietly();
+
+                $transaction->setRelation('manualPaymentRequest', $manualRequest);
+            }
+        }
+
+        if (! $manualRequest instanceof ManualPaymentRequest) {
+            $manualRequest = $this->createManualPaymentRequestFromTransaction(
+                
                 $user,
                 $payableType,
                 $payableId,
@@ -37,6 +54,7 @@ class CreateOrLinkManualPaymentRequest
             $transaction->forceFill([
                 'manual_payment_request_id' => $manualRequest->getKey(),
             ])->saveQuietly();
+            $transaction->setRelation('manualPaymentRequest', $manualRequest);
         }
 
         $manualRequest = $this->manualPaymentRequestService->createOrUpdateForManualTransaction(
@@ -144,6 +162,69 @@ class CreateOrLinkManualPaymentRequest
 
         return $manualRequest->fresh();
     }
+
+
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function createManualPaymentRequestFromTransaction(
+        User $user,
+        string $payableType,
+        ?int $payableId,
+        PaymentTransaction $transaction,
+        array $data
+    ): ManualPaymentRequest {
+        try {
+            return $this->manualPaymentRequestService->createFromTransaction(
+                $user,
+                $payableType,
+                $payableId,
+                $transaction,
+                $data
+            );
+        } catch (QueryException $exception) {
+            if (! $this->isUniqueConstraintViolation($exception)) {
+                throw $exception;
+            }
+
+            $manualRequest = $this->manualPaymentRequestService->findOpenManualPaymentRequestForPayable(
+                $payableType,
+                $payableId
+            );
+
+            if (! $manualRequest instanceof ManualPaymentRequest) {
+                $manualRequest = ManualPaymentRequest::query()
+                    ->where('payment_transaction_id', $transaction->getKey())
+                    ->first();
+            }
+
+            if (! $manualRequest instanceof ManualPaymentRequest) {
+                throw $exception;
+            }
+
+            return $manualRequest;
+        }
+    }
+
+    private function isUniqueConstraintViolation(QueryException $exception): bool
+    {
+        $sqlState = $exception->getCode();
+
+        if (in_array($sqlState, ['23000', '23505'], true)) {
+            return true;
+        }
+
+        $errorInfo = $exception->errorInfo ?? [];
+
+        if (is_array($errorInfo) && isset($errorInfo[0]) && in_array($errorInfo[0], ['23000', '23505'], true)) {
+            return true;
+        }
+
+        return false;
+    }
+
+
 
     private function normalizeString($value): ?string
     {

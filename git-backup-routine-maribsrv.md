@@ -14,6 +14,8 @@ php artisan migrate
 
 php artisan serve --host=0.0.0.0 --port=8000
 
+php artisan serve --host=0.0.0.0 --port=9001
+
 npm run dev -- --hostname 0.0.0.0 --port 3010
 npx next dev -H 0.0.0.0 -p 3000
 
@@ -32,9 +34,6 @@ php artisan cache:clear; php artisan config:clear ;  php artisan route:clear
 # افتح اللوج وراقب كل الأخطاء المهمة
 Get-Content .\storage\logs\laravel.log -Tail 0 -Wait `
 | Select-String -Pattern "payment-requests|PaymentRequest|PaymentRequestTableQuery|SQLSTATE|QueryException|TypeError|ErrorException|Undefined|Base table|Call to"
-
-
-
 
 
 
@@ -92,6 +91,47 @@ Write-Host "Created tag: $tag at $ts"
 
 
 
+استعادة نسخه محدده 
+
+
+# 0) اذهب لجذر المشروع
+cd C:\Users\abo-hassn\Desktop\maribservices\maribsrv
+
+# 1) (اختياري لكن موصى به) خزّن أي تغييرات غير مُكمّتة، ويشمل غير المتتبَّعة
+git stash push -m "wip-before-restore-backup_maribsrv_7" --include-untracked
+
+# 2) احضر التاقات وتحقق من وجود المطلوب
+git fetch --tags
+git tag -l backup_maribsrv_7
+git show --no-patch --oneline backup_maribsrv_7
+
+# 3) ارجع محليًا لنسخة التاق (لا يدفع للريموت)
+git switch main
+git reset --hard backup_maribsrv_7
+git clean -fdx        # يحذف أي ملفات/مجلدات غير متتبَّعة
+
+# 4) (اختياري) submodules إن وُجدت
+git submodule update --init --recursive
+
+# 5) تحقق أننا على نفس نسخة التاق
+git rev-parse --short HEAD
+git rev-parse --short backup_maribsrv_7
+# يجب أن يكون الناتجان متطابقين
+
+# ====== إن كان عندك Laravel في المجلد marib-server ======
+cd .\marib-server
+composer install --no-dev --prefer-dist --no-interaction
+if (!(Test-Path .env) -and (Test-Path .env.example)) { Copy-Item .env.example .env }
+
+# (إذا APP_KEY غير مضبوط)
+php artisan key:generate --force
+
+# تهيئة التخزين والكاش
+mkdir -Force .\storage\framework\sessions | Out-Null
+mkdir -Force .\storage\framework\cache\data | Out-Null
+mkdir -Force .\storage\framework\views | Out-Null
+php artisan optimize:clear
+php artisan storage:link
 
 
 
@@ -99,7 +139,47 @@ Write-Host "Created tag: $tag at $ts"
 
 
 
-> **تلميح:** يُفضَّل فتح PowerShell داخل هذا المسار دائمًا قبل أي أوامر Git.
+
+
+
+تنظيف الطلبات 
+تنظيف جداول الطلبات/الخدمات/المدفوعات (TRUNCATE + إعادة الترقيم)
+
+
+
+
+
+
+$MYSQL = 'mysql --default-character-set=utf8mb4 -h 127.0.0.1 -u root -D maribsrv -e'
+$SQL = @"
+SET FOREIGN_KEY_CHECKS=0;
+
+-- خدمات + ربطها
+TRUNCATE TABLE service_requests;
+
+-- معاملات المحفظة (لو مربوطة بمعاملات الدفع)
+TRUNCATE TABLE wallet_transactions;
+
+-- معاملات الدفع + طلبات الدفع اليدوي
+TRUNCATE TABLE payment_transactions;
+TRUNCATE TABLE manual_payment_requests;
+
+-- الطلبات (إن كانت ضمن الاختبار)
+TRUNCATE TABLE orders;
+
+SET FOREIGN_KEY_CHECKS=1;
+"@
+iex "$MYSQL `"$SQL`""
+
+
+
+
+
+
+
+
+
+
 
 ---
 

@@ -34,6 +34,25 @@ class ManualPaymentRequestService
     private ?ManualBank $defaultManualBank = null;
 
     
+
+
+
+
+    public function findOpenManualPaymentRequestForPayable(string $payableType, ?int $payableId): ?ManualPaymentRequest
+    {
+        if ($payableId === null || trim($payableType) === '') {
+            return null;
+        }
+
+        return ManualPaymentRequest::query()
+            ->where('payable_type', $payableType)
+            ->where('payable_id', $payableId)
+            ->whereIn('status', ManualPaymentRequest::OPEN_STATUSES)
+            ->orderByDesc('id')
+            ->first();
+    }
+
+
     /**
      * @param array<string, mixed> $data
      */

@@ -88,6 +88,11 @@
                             <div>
                                 @if($serviceRequest->payment_transaction_id)
                                     #{{ $serviceRequest->payment_transaction_id }}
+                                    <div class="mt-2">
+                                        <a href="{{ route('service.requests.review', $serviceRequest) }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-receipt"></i> {{ __('Review Payment') }}
+                                        </a>
+                                    </div>
                                 @else
                                     <span class="text-muted">—</span>
                                 @endif

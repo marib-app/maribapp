@@ -32,6 +32,14 @@ class ManualPayment {
     this.context,
     this.metadata,
     this.manualPaymentData,
+
+
+    // ... الحقول القديمة عندك ...
+    this.categoryLabelAr,
+    this.categoryIcon,
+    this.isServiceRequest = false,
+    this.serviceDetailsLabel,
+
   });
 
   final String? manualPaymentId;
@@ -63,6 +71,22 @@ class ManualPayment {
   final Map<String, dynamic>? context;
   final Map<String, dynamic>? metadata;
   final Map<String, dynamic>? manualPaymentData;
+
+
+
+  // اسم القسم (مثلاً: "طلب خدمة", "شراء باقة", "سحب محفظة"...)
+  final String? categoryLabelAr;
+
+  // أيقونة القسم (IconData أو String asset حسب تصميمك)
+  final IconData? categoryIcon;
+
+  // هل هذه العملية تخص طلب خدمة من قسم الخدمات؟
+  final bool isServiceRequest;
+
+  // وصف الطلب/الخدمة (مثلاً: "خدمة تنظيف رقم #1234")
+  final String? serviceDetailsLabel;
+
+
 
   factory ManualPayment.fromJson(Map<String, dynamic> json) {
     Map<String, dynamic>? mapify(dynamic value) {

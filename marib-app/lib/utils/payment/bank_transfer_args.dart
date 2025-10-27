@@ -7,6 +7,9 @@ class BankTransferArgs {
   final int? itemId;
   final String? purpose;
   final String? initialGateway;
+  final int? serviceId;
+  final String? serviceTitle;
+  final String? priceNote;
 
 
   const BankTransferArgs({
@@ -19,6 +22,9 @@ class BankTransferArgs {
     this.itemId,
     this.purpose,
     this.initialGateway,
+    this.serviceId,
+    this.serviceTitle,
+    this.priceNote,
 
 
   });
@@ -30,6 +36,7 @@ extension BankTransferArgsX on BankTransferArgs {
     if (packageId > 0) 'package_id': packageId,
     'package_type': packageType,
     if (itemId != null) 'item_id': itemId,
+    if (serviceId != null) 'service_id': serviceId,
   };
 
 
@@ -44,6 +51,9 @@ extension BankTransferArgsX on BankTransferArgs {
       if (normalized.contains('order')) {
         return 'order';
       }
+      if (normalized.contains('service')) {
+        return 'service';
+      }
       if (normalized == 'general') {
         return 'general';
       }
@@ -52,6 +62,10 @@ extension BankTransferArgsX on BankTransferArgs {
     }
 
     final rawType = packageType.trim().toLowerCase();
+
+    if (rawType.contains('service') || serviceId != null) {
+      return 'service';
+    }
 
     if (rawType.contains('wallet')) {
       return 'wallet_top_up';

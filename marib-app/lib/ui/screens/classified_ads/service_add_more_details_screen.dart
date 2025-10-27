@@ -18,6 +18,12 @@ import 'package:marib/ui/screens/widgets/dynamic_field/dynamic_field.dart'
     as dynamic_fields;
 import 'package:marib/data/repositories/service_request_repository.dart';
 import 'package:marib/utils/helper_utils.dart';
+import 'package:marib/utils/api.dart' show ApiHttpException;
+import 'package:marib/utils/hive_utils.dart';
+import 'package:marib/utils/payment/bank_transfer_args.dart';
+import 'package:marib/utils/payment/bank_transfer_screen.dart';
+import 'package:marib/utils/payment/manual_payment_service.dart'
+    show ManualPaymentSubmissionResult;
 import 'service_add_more_details_screen_ui.dart';
 
 class ServiceAddMoreDetailsScreen extends StatefulWidget {
@@ -1101,15 +1107,23 @@ class _ServiceAddMoreDetailsScreenState
         attachments: attachmentPayload.isEmpty ? null : attachmentPayload,
       );
 
-      if (!mounted) return;
-      _clearStores();
-      HelperUtils.showSnackBarMessage(
-        context,
-        'تم ارسال طلبك بنجاح',
-      );
-      if (Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
+      _onRequestSubmitted();
+    } on ApiHttpException catch (error) {
+      if (error.statusCode == 402) {
+        final handled = await _handlePaymentRequired(
+          error: error,
+          customFieldPayload: customFieldPayload,
+          attachmentPayload: attachmentPayload,
+        );
+
+        if (handled) {
+          return;
+        }
       }
+
+      if (!mounted) return;
+      final message = error.errorMessage ?? error.payload ?? error.toString();
+      HelperUtils.showSnackBarMessage(context, '$message');
     } catch (e) {
       if (!mounted) return;
       HelperUtils.showSnackBarMessage(context, '$e');
@@ -1117,6 +1131,18 @@ class _ServiceAddMoreDetailsScreenState
       if (mounted) {
         setState(() => _submitting = false);
       }
+    }
+  }
+
+  void _onRequestSubmitted() {
+    if (!mounted) return;
+    _clearStores();
+    HelperUtils.showSnackBarMessage(
+      context,
+      'تم ارسال طلبك بنجاح',
+    );
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
     }
   }
 }

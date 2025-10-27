@@ -207,6 +207,9 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       if (normalized == 'general') {
         return 'general';
       }
+      if (normalized.contains('service')) {
+        return 'service';
+      }
       if (normalized.contains('package')) {
         return 'package';
       }
@@ -214,6 +217,9 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     }
 
     final packageType = widget.args.packageType.trim().toLowerCase();
+    if (packageType.contains('service') || widget.args.serviceId != null) {
+      return 'service';
+    }
     if (packageType.contains('wallet')) {
       return _walletTopUpPurpose;
     }
@@ -934,6 +940,10 @@ class _BankTransferScreenState extends State<BankTransferScreen>
 
           payableId = null;
           break;
+        case 'service':
+          payableType = 'service';
+          payableId = widget.args.serviceId ?? widget.args.itemId;
+          break;
         default:
           if (isWalletTopUp) {
             payableType = ManualPaymentService.walletTopUpPurpose;
@@ -944,23 +954,29 @@ class _BankTransferScreenState extends State<BankTransferScreen>
           }
       }
 
-      final int? resolvedId =
+      final int? resolvedPackageId =
           widget.args.packageId > 0 ? widget.args.packageId : null;
+      final int? resolvedServiceId =
+          widget.args.serviceId ?? widget.args.itemId;
 
       String? purposeForApi;
       int? orderIdForApi;
       int? packageIdForApi;
+      int? serviceIdForApi;
       if (normalizedPurpose == 'order') {
         purposeForApi = 'order';
-        orderIdForApi = resolvedId;
+        orderIdForApi = resolvedPackageId;
       } else if (normalizedPurpose == 'package') {
         purposeForApi = 'package';
-        packageIdForApi = resolvedId;
+        packageIdForApi = resolvedPackageId;
       } else if (isWalletTopUp) {
         purposeForApi = ManualPaymentService.walletTopUpPurpose;
-      } else if (resolvedId != null) {
+      } else if (normalizedPurpose == 'service') {
+        purposeForApi = 'service';
+        serviceIdForApi = resolvedServiceId;
+      } else if (resolvedPackageId != null) {
         purposeForApi = 'package';
-        packageIdForApi = resolvedId;
+        packageIdForApi = resolvedPackageId;
       }
 
       final notesText = _notesCtrl.text.trim();
@@ -1019,6 +1035,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
           purpose: purposeForApi,
           orderId: orderIdForApi,
           packageId: packageIdForApi,
+          serviceId: serviceIdForApi,
           amount: widget.args.amount,
           currency: submissionCurrency,
           reference: (trimmedCode != null && trimmedCode.isNotEmpty)
@@ -1037,6 +1054,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
           purpose: purposeForApi,
           orderId: orderIdForApi,
           packageId: packageIdForApi,
+          serviceId: serviceIdForApi,
           amount: widget.args.amount,
           currency: submissionCurrency,
           userNote: userNote.isEmpty ? null : userNote,
@@ -1053,6 +1071,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
           purpose: purposeForApi,
           orderId: orderIdForApi,
           packageId: packageIdForApi,
+          serviceId: serviceIdForApi,
           amount: widget.args.amount,
           currency: submissionCurrency,
           reference:

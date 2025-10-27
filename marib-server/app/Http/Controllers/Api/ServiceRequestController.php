@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Str;
 
 use JsonException;
 
@@ -122,21 +123,72 @@ class ServiceRequestController extends Controller
         }
 
 
-        if ($service->is_paid) {
-            $hasSuccessfulPayment = PaymentTransaction::query()
-                ->where('user_id', $user->id)
-                ->where('payable_type', Service::class)
-                ->where('payable_id', $service->id)
-                ->where('payment_status', 'succeed')
-                ->exists();
+        $resolvedTransaction = null;
 
-            if (!$hasSuccessfulPayment) {
-                return response()->json([   
+        if ($service->is_paid) {
+            $paymentTransactionId = $request->input('payment_transaction_id');
+
+            if ($paymentTransactionId) {
+                $resolvedTransaction = PaymentTransaction::query()
+                    ->whereKey((int) $paymentTransactionId)
+                    ->where('user_id', $user->id)
+                    ->where('payable_type', Service::class)
+                    ->where('payable_id', $service->id)
+                    ->first();
+
+                if (! $resolvedTransaction) {
+                    return response()->json([
+                        'message' => __('تعذّر العثور على معاملة الدفع المحددة.'),
+                        'errors' => [
+                            'payment_transaction_id' => [__('معاملة الدفع غير صالحة أو لا تخص هذه الخدمة.')],
+                        ],
+                    ], 422);
+                }
+
+                if (mb_strtolower((string) $resolvedTransaction->payment_status) !== 'succeed') {
+                    return response()->json([
+                        'message' => __('يحتاج الدفع إلى تأكيد قبل إرسال الطلب.'),
+                        'code' => 'payment_not_confirmed',
+                        'payment_required' => true,
+                        'payable_type' => Service::class,
+                        'payable_id' => $service->id,
+                    ], 422);
+                }
+            } else {
+                $resolvedTransaction = PaymentTransaction::query()
+                    ->where('user_id', $user->id)
+                    ->where('payable_type', Service::class)
+                    ->where('payable_id', $service->id)
+                    ->where('payment_status', 'succeed')
+                    ->orderByDesc('id')
+                    ->first();
+            }
+
+            if (! $resolvedTransaction) {
+                $latestTransaction = PaymentTransaction::query()
+                    ->where('user_id', $user->id)
+                    ->where('payable_type', Service::class)
+                    ->where('payable_id', $service->id)
+                    ->orderByDesc('id')
+                    ->first();
+
+                return response()->json([
                     'message' => __('Payment is required to request this service.'),
                     'code' => 'payment_required',
                     'payment_required' => true,
                     'payable_type' => Service::class,
                     'payable_id' => $service->id,
+                    'service_id' => $service->id,
+                    'service_uid' => $service->service_uid,
+                    'service_title' => $service->title,
+                    'amount' => $service->price !== null ? (float) $service->price : null,
+                    'currency' => $service->currency,
+                    'price_note' => $service->price_note,
+                    'allowed_gateways' => ['wallet', 'manual_bank'],
+                    'payment_transaction_id' => $latestTransaction?->getKey(),
+                    'payment_intent_id' => $latestTransaction?->idempotency_key,
+                    'payment_transaction_status' => $latestTransaction?->payment_status,
+                    'recommended_idempotency_key' => (string) Str::orderedUuid(),
                 ], 402);
             }
         }
@@ -186,11 +238,31 @@ class ServiceRequestController extends Controller
         $serviceRequest->status = 'review';
         $serviceRequest->payload = $payload;
 
+        if ($resolvedTransaction instanceof PaymentTransaction) {
+            $serviceRequest->payment_status = 'paid';
+            $serviceRequest->payment_transaction_id = $resolvedTransaction->getKey();
+        }
+
         if ($request->filled('note')) {
             $serviceRequest->note = trim((string) $request->input('note')) ?: null;
         }
 
         $serviceRequest->save();
+
+        if ($resolvedTransaction instanceof PaymentTransaction) {
+            $meta = $resolvedTransaction->meta ?? [];
+            if (! is_array($meta)) {
+                $meta = [];
+            }
+
+            data_set($meta, 'service.request_id', $serviceRequest->getKey());
+
+            $resolvedTransaction->meta = $meta;
+
+            if ($resolvedTransaction->isDirty('meta')) {
+                $resolvedTransaction->save();
+            }
+        }
 
 
         $deeplink = route('service.requests.show', $serviceRequest->getKey());
@@ -307,6 +379,8 @@ class ServiceRequestController extends Controller
             'id' => $serviceRequest->id,
             'status' => $serviceRequest->status,
             'service_id' => $serviceRequest->service_id,
+            'payment_status' => $serviceRequest->payment_status,
+            'payment_transaction_id' => $serviceRequest->payment_transaction_id,
         ], 201);
     }
     private function transformRequest(ServiceRequest $serviceRequest): array
@@ -326,6 +400,8 @@ class ServiceRequestController extends Controller
             'note' => $serviceRequest->note,
             'custom_fields' => $serviceRequest->payload,
             'payload' => $serviceRequest->payload,
+            'payment_status' => $serviceRequest->payment_status,
+            'payment_transaction_id' => $serviceRequest->payment_transaction_id,
             'submitted_at' => optional($serviceRequest->created_at)->toIso8601String(),
             'created_at' => optional($serviceRequest->created_at)->toDateTimeString(),
             'updated_at' => optional($serviceRequest->updated_at)->toDateTimeString(),

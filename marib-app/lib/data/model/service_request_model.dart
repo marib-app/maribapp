@@ -8,6 +8,8 @@ class ServiceRequestModel {
   final String? note;
   final DateTime? createdAt;
   final Map<String, dynamic>? payload;
+  final String? paymentStatus;
+  final int? paymentTransactionId;
 
   const ServiceRequestModel({
     required this.id,
@@ -17,6 +19,8 @@ class ServiceRequestModel {
     this.note,
     this.createdAt,
     this.payload,
+    this.paymentStatus,
+    this.paymentTransactionId,
   });
 
   factory ServiceRequestModel.fromJson(Map<String, dynamic> json) {
@@ -154,6 +158,21 @@ class ServiceRequestModel {
       map['payload'] ?? map['data'] ?? map['fields'],
     );
 
+    final String? paymentStatus = parseString(
+      map['payment_status'] ??
+          map['paymentStatus'] ??
+          map['payment_state'] ??
+          (map['payment'] is Map ? map['payment']['status'] : null),
+    );
+
+    final int? paymentTransactionId = parseNullableInt(
+      map['payment_transaction_id'] ??
+          map['paymentTransactionId'] ??
+          map['payment_transaction'] ??
+          map['transaction_id'] ??
+          (map['payment'] is Map ? map['payment']['transaction_id'] : null),
+    );
+
     return ServiceRequestModel(
       id: id,
       status: status,
@@ -162,6 +181,8 @@ class ServiceRequestModel {
       note: note,
       createdAt: createdAt,
       payload: payload,
+      paymentStatus: paymentStatus,
+      paymentTransactionId: paymentTransactionId,
     );
   }
 }

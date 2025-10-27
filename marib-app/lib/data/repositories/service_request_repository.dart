@@ -13,6 +13,7 @@ class ServiceRequestRepository {
     String? note,
     Map<String, dynamic>? customFields,
     Map<String, dynamic>? attachments,
+    int? paymentTransactionId,
   }) async {
     final String? normalizedUid =
         serviceUid != null && serviceUid.trim().isNotEmpty
@@ -65,6 +66,10 @@ class ServiceRequestRepository {
           }
           map[key] = _cloneAttachmentValue(rawValue);
         });
+      }
+
+      if (paymentTransactionId != null && paymentTransactionId > 0) {
+        map['payment_transaction_id'] = paymentTransactionId;
       }
 
       return map;

@@ -5,9 +5,11 @@ use App\Models\Package;
 use App\Http\Resources\ManualPaymentRequestResource;
 use App\Http\Resources\PaymentTransactionResource;
 use App\Models\Order;
-use App\Models\PaymentTransaction;
+use App.Models\PaymentTransaction;
+use App\Models\Service;
 use App\Services\Payments\OrderPaymentService;
 use App\Services\Payments\PackagePaymentService;
+use App\Services\Payments\ServicePaymentService;
 use Illuminate\Validation\Rule;
 use App\Models\ManualBank;
 use App\Models\ManualPaymentRequest;
@@ -36,6 +38,7 @@ class PaymentController extends Controller
     public function __construct(
         private readonly OrderPaymentService $orderPaymentService,
         private readonly PackagePaymentService $packagePaymentService,
+        private readonly ServicePaymentService $servicePaymentService,
         private readonly ManualPaymentRequestService $manualPaymentRequestService,
         private readonly CreateOrLinkManualPaymentRequest $manualPaymentLinker        
         )
@@ -68,7 +71,7 @@ class PaymentController extends Controller
 
 
         $rules = [
-            'purpose' => ['nullable', 'string', Rule::in(['order', 'package', ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP])],
+            'purpose' => ['nullable', 'string', Rule::in(['order', 'package', 'service', ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP])],
 
 
             'payment_method' => ['nullable', 'string', 'max:191', Rule::in($allowedMethods)],
@@ -82,7 +85,9 @@ class PaymentController extends Controller
             'currency' => ['nullable', 'string', 'size:3'],
         ];
 
-        if ($purpose === 'package') {
+        if ($purpose === 'service') {
+            $rules['service_id'] = ['required', 'integer', 'exists:services,id'];
+        } elseif ($purpose === 'package') {
             $rules['package_id'] = ['required', 'integer', 'exists:packages,id'];
         } elseif ($purpose === ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP) {
             $rules['amount'] = ['required', 'numeric', 'min:0.01'];
@@ -141,6 +146,77 @@ class PaymentController extends Controller
             return $this->initiateWalletTopUp($request, $validated, $idempotencyKey);
         }
 
+
+        if ($purpose === 'service') {
+            $service = Service::findOrFail($validated['service_id']);
+
+            $transaction = $this->servicePaymentService->initiate(
+                $request->user(),
+                $service,
+                $validated['payment_method'],
+                $idempotencyKey,
+                $validated
+            );
+
+            $transaction->loadMissing('manualPaymentRequest.manualBank');
+
+            $freshTransaction = $transaction->fresh();
+
+            $responsePayload = array_merge(
+                $methodResponsePayload,
+                [
+                    'message' => __('تم إنشاء عملية الدفع بنجاح.'),
+                    'status' => $freshTransaction?->payment_status,
+                    'payment_transaction_id' => $freshTransaction?->getKey(),
+                    'payment_intent_id' => $freshTransaction?->idempotency_key,
+                    'transaction' => $freshTransaction,
+                    'payment_transaction' => $freshTransaction,
+                    'service' => [
+                        'id' => $service->getKey(),
+                        'title' => $service->title,
+                        'price' => $service->price,
+                        'currency' => $service->currency,
+                        'service_uid' => $service->service_uid,
+                        'price_note' => $service->price_note,
+                    ],
+                ]
+            );
+
+            if ($freshTransaction?->manualPaymentRequest) {
+                $responsePayload['manual_payment_request'] = ManualPaymentRequestResource::make(
+                    $freshTransaction->manualPaymentRequest->loadMissing('manualBank')
+                )->resolve();
+            }
+
+            return response()->json($responsePayload);
+        }
+
+        if ($purpose === 'service') {
+            $service = Service::findOrFail($validated['service_id']);
+
+            $transaction = $this->servicePaymentService->createManual(
+                $request->user(),
+                $service,
+                $idempotencyKey,
+                $validated
+            );
+
+            $transaction->loadMissing('manualPaymentRequest.manualBank');
+
+            $manualRequest = $transaction->manualPaymentRequest?->loadMissing('paymentTransaction.payable', 'manualBank');
+
+            $transactionResource = PaymentTransactionResource::make($transaction)->resolve();
+            $manualRequestResource = $manualRequest
+                ? ManualPaymentRequestResource::make($manualRequest)->resolve()
+                : null;
+
+            return response()->json([
+                'message' => __('تم تسجيل الدفع اليدوي.'),
+                'transaction' => $transactionResource,
+                'payment_transaction' => $transactionResource,
+                'manual_payment_request' => $manualRequestResource,
+            ], $transaction->payment_status === 'succeed' ? 200 : 202);
+        }
 
         if ($purpose === 'package') {
             $package = Package::findOrFail($validated['package_id']);
@@ -238,7 +314,14 @@ class PaymentController extends Controller
             ->with('payable')
             ->findOrFail($validated['transaction_id']);
 
-        if ($transaction->payable_type === Package::class) {
+        if ($transaction->payable_type === Service::class) {
+            $updated = $this->servicePaymentService->confirm(
+                $request->user(),
+                $transaction,
+                $idempotencyKey,
+                $validated
+            );
+        } elseif ($transaction->payable_type === Package::class) {
             $updated = $this->packagePaymentService->confirm(
                 $request->user(),
                 $transaction,
@@ -283,7 +366,7 @@ class PaymentController extends Controller
         }
 
         $rules = [
-            'purpose' => ['nullable', 'string', Rule::in(['order', 'package', ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP])],
+            'purpose' => ['nullable', 'string', Rule::in(['order', 'package', 'service', ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP])],
 
 
             'amount' => ['nullable', 'numeric', 'min:0'],
@@ -304,7 +387,9 @@ class PaymentController extends Controller
 
         ];
 
-        if ($purpose === 'package') {
+        if ($purpose === 'service') {
+            $rules['service_id'] = ['required', 'integer', 'exists:services,id'];
+        } elseif ($purpose === 'package') {
             $rules['package_id'] = ['required', 'integer', 'exists:packages,id'];
 
         } elseif ($purpose === ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP) {
@@ -1000,6 +1085,10 @@ class PaymentController extends Controller
      */
     private function supportedPaymentMethodsForPurpose(string $purpose): array
     {
+        if ($purpose === 'service') {
+            return $this->extractSupportedMethodsFrom(ServicePaymentService::class);
+        }
+
         if ($purpose === 'package') {
             return $this->extractSupportedMethodsFrom(PackagePaymentService::class);
         }

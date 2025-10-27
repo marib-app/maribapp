@@ -11,12 +11,10 @@ class BankTransferArgs {
   final String? serviceTitle;
   final String? priceNote;
 
-
   const BankTransferArgs({
     required this.token,
     required this.packageId,
     required this.amount,
-
     required this.packageType,
     this.currency,
     this.itemId,
@@ -25,25 +23,21 @@ class BankTransferArgs {
     this.serviceId,
     this.serviceTitle,
     this.priceNote,
-
-
   });
 }
 
 // اترك تعريف BankTransferArgs لديك كما هو، وأضف الامتداد التالي:
 extension BankTransferArgsX on BankTransferArgs {
   Map<String, dynamic> toContext() => {
-    if (packageId > 0) 'package_id': packageId,
-    'package_type': packageType,
-    if (itemId != null) 'item_id': itemId,
-    if (serviceId != null) 'service_id': serviceId,
-  };
-
+        if (packageId > 0) 'package_id': packageId,
+        'package_type': packageType,
+        if (itemId != null) 'item_id': itemId,
+        if (serviceId != null) 'service_id': serviceId,
+      };
 
   String get normalizedPurpose {
     final explicit = purpose?.trim();
     if (explicit != null && explicit.isNotEmpty) {
-
       final normalized = explicit.toLowerCase();
       if (normalized.contains('wallet')) {
         return 'wallet_top_up';
@@ -89,6 +83,7 @@ extension BankTransferArgsX on BankTransferArgs {
     }
     return c.toUpperCase();
   }
+
   String? get normalizedGateway {
     final gateway = initialGateway?.trim();
     if (gateway == null || gateway.isEmpty) {
@@ -96,6 +91,4 @@ extension BankTransferArgsX on BankTransferArgs {
     }
     return gateway.toLowerCase();
   }
-
-
 }

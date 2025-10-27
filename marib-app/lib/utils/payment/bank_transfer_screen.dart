@@ -839,7 +839,6 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       if (!_senderOk) return false;
       if (!_transferCodeOk) return false;
 
-
       return _selectedBankId != null && _receiptOk;
     }
 
@@ -982,7 +981,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       final notesText = _notesCtrl.text.trim();
       final senderName = _shouldShowSenderField ? _senderCtrl.text.trim() : '';
       final transferCode =
-      _shouldShowTransferCodeField ? _transferCodeCtrl.text.trim() : '';
+          _shouldShowTransferCodeField ? _transferCodeCtrl.text.trim() : '';
       final String? submissionCurrency = _paymentCurrencyCode;
       if (submissionCurrency == null || submissionCurrency.isEmpty) {
         _showOverlayMessage(
@@ -994,7 +993,6 @@ class _BankTransferScreenState extends State<BankTransferScreen>
 
       final userNote = notesText;
 
-
       final contextMetadata = widget.args.toContext()
         ..removeWhere((k, v) => v == null);
 
@@ -1004,14 +1002,11 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         if (payableType != null) 'payable_type': payableType,
         if (payableId != null) 'payable_id': payableId,
         if (senderName.isNotEmpty) 'sender_name': senderName,
-
-        if (_usingManualBank && transferCode.isNotEmpty)
-          ...{
-            'transfer_code': transferCode,
-            'transfer_reference': transferCode,
-            'transfer_number': transferCode,
-          },
-
+        if (_usingManualBank && transferCode.isNotEmpty) ...{
+          'transfer_code': transferCode,
+          'transfer_reference': transferCode,
+          'transfer_number': transferCode,
+        },
         if (contextMetadata.isNotEmpty) 'context': contextMetadata,
       }..removeWhere((k, v) {
           if (v == null) return true;
@@ -1074,9 +1069,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
           serviceId: serviceIdForApi,
           amount: widget.args.amount,
           currency: submissionCurrency,
-          reference:
-          transferCode.isNotEmpty ? transferCode : null,
-
+          reference: transferCode.isNotEmpty ? transferCode : null,
           userNote: userNote.isEmpty ? null : userNote,
           transferredAt: DateTime.now().toUtc(),
           metadata: metadata.isEmpty ? null : metadata,

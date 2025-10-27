@@ -1,11 +1,12 @@
 <?php
 
 namespace App\Http\Controllers;
+
 use App\Models\Package;
 use App\Http\Resources\ManualPaymentRequestResource;
 use App\Http\Resources\PaymentTransactionResource;
 use App\Models\Order;
-use App.Models\PaymentTransaction;
+use App\Models\PaymentTransaction;
 use App\Models\Service;
 use App\Services\Payments\OrderPaymentService;
 use App\Services\Payments\PackagePaymentService;

@@ -1145,4 +1145,276 @@ class _ServiceAddMoreDetailsScreenState
       Navigator.of(context).pop();
     }
   }
+
+  Future<bool> _handlePaymentRequired({
+    required ApiHttpException error,
+    required Map<String, dynamic> customFieldPayload,
+    required Map<String, dynamic> attachmentPayload,
+  }) async {
+    if (!mounted) return false;
+
+    setState(() => _submitting = false);
+
+    final Map<String, dynamic> payload = _normalizeMap(error.payload);
+
+    final int? serviceId =
+        _serviceId ?? _flexInt(payload['service_id'] ?? payload['serviceId']);
+    if (serviceId == null) {
+      HelperUtils.showSnackBarMessage(
+        context,
+        'تعذّر تحديد الخدمة لإتمام الدفع.',
+      );
+      return false;
+    }
+
+    final double? amount =
+        _amount ?? _flexDouble(payload['amount'] ?? payload['price']);
+    if (amount == null || amount <= 0) {
+      HelperUtils.showSnackBarMessage(
+        context,
+        'المبلغ غير متاح لإتمام الدفع.',
+      );
+      return false;
+    }
+
+    final String token = HiveUtils.getJWT();
+    if (token.trim().isEmpty) {
+      HelperUtils.showSnackBarMessage(
+        context,
+        'الرجاء تسجيل الدخول لإتمام عملية الدفع.',
+      );
+      return false;
+    }
+
+    final String? currencyCandidate = _stringify(
+      payload['currency'] ??
+          payload['currency_code'] ??
+          payload['currencyCode'],
+    );
+
+    final BankTransferArgs args = BankTransferArgs(
+      token: token,
+      packageId: serviceId,
+      amount: amount,
+      currency: currencyCandidate ?? _currency,
+      packageType: 'service',
+      itemId: serviceId,
+      purpose: 'service',
+      initialGateway: _preferredGatewayFromPayload(payload),
+      serviceId: serviceId,
+      serviceTitle:
+          _stringify(payload['service_title'] ?? payload['serviceName']) ??
+              _serviceTitle,
+      priceNote: _stringify(payload['price_note'] ?? payload['note']),
+    );
+
+    if (args.priceNote != null && args.priceNote!.isNotEmpty) {
+      HelperUtils.showSnackBarMessage(context, args.priceNote!);
+    }
+
+    final dynamic paymentResult = await BankTransferScreen.show(context, args);
+
+    if (!mounted) {
+      return false;
+    }
+
+    if (paymentResult == null || paymentResult == false) {
+      return false;
+    }
+
+    final String? transactionId = _extractPaymentTransactionId(
+      paymentResult,
+      fallback:
+          payload['payment_transaction'] ?? payload['payment_transaction_id'],
+    );
+
+    if (transactionId == null) {
+      HelperUtils.showSnackBarMessage(
+        context,
+        'تعذّر تحديد معاملة الدفع. يرجى المحاولة لاحقًا.',
+      );
+      return false;
+    }
+
+    final int? numericTransactionId = int.tryParse(transactionId);
+    if (numericTransactionId == null) {
+      HelperUtils.showSnackBarMessage(
+        context,
+        'تعذّر قراءة رقم معاملة الدفع.',
+      );
+      return false;
+    }
+
+    if (!mounted) return false;
+    setState(() => _submitting = true);
+
+    var submitted = false;
+    try {
+      await _requestRepository.createRequest(
+        serviceId: serviceId,
+        serviceUid: _serviceUid,
+        customFields: customFieldPayload.isEmpty ? null : customFieldPayload,
+        attachments: attachmentPayload.isEmpty ? null : attachmentPayload,
+        paymentTransactionId: numericTransactionId,
+      );
+      submitted = true;
+      _onRequestSubmitted();
+      return true;
+    } on ApiHttpException catch (err) {
+      final message = err.errorMessage ?? err.payload ?? err.toString();
+      HelperUtils.showSnackBarMessage(context, '$message');
+    } catch (err) {
+      HelperUtils.showSnackBarMessage(context, '$err');
+    } finally {
+      if (!submitted && mounted) {
+        setState(() => _submitting = false);
+      }
+    }
+
+    return false;
+  }
+
+  Map<String, dynamic> _normalizeMap(dynamic value) {
+    if (value is Map<String, dynamic>) {
+      return Map<String, dynamic>.from(value);
+    }
+    if (value is Map) {
+      return value.map((dynamic key, dynamic val) =>
+          MapEntry<String, dynamic>(key.toString(), val));
+    }
+    return <String, dynamic>{};
+  }
+
+  int? _flexInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) {
+      final trimmed = value.trim();
+      if (trimmed.isEmpty) return null;
+      return int.tryParse(trimmed);
+    }
+    return null;
+  }
+
+  double? _flexDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is num) return value.toDouble();
+    if (value is String) {
+      final trimmed = value.trim();
+      if (trimmed.isEmpty) return null;
+      return double.tryParse(trimmed);
+    }
+    return null;
+  }
+
+  String? _stringify(dynamic value) {
+    if (value == null) return null;
+    if (value is String) {
+      final trimmed = value.trim();
+      return trimmed.isEmpty ? null : trimmed;
+    }
+    if (value is num) {
+      return value.toString();
+    }
+    if (value is bool) {
+      return value ? 'true' : 'false';
+    }
+    final String stringified = value.toString().trim();
+    return stringified.isEmpty ? null : stringified;
+  }
+
+  String? _preferredGatewayFromPayload(Map<String, dynamic> payload) {
+    final List<dynamic> candidates = [
+      payload['preferred_payment_method'],
+      payload['preferred_payment_gateway'],
+      payload['default_payment_method'],
+      payload['default_payment_gateway'],
+    ];
+
+    for (final candidate in candidates) {
+      final normalized = _stringify(candidate);
+      if (normalized != null && normalized.isNotEmpty) {
+        return normalized;
+      }
+    }
+
+    final dynamic allowedRaw =
+        payload['allowed_gateways'] ?? payload['allowed_payment_methods'];
+    if (allowedRaw is Iterable) {
+      for (final entry in allowedRaw) {
+        final normalized = _stringify(entry);
+        if (normalized != null && normalized.isNotEmpty) {
+          return normalized;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  String? _extractPaymentTransactionId(
+    dynamic source, {
+    dynamic fallback,
+  }) {
+    String? fromValue(dynamic value) {
+      if (value is Map || value is Map<String, dynamic>) {
+        final map = _normalizeMap(value);
+        final String? candidate = _stringify(
+          map['payment_transaction_id'] ??
+              map['paymentTransactionId'] ??
+              map['transaction_id'] ??
+              map['id'],
+        );
+        if (candidate != null) {
+          return candidate;
+        }
+        if (map.containsKey('payment_transaction')) {
+          return fromValue(map['payment_transaction']);
+        }
+        if (map.containsKey('transaction')) {
+          return fromValue(map['transaction']);
+        }
+        if (map.containsKey('data')) {
+          return fromValue(map['data']);
+        }
+        return null;
+      }
+
+      return _stringify(value);
+    }
+
+    if (source is ManualPaymentSubmissionResult) {
+      final List<dynamic> candidates = [
+        source.paymentTransactionId,
+        source.manualPaymentId,
+        source.paymentTransaction,
+        source.manualPaymentRequest,
+        source.raw,
+      ];
+
+      for (final candidate in candidates) {
+        final normalized = fromValue(candidate);
+        if (normalized != null && normalized.isNotEmpty) {
+          return normalized;
+        }
+      }
+    } else {
+      final normalized = fromValue(source);
+      if (normalized != null && normalized.isNotEmpty) {
+        return normalized;
+      }
+    }
+
+    if (fallback != null) {
+      final normalized = fromValue(fallback);
+      if (normalized != null && normalized.isNotEmpty) {
+        return normalized;
+      }
+    }
+
+    return null;
+  }
 }

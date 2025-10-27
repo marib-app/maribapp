@@ -216,7 +216,7 @@ class CheckoutRepository {
         if (policyText != null && policyText.trim().isNotEmpty) {
           return policyText.trim();
         }
-      } catch (_) { \
+      } catch (_) {
         // Ignore individual endpoint failures and continue to the next candidate.
       }
     }

@@ -529,7 +529,7 @@ class ManualPaymentRequestService
 
         $skippedReason = $normalizeString(Arr::get($manualRequestMeta, 'skipped.reason'));
 
-        if ($skippedReason === 'missing_manual_bank') {
+        if ($skippedReason !== null && in_array($skippedReason, ['missing_manual_bank', 'manual_request_already_linked'], true)) {
             return null;
         }
 
@@ -972,6 +972,26 @@ class ManualPaymentRequestService
 
         $mergedMeta = $this->filterArrayRecursive(array_replace_recursive($existingMeta, $metaPayload));
 
+
+        $existingLinkedTransactionId = $this->manualPaymentRequestLinkedTransactionId($manualPaymentRequest);
+        $currentTransactionId = $this->normalizeNullableId($transaction->getKey());
+
+        if ($existingLinkedTransactionId !== null && $currentTransactionId !== null && $existingLinkedTransactionId !== $currentTransactionId) {
+            Log::warning('Manual payment request already linked to a different transaction. Skipping linkage to prevent duplicate association.', [
+                'payment_transaction_id' => $transaction->getKey(),
+                'manual_payment_request_id' => $manualPaymentRequest->getKey(),
+                'existing_payment_transaction_id' => $existingLinkedTransactionId,
+            ]);
+
+            $this->markTransactionManualPaymentRequestSkipped($transaction, 'manual_request_already_linked', [
+                'manual_payment_request_id' => (string) $manualPaymentRequest->getKey(),
+                'existing_payment_transaction_id' => (string) $existingLinkedTransactionId,
+            ]);
+
+            return null;
+        }
+
+
         $manualPaymentRequest->forceFill(array_filter([
             'manual_bank_id' => $manualBank?->getKey() ?? $manualBankId,
             'payable_type' => $transactionPayableType,
@@ -1286,6 +1306,39 @@ class ManualPaymentRequestService
 
 
 
+    private function manualPaymentRequestLinkedTransactionId(ManualPaymentRequest $manualPaymentRequest): ?int
+    {
+        $linkedId = $this->normalizeNullableId($manualPaymentRequest->payment_transaction_id);
+
+        if ($linkedId !== null) {
+            return $linkedId;
+        }
+
+        $linkedId = PaymentTransaction::query()
+            ->where('manual_payment_request_id', $manualPaymentRequest->getKey())
+            ->value('id');
+
+        return $this->normalizeNullableId($linkedId);
+    }
+
+    private function normalizeNullableId(int|string|null $value): ?int
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_int($value)) {
+            return $value;
+        }
+
+        if (is_string($value) && is_numeric($value)) {
+            return (int) $value;
+        }
+
+        return null;
+    }
+
+
 
     private function markTransactionManualPaymentRequestSkipped(
         PaymentTransaction $transaction,
@@ -1303,6 +1356,8 @@ class ManualPaymentRequestService
             'at' => now()->toIso8601String(),
             'manual_bank_id' => $context['manual_bank_id'] ?? null,
             'manual_bank_name' => $context['manual_bank_name'] ?? null,
+            'manual_payment_request_id' => $context['manual_payment_request_id'] ?? null,
+            'existing_payment_transaction_id' => $context['existing_payment_transaction_id'] ?? null,
         ], static function ($value) {
             if (is_array($value)) {
                 return true;

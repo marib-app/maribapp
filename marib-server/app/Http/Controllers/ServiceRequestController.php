@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\ManualPaymentViewHelpers;
 use App\Models\Category;
+use App\Models\ManualPaymentRequest;
+use App\Models\PaymentTransaction;
 use App\Models\ServiceRequest;
 use App\Models\UserFcmToken;
 use App\Services\NotificationService;
@@ -26,6 +29,9 @@ use Throwable;
  */
 class ServiceRequestController extends Controller
 {
+
+    use ManualPaymentViewHelpers;
+
 
         public function __construct(private ServiceAuthorizationService $serviceAuthorizationService)
     {
@@ -291,6 +297,125 @@ class ServiceRequestController extends Controller
         ]);
     }
 
+
+
+    public function review($serviceRequest)
+    {
+        ResponseService::noAnyPermissionThenRedirect([
+            'service-requests-list',
+            'service-requests-update',
+        ]);
+
+        $serviceRequestModel = ServiceRequest::with([
+                'service.category',
+                'user',
+            ])
+            ->withTrashed()
+            ->findOrFail($serviceRequest);
+
+        $user = Auth::user();
+        if (!$user || !$this->serviceAuthorizationService->userCanManageService($user, $serviceRequestModel->service)) {
+            abort(403, __('You are not authorized to manage this service.'));
+        }
+
+        $transaction = $this->resolveServiceRequestPaymentTransaction($serviceRequestModel);
+
+        $manualPaymentRelations = [
+            'user',
+            'manualBank',
+            'paymentTransaction.order.user',
+            'paymentTransaction.order.coupon',
+            'paymentTransaction.walletTransaction.walletAccount.user',
+            'paymentTransaction.payable',
+            'histories.user',
+            'reviewer',
+            'payable',
+        ];
+
+        $manualPaymentRequest = $transaction?->manualPaymentRequest;
+
+        if (! $manualPaymentRequest instanceof ManualPaymentRequest && $transaction instanceof PaymentTransaction) {
+            $manualPaymentRequestId = data_get($transaction->meta, 'service.manual_payment_request_id');
+
+            if (is_scalar($manualPaymentRequestId)) {
+                $manualPaymentRequestId = trim((string) $manualPaymentRequestId);
+
+                if ($manualPaymentRequestId !== '') {
+                    $manualPaymentRequest = ManualPaymentRequest::query()
+                        ->with($manualPaymentRelations)
+                        ->whereKey($manualPaymentRequestId)
+                        ->first();
+                }
+            }
+        }
+
+        if (! $manualPaymentRequest instanceof ManualPaymentRequest) {
+            $manualPaymentRequest = ManualPaymentRequest::query()
+                ->with($manualPaymentRelations)
+                ->where(function ($query) use ($serviceRequestModel) {
+                    $id = $serviceRequestModel->getKey();
+                    $query->where('meta->service->request_id', $id)
+                        ->orWhere('meta->service->request_id', (string) $id);
+                })
+                ->orderByDesc('id')
+                ->first();
+        }
+
+        if ($manualPaymentRequest instanceof ManualPaymentRequest) {
+            $manualPaymentRequest = $this->loadManualPaymentRequestRelations($manualPaymentRequest);
+
+            if ($manualPaymentRequest->paymentTransaction instanceof PaymentTransaction) {
+                $transaction = $manualPaymentRequest->paymentTransaction;
+            }
+        } elseif ($transaction instanceof PaymentTransaction) {
+            $manualPaymentRequest = $this->makeManualPaymentRequestFromTransaction($transaction);
+        }
+
+        if ($transaction instanceof PaymentTransaction && $manualPaymentRequest instanceof ManualPaymentRequest) {
+            $transaction->setRelation('manualPaymentRequest', $manualPaymentRequest);
+        }
+
+        if ($manualPaymentRequest instanceof ManualPaymentRequest && $transaction instanceof PaymentTransaction) {
+            $manualPaymentRequest->setRelation('paymentTransaction', $transaction);
+        }
+
+        $presentation = [];
+        $timelineData = [];
+        $timelineEndpoint = null;
+
+        if ($manualPaymentRequest instanceof ManualPaymentRequest) {
+            $presentation = $this->manualPaymentRequestPresentationData($manualPaymentRequest);
+            $timelineData = $this->manualPaymentTimelinePayload($manualPaymentRequest);
+
+            if ($manualPaymentRequest->exists) {
+                $timelineEndpoint = route('payment-requests.timeline', $manualPaymentRequest);
+            }
+        }
+
+        $canReviewManualPayment = $manualPaymentRequest instanceof ManualPaymentRequest
+            && $manualPaymentRequest->isOpen()
+            && $user
+            && $user->can('manual-payments-review');
+
+        $hasPaymentContext = $manualPaymentRequest instanceof ManualPaymentRequest
+            || $transaction instanceof PaymentTransaction;
+
+        return view('services.requests.review', [
+            'serviceRequest' => $serviceRequestModel,
+            'service' => $serviceRequestModel->service,
+            'category' => optional($serviceRequestModel->service)->category,
+            'applicant' => $serviceRequestModel->user,
+            'manualPaymentRequest' => $manualPaymentRequest,
+            'paymentTransaction' => $transaction,
+            'presentation' => $presentation,
+            'timelineData' => $timelineData,
+            'timelineEndpoint' => $timelineEndpoint,
+            'canReviewPayment' => $canReviewManualPayment,
+            'hasPaymentContext' => $hasPaymentContext,
+        ]);
+    }
+
+
     /* =========================================================================
      | تحديث حالة الطلب (موافقة/رفض/مراجعة) + (اختياري) إرسال إشعار FCM
      |=========================================================================*/
@@ -418,6 +543,49 @@ class ServiceRequestController extends Controller
     /* =========================================================================
      | أدوات مساعدة
      |=========================================================================*/
+
+
+    private function resolveServiceRequestPaymentTransaction(ServiceRequest $serviceRequest): ?PaymentTransaction
+    {
+        $transactionRelations = [
+            'user',
+            'order.user',
+            'walletTransaction.walletAccount.user',
+            'payable',
+            'manualPaymentRequest.user',
+            'manualPaymentRequest.manualBank',
+            'manualPaymentRequest.paymentTransaction.order.user',
+            'manualPaymentRequest.paymentTransaction.walletTransaction.walletAccount.user',
+            'manualPaymentRequest.payable',
+            'manualPaymentRequest.histories.user',
+        ];
+
+        $transactionId = $serviceRequest->payment_transaction_id;
+
+        if ($transactionId) {
+            $transaction = PaymentTransaction::query()
+                ->with($transactionRelations)
+                ->find($transactionId);
+
+            if ($transaction instanceof PaymentTransaction) {
+                return $transaction;
+            }
+        }
+
+        return PaymentTransaction::query()
+            ->with($transactionRelations)
+            ->where(function ($query) use ($serviceRequest) {
+                $id = $serviceRequest->getKey();
+                $query->where('meta->service->request_id', $id)
+                    ->orWhere('meta->service->request_id', (string) $id);
+            })
+            ->orderByDesc('id')
+            ->first();
+    }
+
+
+
+
 
     /**
      * يبني معاينة مختصرة للـ payload:

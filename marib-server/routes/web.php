@@ -687,6 +687,7 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
                 
             Route::get('/',                     [ServiceRequestController::class, 'index'])->name('index');
             Route::get('/datatable',            [ServiceRequestController::class, 'datatable'])->name('datatable');
+            Route::get('/{serviceRequest}/review', [ServiceRequestController::class, 'review'])->name('review');
             Route::get('/{serviceRequest}',     [ServiceRequestController::class, 'show'])->name('show');
             
             Route::post('/approval/{id}',       [ServiceRequestController::class, 'updateApproval'])->name('approval');

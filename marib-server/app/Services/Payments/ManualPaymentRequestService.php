@@ -7,6 +7,8 @@ use App\Models\ManualPaymentRequest;
 use App\Models\PaymentTransaction;
 use App\Models\Order;
 use App\Models\User;
+use Illuminate\Database\QueryException;
+use Illuminate\Database\UniqueConstraintViolationException;
 use App\Support\ManualPayments\TransferDetailsResolver;
 use Illuminate\Support\Arr;
 use Illuminate\Validation\ValidationException;
@@ -784,6 +786,98 @@ class ManualPaymentRequestService
         }
 
 
+        $manualPaymentRequest = $existingRequest;
+
+        if (! $manualPaymentRequest instanceof ManualPaymentRequest) {
+            if ($manualBankMissing && $manualBankId === null) {
+                $providedManualBankId = Arr::get($data, 'manual_bank_id')
+                    ?? Arr::get($manualMeta, 'manual_bank.id')
+                    ?? Arr::get($manualRequestMeta, 'manual_bank_id')
+                    ?? Arr::get($manualRequestMeta, 'bank_id');
+
+
+
+                Log::warning('Unable to determine manual bank while creating manual payment request from transaction.', [
+                    'payment_transaction_id' => $transaction->getKey(),
+                    'provided_manual_bank_id' => $providedManualBankId,
+
+                    'provided_manual_bank_name' => $bankName,
+                ]);
+
+                $this->markTransactionManualPaymentRequestSkipped(
+                    $transaction,
+                    'missing_manual_bank',
+                    [
+                        'manual_bank_id' => is_scalar($providedManualBankId) ? (string) $providedManualBankId : null,
+                        'manual_bank_name' => $bankName,
+                    ]
+                );
+
+                return null;
+            }
+
+            try {
+                $manualPaymentRequest = $this->createFromTransaction(
+                    $user,
+                    $transactionPayableType,
+                    $payableId,
+                    $transaction,
+                    $payload
+                );
+            } catch (Throwable $exception) {
+                if (! $this->isManualPaymentRequestDuplicateKeyException($exception) || $payableId === null) {
+                    throw $exception;
+                }
+
+                $manualPaymentRequest = $this->findOpenManualPaymentRequestForPayable(
+                    $transactionPayableType,
+                    $payableId
+                );
+
+                if (! $manualPaymentRequest instanceof ManualPaymentRequest) {
+                    throw $exception;
+                }
+            }
+
+            if (! $manualBank instanceof ManualBank) {
+                $candidateManualBank = $manualPaymentRequest->relationLoaded('manualBank')
+                    ? $manualPaymentRequest->getRelation('manualBank')
+                    : $manualPaymentRequest->manualBank;
+
+                if ($candidateManualBank instanceof ManualBank) {
+                    $manualBank = $candidateManualBank;
+                    $manualBankId = $manualBank->getKey();
+                    $manualBankMissing = false;
+
+                    if ($bankName === null) {
+                        $bankName = $normalizeString($manualBank->name);
+                    }
+
+                    if ($bankBeneficiary === null && $manualBank->beneficiary_name) {
+                        $bankBeneficiary = $normalizeString($manualBank->beneficiary_name);
+                    }
+                }
+            }
+        }
+
+        if ($manualPaymentRequest instanceof ManualPaymentRequest && $manualBankId === null && $manualPaymentRequest->manual_bank_id !== null) {
+            $manualBankId = (int) $manualPaymentRequest->manual_bank_id;
+        }
+
+        if (! $manualBank instanceof ManualBank) {
+            $candidateManualBank = $manualPaymentRequest instanceof ManualPaymentRequest
+                ? ($manualPaymentRequest->relationLoaded('manualBank')
+                    ? $manualPaymentRequest->getRelation('manualBank')
+                    : $manualPaymentRequest->manualBank)
+                : null;
+
+            if ($candidateManualBank instanceof ManualBank) {
+                $manualBank = $candidateManualBank;
+                $manualBankMissing = false;
+            }
+        }
+
+
         $metaPayload = [];
 
         if ($manualMeta !== []) {
@@ -842,101 +936,48 @@ class ManualPaymentRequestService
             $payload['bank'] = ['name' => $bankName];
         }
 
-        if ($existingRequest instanceof ManualPaymentRequest) {
-            $existingMeta = $existingRequest->meta;
-
-            if (! is_array($existingMeta)) {
-                $existingMeta = [];
-            }
-
-            $mergedMeta = $this->filterArrayRecursive(array_replace_recursive($existingMeta, $metaPayload));
-
-            $existingRequest->forceFill(array_filter([
-                'manual_bank_id' => $manualBank?->getKey() ?? $manualBankId,
-                'payable_type' => $transactionPayableType,
-                'payable_id' => $payableId,
-                'amount' => $transaction->amount,
-                'currency' => $transaction->currency,
-                'reference' => $reference ?? $existingRequest->reference,
-                'user_note' => $note ?? $existingRequest->user_note,
-                'receipt_path' => $receiptPath ?? $existingRequest->receipt_path,
-                'payment_transaction_id' => $transaction->getKey(),
-            ], static fn ($value) => $value !== null && $value !== ''));
-
-            if ($supportsBankNameColumn && $bankName !== null) {
-
-                $existingRequest->bank_name = $bankName;
-            }
-
-            if ($supportsBankAccountNameColumn && $bankBeneficiary !== null) {
-
-                $existingRequest->bank_account_name = $bankBeneficiary;
-            }
-
-            $existingRequest->meta = $mergedMeta === [] ? null : $mergedMeta;
-            $existingRequest->saveQuietly();
-
-            $manualPaymentRequest = $existingRequest->fresh();
-        } else {
-
-            if ($manualBankMissing && $manualBankId === null) {
-
-                $providedManualBankId = Arr::get($data, 'manual_bank_id')
-                    ?? Arr::get($manualMeta, 'manual_bank.id')
-                    ?? Arr::get($manualRequestMeta, 'manual_bank_id')
-                    ?? Arr::get($manualRequestMeta, 'bank_id');
-
-
-
-                Log::warning('Unable to determine manual bank while creating manual payment request from transaction.', [
-                    'payment_transaction_id' => $transaction->getKey(),
-                    'provided_manual_bank_id' => $providedManualBankId,
-
-                    'provided_manual_bank_name' => $bankName,
-                ]);
-
-                $this->markTransactionManualPaymentRequestSkipped(
-                    $transaction,
-                    'missing_manual_bank',
-                    [
-                        'manual_bank_id' => is_scalar($providedManualBankId) ? (string) $providedManualBankId : null,
-                        'manual_bank_name' => $bankName,
-                    ]
-                );
-
-                return null;
-
-            }
-
-
-            $manualPaymentRequest = $this->createFromTransaction(
-                $user,
-                $transactionPayableType,
-                $payableId,
-                $transaction,
-                $payload
-            );
-
-            $manualPaymentRequest->forceFill([
-                'payment_transaction_id' => $transaction->getKey(),
-                'manual_bank_id' => $manualBank?->getKey() ?? $manualBankId,
-            ]);
-
-            if ($supportsBankNameColumn && $bankName !== null) {
-                $manualPaymentRequest->bank_name = $bankName;
-            }
-
-            if (
-                $bankBeneficiary !== null
-                && $supportsBankAccountNameColumn
-                && $manualPaymentRequest->bank_account_name === null
-            ) {
-                
-                $manualPaymentRequest->bank_account_name = $bankBeneficiary;
-            }
-
-            $manualPaymentRequest->saveQuietly();
+        if (! $manualPaymentRequest instanceof ManualPaymentRequest) {
+            return null;
         }
+
+        $existingMeta = $manualPaymentRequest->meta;
+
+
+        if (! is_array($existingMeta)) {
+            $existingMeta = [];
+        }
+
+        $mergedMeta = $this->filterArrayRecursive(array_replace_recursive($existingMeta, $metaPayload));
+
+        $manualPaymentRequest->forceFill(array_filter([
+            'manual_bank_id' => $manualBank?->getKey() ?? $manualBankId,
+            'payable_type' => $transactionPayableType,
+            'payable_id' => $payableId,
+            'amount' => $transaction->amount,
+            'currency' => $transaction->currency,
+            'reference' => $reference ?? $manualPaymentRequest->reference,
+            'user_note' => $note ?? $manualPaymentRequest->user_note,
+            'receipt_path' => $receiptPath ?? $manualPaymentRequest->receipt_path,
+            'payment_transaction_id' => $transaction->getKey(),
+        ], static fn ($value) => $value !== null && $value !== ''));
+
+        if ($supportsBankNameColumn && $bankName !== null) {
+
+
+            $manualPaymentRequest->bank_name = $bankName;
+        }
+
+        if ($supportsBankAccountNameColumn && $bankBeneficiary !== null) {
+
+
+            $manualPaymentRequest->bank_account_name = $bankBeneficiary;
+        }
+
+        $manualPaymentRequest->meta = $mergedMeta === [] ? null : $mergedMeta;
+        $manualPaymentRequest->saveQuietly();
+
+        $manualPaymentRequest = $manualPaymentRequest->fresh();
+
 
         $transactionMeta = $transaction->meta;
 
@@ -1523,6 +1564,45 @@ class ManualPaymentRequestService
         return $this->supportsBankNameColumn;
 
     }
+
+
+    private function isManualPaymentRequestDuplicateKeyException(Throwable $exception): bool
+    {
+        $needle = 'manual_payment_requests_open_unique_key_unique';
+
+        $current = $exception;
+
+        while ($current instanceof Throwable) {
+            $message = Str::lower($current->getMessage());
+
+            if (str_contains($message, $needle)) {
+                return true;
+            }
+
+            if ($current instanceof QueryException || $current instanceof UniqueConstraintViolationException) {
+                $errorInfo = $current->errorInfo ?? null;
+
+                if (is_array($errorInfo)) {
+                    foreach ($errorInfo as $value) {
+                        if (is_string($value) && str_contains(Str::lower($value), $needle)) {
+                            return true;
+                        }
+                    }
+                }
+
+                $code = (string) $current->getCode();
+                if ($code === '23000' && str_contains($message, 'duplicate entry')) {
+                    return true;
+                }
+            }
+
+            $current = $current->getPrevious();
+        }
+
+        return false;
+    }
+
+
 
     private function manualPaymentSupportsBankAccountNameColumn(): bool
     

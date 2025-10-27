@@ -786,6 +786,84 @@ class ManualPaymentRequestService
         }
 
 
+        $autoLinkedAt = now()->toIso8601String();
+
+        $buildPayload = function () use (
+            &$manualMeta,
+            &$data,
+            $transaction,
+            &$manualBankId,
+            &$bankName,
+            &$bankBeneficiary,
+            &$reference,
+            &$note,
+            &$receiptPath,
+            $autoLinkedAt
+        ): array {
+            $metaPayload = [];
+
+            if ($manualMeta !== []) {
+                $metaPayload = array_replace_recursive($metaPayload, $manualMeta);
+            }
+
+            $providedMeta = Arr::get($data, 'meta');
+
+            if (is_array($providedMeta)) {
+                $metaPayload = array_replace_recursive($metaPayload, $providedMeta);
+            }
+
+            $transactionMetaPayload = array_filter([
+                'id' => $transaction->getKey(),
+                'amount' => $transaction->amount !== null ? (float) $transaction->amount : null,
+                'currency' => $transaction->currency,
+                'status' => $transaction->payment_status,
+                'created_at' => $transaction->created_at?->toIso8601String(),
+            ], static fn ($value) => $value !== null && $value !== '');
+
+            if ($transactionMetaPayload !== []) {
+                data_set($metaPayload, 'transaction', $transactionMetaPayload);
+            }
+
+            data_set($metaPayload, 'source', Arr::get($manualMeta, 'source', 'auto-from-transaction'));
+            data_set($metaPayload, 'auto_linked_at', $autoLinkedAt);
+
+            if ($manualBankId !== null) {
+                data_set($metaPayload, 'bank.id', $manualBankId);
+                data_set($metaPayload, 'manual_bank.id', $manualBankId);
+            }
+
+            if ($bankName !== null) {
+                data_set($metaPayload, 'bank.name', $bankName);
+                data_set($metaPayload, 'manual_bank.name', $bankName);
+            }
+
+            if ($bankBeneficiary !== null) {
+                data_set($metaPayload, 'bank.beneficiary_name', $bankBeneficiary);
+                data_set($metaPayload, 'manual_bank.beneficiary_name', $bankBeneficiary);
+            }
+
+            $metaPayload = $this->filterArrayRecursive($metaPayload);
+
+            $payload = array_filter([
+                'payment_gateway' => $transaction->payment_gateway,
+                'currency' => $transaction->currency,
+                'reference' => $reference,
+                'note' => $note,
+                'manual_bank_id' => $manualBankId,
+                'receipt_path' => $receiptPath,
+                'meta' => $metaPayload,
+            ], static fn ($value) => $value !== null && $value !== '');
+
+            if ($bankName !== null) {
+                $payload['bank'] = ['name' => $bankName];
+            }
+
+            return [$payload, $metaPayload];
+        };
+
+        [$payload, $metaPayload] = $buildPayload();
+
+        
         $manualPaymentRequest = $existingRequest;
 
         if (! $manualPaymentRequest instanceof ManualPaymentRequest) {
@@ -878,63 +956,8 @@ class ManualPaymentRequestService
         }
 
 
-        $metaPayload = [];
+        [$payload, $metaPayload] = $buildPayload();
 
-        if ($manualMeta !== []) {
-            $metaPayload = array_replace_recursive($metaPayload, $manualMeta);
-        }
-
-        $providedMeta = Arr::get($data, 'meta');
-
-        if (is_array($providedMeta)) {
-            $metaPayload = array_replace_recursive($metaPayload, $providedMeta);
-        }
-
-        $transactionMetaPayload = array_filter([
-            'id' => $transaction->getKey(),
-            'amount' => $transaction->amount !== null ? (float) $transaction->amount : null,
-            'currency' => $transaction->currency,
-            'status' => $transaction->payment_status,
-            'created_at' => $transaction->created_at?->toIso8601String(),
-        ], static fn ($value) => $value !== null && $value !== '');
-
-        if ($transactionMetaPayload !== []) {
-            data_set($metaPayload, 'transaction', $transactionMetaPayload);
-        }
-
-        data_set($metaPayload, 'source', Arr::get($manualMeta, 'source', 'auto-from-transaction'));
-        data_set($metaPayload, 'auto_linked_at', now()->toIso8601String());
-
-        if ($manualBankId !== null) {
-            data_set($metaPayload, 'bank.id', $manualBankId);
-            data_set($metaPayload, 'manual_bank.id', $manualBankId);
-        }
-
-        if ($bankName !== null) {
-            data_set($metaPayload, 'bank.name', $bankName);
-            data_set($metaPayload, 'manual_bank.name', $bankName);
-        }
-
-        if ($bankBeneficiary !== null) {
-            data_set($metaPayload, 'bank.beneficiary_name', $bankBeneficiary);
-            data_set($metaPayload, 'manual_bank.beneficiary_name', $bankBeneficiary);
-        }
-
-        $metaPayload = $this->filterArrayRecursive($metaPayload);
-
-        $payload = array_filter([
-            'payment_gateway' => $transaction->payment_gateway,
-            'currency' => $transaction->currency,
-            'reference' => $reference,
-            'note' => $note,
-            'manual_bank_id' => $manualBankId,
-            'receipt_path' => $receiptPath,
-            'meta' => $metaPayload,
-        ], static fn ($value) => $value !== null && $value !== '');
-
-        if ($bankName !== null) {
-            $payload['bank'] = ['name' => $bankName];
-        }
 
         if (! $manualPaymentRequest instanceof ManualPaymentRequest) {
             return null;

@@ -17,6 +17,7 @@ use App\Models\ManualPaymentRequest;
 use App\Services\OrderCheckoutService;
 use ReflectionClass;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 use App\Models\PaymentConfiguration;
 use App\Models\WalletAccount;
@@ -98,7 +99,17 @@ class PaymentController extends Controller
             $rules['order_id'] = ['required', 'integer', 'exists:orders,id'];
         }
 
-        $validated = $request->validate($rules);
+        try {
+            $validated = $request->validate($rules);
+        } catch (ValidationException $exception) {
+            Log::warning('payments.initiate.validation_failed', [
+                'errors' => $exception->errors(),
+                'purpose' => $purpose,
+                'payload' => $request->all(),
+            ]);
+
+            throw $exception;
+        }
 
         $selectedMethod = null;
 

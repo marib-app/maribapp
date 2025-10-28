@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use ArrayAccess;
 use App\Models\ManualBank;
 use App\Models\ManualPaymentRequest;
 use App\Models\Order;
@@ -829,6 +830,68 @@ class ManualPaymentRequestResource extends JsonResource
 
         return array_values(array_unique($normalized));
     
+    }
+
+    public function offsetExists($offset): bool
+    {
+        if (! is_string($offset) && ! is_int($offset)) {
+            return false;
+        }
+
+        $resource = $this->resource;
+
+        if (is_array($resource)) {
+            return array_key_exists($offset, $resource);
+        }
+
+        if ($resource instanceof ArrayAccess) {
+            try {
+                return $resource->offsetExists($offset);
+            } catch (Throwable) {
+                return false;
+            }
+        }
+
+        if (is_object($resource)) {
+            try {
+                return isset($resource->{$offset});
+            } catch (Throwable) {
+                return false;
+            }
+        }
+
+        return false;
+    }
+
+    public function offsetGet($offset): mixed
+    {
+        if (! is_string($offset) && ! is_int($offset)) {
+            return null;
+        }
+
+        $resource = $this->resource;
+
+        if (is_array($resource)) {
+            return $resource[$offset] ?? null;
+        }
+
+        if ($resource instanceof ArrayAccess) {
+            try {
+                return $resource[$offset];
+            } catch (Throwable) {
+                return null;
+            }
+        }
+
+        if (is_object($resource)) {
+            try {
+                return $resource->{$offset} ?? null;
+            } catch (Throwable) {
+                return null;
+            }
+        }
+
+        return null;
     }
 
 }

@@ -3,7 +3,6 @@ import 'package:marib/ui/screens/auth/sign_up/mobile_verification_screen.dart';
 import 'package:marib/ui/screens/cart/adress.dart';
 import 'package:marib/ui/screens/cart/delivery_and_payment.dart';
 import 'package:marib/ui/screens/cart/order_step.dart';
-import 'dart:ui';
 
 import 'package:marib/ui/screens/competitions/competitions_screen.dart';
 
@@ -273,12 +272,16 @@ class Routes {
       if (arguments == null) {
         return AppPageRoute.build(
           settings: routeSettings,
+          transition: AppPageRouteTransition.fadeBlur,
+          forwardDuration: const Duration(milliseconds: 180),
           builder: (context) => ErrorScreen(),
         );
       }
 
       return AppPageRoute.build(
         settings: routeSettings,
+        transition: AppPageRouteTransition.fadeBlur,
+        forwardDuration: const Duration(milliseconds: 180),
         builder: (context) => TemporarySectionScreen(
           catName: arguments['catName'] ?? 'Default CatName',
           catID: arguments['catID'] ?? 'Default CatID',
@@ -290,6 +293,8 @@ class Routes {
       String itemSlug = routeSettings.name!.split('/').last;
       return AppPageRoute.build(
         settings: routeSettings,
+        transition: AppPageRouteTransition.fadeBlur,
+        forwardDuration: const Duration(milliseconds: 180),
         builder: (context) {
           return FutureBuilder<DataOutput<ItemModel>>(
             future: ItemRepository().fetchItemFromItemSlug(itemSlug),
@@ -341,6 +346,8 @@ class Routes {
       case mapSearch:
         return AppPageRoute.build(
           settings: routeSettings,
+          transition: AppPageRouteTransition.fadeBlur,
+          forwardDuration: const Duration(milliseconds: 180),
           builder: (_) => const MapSearchScreen(),
         );
 
@@ -360,6 +367,8 @@ class Routes {
 
         return AppPageRoute.build(
           settings: routeSettings,
+          transition: AppPageRouteTransition.fadeBlur,
+          forwardDuration: const Duration(milliseconds: 180),
           builder: (context) => TemporarySectionScreen(
             catName: arguments['catName'] ?? '',
             catID: arguments['catID'] ?? '',
@@ -369,11 +378,15 @@ class Routes {
       case splash:
         return AppPageRoute.build(
           settings: routeSettings,
+          transition: AppPageRouteTransition.fadeBlur,
+          forwardDuration: const Duration(milliseconds: 180),
           builder: (context) => const SplashScreen(),
         );
       case onboarding:
         return AppPageRoute.build(
           settings: routeSettings,
+          transition: AppPageRouteTransition.fadeBlur,
+          forwardDuration: const Duration(milliseconds: 180),
           builder: (context) => const OnboardingScreen(),
         );
 
@@ -546,17 +559,23 @@ class Routes {
       case info:
         return AppPageRoute.build(
           settings: routeSettings,
+          transition: AppPageRouteTransition.fadeBlur,
+          forwardDuration: const Duration(milliseconds: 180),
           builder: (context) => const InfoScreen(),
         );
       case currency:
         return AppPageRoute.build(
           settings: routeSettings,
+          transition: AppPageRouteTransition.fadeBlur,
+          forwardDuration: const Duration(milliseconds: 180),
           builder: (context) => const CurrencyScreen(),
         );
 
       case support:
         return AppPageRoute.build(
           settings: routeSettings,
+          transition: AppPageRouteTransition.fadeBlur,
+          forwardDuration: const Duration(milliseconds: 180),
           builder: (context) => const SupportScreen(),
         );
 

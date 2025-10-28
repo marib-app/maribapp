@@ -276,6 +276,8 @@ class ManualPaymentSubmissionResult {
     this.paymentTransaction,
     this.paymentIntent,
     this.requiresConfirmation = false,
+    this.subject,
+    this.next,
     required this.raw,
   });
 
@@ -290,8 +292,44 @@ class ManualPaymentSubmissionResult {
   final Map<String, dynamic>? paymentTransaction;
   final Map<String, dynamic>? paymentIntent;
   final bool requiresConfirmation;
+  final Map<String, dynamic>? subject;
+  final Map<String, dynamic>? next;
 
   Map<String, dynamic> toJson() => raw;
+
+  ManualPaymentSubmissionResult copyWith({
+    bool? success,
+    String? manualPaymentId,
+    String? paymentTransactionId,
+    String? paymentIntentId,
+    String? status,
+    String? message,
+    Map<String, dynamic>? raw,
+    Map<String, dynamic>? manualPaymentRequest,
+    Map<String, dynamic>? paymentTransaction,
+    Map<String, dynamic>? paymentIntent,
+    bool? requiresConfirmation,
+    Map<String, dynamic>? subject,
+    Map<String, dynamic>? next,
+  }) {
+    return ManualPaymentSubmissionResult(
+      success: success ?? this.success,
+      manualPaymentId: manualPaymentId ?? this.manualPaymentId,
+      paymentTransactionId: paymentTransactionId ?? this.paymentTransactionId,
+      paymentIntentId: paymentIntentId ?? this.paymentIntentId,
+      status: status ?? this.status,
+      message: message ?? this.message,
+      manualPaymentRequest:
+          manualPaymentRequest ?? this.manualPaymentRequest,
+      paymentTransaction: paymentTransaction ?? this.paymentTransaction,
+      paymentIntent: paymentIntent ?? this.paymentIntent,
+      requiresConfirmation:
+          requiresConfirmation ?? this.requiresConfirmation,
+      subject: subject ?? this.subject,
+      next: next ?? this.next,
+      raw: raw ?? this.raw,
+    );
+  }
 
   static String? _parseIdentifier(dynamic value) {
     if (value == null) return null;
@@ -410,6 +448,11 @@ class ManualPaymentSubmissionResult {
             const ['payment_intent', 'paymentIntent', 'intent']) ??
         _firstNested(manualPaymentRequest,
             const ['payment_intent', 'paymentIntent', 'intent']);
+
+    final Map<String, dynamic>? subjectMap =
+        _mapify(dataMap?['subject']) ?? _mapify(map['subject']);
+    final Map<String, dynamic>? nextMap =
+        _mapify(dataMap?['next']) ?? _mapify(map['next']);
 
     String? lookupId(List<String> keys,
         {bool includeTransaction = false, bool includeIntent = false}) {
@@ -568,6 +611,12 @@ class ManualPaymentSubmissionResult {
           ? Map<String, dynamic>.unmodifiable(paymentIntent)
           : null,
       requiresConfirmation: requiresConfirmation,
+      subject: subjectMap != null
+          ? Map<String, dynamic>.unmodifiable(subjectMap)
+          : null,
+      next: nextMap != null
+          ? Map<String, dynamic>.unmodifiable(nextMap)
+          : null,
       raw: Map<String, dynamic>.unmodifiable(map),
     );
   }
@@ -1101,6 +1150,8 @@ class ManualPaymentService {
     Map<String, dynamic>? paymentIntent;
     String? paymentIntentId;
     Map<String, dynamic>? paymentTransaction;
+    Map<String, dynamic>? subject;
+    Map<String, dynamic>? next;
     String? paymentTransactionId;
     Map<String, dynamic> raw = const <String, dynamic>{};
 
@@ -1160,6 +1211,18 @@ class ManualPaymentService {
       final Map<String, dynamic> top =
           _mapify(response) ?? <String, dynamic>{'data': response};
       final Map<String, dynamic> root = _mapify(top['data']) ?? top;
+
+      final Map<String, dynamic>? subjectCandidate =
+          _mapify(root['subject']) ?? _mapify(top['subject']);
+      if (subjectCandidate != null && subjectCandidate.isNotEmpty) {
+        subject = Map<String, dynamic>.unmodifiable(subjectCandidate);
+      }
+
+      final Map<String, dynamic>? nextCandidate =
+          _mapify(root['next']) ?? _mapify(top['next']);
+      if (nextCandidate != null && nextCandidate.isNotEmpty) {
+        next = Map<String, dynamic>.unmodifiable(nextCandidate);
+      }
 
       raw = Map<String, dynamic>.from(root);
 
@@ -1324,6 +1387,8 @@ class ManualPaymentService {
           ? Map<String, dynamic>.unmodifiable(paymentTransaction!)
           : null,
       paymentTransactionId: paymentTransactionId,
+      subject: subject,
+      next: next,
       raw: raw,
     );
   }

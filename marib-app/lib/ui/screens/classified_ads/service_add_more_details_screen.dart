@@ -18,6 +18,7 @@ import 'package:marib/ui/screens/item/add_item_screen/custom_filed_structure/cus
 import 'package:marib/ui/screens/widgets/dynamic_field/dynamic_field.dart'
     as dynamic_fields;
 import 'package:marib/data/repositories/service_request_repository.dart';
+import 'package:marib/ui/screens/service/details/service_request_details_screen.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/api.dart' show ApiHttpException;
 import 'package:marib/utils/hive_utils.dart';
@@ -1163,7 +1164,10 @@ class _ServiceAddMoreDetailsScreenState
     }
   }
 
-  void _onRequestSubmitted() {
+  void _onRequestSubmitted({
+    Map<String, dynamic>? subject,
+    Map<String, dynamic>? next,
+  }) {
     if (!mounted) return;
 
     _clearStores();
@@ -1175,6 +1179,21 @@ class _ServiceAddMoreDetailsScreenState
       context,
       'Request submitted successfully.',
     );
+
+    final int? subjectId = _flexInt(subject?['id']);
+    final String? subjectType =
+        _stringify(subject?['type'])?.toLowerCase().trim();
+    final String? nextResource =
+        _stringify(next?['resource'])?.toLowerCase().trim();
+
+    if (subjectId != null &&
+        subjectType == 'service_request' &&
+        nextResource == 'service_requests') {
+      Navigator.of(context).pushReplacement(
+        ServiceRequestDetailsScreen.route(serviceRequestId: subjectId),
+      );
+      return;
+    }
 
     if (Navigator.of(context).canPop()) {
       Navigator.of(context).pop();
@@ -1190,6 +1209,8 @@ class _ServiceAddMoreDetailsScreenState
     String? serviceTitle,
     String? initialGateway,
     dynamic fallbackTransaction,
+    Map<String, dynamic>? initialSubject,
+    Map<String, dynamic>? initialNext,
   }) async {
     if (!mounted) return false;
 
@@ -1238,6 +1259,11 @@ class _ServiceAddMoreDetailsScreenState
       return false;
     }
 
+    final Map<String, dynamic>? navigationSubject =
+        _extractSubjectFromResult(paymentResult) ?? initialSubject;
+    final Map<String, dynamic>? navigationNext =
+        _extractNextFromResult(paymentResult) ?? initialNext;
+
     final String? transactionId = _extractPaymentTransactionId(
       paymentResult,
       fallback: fallbackTransaction,
@@ -1271,7 +1297,10 @@ class _ServiceAddMoreDetailsScreenState
         serviceRequestId: serviceRequestId,
       );
       submitted = true;
-      _onRequestSubmitted();
+      _onRequestSubmitted(
+        subject: navigationSubject,
+        next: navigationNext,
+      );
       return true;
     } on ApiHttpException catch (err) {
       if (!mounted) return false;

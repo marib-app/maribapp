@@ -255,24 +255,28 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
     }
 
     final String? transactionId = _extractPaymentTransactionId(result);
+    final Map<String, dynamic>? subject = _extractSubject(result);
+    final Map<String, dynamic>? next = _extractNext(result);
 
     if (transactionId == null) {
       HelperUtils.showSnackBarMessage(
         context,
-        '?????????? ?????????? ???????????? ??????????. ???????? ???????????? ?????????? ????????????.',
+        'Unable to determine payment transaction.',
       );
       return;
     }
 
     HelperUtils.showSnackBarMessage(
       context,
-      '???? ?????????? ?????????? ??????????.',
+      'Payment submitted successfully.',
     );
 
     Navigator.of(context).maybePop({
       'payment_transaction_id': transactionId,
       'service_id': serviceId,
       'service_request_id': serviceRequestId,
+      if (subject != null) 'subject': subject,
+      if (next != null) 'next': next,
     });
   }
 
@@ -345,6 +349,30 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
     }
 
     return fromValue(result);
+  }
+
+  Map<String, dynamic>? _extractSubject(dynamic value) {
+    if (value is ManualPaymentSubmissionResult) {
+      return value.subject;
+    }
+
+    final map = _normalizeMap(value);
+    if (map == null) return null;
+
+    final subject = map['subject'];
+    return _normalizeMap(subject);
+  }
+
+  Map<String, dynamic>? _extractNext(dynamic value) {
+    if (value is ManualPaymentSubmissionResult) {
+      return value.next;
+    }
+
+    final map = _normalizeMap(value);
+    if (map == null) return null;
+
+    final next = map['next'];
+    return _normalizeMap(next);
   }
 
   Map<String, dynamic> _normalizeMap(dynamic value) {

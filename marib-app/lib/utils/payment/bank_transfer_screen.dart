@@ -83,6 +83,8 @@ class _BankTransferScreenState extends State<BankTransferScreen>
 
   String? _paymentIntentId;
   String? _paymentTransactionId;
+  Map<String, dynamic>? _subject;
+  Map<String, dynamic>? _next;
 
   static const String _manualBankMethod = 'manual_bank';
   static const String _eastYemenMethod = 'east_yemen_bank';
@@ -322,6 +324,8 @@ class _BankTransferScreenState extends State<BankTransferScreen>
 
         _paymentIntentId = settings.paymentIntentId?.trim();
         _paymentTransactionId = settings.paymentTransactionId?.trim();
+        _subject = settings.subject;
+        _next = settings.next;
         _settingsCurrencyInfo = settingsCurrency;
 
         final normalizedGateway = widget.args.normalizedGateway;
@@ -1249,7 +1253,11 @@ class _BankTransferScreenState extends State<BankTransferScreen>
 
         Future.microtask(() {
           if (!mounted) return;
-          _closeWithResult(result);
+          final enriched = result.copyWith(
+            subject: result.subject ?? _subject,
+            next: result.next ?? _next,
+          );
+          _closeWithResult(enriched);
         });
       }
     } catch (e) {

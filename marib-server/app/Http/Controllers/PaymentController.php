@@ -32,6 +32,7 @@ use Throwable;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use App\Services\Payments\CreateOrLinkManualPaymentRequest;
+use App\Support\Payments\PaymentGatewayCurrencyPolicy;
 
 
 
@@ -74,16 +75,12 @@ class PaymentController extends Controller
 
 
         $rules = [
-            'purpose' => ['nullable', 'string', Rule::in(['order', 'package', 'service', ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP])],
-
-
+            'purpose' => ['required', 'string', Rule::in(['order', 'package', 'service', ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP])],
             'payment_method' => ['nullable', 'string', 'max:191', Rule::in($allowedMethods)],
-
             'notes' => ['nullable', 'string'],
             'metadata' => ['nullable', 'array'],
             'bank_id' => ['nullable', 'integer', 'exists:manual_banks,id'],
             'bank_account_id' => ['nullable', 'string', 'max:191'],
-
             'amount' => ['nullable', 'numeric', 'min:0'],
             'currency' => ['nullable', 'string', 'size:3'],
         ];
@@ -108,10 +105,14 @@ class PaymentController extends Controller
         $messages = [];
 
         if ($purpose === 'service') {
+            $rules['payment_method'] = ['required', 'string', 'max:191', Rule::in($allowedMethods)];
+            $rules['currency'] = ['required', 'string', 'size:3', Rule::in(['USD', 'YER'])];
             $rules['service_id'] = ['required', 'integer', 'exists:services,id'];
             $rules['service_request_id'] = ['required', 'integer', 'exists:service_requests,id'];
             $rules['order_id'] = ['prohibited'];
             $messages['order_id.prohibited'] = __('The order_id field is not allowed when initiating a service payment.');
+            $messages['currency.required'] = __('gateway_currency_unsupported');
+            $messages['currency.in'] = __('gateway_currency_unsupported');
         } elseif ($purpose === 'package') {
             $rules['package_id'] = ['required', 'integer', 'exists:packages,id'];
         } elseif ($purpose === ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP) {
@@ -136,6 +137,10 @@ class PaymentController extends Controller
 
         $selectedMethod = null;
 
+        if (isset($validated['currency']) && is_string($validated['currency'])) {
+            $validated['currency'] = strtoupper($validated['currency']);
+        }
+
         if (isset($validated['payment_method']) && is_string($validated['payment_method'])) {
             $candidate = trim($validated['payment_method']);
             $selectedMethod = $candidate !== '' ? $candidate : null;
@@ -155,6 +160,16 @@ class PaymentController extends Controller
         }
 
         $validated['payment_method'] = $this->normalizePaymentMethodForPurpose($selectedMethod, $purpose);
+
+        if (($validated['currency'] ?? null) !== null
+            && ! PaymentGatewayCurrencyPolicy::supports($validated['payment_method'], $validated['currency'])) {
+            return response()->json([
+                'message' => __('gateway_currency_unsupported'),
+                'errors' => [
+                    'currency' => [__('gateway_currency_unsupported')],
+                ],
+            ], 422);
+        }
 
         $methodResponsePayload = array_merge(
             $methodOptionsPayload,
@@ -196,6 +211,10 @@ class PaymentController extends Controller
                         'service_request_id' => [__('Service request does not match the selected service.')],
                     ],
                 ], 422);
+            }
+
+            if ($conflictResponse = $this->guardServicePaymentIdempotency($serviceRequest, $validated['payment_method'])) {
+                return $conflictResponse;
             }
 
             $transaction = $this->servicePaymentService->initiate(
@@ -1106,6 +1125,64 @@ class PaymentController extends Controller
         unset($entries);
 
         return $grouped;
+    }
+
+    private function guardServicePaymentIdempotency(ServiceRequest $serviceRequest, string $paymentMethod): ?JsonResponse
+    {
+        $normalizedMethod = mb_strtolower($paymentMethod);
+
+        $existingTransaction = PaymentTransaction::query()
+            ->where('payable_type', ServiceRequest::class)
+            ->where('payable_id', $serviceRequest->getKey())
+            ->where('payment_gateway', $normalizedMethod)
+            ->orderByDesc('id')
+            ->first();
+
+        if ($existingTransaction) {
+            $status = strtolower((string) $existingTransaction->payment_status);
+            $activeStatuses = ['pending', 'processing', 'requires_action', 'requires_payment_method', 'requires_confirmation', 'under_review', 'initiated'];
+
+            if ($status === 'succeed') {
+                return response()->json([
+                    'message' => __('service_payment_already_completed'),
+                    'code' => 'service_payment_already_completed',
+                    'errors' => [
+                        'service_request_id' => [__('Service payment already completed for this method.')],
+                    ],
+                ], 409);
+            }
+
+            if (in_array($status, $activeStatuses, true)) {
+                return response()->json([
+                    'message' => __('service_payment_already_in_progress'),
+                    'code' => 'service_payment_in_progress',
+                    'errors' => [
+                        'service_request_id' => [__('A payment attempt is already in progress for this service request.')],
+                    ],
+                ], 409);
+            }
+        }
+
+        if ($normalizedMethod === 'manual_bank') {
+            $openRequest = ManualPaymentRequest::query()
+                ->where('payable_type', ServiceRequest::class)
+                ->where('payable_id', $serviceRequest->getKey())
+                ->whereIn('status', ManualPaymentRequest::OPEN_STATUSES)
+                ->orderByDesc('id')
+                ->first();
+
+            if ($openRequest) {
+                return response()->json([
+                    'message' => __('service_manual_payment_request_open'),
+                    'code' => 'service_manual_payment_request_open',
+                    'errors' => [
+                        'service_request_id' => [__('A manual payment request already exists for this service request.')],
+                    ],
+                ], 409);
+            }
+        }
+
+        return null;
     }
 
     private function paymentMethodLabel(string $method): string

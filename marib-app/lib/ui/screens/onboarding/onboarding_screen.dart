@@ -284,7 +284,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 }
 
-class _AnimatedOnboardingPage extends StatelessWidget {
+class _AnimatedOnboardingPage extends StatefulWidget {
+
   const _AnimatedOnboardingPage({
     required this.controller,
     required this.index,
@@ -299,49 +300,90 @@ class _AnimatedOnboardingPage extends StatelessWidget {
   final CardPlanetData data;
   final double Function(double a, double b, double t) lerpDouble;
 
+
+
+  @override
+  State<_AnimatedOnboardingPage> createState() => _AnimatedOnboardingPageState();
+}
+
+class _AnimatedOnboardingPageState extends State<_AnimatedOnboardingPage> {
+  late final OnboardingPageContent _staticContent =
+  OnboardingPageContent(data: widget.data);
+
+
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: controller,
+      animation: widget.controller,
+      child: _staticContent,
       builder: (context, child) {
-        final double currentPage = controller.hasClients
-            ? controller.page ?? controller.initialPage.toDouble()
-            : controller.initialPage.toDouble();
-        final int basePage = currentPage.floor().clamp(0, pageCount - 1);
+        final double currentPage = widget.controller.hasClients
+            ? widget.controller.page ??
+            widget.controller.initialPage.toDouble()
+            : widget.controller.initialPage.toDouble();
+        final int basePage =
+        currentPage.floor().clamp(0, widget.pageCount - 1);
         final double pageOffset = currentPage - basePage;
 
         double opacity;
-        if (index == basePage) {
+        if (widget.index == basePage) {
           opacity = 1 - pageOffset;
-        } else if (index == basePage + 1) {
+        } else if (widget.index == basePage + 1) {
           opacity = pageOffset;
         } else {
           opacity = 0.0;
         }
 
         double textTranslateX;
-        if (index == basePage) {
-          textTranslateX = lerpDouble(0, -100, pageOffset);
-        } else if (index == basePage + 1) {
-          textTranslateX = lerpDouble(100, 0, pageOffset);
+        if (widget.index == basePage) {
+          textTranslateX = widget.lerpDouble(0, -100, pageOffset);
+        } else if (widget.index == basePage + 1) {
+          textTranslateX = widget.lerpDouble(100, 0, pageOffset);
         } else {
           textTranslateX = 100;
         }
 
         double imageTranslateY;
-        if (index == basePage) {
-          imageTranslateY = lerpDouble(0, -50, pageOffset);
-        } else if (index == basePage + 1) {
-          imageTranslateY = lerpDouble(50, 0, pageOffset);
+          if (widget.index == basePage) {
+            imageTranslateY = widget.lerpDouble(0, -50, pageOffset);
+          } else if (widget.index == basePage + 1) {
+            imageTranslateY = widget.lerpDouble(50, 0, pageOffset);
         } else {
           imageTranslateY = 50;
         }
 
-        return OnboardingPage(
-          data: data,
-          opacity: opacity,
-          textTranslateX: textTranslateX,
-          imageTranslateY: imageTranslateY,
+        final OnboardingPageContent content =
+        child! as OnboardingPageContent;
+        final Widget? hero = content.hero;
+        final Widget textContent = content.textContent;
+        final double spacing = ScreenScaler.s(40);
+
+        final List<Widget> columnChildren = <Widget>[
+          if (hero != null)
+            Transform.translate(
+              offset: Offset(0, imageTranslateY),
+              child: hero,
+            ),
+          SizedBox(height: spacing),
+          Transform.translate(
+            offset: Offset(textTranslateX, 0),
+            child: textContent,
+          ),
+        ];
+
+        return Opacity(
+          opacity: opacity.clamp(0.0, 1.0),
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: ScreenScaler.s(24),
+              vertical: ScreenScaler.s(60),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: columnChildren,
+            ),
+          ),
         );
       },
     );

@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use App\Models\ManualBank;
 use App\Models\ManualPaymentRequest;
+use App\Models\Order;
 use App\Models\PaymentTransaction;
 use App\Models\WalletTransaction;
 use App\Support\Payments\PaymentLabelService;
@@ -243,11 +244,13 @@ class ManualPaymentRequestResource extends JsonResource
                 'meta' => $paymentTransactionMeta,
                 'metadata' => $paymentTransactionMeta,
 
-                'order' => $order ? [
-                    'id' => $order->id,
-                    'order_number' => $order->order_number,
-                    'payment_status' => $order->payment_status,
-                ] : null,
+                'order' => $this->when($order instanceof Order, static function () use ($order) {
+                    return [
+                        'id' => $order->id,
+                        'order_number' => $order->order_number,
+                        'payment_status' => $order->payment_status,
+                    ];
+                }),
 
                 'wallet_transaction' => $walletTransaction instanceof WalletTransaction ? [
                     'id' => $walletTransaction->getKey(),

@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 
+use App\Models\Order;
 use App\Support\ManualPayments\TransferDetailsResolver;
 use App\Support\Payments\PaymentLabelService;
 use Illuminate\Database\Eloquent\Model as EloquentModel;
@@ -63,11 +64,13 @@ class PaymentTransactionResource extends JsonResource
 
             'created_at' => optional($this->created_at)->toIso8601String(),
 
-            'order' => $order ? [
-                'id' => $order->id,
-                'order_number' => $order->order_number,
-                'payment_status' => $order->payment_status,
-            ] : null,
+            'order' => $this->when($order instanceof Order, static function () use ($order) {
+                return [
+                    'id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'payment_status' => $order->payment_status,
+                ];
+            }),
 
             'manual_payment_request' => $manualPaymentRequest ? [
                 'id' => $manualPaymentRequest->id,

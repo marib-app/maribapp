@@ -258,27 +258,19 @@ class _FadeBlurPageRoute<T> extends PageRouteBuilder<T> {
       );
     }
 
-    final bool isPushing = animation.status != AnimationStatus.reverse;
-    final Animation<double> primaryProgress =
-        isPushing ? animation : ReverseAnimation(animation);
+
     final CurvedAnimation primaryCurve = CurvedAnimation(
-      parent: primaryProgress,
+      parent: animation,
       curve: _pushCurve,
       reverseCurve: _popCurve,
     );
 
-    final Tween<Offset> pushOffsetTween =
-     Tween<Offset>(begin: Offset(0.0, 0.05), end: Offset.zero);
-    final Tween<Offset> popOffsetTween =
-     Tween<Offset>(begin: Offset.zero, end: Offset(0.0, 0.02));
-
-    final Animation<Offset> primarySlide = (isPushing
-        ? pushOffsetTween
-        : popOffsetTween)
-        .animate(primaryCurve);
 
     Widget transitionedChild = SlideTransition(
-      position: primarySlide,
+      position: Tween<Offset>(
+        begin: const Offset(0, 0.05),
+        end: Offset.zero,
+      ).animate(primaryCurve),
       child: child,
     );
 
@@ -290,7 +282,10 @@ class _FadeBlurPageRoute<T> extends PageRouteBuilder<T> {
         reverseCurve: _popCurve,
       );
       transitionedChild = SlideTransition(
-        position: popOffsetTween.animate(secondaryCurve),
+        position: Tween<Offset>(
+          begin: const Offset(0, -0.02),
+          end: Offset.zero,
+        ).animate(secondaryCurve),
         child: transitionedChild,
       );
     }

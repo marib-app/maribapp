@@ -14,6 +14,7 @@ use App\Services\Payments\Concerns\HandlesManualBankConfirmation;
 use App\Services\WalletService;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use RuntimeException;
 
@@ -313,6 +314,41 @@ class ServicePaymentService
             }
 
             return $existing;
+        }
+
+        $activeDuplicate = PaymentTransaction::query()
+            ->where('user_id', $user->getKey())
+            ->where('payable_type', ServiceRequest::class)
+            ->where('payable_id', $serviceRequest->getKey())
+            ->whereIn('payment_gateway', $this->expandLegacyMethods($method))
+            ->whereIn(DB::raw("LOWER(COALESCE(payment_status, ''))"), ['pending', 'initiated', 'processing'])
+            ->orderByDesc('id')
+            ->lockForUpdate()
+            ->first();
+
+        if ($activeDuplicate) {
+            $needsUpdate = false;
+
+            if ($activeDuplicate->payment_gateway !== $method) {
+                $activeDuplicate->payment_gateway = $method;
+                $needsUpdate = true;
+            }
+
+            if ($activeDuplicate->payable_type !== ServiceRequest::class) {
+                $activeDuplicate->payable_type = ServiceRequest::class;
+                $needsUpdate = true;
+            }
+
+            if (! $activeDuplicate->idempotency_key || trim((string) $activeDuplicate->idempotency_key) === '') {
+                $activeDuplicate->idempotency_key = $idempotencyKey;
+                $needsUpdate = true;
+            }
+
+            if ($needsUpdate) {
+                $activeDuplicate->save();
+            }
+
+            return $activeDuplicate;
         }
 
         $amount = $this->resolveServiceAmount($service, $data);

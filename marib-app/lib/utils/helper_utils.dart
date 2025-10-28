@@ -56,7 +56,6 @@ class HelperUtils {
 
 
 
-
   static String absoluteImage(String? path) {
     final String value = (path ?? '').trim();
     if (value.isEmpty) {
@@ -64,14 +63,28 @@ class HelperUtils {
     }
 
     final Uri? parsed = Uri.tryParse(value);
+    final Uri? hostOrigin = _resolveHostOrigin();
     final bool hasScheme = parsed?.hasScheme ?? false;
     if (hasScheme) {
+      if (parsed != null && hostOrigin != null) {
+        final String normalizedHost = parsed.host.trim().toLowerCase();
+        if (parsed.hasAuthority && _isLoopbackHost(normalizedHost)) {
+          final Uri remapBase = parsed.hasPort
+              ? hostOrigin.replace(port: parsed.port)
+              : hostOrigin;
+
+          final Uri relative = Uri(
+            path: parsed.path,
+            query: parsed.hasQuery ? parsed.query : null,
+            fragment: parsed.hasFragment ? parsed.fragment : null,
+          );
+
+          return remapBase.resolveUri(relative).toString();
+        }
+      }
 
       return value;
     }
-
-
-    final Uri? hostOrigin = _resolveHostOrigin();
 
     if (value.startsWith('//')) {
       if (hostOrigin != null) {
@@ -146,7 +159,21 @@ class HelperUtils {
     return null;
   }
 
+  static bool _isLoopbackHost(String host) {
+    if (host.isEmpty) {
+      return false;
+    }
 
+    if (host == 'localhost' || host == '::1' || host == '0.0.0.0') {
+      return true;
+    }
+
+    if (host.startsWith('127.')) {
+      return true;
+    }
+
+    return false;
+  }
 
   static String formatPhoneNumber(String fullNumber, String countryCode) {
     countryCode = countryCode.replaceAll('+', '');

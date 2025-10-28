@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
 import 'package:marib/utils/constant.dart';
+import 'package:marib/ui/widgets/placeholders/image_error_placeholder.dart';
 
 
 const double defaultPadding = 20;
@@ -26,11 +27,10 @@ Widget setNetworkImg(String? mainUrl,
       height: height,
       borderRadius: BorderRadius.circular(12),
     ),
-    errorWidget: (context, url, error) => ShimmerBox(
+    errorWidget: (context, url, error) => ImageErrorPlaceholder(
       width: width,
       height: height,
-      borderRadius: BorderRadius.circular(12),
-      animate: false,
+
     ),
   );
 }

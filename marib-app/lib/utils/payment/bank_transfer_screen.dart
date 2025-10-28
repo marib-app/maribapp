@@ -282,6 +282,8 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         paymentMethod:
             ManualPaymentService.paymentMethodForApi(_manualBankMethod),
         amount: isWalletTopUp ? widget.args.amount : null,
+        serviceId: widget.args.serviceId ?? widget.args.itemId,
+        serviceRequestId: widget.args.serviceRequestId,
       );
 
       final List<CurrencyParseResult> currencyCandidates =
@@ -693,6 +695,8 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         orderId: orderIdParam,
         paymentMethod: ManualPaymentService.paymentMethodForApi(selectedMethod),
         amount: isWalletTopUp ? widget.args.amount : null,
+        serviceId: widget.args.serviceId ?? widget.args.itemId,
+        serviceRequestId: widget.args.serviceRequestId,
       );
 
       final updatedIntent = settings.paymentIntentId?.trim();
@@ -1031,6 +1035,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
           orderId: orderIdForApi,
           packageId: packageIdForApi,
           serviceId: serviceIdForApi,
+          serviceRequestId: widget.args.serviceRequestId,
           amount: widget.args.amount,
           currency: submissionCurrency,
           reference: (trimmedCode != null && trimmedCode.isNotEmpty)
@@ -1050,6 +1055,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
           orderId: orderIdForApi,
           packageId: packageIdForApi,
           serviceId: serviceIdForApi,
+          serviceRequestId: widget.args.serviceRequestId,
           amount: widget.args.amount,
           currency: submissionCurrency,
           userNote: userNote.isEmpty ? null : userNote,
@@ -1067,6 +1073,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
           orderId: orderIdForApi,
           packageId: packageIdForApi,
           serviceId: serviceIdForApi,
+          serviceRequestId: widget.args.serviceRequestId,
           amount: widget.args.amount,
           currency: submissionCurrency,
           reference: transferCode.isNotEmpty ? transferCode : null,

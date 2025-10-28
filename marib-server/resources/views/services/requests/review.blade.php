@@ -119,7 +119,23 @@
                         'departmentLabel' => $presentation['departmentLabel'] ?? null,
                         'manualBankName' => $presentation['manualBankName'] ?? null,
                         'transferDetails' => $presentation['transferDetails'] ?? null,
-                        'readOnly' => false,
+                        'paymentTransaction' => $transaction,
+                        'readOnly' => ! $canReviewPayment,
+                    ])
+
+                    @include('payments.manual.partials.payable-summary', [
+                        'request' => $manualPayment,
+                    ])
+
+                    @include('payments.manual.partials.receipt', [
+                        'request' => $manualPayment,
+                        'paymentTransaction' => $transaction,
+                    ])
+
+                    @include('payments.manual.partials.status-timeline', [
+                        'request' => $manualPayment,
+                        'timelineData' => $timelineData ?? [],
+                        'timelineEndpoint' => $timelineEndpoint,
                     ])
                 @else
                     <div class="alert alert-warning mb-0" role="alert">

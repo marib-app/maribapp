@@ -27,6 +27,7 @@ class ServicePaymentPage extends StatefulWidget {
 
 class _ServicePaymentPageState extends State<ServicePaymentPage> {
   late final int? _serviceId;
+  late final int? _serviceRequestId;
   late final String _serviceTitle;
   late final double? _amount;
   late final String? _currency;
@@ -73,6 +74,9 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
 
     _serviceId =
         parseInt(data['serviceId'] ?? data['service_id'] ?? data['itemId']);
+    _serviceRequestId = parseInt(
+      data['service_request_id'] ?? data['serviceRequestId'] ?? data['request_id'],
+    );
     _serviceTitle =
         parseString(data['serviceTitle'] ?? data['title']) ?? 'دفع خدمة';
     _amount = parseDouble(data['amount'] ?? data['price'] ?? data['total']);
@@ -219,6 +223,7 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
       serviceId: serviceId,
       serviceTitle: _serviceTitle,
       priceNote: _note,
+      serviceRequestId: _serviceRequestId,
     );
 
     final dynamic result = await BankTransferScreen.show(context, args);
@@ -251,6 +256,7 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
     Navigator.of(context).maybePop({
       'payment_transaction_id': transactionId,
       'service_id': serviceId,
+      'service_request_id': _serviceRequestId,
     });
   }
 

@@ -10,6 +10,7 @@ class BankTransferArgs {
   final int? serviceId;
   final String? serviceTitle;
   final String? priceNote;
+  final int? serviceRequestId;
 
   const BankTransferArgs({
     required this.token,
@@ -23,6 +24,7 @@ class BankTransferArgs {
     this.serviceId,
     this.serviceTitle,
     this.priceNote,
+    this.serviceRequestId,
   });
 }
 
@@ -33,6 +35,7 @@ extension BankTransferArgsX on BankTransferArgs {
         'package_type': packageType,
         if (itemId != null) 'item_id': itemId,
         if (serviceId != null) 'service_id': serviceId,
+        if (serviceRequestId != null) 'service_request_id': serviceRequestId,
       };
 
   String get normalizedPurpose {

@@ -1048,6 +1048,7 @@ class ManualPaymentService {
     String? paymentMethod,
     double? amount,
     int? serviceId,
+    int? serviceRequestId,
   }) async {
     List<BankAccount> banks = <BankAccount>[];
     EastYemenBankConfig? eastYemenBank;
@@ -1095,6 +1096,8 @@ class ManualPaymentService {
         if (formattedAmount != null) 'amount': formattedAmount,
         if (serviceId != null && resolvedPurpose == 'service')
           'service_id': serviceId,
+        if (serviceRequestId != null && resolvedPurpose == 'service')
+          'service_request_id': serviceRequestId,
       };
       final response = await Api.postJson(
         url: Api.paymentsInitiateApi,
@@ -1291,6 +1294,7 @@ class ManualPaymentService {
     int? orderId,
     int? packageId,
     int? serviceId,
+    int? serviceRequestId,
     String? reference,
     String? userNote,
     required DateTime transferredAt,
@@ -1308,6 +1312,7 @@ class ManualPaymentService {
       orderId: orderId,
       packageId: packageId,
       serviceId: serviceId,
+      serviceRequestId: serviceRequestId,
       amount: amount,
       currency: currency,
       reference: reference,
@@ -1331,6 +1336,7 @@ class ManualPaymentService {
     int? orderId,
     int? packageId,
     int? serviceId,
+    int? serviceRequestId,
     String? reference,
     String? userNote,
     required DateTime transferredAt,
@@ -1364,6 +1370,7 @@ class ManualPaymentService {
       if (orderId != null) 'order_id': orderId,
       if (packageId != null) 'package_id': packageId,
       if (serviceId != null) 'service_id': serviceId,
+      if (serviceRequestId != null) 'service_request_id': serviceRequestId,
       'transferred_at': transferredAt.toIso8601String(),
       if (referenceValue != null && referenceValue.isNotEmpty)
         'reference_number': referenceValue,
@@ -1408,6 +1415,11 @@ class ManualPaymentService {
         paymentMethod: 'manual_bank',
         intentId: resolvedIntentId,
         transactionId: resolvedTransactionId,
+        additionalData: {
+          if (serviceRequestId != null) 'service_request_id': serviceRequestId,
+          if (referenceValue != null && referenceValue.isNotEmpty)
+            'reference': referenceValue,
+        },
       );
     }
 
@@ -1456,6 +1468,7 @@ class ManualPaymentService {
     int? orderId,
     int? packageId,
     int? serviceId,
+    int? serviceRequestId,
     required double amount,
     required String currency,
     String? reference,
@@ -1486,6 +1499,7 @@ class ManualPaymentService {
       if (orderId != null) 'order_id': orderId,
       if (packageId != null) 'package_id': packageId,
       if (serviceId != null) 'service_id': serviceId,
+      if (serviceRequestId != null) 'service_request_id': serviceRequestId,
       if (transactionId != null && transactionId.isNotEmpty)
         'payment_transaction_id': transactionId,
       if (referenceValue != null && referenceValue.isNotEmpty)
@@ -1522,6 +1536,7 @@ class ManualPaymentService {
         intentId: resolvedIntentId,
         transactionId: resolvedTransactionId,
         additionalData: {
+          if (serviceRequestId != null) 'service_request_id': serviceRequestId,
           if (referenceValue != null && referenceValue.isNotEmpty)
             'reference': referenceValue,
         },
@@ -1545,6 +1560,7 @@ class ManualPaymentService {
     String? userNote,
     Map<String, dynamic>? metadata,
     int? serviceId,
+    int? serviceRequestId,
   }) async {
     final trimmedIntentId = intentId.trim();
     if (trimmedIntentId.isEmpty) {
@@ -1574,6 +1590,7 @@ class ManualPaymentService {
         'payable_type': payableTypeValue,
       if (payableId != null) 'payable_id': payableId,
       if (serviceId != null) 'service_id': serviceId,
+      if (serviceRequestId != null) 'service_request_id': serviceRequestId,
     };
 
     final Map<String, dynamic> metadataFields = <String, dynamic>{};

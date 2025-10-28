@@ -121,7 +121,7 @@ class PaymentFulfillmentService
                     case Order::class:
                         $this->handleOrderPayment($transaction, $payableId, $userId, $options);
                         break;
-                    case Service::class:
+                    case ServiceRequest::class:
                         $this->handleServicePayment($transaction, $payableId, $userId, $options);
                         break;
 
@@ -908,83 +908,72 @@ class PaymentFulfillmentService
 
 
 
-    protected function handleServicePayment(PaymentTransaction $transaction, ?int $serviceId, int $userId, array $options = []): void
+    protected function handleServicePayment(PaymentTransaction $transaction, ?int $serviceRequestId, int $userId, array $options = []): void
     {
-        if (empty($serviceId)) {
-            throw new InvalidArgumentException('Service id is required to mark service as paid.');
+        if (empty($serviceRequestId)) {
+            throw new InvalidArgumentException('Service request id is required to mark service as paid.');
         }
 
-        $service = Service::query()->findOrFail($serviceId);
+        $serviceRequest = ServiceRequest::query()
+            ->withTrashed()
+            ->with('service')
+            ->findOrFail($serviceRequestId);
+
+        if ((int) $serviceRequest->user_id !== $userId) {
+            throw new InvalidArgumentException('Service request user mismatch.');
+        }
+
+        $service = $serviceRequest->service instanceof Service ? $serviceRequest->service : null;
         $walletTransaction = $options['wallet_transaction'] ?? null;
         $manualPaymentRequestId = $options['manual_payment_request_id'] ?? null;
 
-        $serviceUpdates = [];
+        if ($service instanceof Service) {
+            $serviceUpdates = [];
 
-        if (Schema::hasColumn($service->getTable(), 'payment_status')) {
-            $serviceUpdates['payment_status'] = 'paid';
+            if (Schema::hasColumn($service->getTable(), 'payment_status')) {
+                $serviceUpdates['payment_status'] = 'paid';
+            }
+
+            if (Schema::hasColumn($service->getTable(), 'payment_transaction_id')) {
+                $serviceUpdates['payment_transaction_id'] = $transaction->getKey();
+            }
+
+            if ($walletTransaction instanceof WalletTransaction && Schema::hasColumn($service->getTable(), 'wallet_transaction_id')) {
+                $serviceUpdates['wallet_transaction_id'] = $walletTransaction->getKey();
+            }
+
+            if (!empty($serviceUpdates)) {
+                $service->forceFill($serviceUpdates)->save();
+            }
         }
 
-        if (Schema::hasColumn($service->getTable(), 'payment_transaction_id')) {
-            $serviceUpdates['payment_transaction_id'] = $transaction->getKey();
+        $requestUpdates = [];
+
+        if (Schema::hasColumn($serviceRequest->getTable(), 'payment_status')) {
+            $requestUpdates['payment_status'] = 'paid';
+        } elseif (Schema::hasColumn($serviceRequest->getTable(), 'status')) {
+            $requestUpdates['status'] = 'paid';
         }
 
-        if ($walletTransaction instanceof WalletTransaction && Schema::hasColumn($service->getTable(), 'wallet_transaction_id')) {
-            $serviceUpdates['wallet_transaction_id'] = $walletTransaction->getKey();
+        if (Schema::hasColumn($serviceRequest->getTable(), 'payment_transaction_id')) {
+            $requestUpdates['payment_transaction_id'] = $transaction->getKey();
         }
 
-        if (!empty($serviceUpdates)) {
-            $service->forceFill($serviceUpdates)->save();
+        if ($walletTransaction instanceof WalletTransaction && Schema::hasColumn($serviceRequest->getTable(), 'wallet_transaction_id')) {
+            $requestUpdates['wallet_transaction_id'] = $walletTransaction->getKey();
         }
 
-        $latestRequest = null;
-
-        $requestTable = null;
-
-        if (Schema::hasTable('service_requests')) {
-            $requestModel = new ServiceRequest();
-            $requestTable = $requestModel->getTable();
-
-            $requestQuery = ServiceRequest::query()
-                ->where('service_id', $service->getKey())
-                ->orderByDesc('id');
-
-            if (Schema::hasColumn($requestTable, 'user_id')) {
-                $requestQuery->where('user_id', $userId);
+        foreach (['payment_note', 'payment_comment', 'notes', 'comment'] as $commentColumn) {
+            if (Schema::hasColumn($serviceRequest->getTable(), $commentColumn)) {
+                $existingComment = (string) $serviceRequest->getAttribute($commentColumn);
+                $comment = sprintf('Paid via manual transaction #%d', $transaction->getKey());
+                $requestUpdates[$commentColumn] = trim($existingComment === '' ? $comment : $existingComment . PHP_EOL . $comment);
+                break;
             }
-
-            $latestRequest = $requestQuery->first();
         }
 
-        if ($latestRequest) {
-            $requestTable ??= $latestRequest->getTable();
-            $requestUpdates = [];
-
-            if (Schema::hasColumn($requestTable, 'payment_status')) {
-                $requestUpdates['payment_status'] = 'paid';
-            } elseif (Schema::hasColumn($requestTable, 'status')) {
-                $requestUpdates['status'] = 'paid';
-            }
-
-            if (Schema::hasColumn($requestTable, 'payment_transaction_id')) {
-                $requestUpdates['payment_transaction_id'] = $transaction->getKey();
-            }
-
-            if ($walletTransaction instanceof WalletTransaction && Schema::hasColumn($requestTable, 'wallet_transaction_id')) {
-                $requestUpdates['wallet_transaction_id'] = $walletTransaction->getKey();
-            }
-
-            foreach (['payment_note', 'payment_comment', 'notes', 'comment'] as $commentColumn) {
-                if (Schema::hasColumn($requestTable, $commentColumn)) {
-                    $existingComment = (string) $latestRequest->getAttribute($commentColumn);
-                    $comment = sprintf('Paid via manual transaction #%d', $transaction->getKey());
-                    $requestUpdates[$commentColumn] = trim($existingComment === '' ? $comment : $existingComment . PHP_EOL . $comment);
-                    break;
-                }
-            }
-
-            if (!empty($requestUpdates)) {
-                $latestRequest->forceFill($requestUpdates)->save();
-            }
+        if (!empty($requestUpdates)) {
+            $serviceRequest->forceFill($requestUpdates)->save();
         }
 
         $metaUpdates = [];
@@ -993,8 +982,10 @@ class PaymentFulfillmentService
             data_set($metaUpdates, 'service.manual_payment_request_id', $manualPaymentRequestId);
         }
 
-        if ($latestRequest) {
-            data_set($metaUpdates, 'service.request_id', $latestRequest->getKey());
+        data_set($metaUpdates, 'service.request_id', $serviceRequest->getKey());
+
+        if ($service instanceof Service) {
+            data_set($metaUpdates, 'service.id', $service->getKey());
         }
 
         if ($walletTransaction instanceof WalletTransaction) {
@@ -1360,6 +1351,7 @@ class PaymentFulfillmentService
             'advertisement', 'item', 'items' => Item::class,
             'order', 'orders' => Order::class,
             'service', 'services', 'app\\models\\service' => Service::class,
+            'service_request', 'service_requests', 'app\\models\\servicerequest' => ServiceRequest::class,
 
 
             default => $payableType,

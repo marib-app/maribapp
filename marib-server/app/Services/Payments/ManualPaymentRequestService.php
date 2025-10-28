@@ -449,7 +449,7 @@ class ManualPaymentRequestService
         }
 
 
-        return ManualPaymentRequest::create(array_filter(
+        $filteredAttributes = array_filter(
             $attributes,
             static function ($value) {
                 if (is_array($value)) {
@@ -458,7 +458,33 @@ class ManualPaymentRequestService
 
                 return $value !== null && $value !== '';
             }
-        ));
+        );
+
+        if ($payableType && $payableId) {
+            $existingOpen = $this->findOpenManualPaymentRequestForPayable($payableType, $payableId);
+
+            if ($existingOpen instanceof ManualPaymentRequest) {
+                $existingOpen->fill($filteredAttributes);
+                $existingOpen->payment_transaction_id = $transaction->getKey();
+                $existingOpen->status = ManualPaymentRequest::STATUS_PENDING;
+                $existingOpen->save();
+
+                return $existingOpen;
+            }
+        }
+
+        try {
+            return ManualPaymentRequest::create($filteredAttributes);
+        } catch (QueryException $exception) {
+            if ($this->isDuplicateManualPaymentRequestException($exception, $payableType, $payableId)) {
+                $conflicting = $this->findOpenManualPaymentRequestForPayable($payableType, $payableId);
+                if ($conflicting instanceof ManualPaymentRequest) {
+                    return $conflicting;
+                }
+            }
+
+            throw $exception;
+        }
     }
 
 
@@ -1626,6 +1652,19 @@ class ManualPaymentRequestService
         }
 
         return $filtered;
+    }
+
+    private function isDuplicateManualPaymentRequestException(QueryException $exception, ?string $payableType, ?int $payableId): bool
+    {
+        if ($exception->getCode() !== '23000') {
+            return false;
+        }
+
+        if ($payableType === null || $payableId === null) {
+            return false;
+        }
+
+        return str_contains($exception->getMessage(), 'manual_payment_requests_open_unique_key_unique');
     }
 
     private function manualPaymentSupportsBankNameColumn(): bool

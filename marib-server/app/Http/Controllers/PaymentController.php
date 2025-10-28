@@ -8,6 +8,7 @@ use App\Http\Resources\PaymentTransactionResource;
 use App\Models\Order;
 use App\Models\PaymentTransaction;
 use App\Models\Service;
+use App\Models\ServiceRequest;
 use App\Services\Payments\OrderPaymentService;
 use App\Services\Payments\PackagePaymentService;
 use App\Services\Payments\ServicePaymentService;
@@ -87,8 +88,26 @@ class PaymentController extends Controller
             'currency' => ['nullable', 'string', 'size:3'],
         ];
 
+        if ($purpose === 'order' && $request->filled('order_id')) {
+            $candidateRequest = ServiceRequest::query()
+                ->whereKey((int) $request->input('order_id'))
+                ->where('user_id', $request->user()?->getKey() ?? 0)
+                ->first();
+
+            if ($candidateRequest) {
+                $purpose = 'service';
+                $request->merge([
+                    'purpose' => 'service',
+                    'service_request_id' => $candidateRequest->getKey(),
+                    'service_id' => $candidateRequest->service_id,
+                ]);
+                $request->request->remove('order_id');
+            }
+        }
+
         if ($purpose === 'service') {
             $rules['service_id'] = ['required', 'integer', 'exists:services,id'];
+            $rules['service_request_id'] = ['required', 'integer', 'exists:service_requests,id'];
         } elseif ($purpose === 'package') {
             $rules['package_id'] = ['required', 'integer', 'exists:packages,id'];
         } elseif ($purpose === ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP) {
@@ -160,11 +179,24 @@ class PaymentController extends Controller
 
 
         if ($purpose === 'service') {
-            $service = Service::findOrFail($validated['service_id']);
+            $serviceRequest = ServiceRequest::query()
+                ->whereKey($validated['service_request_id'])
+                ->where('user_id', $request->user()->getKey())
+                ->firstOrFail()
+                ->loadMissing('service');
+
+            if (! $serviceRequest->service || (int) $serviceRequest->service_id !== (int) $validated['service_id']) {
+                return response()->json([
+                    'message' => __('The given data was invalid.'),
+                    'errors' => [
+                        'service_request_id' => [__('Service request does not match the selected service.')],
+                    ],
+                ], 422);
+            }
 
             $transaction = $this->servicePaymentService->initiate(
                 $request->user(),
-                $service,
+                $serviceRequest,
                 $validated['payment_method'],
                 $idempotencyKey,
                 $validated
@@ -173,6 +205,8 @@ class PaymentController extends Controller
             $transaction->loadMissing('manualPaymentRequest.manualBank');
 
             $freshTransaction = $transaction->fresh();
+
+            $service = $serviceRequest->service;
 
             $responsePayload = array_merge(
                 $methodResponsePayload,
@@ -183,6 +217,7 @@ class PaymentController extends Controller
                     'payment_intent_id' => $freshTransaction?->idempotency_key,
                     'transaction' => $freshTransaction,
                     'payment_transaction' => $freshTransaction,
+                    'service_request_id' => $serviceRequest->getKey(),
                     'service' => [
                         'id' => $service->getKey(),
                         'title' => $service->title,
@@ -201,33 +236,6 @@ class PaymentController extends Controller
             }
 
             return response()->json($responsePayload);
-        }
-
-        if ($purpose === 'service') {
-            $service = Service::findOrFail($validated['service_id']);
-
-            $transaction = $this->servicePaymentService->createManual(
-                $request->user(),
-                $service,
-                $idempotencyKey,
-                $validated
-            );
-
-            $transaction->loadMissing('manualPaymentRequest.manualBank');
-
-            $manualRequest = $transaction->manualPaymentRequest?->loadMissing('paymentTransaction.payable', 'manualBank');
-
-            $transactionResource = PaymentTransactionResource::make($transaction)->resolve();
-            $manualRequestResource = $manualRequest
-                ? ManualPaymentRequestResource::make($manualRequest)->resolve()
-                : null;
-
-            return response()->json([
-                'message' => __('تم تسجيل الدفع اليدوي.'),
-                'transaction' => $transactionResource,
-                'payment_transaction' => $transactionResource,
-                'manual_payment_request' => $manualRequestResource,
-            ], $transaction->payment_status === 'succeed' ? 200 : 202);
         }
 
         if ($purpose === 'package') {
@@ -326,7 +334,7 @@ class PaymentController extends Controller
             ->with('payable')
             ->findOrFail($validated['transaction_id']);
 
-        if ($transaction->payable_type === Service::class) {
+        if (in_array($transaction->payable_type, [ServiceRequest::class, Service::class], true)) {
             $updated = $this->servicePaymentService->confirm(
                 $request->user(),
                 $transaction,
@@ -401,6 +409,7 @@ class PaymentController extends Controller
 
         if ($purpose === 'service') {
             $rules['service_id'] = ['required', 'integer', 'exists:services,id'];
+            $rules['service_request_id'] = ['required', 'integer', 'exists:service_requests,id'];
         } elseif ($purpose === 'package') {
             $rules['package_id'] = ['required', 'integer', 'exists:packages,id'];
 
@@ -454,11 +463,24 @@ class PaymentController extends Controller
 
 
         if ($purpose === 'service') {
-            $service = Service::findOrFail($validated['service_id']);
+            $serviceRequest = ServiceRequest::query()
+                ->whereKey($validated['service_request_id'])
+                ->where('user_id', $request->user()->getKey())
+                ->firstOrFail()
+                ->loadMissing('service');
+
+            if (! $serviceRequest->service || (int) $serviceRequest->service_id !== (int) $validated['service_id']) {
+                return response()->json([
+                    'message' => __('The given data was invalid.'),
+                    'errors' => [
+                        'service_request_id' => [__('Service request does not match the selected service.')],
+                    ],
+                ], 422);
+            }
 
             $transaction = $this->servicePaymentService->createManual(
                 $request->user(),
-                $service,
+                $serviceRequest,
                 $idempotencyKey,
                 $validated
             );
@@ -477,6 +499,7 @@ class PaymentController extends Controller
                 'transaction' => $transactionResource,
                 'payment_transaction' => $transactionResource,
                 'manual_payment_request' => $manualRequestResource,
+                'service_request_id' => $serviceRequest->getKey(),
             ], $transaction->payment_status === 'succeed' ? 200 : 202);
         }
 

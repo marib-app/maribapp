@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 use App\Models\PaymentTransaction;
+use App\Models\ManualPaymentRequest;
 use App\Models\UserFcmToken;
 use App\Services\NotificationService;
 use App\Http\Controllers\Controller;
@@ -24,6 +25,28 @@ class ServiceRequestController extends Controller
     public function __construct(
         private ServiceCustomFieldSubmissionService $submissionService
     ) {
+    }
+
+    private function transactionMatchesServiceRequest(?PaymentTransaction $transaction, ServiceRequest $serviceRequest, Service $service): bool
+    {
+        if (! $transaction) {
+            return false;
+        }
+
+        if ($transaction->payable_type === ServiceRequest::class && (int) $transaction->payable_id === $serviceRequest->getKey()) {
+            return true;
+        }
+
+        if ($transaction->payable_type === Service::class && (int) $transaction->payable_id === $service->getKey()) {
+            return true;
+        }
+
+        $metaRequestId = data_get($transaction->meta, 'service.request_id');
+        if ($metaRequestId !== null && (int) $metaRequestId === $serviceRequest->getKey()) {
+            return true;
+        }
+
+        return false;
     }
 
     public function index(Request $request): JsonResponse
@@ -82,6 +105,7 @@ class ServiceRequestController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'service_id' => ['required', 'integer'],
+            'service_request_id' => ['sometimes', 'integer'],
             'note' => ['nullable', 'string'],
         ]);
 
@@ -122,78 +146,24 @@ class ServiceRequestController extends Controller
             ], 403);
         }
 
+        $serviceRequest = null;
+        if ($request->filled('service_request_id')) {
+            $serviceRequest = ServiceRequest::query()
+                ->withTrashed()
+                ->where('user_id', $user->id)
+                ->find($request->integer('service_request_id'));
 
-        $resolvedTransaction = null;
-
-        if ($service->is_paid) {
-            $paymentTransactionId = $request->input('payment_transaction_id');
-
-            if ($paymentTransactionId) {
-                $resolvedTransaction = PaymentTransaction::query()
-                    ->whereKey((int) $paymentTransactionId)
-                    ->where('user_id', $user->id)
-                    ->where('payable_type', Service::class)
-                    ->where('payable_id', $service->id)
-                    ->first();
-
-                if (! $resolvedTransaction) {
-                    return response()->json([
-                        'message' => __('تعذّر العثور على معاملة الدفع المحددة.'),
-                        'errors' => [
-                            'payment_transaction_id' => [__('معاملة الدفع غير صالحة أو لا تخص هذه الخدمة.')],
-                        ],
-                    ], 422);
-                }
-
-                if (mb_strtolower((string) $resolvedTransaction->payment_status) !== 'succeed') {
-                    return response()->json([
-                        'message' => __('يحتاج الدفع إلى تأكيد قبل إرسال الطلب.'),
-                        'code' => 'payment_not_confirmed',
-                        'payment_required' => true,
-                        'payable_type' => Service::class,
-                        'payable_id' => $service->id,
-                    ], 422);
-                }
-            } else {
-                $resolvedTransaction = PaymentTransaction::query()
-                    ->where('user_id', $user->id)
-                    ->where('payable_type', Service::class)
-                    ->where('payable_id', $service->id)
-                    ->where('payment_status', 'succeed')
-                    ->orderByDesc('id')
-                    ->first();
-            }
-
-            if (! $resolvedTransaction) {
-                $latestTransaction = PaymentTransaction::query()
-                    ->where('user_id', $user->id)
-                    ->where('payable_type', Service::class)
-                    ->where('payable_id', $service->id)
-                    ->orderByDesc('id')
-                    ->first();
-
+            if (! $serviceRequest || (int) $serviceRequest->service_id !== (int) $service->id) {
                 return response()->json([
-                    'message' => __('Payment is required to request this service.'),
-                    'code' => 'payment_required',
-                    'payment_required' => true,
-                    'payable_type' => Service::class,
-                    'payable_id' => $service->id,
-                    'service_id' => $service->id,
-                    'service_uid' => $service->service_uid,
-                    'service_title' => $service->title,
-                    'amount' => $service->price !== null ? (float) $service->price : null,
-                    'currency' => $service->currency,
-                    'price_note' => $service->price_note,
-                    'allowed_gateways' => ['wallet', 'manual_bank'],
-                    'payment_transaction_id' => $latestTransaction?->getKey(),
-                    'payment_intent_id' => $latestTransaction?->idempotency_key,
-                    'payment_transaction_status' => $latestTransaction?->payment_status,
-                    'recommended_idempotency_key' => (string) Str::orderedUuid(),
-                ], 402);
+                    'message' => __('The given data was invalid.'),
+                    'errors' => [
+                        'service_request_id' => [__('Invalid service request identifier.')],
+                    ],
+                ], 422);
             }
         }
 
- 
+
         $customFields = $request->input('custom_fields', []);
 
         if (is_string($customFields)) {
@@ -232,24 +202,138 @@ class ServiceRequestController extends Controller
             ], 422);
         }
 
-        $serviceRequest = new ServiceRequest();
-        $serviceRequest->service_id = $service->id;
-        $serviceRequest->user_id = $user->id;
+        if (! $serviceRequest) {
+            $serviceRequest = ServiceRequest::query()
+                ->where('service_id', $service->id)
+                ->where('user_id', $user->id)
+                ->whereNull('payment_transaction_id')
+                ->where(function ($query) {
+                    $query->whereNull('payment_status')
+                        ->orWhereNotIn('payment_status', ['paid']);
+                })
+                ->orderByDesc('id')
+                ->first();
+        }
+
+        if (! $serviceRequest) {
+            $serviceRequest = new ServiceRequest();
+            $serviceRequest->service_id = $service->id;
+            $serviceRequest->user_id = $user->id;
+        } elseif ($serviceRequest->trashed()) {
+            $serviceRequest->restore();
+        }
+
         $serviceRequest->status = 'review';
         $serviceRequest->payload = $payload;
+
+        if ($request->has('note')) {
+            $serviceRequest->note = $request->filled('note')
+                ? (trim((string) $request->input('note')) ?: null)
+                : null;
+        }
+
+        if (! $serviceRequest->exists) {
+            $serviceRequest->payment_status = 'pending';
+            $serviceRequest->save();
+        }
+
+        $resolvedTransaction = null;
+
+        if ($service->is_paid) {
+            $paymentTransactionId = $request->input('payment_transaction_id');
+
+            if ($paymentTransactionId) {
+                $resolvedTransaction = PaymentTransaction::query()
+                    ->whereKey((int) $paymentTransactionId)
+                    ->where('user_id', $user->id)
+                    ->first();
+
+                if (! $resolvedTransaction || ! $this->transactionMatchesServiceRequest($resolvedTransaction, $serviceRequest, $service)) {
+                    return response()->json([
+                        'message' => __('تعذّر العثور على معاملة الدفع المحددة.'),
+                        'errors' => [
+                            'payment_transaction_id' => [__('معاملة الدفع غير صالحة أو لا تخص هذا الطلب.')],
+                        ],
+                    ], 422);
+                }
+
+                if (mb_strtolower((string) $resolvedTransaction->payment_status) !== 'succeed') {
+                    return response()->json([
+                        'message' => __('يحتاج الدفع إلى تأكيد قبل إرسال الطلب.'),
+                        'code' => 'payment_not_confirmed',
+                        'payment_required' => true,
+                        'payable_type' => ServiceRequest::class,
+                        'payable_id' => $serviceRequest->getKey(),
+                    ], 422);
+                }
+            } else {
+                $candidateTransactions = PaymentTransaction::query()
+                    ->where('user_id', $user->id)
+                    ->where('payment_status', 'succeed')
+                    ->orderByDesc('id')
+                    ->limit(10)
+                    ->get();
+
+                $resolvedTransaction = $candidateTransactions->first(function (PaymentTransaction $transaction) use ($serviceRequest, $service) {
+                    return $this->transactionMatchesServiceRequest($transaction, $serviceRequest, $service);
+                });
+            }
+
+            if (! $resolvedTransaction) {
+                if ($serviceRequest->payment_status !== 'paid') {
+                    $serviceRequest->payment_status = 'pending';
+                    $serviceRequest->payment_transaction_id = null;
+                    $serviceRequest->save();
+                }
+
+                $manualRequest = ManualPaymentRequest::query()
+                    ->with('paymentTransaction')
+                    ->where('payable_type', ServiceRequest::class)
+                    ->where('payable_id', $serviceRequest->getKey())
+                    ->whereIn('status', ManualPaymentRequest::OPEN_STATUSES)
+                    ->orderByDesc('id')
+                    ->first();
+
+                $latestTransaction = $manualRequest?->paymentTransaction;
+
+                if (! $latestTransaction && $serviceRequest->payment_transaction_id) {
+                    $latestTransaction = PaymentTransaction::query()
+                        ->whereKey($serviceRequest->payment_transaction_id)
+                        ->first();
+                }
+
+                return response()->json([
+                    'message' => __('Payment is required to request this service.'),
+                    'code' => 'payment_required',
+                    'payment_required' => true,
+                    'payable_type' => ServiceRequest::class,
+                    'payable_id' => $serviceRequest->getKey(),
+                    'service_request_id' => $serviceRequest->getKey(),
+                    'service_id' => $service->id,
+                    'service_uid' => $service->service_uid,
+                    'service_title' => $service->title,
+                    'amount' => $service->price !== null ? (float) $service->price : null,
+                    'currency' => $service->currency,
+                    'price_note' => $service->price_note,
+                    'allowed_gateways' => ['wallet', 'manual_bank'],
+                    'manual_payment_request_id' => $manualRequest?->getKey(),
+                    'payment_transaction_id' => $latestTransaction?->getKey(),
+                    'payment_intent_id' => $latestTransaction?->idempotency_key,
+                    'payment_transaction_status' => $latestTransaction?->payment_status,
+                    'recommended_idempotency_key' => (string) Str::orderedUuid(),
+                ], 402);
+            }
+        }
+
+        if (! $serviceRequest->exists || $serviceRequest->wasChanged() || $serviceRequest->isDirty()) {
+            $serviceRequest->save();
+        }
 
         if ($resolvedTransaction instanceof PaymentTransaction) {
             $serviceRequest->payment_status = 'paid';
             $serviceRequest->payment_transaction_id = $resolvedTransaction->getKey();
-        }
+            $serviceRequest->save();
 
-        if ($request->filled('note')) {
-            $serviceRequest->note = trim((string) $request->input('note')) ?: null;
-        }
-
-        $serviceRequest->save();
-
-        if ($resolvedTransaction instanceof PaymentTransaction) {
             $meta = $resolvedTransaction->meta ?? [];
             if (! is_array($meta)) {
                 $meta = [];
@@ -257,10 +341,21 @@ class ServiceRequestController extends Controller
 
             data_set($meta, 'service.request_id', $serviceRequest->getKey());
 
+            $resolvedTransaction->payable_type = ServiceRequest::class;
+            $resolvedTransaction->payable_id = $serviceRequest->getKey();
             $resolvedTransaction->meta = $meta;
 
-            if ($resolvedTransaction->isDirty('meta')) {
+            if ($resolvedTransaction->isDirty()) {
                 $resolvedTransaction->save();
+            }
+
+            if ($resolvedTransaction->manualPaymentRequest instanceof ManualPaymentRequest) {
+                $manual = $resolvedTransaction->manualPaymentRequest;
+                if ($manual->payable_type !== ServiceRequest::class || (int) $manual->payable_id !== $serviceRequest->getKey()) {
+                    $manual->payable_type = ServiceRequest::class;
+                    $manual->payable_id = $serviceRequest->getKey();
+                    $manual->save();
+                }
             }
         }
 

@@ -14,6 +14,7 @@ class ServiceRequestRepository {
     Map<String, dynamic>? customFields,
     Map<String, dynamic>? attachments,
     int? paymentTransactionId,
+    int? serviceRequestId,
   }) async {
     final String? normalizedUid =
         serviceUid != null && serviceUid.trim().isNotEmpty
@@ -70,6 +71,10 @@ class ServiceRequestRepository {
 
       if (paymentTransactionId != null && paymentTransactionId > 0) {
         map['payment_transaction_id'] = paymentTransactionId;
+      }
+
+      if (serviceRequestId != null && serviceRequestId > 0) {
+        map['service_request_id'] = serviceRequestId;
       }
 
       return map;

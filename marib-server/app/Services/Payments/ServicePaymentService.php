@@ -2,11 +2,14 @@
 
 namespace App\Services\Payments;
 
+use App\Models\ManualPaymentRequest;
 use App\Models\PaymentTransaction;
 use App\Models\Service;
+use App\Models\ServiceRequest;
 use App\Models\User;
 use App\Services\OrderCheckoutService;
 use App\Services\PaymentFulfillmentService;
+use App\Services\Payments\CreateOrLinkManualPaymentRequest;
 use App\Services\Payments\Concerns\HandlesManualBankConfirmation;
 use App\Services\WalletService;
 use Illuminate\Database\DatabaseManager;
@@ -50,15 +53,24 @@ class ServicePaymentService
     /**
      * @param array<string, mixed> $data
      */
-    public function initiate(User $user, Service $service, string $method, string $idempotencyKey, array $data = []): PaymentTransaction
+    public function initiate(User $user, ServiceRequest $serviceRequest, string $method, string $idempotencyKey, array $data = []): PaymentTransaction
     {
         $normalizedMethod = $this->normalizePaymentMethod($method);
 
-        return $this->db->transaction(function () use ($user, $service, $normalizedMethod, $idempotencyKey, $data) {
-            $transaction = $this->findOrCreateTransaction($user, $service, $normalizedMethod, $idempotencyKey, $data);
+        $serviceRequest->loadMissing('service');
+        $service = $serviceRequest->service;
+
+        if (! $service instanceof Service) {
+            throw ValidationException::withMessages([
+                'service_request_id' => __('Service request is missing its linked service.'),
+            ]);
+        }
+
+        return $this->db->transaction(function () use ($user, $serviceRequest, $service, $normalizedMethod, $idempotencyKey, $data) {
+            $transaction = $this->findOrCreateTransaction($user, $serviceRequest, $service, $normalizedMethod, $idempotencyKey, $data);
 
             if ($normalizedMethod === 'manual_bank') {
-                $this->attachManualTransferHint($user, $service, $transaction, $normalizedMethod, $idempotencyKey, $data);
+                $this->attachManualTransferHint($user, $serviceRequest, $service, $transaction, $normalizedMethod, $idempotencyKey, $data);
             }
 
             return $transaction->fresh();
@@ -80,20 +92,39 @@ class ServicePaymentService
             ]);
         }
 
-        if ($transaction->payable_type !== Service::class) {
+        $serviceRequest = $transaction->payable instanceof ServiceRequest
+            ? $transaction->payable
+            : null;
+
+        if (! $serviceRequest && $transaction->payable_type === ServiceRequest::class) {
+            $serviceRequest = ServiceRequest::find($transaction->payable_id);
+        }
+
+        if (! $serviceRequest) {
+            $metaRequestId = data_get($transaction->meta, 'service.request_id');
+            if ($metaRequestId) {
+                $serviceRequest = ServiceRequest::find($metaRequestId);
+            }
+        }
+
+        if (! $serviceRequest) {
             throw ValidationException::withMessages([
-                'transaction' => __('لا يمكن تأكيد هذه المعاملة للنوع المحدد.'),
+                'transaction' => __('تعذر العثور على الطلب المرتبط بالمعاملة.'),
             ]);
         }
 
-        /** @var Service|null $service */
-        $service = $transaction->payable instanceof Service
-            ? $transaction->payable
-            : Service::find($transaction->payable_id);
-
-        if (! $service) {
+        if ((int) $serviceRequest->user_id !== $user->getKey()) {
             throw ValidationException::withMessages([
-                'transaction' => __('تعذر العثور على الخدمة المرتبطة بالمعاملة.'),
+                'transaction' => __('المعاملة المحددة لا تخص المستخدم.'),
+            ]);
+        }
+
+        $serviceRequest->loadMissing('service');
+        $service = $serviceRequest->service;
+
+        if (! $service instanceof Service) {
+            throw ValidationException::withMessages([
+                'service_request_id' => __('Service request is missing its linked service.'),
             ]);
         }
 
@@ -117,8 +148,8 @@ class ServicePaymentService
             $manualContext = $this->prepareManualBankConfirmationPayload(
                 $user,
                 $transaction,
-                Service::class,
-                $service->getKey(),
+                ServiceRequest::class,
+                $serviceRequest->getKey(),
                 $method,
                 $idempotencyKey,
                 $data
@@ -160,8 +191,8 @@ class ServicePaymentService
 
         $result = $this->fulfillmentService->fulfill(
             $transaction,
-            Service::class,
-            $service->getKey(),
+            ServiceRequest::class,
+            $serviceRequest->getKey(),
             $user->getKey(),
             $options
         );
@@ -176,9 +207,17 @@ class ServicePaymentService
             $transaction->payment_id = $options['payment_reference'];
         }
 
+        $transaction->payable_type = ServiceRequest::class;
+        $transaction->payable_id = $serviceRequest->getKey();
         $transaction->payment_status = 'succeed';
         $transaction->meta = $options['meta'];
         $transaction->save();
+
+        if ($serviceRequest->payment_transaction_id !== $transaction->getKey() || $serviceRequest->payment_status !== 'paid') {
+            $serviceRequest->payment_transaction_id = $transaction->getKey();
+            $serviceRequest->payment_status = 'paid';
+            $serviceRequest->save();
+        }
 
         return $transaction->fresh();
     }
@@ -188,18 +227,27 @@ class ServicePaymentService
      *
      * @param array<string, mixed> $data
      */
-    public function createManual(User $user, Service $service, string $idempotencyKey, array $data = []): PaymentTransaction
+    public function createManual(User $user, ServiceRequest $serviceRequest, string $idempotencyKey, array $data = []): PaymentTransaction
     {
-        return $this->db->transaction(function () use ($user, $service, $idempotencyKey, $data) {
+        return $this->db->transaction(function () use ($user, $serviceRequest, $idempotencyKey, $data) {
             $method = $this->normalizePaymentMethod('manual_bank');
             $data['payment_method'] = $method;
 
-            $transaction = $this->findOrCreateTransaction($user, $service, $method, $idempotencyKey, $data);
+            $serviceRequest->loadMissing('service');
+            $service = $serviceRequest->service;
+
+            if (! $service instanceof Service) {
+                throw ValidationException::withMessages([
+                    'service_request_id' => __('Service request is missing its linked service.'),
+                ]);
+            }
+
+            $transaction = $this->findOrCreateTransaction($user, $serviceRequest, $service, $method, $idempotencyKey, $data);
 
             $manualRequest = $this->manualPaymentLinker->handle(
                 $user,
-                Service::class,
-                $service->getKey(),
+                ServiceRequest::class,
+                $serviceRequest->getKey(),
                 $transaction,
                 $data
             );
@@ -209,10 +257,20 @@ class ServicePaymentService
             $meta = $this->mergeServiceMeta($transaction->meta ?? [], $service, $data);
             $meta = $this->mergeManualPayloadMeta($meta, $data, $transaction);
 
+            $transaction->payable_type = ServiceRequest::class;
+            $transaction->payable_id = $serviceRequest->getKey();
             $transaction->payment_status = Arr::get($data, 'auto_confirm') ? 'succeed' : 'pending';
             $transaction->payment_id = $data['reference'] ?? $transaction->payment_id;
             $transaction->meta = $meta;
             $transaction->save();
+
+            if ($serviceRequest->payment_transaction_id !== $transaction->getKey() || $serviceRequest->payment_status !== 'paid') {
+                $serviceRequest->payment_transaction_id = $transaction->getKey();
+                if ($serviceRequest->payment_status !== 'paid') {
+                    $serviceRequest->payment_status = $transaction->payment_status === 'succeed' ? 'paid' : 'pending';
+                }
+                $serviceRequest->save();
+            }
 
             return $transaction->fresh()->loadMissing('manualPaymentRequest.manualBank');
         });
@@ -223,6 +281,7 @@ class ServicePaymentService
      */
     private function findOrCreateTransaction(
         User $user,
+        ServiceRequest $serviceRequest,
         Service $service,
         string $method,
         string $idempotencyKey,
@@ -236,14 +295,19 @@ class ServicePaymentService
             ->first();
 
         if ($existing) {
-            if ((int) $existing->payable_id !== $service->getKey()) {
+            if ((int) $existing->payable_id !== $serviceRequest->getKey()) {
                 throw ValidationException::withMessages([
-                    'idempotency' => __('المعاملة المرتبطة بالمفتاح المرسل تتعلق بخدمة مختلفة.'),
+                    'idempotency' => __('المعاملة المرتبطة بالمفتاح المرسل تتعلق بطلب مختلف.'),
                 ]);
             }
 
             if ($existing->payment_gateway !== $method) {
                 $existing->payment_gateway = $method;
+                $existing->save();
+            }
+
+            if ($existing->payable_type !== ServiceRequest::class) {
+                $existing->payable_type = ServiceRequest::class;
                 $existing->save();
             }
 
@@ -266,8 +330,8 @@ class ServicePaymentService
             'currency' => $currency,
             'payment_gateway' => $method,
             'payment_status' => 'pending',
-            'payable_type' => Service::class,
-            'payable_id' => $service->getKey(),
+            'payable_type' => ServiceRequest::class,
+            'payable_id' => $serviceRequest->getKey(),
             'idempotency_key' => $idempotencyKey,
             'meta' => $meta,
         ]);
@@ -278,22 +342,41 @@ class ServicePaymentService
      */
     private function attachManualTransferHint(
         User $user,
+        ServiceRequest $serviceRequest,
         Service $service,
         PaymentTransaction $transaction,
         string $method,
         string $idempotencyKey,
         array $data = []
     ): void {
-        $manualRequest = $this->manualPaymentRequestService->createFromTransaction(
-            $user,
-            Service::class,
-            $service->getKey(),
-            $transaction,
-            array_merge($data, [
-                'payment_gateway' => $method,
-                'idempotency_key' => $transaction->idempotency_key ?? $idempotencyKey,
-            ])
-        );
+        $manualRequest = $transaction->manualPaymentRequest instanceof ManualPaymentRequest
+            ? $transaction->manualPaymentRequest
+            : null;
+
+        if (! $manualRequest instanceof ManualPaymentRequest) {
+            $manualRequest = $this->manualPaymentRequestService->findOpenManualPaymentRequestForPayable(
+                ServiceRequest::class,
+                $serviceRequest->getKey()
+            );
+        }
+
+        if (! $manualRequest instanceof ManualPaymentRequest) {
+            $manualRequest = $this->manualPaymentRequestService->createFromTransaction(
+                $user,
+                ServiceRequest::class,
+                $serviceRequest->getKey(),
+                $transaction,
+                array_merge($data, [
+                    'payment_gateway' => $method,
+                    'idempotency_key' => $transaction->idempotency_key ?? $idempotencyKey,
+                ])
+            );
+        } else {
+            if ($manualRequest->payment_transaction_id !== $transaction->getKey()) {
+                $manualRequest->payment_transaction_id = $transaction->getKey();
+                $manualRequest->save();
+            }
+        }
 
         if ((int) $transaction->manual_payment_request_id !== $manualRequest->getKey()) {
             $transaction->manual_payment_request_id = $manualRequest->getKey();

@@ -57,6 +57,7 @@ class _ServiceAddMoreDetailsScreenState
   String? _serviceTitle;
   double? _amount;
   String? _currency;
+  int? _pendingServiceRequestId;
 
   final List<Map<String, dynamic>> _fieldMaps = [];
   final List<CustomFieldBuilder> _builders = [];
@@ -989,6 +990,8 @@ class _ServiceAddMoreDetailsScreenState
       _currency = c.isNotEmpty ? c : null;
     }
 
+    _pendingServiceRequestId = null;
+
     final rawSchema = args?['serviceFieldsSchema'] ??
         args?['service_fields_schema'] ??
         args?['service_fields'] ??
@@ -1105,6 +1108,7 @@ class _ServiceAddMoreDetailsScreenState
         serviceUid: _serviceUid,
         customFields: customFieldPayload.isEmpty ? null : customFieldPayload,
         attachments: attachmentPayload.isEmpty ? null : attachmentPayload,
+        serviceRequestId: _pendingServiceRequestId,
       );
 
       _onRequestSubmitted();
@@ -1137,6 +1141,9 @@ class _ServiceAddMoreDetailsScreenState
   void _onRequestSubmitted() {
     if (!mounted) return;
     _clearStores();
+    setState(() {
+      _pendingServiceRequestId = null;
+    });
     HelperUtils.showSnackBarMessage(
       context,
       'تم ارسال طلبك بنجاح',
@@ -1153,9 +1160,22 @@ class _ServiceAddMoreDetailsScreenState
   }) async {
     if (!mounted) return false;
 
-    setState(() => _submitting = false);
-
     final Map<String, dynamic> payload = _normalizeMap(error.payload);
+
+    final int? payloadServiceRequestId = _flexInt(
+      payload['service_request_id'] ??
+          payload['serviceRequestId'] ??
+          payload['request_id'],
+    );
+
+    if (mounted) {
+      setState(() {
+        _submitting = false;
+        if (payloadServiceRequestId != null) {
+          _pendingServiceRequestId = payloadServiceRequestId;
+        }
+      });
+    }
 
     final int? serviceId =
         _serviceId ?? _flexInt(payload['service_id'] ?? payload['serviceId']);
@@ -1192,6 +1212,9 @@ class _ServiceAddMoreDetailsScreenState
           payload['currencyCode'],
     );
 
+    final int? serviceRequestId =
+        _pendingServiceRequestId ?? payloadServiceRequestId;
+
     final BankTransferArgs args = BankTransferArgs(
       token: token,
       packageId: serviceId,
@@ -1206,6 +1229,7 @@ class _ServiceAddMoreDetailsScreenState
           _stringify(payload['service_title'] ?? payload['serviceName']) ??
               _serviceTitle,
       priceNote: _stringify(payload['price_note'] ?? payload['note']),
+      serviceRequestId: serviceRequestId,
     );
 
     if (args.priceNote != null && args.priceNote!.isNotEmpty) {
@@ -1256,6 +1280,7 @@ class _ServiceAddMoreDetailsScreenState
         customFields: customFieldPayload.isEmpty ? null : customFieldPayload,
         attachments: attachmentPayload.isEmpty ? null : attachmentPayload,
         paymentTransactionId: numericTransactionId,
+        serviceRequestId: _pendingServiceRequestId ?? serviceRequestId,
       );
       submitted = true;
       _onRequestSubmitted();

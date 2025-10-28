@@ -1190,7 +1190,11 @@ class _ServiceAddMoreDetailsScreenState
         subjectType == 'service_request' &&
         nextResource == 'service_requests') {
       Navigator.of(context).pushReplacement(
-        ServiceRequestDetailsScreen.route(serviceRequestId: subjectId),
+        ServiceRequestDetailsScreen.route(
+          serviceRequestId: subjectId,
+          subject: subject,
+          next: next,
+        ),
       );
       return;
     }

@@ -1,3 +1,4 @@
+import 'package:marib/data/model/service_request_model.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -1103,7 +1104,8 @@ class _ServiceAddMoreDetailsScreenState
     final attachmentPayload = _collectAttachmentFiles();
     setState(() => _submitting = true);
     try {
-      await _requestRepository.createRequest(
+      final ServiceRequestModel request =
+          await _requestRepository.createRequest(
         serviceId: _serviceId!,
         serviceUid: _serviceUid,
         customFields: customFieldPayload.isEmpty ? null : customFieldPayload,
@@ -1111,13 +1113,36 @@ class _ServiceAddMoreDetailsScreenState
         serviceRequestId: _pendingServiceRequestId,
       );
 
+      _pendingServiceRequestId = request.id;
+
+      final bool paymentPending = _amount != null &&
+          _amount! > 0 &&
+          ((request.paymentStatus ?? '').toLowerCase() != 'paid');
+
+      if (paymentPending) {
+        final bool handled = await _startManualPaymentFlow(
+          serviceId: _serviceId!,
+          serviceRequestId: request.id,
+          amount: _amount!,
+          currency: _currency,
+          priceNote: request.note,
+          serviceTitle: _serviceTitle,
+          initialGateway: null,
+          fallbackTransaction: request.paymentTransactionId,
+        );
+
+        if (handled) {
+          return;
+        }
+
+        return;
+      }
+
       _onRequestSubmitted();
     } on ApiHttpException catch (error) {
       if (error.statusCode == 402) {
         final handled = await _handlePaymentRequired(
           error: error,
-          customFieldPayload: customFieldPayload,
-          attachmentPayload: attachmentPayload,
         );
 
         if (handled) {
@@ -1140,94 +1165,62 @@ class _ServiceAddMoreDetailsScreenState
 
   void _onRequestSubmitted() {
     if (!mounted) return;
+
     _clearStores();
     setState(() {
       _pendingServiceRequestId = null;
     });
+
     HelperUtils.showSnackBarMessage(
       context,
-      'تم ارسال طلبك بنجاح',
+      'Request submitted successfully.',
     );
+
     if (Navigator.of(context).canPop()) {
       Navigator.of(context).pop();
     }
   }
 
-  Future<bool> _handlePaymentRequired({
-    required ApiHttpException error,
-    required Map<String, dynamic> customFieldPayload,
-    required Map<String, dynamic> attachmentPayload,
+  Future<bool> _startManualPaymentFlow({
+    required int serviceId,
+    required int serviceRequestId,
+    required double amount,
+    String? currency,
+    String? priceNote,
+    String? serviceTitle,
+    String? initialGateway,
+    dynamic fallbackTransaction,
   }) async {
     if (!mounted) return false;
 
-    final Map<String, dynamic> payload = _normalizeMap(error.payload);
-
-    final int? payloadServiceRequestId = _flexInt(
-      payload['service_request_id'] ??
-          payload['serviceRequestId'] ??
-          payload['request_id'],
-    );
-
-    if (payloadServiceRequestId != null) {
-      _pendingServiceRequestId = payloadServiceRequestId;
-    }
-
-    if (mounted) {
-      setState(() => _submitting = false);
-    }
-
-    final int? serviceId =
-        _serviceId ?? _flexInt(payload['service_id'] ?? payload['serviceId']);
-    if (serviceId == null) {
-      HelperUtils.showSnackBarMessage(
-        context,
-        'تعذّر تحديد الخدمة لإتمام الدفع.',
-      );
-      return false;
-    }
-
-    final double? amount =
-        _amount ?? _flexDouble(payload['amount'] ?? payload['price']);
-    if (amount == null || amount <= 0) {
-      HelperUtils.showSnackBarMessage(
-        context,
-        'المبلغ غير متاح لإتمام الدفع.',
-      );
-      return false;
-    }
+    _pendingServiceRequestId = serviceRequestId;
 
     final String token = HiveUtils.getJWT();
     if (token.trim().isEmpty) {
       HelperUtils.showSnackBarMessage(
         context,
-        'الرجاء تسجيل الدخول لإتمام عملية الدفع.',
+        'Please sign in to continue with the payment.',
       );
       return false;
     }
 
-    final String? currencyCandidate = _stringify(
-      payload['currency'] ??
-          payload['currency_code'] ??
-          payload['currencyCode'],
-    );
-
-    final int? serviceRequestId =
-        _pendingServiceRequestId ?? payloadServiceRequestId;
+    final String? normalizedCurrency =
+        (currency != null && currency.trim().isNotEmpty)
+            ? currency.trim().toUpperCase()
+            : null;
 
     final BankTransferArgs args = BankTransferArgs(
       token: token,
       packageId: serviceId,
       amount: amount,
-      currency: currencyCandidate ?? _currency,
+      currency: normalizedCurrency,
       packageType: 'service',
       itemId: serviceId,
       purpose: 'service',
-      initialGateway: _preferredGatewayFromPayload(payload),
+      initialGateway: initialGateway,
       serviceId: serviceId,
-      serviceTitle:
-          _stringify(payload['service_title'] ?? payload['serviceName']) ??
-              _serviceTitle,
-      priceNote: _stringify(payload['price_note'] ?? payload['note']),
+      serviceTitle: serviceTitle ?? _serviceTitle,
+      priceNote: priceNote,
       serviceRequestId: serviceRequestId,
     );
 
@@ -1247,14 +1240,13 @@ class _ServiceAddMoreDetailsScreenState
 
     final String? transactionId = _extractPaymentTransactionId(
       paymentResult,
-      fallback:
-          payload['payment_transaction'] ?? payload['payment_transaction_id'],
+      fallback: fallbackTransaction,
     );
 
     if (transactionId == null) {
       HelperUtils.showSnackBarMessage(
         context,
-        'تعذّر تحديد معاملة الدفع. يرجى المحاولة لاحقًا.',
+        'Unable to determine payment transaction.',
       );
       return false;
     }
@@ -1263,12 +1255,11 @@ class _ServiceAddMoreDetailsScreenState
     if (numericTransactionId == null) {
       HelperUtils.showSnackBarMessage(
         context,
-        'تعذّر قراءة رقم معاملة الدفع.',
+        'Unable to parse payment transaction id.',
       );
       return false;
     }
 
-    if (!mounted) return false;
     setState(() => _submitting = true);
 
     var submitted = false;
@@ -1276,18 +1267,18 @@ class _ServiceAddMoreDetailsScreenState
       await _requestRepository.createRequest(
         serviceId: serviceId,
         serviceUid: _serviceUid,
-        customFields: customFieldPayload.isEmpty ? null : customFieldPayload,
-        attachments: attachmentPayload.isEmpty ? null : attachmentPayload,
         paymentTransactionId: numericTransactionId,
-        serviceRequestId: _pendingServiceRequestId ?? serviceRequestId,
+        serviceRequestId: serviceRequestId,
       );
       submitted = true;
       _onRequestSubmitted();
       return true;
     } on ApiHttpException catch (err) {
-      final message = err.errorMessage ?? err.payload ?? err.toString();
+      if (!mounted) return false;
+      final String message = err.errorMessage ?? err.payload ?? err.toString();
       HelperUtils.showSnackBarMessage(context, '$message');
     } catch (err) {
+      if (!mounted) return false;
       HelperUtils.showSnackBarMessage(context, '$err');
     } finally {
       if (!submitted && mounted) {
@@ -1296,6 +1287,85 @@ class _ServiceAddMoreDetailsScreenState
     }
 
     return false;
+  }
+
+  Future<bool> _handlePaymentRequired({
+    required ApiHttpException error,
+  }) async {
+    if (!mounted) return false;
+
+    final Map<String, dynamic> payload = _normalizeMap(error.payload);
+
+    final int? payloadServiceRequestId = _flexInt(
+      payload['service_request_id'] ??
+          payload['serviceRequestId'] ??
+          payload['request_id'],
+    );
+
+    if (payloadServiceRequestId != null) {
+      _pendingServiceRequestId = payloadServiceRequestId;
+    }
+
+    final int? serviceRequestId =
+        payloadServiceRequestId ?? _pendingServiceRequestId;
+
+    if (serviceRequestId == null) {
+      HelperUtils.showSnackBarMessage(
+        context,
+        'Missing service request identifier. Please try again.',
+      );
+      return false;
+    }
+
+    if (mounted) {
+      setState(() => _submitting = false);
+    }
+
+    final int? serviceId =
+        _serviceId ?? _flexInt(payload['service_id'] ?? payload['serviceId']);
+    if (serviceId == null) {
+      HelperUtils.showSnackBarMessage(
+        context,
+        'Unable to determine the service for payment.',
+      );
+      return false;
+    }
+
+    final double? amount =
+        _amount ?? _flexDouble(payload['amount'] ?? payload['price']);
+    if (amount == null || amount <= 0) {
+      HelperUtils.showSnackBarMessage(
+        context,
+        'Payment amount is missing or invalid.',
+      );
+      return false;
+    }
+
+    final String? currencyCandidate = _stringify(
+      payload['currency'] ??
+          payload['currency_code'] ??
+          payload['currencyCode'],
+    );
+
+    final String? priceNote =
+        _stringify(payload['price_note'] ?? payload['note']);
+
+    final String? serviceTitle =
+        _stringify(payload['service_title'] ?? payload['serviceName']);
+
+    final bool handled = await _startManualPaymentFlow(
+      serviceId: serviceId,
+      serviceRequestId: serviceRequestId,
+      amount: amount,
+      currency: currencyCandidate ?? _currency,
+      priceNote: priceNote,
+      serviceTitle: serviceTitle,
+      initialGateway: _preferredGatewayFromPayload(payload),
+      fallbackTransaction:
+          payload['payment_transaction'] ?? payload['payment_transaction_id'],
+    );
+
+    return handled;
   }
 
   Map<String, dynamic> _normalizeMap(dynamic value) {

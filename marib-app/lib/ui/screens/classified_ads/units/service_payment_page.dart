@@ -75,7 +75,9 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
     _serviceId =
         parseInt(data['serviceId'] ?? data['service_id'] ?? data['itemId']);
     _serviceRequestId = parseInt(
-      data['service_request_id'] ?? data['serviceRequestId'] ?? data['request_id'],
+      data['service_request_id'] ??
+          data['serviceRequestId'] ??
+          data['request_id'],
     );
     _serviceTitle =
         parseString(data['serviceTitle'] ?? data['title']) ?? 'دفع خدمة';
@@ -166,7 +168,7 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.payment),
-                label: Text(_submitting ? 'جاري المعالجة…' : 'ادفع الآن'),
+                label: Text(_submitting ? 'Processing...' : 'Pay'),
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   textStyle: theme.textTheme.titleMedium,
@@ -183,12 +185,13 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
     if (_submitting) return;
 
     final int? serviceId = _serviceId;
+    final int? serviceRequestId = _serviceRequestId;
     final double? amount = _amount;
 
     if (serviceId == null) {
       HelperUtils.showSnackBarMessage(
         context,
-        'تعذّر تحديد الخدمة لإتمام الدفع.',
+        'Unable to determine the service for payment.',
       );
       return;
     }
@@ -196,7 +199,15 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
     if (amount == null || amount <= 0) {
       HelperUtils.showSnackBarMessage(
         context,
-        'المبلغ غير متاح لإتمام الدفع.',
+        'Payment amount is missing or invalid.',
+      );
+      return;
+    }
+
+    if (serviceRequestId == null) {
+      HelperUtils.showSnackBarMessage(
+        context,
+        'Service request id is missing.',
       );
       return;
     }
@@ -205,25 +216,30 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
     if (token.trim().isEmpty) {
       HelperUtils.showSnackBarMessage(
         context,
-        'الرجاء تسجيل الدخول لإتمام عملية الدفع.',
+        'Please sign in to continue with the payment.',
       );
       return;
     }
 
     setState(() => _submitting = true);
 
+    final String? normalizedCurrency =
+        (_currency != null && _currency!.trim().isNotEmpty)
+            ? _currency!.trim().toUpperCase()
+            : null;
+
     final BankTransferArgs args = BankTransferArgs(
       token: token,
       packageId: serviceId,
       amount: amount,
-      currency: _currency,
+      currency: normalizedCurrency,
       packageType: 'service',
       itemId: serviceId,
       purpose: 'service',
       serviceId: serviceId,
       serviceTitle: _serviceTitle,
       priceNote: _note,
-      serviceRequestId: _serviceRequestId,
+      serviceRequestId: serviceRequestId,
     );
 
     final dynamic result = await BankTransferScreen.show(context, args);
@@ -243,20 +259,20 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
     if (transactionId == null) {
       HelperUtils.showSnackBarMessage(
         context,
-        'تعذّر تحديد معاملة الدفع. يرجى مراجعة السجل اليدوي.',
+        '?????????? ?????????? ???????????? ??????????. ???????? ???????????? ?????????? ????????????.',
       );
       return;
     }
 
     HelperUtils.showSnackBarMessage(
       context,
-      'تم إكمال الدفع بنجاح.',
+      '???? ?????????? ?????????? ??????????.',
     );
 
     Navigator.of(context).maybePop({
       'payment_transaction_id': transactionId,
       'service_id': serviceId,
-      'service_request_id': _serviceRequestId,
+      'service_request_id': serviceRequestId,
     });
   }
 

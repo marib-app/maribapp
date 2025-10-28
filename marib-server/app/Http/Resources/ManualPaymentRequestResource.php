@@ -6,6 +6,7 @@ use App\Models\ManualBank;
 use App\Models\ManualPaymentRequest;
 use App\Models\Order;
 use App\Models\PaymentTransaction;
+use App\Models\ServiceRequest;
 use App\Models\WalletTransaction;
 use App\Support\Payments\PaymentLabelService;
 use App\Support\ManualPayments\TransferDetailsResolver;
@@ -145,6 +146,30 @@ class ManualPaymentRequestResource extends JsonResource
         }
 
 
+        $serviceRequestRelation = $this->resolveServiceRequestRelation(
+            $manualPaymentRequestModel,
+            $paymentTransaction,
+            $payable
+        );
+
+        $orderRelation = $this->resolveOrderRelation(
+            $manualPaymentRequestModel,
+            $paymentTransaction
+        );
+
+        $serviceRequestId = $this->resolveServiceRequestId(
+            $manualPaymentRequestModel,
+            $serviceRequestRelation,
+            $meta,
+            $paymentTransactionMeta
+        );
+
+        $attachmentsPayload = $this->resolveAttachmentPayload(
+            $manualPaymentRequestModel,
+            $meta,
+            $paymentTransactionMeta
+        );
+
         $manualPaymentSnapshot = array_filter([
             'id' => $this->id,
             'manual_payment_id' => (string) $this->id,
@@ -210,6 +235,7 @@ class ManualPaymentRequestResource extends JsonResource
 
             'transaction_id' => $paymentTransaction?->id,
             'payment_transaction_id' => $paymentTransaction?->id,
+            'service_request_id' => $serviceRequestId,
             'transaction_identifier' => $paymentTransaction?->payment_id
                 ?? $paymentTransaction?->payment_signature
                 ?? $paymentTransaction?->idempotency_key,
@@ -217,6 +243,13 @@ class ManualPaymentRequestResource extends JsonResource
             'metadata' => $meta,
             'context' => is_array($meta) ? ($meta['context'] ?? null) : null,
             'manual_payment' => $manualPaymentSnapshot !== [] ? $manualPaymentSnapshot : null,
+            'order' => OrderResource::make($orderRelation),
+            'order_number' => $this->when(
+                $orderRelation instanceof Order,
+                static fn () => $orderRelation->order_number
+            ),
+            'service_request' => ServiceRequestResource::make($serviceRequestRelation),
+            'attachments' => AttachmentResource::collection(collect($attachmentsPayload)),
             'transfer_details' => $transferDetails,
 
             'payable' => $payable ? [
@@ -270,6 +303,286 @@ class ManualPaymentRequestResource extends JsonResource
 
 
         ];
+    }
+
+    private function resolveServiceRequestRelation(
+        ?ManualPaymentRequest $manualPaymentRequest,
+        ?EloquentModel $paymentTransaction,
+        mixed $payable
+    ): ?ServiceRequest {
+        if ($this->relationLoaded('serviceRequest')) {
+            $relation = $this->resource->getRelation('serviceRequest');
+
+            if (! $relation instanceof MissingValue && $relation instanceof ServiceRequest) {
+                return $relation;
+            }
+        }
+
+        if ($manualPaymentRequest instanceof ManualPaymentRequest && $manualPaymentRequest->relationLoaded('serviceRequest')) {
+            $relation = $manualPaymentRequest->getRelation('serviceRequest');
+
+            if ($relation instanceof ServiceRequest) {
+                return $relation;
+            }
+        }
+
+        if ($payable instanceof ServiceRequest) {
+            return $payable;
+        }
+
+        if ($paymentTransaction instanceof PaymentTransaction && $paymentTransaction->relationLoaded('payable')) {
+            $candidate = $paymentTransaction->payable;
+
+            if ($candidate instanceof ServiceRequest) {
+                return $candidate;
+            }
+        }
+
+        return null;
+    }
+
+    private function resolveOrderRelation(
+        ?ManualPaymentRequest $manualPaymentRequest,
+        ?EloquentModel $paymentTransaction
+    ): ?Order {
+        if ($this->relationLoaded('order')) {
+            $relation = $this->resource->getRelation('order');
+
+            if (! $relation instanceof MissingValue && $relation instanceof Order) {
+                return $relation;
+            }
+        }
+
+        if ($manualPaymentRequest instanceof ManualPaymentRequest && $manualPaymentRequest->relationLoaded('order')) {
+            $relation = $manualPaymentRequest->getRelation('order');
+
+            if ($relation instanceof Order) {
+                return $relation;
+            }
+        }
+
+        if ($manualPaymentRequest instanceof ManualPaymentRequest && $manualPaymentRequest->relationLoaded('paymentTransaction')) {
+            $transaction = $manualPaymentRequest->getRelation('paymentTransaction');
+
+            if ($transaction instanceof PaymentTransaction && $transaction->relationLoaded('order')) {
+                $order = $transaction->order;
+
+                if ($order instanceof Order) {
+                    return $order;
+                }
+            }
+        }
+
+        if ($paymentTransaction instanceof PaymentTransaction && $paymentTransaction->relationLoaded('order')) {
+            $order = $paymentTransaction->order;
+
+            if ($order instanceof Order) {
+                return $order;
+            }
+        }
+
+        return null;
+    }
+
+    private function resolveServiceRequestId(
+        ?ManualPaymentRequest $manualPaymentRequest,
+        ?ServiceRequest $serviceRequest,
+        ?array $meta,
+        ?array $paymentTransactionMeta
+    ): ?int {
+        if ($serviceRequest instanceof ServiceRequest) {
+            return (int) $serviceRequest->getKey();
+        }
+
+        $direct = $this->service_request_id ?? null;
+        if (is_numeric($direct)) {
+            return (int) $direct;
+        }
+
+        if ($manualPaymentRequest instanceof ManualPaymentRequest) {
+            $payableId = $manualPaymentRequest->payable_id;
+            $payableType = $manualPaymentRequest->payable_type;
+
+            if (is_numeric($payableId) && is_string($payableType)) {
+                $normalized = strtolower(trim($payableType));
+
+                if (str_contains($normalized, 'service')) {
+                    return (int) $payableId;
+                }
+            }
+        }
+
+        $metaCandidate = data_get($meta, 'service_request_id')
+            ?? data_get($meta, 'service_request.id')
+            ?? data_get($paymentTransactionMeta, 'service_request_id')
+            ?? data_get($paymentTransactionMeta, 'service.request_id');
+
+        if (is_numeric($metaCandidate)) {
+            return (int) $metaCandidate;
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function resolveAttachmentPayload(
+        ?ManualPaymentRequest $manualPaymentRequest,
+        ?array $meta,
+        ?array $paymentTransactionMeta
+    ): array {
+        $sources = [
+            data_get($meta, 'attachments'),
+            data_get($paymentTransactionMeta, 'attachments'),
+            data_get($paymentTransactionMeta, 'manual.attachments'),
+        ];
+
+        if ($manualPaymentRequest instanceof ManualPaymentRequest && $manualPaymentRequest->relationLoaded('attachments')) {
+            $sources[] = $manualPaymentRequest->getRelation('attachments');
+        }
+
+        $normalized = [];
+
+        foreach ($sources as $source) {
+            $normalized = array_merge($normalized, $this->normalizeAttachmentEntries($source));
+        }
+
+        if ($normalized === [] && $manualPaymentRequest instanceof ManualPaymentRequest) {
+            $receiptPath = $manualPaymentRequest->receipt_path ?? null;
+
+            if (is_string($receiptPath) && trim($receiptPath) !== '') {
+                $normalized[] = array_filter([
+                    'type' => 'receipt',
+                    'path' => $receiptPath,
+                    'disk' => 'public',
+                    'url' => $this->generateSignedUrl($receiptPath),
+                ], static fn ($value) => $value !== null && $value !== '');
+            }
+        }
+
+        return $this->deduplicateAttachments($normalized);
+    }
+
+    /**
+     * @param mixed $attachments
+     * @return array<int, array<string, mixed>>
+     */
+    private function normalizeAttachmentEntries(mixed $attachments): array
+    {
+        if ($attachments instanceof MissingValue) {
+            return [];
+        }
+
+        if ($attachments instanceof \Illuminate\Support\Collection) {
+            $attachments = $attachments->all();
+        }
+
+        if (! is_iterable($attachments)) {
+            return [];
+        }
+
+        $normalized = [];
+
+        foreach ($attachments as $attachment) {
+            $path = $this->stringFromData($attachment, 'path');
+            $url = $this->stringFromData($attachment, 'url');
+
+            if ($path === null && $url === null) {
+                continue;
+            }
+
+            if ($url === null && $path !== null) {
+                $url = $this->generateSignedUrl($path);
+            }
+
+            $normalized[] = array_filter([
+                'type'        => $this->stringFromData($attachment, 'type') ?? 'receipt',
+                'name'        => $this->stringFromData($attachment, 'name'),
+                'path'        => $path,
+                'disk'        => $this->stringFromData($attachment, 'disk'),
+                'mime_type'   => $this->stringFromData($attachment, 'mime_type'),
+                'size'        => $this->numericFromData($attachment, 'size'),
+                'uploaded_at' => $this->stringFromData($attachment, 'uploaded_at'),
+                'url'         => $url,
+            ], static fn ($value) => $value !== null && $value !== '');
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $attachments
+     * @return array<int, array<string, mixed>>
+     */
+    private function deduplicateAttachments(array $attachments): array
+    {
+        $seen = [];
+        $unique = [];
+
+        foreach ($attachments as $attachment) {
+            $key = $this->attachmentIdentityKey($attachment);
+
+            if ($key !== null) {
+                if (isset($seen[$key])) {
+                    continue;
+                }
+
+                $seen[$key] = true;
+            }
+
+            $unique[] = $attachment;
+        }
+
+        return $unique;
+    }
+
+    /**
+     * @param array<string, mixed> $attachment
+     */
+    private function attachmentIdentityKey(array $attachment): ?string
+    {
+        $rawPath = $attachment['url'] ?? $attachment['path'] ?? null;
+
+        if (! is_string($rawPath)) {
+            return null;
+        }
+
+        $path = trim(strtolower($rawPath));
+
+        if ($path === '') {
+            return null;
+        }
+
+        $type = isset($attachment['type']) && is_string($attachment['type'])
+            ? trim(strtolower($attachment['type']))
+            : 'attachment';
+
+        return $type . '|' . $path;
+    }
+
+    private function stringFromData(mixed $data, string $key): ?string
+    {
+        $value = data_get($data, $key);
+
+        if (! is_string($value)) {
+            return null;
+        }
+
+        $trimmed = trim($value);
+
+        return $trimmed === '' ? null : $trimmed;
+    }
+
+    private function numericFromData(mixed $data, string $key): ?float
+    {
+        $value = data_get($data, $key);
+
+        if (! is_numeric($value)) {
+            return null;
+        }
+
+        return (float) $value;
     }
 
     protected function generateSignedUrl(?string $path): ?string

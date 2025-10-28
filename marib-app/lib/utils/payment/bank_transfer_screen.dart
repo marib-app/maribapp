@@ -7,6 +7,7 @@ import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/constant.dart';
+import 'package:marib/utils/api.dart';
 
 // موديلات وخدمات
 import 'package:marib/utils/payment/bank_account.dart';
@@ -693,7 +694,9 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         ? _manualBankMethod
         : _selectedMethod!;
 
-    final int? orderIdParam = (!isWalletTopUp && widget.args.packageId > 0)
+    final bool isOrderPurpose = purposeParam == 'order';
+
+    final int? orderIdParam = (isOrderPurpose && widget.args.packageId > 0)
         ? widget.args.packageId
         : null;
 
@@ -734,7 +737,16 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       }
 
       return updatedIntent != null && updatedIntent.isNotEmpty;
-    } catch (_) {
+    } on ApiHttpException catch (err) {
+      if (mounted) {
+        final String message = _resolveApiErrorMessage(err);
+        _showOverlayMessage(message, type: MessageType.error);
+      }
+      return false;
+    } catch (err) {
+      if (mounted) {
+        _showOverlayMessage(err.toString(), type: MessageType.error);
+      }
       return false;
     }
   }
@@ -1380,6 +1392,38 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         );
       },
     );
+  }
+
+  String _resolveApiErrorMessage(ApiHttpException err) {
+    final dynamic payload = err.payload;
+
+    if (payload is Map) {
+      final dynamic messageNode = payload['message'];
+      if (messageNode is String && messageNode.trim().isNotEmpty) {
+        return messageNode.trim();
+      }
+
+      final dynamic errorsNode = payload['errors'];
+      if (errorsNode is Map) {
+        for (final value in errorsNode.values) {
+          if (value is List && value.isNotEmpty) {
+            final dynamic firstValue = value.first;
+            if (firstValue is String && firstValue.trim().isNotEmpty) {
+              return firstValue.trim();
+            }
+          } else if (value is String && value.trim().isNotEmpty) {
+            return value.trim();
+          }
+        }
+      }
+    }
+
+    final dynamic errorMessage = err.errorMessage;
+    if (errorMessage is String && errorMessage.trim().isNotEmpty) {
+      return errorMessage.trim();
+    }
+
+    return err.toString();
   }
 
   void _showOverlayMessage(String message,

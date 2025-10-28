@@ -64,13 +64,7 @@ class PaymentTransactionResource extends JsonResource
 
             'created_at' => optional($this->created_at)->toIso8601String(),
 
-            'order' => $this->when($order instanceof Order, static function () use ($order) {
-                return [
-                    'id' => $order->id,
-                    'order_number' => $order->order_number,
-                    'payment_status' => $order->payment_status,
-                ];
-            }),
+            'order' => OrderResource::make($order instanceof Order ? $order : null),
 
             'manual_payment_request' => $manualPaymentRequest ? [
                 'id' => $manualPaymentRequest->id,

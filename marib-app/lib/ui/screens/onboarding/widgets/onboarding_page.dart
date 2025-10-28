@@ -5,84 +5,112 @@ import 'package:marib/utils/screen_scaler.dart';
 
 import '../models/onboarding_page_data.dart';
 
-class OnboardingPage extends StatelessWidget {
-  const OnboardingPage({
+class OnboardingPageContent extends StatelessWidget {
+  OnboardingPageContent({
     super.key,
-    required this.data,
-    required this.opacity,
-    required this.textTranslateX,
-    required this.imageTranslateY,
-  });
+    required CardPlanetData data,
+  })  : hero = _buildHero(data),
+        textContent = _OnboardingTextContent(data: data);
 
-  final CardPlanetData data;
-  final double opacity;
-  final double textTranslateX;
-  final double imageTranslateY;
+  final Widget? hero;
+  final Widget textContent;
+
+  static Widget? _buildHero(CardPlanetData data) {
+    if (data.animationPath != null) {
+      return _OnboardingLottieHero(animationPath: data.animationPath!);
+    }
+    if (data.image != null) {
+      return _OnboardingImageHero(image: data.image!);
+    }
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Opacity(
-      opacity: opacity,
-      child: Padding(
-        padding: EdgeInsets.symmetric(
-          horizontal: ScreenScaler.s(24),
-          vertical: ScreenScaler.s(60),
+    final double spacing = ScreenScaler.s(40);
+
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        if (hero != null) hero!,
+        SizedBox(height: spacing),
+        textContent,
+      ],
+    );
+  }
+}
+
+class _OnboardingLottieHero extends StatelessWidget {
+  const _OnboardingLottieHero({
+    required this.animationPath,
+  });
+
+  final String animationPath;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: ScreenScaler.s(300),
+      child: Lottie.asset(
+        animationPath,
+        fit: BoxFit.contain,
+      ),
+    );
+  }
+}
+
+class _OnboardingImageHero extends StatelessWidget {
+  const _OnboardingImageHero({
+    required this.image,
+  });
+
+  final ImageProvider<Object> image;
+
+  @override
+  Widget build(BuildContext context) {
+    return Image(
+      image: image,
+      height: ScreenScaler.s(300),
+      fit: BoxFit.contain,
+    );
+  }
+}
+
+class _OnboardingTextContent extends StatelessWidget {
+  const _OnboardingTextContent({
+    required this.data,
+
+  });
+
+  final CardPlanetData data;
+
+
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Column(
+        children: [
+        Text(
+        data.title,
+        style: GoogleFonts.tajawal(
+          fontSize: ScreenScaler.s(22),
+          fontWeight: FontWeight.bold,
+          color: data.titleColor,
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (data.animationPath != null)
-              Transform.translate(
-                offset: Offset(0, imageTranslateY),
-                child: SizedBox(
-                  height: ScreenScaler.s(300),
-                  child: Lottie.asset(
-                    data.animationPath!,
-                    fit: BoxFit.contain,
-                  ),
-                ),
-              )
-            else if (data.image != null)
-              Transform.translate(
-                offset: Offset(0, imageTranslateY),
-                child: Image(
-                  image: data.image!,
-                  height: ScreenScaler.s(300),
-                  fit: BoxFit.contain,
-                ),
-              ),
-            SizedBox(height: ScreenScaler.s(40)),
-            Transform.translate(
-              offset: Offset(textTranslateX, 0),
-              child: Directionality(
-                textDirection: TextDirection.rtl,
-                child: Column(
-                  children: [
-                    Text(
-                      data.title,
-                      style: GoogleFonts.tajawal(
-                        fontSize: ScreenScaler.s(22),
-                        fontWeight: FontWeight.bold,
-                        color: data.titleColor,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    SizedBox(height: ScreenScaler.s(12)),
-                    Text(
-                      data.subtitle,
-                      style: GoogleFonts.tajawal(
-                        fontSize: ScreenScaler.s(16),
-                        height: 1.6,
-                        color: data.subtitleColor,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
+        textAlign: TextAlign.center,
+      ),
+      SizedBox(height: ScreenScaler.s(12)),
+      Text(
+        data.subtitle,
+        style: GoogleFonts.tajawal(
+          fontSize: ScreenScaler.s(16),
+          height: 1.6,
+          color: data.subtitleColor,
             ),
-          ],
-        ),
+        textAlign: TextAlign.center,
+      ),
+        ],
       ),
     );
   }

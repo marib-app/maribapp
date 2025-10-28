@@ -254,13 +254,14 @@ class PaymentController extends Controller
 
             if ($freshTransaction?->manualPaymentRequest instanceof ManualPaymentRequest) {
                 $manualPaymentRequest = $freshTransaction->manualPaymentRequest;
-                $manualPaymentRequest->loadMissing([
-                    'manualBank',
-                    'paymentTransaction.order',
-                    'paymentTransaction.walletTransaction',
-                ]);
 
-                $responsePayload['manual_payment_request'] = ManualPaymentRequestResource::make($manualPaymentRequest)->resolve();
+                $manualPaymentRequest->loadMissing(
+                    $this->manualPaymentRequestRelations($manualPaymentRequest)
+                );
+
+                return ManualPaymentRequestResource::make($manualPaymentRequest)
+                    ->response()
+                    ->setStatusCode(402);
             }
 
             return response()->json($responsePayload);
@@ -391,6 +392,29 @@ class PaymentController extends Controller
         ]);
     }
 
+    /**
+     * @return array<int, string>
+     */
+    private function manualPaymentRequestRelations(ManualPaymentRequest $request): array
+    {
+        $relations = [
+            'manualBank',
+            'payable',
+            'paymentTransaction.order',
+            'paymentTransaction.walletTransaction',
+            'paymentTransaction.payable',
+            'paymentTransaction.payable.service',
+        ];
+
+        foreach (['serviceRequest', 'order', 'attachments'] as $relation) {
+            if (method_exists($request, $relation)) {
+                $relations[] = $relation;
+            }
+        }
+
+        return $relations;
+    }
+
     public function manual(Request $request): JsonResponse
     {
         $idempotencyKey = $this->resolveIdempotencyKey($request);
@@ -519,12 +543,15 @@ class PaymentController extends Controller
 
             $transaction->loadMissing('manualPaymentRequest.manualBank');
 
-            $manualRequest = $transaction->manualPaymentRequest?->loadMissing([
-                'paymentTransaction.payable',
-                'paymentTransaction.order',
-                'paymentTransaction.walletTransaction',
-                'manualBank',
-            ]);
+            $manualRequest = $transaction->manualPaymentRequest;
+
+            if ($manualRequest instanceof ManualPaymentRequest) {
+                $manualRequest->loadMissing(
+                    $this->manualPaymentRequestRelations($manualRequest)
+                );
+            } else {
+                $manualRequest = null;
+            }
 
             $transactionResource = PaymentTransactionResource::make($transaction)->resolve();
             $manualRequestResource = $manualRequest
@@ -553,12 +580,15 @@ class PaymentController extends Controller
 
             $transaction->loadMissing('manualPaymentRequest.manualBank');
 
-            $manualRequest = $transaction->manualPaymentRequest?->loadMissing([
-                'paymentTransaction.order',
-                'paymentTransaction.walletTransaction',
-                'paymentTransaction.payable',
-                'manualBank',
-            ]);
+            $manualRequest = $transaction->manualPaymentRequest;
+
+            if ($manualRequest instanceof ManualPaymentRequest) {
+                $manualRequest->loadMissing(
+                    $this->manualPaymentRequestRelations($manualRequest)
+                );
+            } else {
+                $manualRequest = null;
+            }
 
             $transactionResource = PaymentTransactionResource::make($transaction)->resolve();
             $manualRequestResource = $manualRequest
@@ -587,12 +617,15 @@ class PaymentController extends Controller
 
         $transaction->loadMissing('manualPaymentRequest.manualBank');
 
-        $manualRequest = $transaction->manualPaymentRequest?->loadMissing([
-            'paymentTransaction.order',
-            'paymentTransaction.walletTransaction',
-            'paymentTransaction.payable',
-            'manualBank',
-        ]);
+        $manualRequest = $transaction->manualPaymentRequest;
+
+        if ($manualRequest instanceof ManualPaymentRequest) {
+            $manualRequest->loadMissing(
+                $this->manualPaymentRequestRelations($manualRequest)
+            );
+        } else {
+            $manualRequest = null;
+        }
 
         $transactionResource = PaymentTransactionResource::make($transaction)->resolve();
         $manualRequestResource = $manualRequest
@@ -879,13 +912,15 @@ class PaymentController extends Controller
             $transaction->save();
 
             $transaction->loadMissing('manualPaymentRequest.manualBank');
-            $manualRequest = $transaction->manualPaymentRequest?->loadMissing([
-                'paymentTransaction.order',
-                'paymentTransaction.walletTransaction',
-                'paymentTransaction.payable',
-                'manualBank',
-                'payable',
-            ]);
+            $manualRequest = $transaction->manualPaymentRequest;
+
+            if ($manualRequest instanceof ManualPaymentRequest) {
+                $manualRequest->loadMissing(
+                    $this->manualPaymentRequestRelations($manualRequest)
+                );
+            } else {
+                $manualRequest = null;
+            }
 
             $transactionResource = PaymentTransactionResource::make($transaction)->resolve();
             $manualRequestResource = $manualRequest

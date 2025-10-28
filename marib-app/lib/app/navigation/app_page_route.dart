@@ -5,11 +5,10 @@ import 'package:flutter/material.dart';
 
 import 'motion/route_motion.dart';
 
-
 class AppPageRoute {
   AppPageRoute._();
 
-  static const Duration _defaultDuration = Duration(milliseconds: 200);
+  static const Duration _defaultDuration = Duration(milliseconds: 180);
   static const Duration _defaultBlurDuration = Duration(milliseconds: 180);
 
   static Duration _durationForTransition(AppPageRouteTransition transition) {
@@ -44,7 +43,6 @@ class AppPageRoute {
     AppPageRouteTransition transition = AppPageRouteTransition.motion,
     RouteTransitionsBuilder? fadeTransitionBuilder,
     RouteTransitionsBuilder? customTransitionsBuilder,
-
   }) {
     final baseDuration =
         forwardDuration ?? duration ?? _durationForTransition(transition);
@@ -93,10 +91,10 @@ class AppPageRoute {
           customTransitionsBuilder: fadeTransitionBuilder,
         );
       case AppPageRouteTransition.custom:
-        if (customTransitionsBuilder  == null) {
+        if (customTransitionsBuilder == null) {
           throw ArgumentError(
             'A custom transitionsBuilder must be provided when using '
-                'AppPageRouteTransition.custom.',
+            'AppPageRouteTransition.custom.',
           );
         }
         return _CustomPageRoute<T>(
@@ -110,12 +108,10 @@ class AppPageRoute {
           opaque: opaque ?? !barrierDismissible,
           forwardDuration: baseDuration,
           reverseDuration: baseReverseDuration,
-          transitionsBuilder: customTransitionsBuilder ,
+          transitionsBuilder: customTransitionsBuilder,
         );
     }
   }
-
-
 
   static PageRoute<T> buildOverlay<T>({
     required WidgetBuilder builder,
@@ -129,19 +125,16 @@ class AppPageRoute {
       builder: builder,
       settings: settings,
       transition: AppPageRouteTransition.fadeBlur,
-      forwardDuration:
-      forwardDuration ?? const Duration(milliseconds: 180),
+      forwardDuration: forwardDuration ?? const Duration(milliseconds: 180),
       reverseDuration: reverseDuration,
       barrierDismissible: barrierDismissible,
       barrierColor: barrierColor ?? Colors.black.withOpacity(0.2),
       opaque: false,
     );
   }
-
 }
 
 enum AppPageRouteTransition { motion, fadeBlur, custom }
-
 
 class _MotionPageRoute<T> extends PageRouteBuilder<T> {
   _MotionPageRoute({
@@ -155,54 +148,50 @@ class _MotionPageRoute<T> extends PageRouteBuilder<T> {
     required bool maintainState,
     required bool opaque,
   }) : super(
-    settings: settings,
-    fullscreenDialog: fullscreenDialog,
-    barrierDismissible: barrierDismissible,
-    barrierColor: barrierColor,
-    barrierLabel: barrierLabel,
-    maintainState: maintainState,
-    opaque: opaque,
-    transitionDuration: composer.effectivePushDuration,
-    reverseTransitionDuration: composer.effectivePopDuration,
-    pageBuilder: (context, animation, secondaryAnimation) {
-      return builder(context);
-    },
-    transitionsBuilder:
-        (context, animation, secondaryAnimation, child) {
-          final route = ModalRoute.of(context);
-          if (animation.status == AnimationStatus.reverse) {
-            return composer.buildForPop(
+          settings: settings,
+          fullscreenDialog: fullscreenDialog,
+          barrierDismissible: barrierDismissible,
+          barrierColor: barrierColor,
+          barrierLabel: barrierLabel,
+          maintainState: maintainState,
+          opaque: opaque,
+          transitionDuration: composer.effectivePushDuration,
+          reverseTransitionDuration: composer.effectivePopDuration,
+          pageBuilder: (context, animation, secondaryAnimation) {
+            return builder(context);
+          },
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final route = ModalRoute.of(context);
+            if (animation.status == AnimationStatus.reverse) {
+              return composer.buildForPop(
+                context,
+                animation,
+                secondaryAnimation,
+                child,
+                route: route is PageRoute<dynamic> ? route : null,
+              );
+            }
+
+            if (secondaryAnimation.status == AnimationStatus.forward &&
+                animation.status == AnimationStatus.forward) {
+              return composer.buildForRefresh(
+                context,
+                animation,
+                secondaryAnimation,
+                child,
+                route: route is PageRoute<dynamic> ? route : null,
+              );
+            }
+
+            return composer.buildForPush(
               context,
               animation,
               secondaryAnimation,
               child,
               route: route is PageRoute<dynamic> ? route : null,
             );
-          }
-
-          if (secondaryAnimation.status == AnimationStatus.forward &&
-              animation.status == AnimationStatus.forward) {
-            return composer.buildForRefresh(
-              context,
-              animation,
-              secondaryAnimation,
-              child,
-              route: route is PageRoute<dynamic> ? route : null,
-            );
-          }
-
-          return composer.buildForPush(
-            context,
-            animation,
-            secondaryAnimation,
-            child,
-            route: route is PageRoute<dynamic> ? route : null,
-      );
-    },
-  );
-
-
-
+          },
+        );
 }
 
 class _FadeBlurPageRoute<T> extends PageRouteBuilder<T> {
@@ -219,74 +208,58 @@ class _FadeBlurPageRoute<T> extends PageRouteBuilder<T> {
     required Duration reverseDuration,
     RouteTransitionsBuilder? customTransitionsBuilder,
   }) : super(
-    settings: settings,
-    fullscreenDialog: fullscreenDialog,
-    barrierDismissible: barrierDismissible,
-    barrierColor: barrierColor,
-    barrierLabel: barrierLabel,
-    maintainState: maintainState,
-    opaque: opaque,
-    transitionDuration: forwardDuration,
-    reverseTransitionDuration: reverseDuration,
-    pageBuilder: (context, animation, secondaryAnimation) {
-      return builder(context);
-    },
-    transitionsBuilder: customTransitionsBuilder ??
-            (context, animation, secondaryAnimation, child) {
-          final bool isPushing =
-              animation.status != AnimationStatus.reverse;
-          final Animation<double> progress = isPushing
-              ? animation
-              : ReverseAnimation(animation);
+          settings: settings,
+          fullscreenDialog: fullscreenDialog,
+          barrierDismissible: barrierDismissible,
+          barrierColor: barrierColor,
+          barrierLabel: barrierLabel,
+          maintainState: maintainState,
+          opaque: opaque,
+          transitionDuration: forwardDuration,
+          reverseTransitionDuration: reverseDuration,
+          pageBuilder: (context, animation, secondaryAnimation) {
+            return builder(context);
+          },
+          transitionsBuilder: customTransitionsBuilder ??
+              (context, animation, secondaryAnimation, child) {
+                final bool isPushing =
+                    animation.status != AnimationStatus.reverse;
+                final Animation<double> progress =
+                    isPushing ? animation : ReverseAnimation(animation);
 
-          final CurvedAnimation eased = CurvedAnimation(
-            parent: progress,
-            curve: Curves.easeOutCubic,
-            reverseCurve: Curves.easeInCubic,
-          );
+                final CurvedAnimation eased = CurvedAnimation(
+                  parent: progress,
+                  curve: Curves.easeOutCubic,
+                  reverseCurve: Curves.easeInCubic,
+                );
 
-          final Animation<double> fade = Tween<double>(
-            begin: isPushing ? 0.0 : 1.0,
-            end: isPushing ? 1.0 : 0.0,
-          ).animate(eased);
+                final Animation<double> fade = Tween<double>(
+                  begin: isPushing ? 0.0 : 1.0,
+                  end: isPushing ? 1.0 : 0.0,
+                ).animate(eased);
 
-          final Animation<Offset> slide = Tween<Offset>(
-            begin: isPushing
-                ? const Offset(0.0, 0.035)
-                : Offset.zero,
-            end: isPushing
-                ? Offset.zero
-                : const Offset(0.0, 0.02),
-          ).animate(eased);
+                final Animation<double> scale = Tween<double>(
+                  begin: isPushing ? 0.98 : 1.0,
+                  end: isPushing ? 1.0 : 0.985,
+                ).animate(eased);
 
-          final Animation<double> scale = Tween<double>(
-            begin: isPushing ? 0.98 : 1.0,
-            end: isPushing ? 1.0 : 0.985,
-          ).animate(eased);
-
-          return FadeTransition(
-            opacity: fade,
-            child: SlideTransition(
-              position: slide,
-              child: ScaleTransition(
-                scale: scale,
-                child: child,
-              ),
-            ),
-          );
-
-        },
-  );
-
-
+                return FadeTransition(
+                  opacity: fade,
+                  child: ScaleTransition(
+                    scale: scale,
+                    child: child,
+                  ),
+                );
+              },
+        );
 
   @override
   Widget buildTransitions(
-      BuildContext context,
-      Animation<double> animation,
-      Animation<double> secondaryAnimation,
-      Widget child,
-      ) {
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
     final Widget transitionedChild = super.buildTransitions(
       context,
       animation,
@@ -294,54 +267,76 @@ class _FadeBlurPageRoute<T> extends PageRouteBuilder<T> {
       child,
     );
 
-    if (opaque) {
-      return transitionedChild;
-    }
-
     final bool isPushing = animation.status != AnimationStatus.reverse;
     final Animation<double> progress =
-    isPushing ? animation : ReverseAnimation(animation);
-    final CurvedAnimation eased = CurvedAnimation(
+        isPushing ? animation : ReverseAnimation(animation);
+    final CurvedAnimation primaryCurve = CurvedAnimation(
       parent: progress,
       curve: Curves.easeOutCubic,
       reverseCurve: Curves.easeInCubic,
     );
+    final CurvedAnimation secondaryCurve = CurvedAnimation(
+      parent: secondaryAnimation,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
+    );
 
-    return AnimatedBuilder(
-      animation: eased,
+    final Animation<Offset> pushSlide = Tween<Offset>(
+      begin: const Offset(0.0, 0.05),
+      end: Offset.zero,
+    ).animate(primaryCurve);
+
+    final Animation<Offset> returnSlide = Tween<Offset>(
+      begin: Offset.zero,
+      end: const Offset(0.0, 0.02),
+    ).animate(secondaryCurve);
+
+    Widget slideWrappedChild = SlideTransition(
+      position: pushSlide,
       child: transitionedChild,
-      builder: (context, animatedChild) {
-        final double backdropStrength =
-        ((1 - eased.value).clamp(0.0, 1.0)).toDouble();
-        final double blurSigma = 6.0 * backdropStrength;
-        final Color baseBarrierColor = (barrierColor ?? Colors.black);
-        final double baseBarrierOpacity = barrierColor?.opacity ?? 0.12;
-        final double overlayOpacity = baseBarrierOpacity * backdropStrength;
+    );
 
-        final Widget overlayTint = Container(
-          color: baseBarrierColor.withOpacity(overlayOpacity),
-        );
+    if (secondaryAnimation.status != AnimationStatus.dismissed ||
+        secondaryAnimation.value > 0.0) {
+      slideWrappedChild = SlideTransition(
+        position: returnSlide,
+        child: slideWrappedChild,
+      );
+    }
 
-        final Widget backdrop = blurSigma > 0
-            ? ClipRect(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(
-              sigmaX: blurSigma,
-              sigmaY: blurSigma,
+    if (opaque) {
+      return slideWrappedChild;
+    }
+
+    final double backdropStrength =
+        ((1 - primaryCurve.value).clamp(0.0, 1.0)).toDouble();
+    final double blurSigma = 6.0 * backdropStrength;
+    final Color baseBarrierColor = (barrierColor ?? Colors.black);
+    final double baseBarrierOpacity = barrierColor?.opacity ?? 0.12;
+    final double overlayOpacity = baseBarrierOpacity * backdropStrength;
+
+    final Widget overlayTint = Container(
+      color: baseBarrierColor.withOpacity(overlayOpacity),
+    );
+
+    final Widget backdrop = blurSigma > 0
+        ? ClipRect(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(
+                sigmaX: blurSigma,
+                sigmaY: blurSigma,
+              ),
+              child: overlayTint,
             ),
-            child: overlayTint,
-          ),
-        )
-            : overlayTint;
+          )
+        : overlayTint;
 
-        return Stack(
-          fit: StackFit.expand,
-          children: [
-            backdrop,
-            if (animatedChild != null) animatedChild!,
-          ],
-        );
-      },
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        backdrop,
+        slideWrappedChild,
+      ],
     );
   }
 }
@@ -360,18 +355,18 @@ class _CustomPageRoute<T> extends PageRouteBuilder<T> {
     required Duration reverseDuration,
     required RouteTransitionsBuilder transitionsBuilder,
   }) : super(
-    settings: settings,
-    fullscreenDialog: fullscreenDialog,
-    barrierDismissible: barrierDismissible,
-    barrierColor: barrierColor,
-    barrierLabel: barrierLabel,
-    maintainState: maintainState,
-    opaque: opaque,
-    transitionDuration: forwardDuration,
-    reverseTransitionDuration: reverseDuration,
-    pageBuilder: (context, animation, secondaryAnimation) {
-      return builder(context);
-    },
-    transitionsBuilder: transitionsBuilder,
-  );
+          settings: settings,
+          fullscreenDialog: fullscreenDialog,
+          barrierDismissible: barrierDismissible,
+          barrierColor: barrierColor,
+          barrierLabel: barrierLabel,
+          maintainState: maintainState,
+          opaque: opaque,
+          transitionDuration: forwardDuration,
+          reverseTransitionDuration: reverseDuration,
+          pageBuilder: (context, animation, secondaryAnimation) {
+            return builder(context);
+          },
+          transitionsBuilder: transitionsBuilder,
+        );
 }

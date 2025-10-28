@@ -184,6 +184,10 @@ Route::prefix('wifi-cabin')
 
     Route::get('service-requests', [ApiServiceRequestController::class, 'index']);
     Route::post('service-requests', [ApiServiceRequestController::class, 'store']);
+    Route::get('service-requests/{service_request}', [ApiServiceRequestController::class, 'show'])
+        ->whereNumber('service_request');
+    Route::get('service-requests/{service_request}/purchase-options', [ApiServiceRequestController::class, 'purchaseOptions'])
+        ->whereNumber('service_request');
     Route::post('services/requests', [ApiServiceRequestController::class, 'store']);
 
 

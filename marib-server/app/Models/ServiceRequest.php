@@ -18,6 +18,18 @@ class ServiceRequest extends Model
 
     use SoftDeletes;
 
+    protected $fillable = [
+        'service_id',
+        'user_id',
+        'status',
+        'payment_status',
+        'payment_transaction_id',
+        'payload',
+        'note',
+        'rejected_reason',
+        'request_number',
+    ];
+
     protected $casts = [
         'payload' => 'array',
     ];

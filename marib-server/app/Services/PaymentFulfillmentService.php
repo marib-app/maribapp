@@ -14,6 +14,8 @@ use App\Services\DepartmentPolicyService;
 use Illuminate\Support\Facades\Storage;
 
 use App\Models\WalletTransaction;
+use App\Services\Logging\PaymentTrace;
+use App\Services\NotificationService;
 use App\Services\Payments\TransactionAmountResolver;
 use App\Models\User;
 use App\Models\WifiPlan;
@@ -69,11 +71,17 @@ class PaymentFulfillmentService
                     $transaction->save();
                 }
 
-                return [
+                $response = [
                     'error' => false,
                     'message' => 'Transaction already processed',
                     'transaction' => $transaction->fresh(),
                 ];
+
+                if ($transaction->payable_type === ServiceRequest::class && $transaction->payable_id) {
+                    $response['service_request_id'] = (int) $transaction->payable_id;
+                }
+
+                return $response;
             }
 
             return DB::transaction(function () use (
@@ -111,6 +119,8 @@ class PaymentFulfillmentService
 
                 $transaction->save();
 
+                $serviceRequestModel = null;
+
                 switch ($normalizedType) {
                     case Package::class:
                         $this->handlePackagePurchase($transaction, $payableId, $userId, $options);
@@ -122,7 +132,7 @@ class PaymentFulfillmentService
                         $this->handleOrderPayment($transaction, $payableId, $userId, $options);
                         break;
                     case ServiceRequest::class:
-                        $this->handleServicePayment($transaction, $payableId, $userId, $options);
+                        $serviceRequestModel = $this->handleServicePayment($transaction, $payableId, $userId, $options);
                         break;
 
                     case WifiPlan::class:
@@ -134,14 +144,24 @@ class PaymentFulfillmentService
                         throw new InvalidArgumentException('Unsupported payable type provided.');
                 }
 
-                if (($options['notify'] ?? true) === true) {
+                if ($normalizedType !== ServiceRequest::class && ($options['notify'] ?? true) === true) {
                     $this->sendDefaultNotification($transaction, $normalizedType, $userId, $options);
+                }
+                $freshTransaction = $transaction->fresh();
+
+                if ($normalizedType === ServiceRequest::class) {
+                    PaymentTrace::trace('payment.fulfillment.service', [
+                        'payment_transaction_id' => $freshTransaction->getKey(),
+                        'service_request_id' => $serviceRequestModel?->getKey() ?? $payableId,
+                        'user_id' => $userId,
+                    ]);
                 }
 
                 return [
                     'error' => false,
                     'message' => 'Transaction processed successfully',
-                    'transaction' => $transaction->fresh(),
+                    'transaction' => $freshTransaction,
+                    'service_request_id' => $serviceRequestModel?->getKey(),
                 ];
             });
         } catch (Throwable $throwable) {
@@ -908,7 +928,7 @@ class PaymentFulfillmentService
 
 
 
-    protected function handleServicePayment(PaymentTransaction $transaction, ?int $serviceRequestId, int $userId, array $options = []): void
+    protected function handleServicePayment(PaymentTransaction $transaction, ?int $serviceRequestId, int $userId, array $options = []): ServiceRequest
     {
         if (empty($serviceRequestId)) {
             throw new InvalidArgumentException('Service request id is required to mark service as paid.');
@@ -996,6 +1016,36 @@ class PaymentFulfillmentService
             $this->mergeTransactionMeta($transaction, $metaUpdates);
             $transaction->save();
         }
+
+        $tokens = UserFcmToken::query()
+            ->where('user_id', $serviceRequest->user_id)
+            ->pluck('fcm_token')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        if (! empty($tokens)) {
+            $title = __('Service payment confirmed');
+            $body = __('Your service request #:number has been paid.', [
+                'number' => $serviceRequest->request_number ?? $serviceRequest->getKey(),
+            ]);
+
+            NotificationService::sendFcmNotification(
+                $tokens,
+                $title,
+                $body,
+                'service_payment_confirmed',
+                [
+                    'data' => json_encode([
+                        'service_request_id' => $serviceRequest->getKey(),
+                        'request_number' => $serviceRequest->request_number,
+                    ], JSON_UNESCAPED_UNICODE),
+                ]
+            );
+        }
+
+        return $serviceRequest;
     }
 
 

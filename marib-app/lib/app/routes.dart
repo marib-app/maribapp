@@ -52,13 +52,13 @@ import 'package:marib/ui/screens/seller/seller_intro_verification.dart';
 import 'package:marib/ui/screens/seller/seller_profile.dart';
 import 'package:marib/ui/screens/seller/seller_verification.dart';
 import 'package:marib/ui/screens/subscription/packages_list.dart';
-import 'package:marib/ui/screens/subscription/transaction_history_screen.dart';
 import 'package:marib/ui/screens/filter_screen.dart';
 import 'package:marib/ui/screens/widgets/maintenance_mode.dart';
 import 'package:marib/data/repositories/item/item_repository.dart';
 import 'package:marib/data/model/data_output.dart';
 import 'package:marib/data/model/item/item_model.dart';
 import 'package:marib/ui/screens/cart/cart.dart';
+import 'package:marib/ui/screens/transaction/transaction_screen.dart';
 
 import 'package:marib/app/navigation/app_page_route.dart';
 
@@ -460,7 +460,7 @@ class Routes {
         return FavoriteScreen.route(routeSettings);
 
       case transactionHistory:
-        return TransactionHistory.route(routeSettings);
+        return TransactionScreen.route(routeSettings);
 
       case wallet:
         return WalletScreen.route(routeSettings);

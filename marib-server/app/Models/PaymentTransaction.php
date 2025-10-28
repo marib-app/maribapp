@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\WalletTransaction;
@@ -12,8 +13,8 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Str;
 use App\Models\Concerns\HasPaymentLabels;
 use App\Support\Payments\PaymentLabelService;
-
 use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class PaymentTransaction extends Model
@@ -106,14 +107,6 @@ class PaymentTransaction extends Model
         return $this->belongsTo(ManualPaymentRequest::class);
     }
 
-    public function order(): BelongsTo
-    {
-
-        return $this->belongsTo(Order::class)->withTrashed();
-
-
-    }
-
     public function manualRequest()
     {
         
@@ -133,6 +126,29 @@ class PaymentTransaction extends Model
     public function payableIsWalletTransaction(): bool
     {
         return $this->payable_type === WalletTransaction::class;
+    }
+
+    public function scopeForPayable(Builder $query, string $payableType, int $payableId): Builder
+    {
+        $normalized = ltrim($payableType, '\\');
+
+        if (! class_exists($normalized) && ! str_starts_with($normalized, 'App\\')) {
+            $candidate = 'App\\Models\\' . $normalized;
+            if (class_exists($candidate)) {
+                $normalized = $candidate;
+            }
+        }
+
+        return $query
+            ->where('payable_type', $normalized)
+            ->where('payable_id', $payableId);
+    }
+
+    public function scopeActive(Builder $query): Builder
+    {
+        $statuses = ['pending', 'initiated', 'processing'];
+
+        return $query->whereIn(DB::raw('LOWER(payment_status)'), $statuses);
     }
 
     

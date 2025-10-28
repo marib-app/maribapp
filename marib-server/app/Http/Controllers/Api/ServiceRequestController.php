@@ -8,6 +8,7 @@ use App\Services\NotificationService;
 use App\Http\Controllers\Controller;
 use App\Models\Service;
 use App\Models\ServiceRequest;
+use App\Services\Payments\ServicePaymentService;
 use App\Services\ServiceCustomFieldSubmissionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,11 +20,13 @@ use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
 
 use JsonException;
+use App\Support\Payments\PaymentGatewayCurrencyPolicy;
 
 class ServiceRequestController extends Controller
 {
     public function __construct(
-        private ServiceCustomFieldSubmissionService $submissionService
+        private ServiceCustomFieldSubmissionService $submissionService,
+        private ServicePaymentService $servicePaymentService
     ) {
     }
 
@@ -219,8 +222,13 @@ class ServiceRequestController extends Controller
             $serviceRequest = new ServiceRequest();
             $serviceRequest->service_id = $service->id;
             $serviceRequest->user_id = $user->id;
+            $serviceRequest->request_number = $this->generateRequestNumber();
         } elseif ($serviceRequest->trashed()) {
             $serviceRequest->restore();
+        }
+
+        if (! $serviceRequest->request_number) {
+            $serviceRequest->request_number = $this->generateRequestNumber();
         }
 
         $serviceRequest->status = 'review';
@@ -478,6 +486,69 @@ class ServiceRequestController extends Controller
             'payment_transaction_id' => $serviceRequest->payment_transaction_id,
         ], 201);
     }
+
+    public function show(Request $request, ServiceRequest $serviceRequest): JsonResponse
+    {
+        $user = $request->user() ?? Auth::user();
+
+        if (! $user || (int) $serviceRequest->user_id !== (int) $user->id) {
+            return response()->json(['message' => __('Service request not found.')], 404);
+        }
+
+        $serviceRequest->loadMissing('service');
+
+        return response()->json([
+            'data' => $this->transformRequest($serviceRequest),
+        ]);
+    }
+
+    public function purchaseOptions(Request $request, ServiceRequest $serviceRequest): JsonResponse
+    {
+        $user = $request->user() ?? Auth::user();
+
+        if (! $user || (int) $serviceRequest->user_id !== (int) $user->id) {
+            return response()->json(['message' => __('Service request not found.')], 404);
+        }
+
+        $serviceRequest->loadMissing('service');
+        $service = $serviceRequest->service;
+
+        $currency = strtoupper($service?->currency ?? config('app.currency', 'YER'));
+
+        $supportedMethods = ServicePaymentService::SUPPORTED_METHODS;
+
+        $methods = collect($supportedMethods)
+            ->unique()
+            ->filter(fn (string $method) => PaymentGatewayCurrencyPolicy::supports($method, $currency))
+            ->map(static function (string $method) use ($currency): array {
+                return [
+                    'code' => $method,
+                    'currencies' => PaymentGatewayCurrencyPolicy::supportedCurrencies($method),
+                    'currency_supported' => PaymentGatewayCurrencyPolicy::supports($method, $currency),
+                ];
+            })
+            ->values()
+            ->all();
+
+        $currencyRules = [
+            'YER' => collect($supportedMethods)
+                ->filter(fn (string $method) => PaymentGatewayCurrencyPolicy::supports($method, 'YER'))
+                ->values()
+                ->all(),
+            'USD' => collect($supportedMethods)
+                ->filter(fn (string $method) => PaymentGatewayCurrencyPolicy::supports($method, 'USD'))
+                ->values()
+                ->all(),
+        ];
+
+        return response()->json([
+            'service_request_id' => $serviceRequest->getKey(),
+            'default_currency' => $currency,
+            'methods' => $methods,
+            'currency_rules' => $currencyRules,
+        ]);
+    }
+
     private function transformRequest(ServiceRequest $serviceRequest): array
     {
         $service = $serviceRequest->service;
@@ -486,6 +557,7 @@ class ServiceRequestController extends Controller
             'id' => $serviceRequest->getKey(),
             'status' => $serviceRequest->status,
             'service_id' => $serviceRequest->service_id,
+            'request_number' => $serviceRequest->request_number,
             'service_title' => $service?->title,
             'service' => $service ? [
                 'id' => $service->getKey(),
@@ -501,5 +573,28 @@ class ServiceRequestController extends Controller
             'created_at' => optional($serviceRequest->created_at)->toDateTimeString(),
             'updated_at' => optional($serviceRequest->updated_at)->toDateTimeString(),
         ];
+    }
+
+    private function generateRequestNumber(): string
+    {
+        $prefix = 'SR-' . now()->format('Ymd');
+        $attempt = 0;
+
+        do {
+            $suffix = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+            $candidate = "{$prefix}-{$suffix}";
+
+            $exists = ServiceRequest::query()
+                ->where('request_number', $candidate)
+                ->exists();
+
+            if (! $exists) {
+                return $candidate;
+            }
+
+            $attempt++;
+        } while ($attempt < 10);
+
+        return $prefix . '-' . Str::upper(Str::random(6));
     }
 }

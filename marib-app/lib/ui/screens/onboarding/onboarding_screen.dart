@@ -266,19 +266,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
         );
       },
-      child: PageView.builder(
-        controller: _pageController,
-        itemCount: data.length,
-        onPageChanged: _handlePageSettled,
-        itemBuilder: (context, index) {
-          return _AnimatedOnboardingPage(
-            controller: _pageController,
-            index: index,
-            pageCount: data.length,
-            data: data[index],
-            lerpDouble: lerpDouble,
-          );
-        },
+      child: Directionality(
+        textDirection: TextDirection.rtl,
+        child: PageView.builder(
+          controller: _pageController,
+          itemCount: data.length,
+          onPageChanged: _handlePageSettled,
+          itemBuilder: (context, index) {
+            return _AnimatedOnboardingPage(
+              controller: _pageController,
+              index: index,
+              pageCount: data.length,
+              data: data[index],
+              lerpDouble: lerpDouble,
+            );
+          },
+        ),
       ),
     );
   }

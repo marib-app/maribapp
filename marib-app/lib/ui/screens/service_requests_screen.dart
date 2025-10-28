@@ -343,52 +343,54 @@ class _ServiceRequestTile extends StatelessWidget {
             );
           },
           child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      request.serviceTitle ?? 'طلب #${request.id}',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        request.serviceTitle ?? 'طلب #${request.id}',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
-                  ),
-                  Chip(
-                    backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
-                    label: Text(
-                      statusLabel,
-                      style: TextStyle(color: theme.colorScheme.primary),
+                    Chip(
+                      backgroundColor:
+                          theme.colorScheme.primary.withOpacity(0.1),
+                      label: Text(
+                        statusLabel,
+                        style: TextStyle(color: theme.colorScheme.primary),
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'رقم الطلب: ${request.id}',
-                style: theme.textTheme.bodyMedium,
-              ),
-              if (createdAt != null) ...[
-                const SizedBox(height: 4),
-                Text(
-                  'تاريخ الطلب: $createdAt',
-                  style: theme.textTheme.bodySmall,
+                  ],
                 ),
-              ],
-              if (request.note != null && request.note!.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Text(
-                  request.note!,
+                  'رقم الطلب: ${request.id}',
                   style: theme.textTheme.bodyMedium,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
                 ),
+                if (createdAt != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'تاريخ الطلب: $createdAt',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ],
+                if (request.note != null && request.note!.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    request.note!,
+                    style: theme.textTheme.bodyMedium,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),

@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 
@@ -88,6 +86,8 @@ class AppPageRoute {
           opaque: opaque ?? !barrierDismissible,
           forwardDuration: baseDuration,
           reverseDuration: baseReverseDuration,
+          pushCurve: curve,
+          popCurve: popCurve ?? Curves.easeInCubic,
           customTransitionsBuilder: fadeTransitionBuilder,
         );
       case AppPageRouteTransition.custom:
@@ -206,8 +206,13 @@ class _FadeBlurPageRoute<T> extends PageRouteBuilder<T> {
     required bool opaque,
     required Duration forwardDuration,
     required Duration reverseDuration,
+    Curve pushCurve = Curves.easeOutCubic,
+    Curve? popCurve,
     RouteTransitionsBuilder? customTransitionsBuilder,
-  }) : super(
+  })  : _pushCurve = pushCurve,
+        _popCurve = popCurve ?? Curves.easeInCubic,
+        _customTransitionsBuilder = customTransitionsBuilder,
+        super(
           settings: settings,
           fullscreenDialog: fullscreenDialog,
           barrierDismissible: barrierDismissible,
@@ -220,38 +225,22 @@ class _FadeBlurPageRoute<T> extends PageRouteBuilder<T> {
           pageBuilder: (context, animation, secondaryAnimation) {
             return builder(context);
           },
-          transitionsBuilder: customTransitionsBuilder ??
-              (context, animation, secondaryAnimation, child) {
-                final bool isPushing =
-                    animation.status != AnimationStatus.reverse;
-                final Animation<double> progress =
-                    isPushing ? animation : ReverseAnimation(animation);
+        transitionsBuilder:
+        customTransitionsBuilder ?? _passThroughTransitionsBuilder,
+      );
 
-                final CurvedAnimation eased = CurvedAnimation(
-                  parent: progress,
-                  curve: Curves.easeOutCubic,
-                  reverseCurve: Curves.easeInCubic,
-                );
+  final RouteTransitionsBuilder? _customTransitionsBuilder;
+  final Curve _pushCurve;
+  final Curve _popCurve;
 
-                final Animation<double> fade = Tween<double>(
-                  begin: isPushing ? 0.0 : 1.0,
-                  end: isPushing ? 1.0 : 0.0,
-                ).animate(eased);
-
-                final Animation<double> scale = Tween<double>(
-                  begin: isPushing ? 0.98 : 1.0,
-                  end: isPushing ? 1.0 : 0.985,
-                ).animate(eased);
-
-                return FadeTransition(
-                  opacity: fade,
-                  child: ScaleTransition(
-                    scale: scale,
-                    child: child,
-                  ),
-                );
-              },
-        );
+  static Widget _passThroughTransitionsBuilder(
+      BuildContext context,
+      Animation<double> animation,
+      Animation<double> secondaryAnimation,
+      Widget child,
+      ) {
+    return child;
+  }
 
   @override
   Widget buildTransitions(
@@ -260,84 +249,54 @@ class _FadeBlurPageRoute<T> extends PageRouteBuilder<T> {
     Animation<double> secondaryAnimation,
     Widget child,
   ) {
-    final Widget transitionedChild = super.buildTransitions(
-      context,
-      animation,
-      secondaryAnimation,
-      child,
-    );
+    if (_customTransitionsBuilder != null) {
+      return _customTransitionsBuilder!(
+        context,
+        animation,
+        secondaryAnimation,
+        child,
+      );
+    }
 
     final bool isPushing = animation.status != AnimationStatus.reverse;
-    final Animation<double> progress =
+    final Animation<double> primaryProgress =
         isPushing ? animation : ReverseAnimation(animation);
     final CurvedAnimation primaryCurve = CurvedAnimation(
-      parent: progress,
-      curve: Curves.easeOutCubic,
-      reverseCurve: Curves.easeInCubic,
-    );
-    final CurvedAnimation secondaryCurve = CurvedAnimation(
-      parent: secondaryAnimation,
-      curve: Curves.easeOutCubic,
-      reverseCurve: Curves.easeInCubic,
+      parent: primaryProgress,
+      curve: _pushCurve,
+      reverseCurve: _popCurve,
     );
 
-    final Animation<Offset> pushSlide = Tween<Offset>(
-      begin: const Offset(0.0, 0.05),
-      end: Offset.zero,
-    ).animate(primaryCurve);
+    final Tween<Offset> pushOffsetTween =
+     Tween<Offset>(begin: Offset(0.0, 0.05), end: Offset.zero);
+    final Tween<Offset> popOffsetTween =
+     Tween<Offset>(begin: Offset.zero, end: Offset(0.0, 0.02));
 
-    final Animation<Offset> returnSlide = Tween<Offset>(
-      begin: Offset.zero,
-      end: const Offset(0.0, 0.02),
-    ).animate(secondaryCurve);
+    final Animation<Offset> primarySlide = (isPushing
+        ? pushOffsetTween
+        : popOffsetTween)
+        .animate(primaryCurve);
 
-    Widget slideWrappedChild = SlideTransition(
-      position: pushSlide,
-      child: transitionedChild,
+    Widget transitionedChild = SlideTransition(
+      position: primarySlide,
+      child: child,
     );
 
     if (secondaryAnimation.status != AnimationStatus.dismissed ||
         secondaryAnimation.value > 0.0) {
-      slideWrappedChild = SlideTransition(
-        position: returnSlide,
-        child: slideWrappedChild,
+      final CurvedAnimation secondaryCurve = CurvedAnimation(
+        parent: secondaryAnimation,
+        curve: _pushCurve,
+        reverseCurve: _popCurve,
+      );
+      transitionedChild = SlideTransition(
+        position: popOffsetTween.animate(secondaryCurve),
+        child: transitionedChild,
       );
     }
 
-    if (opaque) {
-      return slideWrappedChild;
-    }
+    return transitionedChild;
 
-    final double backdropStrength =
-        ((1 - primaryCurve.value).clamp(0.0, 1.0)).toDouble();
-    final double blurSigma = 6.0 * backdropStrength;
-    final Color baseBarrierColor = (barrierColor ?? Colors.black);
-    final double baseBarrierOpacity = barrierColor?.opacity ?? 0.12;
-    final double overlayOpacity = baseBarrierOpacity * backdropStrength;
-
-    final Widget overlayTint = Container(
-      color: baseBarrierColor.withOpacity(overlayOpacity),
-    );
-
-    final Widget backdrop = blurSigma > 0
-        ? ClipRect(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(
-                sigmaX: blurSigma,
-                sigmaY: blurSigma,
-              ),
-              child: overlayTint,
-            ),
-          )
-        : overlayTint;
-
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        backdrop,
-        slideWrappedChild,
-      ],
-    );
   }
 }
 

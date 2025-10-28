@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:marib/app/routes.dart';
+import 'package:marib/data/cubits/service_requests_cubit.dart';
 import 'package:marib/utils/currency_utils.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/hive_utils.dart';
@@ -271,13 +274,28 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
       'Payment submitted successfully.',
     );
 
-    Navigator.of(context).maybePop({
+    final ServiceRequestsCubit? serviceRequestsCubit =
+        BlocProvider.maybeOf<ServiceRequestsCubit>(context);
+    if (serviceRequestsCubit != null) {
+      for (final ServiceRequestFilter filter in ServiceRequestFilter.values) {
+        serviceRequestsCubit.refresh(filter);
+      }
+    }
+
+    final Map<String, dynamic> resultPayload = {
       'payment_transaction_id': transactionId,
       'service_id': serviceId,
       'service_request_id': serviceRequestId,
       if (subject != null) 'subject': subject,
       if (next != null) 'next': next,
-    });
+    };
+
+    Navigator.of(context, rootNavigator: true).pushNamed(
+      Routes.transactionHistory,
+      arguments: {'focus_transaction_id': transactionId},
+    );
+
+    Navigator.of(context).maybePop(resultPayload);
   }
 
   String _formatAmount(double? amount, String? currency) {

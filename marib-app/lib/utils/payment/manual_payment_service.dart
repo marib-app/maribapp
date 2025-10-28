@@ -1194,14 +1194,28 @@ class ManualPaymentService {
       if (formattedAmount != null) {
         body['amount'] = formattedAmount;
       }
-      final response = await Api.postJson(
-        url: Api.paymentsInitiateApi,
-        data: body,
-        extraHeaders: {
-          'Authorization': 'Bearer $token',
-          'Idempotency-Key': Api.generateIdempotencyKey(),
-        },
-      );
+      Map<String, dynamic> response;
+      try {
+        response = await Api.postJson(
+          url: Api.paymentsInitiateApi,
+          data: body,
+          extraHeaders: {
+            'Authorization': 'Bearer $token',
+            'Idempotency-Key': Api.generateIdempotencyKey(),
+          },
+        );
+      } on ApiHttpException catch (error) {
+        if (error.statusCode == 402) {
+          final dynamic payload = error.payload;
+          final Map<String, dynamic>? mapped = _mapify(payload);
+          response = mapped ??
+              <String, dynamic>{
+                'data': payload,
+              };
+        } else {
+          rethrow;
+        }
+      }
 
       final Map<String, dynamic> top =
           _mapify(response) ?? <String, dynamic>{'data': response};
@@ -1775,18 +1789,42 @@ class ManualPaymentService {
   }) async {
     try {
       final token = HiveUtils.getJWT();
-      if (token == null || token.isEmpty) return [];
+      if (token == null || token.isEmpty) return const <ManualPayment>[];
 
       final normalizedGateways = paymentGateways
           .map(_normalizeGatewayKey)
           .where((e) => e.isNotEmpty)
           .toSet();
 
+      final Map<String, dynamic> headers =
+          Map<String, dynamic>.from(Api.headers());
+      headers.putIfAbsent('Authorization', () => 'Bearer $token');
+
       // طلب واحد بسيط بدون رمي أخطاء
       final res = await _dio.get(
         'manual-payment-requests',
-        options: Options(headers: {'Authorization': 'Bearer $token'}),
+        options: Options(
+          headers: headers,
+          validateStatus: (status) => status != null && status < 400,
+        ),
       );
+
+
+      if (res.data is Map) {
+        final Map<String, dynamic> responseMap =
+        Map<String, dynamic>.from(res.data as Map);
+        if (responseMap['error'] == true) {
+          final dynamic codeValue = responseMap['code'];
+          final int? errorCode =
+          codeValue is int ? codeValue : int.tryParse('$codeValue');
+          if (errorCode == 401) {
+            Api.userExpired();
+          }
+          final String message =
+              responseMap['message']?.toString() ?? 'manualPaymentFetchFailed';
+          throw ApiException(message);
+        }
+      }
 
       // تفريغ الشكل أياً كان
       List<Map<String, dynamic>> _unwrap(dynamic payload) {
@@ -1876,9 +1914,22 @@ class ManualPaymentService {
       }
       deduped.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       return deduped;
-    } catch (_) {
-      // لا نرمي خطأ للشاشة إطلاقًا
-      return [];
+    } on DioException catch (error) {
+      if (error.response?.statusCode == 401) {
+        Api.userExpired();
+        throw ApiException('Unauthenticated.');
+      }
+
+      final dynamic payload = error.response?.data;
+      final String message = payload is Map && payload['message'] is String
+          ? payload['message'] as String
+          : error.message ?? 'Failed to load manual payments';
+      throw ApiException(message);
+    } catch (error) {
+      if (error is ApiException) {
+        rethrow;
+      }
+      throw ApiException(error.toString());
     }
   }
 }

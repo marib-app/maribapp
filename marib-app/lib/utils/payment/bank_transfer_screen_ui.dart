@@ -493,8 +493,12 @@ extension _BankTransferScreenUi on _BankTransferScreenState {
         ? _formatWalletBalance(summary)
         : '—${currency.isNotEmpty ? ' $currency' : ''}';
     final bool hasError = _walletError != null;
-    final bool selected = _usingWallet;
-    final bool pressed =
+    final bool walletCurrencyMismatch = !_walletCurrencyMatchesPayment;
+    final bool canSelectWallet =
+        !hasError && !_loadingWallet && summary != null && _walletCanPay;
+    final bool isWalletChosen = _usingWallet;
+    final bool selected = isWalletChosen && canSelectWallet;
+    final bool pressed = canSelectWallet &&
         _pressedBankId == _BankTransferScreenState._walletPressedKey;
 
     final errorMessage = () {
@@ -516,8 +520,17 @@ extension _BankTransferScreenUi on _BankTransferScreenState {
       statusColor = onSurface.withOpacity(.7);
     } else if (summary == null) {
       statusText = 'الرصيد غير متاح';
-
       statusColor = onSurface.withOpacity(.7);
+    } else if (walletCurrencyMismatch) {
+      final String walletLabel =
+          _walletCurrencyLabel ?? _walletCurrencyCode ?? 'المحفظة';
+      final String paymentLabel = _paymentCurrencyDisplay ??
+          _paymentCurrencyLabel ??
+          _paymentCurrencyCode ??
+          'العملية الحالية';
+      statusText =
+          'لا يمكن استخدام المحفظة بعملة $walletLabel لهذه العملية التي عملتها $paymentLabel.';
+      statusColor = Theme.of(context).colorScheme.error;
     } else {
       statusText = 'الرصيد: $balanceText';
       statusColor = _walletHasEnoughBalance
@@ -531,24 +544,30 @@ extension _BankTransferScreenUi on _BankTransferScreenState {
     final bool showInteractiveBalance = !hasError &&
         !_loadingWallet &&
         summary != null &&
+        !walletCurrencyMismatch &&
         _walletHasEnoughBalance;
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: InkWell(
-        onHighlightChanged: (h) => setState(() => _pressedBankId =
-            h ? _BankTransferScreenState._walletPressedKey : null),
-        onTap: () => setState(() {
-          _selectedMethod = _BankTransferScreenState._walletMethod;
-          _selectedBankId = null;
-          _attempted = false;
-        }),
-        borderRadius: BorderRadius.circular(14),
-        child: AnimatedScale(
-          scale: pressed ? 0.98 : 1.0,
-          duration: const Duration(milliseconds: 120),
-          curve: Curves.easeOut,
-          child: AnimatedContainer(
+    final double cardOpacity = canSelectWallet ? 1.0 : 0.65;
+
+    return Opacity(
+      opacity: cardOpacity,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: InkWell(
+          onHighlightChanged: canSelectWallet
+              ? (h) => setState(() => _pressedBankId =
+                  h ? _BankTransferScreenState._walletPressedKey : null)
+              : null,
+          onTap: canSelectWallet
+              ? () => setState(() {
+                    _selectedMethod = _BankTransferScreenState._walletMethod;
+                    _selectedBankId = null;
+                    _attempted = false;
+                  })
+              : null,
+          borderRadius: BorderRadius.circular(14),
+          child: AnimatedScale(
+            scale: pressed ? 0.98 : 1.0,
             duration: const Duration(milliseconds: 180),
             curve: Curves.easeOut,
             decoration: BoxDecoration(
@@ -696,10 +715,10 @@ extension _BankTransferScreenUi on _BankTransferScreenState {
                     ),
                   ),
                 Icon(
-                  selected
+                  isWalletChosen
                       ? Icons.radio_button_checked
                       : Icons.radio_button_off,
-                  color: selected
+                  color: isWalletChosen
                       ? context.color.territoryColor
                       : context.color.borderColor.withOpacity(.8),
                 ),

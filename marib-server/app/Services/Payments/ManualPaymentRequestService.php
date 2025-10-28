@@ -1077,10 +1077,36 @@ class ManualPaymentRequestService
             data_set($transactionMeta, 'manual_bank.beneficiary_name', $bankBeneficiary);
         }
 
-        $transaction->forceFill([
-            'manual_payment_request_id' => $manualPaymentRequest->getKey(),
+        $transactionAttributes = [
             'meta' => $this->filterArrayRecursive($transactionMeta),
-        ])->saveQuietly();
+        ];
+
+        if ($this->normalizeNullableId($transaction->manual_payment_request_id) !== $manualPaymentRequest->getKey()) {
+            $transactionAttributes['manual_payment_request_id'] = $manualPaymentRequest->getKey();
+        }
+
+        try {
+            $transaction->forceFill($transactionAttributes)->saveQuietly();
+        } catch (QueryException|UniqueConstraintViolationException $exception) {
+            if ($this->isPaymentTransactionManualPaymentDuplicateException($exception)) {
+                $existingLinkedTransactionId = $this->manualPaymentRequestLinkedTransactionId($manualPaymentRequest);
+
+                Log::warning('Manual payment request already linked to a different transaction. Skipping linkage to prevent duplicate association.', [
+                    'payment_transaction_id' => $transaction->getKey(),
+                    'manual_payment_request_id' => $manualPaymentRequest->getKey(),
+                    'existing_payment_transaction_id' => $existingLinkedTransactionId,
+                ]);
+
+                $this->markTransactionManualPaymentRequestSkipped($transaction, 'manual_request_already_linked', [
+                    'manual_payment_request_id' => (string) $manualPaymentRequest->getKey(),
+                    'existing_payment_transaction_id' => $existingLinkedTransactionId !== null ? (string) $existingLinkedTransactionId : null,
+                ]);
+
+                return $manualPaymentRequest->fresh();
+            }
+
+            throw $exception;
+        }
 
         $transaction->refresh();
         $manualPaymentRequest->setRelation('paymentTransaction', $transaction);
@@ -1709,6 +1735,56 @@ class ManualPaymentRequestService
 
                 $code = (string) $current->getCode();
                 if ($code === '23000' && str_contains($message, 'duplicate entry')) {
+                    return true;
+                }
+            }
+
+            $current = $current->getPrevious();
+        }
+
+        return false;
+    }
+
+    private function isPaymentTransactionManualPaymentDuplicateException(Throwable $exception): bool
+    {
+        $needles = [
+            'payment_transactions_manual_payment_request_id_unique',
+            'manual_payment_request_id_unique',
+        ];
+
+        $current = $exception;
+
+        while ($current instanceof Throwable) {
+            $message = Str::lower($current->getMessage());
+
+            foreach ($needles as $needle) {
+                if (str_contains($message, $needle)) {
+                    return true;
+                }
+            }
+
+            if ($current instanceof QueryException || $current instanceof UniqueConstraintViolationException) {
+                $errorInfo = $current->errorInfo ?? null;
+
+                if (is_array($errorInfo)) {
+                    foreach ($errorInfo as $value) {
+                        if (! is_string($value)) {
+                            continue;
+                        }
+
+                        $lower = Str::lower($value);
+
+                        foreach ($needles as $needle) {
+                            if (str_contains($lower, $needle)) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+
+                $code = (string) $current->getCode();
+
+                if ($code === '23000' && str_contains($message, 'manual_payment_request_id') && str_contains($message, 'duplicate')) {
                     return true;
                 }
             }

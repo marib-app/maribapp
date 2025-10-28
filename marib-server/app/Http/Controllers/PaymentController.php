@@ -105,9 +105,13 @@ class PaymentController extends Controller
             }
         }
 
+        $messages = [];
+
         if ($purpose === 'service') {
             $rules['service_id'] = ['required', 'integer', 'exists:services,id'];
             $rules['service_request_id'] = ['required', 'integer', 'exists:service_requests,id'];
+            $rules['order_id'] = ['prohibited'];
+            $messages['order_id.prohibited'] = __('The order_id field is not allowed when initiating a service payment.');
         } elseif ($purpose === 'package') {
             $rules['package_id'] = ['required', 'integer', 'exists:packages,id'];
         } elseif ($purpose === ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP) {
@@ -119,7 +123,7 @@ class PaymentController extends Controller
         }
 
         try {
-            $validated = $request->validate($rules);
+            $validated = $request->validate($rules, $messages);
         } catch (ValidationException $exception) {
             Log::warning('payments.initiate.validation_failed', [
                 'errors' => $exception->errors(),
@@ -407,9 +411,13 @@ class PaymentController extends Controller
 
         ];
 
+        $messages = [];
+
         if ($purpose === 'service') {
             $rules['service_id'] = ['required', 'integer', 'exists:services,id'];
             $rules['service_request_id'] = ['required', 'integer', 'exists:service_requests,id'];
+            $rules['order_id'] = ['prohibited'];
+            $messages['order_id.prohibited'] = __('The order_id field is not allowed when creating a manual service payment.');
         } elseif ($purpose === 'package') {
             $rules['package_id'] = ['required', 'integer', 'exists:packages,id'];
 
@@ -421,7 +429,7 @@ class PaymentController extends Controller
             $rules['order_id'] = ['required', 'integer', 'exists:orders,id'];
         }
 
-        $validated = $request->validate($rules);
+        $validated = $request->validate($rules, $messages);
 
         if (! isset($validated['note']) && $request->filled('notes')) {
             $validated['note'] = $request->input('notes');

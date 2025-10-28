@@ -158,6 +158,9 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         _loadingWallet = false;
         _walletSummary = state.summary;
         _walletError = null;
+        if (_selectedMethod == _walletMethod && !_walletCanPay) {
+          _selectedMethod = null;
+        }
       });
       return;
     }
@@ -165,6 +168,9 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       setState(() {
         _loadingWallet = false;
         _walletError = state.error;
+        if (_selectedMethod == _walletMethod) {
+          _selectedMethod = null;
+        }
       });
     }
   }
@@ -768,6 +774,49 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     return null;
   }
 
+  String? _currencyDisplayToken(String? value,
+      {String? code, String? fallback}) {
+    final String? trimmed = value?.trim();
+    final String? normalized =
+        CurrencyUtils.normalizeCurrencyCode(code ?? trimmed);
+
+    return CurrencyUtils.displayToken(
+          label: (trimmed == null || trimmed.isEmpty) ? null : trimmed,
+          fallback: fallback ?? normalized ?? trimmed,
+          code: normalized,
+        ) ??
+        fallback ??
+        normalized ??
+        trimmed;
+  }
+
+  String? get _walletCurrencyCode => CurrencyUtils.normalizeCurrencyCode(
+        _walletSummary?.currencyCode ?? _walletSummary?.currency,
+      );
+
+  String? get _walletCurrencyLabel => _currencyDisplayToken(
+        _walletSummary?.currency,
+        code: _walletSummary?.currencyCode ?? _walletCurrencyCode,
+        fallback: _walletCurrencyCode,
+      );
+
+  String? get _paymentCurrencyDisplay => _currencyDisplayToken(
+        _paymentCurrencyLabel ?? _paymentCurrencyCode,
+        code: _paymentCurrencyCode,
+        fallback: _paymentCurrencyCode,
+      );
+
+  bool get _walletCurrencyMatchesPayment {
+    final String? walletCurrency = _walletCurrencyCode;
+    final String? paymentCurrency =
+        CurrencyUtils.normalizeCurrencyCode(_paymentCurrencyCode);
+    if (walletCurrency == null || paymentCurrency == null) {
+      return true;
+    }
+
+    return walletCurrency == paymentCurrency;
+  }
+
   String _maskRight(String? v, {int take = 4}) {
     if (v == null || v.isEmpty) return '';
     final t = v.replaceAll(' ', '');
@@ -831,6 +880,11 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     return summary.balance + epsilon >= widget.args.amount;
   }
 
+  bool get _walletCanPay =>
+      _walletSummaryReady &&
+      _walletCurrencyMatchesPayment &&
+      _walletHasEnoughBalance;
+
   bool get _shouldShowSenderField => _usingManualBank;
 
   bool get _shouldShowTransferCodeField => _usingManualBank;
@@ -851,7 +905,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     }
 
     if (_usingWallet) {
-      return _walletSummaryReady && _walletHasEnoughBalance;
+      return _walletCanPay;
     }
 
     return false;
@@ -895,6 +949,19 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       if (!_walletSummaryReady) {
         _showOverlayMessage(
           'تعذّر تحميل رصيد المحفظة. يرجى تحديث البطاقة والمحاولة مجددًا.',
+          type: MessageType.error,
+        );
+        return;
+      }
+      if (!_walletCurrencyMatchesPayment) {
+        final String walletLabel =
+            _walletCurrencyLabel ?? _walletCurrencyCode ?? 'المحفظة';
+        final String paymentLabel = _paymentCurrencyDisplay ??
+            _paymentCurrencyLabel ??
+            _paymentCurrencyCode ??
+            'العملية الحالية';
+        _showOverlayMessage(
+          'لا يمكن استخدام المحفظة بعملة $walletLabel لهذه العملية التي عملتها $paymentLabel.',
           type: MessageType.error,
         );
         return;

@@ -108,7 +108,7 @@
                 </div>
             </div>
             <div class="card-body">
-                @if($hasPaymentContext && $manualPayment instanceof ManualPaymentRequest)
+                @if($hasPaymentContext && isset($manualPayment) && $manualPayment instanceof ManualPaymentRequest && filled($serviceRequest->payment_status))
                     @include('payments.manual.show', [
                         'request' => $manualPayment,
                         'canReview' => $canReviewPayment,
@@ -137,6 +137,10 @@
                         'timelineData' => $timelineData ?? [],
                         'timelineEndpoint' => $timelineEndpoint,
                     ])
+                @elseif($hasPaymentContext && filled($serviceRequest->payment_status))
+                    <div class="alert alert-info mb-0" role="alert">
+                        <i class="fa fa-circle-info me-2"></i>{{ __('تم تأكيد الدفع لهذه الخدمة، لكن تفاصيل التحويل اليدوي غير متاحة حالياً.') }}
+                    </div>
                 @else
                     <div class="alert alert-warning mb-0" role="alert">
                         <i class="fa fa-circle-info me-2"></i>{{ __('لا يوجد دفع مرتبط.') }}

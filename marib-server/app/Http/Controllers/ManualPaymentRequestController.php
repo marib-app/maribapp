@@ -38,6 +38,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Database\QueryException;
 use App\Services\Payments\ManualPaymentRequestService;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Collection;
@@ -1993,11 +1994,36 @@ class ManualPaymentRequestController extends Controller
             }
 
             if (! $manualPaymentRequest instanceof ManualPaymentRequest) {
-                $manualPaymentRequest = $this->manualPaymentRequestService
-                    ->ensureManualPaymentRequestForTransaction($transaction);
+                try {
+                    $manualPaymentRequest = $this->manualPaymentRequestService
+                        ->ensureManualPaymentRequestForTransaction($transaction);
+                } catch (QueryException $exception) {
+                    if ((string) $exception->getCode() === '23000') {
+                        Log::warning('Skipped hydrating manual payment request for transaction due to unique constraint violation.', [
+                            'payment_transaction_id' => $transaction->getKey(),
+                            'error' => $exception->getMessage(),
+                        ]);
+
+                        continue;
+                    }
+
+                    throw $exception;
+                }
             }
 
             if (! $manualPaymentRequest instanceof ManualPaymentRequest) {
+                continue;
+            }
+
+            $linkedTransactionId = $manualPaymentRequest->payment_transaction_id;
+
+            if ($linkedTransactionId !== null && (int) $linkedTransactionId !== $transaction->getKey()) {
+                Log::info('Manual payment request already linked to a different transaction. Skipping hydration.', [
+                    'manual_payment_request_id' => $manualPaymentRequest->getKey(),
+                    'payment_transaction_id' => $transaction->getKey(),
+                    'existing_payment_transaction_id' => $linkedTransactionId,
+                ]);
+
                 continue;
             }
 

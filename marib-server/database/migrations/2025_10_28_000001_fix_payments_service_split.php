@@ -23,6 +23,41 @@ return new class extends Migration
                     ->update(['payment_status' => $status]);
             }
 
+            $activeDuplicateRows = DB::table('payment_transactions')
+                ->select('id', 'payable_type', 'payable_id', 'payment_gateway', 'payment_status')
+                ->whereIn(DB::raw('LOWER(COALESCE(payment_status, ""))'), $activeStatuses)
+                ->orderBy('payable_type')
+                ->orderBy('payable_id')
+                ->orderBy('payment_gateway')
+                ->orderBy('id')
+                ->get();
+
+            $seen = [];
+            foreach ($activeDuplicateRows as $row) {
+                $key = sprintf(
+                    '%s|%s|%s|%s',
+                    $row->payable_type,
+                    $row->payable_id,
+                    $row->payment_gateway,
+                    strtolower($row->payment_status ?? '')
+                );
+
+                if (! array_key_exists($key, $seen)) {
+                    $seen[$key] = $row->id;
+                    continue;
+                }
+
+                $newStatus = sprintf('%s_dup_%d', $row->payment_status, $row->id);
+
+                if (strlen($newStatus) > 191) {
+                    $newStatus = substr($newStatus, 0, 191);
+                }
+
+                DB::table('payment_transactions')
+                    ->where('id', $row->id)
+                    ->update(['payment_status' => $newStatus]);
+            }
+
             $duplicateGroups = DB::table('payment_transactions')
                 ->select('payable_type', 'payable_id', 'payment_gateway')
                 ->selectRaw("COALESCE(payment_status, '__NULL__') AS status_key")
@@ -94,6 +129,81 @@ return new class extends Migration
                 DB::table('payment_transactions')
                     ->where('id', $row->id)
                     ->update(['payment_status' => $newStatus]);
+            }
+
+            $nullStatusDuplicates = DB::table('payment_transactions')
+                ->select('payable_type', 'payable_id', 'payment_gateway')
+                ->whereNull('payment_status')
+                ->groupBy('payable_type', 'payable_id', 'payment_gateway')
+                ->havingRaw('COUNT(*) > 1')
+                ->get();
+
+            foreach ($nullStatusDuplicates as $duplicate) {
+                $rows = DB::table('payment_transactions')
+                    ->select('id')
+                    ->where('payable_type', $duplicate->payable_type)
+                    ->where('payable_id', $duplicate->payable_id)
+                    ->where('payment_gateway', $duplicate->payment_gateway)
+                    ->whereNull('payment_status')
+                    ->orderByDesc('id')
+                    ->get();
+
+                $rowsToUpdate = $rows->slice(1);
+
+                foreach ($rowsToUpdate as $row) {
+                    $newStatus = sprintf('archived_dup_%d', $row->id);
+                    DB::table('payment_transactions')
+                        ->where('id', $row->id)
+                        ->update(['payment_status' => $newStatus]);
+                }
+            }
+
+            while (true) {
+                $duplicate = DB::table('payment_transactions')
+                    ->select('payable_type', 'payable_id', 'payment_gateway')
+                    ->selectRaw("COALESCE(payment_status, '__NULL__') AS status_key")
+                    ->groupBy('payable_type', 'payable_id', 'payment_gateway', 'status_key')
+                    ->havingRaw('COUNT(*) > 1')
+                    ->first();
+
+                if (! $duplicate) {
+                    break;
+                }
+
+                $rows = DB::table('payment_transactions')
+                    ->select('id', 'payment_status')
+                    ->where('payable_type', $duplicate->payable_type)
+                    ->where('payable_id', $duplicate->payable_id)
+                    ->where('payment_gateway', $duplicate->payment_gateway)
+                    ->when(
+                        $duplicate->status_key === '__NULL__',
+                        static fn ($query) => $query->whereNull('payment_status'),
+                        static fn ($query) => $query->where('payment_status', $duplicate->status_key)
+                    )
+                    ->orderBy('id')
+                    ->get();
+
+                if ($rows->count() <= 1) {
+                    continue;
+                }
+
+                $rows->shift();
+
+                foreach ($rows as $row) {
+                    $base = $row->payment_status;
+                    if ($base === null || trim((string) $base) === '') {
+                        $base = 'archived';
+                    }
+
+                    $newStatus = sprintf('%s_dup_%d', $base, $row->id);
+                    if (strlen($newStatus) > 191) {
+                        $newStatus = substr($newStatus, 0, 191);
+                    }
+
+                    DB::table('payment_transactions')
+                        ->where('id', $row->id)
+                        ->update(['payment_status' => $newStatus]);
+                }
             }
 
             Schema::table('payment_transactions', function (Blueprint $table): void {

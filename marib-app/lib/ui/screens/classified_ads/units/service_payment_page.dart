@@ -274,8 +274,12 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
       'Payment submitted successfully.',
     );
 
-    final ServiceRequestsCubit? serviceRequestsCubit =
-        BlocProvider.maybeOf<ServiceRequestsCubit>(context);
+    ServiceRequestsCubit? serviceRequestsCubit;
+    try {
+      serviceRequestsCubit = context.read<ServiceRequestsCubit>();
+    } catch (_) {
+      serviceRequestsCubit = null;
+    }
     if (serviceRequestsCubit != null) {
       for (final ServiceRequestFilter filter in ServiceRequestFilter.values) {
         serviceRequestsCubit.refresh(filter);

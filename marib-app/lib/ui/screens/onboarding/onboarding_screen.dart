@@ -285,7 +285,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 }
 
 class _AnimatedOnboardingPage extends StatefulWidget {
-
   const _AnimatedOnboardingPage({
     required this.controller,
     required this.index,
@@ -300,17 +299,30 @@ class _AnimatedOnboardingPage extends StatefulWidget {
   final CardPlanetData data;
   final double Function(double a, double b, double t) lerpDouble;
 
-
-
   @override
-  State<_AnimatedOnboardingPage> createState() => _AnimatedOnboardingPageState();
+  State<_AnimatedOnboardingPage> createState() =>
+      _AnimatedOnboardingPageState();
 }
 
 class _AnimatedOnboardingPageState extends State<_AnimatedOnboardingPage> {
-  late final OnboardingPageContent _staticContent =
-  OnboardingPageContent(data: widget.data);
+  late final ValueNotifier<bool> _isHeroActive;
+  late final OnboardingPageContent _staticContent;
 
+  @override
+  void initState() {
+    super.initState();
+    _isHeroActive = ValueNotifier<bool>(false);
+    _staticContent = OnboardingPageContent(
+      data: widget.data,
+      heroActiveListenable: _isHeroActive,
+    );
+  }
 
+  @override
+  void dispose() {
+    _isHeroActive.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -319,12 +331,16 @@ class _AnimatedOnboardingPageState extends State<_AnimatedOnboardingPage> {
       child: _staticContent,
       builder: (context, child) {
         final double currentPage = widget.controller.hasClients
-            ? widget.controller.page ??
-            widget.controller.initialPage.toDouble()
+            ? widget.controller.page ?? widget.controller.initialPage.toDouble()
             : widget.controller.initialPage.toDouble();
-        final int basePage =
-        currentPage.floor().clamp(0, widget.pageCount - 1);
+        final int basePage = currentPage.floor().clamp(0, widget.pageCount - 1);
         final double pageOffset = currentPage - basePage;
+
+        final bool isHeroActive = widget.index == basePage ||
+            (basePage + 1 < widget.pageCount && widget.index == basePage + 1);
+        if (_isHeroActive.value != isHeroActive) {
+          _isHeroActive.value = isHeroActive;
+        }
 
         double opacity;
         if (widget.index == basePage) {
@@ -345,16 +361,15 @@ class _AnimatedOnboardingPageState extends State<_AnimatedOnboardingPage> {
         }
 
         double imageTranslateY;
-          if (widget.index == basePage) {
-            imageTranslateY = widget.lerpDouble(0, -50, pageOffset);
-          } else if (widget.index == basePage + 1) {
-            imageTranslateY = widget.lerpDouble(50, 0, pageOffset);
+        if (widget.index == basePage) {
+          imageTranslateY = widget.lerpDouble(0, -50, pageOffset);
+        } else if (widget.index == basePage + 1) {
+          imageTranslateY = widget.lerpDouble(50, 0, pageOffset);
         } else {
           imageTranslateY = 50;
         }
 
-        final OnboardingPageContent content =
-        child! as OnboardingPageContent;
+        final OnboardingPageContent content = child! as OnboardingPageContent;
         final Widget? hero = content.hero;
         final Widget textContent = content.textContent;
         final double spacing = ScreenScaler.s(40);

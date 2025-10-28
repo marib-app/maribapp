@@ -16,7 +16,8 @@ use App\Http\Middleware\InitializeApiMetrics;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CartShippingQuoteController;
 use App\Http\Controllers\OrderApiController;
-use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\Api\PaymentController as ApiPaymentController;
+use App\Http\Controllers\PaymentController as LegacyPaymentController;
 use App\Http\Controllers\Payments\PaymentWebhookController;
 use App\Http\Controllers\WifiCodeBatchController;
 use App\Http\Controllers\WifiNetworkController;
@@ -245,11 +246,10 @@ Route::prefix('wifi-cabin')
     Route::post('orders/{order}/collect-delivery', [OrderApiController::class, 'collectDelivery'])->whereNumber('order');
     Route::get('orders/{order}/invoice.pdf', [OrderApiController::class, 'invoice'])->whereNumber('order');
 
-    Route::post('payments/initiate', [PaymentController::class, 'initiate'])
+    Route::post('payments/initiate', [ApiPaymentController::class, 'initiate'])
         ->middleware('throttle:payments-initiate');
-        
-        Route::post('payments/confirm', [PaymentController::class, 'confirm']);
-    Route::post('payments/manual', [PaymentController::class, 'manual']);
+    Route::post('payments/confirm', [ApiPaymentController::class, 'confirm']);
+    Route::post('payments/manual', [LegacyPaymentController::class, 'manual']);
 
 
     Route::get('verification-fields', [ApiController::class, 'getVerificationFields']);

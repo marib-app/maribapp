@@ -29,6 +29,7 @@ class ServicePaymentService
     public const SUPPORTED_METHODS = [
         'wallet',
         'manual_bank',
+        'east_yemen_bank',
     ];
 
     /**

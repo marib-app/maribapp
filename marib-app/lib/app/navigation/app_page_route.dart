@@ -239,7 +239,7 @@ class _FadeBlurPageRoute<T> extends PageRouteBuilder<T> {
             end: isPushing ? 1.0 : 0.985,
           ).animate(eased);
 
-          final Widget transitionChild = FadeTransition(
+          return FadeTransition(
             opacity: fade,
             child: SlideTransition(
               position: slide,
@@ -250,36 +250,75 @@ class _FadeBlurPageRoute<T> extends PageRouteBuilder<T> {
             ),
           );
 
-          return AnimatedBuilder(
-            animation: eased,
-            child: transitionChild,
-            builder: (context, animatedChild) {
-              final double backdropStrength =
-              ((1 - eased.value).clamp(0.0, 1.0)).toDouble();
-              final double blurSigma = 6.0 * backdropStrength;
-              final double overlayOpacity = 0.12 * backdropStrength;
-
-              return Stack(
-                fit: StackFit.expand,
-                children: [
-                  ClipRect(
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(
-                        sigmaX: blurSigma,
-                        sigmaY: blurSigma,
-                      ),
-                      child: Container(
-                        color: Colors.black.withOpacity(overlayOpacity),
-                      ),
-                    ),
-                  ),
-                  animatedChild!,
-                ],
-              );
-            },
-          );
         },
   );
+
+
+
+  @override
+  Widget buildTransitions(
+      BuildContext context,
+      Animation<double> animation,
+      Animation<double> secondaryAnimation,
+      Widget child,
+      ) {
+    final Widget transitionedChild = super.buildTransitions(
+      context,
+      animation,
+      secondaryAnimation,
+      child,
+    );
+
+    if (opaque) {
+      return transitionedChild;
+    }
+
+    final bool isPushing = animation.status != AnimationStatus.reverse;
+    final Animation<double> progress =
+    isPushing ? animation : ReverseAnimation(animation);
+    final CurvedAnimation eased = CurvedAnimation(
+      parent: progress,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
+    );
+
+    return AnimatedBuilder(
+      animation: eased,
+      child: transitionedChild,
+      builder: (context, animatedChild) {
+        final double backdropStrength =
+        ((1 - eased.value).clamp(0.0, 1.0)).toDouble();
+        final double blurSigma = 6.0 * backdropStrength;
+        final Color baseBarrierColor = (barrierColor ?? Colors.black);
+        final double baseBarrierOpacity = barrierColor?.opacity ?? 0.12;
+        final double overlayOpacity = baseBarrierOpacity * backdropStrength;
+
+        Widget backdrop = Container(
+          color: baseBarrierColor.withOpacity(overlayOpacity),
+        );
+
+        if (blurSigma > 0) {
+          backdrop = ClipRect(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(
+                sigmaX: blurSigma,
+                sigmaY: blurSigma,
+              ),
+              child: backdrop,
+            ),
+          );
+        }
+
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            backdrop,
+            animatedChild ?? const SizedBox.shrink(),
+          ],
+        );
+      },
+    );
+  }
 }
 
 class _CustomPageRoute<T> extends PageRouteBuilder<T> {

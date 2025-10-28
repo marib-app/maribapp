@@ -570,20 +570,23 @@ extension _BankTransferScreenUi on _BankTransferScreenState {
             scale: pressed ? 0.98 : 1.0,
             duration: const Duration(milliseconds: 180),
             curve: Curves.easeOut,
-            decoration: BoxDecoration(
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? context.color.secondaryColor.withOpacity(.88)
-                  : Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: selected
-                    ? context.color.territoryColor
-                    : context.color.borderColor.withOpacity(.65),
-                width: selected ? 2 : 1,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOut,
+              decoration: BoxDecoration(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? context.color.secondaryColor.withOpacity(.88)
+                    : Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: selected
+                      ? context.color.territoryColor
+                      : context.color.borderColor.withOpacity(.65),
+                  width: selected ? 2 : 1,
+                ),
               ),
-            ),
-            padding: const EdgeInsets.all(12),
-            child: Row(
+              padding: const EdgeInsets.all(12),
+              child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Container(
@@ -726,6 +729,7 @@ extension _BankTransferScreenUi on _BankTransferScreenState {
             ),
           ),
         ),
+      ),
       ),
     );
   }

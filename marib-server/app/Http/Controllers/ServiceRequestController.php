@@ -12,6 +12,7 @@ use App\Services\NotificationService;
 use App\Services\BootstrapTableService;
 use App\Services\ResponseService;
 use App\Services\ServiceAuthorizationService;
+use App\Support\Payments\PaymentLabelService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -190,7 +191,7 @@ class ServiceRequestController extends Controller
                 if (Auth::user()->can('service-requests-list')) {
                     $operate .= BootstrapTableService::button(
                         'fa fa-eye',
-                        route('service.requests.show', $r->id),
+                        route('service.requests.review', $r->id),
                         ['btn-outline-primary'],
 
 
@@ -272,29 +273,7 @@ class ServiceRequestController extends Controller
             'service-requests-delete',
         ]);
 
-        $serviceRequest = ServiceRequest::with([
-                'service.category',
-                'user',
-            ])
-            ->withTrashed()
-            ->findOrFail($id);
-
-        $user = Auth::user();
-        if (!$user || !$this->serviceAuthorizationService->userCanManageService($user, $serviceRequest->service)) {
-            abort(403, __('You are not authorized to manage this service.'));
-        }
-
-        $payloadEntries = $this->normalizePayloadEntriesForView($serviceRequest->payload, true);
-        $attachmentEntries = array_values(array_filter($payloadEntries, static fn (array $entry): bool => $entry['is_file']));
-
-        return view('services.requests.show', [
-            'serviceRequest'    => $serviceRequest,
-            'service'           => $serviceRequest->service,
-            'category'          => optional($serviceRequest->service)->category,
-            'applicant'         => $serviceRequest->user,
-            'payloadEntries'    => $payloadEntries,
-            'attachmentEntries' => $attachmentEntries,
-        ]);
+        return redirect()->route('service.requests.review', $id);
     }
 
 
@@ -400,6 +379,72 @@ class ServiceRequestController extends Controller
         $hasPaymentContext = $manualPaymentRequest instanceof ManualPaymentRequest
             || $transaction instanceof PaymentTransaction;
 
+        $paymentLabels = [];
+
+        if ($manualPaymentRequest instanceof ManualPaymentRequest) {
+            $paymentLabels = PaymentLabelService::forManualPaymentRequest($manualPaymentRequest);
+        } elseif ($transaction instanceof PaymentTransaction) {
+            $paymentLabels = PaymentLabelService::forPaymentTransaction($transaction);
+        }
+
+        $payloadEntries = $this->normalizePayloadEntriesForView($serviceRequestModel->payload);
+        $fieldEntries = array_values(array_filter($payloadEntries, static function (array $entry): bool {
+            return empty($entry['is_file']);
+        }));
+        $attachmentEntries = array_values(array_filter($payloadEntries, static function (array $entry): bool {
+            return ! empty($entry['is_file']);
+        }));
+
+        $expectedAmountRaw = $manualPaymentRequest?->amount
+            ?? $transaction?->amount
+            ?? optional($serviceRequestModel->service)->price;
+
+        $expectedAmount = is_numeric($expectedAmountRaw) ? (float) $expectedAmountRaw : null;
+
+        $expectedCurrency = $manualPaymentRequest?->currency
+            ?? $transaction?->currency
+            ?? optional($serviceRequestModel->service)->currency
+            ?? config('app.currency', 'SAR');
+
+        if (is_string($expectedCurrency)) {
+            $expectedCurrency = strtoupper(trim($expectedCurrency));
+        }
+
+        $paymentInstruction = optional($serviceRequestModel->service)->price_note;
+
+        if (is_string($paymentInstruction)) {
+            $paymentInstruction = trim($paymentInstruction);
+            if ($paymentInstruction === '') {
+                $paymentInstruction = null;
+            }
+        } else {
+            $paymentInstruction = null;
+        }
+
+        if ($paymentInstruction === null && $manualPaymentRequest instanceof ManualPaymentRequest) {
+            $candidateInstruction = $manualPaymentRequest->user_note ?? null;
+            if (is_string($candidateInstruction)) {
+                $candidateInstruction = trim($candidateInstruction);
+                if ($candidateInstruction !== '') {
+                    $paymentInstruction = $candidateInstruction;
+                }
+            }
+        }
+
+        $actionFlags = [
+            'approve' => ($user?->can('service-requests-update') ?? false)
+                && $serviceRequestModel->status === 'review',
+            'reject' => ($user?->can('service-requests-update') ?? false)
+                && $serviceRequestModel->status === 'review',
+            'markPaid' => $canReviewManualPayment,
+            'refund' => ($user?->can('manual-payments-review') ?? false)
+                && $serviceRequestModel->payment_status === 'paid',
+        ];
+
+        $paymentStatusLabel = $serviceRequestModel->payment_status
+            ? __($serviceRequestModel->payment_status)
+            : __('Not provided');
+
         return view('services.requests.review', [
             'serviceRequest' => $serviceRequestModel,
             'service' => $serviceRequestModel->service,
@@ -412,6 +457,15 @@ class ServiceRequestController extends Controller
             'timelineEndpoint' => $timelineEndpoint,
             'canReviewPayment' => $canReviewManualPayment,
             'hasPaymentContext' => $hasPaymentContext,
+            'paymentLabels' => $paymentLabels,
+            'payloadEntries' => $payloadEntries,
+            'fieldEntries' => $fieldEntries,
+            'attachmentEntries' => $attachmentEntries,
+            'expectedAmount' => $expectedAmount,
+            'expectedCurrency' => $expectedCurrency,
+            'paymentInstruction' => $paymentInstruction,
+            'paymentStatusLabel' => $paymentStatusLabel,
+            'actionFlags' => $actionFlags,
         ]);
     }
 
@@ -459,7 +513,7 @@ class ServiceRequestController extends Controller
                     $statusLabel = ucfirst($r->status);
                     $body  = 'تم تحديث حالة طلبك إلى: ' . $statusLabel;
 
-                    $deeplink = route('service.requests.show', $r->getKey());
+                    $deeplink = route('service.requests.review', $r->getKey());
 
                     $dataPayload = [
                         'service_request_id' => $r->getKey(),

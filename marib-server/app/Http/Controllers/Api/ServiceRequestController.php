@@ -360,7 +360,7 @@ class ServiceRequestController extends Controller
         }
 
 
-        $deeplink = route('service.requests.show', $serviceRequest->getKey());
+        $deeplink = route('service.requests.review', $serviceRequest->getKey());
         $notificationPayload = [
             'service_request_id' => $serviceRequest->getKey(),
             'status' => $serviceRequest->status,

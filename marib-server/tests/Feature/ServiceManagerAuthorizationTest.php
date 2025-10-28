@@ -108,7 +108,7 @@ class ServiceManagerAuthorizationTest extends TestCase
         $managedRequest = $this->createServiceRequest($managedService, $customer);
         $this->createServiceRequest($otherService, $customer);
 
-        $response = $this->actingAs($manager)->get(route('service.requests.show', ['id' => 'list', 'limit' => 'all']));
+        $response = $this->actingAs($manager)->get(route('service.requests.datatable', ['limit' => 'all']));
 
         $response->assertOk();
         $response->assertJsonPath('total', 1);

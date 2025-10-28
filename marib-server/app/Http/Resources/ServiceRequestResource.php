@@ -52,7 +52,7 @@ class ServiceRequestResource extends JsonResource
 
     private function stringValue(string|array $keys): ?string
     {
-        $value = Arr::get($this->resource, $keys);
+        $value = $this->valueForKeys($keys);
 
         if (! is_string($value)) {
             return null;
@@ -65,7 +65,7 @@ class ServiceRequestResource extends JsonResource
 
     private function integerValue(string|array $keys): ?int
     {
-        $value = Arr::get($this->resource, $keys);
+        $value = $this->valueForKeys($keys);
 
         if (! is_numeric($value)) {
             return null;
@@ -76,7 +76,7 @@ class ServiceRequestResource extends JsonResource
 
     private function numericValue(string|array $keys): ?float
     {
-        $value = Arr::get($this->resource, $keys);
+        $value = $this->valueForKeys($keys);
 
         if (! is_numeric($value)) {
             return null;
@@ -87,7 +87,7 @@ class ServiceRequestResource extends JsonResource
 
     private function dateTimeValue(string $key): ?string
     {
-        $value = Arr::get($this->resource, $key);
+        $value = $this->valueForKeys($key);
 
         if ($value instanceof \DateTimeInterface) {
             return $value->format(\DateTimeInterface::ATOM);
@@ -101,5 +101,23 @@ class ServiceRequestResource extends JsonResource
 
         return null;
     }
-}
 
+    private function valueForKeys(string|array $keys): mixed
+    {
+        $keysList = is_array($keys) ? $keys : [$keys];
+
+        foreach ($keysList as $key) {
+            if (! is_string($key) || $key === '') {
+                continue;
+            }
+
+            $value = Arr::get($this->resource, $key);
+
+            if ($value !== null) {
+                return $value;
+            }
+        }
+
+        return null;
+    }
+}

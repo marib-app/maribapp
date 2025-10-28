@@ -7,12 +7,11 @@ import 'route_motion.dart';
 /// according to the application's motion preferences.
 class MotionSettingsController {
   MotionSettingsController._()
-      : _defaultComposer =  RouteMotionComposer(
-    pattern: AppMotionPattern.sharedAxis,
-  );
+      : _defaultComposer = RouteMotionComposer(
+          pattern: AppMotionPattern.hero,
+        );
 
-  static final MotionSettingsController instance =
-  MotionSettingsController._();
+  static final MotionSettingsController instance = MotionSettingsController._();
 
   RouteMotionComposer _defaultComposer;
   AppMotionPattern? _preferredPattern;
@@ -50,8 +49,8 @@ class MotionSettingsController {
 
   /// Restores the controller to its initial state.
   void reset() {
-    _defaultComposer =  RouteMotionComposer(
-      pattern: AppMotionPattern.sharedAxis,
+    _defaultComposer = RouteMotionComposer(
+      pattern: AppMotionPattern.hero,
     );
     clearOverrides();
   }
@@ -89,9 +88,9 @@ class MotionSettingsController {
 /// consistent page transitions according to global motion preferences.
 class MotionPageTransitionsBuilder extends PageTransitionsBuilder {
   const MotionPageTransitionsBuilder({
-    this.defaultPattern = AppMotionPattern.sharedAxis,
+    this.defaultPattern = AppMotionPattern.hero,
     this.sharedAxisType = SharedAxisTransitionType.scaled,
-    this.pushDuration = const Duration(milliseconds: 200),
+    this.pushDuration = const Duration(milliseconds: 220),
     Duration? popDuration,
     Duration? refreshDuration,
     this.pushCurve = Curves.easeOutCubic,
@@ -131,12 +130,12 @@ class MotionPageTransitionsBuilder extends PageTransitionsBuilder {
 
   @override
   Widget buildTransitions<T>(
-      PageRoute<T> route,
-      BuildContext context,
-      Animation<double> animation,
-      Animation<double> secondaryAnimation,
-      Widget child,
-      ) {
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
     if (route.settings.name == Navigator.defaultRouteName) {
       return child;
     }

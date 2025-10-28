@@ -10013,6 +10013,12 @@ public function storeRequestDevice(Request $request)
 
             $this->applyManualPaymentRequestVisibilityScope($query, (int) Auth::id());
 
+            $query->where(static function ($builder) {
+                $builder
+                    ->whereNull('manual_payment_requests.payable_type')
+                    ->orWhere('manual_payment_requests.payable_type', '!=', ServiceRequest::class);
+            });
+
             $query
                 ->when($status, static function ($builder, string $statusValue) {
                     $builder->where('manual_payment_requests.status', $statusValue);

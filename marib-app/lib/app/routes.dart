@@ -61,6 +61,7 @@ import 'package:marib/ui/screens/cart/cart.dart';
 import 'package:marib/ui/screens/transaction/transaction_screen.dart';
 
 import 'package:marib/app/navigation/app_page_route.dart';
+import 'package:marib/app/navigation/motion/route_motion.dart';
 
 import 'package:marib/ui/screens/settings/contact_us.dart';
 import 'package:marib/ui/screens/settings/notification_detail.dart';
@@ -288,8 +289,9 @@ class Routes {
       String itemSlug = routeSettings.name!.split('/').last;
       return AppPageRoute.build(
         settings: routeSettings,
-        transition: AppPageRouteTransition.fadeBlur,
-        forwardDuration: const Duration(milliseconds: 180),
+        transition: AppPageRouteTransition.motion,
+        motionPattern: AppMotionPattern.hero,
+        forwardDuration: const Duration(milliseconds: 220),
         builder: (context) {
           return FutureBuilder<DataOutput<ItemModel>>(
             future: ItemRepository().fetchItemFromItemSlug(itemSlug),
@@ -340,8 +342,9 @@ class Routes {
       case mapSearch:
         return AppPageRoute.build(
           settings: routeSettings,
-          transition: AppPageRouteTransition.fadeBlur,
-          forwardDuration: const Duration(milliseconds: 180),
+          transition: AppPageRouteTransition.motion,
+          motionPattern: AppMotionPattern.hero,
+          forwardDuration: const Duration(milliseconds: 220),
           builder: (_) => const MapSearchScreen(),
         );
 
@@ -606,8 +609,9 @@ Route<T> _buildFadeBlurOverlay<T>({
 }) {
   return AppPageRoute.build(
     settings: settings,
-    transition: AppPageRouteTransition.fadeBlur,
-    forwardDuration: const Duration(milliseconds: 180),
+    transition: AppPageRouteTransition.motion,
+    motionPattern: AppMotionPattern.hero,
+    forwardDuration: const Duration(milliseconds: 220),
     builder: builder,
     barrierDismissible: barrierDismissible,
     barrierColor: Colors.black.withOpacity(0.2),

@@ -1,12 +1,12 @@
 import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 
-enum AppMotionPattern { sharedAxis, fadeThrough, platform }
+enum AppMotionPattern { sharedAxis, fadeThrough, hero, platform }
 
 enum _RouteMotionPhase { push, pop, refresh }
 
 class RouteMotionComposer {
-   RouteMotionComposer({
+  RouteMotionComposer({
     required this.pattern,
     this.sharedAxisType = SharedAxisTransitionType.scaled,
     Duration? pushDuration,
@@ -21,17 +21,17 @@ class RouteMotionComposer {
     this.modal = false,
     this.reducedMotion = false,
   })  : pushDuration = pushDuration ?? const Duration(milliseconds: 200),
-        popDuration = popDuration ?? pushDuration ?? const Duration(milliseconds: 200),
-        refreshDuration =
-            refreshDuration ?? pushDuration ?? const Duration(milliseconds: 200),
+        popDuration =
+            popDuration ?? pushDuration ?? const Duration(milliseconds: 200),
+        refreshDuration = refreshDuration ??
+            pushDuration ??
+            const Duration(milliseconds: 200),
         pushCurve = pushCurve,
-        pushReverseCurve =
-            pushReverseCurveOverride ?? pushCurve.flipped,
+        pushReverseCurve = pushReverseCurveOverride ?? pushCurve.flipped,
         popCurve =
             popCurveOverride ?? pushReverseCurveOverride ?? pushCurve.flipped,
-        popReverseCurve = popReverseCurveOverride ??
-            popCurveOverride ??
-            pushCurve,
+        popReverseCurve =
+            popReverseCurveOverride ?? popCurveOverride ?? pushCurve,
         refreshCurve = refreshCurveOverride ?? pushCurve,
         refreshReverseCurve = refreshReverseCurveOverride ??
             refreshCurveOverride ??
@@ -95,12 +95,12 @@ class RouteMotionComposer {
       reducedMotion ? Duration.zero : refreshDuration;
 
   Widget buildForPush(
-      BuildContext context,
-      Animation<double> animation,
-      Animation<double> secondaryAnimation,
-      Widget child, {
-        PageRoute<dynamic>? route,
-      }) {
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child, {
+    PageRoute<dynamic>? route,
+  }) {
     return _buildTransition(
       context,
       animation,
@@ -112,12 +112,12 @@ class RouteMotionComposer {
   }
 
   Widget buildForPop(
-      BuildContext context,
-      Animation<double> animation,
-      Animation<double> secondaryAnimation,
-      Widget child, {
-        PageRoute<dynamic>? route,
-      }) {
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child, {
+    PageRoute<dynamic>? route,
+  }) {
     return _buildTransition(
       context,
       animation,
@@ -129,12 +129,12 @@ class RouteMotionComposer {
   }
 
   Widget buildForRefresh(
-      BuildContext context,
-      Animation<double> animation,
-      Animation<double> secondaryAnimation,
-      Widget child, {
-        PageRoute<dynamic>? route,
-      }) {
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child, {
+    PageRoute<dynamic>? route,
+  }) {
     return _buildTransition(
       context,
       animation,
@@ -146,13 +146,13 @@ class RouteMotionComposer {
   }
 
   Widget _buildTransition(
-      BuildContext context,
-      Animation<double> animation,
-      Animation<double> secondaryAnimation,
-      Widget child,
-      _RouteMotionPhase phase, {
-        PageRoute<dynamic>? route,
-      }) {
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+    _RouteMotionPhase phase, {
+    PageRoute<dynamic>? route,
+  }) {
     if (_shouldReduceMotion(context)) {
       return child;
     }
@@ -178,29 +178,35 @@ class RouteMotionComposer {
           secondaryAnimation: _secondaryAnimation(secondaryAnimation, phase),
           child: child,
         );
+      case AppMotionPattern.hero:
+        return _HeroMotionTransition(
+          primary: _primaryAnimation(animation, phase),
+          secondary: _secondaryAnimation(secondaryAnimation, phase),
+          phase: phase,
+          child: child,
+        );
       case AppMotionPattern.platform:
-        final routeForTransition = route ??
-            ModalRoute.of(context);
+        final routeForTransition = route ?? ModalRoute.of(context);
         final pageRoute = routeForTransition is PageRoute<dynamic>
             ? routeForTransition
             : null;
         if (pageRoute != null) {
           return Theme.of(context).pageTransitionsTheme.buildTransitions(
-            pageRoute,
-            context,
-            _primaryAnimation(animation, phase),
-            _secondaryAnimation(secondaryAnimation, phase),
-            child,
-          );
+                pageRoute,
+                context,
+                _primaryAnimation(animation, phase),
+                _secondaryAnimation(secondaryAnimation, phase),
+                child,
+              );
         }
         return child;
     }
   }
 
   Animation<double> _primaryAnimation(
-      Animation<double> animation,
-      _RouteMotionPhase phase,
-      ) {
+    Animation<double> animation,
+    _RouteMotionPhase phase,
+  ) {
     switch (phase) {
       case _RouteMotionPhase.push:
         return CurvedAnimation(
@@ -224,9 +230,9 @@ class RouteMotionComposer {
   }
 
   Animation<double> _secondaryAnimation(
-      Animation<double> animation,
-      _RouteMotionPhase phase,
-      ) {
+    Animation<double> animation,
+    _RouteMotionPhase phase,
+  ) {
     switch (phase) {
       case _RouteMotionPhase.push:
         return CurvedAnimation(
@@ -260,5 +266,61 @@ class RouteMotionComposer {
     }
 
     return mediaQuery.disableAnimations || mediaQuery.accessibleNavigation;
+  }
+}
+
+class _HeroMotionTransition extends StatelessWidget {
+  const _HeroMotionTransition({
+    required this.primary,
+    required this.secondary,
+    required this.phase,
+    required this.child,
+  });
+
+  final Animation<double> primary;
+  final Animation<double> secondary;
+  final _RouteMotionPhase phase;
+  final Widget child;
+
+  static const double _incomingYOffset = 28.0;
+  static const double _outgoingYOffset = 22.0;
+  static const double _minScale = 0.92;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: Listenable.merge(<Listenable>[primary, secondary]),
+      child: child,
+      builder: (BuildContext context, Widget? child) {
+        final double t = primary.value.clamp(0.0, 1.0);
+        final bool isPushing = phase == _RouteMotionPhase.push;
+
+        final double translateY =
+            isPushing ? (1 - t) * _incomingYOffset : (1 - t) * _outgoingYOffset;
+
+        final double scale = _minScale + (1 - _minScale) * t;
+
+        final double backgroundLift =
+            secondary.value.clamp(0.0, 1.0) * 8.0 * (isPushing ? -1 : 1);
+
+        Widget transformed = Transform.translate(
+          offset: Offset(0, translateY),
+          child: Transform.scale(
+            scale: scale,
+            alignment: Alignment.center,
+            child: child,
+          ),
+        );
+
+        if (secondary.value != 0.0) {
+          transformed = Transform.translate(
+            offset: Offset(0, backgroundLift),
+            child: transformed,
+          );
+        }
+
+        return transformed;
+      },
+    );
   }
 }

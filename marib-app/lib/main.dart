@@ -65,8 +65,11 @@ class App extends StatefulWidget {
 }
 
 class _AppState extends State<App> {
+  late final HeroController _heroController;
+
   @override
   void initState() {
+    _heroController = MaterialApp.createMaterialHeroController();
     context.read<LanguageCubit>().loadCurrentLanguage();
 
     AppTheme currentTheme = HiveUtils.getCurrentTheme();
@@ -123,13 +126,16 @@ class _AppState extends State<App> {
               child: Directionality(
                 textDirection: direction,
                 //This will convert app direction according to language
-                child: DevicePreview(
-                  enabled: false,
+                child: HeroControllerScope(
+                  controller: _heroController,
+                  child: DevicePreview(
+                    enabled: false,
 
-                  /// Turn on this if you want to test the app in different screen sizes
-                  builder: (context) {
-                    return child!;
-                  },
+                    /// Turn on this if you want to test the app in different screen sizes
+                    builder: (context) {
+                      return child!;
+                    },
+                  ),
                 ),
               ),
             ); /*MediaQuery(

@@ -6,8 +6,8 @@ import 'motion/route_motion.dart';
 class AppPageRoute {
   AppPageRoute._();
 
-  static const Duration _defaultDuration = Duration(milliseconds: 180);
-  static const Duration _defaultBlurDuration = Duration(milliseconds: 180);
+  static const Duration _defaultDuration = Duration(milliseconds: 220);
+  static const Duration _defaultBlurDuration = Duration(milliseconds: 220);
 
   static Duration _durationForTransition(AppPageRouteTransition transition) {
     switch (transition) {
@@ -31,7 +31,7 @@ class AppPageRoute {
     Curve curve = Curves.easeOutQuart,
     bool maintainState = true,
     bool? opaque,
-    AppMotionPattern motionPattern = AppMotionPattern.sharedAxis,
+    AppMotionPattern motionPattern = AppMotionPattern.hero,
     SharedAxisTransitionType sharedAxisType = SharedAxisTransitionType.scaled,
     bool? reduceMotion,
     Duration? reverseDuration,
@@ -125,7 +125,7 @@ class AppPageRoute {
       builder: builder,
       settings: settings,
       transition: AppPageRouteTransition.fadeBlur,
-      forwardDuration: forwardDuration ?? const Duration(milliseconds: 180),
+      forwardDuration: forwardDuration ?? const Duration(milliseconds: 220),
       reverseDuration: reverseDuration,
       barrierDismissible: barrierDismissible,
       barrierColor: barrierColor ?? Colors.black.withOpacity(0.2),
@@ -225,20 +225,20 @@ class _FadeBlurPageRoute<T> extends PageRouteBuilder<T> {
           pageBuilder: (context, animation, secondaryAnimation) {
             return builder(context);
           },
-        transitionsBuilder:
-        customTransitionsBuilder ?? _passThroughTransitionsBuilder,
-      );
+          transitionsBuilder:
+              customTransitionsBuilder ?? _passThroughTransitionsBuilder,
+        );
 
   final RouteTransitionsBuilder? _customTransitionsBuilder;
   final Curve _pushCurve;
   final Curve _popCurve;
 
   static Widget _passThroughTransitionsBuilder(
-      BuildContext context,
-      Animation<double> animation,
-      Animation<double> secondaryAnimation,
-      Widget child,
-      ) {
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
     return child;
   }
 
@@ -258,13 +258,11 @@ class _FadeBlurPageRoute<T> extends PageRouteBuilder<T> {
       );
     }
 
-
     final CurvedAnimation primaryCurve = CurvedAnimation(
       parent: animation,
       curve: _pushCurve,
       reverseCurve: _popCurve,
     );
-
 
     Widget transitionedChild = SlideTransition(
       position: Tween<Offset>(
@@ -291,7 +289,6 @@ class _FadeBlurPageRoute<T> extends PageRouteBuilder<T> {
     }
 
     return transitionedChild;
-
   }
 }
 

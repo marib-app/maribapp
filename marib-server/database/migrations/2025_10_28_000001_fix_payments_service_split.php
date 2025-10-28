@@ -12,9 +12,6 @@ return new class extends Migration
     public function up(): void
     {
         if (Schema::hasTable('payment_transactions')) {
-            $this->normalizePaymentTransactions();
-
-
             Schema::table('payment_transactions', function (Blueprint $table): void {
                 if ($this->indexExists('payment_transactions', 'payment_transactions_payment_gateway_order_id_unique')) {
                     $table->dropUnique('payment_transactions_payment_gateway_order_id_unique');
@@ -147,57 +144,4 @@ return new class extends Migration
 
         return isset($result[0]) && (int) $result[0]->aggregate > 0;
     }
-
-
-    private function normalizePaymentTransactions(): void
-    {
-        $connection = DB::table('payment_transactions')->getConnection();
-
-        $connection->statement(<<<'SQL'
-            UPDATE `payment_transactions`
-            SET `payment_status` = NULL
-            WHERE `payment_status` IS NULL
-                OR TRIM(`payment_status`) = ''
-                OR LOWER(TRIM(`payment_status`)) = 'null'
-        SQL);
-
-        $connection->statement(<<<'SQL'
-            UPDATE `payment_transactions`
-            SET `payment_status` = LOWER(TRIM(`payment_status`))
-            WHERE `payment_status` IS NOT NULL
-        SQL);
-
-        $connection->statement(<<<'SQL'
-            UPDATE `payment_transactions`
-            SET `payment_status` = 'succeed'
-            WHERE `payment_status` IN ('success', 'successful', 'succeeded', 'completed', 'complete', 'done', 'paid', 'settled')
-        SQL);
-
-        $connection->statement(<<<'SQL'
-            UPDATE `payment_transactions`
-            SET `payment_status` = 'failed'
-            WHERE `payment_status` IN ('fail', 'failure', 'failed', 'error', 'cancelled', 'canceled', 'declined', 'void', 'rejected', 'refunded')
-        SQL);
-
-        $connection->statement(<<<'SQL'
-            UPDATE `payment_transactions`
-            SET `payment_status` = 'pending'
-            WHERE `payment_status` IN (
-                'pending',
-                'processing',
-                'initiated',
-                'in_progress',
-                'in-progress',
-                'in progress',
-                'open',
-                'waiting',
-                'awaiting',
-                'new',
-                'on_hold',
-                'on-hold',
-                'on hold'
-            )
-        SQL);
-    }
-
 };

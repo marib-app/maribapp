@@ -18,7 +18,6 @@ import 'package:marib/ui/screens/item/add_item_screen/custom_filed_structure/cus
 import 'package:marib/ui/screens/widgets/dynamic_field/dynamic_field.dart'
     as dynamic_fields;
 import 'package:marib/data/repositories/service_request_repository.dart';
-import 'package:marib/ui/screens/service/details/service_request_details_screen.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/api.dart' show ApiHttpException;
 import 'package:marib/utils/hive_utils.dart';
@@ -1179,25 +1178,6 @@ class _ServiceAddMoreDetailsScreenState
       context,
       'Request submitted successfully.',
     );
-
-    final int? subjectId = _flexInt(subject?['id']);
-    final String? subjectType =
-        _stringify(subject?['type'])?.toLowerCase().trim();
-    final String? nextResource =
-        _stringify(next?['resource'])?.toLowerCase().trim();
-
-    if (subjectId != null &&
-        subjectType == 'service_request' &&
-        nextResource == 'service_requests') {
-      Navigator.of(context).pushReplacement(
-        ServiceRequestDetailsScreen.route(
-          serviceRequestId: subjectId,
-          subject: subject,
-          next: next,
-        ),
-      );
-      return;
-    }
 
     if (Navigator.of(context).canPop()) {
       Navigator.of(context).pop();

@@ -72,7 +72,6 @@ import 'package:marib/ui/screens/classified_ads/classified_screen.dart';
 import 'package:marib/ui/screens/classified_ads/classified_screen2.dart';
 import 'package:marib/ui/screens/classified_ads/classified_screen3.dart';
 import 'package:marib/ui/screens/classified_ads/units/service_payment_page.dart';
-import 'package:marib/ui/screens/service/details/service_request_details_screen.dart';
 import 'package:marib/ui/screens/home_screen/section/section_screen/section_screen.dart';
 
 import 'package:marib/ui/screens/item/purchase_options/product_purchase_options_screen.dart';
@@ -84,7 +83,6 @@ import 'package:marib/ui/screens/item/add_item_screen/widgets/success_item_scree
 import 'package:marib/ui/screens/item/add_item_screen/select_category.dart';
 
 //
-
 
 import 'package:marib/ui/screens/item/ad_details_screen/ad_details_screen.dart';
 import 'package:marib/ui/screens/user_profile/show_profile.dart';
@@ -119,7 +117,6 @@ class Routes {
   static const classifiedScreenRoute2 = 'classifiedScreen2Route';
   static const classifiedScreenRoute3 = 'classifiedScreen3Route';
   static const servicePaymentPage = '/service-payment';
-  static const serviceRequestDetailsScreen = '/service-requests/details';
   static const myReviewsScreen = '/myReviewsScreenRoute';
   static const serviceAddMoreDetails = '/service-add-more-details';
 
@@ -274,7 +271,6 @@ class Routes {
       if (arguments == null) {
         return AppPageRoute.build(
           settings: routeSettings,
-
           builder: (context) => ErrorScreen(),
         );
       }
@@ -334,7 +330,6 @@ class Routes {
       case productReviewScreen:
         return ProductReviewScreen.route(routeSettings);
 
-
 // ✅ جديد: خدمات أخرى
       case otherServices:
         return OtherServicesScreen.route(routeSettings);
@@ -351,63 +346,6 @@ class Routes {
         );
 
       // الدفع
-      case Routes.serviceRequestDetailsScreen:
-        {
-          int? parseInt(dynamic value) {
-            if (value == null) return null;
-            if (value is int) return value;
-            if (value is num) return value.toInt();
-            if (value is String) {
-              final String trimmed = value.trim();
-              if (trimmed.isEmpty) return null;
-              return int.tryParse(trimmed);
-            }
-            return null;
-          }
-
-          Map<String, dynamic>? mapOrNull(dynamic value) {
-            if (value is Map<String, dynamic>) {
-              return Map<String, dynamic>.from(value);
-            }
-            if (value is Map) {
-              return value.map(
-                (dynamic key, dynamic val) =>
-                    MapEntry<String, dynamic>(key.toString(), val),
-              );
-            }
-            return null;
-          }
-
-          final dynamic rawArgs = routeSettings.arguments;
-          final Map<String, dynamic> args = rawArgs is Map<String, dynamic>
-              ? Map<String, dynamic>.from(rawArgs)
-              : rawArgs is Map
-                  ? rawArgs.map(
-                      (dynamic key, dynamic value) =>
-                          MapEntry<String, dynamic>(key.toString(), value),
-                    )
-                  : <String, dynamic>{};
-
-          final int? requestId = parseInt(
-            args['service_request_id'] ??
-                args['serviceRequestId'] ??
-                args['id'],
-          );
-
-          if (requestId == null || requestId <= 0) {
-            return AppPageRoute.buildOverlay(
-              settings: routeSettings,
-              builder: (_) => const Scaffold(),
-            );
-          }
-
-          return ServiceRequestDetailsScreen.route(
-            serviceRequestId: requestId,
-            subject: mapOrNull(args['subject']),
-            next: mapOrNull(args['next']),
-          );
-        }
-
       case Routes.servicePaymentPage:
         return ServicePaymentPage.route(routeSettings);
 

@@ -699,10 +699,6 @@ class Api {
 
   static String serviceRequestsCreateApi = "service-requests";
   static String serviceRequestsAlternativeCreateApi = "services/requests";
-  static String serviceRequestShowApi(int id) => "service-requests/$id";
-  static String serviceRequestPurchaseOptionsApi(int id) =>
-      "service-requests/$id/purchase-options";
-
   static String myServicesApi = "my-services";
 
   static String myServiceManageApi(int id) => "my-services/$id";

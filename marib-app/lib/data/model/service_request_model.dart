@@ -179,18 +179,29 @@ class ServiceRequestModel {
       map['request_number'] ?? map['requestNumber'] ?? map['number'],
     );
 
+    Map<String, dynamic>? serviceMap;
+    if (map['service'] is Map<String, dynamic>) {
+      serviceMap =
+          Map<String, dynamic>.from(map['service'] as Map<String, dynamic>);
+    } else if (map['service'] is Map) {
+      serviceMap = (map['service'] as Map).map(
+        (dynamic key, dynamic value) =>
+            MapEntry<String, dynamic>(key.toString(), value),
+      );
+    }
+
     final double? amount = parseNullableDouble(
       map['amount'] ??
-          (map['service'] is Map ? map['service']['price'] : null) ??
-          (payload is Map ? payload['amount'] : null),
+          (serviceMap != null ? serviceMap['price'] : null) ??
+          (payload?['amount']),
     );
 
     String? currency = parseString(
       map['currency'] ??
           map['currency_code'] ??
           map['currencyCode'] ??
-          (map['service'] is Map ? map['service']['currency'] : null) ??
-          (payload is Map ? payload['currency'] : null),
+          (serviceMap != null ? serviceMap['currency'] : null) ??
+          (payload?['currency']),
     );
 
     currency = currency?.toUpperCase();

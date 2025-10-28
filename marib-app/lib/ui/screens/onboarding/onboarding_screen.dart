@@ -7,6 +7,7 @@ import 'widgets/onboarding_dots.dart';
 import 'widgets/onboarding_hint.dart';
 import 'widgets/onboarding_page.dart';
 import 'widgets/onboarding_start_button.dart';
+import 'models/onboarding_page_data.dart';
 
 
 class OnboardingScreen extends StatefulWidget {

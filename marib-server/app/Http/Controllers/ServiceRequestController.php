@@ -340,6 +340,18 @@ class ServiceRequestController extends Controller
                 ->first();
         }
 
+
+        if (! $manualPaymentRequest instanceof ManualPaymentRequest) {
+            $manualPaymentRequest = ManualPaymentRequest::query()
+                ->with($manualPaymentRelations)
+                ->where('payable_type', ServiceRequest::class)
+                ->where('payable_id', $serviceRequestModel->getKey())
+                ->orderByDesc('id')
+                ->first();
+        }
+
+
+
         if ($manualPaymentRequest instanceof ManualPaymentRequest) {
             $manualPaymentRequest = $this->loadManualPaymentRequestRelations($manualPaymentRequest);
 

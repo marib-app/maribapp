@@ -5,6 +5,9 @@ class ServiceRequestModel {
   final String status;
   final int? serviceId;
   final String? serviceTitle;
+  final String? requestNumber;
+  final double? amount;
+  final String? currency;
   final String? note;
   final DateTime? createdAt;
   final Map<String, dynamic>? payload;
@@ -16,6 +19,9 @@ class ServiceRequestModel {
     required this.status,
     this.serviceId,
     this.serviceTitle,
+    this.requestNumber,
+    this.amount,
+    this.currency,
     this.note,
     this.createdAt,
     this.payload,
@@ -60,6 +66,17 @@ class ServiceRequestModel {
       if (value is num) return value.toInt();
       if (value is String && value.trim().isNotEmpty) {
         return int.tryParse(value.trim());
+      }
+      return null;
+    }
+
+    double? parseNullableDouble(dynamic value) {
+      if (value == null) return null;
+      if (value is double) return value;
+      if (value is int) return value.toDouble();
+      if (value is num) return value.toDouble();
+      if (value is String && value.trim().isNotEmpty) {
+        return double.tryParse(value.trim());
       }
       return null;
     }
@@ -158,6 +175,26 @@ class ServiceRequestModel {
       map['payload'] ?? map['data'] ?? map['fields'],
     );
 
+    final String? requestNumber = parseString(
+      map['request_number'] ?? map['requestNumber'] ?? map['number'],
+    );
+
+    final double? amount = parseNullableDouble(
+      map['amount'] ??
+          (map['service'] is Map ? map['service']['price'] : null) ??
+          (payload is Map ? payload['amount'] : null),
+    );
+
+    String? currency = parseString(
+      map['currency'] ??
+          map['currency_code'] ??
+          map['currencyCode'] ??
+          (map['service'] is Map ? map['service']['currency'] : null) ??
+          (payload is Map ? payload['currency'] : null),
+    );
+
+    currency = currency?.toUpperCase();
+
     final String? paymentStatus = parseString(
       map['payment_status'] ??
           map['paymentStatus'] ??
@@ -178,6 +215,9 @@ class ServiceRequestModel {
       status: status,
       serviceId: serviceId,
       serviceTitle: serviceTitle,
+      requestNumber: requestNumber,
+      amount: amount,
+      currency: currency,
       note: note,
       createdAt: createdAt,
       payload: payload,

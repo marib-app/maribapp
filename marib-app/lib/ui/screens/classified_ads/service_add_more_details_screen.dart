@@ -1397,6 +1397,34 @@ class _ServiceAddMoreDetailsScreenState
     return handled;
   }
 
+  Map<String, dynamic>? _extractSubjectFromResult(dynamic value) {
+    if (value is ManualPaymentSubmissionResult) {
+      return value.subject;
+    }
+
+    final Map<String, dynamic> map = _normalizeMap(value);
+    if (map.isEmpty) {
+      return null;
+    }
+
+    final Map<String, dynamic> subject = _normalizeMap(map['subject']);
+    return subject.isEmpty ? null : subject;
+  }
+
+  Map<String, dynamic>? _extractNextFromResult(dynamic value) {
+    if (value is ManualPaymentSubmissionResult) {
+      return value.next;
+    }
+
+    final Map<String, dynamic> map = _normalizeMap(value);
+    if (map.isEmpty) {
+      return null;
+    }
+
+    final Map<String, dynamic> next = _normalizeMap(map['next']);
+    return next.isEmpty ? null : next;
+  }
+
   Map<String, dynamic> _normalizeMap(dynamic value) {
     if (value is Map<String, dynamic>) {
       return Map<String, dynamic>.from(value);

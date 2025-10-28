@@ -174,6 +174,39 @@ class ServiceRequestRepository {
     throw ApiException('invalid-response');
   }
 
+  Future<ServiceRequestModel> fetchRequest({required int id}) async {
+    final dynamic response = await Api.get(
+      url: Api.serviceRequestShowApi(id),
+    );
+
+    return _parseResponse(response);
+  }
+
+  Future<Map<String, dynamic>> fetchPurchaseOptions({required int id}) async {
+    final dynamic response = await Api.get(
+      url: Api.serviceRequestPurchaseOptionsApi(id),
+    );
+
+    Map<String, dynamic> _ensureMap(dynamic value) {
+      if (value is Map<String, dynamic>) {
+        return Map<String, dynamic>.from(value);
+      }
+      if (value is Map) {
+        return value.map(
+          (dynamic key, dynamic val) =>
+              MapEntry<String, dynamic>(key.toString(), val),
+        );
+      }
+      return <String, dynamic>{};
+    }
+
+    final Map<String, dynamic> map = _ensureMap(response);
+    final Map<String, dynamic> data =
+        map.containsKey('data') ? _ensureMap(map['data']) : map;
+
+    return _ensureMap(data);
+  }
+
   Future<ServiceRequestPage> fetchRequests({
     String status = 'review',
     int page = 1,

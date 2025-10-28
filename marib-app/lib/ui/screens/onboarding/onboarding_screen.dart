@@ -306,16 +306,37 @@ class _AnimatedOnboardingPage extends StatefulWidget {
 
 class _AnimatedOnboardingPageState extends State<_AnimatedOnboardingPage> {
   late final ValueNotifier<bool> _isHeroActive;
-  late final OnboardingPageContent _staticContent;
+  late OnboardingPageContent _staticContent;
+  late CardPlanetData _currentData;
+
+  OnboardingPageContent _createStaticContent(CardPlanetData data) {
+    return OnboardingPageContent(
+      data: data,
+      heroActiveListenable: _isHeroActive,
+    );
+  }
+
 
   @override
   void initState() {
     super.initState();
     _isHeroActive = ValueNotifier<bool>(false);
-    _staticContent = OnboardingPageContent(
-      data: widget.data,
-      heroActiveListenable: _isHeroActive,
-    );
+    _currentData = widget.data;
+    _staticContent = _createStaticContent(_currentData);
+  }
+
+  @override
+  void didUpdateWidget(covariant _AnimatedOnboardingPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.data, widget.data)) {
+      final CardPlanetData newData = widget.data;
+      if (!identical(_currentData, newData)) {
+        _currentData = newData;
+        setState(() {
+          _staticContent = _createStaticContent(_currentData);
+        });
+      }
+    }
   }
 
   @override
@@ -328,8 +349,8 @@ class _AnimatedOnboardingPageState extends State<_AnimatedOnboardingPage> {
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: widget.controller,
-      child: _staticContent,
-      builder: (context, child) {
+      builder: (context, _) {
+
         final double currentPage = widget.controller.hasClients
             ? widget.controller.page ?? widget.controller.initialPage.toDouble()
             : widget.controller.initialPage.toDouble();
@@ -369,7 +390,7 @@ class _AnimatedOnboardingPageState extends State<_AnimatedOnboardingPage> {
           imageTranslateY = 50;
         }
 
-        final OnboardingPageContent content = child! as OnboardingPageContent;
+        final OnboardingPageContent content = _staticContent;
         final Widget? hero = content.hero;
         final Widget textContent = content.textContent;
         final double spacing = ScreenScaler.s(40);

@@ -244,6 +244,8 @@ class ManualPaymentSettingsResult {
     this.paymentIntentId,
     this.paymentTransaction,
     this.paymentTransactionId,
+    this.subject,
+    this.next,
     Map<String, dynamic>? raw,
   }) : raw = raw == null
             ? const <String, dynamic>{}
@@ -257,6 +259,8 @@ class ManualPaymentSettingsResult {
   final String? paymentIntentId;
   final Map<String, dynamic>? paymentTransaction;
   final String? paymentTransactionId;
+  final Map<String, dynamic>? subject;
+  final Map<String, dynamic>? next;
   final Map<String, dynamic> raw;
 }
 

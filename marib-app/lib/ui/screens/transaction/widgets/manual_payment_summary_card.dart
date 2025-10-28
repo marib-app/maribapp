@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import 'package:marib/ui/theme/theme.dart';
@@ -68,7 +68,8 @@ class ManualPaymentSummaryCard extends StatelessWidget {
                   _MetaRow(
                     identifier: manualPayment.displayTransactionIdentifier,
                     gateway: manualPayment.gatewayLabel,
-                    dateText: dateFormat.format(manualPayment.createdAt.toLocal()),
+                    dateText:
+                        dateFormat.format(manualPayment.createdAt.toLocal()),
                   ),
                 ],
               ),
@@ -85,7 +86,8 @@ class ManualPaymentSummaryCard extends StatelessWidget {
                 const SizedBox(height: 10),
                 _StatusChip(color: statusColor, label: statusLabel),
                 const SizedBox(height: 12),
-                Icon(Icons.chevron_left_rounded, color: colors.onSurfaceVariant.withOpacity(0.7)),
+                Icon(Icons.chevron_left_rounded,
+                    color: colors.onSurfaceVariant.withOpacity(0.7)),
               ],
             ),
           ],
@@ -154,7 +156,6 @@ class ManualPaymentSummaryCard extends StatelessWidget {
 
     return Icons.receipt_long_outlined;
   }
-
 }
 
 class _LeadingIcon extends StatelessWidget {
@@ -229,12 +230,14 @@ class _MetaRow extends StatelessWidget {
             Icon(Icons.confirmation_number_outlined, size: 18, color: color),
             const SizedBox(width: 4),
             Expanded(
-              child: Text(identifier, overflow: TextOverflow.ellipsis, style: textStyle),
+              child: Text(identifier,
+                  overflow: TextOverflow.ellipsis, style: textStyle),
             ),
             if (gateway != null && gateway!.trim().isNotEmpty) ...<Widget>[
               const SizedBox(width: 12),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.primary.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(999),
@@ -259,11 +262,3 @@ class _MetaRow extends StatelessWidget {
     );
   }
 }
-
-
-
-
-
-
-
-

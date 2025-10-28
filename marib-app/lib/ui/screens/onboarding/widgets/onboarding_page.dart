@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lottie/lottie.dart';
 import 'package:marib/utils/screen_scaler.dart';
+import 'package:flutter/foundation.dart';
 
 import '../models/onboarding_page_data.dart';
 

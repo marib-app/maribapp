@@ -364,8 +364,9 @@ class Routes {
 
         return AppPageRoute.build(
           settings: routeSettings,
-          transition: AppPageRouteTransition.fadeBlur,
-          forwardDuration: const Duration(milliseconds: 180),
+          transition: AppPageRouteTransition.motion,
+          motionPattern: AppMotionPattern.hero,
+          forwardDuration: const Duration(milliseconds: 220),
           builder: (context) => TemporarySectionScreen(
             catName: arguments['catName'] ?? '',
             catID: arguments['catID'] ?? '',
@@ -375,15 +376,17 @@ class Routes {
       case splash:
         return AppPageRoute.build(
           settings: routeSettings,
-          transition: AppPageRouteTransition.fadeBlur,
-          forwardDuration: const Duration(milliseconds: 180),
+          transition: AppPageRouteTransition.motion,
+          motionPattern: AppMotionPattern.hero,
+          forwardDuration: const Duration(milliseconds: 220),
           builder: (context) => const SplashScreen(),
         );
       case onboarding:
         return AppPageRoute.build(
           settings: routeSettings,
-          transition: AppPageRouteTransition.fadeBlur,
-          forwardDuration: const Duration(milliseconds: 180),
+          transition: AppPageRouteTransition.motion,
+          motionPattern: AppMotionPattern.hero,
+          forwardDuration: const Duration(milliseconds: 220),
           builder: (context) => const OnboardingScreen(),
         );
 

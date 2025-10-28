@@ -1,8 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
+import 'package:marib/ui/screens/widgets/errors/no_data_found.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/payment/manual_payment.dart';
@@ -13,12 +14,8 @@ import 'manual_payments_controller.dart';
 import 'manual_payment_details_screen.dart';
 import 'widgets/manual_payment_summary_card.dart';
 import 'widgets/transaction_error_banner.dart';
-import '../widgets/errors/no_data_found.dart';
 
 enum _TransactionsFilter { all, orders, packages, services }
-
-
-import 'widgets/manual_payment_summary_tile.dart';
 
 class TransactionScreen extends StatefulWidget {
   const TransactionScreen({super.key, this.service, this.focusTransactionId});
@@ -126,50 +123,23 @@ class _TransactionScreenState extends State<TransactionScreen> {
     return null;
   }
 
-  Future<void> _showTransactionDetails(ManualPayment payment) async {
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      enableDrag: true,
-      builder: (BuildContext sheetContext) {
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 16,
-            right: 16,
-            top: 16,
-            bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 24,
-          ),
-          child: SingleChildScrollView(
-            child: ManualPaymentTile(
-              manualPayment: payment,
-              dateFormat: _dateFormat,
-              pollInterval: ManualPaymentsController.pollInterval,
-            ),
-          ),
-        );
-      },
+  Future<void> _showTransactionDetails(ManualPayment payment) {
+    return ManualPaymentDetailsScreen.push(
+      context,
+      manualPayment: payment,
+      dateFormat: _dateFormat,
+      pollInterval: ManualPaymentsController.pollInterval,
     );
   }
 
-
-
   List<ManualPayment> _filteredTransactions(List<ManualPayment> transactions) {
-    switch (_selectedFilter) {
-      case _TransactionsFilter.all:
-        return transactions;
-      case _TransactionsFilter.orders:
-        return transactions
-            .where((ManualPayment mp) => mp.category == ManualPaymentCategory.order)
-            .toList();
-      case _TransactionsFilter.packages:
-        return transactions
-            .where((ManualPayment mp) => mp.category == ManualPaymentCategory.package)
-            .toList();
-      case _TransactionsFilter.services:
-        return transactions
-            .where((ManualPayment mp) => mp.category == ManualPaymentCategory.service)
-            .toList();
+    if (_selectedFilter == _TransactionsFilter.all) {
+      return List<ManualPayment>.from(transactions);
     }
+
+    return transactions
+        .where((ManualPayment mp) => _matchesFilter(mp, _selectedFilter))
+        .toList();
   }
 
   int _countForFilter(List<ManualPayment> transactions, _TransactionsFilter filter) {
@@ -178,16 +148,35 @@ class _TransactionScreenState extends State<TransactionScreen> {
   }
 
   bool _matchesFilter(ManualPayment mp, _TransactionsFilter filter) {
+    final category = _resolveCategory(mp);
     switch (filter) {
       case _TransactionsFilter.all:
         return true;
       case _TransactionsFilter.orders:
-        return mp.category == ManualPaymentCategory.order;
+        return category == _TransactionsFilter.orders;
       case _TransactionsFilter.packages:
-        return mp.category == ManualPaymentCategory.package;
+        return category == _TransactionsFilter.packages;
       case _TransactionsFilter.services:
-        return mp.category == ManualPaymentCategory.service;
+        return category == _TransactionsFilter.services;
     }
+  }
+
+  _TransactionsFilter? _resolveCategory(ManualPayment mp) {
+    final lowerType = mp.payableType?.toLowerCase().trim() ?? '';
+
+    if (mp.isServiceRequest || lowerType.contains('service')) {
+      return _TransactionsFilter.services;
+    }
+
+    if (lowerType.contains('package') || lowerType.contains('subscription')) {
+      return _TransactionsFilter.packages;
+    }
+
+    if (lowerType.contains('order')) {
+      return _TransactionsFilter.orders;
+    }
+
+    return null;
   }
 
   void _onFilterSelected(_TransactionsFilter filter) {
@@ -200,10 +189,10 @@ class _TransactionScreenState extends State<TransactionScreen> {
   Widget _buildFilterBar(BuildContext context, List<ManualPayment> transactions) {
     final colors = context.color;
     final options = <({String label, _TransactionsFilter filter})>[
-      (label: 'الكل', filter: _TransactionsFilter.all),
-      (label: 'الطلبات', filter: _TransactionsFilter.orders),
-      (label: 'الباقات', filter: _TransactionsFilter.packages),
-      (label: 'الخدمات', filter: _TransactionsFilter.services),
+      (label: 'ط§ظ„ظƒظ„', filter: _TransactionsFilter.all),
+      (label: 'ط§ظ„ط·ظ„ط¨ط§طھ', filter: _TransactionsFilter.orders),
+      (label: 'ط§ظ„ط¨ط§ظ‚ط§طھ', filter: _TransactionsFilter.packages),
+      (label: 'ط§ظ„ط®ط¯ظ…ط§طھ', filter: _TransactionsFilter.services),
     ];
 
     return Column(
@@ -211,121 +200,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
       children: <Widget>[
         Padding(
           padding: const EdgeInsetsDirectional.fromSTEB(16, 12, 16, 6),
-          child: Text('عرض حسب التصنيف')
-              .bold(weight: FontWeight.w600)
-              .size(context.font.small)
-              .color(colors.onSurfaceVariant.withOpacity(0.8)),
-        ),
-        SizedBox(
-          height: 48,
-          child: ListView.separated(
-            padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 0),
-            scrollDirection: Axis.horizontal,
-            itemCount: options.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 8),
-            itemBuilder: (BuildContext context, int index) {
-              final option = options[index];
-              final selected = _selectedFilter == option.filter;
-              final count = _countForFilter(transactions, option.filter);
-              return _FilterChip(
-                label: option.label,
-                count: count,
-                selected: selected,
-                onTap: () => _onFilterSelected(option.filter),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-
-
-
-  @override
-  Widget build(BuildContext context) {
-    final List<ManualPayment> transactions = _controller.transactions;
-    final List<ManualPayment> filteredTransactions = _filteredTransactions(transactions);
-    final bool hasTransactions = transactions.isNotEmpty;
-    final bool hasFilteredResults = filteredTransactions.isNotEmpty;
-    final bool loading = _controller.loading && !hasTransactions;
-    final bool hasError = _controller.error != null;
-
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: UiUtils.getSystemUiOverlayStyle(
-        context: context,
-        statusBarColor: context.color.secondaryColor,
-      ),
-      child: Scaffold(
-        backgroundColor: context.color.primaryColor,
-        appBar: UiUtils.buildAppBar(
-          context,
-          title: 'transactionHistory'.translate(context),
-          bottomHeight: 20,
-        ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: _controller.fetching ? null : _handleManualRefresh,
-          child: _controller.fetching && transactions.isEmpty
-              ? const CircularProgressIndicator.adaptive()
-              : const Icon(Icons.refresh),
-        ),
-        body: RefreshIndicator(
-          onRefresh: _onRefresh,
-          child: CustomScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            slivers: <Widget>[
-              SliverToBoxAdapter(child: const SizedBox(height: 12)),
-              SliverToBoxAdapter(child: _buildFilterBar(context, transactions)),
-              if (hasError && hasTransactions)
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                  sliver: SliverToBoxAdapter(
-                    child: TransactionErrorBanner(onRetry: _handleManualRefresh),
-                  ),
-                ),
-              if (loading)
-                SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: Center(child: UiUtils.progress()),
-                )
-              else if (hasError && !hasTransactions)
-                SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: TransactionErrorBanner(
-                      onRetry: _handleManualRefresh,
-                      includeRetry: true,
-                    ),
-                  ),
-                )
-              else if (!hasTransactions)
-                  SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: NoDataFound(
-                        onTap: _handleManualRefresh,
-                        category: EmptyStateCategory.transactions,
-                      ),
-                    ),
-                  )
-                else if (!hasFilteredResults)
-                    SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 32),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: <Widget>[
-                            Icon(Icons.inbox_outlined,
-                                size: 56, color: context.color.onSurfaceVariant.withOpacity(0.5)),
-                            const SizedBox(height: 12),
-                            Text('لا توجد معاملات ضمن هذا التصنيف حتى الآن.')
-                                .size(context.font.normal)
-                                .color(context.color.onSurfaceVariant.withOpacity(0.8))
-                                .center(),
+          child: Text(\n                              'لا توجد معاملات ضمن هذا التصنيف.',\n                              textAlign: TextAlign.center,\n                            )\n                                .size(context.font.normal)\n                                .color(\n                                  context.color.onSurfaceVariant.withOpacity(0.8),\n                                ),
                           ],
                         ),
                       ),
@@ -422,3 +297,4 @@ class _FilterChip extends StatelessWidget {
     );
   }
 }
+

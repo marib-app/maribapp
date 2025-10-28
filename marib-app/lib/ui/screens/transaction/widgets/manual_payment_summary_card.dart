@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import 'package:marib/ui/theme/theme.dart';
@@ -43,14 +43,17 @@ class ManualPaymentSummaryCard extends StatelessWidget {
         padding: const EdgeInsetsDirectional.fromSTEB(16, 16, 16, 18),
         child: Row(
           children: <Widget>[
-            _LeadingIcon(statusColor: statusColor, icon: manualPayment.categoryIcon),
+            _LeadingIcon(
+              statusColor: statusColor,
+              icon: _resolveIcon(manualPayment),
+            ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Text(
-                    manualPayment.payableSummary ?? manualPayment.categoryLabelAr,
+                    _resolveTitle(manualPayment),
                   )
                       .bold(weight: FontWeight.w700)
                       .size(context.font.normal)
@@ -92,7 +95,7 @@ class ManualPaymentSummaryCard extends StatelessWidget {
   }
 
   String? _buildSubtitle() {
-    final details = <String>[
+    final details = <String?>[
       manualPayment.categoryLabelAr,
       manualPayment.serviceDetailsLabel,
     ].whereType<String>().where((value) => value.trim().isNotEmpty).toList();
@@ -107,8 +110,51 @@ class ManualPaymentSummaryCard extends StatelessWidget {
         filtered.add(entry);
       }
     }
-    return filtered.join(' • ');
+    return filtered.join(' - ');
   }
+
+  String _resolveTitle(ManualPayment payment) {
+    final candidates = <String?>[
+      payment.payableSummary,
+      payment.categoryLabelAr,
+      payment.gatewayLabel,
+      payment.manualPaymentDisplayId,
+    ];
+
+    for (final candidate in candidates) {
+      if (candidate == null) continue;
+      final trimmed = candidate.trim();
+      if (trimmed.isNotEmpty) {
+        return trimmed;
+      }
+    }
+
+    return 'Transaction details';
+  }
+
+  IconData _resolveIcon(ManualPayment payment) {
+    if (payment.categoryIcon != null) {
+      return payment.categoryIcon!;
+    }
+
+    final type = payment.payableType?.toLowerCase().trim() ?? '';
+
+    if (payment.isServiceRequest || type.contains('service')) {
+      return Icons.home_repair_service_outlined;
+    }
+    if (type.contains('package') || type.contains('subscription')) {
+      return Icons.card_giftcard_outlined;
+    }
+    if (type.contains('order')) {
+      return Icons.shopping_bag_outlined;
+    }
+    if (type.contains('wallet')) {
+      return Icons.account_balance_wallet_outlined;
+    }
+
+    return Icons.receipt_long_outlined;
+  }
+
 }
 
 class _LeadingIcon extends StatelessWidget {
@@ -213,3 +259,11 @@ class _MetaRow extends StatelessWidget {
     );
   }
 }
+
+
+
+
+
+
+
+

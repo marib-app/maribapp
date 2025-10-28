@@ -594,6 +594,48 @@ class ManualPaymentService {
   static String? paymentMethodForApiOrNull(String? value) =>
       _apiPaymentMethodOrNull(value);
 
+  static Map<String, dynamic> buildPaymentBody({
+    required String purpose,
+    required String paymentMethod,
+    required String currency,
+    int? orderId,
+    int? serviceId,
+    int? serviceRequestId,
+  }) {
+    final String purposeValue = purpose.trim();
+    final String methodValue = paymentMethod.trim();
+    final String currencyValue = currency.trim();
+    final String normalizedPurpose = purposeValue.toLowerCase();
+
+    final Map<String, dynamic> payload = <String, dynamic>{};
+
+    if (purposeValue.isNotEmpty) {
+      payload['purpose'] = purposeValue;
+    }
+
+    if (methodValue.isNotEmpty) {
+      payload['payment_method'] = methodValue;
+    }
+
+    if (currencyValue.isNotEmpty) {
+      payload['currency'] = currencyValue.toUpperCase();
+    }
+
+    if (normalizedPurpose == 'order' && orderId != null) {
+      payload['order_id'] = orderId;
+    } else if (normalizedPurpose == 'service') {
+      if (serviceId != null) {
+        payload['service_id'] = serviceId;
+      }
+
+      if (serviceRequestId != null) {
+        payload['service_request_id'] = serviceRequestId;
+      }
+    }
+
+    return payload;
+  }
+
   static String _normalizeBase(String u) {
     if (u.endsWith('/api/')) return u;
     if (u.endsWith('/')) return '${u}api/';
@@ -1085,20 +1127,23 @@ class ManualPaymentService {
       final int? sanitizedOrderId =
           (!walletPurpose && orderId != null && orderId > 0) ? orderId : null;
 
-      final body = <String, dynamic>{
-        if (resolvedPurpose != null && resolvedPurpose.isNotEmpty)
-          'purpose': resolvedPurpose,
-        if (upperCurrency != null && upperCurrency.isNotEmpty)
-          'currency': upperCurrency,
-        if (sanitizedOrderId != null) 'order_id': sanitizedOrderId,
-        if (apiPaymentMethod != null && apiPaymentMethod.isNotEmpty)
-          'payment_method': apiPaymentMethod,
-        if (formattedAmount != null) 'amount': formattedAmount,
-        if (serviceId != null && resolvedPurpose == 'service')
-          'service_id': serviceId,
-        if (serviceRequestId != null && resolvedPurpose == 'service')
-          'service_request_id': serviceRequestId,
-      };
+      final String purposeForBody = resolvedPurpose ?? '';
+      final String methodForBody = apiPaymentMethod ?? '';
+      final String currencyForBody = upperCurrency ?? '';
+
+      final Map<String, dynamic> body =
+          ManualPaymentService.buildPaymentBody(
+        purpose: purposeForBody,
+        paymentMethod: methodForBody,
+        currency: currencyForBody,
+        orderId: sanitizedOrderId,
+        serviceId: serviceId,
+        serviceRequestId: serviceRequestId,
+      );
+
+      if (formattedAmount != null) {
+        body['amount'] = formattedAmount;
+      }
       final response = await Api.postJson(
         url: Api.paymentsInitiateApi,
         data: body,
@@ -1350,12 +1395,27 @@ class ManualPaymentService {
     final normalizedCurrency = _normalizeCurrencyCode(currency);
     final formattedAmount =
         formatManualPaymentAmount(amount, normalizedCurrency);
+    final String normalizedMethod =
+        ManualPaymentService.paymentMethodForApi('manual_bank');
+    final String purposeForBody =
+        normalizedPurpose ?? purpose?.trim() ?? '';
+
+    final Map<String, dynamic> basePayload =
+        ManualPaymentService.buildPaymentBody(
+      purpose: purposeForBody,
+      paymentMethod: normalizedMethod,
+      currency: normalizedCurrency,
+      orderId: orderId,
+      serviceId: serviceId,
+      serviceRequestId: serviceRequestId,
+    );
 
     final Map<String, dynamic>? metadataPayload =
         _mergeTransferReferenceMetadata(metadata, referenceValue);
 
     final Map<String, dynamic> formMap = {
-      'payment_method': ManualPaymentService.paymentMethodForApi('manual_bank'),
+      ...basePayload,
+      'payment_method': normalizedMethod,
       'bank_id': bankId,
       'bank_account_id': bankId,
       'amount': formattedAmount,
@@ -1366,11 +1426,7 @@ class ManualPaymentService {
         'transaction_id': transactionId,
       if (transactionId != null && transactionId.isNotEmpty)
         'payment_transaction_id': transactionId,
-      if (normalizedPurpose != null) 'purpose': normalizedPurpose,
-      if (orderId != null) 'order_id': orderId,
       if (packageId != null) 'package_id': packageId,
-      if (serviceId != null) 'service_id': serviceId,
-      if (serviceRequestId != null) 'service_request_id': serviceRequestId,
       'transferred_at': transferredAt.toIso8601String(),
       if (referenceValue != null && referenceValue.isNotEmpty)
         'reference_number': referenceValue,
@@ -1484,10 +1540,22 @@ class ManualPaymentService {
     final normalizedPurpose = _normalizePurposeForApi(purpose);
     final String normalizedMethod =
         ManualPaymentService.paymentMethodForApi('east_yemen_bank');
+    final String purposeForBody =
+        normalizedPurpose ?? purpose?.trim() ?? '';
+    final Map<String, dynamic> basePayload =
+        ManualPaymentService.buildPaymentBody(
+      purpose: purposeForBody,
+      paymentMethod: normalizedMethod,
+      currency: normalizedCurrency,
+      orderId: orderId,
+      serviceId: serviceId,
+      serviceRequestId: serviceRequestId,
+    );
     final Map<String, dynamic>? metadataPayload =
         _mergeTransferReferenceMetadata(metadata, referenceValue);
 
     final Map<String, dynamic> formMap = {
+      ...basePayload,
       'payment_method': normalizedMethod,
       'amount': formattedAmount,
       'currency': normalizedCurrency,
@@ -1495,11 +1563,7 @@ class ManualPaymentService {
       'payment_intent_id': intentId,
       if (transactionId != null && transactionId.isNotEmpty)
         'transaction_id': transactionId,
-      if (normalizedPurpose != null) 'purpose': normalizedPurpose,
-      if (orderId != null) 'order_id': orderId,
       if (packageId != null) 'package_id': packageId,
-      if (serviceId != null) 'service_id': serviceId,
-      if (serviceRequestId != null) 'service_request_id': serviceRequestId,
       if (transactionId != null && transactionId.isNotEmpty)
         'payment_transaction_id': transactionId,
       if (referenceValue != null && referenceValue.isNotEmpty)
@@ -1577,20 +1641,30 @@ class ManualPaymentService {
     final formattedAmount =
         formatManualPaymentAmount(amount, normalizedCurrency);
     final normalizedPurpose = _normalizePurposeForApi(purpose);
+    final String walletMethod =
+        ManualPaymentService.paymentMethodForApi('wallet');
+    final String purposeForBody =
+        normalizedPurpose ?? purpose?.trim() ?? '';
+    final Map<String, dynamic> basePayload =
+        ManualPaymentService.buildPaymentBody(
+      purpose: purposeForBody,
+      paymentMethod: walletMethod,
+      currency: normalizedCurrency,
+      orderId: orderId,
+      serviceId: serviceId,
+      serviceRequestId: serviceRequestId,
+    );
 
     final Map<String, dynamic> additionalData = <String, dynamic>{
+      ...basePayload,
       'amount': formattedAmount,
       'currency': normalizedCurrency,
-      if (normalizedPurpose != null) 'purpose': normalizedPurpose,
-      if (orderId != null) 'order_id': orderId,
       if (packageId != null) 'package_id': packageId,
       if (userNoteValue != null && userNoteValue.isNotEmpty)
         'note': userNoteValue,
       if (payableTypeValue != null && payableTypeValue.isNotEmpty)
         'payable_type': payableTypeValue,
       if (payableId != null) 'payable_id': payableId,
-      if (serviceId != null) 'service_id': serviceId,
-      if (serviceRequestId != null) 'service_request_id': serviceRequestId,
     };
 
     final Map<String, dynamic> metadataFields = <String, dynamic>{};

@@ -233,10 +233,15 @@ class PaymentController extends Controller
                 ]
             );
 
-            if ($freshTransaction?->manualPaymentRequest) {
-                $responsePayload['manual_payment_request'] = ManualPaymentRequestResource::make(
-                    $freshTransaction->manualPaymentRequest->loadMissing('manualBank')
-                )->resolve();
+            if ($freshTransaction?->manualPaymentRequest instanceof ManualPaymentRequest) {
+                $manualPaymentRequest = $freshTransaction->manualPaymentRequest;
+                $manualPaymentRequest->loadMissing([
+                    'manualBank',
+                    'paymentTransaction.order',
+                    'paymentTransaction.walletTransaction',
+                ]);
+
+                $responsePayload['manual_payment_request'] = ManualPaymentRequestResource::make($manualPaymentRequest)->resolve();
             }
 
             return response()->json($responsePayload);
@@ -495,7 +500,12 @@ class PaymentController extends Controller
 
             $transaction->loadMissing('manualPaymentRequest.manualBank');
 
-            $manualRequest = $transaction->manualPaymentRequest?->loadMissing('paymentTransaction.payable', 'manualBank');
+            $manualRequest = $transaction->manualPaymentRequest?->loadMissing([
+                'paymentTransaction.payable',
+                'paymentTransaction.order',
+                'paymentTransaction.walletTransaction',
+                'manualBank',
+            ]);
 
             $transactionResource = PaymentTransactionResource::make($transaction)->resolve();
             $manualRequestResource = $manualRequest
@@ -524,7 +534,12 @@ class PaymentController extends Controller
 
             $transaction->loadMissing('manualPaymentRequest.manualBank');
 
-            $manualRequest = $transaction->manualPaymentRequest?->loadMissing('paymentTransaction.order', 'payable');
+            $manualRequest = $transaction->manualPaymentRequest?->loadMissing([
+                'paymentTransaction.order',
+                'paymentTransaction.walletTransaction',
+                'paymentTransaction.payable',
+                'manualBank',
+            ]);
 
             $transactionResource = PaymentTransactionResource::make($transaction)->resolve();
             $manualRequestResource = $manualRequest
@@ -553,7 +568,12 @@ class PaymentController extends Controller
 
         $transaction->loadMissing('manualPaymentRequest.manualBank');
 
-        $manualRequest = $transaction->manualPaymentRequest?->loadMissing('paymentTransaction.order', 'payable');
+        $manualRequest = $transaction->manualPaymentRequest?->loadMissing([
+            'paymentTransaction.order',
+            'paymentTransaction.walletTransaction',
+            'paymentTransaction.payable',
+            'manualBank',
+        ]);
 
         $transactionResource = PaymentTransactionResource::make($transaction)->resolve();
         $manualRequestResource = $manualRequest
@@ -840,7 +860,13 @@ class PaymentController extends Controller
             $transaction->save();
 
             $transaction->loadMissing('manualPaymentRequest.manualBank');
-            $manualRequest = $transaction->manualPaymentRequest?->loadMissing('payable');
+            $manualRequest = $transaction->manualPaymentRequest?->loadMissing([
+                'paymentTransaction.order',
+                'paymentTransaction.walletTransaction',
+                'paymentTransaction.payable',
+                'manualBank',
+                'payable',
+            ]);
 
             $transactionResource = PaymentTransactionResource::make($transaction)->resolve();
             $manualRequestResource = $manualRequest

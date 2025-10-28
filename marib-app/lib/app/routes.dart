@@ -272,16 +272,13 @@ class Routes {
       if (arguments == null) {
         return AppPageRoute.build(
           settings: routeSettings,
-          transition: AppPageRouteTransition.fadeBlur,
-          forwardDuration: const Duration(milliseconds: 180),
+
           builder: (context) => ErrorScreen(),
         );
       }
 
-      return AppPageRoute.build(
+      return AppPageRoute.buildOverlay(
         settings: routeSettings,
-        transition: AppPageRouteTransition.fadeBlur,
-        forwardDuration: const Duration(milliseconds: 180),
         builder: (context) => TemporarySectionScreen(
           catName: arguments['catName'] ?? 'Default CatName',
           catID: arguments['catID'] ?? 'Default CatID',
@@ -586,7 +583,7 @@ class Routes {
         return ItemsScreen.route(routeSettings);*/
 
       default:
-        return AppPageRoute.build(
+        return AppPageRoute.buildOverlay(
           settings: routeSettings,
           builder: (context) => const Scaffold(),
         );

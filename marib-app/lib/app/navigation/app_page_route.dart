@@ -114,6 +114,30 @@ class AppPageRoute {
         );
     }
   }
+
+
+
+  static PageRoute<T> buildOverlay<T>({
+    required WidgetBuilder builder,
+    RouteSettings? settings,
+    bool barrierDismissible = false,
+    Duration? forwardDuration,
+    Duration? reverseDuration,
+    Color? barrierColor,
+  }) {
+    return AppPageRoute.build(
+      builder: builder,
+      settings: settings,
+      transition: AppPageRouteTransition.fadeBlur,
+      forwardDuration:
+      forwardDuration ?? const Duration(milliseconds: 180),
+      reverseDuration: reverseDuration,
+      barrierDismissible: barrierDismissible,
+      barrierColor: barrierColor ?? Colors.black.withOpacity(0.2),
+      opaque: false,
+    );
+  }
+
 }
 
 enum AppPageRouteTransition { motion, fadeBlur, custom }

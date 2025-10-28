@@ -7,6 +7,7 @@ use App\Support\ManualPayments\TransferDetailsResolver;
 use App\Support\Payments\PaymentLabelService;
 use Illuminate\Database\Eloquent\Model as EloquentModel;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Http\Resources\MissingValue;
 
 class PaymentTransactionResource extends JsonResource
 {
@@ -22,6 +23,10 @@ class PaymentTransactionResource extends JsonResource
         }
 
         $manualPaymentRequest = $this->whenLoaded('manualPaymentRequest');
+
+        if ($manualPaymentRequest instanceof MissingValue) {
+            $manualPaymentRequest = null;
+        }
         $manualBank = $manualPaymentRequest?->manualBank;
         $order = $resource instanceof EloquentModel ? $resource->order : null;
 

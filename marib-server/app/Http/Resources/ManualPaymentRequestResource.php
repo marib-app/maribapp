@@ -10,6 +10,7 @@ use App\Support\Payments\PaymentLabelService;
 use App\Support\ManualPayments\TransferDetailsResolver;
 use Illuminate\Database\Eloquent\Model as EloquentModel;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Http\Resources\MissingValue;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Throwable;
@@ -19,6 +20,10 @@ class ManualPaymentRequestResource extends JsonResource
     public function toArray($request): array
     {
         $paymentTransaction = $this->whenLoaded('paymentTransaction');
+
+        if ($paymentTransaction instanceof MissingValue) {
+            $paymentTransaction = null;
+        }
 
         if ($paymentTransaction instanceof EloquentModel && ! $paymentTransaction->relationLoaded('order')) {
             $paymentTransaction->load('order');
@@ -45,6 +50,10 @@ class ManualPaymentRequestResource extends JsonResource
             : null;
 
         $payable = $this->whenLoaded('payable');
+
+        if ($payable instanceof MissingValue) {
+            $payable = null;
+        }
 
         if (
             $paymentTransaction instanceof EloquentModel

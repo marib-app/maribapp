@@ -1168,13 +1168,12 @@ class _ServiceAddMoreDetailsScreenState
           payload['request_id'],
     );
 
+    if (payloadServiceRequestId != null) {
+      _pendingServiceRequestId = payloadServiceRequestId;
+    }
+
     if (mounted) {
-      setState(() {
-        _submitting = false;
-        if (payloadServiceRequestId != null) {
-          _pendingServiceRequestId = payloadServiceRequestId;
-        }
-      });
+      setState(() => _submitting = false);
     }
 
     final int? serviceId =

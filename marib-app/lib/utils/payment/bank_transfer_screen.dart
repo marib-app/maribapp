@@ -265,6 +265,8 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         purposeParam = purpose;
       } else if (isWalletTopUp) {
         purposeParam = _walletTopUpPurpose;
+      } else if (purpose == 'service' || widget.args.serviceId != null) {
+        purposeParam = 'service';
       } else {
         purposeParam = null;
       }
@@ -651,6 +653,8 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       purposeParam = purpose;
     } else if (isWalletTopUp) {
       purposeParam = _walletTopUpPurpose;
+    } else if (purpose == 'service' || widget.args.serviceId != null) {
+      purposeParam = 'service';
     } else {
       purposeParam = null;
     }

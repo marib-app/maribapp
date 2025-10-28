@@ -2,7 +2,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
 import 'dart:math' as math;
-import 'package:marib/ui/widgets/placeholders/image_error_placeholder.dart';
 
 class LazyNetworkImage extends StatelessWidget {
   const LazyNetworkImage({
@@ -80,10 +79,12 @@ class LazyNetworkImage extends StatelessWidget {
   }
 
   Widget _defaultError(BuildContext context) {
-    return ImageErrorPlaceholder(
+    return ShimmerBox(
       width: width,
       height: height,
-
+      borderRadius: BorderRadius.circular(12),
+      animate: false,
+      baseColor: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.35),
     );
   }
 }

@@ -1,30 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:lottie/lottie.dart';
 import 'package:marib/app/routes.dart';
 import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/utils/screen_scaler.dart';
+import 'widgets/onboarding_dots.dart';
+import 'widgets/onboarding_hint.dart';
+import 'widgets/onboarding_page.dart';
+import 'widgets/onboarding_start_button.dart';
 
-class CardPlanetData {
-  final String title;
-  final String subtitle;
-  final ImageProvider? image;
-  final List<Color> backgroundGradientColors;
-  final Color titleColor;
-  final Color subtitleColor;
-  final String? animationPath;
-
-  CardPlanetData({
-    required this.title,
-    required this.subtitle,
-    this.image,
-    required this.backgroundGradientColors,
-    required this.titleColor,
-    required this.subtitleColor,
-    this.animationPath,
-  });
-}
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -34,6 +17,10 @@ class OnboardingScreen extends StatefulWidget {
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
+
+  static const _trustedTitle = "موثوق رسميًا";
+
+
   final PageController _pageController = PageController();
   double currentPage = 0.0;
   bool _showHint = false;
@@ -95,29 +82,83 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   void initState() {
     super.initState();
-    _pageController.addListener(() {
-      setState(() {
-        currentPage = _pageController.page ?? 0.0;
+    _pageController.addListener(_handleScroll);
+    _restartHintTimer(0);
+  }
 
-        // إخفاء التلميح فور الوصول إلى الصفحة الأخيرة أو في الصفحة التي تحتوي على "موثوق رسميًا"
-        if (currentPage >= data.length - 1 ||
-            data[currentPage.floor()].title == "موثوق رسميًا") {
-          _showHint = false;
-          _showStartButton = true; // إظهار زر البدء مع التأثير
-        }
-      });
+  @override
+  void dispose() {
+    _pageController.removeListener(_handleScroll);
+    _pageController.dispose();
+    _cancelHintTimer();
+    super.dispose();
+  }
+
+  void _handleScroll() {
+    final double page = _pageController.page ?? currentPage;
+    setState(() {
+      currentPage = page;
     });
+  }
+
+  void _handlePageSettled(int pageIndex) {
+    final bool isLastPage = pageIndex >= data.length - 1;
+    final bool isTrustedPage = data[pageIndex].title == _trustedTitle;
+    final bool shouldShowStart = isLastPage || isTrustedPage;
+
+    if (shouldShowStart) {
+      _cancelHintTimer();
+
+      setState(() {
+        _showHint = false;
+        _showStartButton = true;
+      });
+    } else {
+      setState(() {
+        _showStartButton = false;
+      });
+      _restartHintTimer(pageIndex);
+    }
+  }
+
+  void _restartHintTimer(int pageIndex) {
+    _cancelHintTimer();
+
+    if (_showHint) {
+      setState(() {
+        _showHint = false;
+      });
+    }
+
+    if (pageIndex >= data.length - 1 || data[pageIndex].title == _trustedTitle) {
+      return;
+    }
 
     // عرض التلميح بعد فترة معينة بشرط ألا تكون الصفحة "موثوق رسميًا"
     _hintTimer = Timer(const Duration(seconds: 2), () {
-      if (mounted && currentPage < data.length - 1 &&
-          data[currentPage.floor()].title != "موثوق رسميًا") {
+      if (!mounted) return;
+
+      final int currentIndex =
+      currentPage.round().clamp(0, data.length - 1);
+      if (currentIndex == pageIndex &&
+          currentIndex < data.length - 1 &&
+          data[currentIndex].title != _trustedTitle) {
         setState(() {
           _showHint = true;
         });
       }
     });
   }
+
+
+
+  void _cancelHintTimer() {
+    _hintTimer?.cancel();
+    _hintTimer = null;
+  }
+
+
+
 
   Color lerpColor(Color a, Color b, double t) =>
       Color.lerp(a, b, t.clamp(0.0, 1.0))!;
@@ -139,7 +180,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget build(BuildContext context) {
     ScreenScaler.init(context);
 
-    int basePage = currentPage.floor();
+    final int basePage = currentPage.floor().clamp(0, data.length - 1);
     double pageOffset = currentPage - basePage;
 
     // تدرج الخلفية بين الصفحتين بناء على موقع السحب
@@ -168,6 +209,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             child: PageView.builder(
               controller: _pageController,
               itemCount: data.length,
+              onPageChanged: _handlePageSettled,
               itemBuilder: (context, index) {
                 final item = data[index];
 
@@ -201,70 +243,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   imageTranslateY = 50;
                 }
 
-                return Opacity(
+                return OnboardingPage(
+                  data: item,
                   opacity: opacity,
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: ScreenScaler.s(24),
-                      vertical: ScreenScaler.s(60),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        if (item.animationPath != null)
-                          Transform.translate(
-                            offset: Offset(0, imageTranslateY),
-                            child: SizedBox(
-                              height: ScreenScaler.s(300),
-                              child: Lottie.asset(
-                                item.animationPath!,
-                                fit: BoxFit.contain,
-                              ),
-                            ),
-                          )
-                        else
-                          if (item.image != null)
-                            Transform.translate(
-                              offset: Offset(0, imageTranslateY),
-                              child: Image(
-                                image: item.image!,
-                                height: ScreenScaler.s(300),
-                                fit: BoxFit.contain,
-                              ),
-                            ),
-                        SizedBox(height: ScreenScaler.s(40)),
-                        Transform.translate(
-                          offset: Offset(textTranslateX, 0),
-                          child: Directionality(
-                            textDirection: TextDirection.rtl,
-                            child: Column(
-                              children: [
-                                Text(
-                                  item.title,
-                                  style: GoogleFonts.tajawal(
-                                    fontSize: ScreenScaler.s(22),
-                                    fontWeight: FontWeight.bold,
-                                    color: item.titleColor,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                                SizedBox(height: ScreenScaler.s(12)),
-                                Text(
-                                  item.subtitle,
-                                  style: GoogleFonts.tajawal(
-                                    fontSize: ScreenScaler.s(16),
-                                    height: 1.6,
-                                    color: item.subtitleColor,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  textTranslateX: textTranslateX,
+                  imageTranslateY: imageTranslateY,
                 );
               },
             ),
@@ -275,25 +258,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             bottom: ScreenScaler.s(20),
             left: 0,
             right: 0,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(data.length, (i) {
-                double selectedness = 1.0 -
-                    (currentPage - i).abs().clamp(0.0, 1.0);
-                double width = lerpDouble(8, 18, selectedness)!;
-                Color color = Color.lerp(
-                    Colors.white38, Colors.white, selectedness)!;
-
-                return Container(
-                  margin: EdgeInsets.symmetric(horizontal: ScreenScaler.s(4)),
-                  width: ScreenScaler.s(width),
-                  height: ScreenScaler.s(8),
-                  decoration: BoxDecoration(
-                    color: color,
-                    borderRadius: BorderRadius.circular(ScreenScaler.s(8)),
-                  ),
-                );
-              }),
+            child: OnboardingDots(
+              itemCount: data.length,
+              currentPage: currentPage,
             ),
           ),
 
@@ -303,27 +270,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               bottom: ScreenScaler.s(60),
               left: 0,
               right: 0,
-              child: IgnorePointer(
-                ignoring: true,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.swipe_right,
-                      color: Colors.white70,
-                      size: ScreenScaler.iconSize(context, baseSize: 24),
-                    ),
-                    SizedBox(height: ScreenScaler.s(6)),
-                    Text(
-                      "اسحب لليمين للمتابعة",
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: ScreenScaler.fontSize(context, baseSize: 14),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              child: const OnboardingHint(),
+
             ),
 
           // زر البدء في الصفحة الأخيرة (ظهور مع تأثير)
@@ -331,31 +279,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             Positioned(
               left: ScreenScaler.s(20),
               bottom: ScreenScaler.s(60),
-              child: ElevatedButton(
+              child: OnboardingStartButton(
                 onPressed: () {
                   HiveUtils.setUserIsNotNew();
                   Navigator.of(context)
                       .pushNamedAndRemoveUntil(Routes.login, (_) => false);
                 },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.black,
-                  padding: EdgeInsets.symmetric(
-                    horizontal: ScreenScaler.s(24),
-                    vertical: ScreenScaler.s(12),
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(ScreenScaler.s(30)),
-                  ),
-                  elevation: 8,
-                ),
-                child: Text(
-                  "ابدأ الآن",
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: ScreenScaler.s(16),
-                  ),
-                ),
+
               ),
             ),
         ],

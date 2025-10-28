@@ -28,6 +28,7 @@ import 'package:marib/utils/currency_utils.dart';
 
 import 'package:marib/utils/payment/east_yemen_bank_config.dart';
 import 'package:marib/ui/widgets/standard_bottom_sheet_scaffold.dart';
+import 'package:marib/utils/money_formatter.dart';
 
 part 'bank_transfer_screen_ui.dart';
 
@@ -73,7 +74,6 @@ class _BankTransferScreenState extends State<BankTransferScreen>
   int? _selectedBankId;
   int? _pressedBankId; // لتأثير الضغط (Scale)
   int? _highlightedAccountNameBankId; // تأثير الضغط على اسم المستفيد
-  bool _walletBalancePressed = false; // تأثير الضغط على رصيد المحفظة
 
   WalletSummary? _walletSummary;
   dynamic _walletError;

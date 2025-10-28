@@ -128,7 +128,7 @@ extension _BankTransferScreenUi on _BankTransferScreenState {
           const SizedBox(height: 12),
         ],
         if (!hideWalletOption) ...[
-          _walletPaymentCard(onSurface),
+          _walletPaymentCard(),
           const SizedBox(height: 12),
         ],
         ...List.generate(_banks.length, (i) {
@@ -483,71 +483,109 @@ extension _BankTransferScreenUi on _BankTransferScreenState {
     );
   }
 
-  Widget _walletPaymentCard(Color onSurface) {
-    final summary = _walletSummary;
-    final currency = summary?.currency ??
-        widget.args.normalizedCurrency ??
-        widget.args.currency ??
-        '';
-    final balanceText = summary != null
-        ? _formatWalletBalance(summary)
-        : '—${currency.isNotEmpty ? ' $currency' : ''}';
+  Widget _walletPaymentCard() {
+    final theme = Theme.of(context);
+    final bool isDark = theme.brightness == Brightness.dark;
+    final Color secondaryColor = const Color(0xFFFF8000);
+    final Color backgroundColor = theme.colorScheme.surface;
+    final Color lightBackground =
+    isDark ? Colors.grey.shade800 : const Color(0xFFF9F9F9);
+    final Color textColor = isDark ? Colors.white : const Color(0xFF222222);
+    final Color borderColor =
+    isDark ? Colors.grey.shade600 : const Color(0xFFE0E0E0);
+    final Color iconBackground =
+    isDark ? Colors.deepPurple.shade400 : Colors.deepPurple.shade100;
+    final Color iconColor = isDark ? Colors.white : Colors.deepPurple;
+
+    String? sanitize(String? value) {
+      if (value == null) return null;
+      final trimmed = value.trim();
+      return trimmed.isEmpty ? null : trimmed;
+    }
+
+    final WalletSummary? summary = _walletSummary;
+    final bool walletSelected = _usingWallet;
+
     final bool hasError = _walletError != null;
     final bool walletCurrencyMismatch = !_walletCurrencyMatchesPayment;
     final bool canSelectWallet =
         !hasError && !_loadingWallet && summary != null && _walletCanPay;
-    final bool isWalletChosen = _usingWallet;
-    final bool selected = isWalletChosen && canSelectWallet;
-    final bool pressed = canSelectWallet &&
-        _pressedBankId == _BankTransferScreenState._walletPressedKey;
+    final bool pressed =
+        canSelectWallet &&
+            _pressedBankId == _BankTransferScreenState._walletPressedKey;
 
-    final errorMessage = () {
-      if (!hasError) return null;
-      final text = _walletError.toString().trim();
-      if (text.isEmpty || text == 'null') {
-        return 'تعذّر تحديث رصيد المحفظة. حاول مرة أخرى.';
-      }
-      return 'تعذّر تحديث رصيد المحفظة: $text';
-    }();
+    final MoneyFormatter balanceFormatter = MoneyFormatter.fromCartCurrency(
+      currency: sanitize(summary?.currency) ??
+          sanitize(_paymentCurrencyLabel) ??
+          sanitize(widget.args.normalizedCurrency) ??
+          sanitize(widget.args.currency),
+      currencyCode: summary?.currencyCode ?? _paymentCurrencyCode,
+      fallbackLabel: _paymentCurrencyDisplay ??
+          _paymentCurrencyLabel ??
+          _paymentCurrencyCode ??
+          sanitize(widget.args.normalizedCurrency) ??
+          sanitize(widget.args.currency),
+    );
+    final String balanceText =
+    summary == null ? '—' : balanceFormatter.format(summary.balance);
+
+    final MoneyFormatter requiredFormatter = MoneyFormatter.fromCartCurrency(
+      currency: sanitize(_paymentCurrencyLabel) ??
+          sanitize(summary?.currency) ??
+          sanitize(widget.args.normalizedCurrency) ??
+          sanitize(widget.args.currency),
+      currencyCode: _paymentCurrencyCode ?? summary?.currencyCode,
+      fallbackLabel: _paymentCurrencyDisplay ??
+          _paymentCurrencyLabel ??
+          _paymentCurrencyCode ??
+          sanitize(widget.args.normalizedCurrency) ??
+          sanitize(widget.args.currency),
+    );
+    final String requiredAmountText =
+    requiredFormatter.format(widget.args.amount);
+
+    final String walletMessageLabel = _walletCurrencyLabel ??
+        _walletCurrencyCode ??
+        balanceFormatter.currencyLabel ??
+        '—';
+    final String paymentMessageLabel = _paymentCurrencyDisplay ??
+        _paymentCurrencyLabel ??
+        _paymentCurrencyCode ??
+        requiredFormatter.currencyLabel ??
+        '—';
 
     String statusText;
     Color statusColor;
-    if (hasError) {
-      statusText = errorMessage ?? 'تعذّر تحديث رصيد المحفظة';
-      statusColor = Theme.of(context).colorScheme.error;
-    } else if (_loadingWallet) {
+    if (_loadingWallet) {
+
       statusText = 'جاري تحديث رصيد المحفظة...';
-      statusColor = onSurface.withOpacity(.7);
+      statusColor = textColor.withOpacity(0.85);
+    } else if (hasError) {
+      statusText = 'تعذر تحديث رصيد المحفظة';
+      statusColor = Colors.orange;
     } else if (summary == null) {
-      statusText = 'الرصيد غير متاح';
-      statusColor = onSurface.withOpacity(.7);
+
+      statusText = 'المحفظة غير متاحة حاليًا';
+      statusColor = Colors.orange;
     } else if (walletCurrencyMismatch) {
-      final String walletLabel =
-          _walletCurrencyLabel ?? _walletCurrencyCode ?? 'المحفظة';
-      final String paymentLabel = _paymentCurrencyDisplay ??
-          _paymentCurrencyLabel ??
-          _paymentCurrencyCode ??
-          'العملية الحالية';
+
       statusText =
-          'لا يمكن استخدام المحفظة بعملة $walletLabel لهذه العملية التي عملتها $paymentLabel.';
-      statusColor = Theme.of(context).colorScheme.error;
+      'لا يمكن استخدام المحفظة بعملة $walletMessageLabel لعملية عملتها $paymentMessageLabel.';
+      statusColor = Colors.orange;
+    } else if (!_walletHasEnoughBalance) {
+      statusText = 'الرصيد غير كافٍ لإجمالي $requiredAmountText';
+      statusColor = Colors.redAccent;
     } else {
-      statusText = 'الرصيد: $balanceText';
-      statusColor = _walletHasEnoughBalance
-          ? onSurface.withOpacity(.8)
-          : Theme.of(context).colorScheme.error;
-      if (!_walletHasEnoughBalance) {
-        statusText = '$statusText (غير كافٍ)';
-      }
+      statusText = 'الرصيد متاح للدفع';
+      statusColor = Colors.green;
     }
 
-    final bool showInteractiveBalance = !hasError &&
-        !_loadingWallet &&
-        summary != null &&
-        !walletCurrencyMismatch &&
-        _walletHasEnoughBalance;
-
-    final double cardOpacity = canSelectWallet ? 1.0 : 0.65;
+    final double cardOpacity =
+    canSelectWallet || _loadingWallet ? 1.0 : 0.65;
+    final Color cardBorderColor =
+    walletSelected ? secondaryColor : borderColor;
+    final Color cardBackgroundColor =
+    walletSelected ? lightBackground : backgroundColor;
 
     return Opacity(
       opacity: cardOpacity,
@@ -565,7 +603,8 @@ extension _BankTransferScreenUi on _BankTransferScreenState {
                     _attempted = false;
                   })
               : null,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(12),
+
           child: AnimatedScale(
             scale: pressed ? 0.98 : 1.0,
             duration: const Duration(milliseconds: 180),
@@ -574,179 +613,102 @@ extension _BankTransferScreenUi on _BankTransferScreenState {
               duration: const Duration(milliseconds: 180),
               curve: Curves.easeOut,
               decoration: BoxDecoration(
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? context.color.secondaryColor.withOpacity(.88)
-                    : Colors.white,
-                borderRadius: BorderRadius.circular(16),
+                color: cardBackgroundColor,
+                borderRadius: BorderRadius.circular(12),
+
                 border: Border.all(
-                  color: selected
-                      ? context.color.territoryColor
-                      : context.color.borderColor.withOpacity(.65),
-                  width: selected ? 2 : 1,
+                  color: cardBorderColor,
+                  width: walletSelected ? 1.6 : 1.2,
                 ),
               ),
               padding: const EdgeInsets.all(12),
               child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                 Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? context.color.secondaryColor
-                            .withOpacity(selected ? .45 : .25)
-                        : context.color.secondaryColor,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    Icons.account_balance_wallet_outlined,
-                    color: onSurface,
-                  ),
+                width: 45,
+                height: 45,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  color: iconBackground,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+                child: Icon(
+                  Icons.account_balance_wallet_rounded,
+                  color: iconColor,
+                ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                       Text(
-                        'محفظتي',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14,
-                          color: onSurface,
-                        ),
+                      'المحفظة الإلكترونية',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                        color: textColor,
                       ),
-                      const SizedBox(height: 4),
-                      if (!showInteractiveBalance)
+                        ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'الرصيد المتاح: $balanceText',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: textColor.withOpacity(0.85),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
                         Text(
                           statusText,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: statusColor,
+                            height: 1.35,
+
                           ),
-                        )
-                      else
-                        Row(
-                          children: [
-                            Text(
-                              'الرصيد المتاح',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: onSurface.withOpacity(.75),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Material(
-                                type: MaterialType.transparency,
-                                child: InkWell(
-                                  onHighlightChanged: (h) =>
-                                      setState(() => _walletBalancePressed = h),
-                                  onTap: () => _copyValueToClipboard(
-                                    balanceText,
-                                    label: 'الرصيد المتاح',
-                                  ),
-                                  borderRadius: BorderRadius.circular(10),
-                                  child: AnimatedContainer(
-                                    duration: const Duration(milliseconds: 180),
-                                    curve: Curves.easeOut,
-                                    decoration: BoxDecoration(
-                                      color: onSurface.withOpacity(
-                                          Theme.of(context).brightness ==
-                                                  Brightness.dark
-                                              ? .12
-                                              : .05),
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(
-                                        color: _walletBalancePressed
-                                            ? context.color.territoryColor
-                                            : onSurface.withOpacity(.12),
-                                      ),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 10,
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            balanceText,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w700,
-                                              color: onSurface,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
+
                         ),
-                    ],
-                  ),
-                ),
-                if (hasError && !_loadingWallet)
-                  Padding(
-                    padding: const EdgeInsetsDirectional.only(end: 8),
-                    child: Icon(
-                      Icons.error_outline,
-                      color: statusColor,
+                      ],
                     ),
                   ),
-                if (_loadingWallet)
-                  Padding(
-                    padding: const EdgeInsetsDirectional.only(end: 8),
-                    child: SizedBox(
+                if (_loadingWallet) ...[
+              const SizedBox(width: 12),
+          SizedBox(
                       height: 20,
                       width: 20,
                       child: const CircularProgressIndicator(strokeWidth: 2),
                     ),
-                  ),
-                Icon(
-                  isWalletChosen
-                      ? Icons.radio_button_checked
-                      : Icons.radio_button_off,
-                  color: isWalletChosen
-                      ? context.color.territoryColor
-                      : context.color.borderColor.withOpacity(.8),
-                ),
-              ],
+                ] else if (walletSelected) ...[
+                  const SizedBox(width: 12),
+                  Icon(Icons.check_circle, color: secondaryColor),
+                ],
+                ],
+              ),
             ),
           ),
         ),
-      ),
       ),
     );
   }
 
   String _formatWalletBalance(WalletSummary summary) {
-    final String? summaryCurrency = summary.currency?.trim();
-    final String? summaryCode = summary.currencyCode?.trim();
-    final String? displayCurrency = summaryCurrency?.isNotEmpty == true
-        ? summaryCurrency
-        : summaryCode?.isNotEmpty == true
-            ? summaryCode
-            : _paymentCurrencyLabel;
-    final String amountText = summary.balance.toStringAsFixed(2);
-    if (displayCurrency == null || displayCurrency.isEmpty) {
-      return amountText;
-    }
-    return '$amountText $displayCurrency';
+    final MoneyFormatter formatter = MoneyFormatter.fromCartCurrency(
+      currency: summary.currency ??
+          _paymentCurrencyLabel ??
+          widget.args.normalizedCurrency ??
+          widget.args.currency,
+      currencyCode: summary.currencyCode ?? _paymentCurrencyCode,
+      fallbackLabel: _paymentCurrencyDisplay ??
+          _paymentCurrencyLabel ??
+          _paymentCurrencyCode ??
+          widget.args.normalizedCurrency ??
+          widget.args.currency,
+    );
+    return formatter.format(summary.balance);
   }
 
   String _formatWalletUpdated(DateTime? updatedAt) {

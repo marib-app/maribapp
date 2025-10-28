@@ -551,26 +551,24 @@ class Routes {
         return MobileVerificationScreen.route(routeSettings);
 
       case info:
-        return AppPageRoute.build(
+        return _buildFadeBlurOverlay(
           settings: routeSettings,
-          transition: AppPageRouteTransition.fadeBlur,
-          forwardDuration: const Duration(milliseconds: 180),
           builder: (context) => const InfoScreen(),
+          barrierDismissible: false,
         );
+
       case currency:
-        return AppPageRoute.build(
+        return _buildFadeBlurOverlay(
           settings: routeSettings,
-          transition: AppPageRouteTransition.fadeBlur,
-          forwardDuration: const Duration(milliseconds: 180),
           builder: (context) => const CurrencyScreen(),
+          barrierDismissible: false,
         );
 
       case support:
-        return AppPageRoute.build(
+        return _buildFadeBlurOverlay(
           settings: routeSettings,
-          transition: AppPageRouteTransition.fadeBlur,
-          forwardDuration: const Duration(milliseconds: 180),
           builder: (context) => const SupportScreen(),
+          barrierDismissible: false,
         );
 
       /*case payStackWebViewScreen:
@@ -580,7 +578,7 @@ class Routes {
         return ItemsScreen.route(routeSettings);*/
 
       default:
-        return AppPageRoute.buildOverlay(
+        return _buildFadeBlurOverlay(
           settings: routeSettings,
           builder: (context) => const Scaffold(),
         );
@@ -599,4 +597,20 @@ class Routes {
         );*/
     }
   }
+}
+
+Route<T> _buildFadeBlurOverlay<T>({
+  required RouteSettings settings,
+  required WidgetBuilder builder,
+  bool barrierDismissible = false,
+}) {
+  return AppPageRoute.build(
+    settings: settings,
+    transition: AppPageRouteTransition.fadeBlur,
+    forwardDuration: const Duration(milliseconds: 180),
+    builder: builder,
+    barrierDismissible: barrierDismissible,
+    barrierColor: Colors.black.withOpacity(0.2),
+    opaque: false,
+  );
 }

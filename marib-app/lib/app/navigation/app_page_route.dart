@@ -318,27 +318,27 @@ class _FadeBlurPageRoute<T> extends PageRouteBuilder<T> {
         final double baseBarrierOpacity = barrierColor?.opacity ?? 0.12;
         final double overlayOpacity = baseBarrierOpacity * backdropStrength;
 
-        Widget backdrop = Container(
+        final Widget overlayTint = Container(
           color: baseBarrierColor.withOpacity(overlayOpacity),
         );
 
-        if (blurSigma > 0) {
-          backdrop = ClipRect(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(
-                sigmaX: blurSigma,
-                sigmaY: blurSigma,
-              ),
-              child: backdrop,
+        final Widget backdrop = blurSigma > 0
+            ? ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(
+              sigmaX: blurSigma,
+              sigmaY: blurSigma,
             ),
-          );
-        }
+            child: overlayTint,
+          ),
+        )
+            : overlayTint;
 
         return Stack(
           fit: StackFit.expand,
           children: [
             backdrop,
-            animatedChild ?? const SizedBox.shrink(),
+            if (animatedChild != null) animatedChild!,
           ],
         );
       },

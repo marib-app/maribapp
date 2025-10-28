@@ -60,7 +60,6 @@ class TransactionBody extends StatelessWidget {
     }
 
     return ListView.separated(
-      reverse: true,
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 96),
       itemCount: transactions.length + (_hasError ? 1 : 0),

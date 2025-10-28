@@ -12,7 +12,7 @@ use App\Models\PaymentTransaction;
 use App\Models\ServiceRequest;
 use App\Services\Logging\PaymentTrace;
 use App\Services\Payments\OrderPaymentService;
-use App\Services\Payments\PaymentFulfillmentService;
+use App\Services\PaymentFulfillmentService;
 use App\Services\Payments\ServicePaymentService;
 use App\Support\Payments\PaymentGatewayCurrencyPolicy;
 use Illuminate\Http\JsonResponse;

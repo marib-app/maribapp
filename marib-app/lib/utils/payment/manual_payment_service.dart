@@ -319,12 +319,10 @@ class ManualPaymentSubmissionResult {
       paymentIntentId: paymentIntentId ?? this.paymentIntentId,
       status: status ?? this.status,
       message: message ?? this.message,
-      manualPaymentRequest:
-          manualPaymentRequest ?? this.manualPaymentRequest,
+      manualPaymentRequest: manualPaymentRequest ?? this.manualPaymentRequest,
       paymentTransaction: paymentTransaction ?? this.paymentTransaction,
       paymentIntent: paymentIntent ?? this.paymentIntent,
-      requiresConfirmation:
-          requiresConfirmation ?? this.requiresConfirmation,
+      requiresConfirmation: requiresConfirmation ?? this.requiresConfirmation,
       subject: subject ?? this.subject,
       next: next ?? this.next,
       raw: raw ?? this.raw,
@@ -614,9 +612,7 @@ class ManualPaymentSubmissionResult {
       subject: subjectMap != null
           ? Map<String, dynamic>.unmodifiable(subjectMap)
           : null,
-      next: nextMap != null
-          ? Map<String, dynamic>.unmodifiable(nextMap)
-          : null,
+      next: nextMap != null ? Map<String, dynamic>.unmodifiable(nextMap) : null,
       raw: Map<String, dynamic>.unmodifiable(map),
     );
   }
@@ -1186,8 +1182,7 @@ class ManualPaymentService {
       final String methodForBody = apiPaymentMethod ?? '';
       final String currencyForBody = upperCurrency ?? '';
 
-      final Map<String, dynamic> body =
-          ManualPaymentService.buildPaymentBody(
+      final Map<String, dynamic> body = ManualPaymentService.buildPaymentBody(
         purpose: purposeForBody,
         paymentMethod: methodForBody,
         currency: currencyForBody,
@@ -1466,8 +1461,7 @@ class ManualPaymentService {
         formatManualPaymentAmount(amount, normalizedCurrency);
     final String normalizedMethod =
         ManualPaymentService.paymentMethodForApi('manual_bank');
-    final String purposeForBody =
-        normalizedPurpose ?? purpose?.trim() ?? '';
+    final String purposeForBody = normalizedPurpose ?? purpose?.trim() ?? '';
 
     final Map<String, dynamic> basePayload =
         ManualPaymentService.buildPaymentBody(
@@ -1609,8 +1603,7 @@ class ManualPaymentService {
     final normalizedPurpose = _normalizePurposeForApi(purpose);
     final String normalizedMethod =
         ManualPaymentService.paymentMethodForApi('east_yemen_bank');
-    final String purposeForBody =
-        normalizedPurpose ?? purpose?.trim() ?? '';
+    final String purposeForBody = normalizedPurpose ?? purpose?.trim() ?? '';
     final Map<String, dynamic> basePayload =
         ManualPaymentService.buildPaymentBody(
       purpose: purposeForBody,
@@ -1712,8 +1705,7 @@ class ManualPaymentService {
     final normalizedPurpose = _normalizePurposeForApi(purpose);
     final String walletMethod =
         ManualPaymentService.paymentMethodForApi('wallet');
-    final String purposeForBody =
-        normalizedPurpose ?? purpose?.trim() ?? '';
+    final String purposeForBody = normalizedPurpose ?? purpose?.trim() ?? '';
     final Map<String, dynamic> basePayload =
         ManualPaymentService.buildPaymentBody(
       purpose: purposeForBody,
@@ -1773,7 +1765,13 @@ class ManualPaymentService {
 
   Future<List<ManualPayment>> fetchMyManualPayments({
     bool latestOnly = true,
-    Set<String> paymentGateways = const {'manual_bank', 'east_yemen_bank'},
+    Set<String> paymentGateways = const {
+      'manual_bank',
+      'east_yemen_bank',
+      'manual_banks',
+      'wallet',
+      'cash',
+    },
   }) async {
     try {
       final token = HiveUtils.getJWT();

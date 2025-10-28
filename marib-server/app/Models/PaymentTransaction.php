@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Order;
 use App\Models\WalletTransaction;
 use App\Models\ManualPaymentRequest;
 use App\Services\Payments\ManualPaymentRequestService;
@@ -105,6 +106,11 @@ class PaymentTransaction extends Model
     public function manualPaymentRequest(): BelongsTo
     {
         return $this->belongsTo(ManualPaymentRequest::class);
+    }
+
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(Order::class);
     }
 
     public function manualRequest()

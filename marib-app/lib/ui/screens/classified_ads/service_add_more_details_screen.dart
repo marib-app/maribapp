@@ -1166,6 +1166,7 @@ class _ServiceAddMoreDetailsScreenState
   void _onRequestSubmitted({
     Map<String, dynamic>? subject,
     Map<String, dynamic>? next,
+    String? transactionId,
   }) {
     if (!mounted) return;
 
@@ -1178,6 +1179,20 @@ class _ServiceAddMoreDetailsScreenState
       context,
       'Request submitted successfully.',
     );
+
+    final String? focusId = transactionId?.trim();
+
+    if (focusId != null && focusId.isNotEmpty) {
+      final Map<String, dynamic> args = <String, dynamic>{
+        'focus_transaction_id': focusId,
+      };
+
+      Navigator.of(context, rootNavigator: true).pushNamed(
+        Routes.transactionHistory,
+        arguments: args,
+      );
+      return;
+    }
 
     if (Navigator.of(context).canPop()) {
       Navigator.of(context).pop();
@@ -1284,6 +1299,7 @@ class _ServiceAddMoreDetailsScreenState
       _onRequestSubmitted(
         subject: navigationSubject,
         next: navigationNext,
+        transactionId: transactionId,
       );
       return true;
     } on ApiHttpException catch (err) {

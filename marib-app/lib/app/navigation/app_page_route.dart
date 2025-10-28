@@ -42,7 +42,8 @@ class AppPageRoute {
     Curve? popCurve,
     Curve? refreshCurve,
     AppPageRouteTransition transition = AppPageRouteTransition.motion,
-    RouteTransitionsBuilder? transitionsBuilder,
+    RouteTransitionsBuilder? fadeTransitionBuilder,
+    RouteTransitionsBuilder? customTransitionsBuilder,
 
   }) {
     final baseDuration =
@@ -89,10 +90,10 @@ class AppPageRoute {
           opaque: opaque ?? !barrierDismissible,
           forwardDuration: baseDuration,
           reverseDuration: baseReverseDuration,
-          customTransitionsBuilder: transitionsBuilder,
+          customTransitionsBuilder: fadeTransitionBuilder,
         );
       case AppPageRouteTransition.custom:
-        if (transitionsBuilder == null) {
+        if (customTransitionsBuilder  == null) {
           throw ArgumentError(
             'A custom transitionsBuilder must be provided when using '
                 'AppPageRouteTransition.custom.',
@@ -109,7 +110,7 @@ class AppPageRoute {
           opaque: opaque ?? !barrierDismissible,
           forwardDuration: baseDuration,
           reverseDuration: baseReverseDuration,
-          transitionsBuilder: transitionsBuilder,
+          transitionsBuilder: customTransitionsBuilder ,
         );
     }
   }

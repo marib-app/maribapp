@@ -169,14 +169,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
 
   @override
-  void dispose() {
-    _pageController.dispose();
-    _hintTimer?.cancel();
-    super.dispose();
-  }
-
-
-  @override
   Widget build(BuildContext context) {
     ScreenScaler.init(context);
 

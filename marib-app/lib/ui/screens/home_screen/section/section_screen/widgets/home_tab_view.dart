@@ -69,7 +69,7 @@ class HomeTabView extends StatefulWidget {
     required this.categoryId,
     required this.searchController,
     required this.viewModeListenable,
-    this.specialRequestSectionSlug, \\
+    this.specialRequestSectionSlug,
     this.bottomPadding = 0.0,
     this.enableAdSlider = false, // افتراضي: مخفي
     this.adInterfaceType,

@@ -139,12 +139,30 @@ class _SellerVerificationScreenState
   }*/
 
   Map<String, dynamic> convertToCustomFields(Map<dynamic, dynamic> fieldsData) {
-    return fieldsData.map((key, value) {
-      // Check if the value is not empty and join the list elements if necessary
+    final Map<String, dynamic> mapped = {};
 
-      return MapEntry('verification_field[$key]', value.join(', '));
-    })
-      ..removeWhere((key, value) => value == null); // Remove null entries
+
+    fieldsData.forEach((key, dynamic rawValue) {
+      final String fieldKey = 'verification_field[$key]';
+
+      if (rawValue is Iterable) {
+        final List<String> sanitized = rawValue
+            .map((element) => element?.toString().trim() ?? '')
+            .where((element) => element.isNotEmpty)
+            .toList();
+
+        mapped[fieldKey] = sanitized.isEmpty ? '' : sanitized.join(',');
+      } else if (rawValue != null) {
+        final String value = rawValue.toString().trim();
+        mapped[fieldKey] = value;
+      } else {
+        mapped[fieldKey] = '';
+      }
+    });
+
+    mapped.removeWhere((_, value) => value == null);
+
+    return mapped;
   }
 
   Widget bottomBar() {
@@ -432,7 +450,15 @@ class _SellerVerificationScreenState
                                     (e) => e.verificationFieldId == field.id)
                                 : null;
                         if (matchingField != null) {
-                          fieldData['value'] = matchingField.value!.split(',');
+                          final String rawValue = matchingField.value ?? '';
+                          final List<String> parsedValues = rawValue
+                              .split(',')
+                              .map((entry) => entry.trim())
+                              .where((entry) => entry.isNotEmpty)
+                              .toList();
+
+                          fieldData['value'] = parsedValues;
+
                           fieldData['isEdit'] = true;
                         } // Use null-aware operator '?.' for safety
                       }

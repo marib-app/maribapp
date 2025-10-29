@@ -6585,12 +6585,13 @@ class ApiController extends Controller {
 
     public function getVerificationFields() {
         try {
-            $fields = VerificationField::all();
-            ResponseService::successResponse("Verification Field Fetched Successfully", $fields);
+            $fields = VerificationField::query()->get();
+
+            ResponseService::successResponse('Verification Field Fetched Successfully', $fields);
+
         } catch (Throwable $th) {
-            DB::rollBack();
-            ResponseService::logErrorResponse($th, "API Controller -> addVerificationFieldValues");
-            ResponseService::errorResponse();
+            ResponseService::logErrorResponse($th, 'API Controller -> getVerificationFields');
+            ResponseService::errorResponse('Failed to fetch verification fields.');
         }
     }
 
@@ -6620,34 +6621,61 @@ class ApiController extends Controller {
             if ($request->verification_field) {
                 $itemCustomFieldValues = [];
                 foreach ($request->verification_field as $id => $value) {
+                    $fieldId = (int) $id;
+
+                    if ($fieldId <= 0) {
+                        continue;
+                    }
+
+                    $normalizedValue = $this->normalizeVerificationFieldValue($value);
+
                     $itemCustomFieldValues[] = [
                         'user_id'                 => $user->id,
-                        'verification_field_id'   => $id,
+                        'verification_field_id'   => $fieldId,
                         'verification_request_id' => $verificationRequest->id,
-                        'value'                   => $value,
+                        'value'                   => $normalizedValue,
                         'created_at'              => now(),
                         'updated_at'              => now()
                     ];
                 }
-                if (count($itemCustomFieldValues) > 0) {
-                    VerificationFieldValue::upsert($itemCustomFieldValues, ['user_id', 'verification_fields_id'], ['value', 'updated_at']);
+
+                if (!empty($itemCustomFieldValues)) {
+                    VerificationFieldValue::upsert(
+                        $itemCustomFieldValues,
+                        ['user_id', 'verification_field_id'],
+                        ['value', 'updated_at', 'verification_request_id']
+                    );
                 }
             }
 
             if ($request->verification_field_files) {
                 $itemCustomFieldValues = [];
                 foreach ($request->verification_field_files as $fieldId => $file) {
+
+                    $normalizedFieldId = (int) $fieldId;
+
+                    if ($normalizedFieldId <= 0) {
+                        continue;
+                    }
+
+
+
                     $itemCustomFieldValues[] = [
                         'user_id'                 => $user->id,
-                        'verification_field_id'   => $fieldId,
+                        'verification_field_id'   => $normalizedFieldId,
                         'verification_request_id' => $verificationRequest->id,
-                        'value'                   => !empty($file) ? FileService::upload($file, 'verification_field_files') : '',
+                        'value'                   => !empty($file) ? FileService::upload($file, 'verification_field_files') : null,
                         'created_at'              => now(),
                         'updated_at'              => now()
                     ];
                 }
-                if (count($itemCustomFieldValues) > 0) {
-                    VerificationFieldValue::upsert($itemCustomFieldValues, ['user_id', 'verification_field_id'], ['value', 'updated_at']);
+
+                if (!empty($itemCustomFieldValues)) {
+                    VerificationFieldValue::upsert(
+                        $itemCustomFieldValues,
+                        ['user_id', 'verification_field_id'],
+                        ['value', 'updated_at', 'verification_request_id']
+                    );
                 }
             }
             DB::commit();
@@ -6660,9 +6688,64 @@ class ApiController extends Controller {
     }
 
 
+
+
+    protected function normalizeVerificationFieldValue(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_string($value)) {
+            $normalized = trim($value);
+
+            return $normalized === '' ? null : $normalized;
+        }
+
+        if (is_scalar($value)) {
+            $normalized = trim((string) $value);
+
+            return $normalized === '' ? null : $normalized;
+        }
+
+        if (is_iterable($value)) {
+            $parts = [];
+
+            foreach ($value as $part) {
+                if ($part === null) {
+                    continue;
+                }
+
+                if (!is_scalar($part)) {
+                    continue;
+                }
+
+                $normalizedPart = trim((string) $part);
+
+                if ($normalizedPart === '') {
+                    continue;
+                }
+
+                $parts[] = $normalizedPart;
+            }
+
+            if (empty($parts)) {
+                return null;
+            }
+
+            return implode(',', $parts);
+        }
+
+        return null;
+    }
+
+
+
     public function getVerificationRequest(Request $request) {
         try {
-            $verificationRequest = VerificationRequest::with('verification_field_values')->owner()->first();
+            $verificationRequest = VerificationRequest::with(['verification_field_values.verification_field'])
+                ->owner()
+                ->first();
 
             if (empty($verificationRequest)) {
                 ResponseService::errorResponse("No Request found");
@@ -6670,44 +6753,37 @@ class ApiController extends Controller {
             $response = $verificationRequest->toArray();
             $response['verification_fields'] = [];
 
-            foreach ($verificationRequest->verification_field_values as $key2 => $verificationFieldValue) {
-                $tempRow = [];
-
-                if ($verificationFieldValue->relationLoaded('verification_field')) {
-
-                    if (!empty($verificationFieldValue->verification_field)) {
-
-                        $tempRow = $verificationFieldValue->verification_field->toArray();
-
-                        if ($verificationFieldValue->verification_field->type == "fileinput") {
-                            if (!is_array($verificationFieldValue->value)) {
-                                $tempRow['value'] = !empty($verificationFieldValue->value) ? [url(Storage::url($verificationFieldValue->value))] : [];
-                            } else {
-                                $tempRow['value'] = null;
-                            }
-                        } else {
-                            $tempRow['value'] = $verificationFieldValue->value ?? [];
-                        }
-
-                        // $tempRow['verification_field_value'] = !empty($verificationFieldValue) ? $verificationFieldValue->toArray() : (object)[];
-                        if (!empty($verificationFieldValue)) {
-                            $tempRow['verification_field_value'] = $verificationFieldValue->toArray();
-
-                            if ($verificationFieldValue->verification_field->type == "fileinput") {
-
-                                $tempRow['verification_field_value'][]['value'] = !empty($verificationFieldValue->value) ? [url(Storage::url($verificationFieldValue->value))] : [];
-                            } else {
-                                $tempRow['verification_field_value']['value'] = $verificationFieldValue->value ?? [];
-                            }
-                        } else {
-                            $tempRow['verification_field_value'] = (object)[];
-                        }
-
-                    }
-                    unset($tempRow['verification_field_value']['verification_field']);
-                    $response['verification_field'][] = $tempRow;
-
+            foreach ($verificationRequest->verification_field_values as $verificationFieldValue) {
+                if (!$verificationFieldValue->relationLoaded('verification_field')) {
+                    continue;
                 }
+
+
+                $verificationField = $verificationFieldValue->verification_field;
+
+                if (empty($verificationField)) {
+                    continue;
+                }
+
+                $fieldData = $verificationField->toArray();
+                $valueData = $verificationFieldValue->toArray();
+
+                unset($valueData['verification_field']);
+
+
+                if ($verificationField->type === 'fileinput') {
+                    $fileUrl = $verificationFieldValue->value;
+
+                    $fieldData['value'] = !empty($fileUrl) ? [$fileUrl] : [];
+                    $valueData['value'] = !empty($fileUrl) ? [$fileUrl] : [];
+                } else {
+                    $fieldData['value'] = $verificationFieldValue->value ?? '';
+                    $valueData['value'] = $verificationFieldValue->value ?? '';
+                }
+
+                $response['verification_fields'][] = $fieldData + ['verification_field_value' => $valueData];
+
+                
             }
             ResponseService::successResponse("Verification request fetched successfully.", $response);
         } catch (Throwable $th) {

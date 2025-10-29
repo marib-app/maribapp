@@ -13,8 +13,9 @@ import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/currency_utils.dart';
-
 import 'add_network_form.dart';
+import 'package:marib/app/navigation/app_page_route.dart';
+import 'package:marib/app/navigation/motion/route_motion.dart';
 
 class WifiPlanConfigurationScreen extends StatefulWidget {
   const WifiPlanConfigurationScreen({
@@ -36,13 +37,14 @@ class WifiPlanConfigurationScreen extends StatefulWidget {
     String defaultCurrency = 'YER',
     WifiRepository? repository,
   }) {
-    return MaterialPageRoute<Map<String, dynamic>?>(
+    return AppPageRoute.build<Map<String, dynamic>?>(
       builder: (_) => WifiPlanConfigurationScreen(
         networkId: networkId,
         networkName: networkName,
         defaultCurrency: defaultCurrency,
         repository: repository,
       ),
+      motionPattern: AppMotionPattern.glide,
     );
   }
 
@@ -690,3 +692,5 @@ class WifiPlanConfigurationScreenState
   @visibleForTesting
   bool get validityUnlimited => _validityUnlimited;
 }
+
+

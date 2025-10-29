@@ -17,6 +17,7 @@ class DepartmentReportService
     public const DEPARTMENT_SHEIN = 'shein';
     public const DEPARTMENT_COMPUTER = 'computer';
     public const DEPARTMENT_STORE = 'store';
+    public const DEPARTMENT_SERVICES = 'services';
 
     public function getGeneralOrderStats(): array
     {
@@ -151,6 +152,7 @@ class DepartmentReportService
             self::DEPARTMENT_SHEIN => __('departments.shein'),
             self::DEPARTMENT_COMPUTER => __('departments.computer'),
             self::DEPARTMENT_STORE => __('departments.store'),
+            self::DEPARTMENT_SERVICES => __('departments.services'),
 
 
         ];

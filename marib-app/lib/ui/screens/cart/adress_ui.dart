@@ -351,15 +351,15 @@ class AdressUI extends StatelessWidget {
 
   // ====== شيمر البطاقة ======
   Widget _buildShimmerCard(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
     return Shimmer.fromColors(
-      baseColor: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
-      highlightColor: isDark ? Colors.grey.shade600 : Colors.grey.shade100,
+      baseColor: colorScheme.shimmerBaseColor,
+      highlightColor: colorScheme.shimmerHighlightColor,
       child: Container(
         height: 160,
         margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
-          color: isDark ? Colors.grey.shade900 : Colors.white,
+          color: colorScheme.shimmerContentColor,
           borderRadius: BorderRadius.circular(12),
         ),
       ),

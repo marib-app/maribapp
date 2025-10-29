@@ -9,6 +9,8 @@ import 'package:marib/utils/payment/bank_transfer_args.dart';
 import 'package:marib/utils/payment/bank_transfer_screen.dart';
 import 'package:marib/utils/payment/manual_payment_service.dart'
     show ManualPaymentSubmissionResult;
+import 'package:marib/app/navigation/app_page_route.dart';
+import 'package:marib/app/navigation/motion/route_motion.dart';
 
 class ServicePaymentPage extends StatefulWidget {
   const ServicePaymentPage({super.key, this.args = const {}});
@@ -18,9 +20,10 @@ class ServicePaymentPage extends StatefulWidget {
     final Map<String, dynamic> args =
         (settings.arguments as Map?)?.cast<String, dynamic>() ?? const {};
 
-    return MaterialPageRoute(
+    return AppPageRoute.build(
       builder: (_) => ServicePaymentPage(args: args),
       settings: settings,
+      motionPattern: AppMotionPattern.glide,
     );
   }
 
@@ -408,3 +411,5 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
     return <String, dynamic>{};
   }
 }
+
+

@@ -825,7 +825,7 @@ class _HomeTabViewState extends State<HomeTabView> {
                                                               width: itemWidth,
                                                               decoration:
                                                                   BoxDecoration(
-                                                                color: base,
+                                                                color: content,
                                                                 borderRadius:
                                                                     BorderRadius
                                                                         .circular(
@@ -868,7 +868,7 @@ class _HomeTabViewState extends State<HomeTabView> {
                                               width: width,
                                               height: indicatorHeight,
                                               decoration: BoxDecoration(
-                                                color: base,
+                                                color: content,
                                                 borderRadius:
                                                     BorderRadius.circular(20),
                                               ),

@@ -6,7 +6,8 @@ import 'fullscreen_gallery.dart';
 import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
 import 'ad_image_source.dart';
 import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
-
+import 'package:marib/app/navigation/app_page_route.dart';
+import 'package:marib/app/navigation/motion/route_motion.dart';
 
 
 class AdImagesHeaderShimmer extends StatelessWidget {
@@ -236,7 +237,7 @@ class _AdImageHeaderState extends State<AdImageHeader> {
                 : () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
+                AppPageRoute.build(
                   builder: (context) => FullscreenGalleryPage(
                     images: widget.images,
                     initialIndex: currentImageIndex,
@@ -244,7 +245,8 @@ class _AdImageHeaderState extends State<AdImageHeader> {
                         ? 'ad-image-${widget.modelId}-$index'
                         : 'ad-image-$index',
                   ),
-                      ),
+                  motionPattern: AppMotionPattern.glide,
+                ),
               );
             },
             child: _buildImageSlider(),
@@ -524,3 +526,5 @@ class _AdImageHeaderState extends State<AdImageHeader> {
     );
   }
 }
+
+

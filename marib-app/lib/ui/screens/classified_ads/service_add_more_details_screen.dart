@@ -21,21 +21,23 @@ import 'package:marib/utils/payment/bank_transfer_args.dart';
 import 'package:marib/utils/payment/bank_transfer_screen.dart';
 import 'package:marib/utils/payment/manual_payment_service.dart';
 import 'package:marib/utils/payment/manual_payment.dart';
-import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 import 'package:marib/ui/screens/transaction/manual_payment_details_screen.dart';
 import 'package:marib/ui/screens/transaction/manual_payments_controller.dart';
 import 'package:marib/ui/screens/classified_ads/service_add_more_details_screen_ui.dart';
+import 'package:marib/app/navigation/app_page_route.dart';
+import 'package:marib/app/navigation/motion/route_motion.dart';
 
 class ServiceAddMoreDetailsScreen extends StatefulWidget {
   const ServiceAddMoreDetailsScreen({super.key});
 
   static Route route(RouteSettings settings) {
-    return MaterialPageRoute(
+    return AppPageRoute.build(
       builder: (_) => BlocProvider(
         create: (_) => FetchCustomFieldsCubit(),
         child: const ServiceAddMoreDetailsScreen(),
       ),
       settings: settings,
+      motionPattern: AppMotionPattern.glide,
     );
   }
 
@@ -1193,12 +1195,13 @@ class _ServiceAddMoreDetailsScreenState
       if (manualPaymentSnapshot != null) {
         unawaited(
           Navigator.of(context).pushReplacement(
-            BlurredRouter(
+            AppPageRoute.build(
               builder: (_) => ManualPaymentDetailsScreen(
                 manualPayment: manualPaymentSnapshot,
                 dateFormat: DateFormat('d MMM yyyy, h:mm a', 'ar'),
                 pollInterval: ManualPaymentsController.pollInterval,
               ),
+              motionPattern: AppMotionPattern.glide,
             ),
           ),
         );
@@ -1356,12 +1359,13 @@ class _ServiceAddMoreDetailsScreenState
 
       unawaited(
         Navigator.of(context, rootNavigator: true).pushReplacement(
-          BlurredRouter(
+          AppPageRoute.build(
             builder: (_) => ManualPaymentDetailsScreen(
               manualPayment: manualPayment,
               dateFormat: DateFormat('d MMM yyyy, h:mm a', 'ar'),
               pollInterval: ManualPaymentsController.pollInterval,
             ),
+            motionPattern: AppMotionPattern.glide,
           ),
         ),
       );
@@ -1840,3 +1844,5 @@ class _ServiceAddMoreDetailsScreenState
     return null;
   }
 }
+
+

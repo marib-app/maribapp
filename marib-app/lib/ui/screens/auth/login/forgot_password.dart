@@ -22,7 +22,7 @@ import 'package:marib/data/cubits/system/fetch_system_settings_cubit.dart';
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
 
-  static BlurredRouter route(RouteSettings routeSettings) {
+  static Route route(RouteSettings routeSettings) {
     return BlurredRouter(
       builder: (_) => const ForgotPasswordScreen(),
     );

@@ -7,13 +7,14 @@ import 'package:marib/data/cubits/wallet/wallet_transactions_cubit.dart';
 import 'package:marib/ui/screens/wallet/wallet_screen_ui.dart';
 import 'package:marib/data/cubits/wallet/wallet_transfers_cubit.dart';
 import 'package:marib/data/cubits/wallet/wallet_withdrawals_cubit.dart';
-
+import 'package:marib/app/navigation/app_page_route.dart';
+import 'package:marib/app/navigation/motion/route_motion.dart';
 
 class WalletScreen extends StatelessWidget {
   const WalletScreen({super.key});
 
   static Route route(RouteSettings settings) {
-    return MaterialPageRoute(
+    return AppPageRoute.build(
       settings: settings,
       builder: (context) {
         return MultiBlocProvider(
@@ -31,6 +32,7 @@ class WalletScreen extends StatelessWidget {
           child: const WalletScreenUI(),
         );
       },
+      motionPattern: AppMotionPattern.glide,
     );
   }
 
@@ -51,3 +53,5 @@ class WalletScreen extends StatelessWidget {
     );
   }
 }
+
+

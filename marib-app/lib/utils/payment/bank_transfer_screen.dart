@@ -3,20 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 
 import 'package:marib/utils/extensions/extensions.dart';
-import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/api.dart';
 
-// موديلات وخدمات
+// ظ…ظˆط¯ظٹظ„ط§طھ ظˆط®ط¯ظ…ط§طھ
 import 'package:marib/utils/payment/bank_account.dart';
 import 'package:marib/utils/payment/manual_payment_service.dart';
 import 'package:marib/utils/payment/bank_transfer_args.dart';
-import 'package:marib/ui/screens/cart/order_step.dart';
-
-import 'package:marib/ui/screens/Transaction_screen.dart';
-
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:marib/utils/payment/payment_method_cards.dart';
 import 'dart:async';
@@ -38,7 +33,7 @@ class BankTransferScreen extends StatefulWidget {
 
   const BankTransferScreen({super.key, required this.args});
 
-  /// يعرض نافذة التحويل البنكي كنافذة سفلية احترافية.
+  /// ظٹط¹ط±ط¶ ظ†ط§ظپط°ط© ط§ظ„طھط­ظˆظٹظ„ ط§ظ„ط¨ظ†ظƒظٹ ظƒظ†ط§ظپط°ط© ط³ظپظ„ظٹط© ط§ط­طھط±ط§ظپظٹط©.
   static Future<T?> show<T>(BuildContext context, BankTransferArgs args) {
     return showModalBottomSheet<T>(
       context: context,
@@ -64,6 +59,8 @@ class _BankTransferScreenState extends State<BankTransferScreen>
   late final WalletSummaryCubit _walletSummaryCubit;
   StreamSubscription<WalletSummaryState>? _walletSummarySub;
   StreamSubscription<String>? _walletUpdateSub;
+  OverlayEntry? _overlayMessageEntry;
+  Timer? _overlayMessageTimer;
 
   List<BankAccount> _banks = [];
   EastYemenBankConfig? _eastYemenBank;
@@ -73,8 +70,8 @@ class _BankTransferScreenState extends State<BankTransferScreen>
   bool _loadingWallet = false;
 
   int? _selectedBankId;
-  int? _pressedBankId; // لتأثير الضغط (Scale)
-  int? _highlightedAccountNameBankId; // تأثير الضغط على اسم المستفيد
+  int? _pressedBankId; // ظ„طھط£ط«ظٹط± ط§ظ„ط¶ط؛ط· (Scale)
+  int? _highlightedAccountNameBankId; // طھط£ط«ظٹط± ط§ظ„ط¶ط؛ط· ط¹ظ„ظ‰ ط§ط³ظ… ط§ظ„ظ…ط³طھظپظٹط¯
 
   WalletSummary? _walletSummary;
   dynamic _walletError;
@@ -101,17 +98,17 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     'pdf',
   ]; // Keep in sync with PaymentController::manual MIME validation.
 
-  // الحقول
-  final _senderCtrl = TextEditingController(); // اسم المرسل
-  final _transferCodeCtrl = TextEditingController(); // رقم الحوالة
-  final _notesCtrl = TextEditingController(); // ملاحظات
-  bool _allowRoutePop = false; // للسماح بإغلاق النافذة عند التأكيد فقط
+  // ط§ظ„ط­ظ‚ظˆظ„
+  final _senderCtrl = TextEditingController(); // ط§ط³ظ… ط§ظ„ظ…ط±ط³ظ„
+  final _transferCodeCtrl = TextEditingController(); // ط±ظ‚ظ… ط§ظ„ط­ظˆط§ظ„ط©
+  final _notesCtrl = TextEditingController(); // ظ…ظ„ط§ط­ط¸ط§طھ
+  bool _allowRoutePop = false; // ظ„ظ„ط³ظ…ط§ط­ ط¨ط¥ط؛ظ„ط§ظ‚ ط§ظ„ظ†ط§ظپط°ط© ط¹ظ†ط¯ ط§ظ„طھط£ظƒظٹط¯ ظپظ‚ط·
 
   File? _receiptFile;
   String? _receiptName;
   bool _pickingReceipt = false;
   bool _submitting = false;
-  bool _attempted = false; // لإظهار خطأ بسيط إذا أُرسل بدون اسم مرسل
+  bool _attempted = false; // ظ„ط¥ط¸ظ‡ط§ط± ط®ط·ط£ ط¨ط³ظٹط· ط¥ط°ط§ ط£ظڈط±ط³ظ„ ط¨ط¯ظˆظ† ط§ط³ظ… ظ…ط±ط³ظ„
 
   late final AnimationController _shimmerCtl;
 
@@ -140,6 +137,9 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     _walletSummarySub?.cancel();
     _walletUpdateSub?.cancel();
     _walletSummaryCubit.close();
+    _overlayMessageTimer?.cancel();
+    _overlayMessageEntry?.remove();
+    _overlayMessageEntry = null;
 
     super.dispose();
   }
@@ -629,13 +629,13 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     }
     final String? accountNumber = bank.accountNumber?.trim();
     if (accountNumber != null && accountNumber.isNotEmpty) {
-      return 'حساب رقم $accountNumber';
+      return 'ط­ط³ط§ط¨ ط±ظ‚ظ… $accountNumber';
     }
     final String? iban = bank.iban?.trim();
     if (iban != null && iban.isNotEmpty) {
       return 'IBAN $iban';
     }
-    return 'وسيلة دفع';
+    return 'ظˆط³ظٹظ„ط© ط¯ظپط¹';
   }
 
   Future<bool> _ensurePaymentIntent() async {
@@ -833,13 +833,6 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     return walletCurrency == paymentCurrency;
   }
 
-  String _maskRight(String? v, {int take = 4}) {
-    if (v == null || v.isEmpty) return '';
-    final t = v.replaceAll(' ', '');
-    if (t.length <= take) return t;
-    return '•••• ${t.substring(t.length - take)}';
-  }
-
   Future<void> _pickReceipt() async {
     setState(() => _pickingReceipt = true);
     try {
@@ -860,7 +853,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       if (bytes > 5 * 1024 * 1024) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('حجم الإيصال يتجاوز 5MB')),
+          const SnackBar(content: Text('ط­ط¬ظ… ط§ظ„ط¥ظٹطµط§ظ„ ظٹطھط¬ط§ظˆط² 5MB')),
         );
         return;
       }
@@ -937,7 +930,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     if (_selectedMethod == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('الرجاء اختيار وسيلة دفع')),
+          const SnackBar(content: Text('ط§ظ„ط±ط¬ط§ط، ط§ط®طھظٹط§ط± ظˆط³ظٹظ„ط© ط¯ظپط¹')),
         );
       }
       return;
@@ -945,7 +938,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
 
     if (_usingManualBank && !_receiptOk && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('الرجاء إرفاق إيصال التحويل')),
+        const SnackBar(content: Text('ط§ظ„ط±ط¬ط§ط، ط¥ط±ظپط§ظ‚ ط¥ظٹطµط§ظ„ ط§ظ„طھط­ظˆظٹظ„')),
       );
     }
 
@@ -955,7 +948,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
 
     if (_usingWallet && walletPurpose) {
       _showOverlayMessage(
-        'لا يمكن استخدام المحفظة لشحن الرصيد. الرجاء اختيار تحويل بنكي.',
+        'ظ„ط§ ظٹظ…ظƒظ† ط§ط³طھط®ط¯ط§ظ… ط§ظ„ظ…ط­ظپط¸ط© ظ„ط´ط­ظ† ط§ظ„ط±طµظٹط¯. ط§ظ„ط±ط¬ط§ط، ط§ط®طھظٹط§ط± طھط­ظˆظٹظ„ ط¨ظ†ظƒظٹ.',
         type: MessageType.warning,
       );
       return;
@@ -964,20 +957,20 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     if (_usingWallet) {
       if (!_walletSummaryReady) {
         _showOverlayMessage(
-          'تعذّر تحميل رصيد المحفظة. يرجى تحديث البطاقة والمحاولة مجددًا.',
+          'طھط¹ط°ظ‘ط± طھط­ظ…ظٹظ„ ط±طµظٹط¯ ط§ظ„ظ…ط­ظپط¸ط©. ظٹط±ط¬ظ‰ طھط­ط¯ظٹط« ط§ظ„ط¨ط·ط§ظ‚ط© ظˆط§ظ„ظ…ط­ط§ظˆظ„ط© ظ…ط¬ط¯ط¯ظ‹ط§.',
           type: MessageType.error,
         );
         return;
       }
       if (!_walletCurrencyMatchesPayment) {
         final String walletLabel =
-            _walletCurrencyLabel ?? _walletCurrencyCode ?? 'المحفظة';
+            _walletCurrencyLabel ?? _walletCurrencyCode ?? 'ط§ظ„ظ…ط­ظپط¸ط©';
         final String paymentLabel = _paymentCurrencyDisplay ??
             _paymentCurrencyLabel ??
             _paymentCurrencyCode ??
-            'العملية الحالية';
+            'ط§ظ„ط¹ظ…ظ„ظٹط© ط§ظ„ط­ط§ظ„ظٹط©';
         _showOverlayMessage(
-          'لا يمكن استخدام المحفظة بعملة $walletLabel لهذه العملية التي عملتها $paymentLabel.',
+          'ظ„ط§ ظٹظ…ظƒظ† ط§ط³طھط®ط¯ط§ظ… ط§ظ„ظ…ط­ظپط¸ط© ط¨ط¹ظ…ظ„ط© $walletLabel ظ„ظ‡ط°ظ‡ ط§ظ„ط¹ظ…ظ„ظٹط© ط§ظ„طھظٹ ط¹ظ…ظ„طھظ‡ط§ $paymentLabel.',
           type: MessageType.error,
         );
         return;
@@ -988,7 +981,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         final amountText = widget.args.amount.toStringAsFixed(2);
         final String suffix = currency.isNotEmpty ? ' $currency' : '';
         _showOverlayMessage(
-          'رصيد المحفظة غير كافٍ لدفع $amountText$suffix.',
+          'ط±طµظٹط¯ ط§ظ„ظ…ط­ظپط¸ط© ط؛ظٹط± ظƒط§ظپظچ ظ„ط¯ظپط¹ $amountText$suffix.',
           type: MessageType.error,
         );
         return;
@@ -1001,7 +994,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     final resolvedIntentId = _paymentIntentId?.trim();
     if (!ensured || resolvedIntentId == null || resolvedIntentId.isEmpty) {
       _showOverlayMessage(
-        'تعذّر تهيئة عملية الدفع. يرجى إعادة تحميل شاشة التحويل والمحاولة مجددًا.',
+        'طھط¹ط°ظ‘ط± طھظ‡ظٹط¦ط© ط¹ظ…ظ„ظٹط© ط§ظ„ط¯ظپط¹. ظٹط±ط¬ظ‰ ط¥ط¹ط§ط¯ط© طھط­ظ…ظٹظ„ ط´ط§ط´ط© ط§ظ„طھط­ظˆظٹظ„ ظˆط§ظ„ظ…ط­ط§ظˆظ„ط© ظ…ط¬ط¯ط¯ظ‹ط§.',
         type: MessageType.error,
       );
       return;
@@ -1016,32 +1009,39 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       String? payableType;
       int? payableId;
 
-      switch (normalizedPurpose) {
-        case 'order':
-          payableType = 'order';
-          payableId = widget.args.packageId;
-          break;
-        case 'package':
-          payableType = 'package';
-          payableId = widget.args.packageId;
-          break;
-        case _walletTopUpPurpose:
-          payableType = ManualPaymentService.walletTopUpPurpose;
+      final int? serviceRequestIdArg = widget.args.serviceRequestId;
+      final int? serviceIdArg = widget.args.serviceId ?? widget.args.itemId;
 
-          payableId = null;
-          break;
-        case 'service':
-          payableType = 'service';
-          payableId = widget.args.serviceId ?? widget.args.itemId;
-          break;
-        default:
-          if (isWalletTopUp) {
-            payableType = ManualPaymentService.walletTopUpPurpose;
-            payableId = null;
-          } else {
+      if (serviceRequestIdArg != null) {
+        payableType = 'App\\Models\\ServiceRequest';
+        payableId = serviceRequestIdArg;
+      } else {
+        switch (normalizedPurpose) {
+          case 'order':
+            payableType = 'order';
+            payableId = widget.args.packageId;
+            break;
+          case 'package':
             payableType = 'package';
             payableId = widget.args.packageId;
-          }
+            break;
+          case _walletTopUpPurpose:
+            payableType = ManualPaymentService.walletTopUpPurpose;
+            payableId = null;
+            break;
+          case 'service':
+            payableType = 'service';
+            payableId = widget.args.serviceId ?? widget.args.itemId;
+            break;
+          default:
+            if (isWalletTopUp) {
+              payableType = ManualPaymentService.walletTopUpPurpose;
+              payableId = null;
+            } else {
+              payableType = 'package';
+              payableId = widget.args.packageId;
+            }
+        }
       }
 
       final int? resolvedPackageId =
@@ -1073,38 +1073,56 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       final senderName = _shouldShowSenderField ? _senderCtrl.text.trim() : '';
       final transferCode =
           _shouldShowTransferCodeField ? _transferCodeCtrl.text.trim() : '';
-      final String? submissionCurrency = _paymentCurrencyCode;
-      if (submissionCurrency == null || submissionCurrency.isEmpty) {
+      final String? submissionCurrencyCandidate = _paymentCurrencyCode;
+      if ((submissionCurrencyCandidate ?? '').isEmpty) {
         _showOverlayMessage(
-          'تعذّر تحديد عملة الطلب. يرجى المحاولة لاحقًا.',
+          'طھط¹ط°ظ‘ط± طھط­ط¯ظٹط¯ ط¹ظ…ظ„ط© ط§ظ„ط·ظ„ط¨. ظٹط±ط¬ظ‰ ط§ظ„ظ…ط­ط§ظˆظ„ط© ظ„ط§ط­ظ‚ظ‹ط§.',
           type: MessageType.error,
         );
         return;
       }
+      final String submissionCurrency = submissionCurrencyCandidate!;
 
       final userNote = notesText;
 
       final contextMetadata = widget.args.toContext()
         ..removeWhere((k, v) => v == null);
 
-      final metadata = <String, dynamic>{
+      final Map<String, dynamic> metadata = <String, dynamic>{
         'device': _deviceLabel(),
         'source': _sourceLabel(),
-        if (payableType != null) 'payable_type': payableType,
-        if (payableId != null) 'payable_id': payableId,
-        if (senderName.isNotEmpty) 'sender_name': senderName,
-        if (_usingManualBank && transferCode.isNotEmpty) ...{
+      };
+
+      if (payableType case final String type) {
+        metadata['payable_type'] = type;
+      }
+      if (payableId case final int id) {
+        metadata['payable_id'] = id;
+      }
+      if (serviceRequestIdArg != null) {
+        metadata['service_request_id'] = serviceRequestIdArg;
+      }
+      if (serviceIdArg != null) {
+        metadata['service_id'] = serviceIdArg;
+      }
+      if (senderName.isNotEmpty) metadata['sender_name'] = senderName;
+      if (_usingManualBank && transferCode.isNotEmpty) {
+        metadata.addAll({
           'transfer_code': transferCode,
           'transfer_reference': transferCode,
           'transfer_number': transferCode,
-        },
-        if (contextMetadata.isNotEmpty) 'context': contextMetadata,
-      }..removeWhere((k, v) {
-          if (v == null) return true;
-          if (v is String) return v.trim().isEmpty;
-          if (v is Map) return v.isEmpty;
-          return false;
         });
+      }
+      if (contextMetadata.isNotEmpty) {
+        metadata['context'] = contextMetadata;
+      }
+
+      metadata.removeWhere((k, v) {
+        if (v == null) return true;
+        if (v is String) return v.trim().isEmpty;
+        if (v is Map) return v.isEmpty;
+        return false;
+      });
 
       final intentId = resolvedIntentId;
       final transactionId = _paymentTransactionId?.trim();
@@ -1208,20 +1226,20 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         final t = (result.message ?? '').trim();
         if (t.isNotEmpty) return t;
         return _usingEastYemen
-            ? 'تم إكمال الدفع عبر بوابة بنك الشرق بنجاح.'
+            ? 'طھظ… ط¥ظƒظ…ط§ظ„ ط§ظ„ط¯ظپط¹ ط¹ط¨ط± ط¨ظˆط§ط¨ط© ط¨ظ†ظƒ ط§ظ„ط´ط±ظ‚ ط¨ظ†ط¬ط§ط­.'
             : _usingWallet
-                ? 'تم خصم المبلغ من المحفظة وإكمال العملية بنجاح.'
-                : 'تم إرسال طلب الدفع، يتم تحويلك لمتابعة الطلب';
+                ? 'طھظ… ط®طµظ… ط§ظ„ظ…ط¨ظ„ط؛ ظ…ظ† ط§ظ„ظ…ط­ظپط¸ط© ظˆط¥ظƒظ…ط§ظ„ ط§ظ„ط¹ظ…ظ„ظٹط© ط¨ظ†ط¬ط§ط­.'
+                : 'طھظ… ط¥ط±ط³ط§ظ„ ط·ظ„ط¨ ط§ظ„ط¯ظپط¹طŒ ظٹطھظ… طھط­ظˆظٹظ„ظƒ ظ„ظ…طھط§ط¨ط¹ط© ط§ظ„ط·ظ„ط¨';
       })();
 
       final String errorMessage = (() {
         final t = (result.message ?? '').trim();
         if (t.isNotEmpty) return t;
         return _usingEastYemen
-            ? 'تعذّر إكمال الدفع عبر بوابة بنك الشرق. حاول مرة أخرى.'
+            ? 'طھط¹ط°ظ‘ط± ط¥ظƒظ…ط§ظ„ ط§ظ„ط¯ظپط¹ ط¹ط¨ط± ط¨ظˆط§ط¨ط© ط¨ظ†ظƒ ط§ظ„ط´ط±ظ‚. ط­ط§ظˆظ„ ظ…ط±ط© ط£ط®ط±ظ‰.'
             : _usingWallet
-                ? 'تعذّر خصم المبلغ من المحفظة. حاول مرة أخرى.'
-                : 'تعذّر إرسال طلب الدفع. حاول مرة أخرى.';
+                ? 'طھط¹ط°ظ‘ط± ط®طµظ… ط§ظ„ظ…ط¨ظ„ط؛ ظ…ظ† ط§ظ„ظ…ط­ظپط¸ط©. ط­ط§ظˆظ„ ظ…ط±ط© ط£ط®ط±ظ‰.'
+                : 'طھط¹ط°ظ‘ط± ط¥ط±ط³ط§ظ„ ط·ظ„ط¨ ط§ظ„ط¯ظپط¹. ط­ط§ظˆظ„ ظ…ط±ط© ط£ط®ط±ظ‰.';
       })();
 
       final String? displayReference = (() {
@@ -1240,7 +1258,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       })();
 
       final String successMessageWithReference = displayReference != null
-          ? '$successMessage\nرقم العملية: $displayReference'
+          ? '$successMessage\nط±ظ‚ظ… ط§ظ„ط¹ظ…ظ„ظٹط©: $displayReference'
           : successMessage;
 
       _showOverlayMessage(ok ? successMessageWithReference : errorMessage,
@@ -1262,7 +1280,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       }
     } catch (e) {
       if (!mounted) return;
-      _showOverlayMessage('تعذّر إرسال الطلب: $e', type: MessageType.error);
+      _showOverlayMessage('طھط¹ط°ظ‘ط± ط¥ط±ط³ط§ظ„ ط§ظ„ط·ظ„ط¨: $e', type: MessageType.error);
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -1317,7 +1335,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
                     children: [
                       Expanded(
                         child: Text(
-                          'تعليمات الدفع عبر بوابة بنك الشرق الإلكترونية',
+                          'طھط¹ظ„ظٹظ…ط§طھ ط§ظ„ط¯ظپط¹ ط¹ط¨ط± ط¨ظˆط§ط¨ط© ط¨ظ†ظƒ ط§ظ„ط´ط±ظ‚ ط§ظ„ط¥ظ„ظƒطھط±ظˆظ†ظٹط©',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
@@ -1326,42 +1344,44 @@ class _BankTransferScreenState extends State<BankTransferScreen>
                         ),
                       ),
                       IconButton(
-                        tooltip: 'إغلاق',
+                        tooltip: 'ط¥ط؛ظ„ط§ظ‚',
                         onPressed: () => Navigator.of(sheetContext).pop(),
-                        icon: Icon(Icons.close_rounded,
-                            color: onSurface.withOpacity(.65)),
+                        icon: Icon(
+                          Icons.close_rounded,
+                          color: onSurface.withValues(alpha: 0.65),
+                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'ملاحظة: لإتمام الدفع عبر هذه البوابة، يجب أن يكون لديك حساب مفعل لدى بنك الشرق.',
+                    'ظ…ظ„ط§ط­ط¸ط©: ظ„ط¥طھظ…ط§ظ… ط§ظ„ط¯ظپط¹ ط¹ط¨ط± ظ‡ط°ظ‡ ط§ظ„ط¨ظˆط§ط¨ط©طŒ ظٹط¬ط¨ ط£ظ† ظٹظƒظˆظ† ظ„ط¯ظٹظƒ ط­ط³ط§ط¨ ظ…ظپط¹ظ„ ظ„ط¯ظ‰ ط¨ظ†ظƒ ط§ظ„ط´ط±ظ‚.',
                     style: TextStyle(
                       height: 1.5,
-                      color: onSurface.withOpacity(.8),
+                      color: onSurface.withValues(alpha: 0.8),
                     ),
                   ),
                   const SizedBox(height: 16),
                   ...[
-                    'افتح تطبيق بنك الشرق اليمني على هاتفك.',
-                    'من الواجهة الرئيسية، اختر أيقونة التسوق.',
-                    'من قائمة التطبيقات، اختر "مارب بين يديك".',
-                    'سيظهر لك كود الشراء الخاص بعملية الدفع.',
-                    'انسخ الكود وأدخله في تطبيق مارب بين يديك لتأكيد العملية.',
-                    'اضغط على زر تأكيد لإكمال عملية الدفع.',
+                    'ط§ظپطھط­ طھط·ط¨ظٹظ‚ ط¨ظ†ظƒ ط§ظ„ط´ط±ظ‚ ط§ظ„ظٹظ…ظ†ظٹ ط¹ظ„ظ‰ ظ‡ط§طھظپظƒ.',
+                    'ظ…ظ† ط§ظ„ظˆط§ط¬ظ‡ط© ط§ظ„ط±ط¦ظٹط³ظٹط©طŒ ط§ط®طھط± ط£ظٹظ‚ظˆظ†ط© ط§ظ„طھط³ظˆظ‚.',
+                    'ظ…ظ† ظ‚ط§ط¦ظ…ط© ط§ظ„طھط·ط¨ظٹظ‚ط§طھطŒ ط§ط®طھط± "ظ…ط§ط±ط¨ ط¨ظٹظ† ظٹط¯ظٹظƒ".',
+                    'ط³ظٹط¸ظ‡ط± ظ„ظƒ ظƒظˆط¯ ط§ظ„ط´ط±ط§ط، ط§ظ„ط®ط§طµ ط¨ط¹ظ…ظ„ظٹط© ط§ظ„ط¯ظپط¹.',
+                    'ط§ظ†ط³ط® ط§ظ„ظƒظˆط¯ ظˆط£ط¯ط®ظ„ظ‡ ظپظٹ طھط·ط¨ظٹظ‚ ظ…ط§ط±ط¨ ط¨ظٹظ† ظٹط¯ظٹظƒ ظ„طھط£ظƒظٹط¯ ط§ظ„ط¹ظ…ظ„ظٹط©.',
+                    'ط§ط¶ط؛ط· ط¹ظ„ظ‰ ط²ط± طھط£ظƒظٹط¯ ظ„ط¥ظƒظ…ط§ظ„ ط¹ظ…ظ„ظٹط© ط§ظ„ط¯ظپط¹.',
                   ].map(
                     (step) => Padding(
                       padding: const EdgeInsetsDirectional.only(bottom: 8),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('• '),
+                          const Text('â€¢ '),
                           Expanded(
                             child: Text(
                               step,
                               style: TextStyle(
                                 height: 1.5,
-                                color: onSurface.withOpacity(.9),
+                                color: onSurface.withValues(alpha: 0.9),
                               ),
                             ),
                           ),
@@ -1371,10 +1391,10 @@ class _BankTransferScreenState extends State<BankTransferScreen>
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'تنويه: بمجرد إدخال كود الشراء وتأكيد العملية، سيتم خصم المبلغ مباشرة من حسابك في بنك الشرق، كما سيتم تنفيذ عملية الشراء تلقائياً.',
+                    'طھظ†ظˆظٹظ‡: ط¨ظ…ط¬ط±ط¯ ط¥ط¯ط®ط§ظ„ ظƒظˆط¯ ط§ظ„ط´ط±ط§ط، ظˆطھط£ظƒظٹط¯ ط§ظ„ط¹ظ…ظ„ظٹط©طŒ ط³ظٹطھظ… ط®طµظ… ط§ظ„ظ…ط¨ظ„ط؛ ظ…ط¨ط§ط´ط±ط© ظ…ظ† ط­ط³ط§ط¨ظƒ ظپظٹ ط¨ظ†ظƒ ط§ظ„ط´ط±ظ‚طŒ ظƒظ…ط§ ط³ظٹطھظ… طھظ†ظپظٹط° ط¹ظ…ظ„ظٹط© ط§ظ„ط´ط±ط§ط، طھظ„ظ‚ط§ط¦ظٹط§ظ‹.',
                     style: TextStyle(
                       height: 1.5,
-                      color: onSurface.withOpacity(.85),
+                      color: onSurface.withValues(alpha: 0.85),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -1382,7 +1402,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () => Navigator.of(sheetContext).pop(),
-                      child: const Text('فهمت التعليمات'),
+                      child: const Text('ظپظ‡ظ…طھ ط§ظ„طھط¹ظ„ظٹظ…ط§طھ'),
                     ),
                   ),
                 ],
@@ -1436,32 +1456,72 @@ class _BankTransferScreenState extends State<BankTransferScreen>
 
   void _showOverlayMessage(String message,
       {MessageType type = MessageType.success}) {
-    void show(BuildContext c) {
-      final m = ScaffoldMessenger.maybeOf(c);
-      if (m != null) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          m.showSnackBar(SnackBar(
-            content: Text(message),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: type == MessageType.error ? Colors.red : null,
-            duration: Duration(seconds: type == MessageType.error ? 4 : 3),
-          ));
-        });
-      }
+    _overlayMessageTimer?.cancel();
+    _overlayMessageEntry?.remove();
+
+    final buildContext =
+        Constant.navigatorKey.currentContext ?? context;
+    final overlay = Overlay.maybeOf(buildContext, rootOverlay: true);
+
+    if (overlay == null) {
+      final messenger = ScaffoldMessenger.maybeOf(buildContext);
+      messenger?.showSnackBar(
+        SnackBar(
+          content: Text(message),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: type == MessageType.error ? Colors.red : null,
+          duration: Duration(seconds: type == MessageType.error ? 4 : 3),
+        ),
+      );
+      return;
     }
 
-    // جرّب السياقات بالترتيب
-    final ctxs = <BuildContext?>[
-      context,
-      Navigator.of(context, rootNavigator: true).context,
-      Constant.navigatorKey.currentContext,
-    ];
-    for (final c in ctxs) {
-      if (c != null) {
-        show(c);
-        return;
-      }
-    }
+    final theme = Theme.of(buildContext);
+    final Color background = type == MessageType.error
+        ? theme.colorScheme.error
+        : theme.colorScheme.secondaryContainer;
+    final Color foreground = type == MessageType.error
+        ? theme.colorScheme.onError
+        : theme.colorScheme.onSecondaryContainer;
+
+    final entry = OverlayEntry(
+      builder: (BuildContext context) {
+        final media = MediaQuery.of(context);
+        return Positioned(
+          top: media.padding.top + 16,
+          left: 16,
+          right: 16,
+          child: Material(
+            elevation: 6,
+            borderRadius: BorderRadius.circular(16),
+            color: background,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
+              ),
+              child: Text(
+                message,
+                style: theme.textTheme.bodyMedium?.copyWith(color: foreground),
+                textAlign: TextAlign.start,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    overlay.insert(entry);
+    _overlayMessageEntry = entry;
+    _overlayMessageTimer = Timer(
+      Duration(seconds: type == MessageType.error ? 5 : 3),
+      () {
+        if (_overlayMessageEntry == entry) {
+          entry.remove();
+          _overlayMessageEntry = null;
+        }
+      },
+    );
   }
 
   Future<void> _copyValueToClipboard(String value,
@@ -1470,11 +1530,10 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     if (!mounted) return;
 
     final overlayContext = Constant.navigatorKey.currentContext ?? context;
-    if (overlayContext == null) return;
 
     HelperUtils.showSnackBarMessage(
       overlayContext,
-      'تم نسخ $label',
+      'طھظ… ظ†ط³ط® $label',
       //  type: MessageType.info,
       messageDuration: 2,
     );
@@ -1492,14 +1551,6 @@ class _BankTransferScreenState extends State<BankTransferScreen>
 
   String _sourceLabel() => _deviceLabel();
 
-  Future<bool> _onWillPop() async {
-    if (_allowRoutePop) {
-      return true;
-    }
-    await _showCloseConfirmation();
-    return false;
-  }
-
   void _closeWithResult([Object? result]) {
     _allowRoutePop = true;
     if (mounted) {
@@ -1507,8 +1558,8 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     }
   }
 
-  Future<void> _showCloseConfirmation() async {
-    if (!mounted) return;
+  Future<bool> _showCloseConfirmation() async {
+    if (!mounted) return false;
     final theme = Theme.of(context);
     final onSurface = theme.colorScheme.onSurface;
     final confirmed = await showDialog<bool>(
@@ -1519,30 +1570,28 @@ class _BankTransferScreenState extends State<BankTransferScreen>
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Text(
-            'تأكيد الإغلاق',
+            'طھط£ظƒظٹط¯ ط§ظ„ط¥ط؛ظ„ط§ظ‚',
             style: TextStyle(
               fontWeight: FontWeight.w700,
               color: onSurface,
             ),
           ),
-          content: const Text('هل أنت متأكد من رغبتك في إغلاق نافذة الدفع؟'),
+          content: const Text('ظ‡ظ„ ط£ظ†طھ ظ…طھط£ظƒط¯ ظ…ظ† ط±ط؛ط¨طھظƒ ظپظٹ ط¥ط؛ظ„ط§ظ‚ ظ†ط§ظپط°ط© ط§ظ„ط¯ظپط¹طں'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('متابعة'),
+              child: const Text('ظ…طھط§ط¨ط¹ط©'),
             ),
             FilledButton(
               onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('إغلاق'),
+              child: const Text('ط¥ط؛ظ„ط§ظ‚'),
             ),
           ],
         );
       },
     );
 
-    if (confirmed == true) {
-      _closeWithResult(false);
-    }
+    return confirmed == true;
   }
 
   @override
@@ -1550,8 +1599,17 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     final viewInsets = MediaQuery.of(context).viewInsets;
     return BlocProvider.value(
       value: _walletSummaryCubit,
-      child: WillPopScope(
-        onWillPop: _onWillPop,
+      child: PopScope(
+        canPop: _allowRoutePop,
+        onPopInvokedWithResult: (bool didPop, Object? _) async {
+          if (didPop || _allowRoutePop) {
+            return;
+          }
+          final bool shouldClose = await _showCloseConfirmation();
+          if (shouldClose && mounted) {
+            _closeWithResult(false);
+          }
+        },
         child: AnimatedPadding(
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeOut,
@@ -1569,7 +1627,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
   }
 }
 
-/* ========================= شيمر خفيف بدون باكج ========================= */
+/* ========================= ط´ظٹظ…ط± ط®ظپظٹظپ ط¨ط¯ظˆظ† ط¨ط§ظƒط¬ ========================= */
 
 class _ShimmerBox extends StatelessWidget {
   final AnimationController controller;

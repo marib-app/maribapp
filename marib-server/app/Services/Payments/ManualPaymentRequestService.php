@@ -7,6 +7,8 @@ use App\Models\ManualPaymentRequest;
 use App\Models\PaymentTransaction;
 use App\Models\Order;
 use App\Models\User;
+use App\Models\ServiceRequest;
+use App\Services\DepartmentReportService;
 use Illuminate\Database\QueryException;
 use Illuminate\Database\UniqueConstraintViolationException;
 use App\Support\ManualPayments\TransferDetailsResolver;
@@ -1519,6 +1521,26 @@ class ManualPaymentRequestService
         mixed $payableId,
         ?ManualPaymentRequest $existingRequest
     ): ?string {
+        $charactersToTrim = " \t\n\r\0\x0B\"'";
+
+        if (is_string($payableType)) {
+            $normalizedType = strtolower(trim((string) $payableType, $charactersToTrim));
+            $serviceAliases = [
+                'service',
+                'services',
+                strtolower(ServiceRequest::class),
+                strtolower('\\' . ServiceRequest::class),
+                'app\\models\\servicerequest',
+                'app\\servicerequest',
+                'service_request',
+                'service-request',
+            ];
+
+            if (in_array($normalizedType, $serviceAliases, true)) {
+                return DepartmentReportService::DEPARTMENT_SERVICES;
+            }
+        }
+
         if (! ManualPaymentRequest::isOrderPayableType($payableType)) {
             return null;
         }

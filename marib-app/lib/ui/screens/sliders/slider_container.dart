@@ -267,17 +267,21 @@ class _SliderWidgetState extends State<SliderWidget> {
                     ],
                     color: Colors.grey.shade200,
                   ),
-                  child: ClipRRect(
+                child: ClipRRect(
 
-                    borderRadius: borderRadius,
-                    child: LazyNetworkImage(
-                      imageUrl: imageUrl,
-                      fit: BoxFit.cover,
-                      placeholder: ShimmerBox(
-                        borderRadius: borderRadius,
-                      ),
+                  borderRadius: borderRadius,
+                  child: LazyNetworkImage(
+                    imageUrl: imageUrl,
+                    width: double.infinity,
+                    height: kSliderBannerHeight,
+                    fit: BoxFit.cover,
+                    fadeInDuration: Duration.zero,
+                    fadeOutDuration: Duration.zero,
+                    placeholder: ShimmerBox(
+                      borderRadius: borderRadius,
                     ),
                   ),
+                ),
                 ),
           ],
             ),

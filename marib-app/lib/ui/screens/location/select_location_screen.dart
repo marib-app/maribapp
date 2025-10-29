@@ -67,7 +67,7 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
     // Replace this with the actual navigation to your country screen.
     /*Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => CountryScreen()),
+      AppPageRoute.build(builder: (context) => CountryScreen()),
     );*/
   }
 

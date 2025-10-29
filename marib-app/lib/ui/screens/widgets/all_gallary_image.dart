@@ -5,6 +5,8 @@ import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/responsiveSize.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/ui/screens/widgets/video_view_screen.dart';
+import 'package:marib/app/navigation/app_page_route.dart';
+import 'package:marib/app/navigation/motion/route_motion.dart';
 
 class AllGallaryImages extends StatelessWidget {
   final List images;
@@ -31,11 +33,14 @@ class AllGallaryImages extends StatelessWidget {
               child: GestureDetector(
                 onTap: () {
                   if (images[index].isVideo == true) {
-                    Navigator.push(context, MaterialPageRoute(
-                      builder: (context) {
-                        return VideoViewScreen(videoUrl: images[index].image);
-                      },
-                    ));
+                    Navigator.push(
+                      context,
+                      AppPageRoute.build(
+                        builder: (context) =>
+                            VideoViewScreen(videoUrl: images[index].image),
+                        motionPattern: AppMotionPattern.glide,
+                      ),
+                    );
                   } else {
                     var stringImages = images.map((e) => e.imageUrl).toList();
                     UiUtils.imageGallaryView(
@@ -70,3 +75,5 @@ class AllGallaryImages extends StatelessWidget {
     );
   }
 }
+
+

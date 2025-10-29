@@ -9,6 +9,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:marib/ui/screens/item/add_item_screen/add_item_details/add_item_details_model.dart';
 import 'package:marib/ui/screens/item/add_item_screen/shein_grabber_page.dart';
 import 'package:marib/utils/helper_utils.dart';
+import 'package:marib/app/navigation/app_page_route.dart';
+import 'package:marib/app/navigation/motion/route_motion.dart';
 
 class AddItemDetailsSheinService {
   AddItemDetailsSheinService({
@@ -42,8 +44,9 @@ class AddItemDetailsSheinService {
     try {
       final Map<String, dynamic>? data = await Navigator.push(
         context,
-        MaterialPageRoute<Map<String, dynamic>>(
+        AppPageRoute.build<Map<String, dynamic>>(
           builder: (_) => SheinGrabberPage(startUrl: url),
+          motionPattern: AppMotionPattern.glide,
         ),
       );
 
@@ -175,3 +178,5 @@ class AddItemDetailsSheinService {
     return resolved;
   }
 }
+
+

@@ -1,7 +1,7 @@
 import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 
-enum AppMotionPattern { sharedAxis, fadeThrough, hero, platform }
+enum AppMotionPattern { sharedAxis, fadeThrough, hero, glide, platform }
 
 enum _RouteMotionPhase { push, pop, refresh }
 
@@ -158,8 +158,9 @@ class RouteMotionComposer {
     }
 
     if (modal) {
-      return FadeScaleTransition(
-        animation: _primaryAnimation(animation, phase),
+      return _GlidePageTransition(
+        animation: animation,
+        secondaryAnimation: secondaryAnimation,
         child: child,
       );
     }
@@ -185,19 +186,27 @@ class RouteMotionComposer {
           phase: phase,
           child: child,
         );
+      case AppMotionPattern.glide:
+        return _GlideMotionTransition(
+          primary: _primaryAnimation(animation, phase),
+          secondary: _secondaryAnimation(secondaryAnimation, phase),
+          child: child,
+        );
       case AppMotionPattern.platform:
         final routeForTransition = route ?? ModalRoute.of(context);
         final pageRoute = routeForTransition is PageRoute<dynamic>
             ? routeForTransition
             : null;
         if (pageRoute != null) {
-          return Theme.of(context).pageTransitionsTheme.buildTransitions(
-                pageRoute,
-                context,
-                _primaryAnimation(animation, phase),
-                _secondaryAnimation(secondaryAnimation, phase),
-                child,
-              );
+          const PageTransitionsBuilder builder =
+              _GlidePageTransitionsBuilder();
+          return builder.buildTransitions(
+            pageRoute,
+            context,
+            _primaryAnimation(animation, phase),
+            _secondaryAnimation(secondaryAnimation, phase),
+            child,
+          );
         }
         return child;
     }
@@ -324,3 +333,88 @@ class _HeroMotionTransition extends StatelessWidget {
     );
   }
 }
+
+class _GlideMotionTransition extends StatelessWidget {
+  const _GlideMotionTransition({
+    required this.primary,
+    required this.secondary,
+    required this.child,
+  });
+
+  final Animation<double> primary;
+  final Animation<double> secondary;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return _GlidePageTransition(
+      animation: primary,
+      secondaryAnimation: secondary,
+      child: child,
+    );
+  }
+}
+
+class _GlidePageTransitionsBuilder extends PageTransitionsBuilder {
+  const _GlidePageTransitionsBuilder();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    if (route.settings.name == Navigator.defaultRouteName) {
+      return child;
+    }
+
+    return _GlidePageTransition(
+      animation: animation,
+      secondaryAnimation: secondaryAnimation,
+      child: child,
+    );
+  }
+}
+
+class _GlidePageTransition extends StatelessWidget {
+  const _GlidePageTransition({
+    required this.animation,
+    required this.secondaryAnimation,
+    required this.child,
+  });
+
+  final Animation<double> animation;
+  final Animation<double> secondaryAnimation;
+  final Widget child;
+
+  static final Tween<Offset> _incomingOffsetTween =
+      Tween<Offset>(begin: const Offset(0.04, 0.0), end: Offset.zero);
+  static final Tween<Offset> _outgoingOffsetTween =
+      Tween<Offset>(begin: Offset.zero, end: const Offset(-0.02, 0.0));
+
+  @override
+  Widget build(BuildContext context) {
+    final Animation<double> incoming = CurvedAnimation(
+      parent: animation,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
+    );
+
+    final Animation<double> outgoing = CurvedAnimation(
+      parent: secondaryAnimation,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
+    );
+
+    return SlideTransition(
+      position: outgoing.drive(_outgoingOffsetTween),
+      child: SlideTransition(
+        position: incoming.drive(_incomingOffsetTween),
+        child: child,
+      ),
+    );
+  }
+}
+

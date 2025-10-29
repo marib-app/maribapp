@@ -46,7 +46,7 @@ class MobileVerificationScreen extends StatefulWidget {
 
 
 
-  static BlurredRouter route(RouteSettings settings) {
+  static Route route(RouteSettings settings) {
     final args = settings.arguments as Map<String, dynamic>?;
     final selectedType = args?['selectedAccountType'] as String?;
     final phoneNumber = (args?['phoneNumber'] as String?) ?? "";

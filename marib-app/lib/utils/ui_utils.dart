@@ -8,6 +8,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:marib/app/app_localization.dart';
 import 'package:marib/app/app_theme.dart';
 import 'package:marib/app/routes.dart';
+import 'package:marib/app/navigation/app_page_route.dart';
+import 'package:marib/app/navigation/motion/route_motion.dart';
 import 'package:marib/data/cubits/system/app_theme_cubit.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/constant.dart';
@@ -23,7 +25,6 @@ import 'package:flutter_svg/svg.dart';
 import 'package:intl/intl.dart';
 import 'package:lottie/lottie.dart';
 import 'package:mime_type/mime_type.dart';
-import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart';
 import 'package:marib/ui/screens/widgets/full_screen_image_view.dart';
 import 'package:marib/ui/screens/widgets/gallery_view.dart';
@@ -34,7 +35,6 @@ import 'package:timeago/timeago.dart' as timeago;
 import 'package:intl/intl.dart';
 import 'helper_utils.dart';
 import 'package:marib/utils/network_to_localsvg.dart';
-import 'package:marib/utils/responsiveSize.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:marib/data/model/subscription_package_limit.dart';
 
@@ -128,6 +128,426 @@ class _AdaptiveNetworkImageState extends State<_AdaptiveNetworkImage> {
         }
         return UiUtils._buildImageError(context, widget.width, widget.height);
       },
+    );
+  }
+}
+
+class _UiSmartButton extends StatefulWidget {
+  const _UiSmartButton({
+    this.height,
+    this.width,
+    this.border,
+    this.titleWhenProgress,
+    this.isInProgress,
+    this.isSuccess,
+    this.isError,
+    this.fontSize,
+    this.radius,
+    this.autoWidth,
+    this.prefixWidget,
+    this.padding,
+    required this.onPressed,
+    required this.buttonTitle,
+    this.showProgressTitle,
+    this.progressWidth,
+    this.progressHeight,
+    this.showElevation,
+    this.textColor,
+    this.buttonColor,
+    this.outerPadding,
+    this.disabledColor,
+    this.disabledTextColor,
+    this.onTapDisabledButton,
+    this.disabled,
+    required this.autoManageState,
+    required this.autoDisableWhenInvalid,
+    this.requiredTextControllers,
+    this.enableConditions,
+  });
+
+  final double? height;
+  final double? width;
+  final BorderSide? border;
+  final String? titleWhenProgress;
+  final bool? isInProgress;
+  final bool? isSuccess;
+  final bool? isError;
+  final double? fontSize;
+  final double? radius;
+  final bool? autoWidth;
+  final Widget? prefixWidget;
+  final EdgeInsetsGeometry? padding;
+  final FutureOr<void> Function() onPressed;
+  final String buttonTitle;
+  final bool? showProgressTitle;
+  final double? progressWidth;
+  final double? progressHeight;
+  final bool? showElevation;
+  final Color? textColor;
+  final Color? buttonColor;
+  final EdgeInsets? outerPadding;
+  final Color? disabledColor;
+  final Color? disabledTextColor;
+  final VoidCallback? onTapDisabledButton;
+  final bool? disabled;
+  final bool autoManageState;
+  final bool autoDisableWhenInvalid;
+  final List<TextEditingController>? requiredTextControllers;
+  final List<ValueListenable<bool>>? enableConditions;
+
+  @override
+  State<_UiSmartButton> createState() => _UiSmartButtonState();
+}
+
+class _UiSmartButtonState extends State<_UiSmartButton> {
+  bool _autoBusy = false;
+  bool _pressGuardActive = false;
+  bool _requirementsDisabled = false;
+  final Set<Listenable> _requirementListeners = <Listenable>{};
+
+  @override
+  void initState() {
+    super.initState();
+    _syncRequirementListeners();
+    if (widget.autoDisableWhenInvalid) {
+      _requirementsDisabled = _computeRequirementDisabled();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _UiSmartButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    final bool requirementsChanged =
+        !listEquals(oldWidget.requiredTextControllers, widget.requiredTextControllers) ||
+        !listEquals(oldWidget.enableConditions, widget.enableConditions) ||
+        oldWidget.autoDisableWhenInvalid != widget.autoDisableWhenInvalid;
+
+    if (requirementsChanged) {
+      _syncRequirementListeners();
+      final bool disabledNow =
+          widget.autoDisableWhenInvalid ? _computeRequirementDisabled() : false;
+      if (disabledNow != _requirementsDisabled) {
+        setState(() {
+          _requirementsDisabled = disabledNow;
+        });
+      }
+    }
+
+    if (!_shouldAutoManage && _autoBusy) {
+      _autoBusy = false;
+    }
+  }
+
+  @override
+  void dispose() {
+    _detachRequirementListeners();
+    super.dispose();
+  }
+
+  void _syncRequirementListeners() {
+    _detachRequirementListeners();
+    if (!widget.autoDisableWhenInvalid) {
+      return;
+    }
+
+    final List<TextEditingController>? controllers =
+        widget.requiredTextControllers;
+    if (controllers != null) {
+      for (final TextEditingController controller in controllers) {
+        controller.addListener(_handleRequirementChanged);
+        _requirementListeners.add(controller);
+      }
+    }
+
+    final List<ValueListenable<bool>>? conditions = widget.enableConditions;
+    if (conditions != null) {
+      for (final ValueListenable<bool> condition in conditions) {
+        condition.addListener(_handleRequirementChanged);
+        _requirementListeners.add(condition);
+      }
+    }
+  }
+
+  void _detachRequirementListeners() {
+    for (final Listenable listenable in _requirementListeners) {
+      listenable.removeListener(_handleRequirementChanged);
+    }
+    _requirementListeners.clear();
+  }
+
+  void _handleRequirementChanged() {
+    if (!widget.autoDisableWhenInvalid || !mounted) {
+      return;
+    }
+    final bool disabledNow = _computeRequirementDisabled();
+    if (disabledNow != _requirementsDisabled) {
+      setState(() {
+        _requirementsDisabled = disabledNow;
+      });
+    }
+  }
+
+  bool _computeRequirementDisabled() {
+    bool missing = false;
+    final List<TextEditingController>? controllers =
+        widget.requiredTextControllers;
+    if (controllers != null && controllers.isNotEmpty) {
+      for (final TextEditingController controller in controllers) {
+        if (controller.text.trim().isEmpty) {
+          missing = true;
+          break;
+        }
+      }
+    }
+
+    if (!missing) {
+      final List<ValueListenable<bool>>? conditions = widget.enableConditions;
+      if (conditions != null && conditions.isNotEmpty) {
+        for (final ValueListenable<bool> condition in conditions) {
+          if (!condition.value) {
+            missing = true;
+            break;
+          }
+        }
+      }
+    }
+
+    return missing;
+  }
+
+  bool get _shouldAutoManage =>
+      widget.autoManageState &&
+      widget.isInProgress == null &&
+      widget.isSuccess == null &&
+      widget.isError == null;
+
+  bool get _isBusy =>
+      (widget.isInProgress ?? false) ||
+      (_shouldAutoManage ? _autoBusy : false);
+
+  bool get _isDisabled =>
+      (widget.disabled ?? false) ||
+      (widget.autoDisableWhenInvalid && _requirementsDisabled);
+
+  bool get _showDisabledVisuals => _isDisabled || _isBusy;
+
+  bool get _blockInput => _isDisabled || _isBusy || _pressGuardActive;
+
+  Future<void> _handlePressed() async {
+    if (_blockInput) {
+      return;
+    }
+
+    HelperUtils.unfocus();
+
+    final bool manageInternally = _shouldAutoManage;
+    setState(() {
+      _pressGuardActive = true;
+      if (manageInternally) {
+        _autoBusy = true;
+      }
+    });
+
+    Object? error;
+    StackTrace? stackTrace;
+
+    try {
+      final Object? result = widget.onPressed();
+      if (result is Future<void>) {
+        await result;
+      } else if (result is Future) {
+        await result;
+      }
+    } catch (err, st) {
+      error = err;
+      stackTrace = st;
+    } finally {
+      if (!mounted) {
+        _pressGuardActive = false;
+        _autoBusy = false;
+      } else {
+        setState(() {
+          _pressGuardActive = false;
+          if (manageInternally) {
+            _autoBusy = false;
+          }
+        });
+      }
+    }
+
+    if (error != null) {
+      Error.throwWithStackTrace(error, stackTrace ?? StackTrace.current);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final Size screenSize = MediaQuery.of(context).size;
+    final bool isNarrow = screenSize.width < 360;
+
+    final double effectiveHeight =
+        widget.height ?? (isNarrow ? 42.0 : 46.0);
+    final double effectiveRadius =
+        widget.radius ?? (isNarrow ? 12.0 : 16.0);
+    final double resolvedFontSize = widget.fontSize ??
+        (isNarrow ? context.font.normal : context.font.large);
+    final double horizontalPadding = isNarrow ? 12.0 : 16.0;
+    final double contentGap = isNarrow ? 6.0 : 8.0;
+
+    final bool isBusy = _isBusy;
+    final bool isSuccess = widget.isSuccess == true;
+    final bool isError = widget.isError == true;
+
+    final Color baseButtonColor =
+        widget.buttonColor ?? context.color.territoryColor;
+    final Color fallbackDisabledBackground = Colors.grey.shade400;
+    final Color disabledBackgroundColor =
+        widget.disabledColor ?? fallbackDisabledBackground;
+
+    final bool showDisabledVisuals = _showDisabledVisuals;
+    final Color bg =
+        showDisabledVisuals ? disabledBackgroundColor : baseButtonColor;
+
+    final Color fg =
+        widget.textColor ?? context.color.textAutoAdapt(bg);
+    final Color disabledForeground = widget.disabledTextColor ??
+        theme.colorScheme.onSurface.withOpacity(0.6);
+
+    final Color contentColor =
+        showDisabledVisuals ? disabledForeground : fg;
+
+    final bool useWhiteProgress = bg.computeLuminance() < 0.5;
+    final Color progressColor =
+        useWhiteProgress ? Colors.white : contentColor;
+    final String title = isBusy
+        ? (widget.titleWhenProgress ?? widget.buttonTitle)
+        : widget.buttonTitle;
+
+    final double resolvedProgressWidth =
+        widget.progressWidth ?? (isNarrow ? 20.0 : 22.0);
+    final double resolvedProgressHeight =
+        widget.progressHeight ?? (isNarrow ? 20.0 : 22.0);
+    final bool showStatusIcon = isBusy || isSuccess || isError;
+    final double statusGap = showStatusIcon
+        ? (isBusy
+            ? (max(resolvedProgressWidth, resolvedProgressHeight) >= 22
+                ? contentGap + 2
+                : contentGap)
+            : contentGap)
+        : 0;
+
+    Widget buildText(String t, Color c) => Flexible(
+          child: Text(
+            t,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: resolvedFontSize,
+              fontWeight: FontWeight.bold,
+              height: 1.1,
+              color: c,
+            ),
+          ),
+        );
+
+    final bool allowDisabledTap =
+        widget.onTapDisabledButton != null && _isDisabled;
+
+    final List<Widget> rowChildren = <Widget>[];
+
+    if (isBusy) {
+      rowChildren.add(
+        UiUtils.progress(
+          width: resolvedProgressWidth,
+          height: resolvedProgressHeight,
+          showWhite: useWhiteProgress,
+          normalProgressColor: progressColor,
+        ),
+      );
+    }
+
+    if (isSuccess) {
+      rowChildren.add(
+        Icon(Icons.check_circle,
+            color: contentColor, size: isNarrow ? 20 : 22),
+      );
+    }
+
+    if (isError) {
+      rowChildren.add(
+        Icon(Icons.error_outline,
+            color: contentColor, size: isNarrow ? 20 : 22),
+      );
+    }
+
+    if (showStatusIcon && rowChildren.isNotEmpty) {
+      rowChildren.add(SizedBox(width: statusGap));
+    }
+
+    if (isBusy) {
+      if (widget.showProgressTitle ?? false) {
+        rowChildren.add(buildText(title, contentColor));
+      }
+    } else if (!isSuccess && !isError) {
+      if (widget.prefixWidget != null) {
+        rowChildren.add(
+          IconTheme.merge(
+            data: IconThemeData(color: contentColor),
+            child: widget.prefixWidget!,
+          ),
+        );
+        rowChildren.add(SizedBox(width: contentGap));
+      }
+      rowChildren.add(buildText(title, contentColor));
+    }
+
+    return Padding(
+      padding: widget.outerPadding ?? EdgeInsets.zero,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: (showDisabledVisuals && allowDisabledTap)
+            ? widget.onTapDisabledButton
+            : null,
+        child: IgnorePointer(
+          ignoring: _blockInput,
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              elevation: (widget.showElevation ?? false) ? 1 : 0,
+              backgroundColor: bg,
+              foregroundColor: fg,
+              disabledBackgroundColor: disabledBackgroundColor,
+              disabledForegroundColor: disabledForeground,
+              minimumSize: Size(
+                widget.autoWidth == true ? 0 : (widget.width ?? double.infinity),
+                effectiveHeight,
+              ),
+              padding: widget.padding ??
+                  EdgeInsets.symmetric(horizontal: horizontalPadding),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(effectiveRadius),
+                side: widget.border ?? BorderSide.none,
+              ),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              visualDensity: VisualDensity.compact,
+            ),
+            onPressed: _blockInput ? null : _handlePressed,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 250),
+              transitionBuilder: (child, anim) =>
+                  FadeTransition(opacity: anim, child: child),
+              child: Row(
+                key: ValueKey('${isBusy}-${isSuccess}-${isError}-$title'),
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: rowChildren,
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -305,6 +725,7 @@ class UiUtils {
     if (overlay == null) return;
 
     final OverlayState overlayState = overlay;
+
     final ThemeData theme = Theme.of(context);
 
     void insertSnackBar() {
@@ -371,6 +792,8 @@ class UiUtils {
     BuildContext context, {
     String? title,
     Widget? titleWidget,
+    String? subtitle,
+    Widget? subtitleWidget,
     bool showBackButton = false,
     Widget? leading,
     List<Widget>? actions,
@@ -381,6 +804,7 @@ class UiUtils {
     Color? backgroundColor,
     Color? foregroundColor,
     Color? borderColor,
+    Color? statusBarColor,
     Color? backButtonBackgroundColor,
     EdgeInsetsGeometry? contentPadding,
     bool centerTitle = true,
@@ -388,10 +812,16 @@ class UiUtils {
     double borderRadius = 18,
     double borderStrokeWidth = 1.0,
   }) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme colorScheme = theme.colorScheme;
     final bool shouldHideTopBorder = hideTopBorder ?? true;
     final double toolbarHeight = height ?? kToolbarHeight;
+
+    final String? normalizedTitle =
+        title != null && title.trim().isNotEmpty ? title.trim() : null;
+    final String? normalizedSubtitle =
+        subtitle != null && subtitle.trim().isNotEmpty ? subtitle.trim() : null;
+
     final Color resolvedBackgroundColor =
         backgroundColor ?? colorScheme.secondaryColor;
     final Color resolvedBorderColor = borderColor ?? colorScheme.borderColor;
@@ -399,13 +829,15 @@ class UiUtils {
         foregroundColor ?? colorScheme.textAutoAdapt(resolvedBackgroundColor);
     final bool hasBottom = bottom != null && bottom.isNotEmpty;
     final bool hasLeading = leading != null || showBackButton;
+
     final EdgeInsetsGeometry resolvedPadding = contentPadding ??
         EdgeInsetsDirectional.only(
-          start: hasLeading ? 12 : 20,
-          end: actions?.isNotEmpty == true ? 12 : 20,
-          top: 12,
-          bottom: 12,
+          start: hasLeading ? 16 : 24,
+          end: actions?.isNotEmpty == true ? 16 : 24,
+          top: 8,
+          bottom: 8,
         );
+
     final double? resolvedBottomHeight = hasBottom
         ? (bottomHeight != null && bottomHeight > 0 ? bottomHeight : null)
         : null;
@@ -414,7 +846,7 @@ class UiUtils {
     if (leading != null) {
       resolvedLeading = leading;
     } else if (showBackButton) {
-      final textDirection = Directionality.of(context);
+    final ui.TextDirection textDirection = Directionality.of(context);
       resolvedLeading = _AppBarBackButton(
         onPressed: onBackPress ?? () => Navigator.of(context).maybePop(),
         foregroundColor: resolvedForegroundColor,
@@ -427,25 +859,58 @@ class UiUtils {
         ? _withSpacing(actions!, const SizedBox(width: 12))
         : null;
 
-    final Widget? resolvedTitleWidget = titleWidget ??
-        (title != null
+    final TextStyle defaultTitleStyle = theme.textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.w700,
+          fontSize: actions?.isNotEmpty == true ? 17 : 21,
+          letterSpacing: 0.2,
+          color: resolvedForegroundColor,
+        ) ??
+        TextStyle(
+          fontWeight: FontWeight.w700,
+          fontSize: actions?.isNotEmpty == true ? 17 : 21,
+          letterSpacing: 0.2,
+          color: resolvedForegroundColor,
+        );
+
+    final TextStyle subtitleTextStyle = theme.textTheme.bodySmall?.copyWith(
+          fontWeight: FontWeight.w400,
+          fontSize: 13,
+          letterSpacing: 0.15,
+          color: resolvedForegroundColor.withOpacity(0.7),
+        ) ??
+        TextStyle(
+          fontWeight: FontWeight.w400,
+          fontSize: 13,
+          letterSpacing: 0.15,
+          color: resolvedForegroundColor.withOpacity(0.7),
+        );
+
+    final Widget? subtitleContent = subtitleWidget ??
+        (normalizedSubtitle != null
             ? Text(
-                title,
+                normalizedSubtitle,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               )
             : null);
 
-    final TextStyle defaultTitleStyle = theme.textTheme.titleMedium?.copyWith(
-          fontWeight: FontWeight.w600,
-          fontSize: actions?.isNotEmpty == true ? 16 : 20,
-          color: resolvedForegroundColor,
-        ) ??
-        TextStyle(
-          fontWeight: FontWeight.w600,
-          fontSize: actions?.isNotEmpty == true ? 16 : 20,
-          color: resolvedForegroundColor,
-        );
+    final Widget? resolvedSubtitle = subtitleContent != null
+        ? DefaultTextStyle.merge(
+            style: subtitleTextStyle,
+            child: subtitleContent,
+          )
+        : null;
+
+    Widget? resolvedTitle;
+    if (titleWidget != null) {
+      resolvedTitle = titleWidget;
+    } else if (normalizedTitle != null || resolvedSubtitle != null) {
+      resolvedTitle = _AppBarTitleSection(
+        title: normalizedTitle,
+        subtitle: resolvedSubtitle,
+        center: centerTitle,
+      );
+    }
 
     final BorderRadius borderRadiusShape = BorderRadius.only(
       topLeft:
@@ -457,7 +922,7 @@ class UiUtils {
     );
 
     final BorderSide defaultBorderSide = BorderSide(
-      color: resolvedBorderColor,
+      color: resolvedBorderColor.withOpacity(0.85),
       width: borderStrokeWidth,
     );
 
@@ -468,10 +933,31 @@ class UiUtils {
       bottom: defaultBorderSide,
     );
 
-    final Color shadowColor = (theme.brightness == Brightness.dark
-            ? Colors.black
-            : Colors.black.withOpacity(0.25))
-        .withOpacity(theme.brightness == Brightness.dark ? 0.45 : 0.12);
+    final bool isDarkMode = theme.brightness == Brightness.dark;
+    final Color accentColor = colorScheme.headingAccentColor;
+    final Color gradientEnd =
+        Color.lerp(resolvedBackgroundColor, accentColor, isDarkMode ? 0.18 : 0.28) ??
+            resolvedBackgroundColor;
+
+    final LinearGradient backgroundGradient = LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [
+        resolvedBackgroundColor.withOpacity(isDarkMode ? 0.88 : 0.96),
+        gradientEnd.withOpacity(isDarkMode ? 0.72 : 0.86),
+      ],
+    );
+
+    final Color resolvedStatusBarColor =
+        statusBarColor ?? backgroundGradient.colors.first;
+    final SystemUiOverlayStyle statusBarStyle = getSystemUiOverlayStyle(
+      context: context,
+      statusBarColor: resolvedStatusBarColor,
+    );
+
+    final Color shadowColor =
+        (isDarkMode ? Colors.black : Colors.black.withOpacity(0.35))
+            .withOpacity(isDarkMode ? 0.32 : 0.16);
 
     final double topPadding = MediaQuery.of(context).padding.top;
     final double totalHeight =
@@ -479,7 +965,10 @@ class UiUtils {
 
     return PreferredSize(
       preferredSize: Size.fromHeight(totalHeight),
-      child: SizedBox(
+      child: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: statusBarStyle,
+        sized: true,
+        child: SizedBox(
         height: totalHeight,
         child: Material(
           color: Colors.transparent,
@@ -492,60 +981,111 @@ class UiUtils {
                 boxShadow: [
                   BoxShadow(
                     color: shadowColor,
-                    blurRadius: 18,
-                    offset: const Offset(0, 8),
+                    blurRadius: 26,
+                    offset: const Offset(0, 14),
+                    spreadRadius: -2,
                   ),
                 ],
               ),
               child: ClipRRect(
                 borderRadius: borderRadiusShape,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: resolvedBackgroundColor,
-                    border: border,
-                  ),
-                  child: IconTheme.merge(
-                    data: IconThemeData(
-                      color: resolvedForegroundColor,
-                      size: 22,
+                child: BackdropFilter(
+                  filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: backgroundGradient,
+                      border: border,
                     ),
-                    child: DefaultTextStyle(
-                      style: defaultTitleStyle,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SizedBox(
-                            height: toolbarHeight,
-                            child: Padding(
-                              padding: resolvedPadding,
-                              child: NavigationToolbar(
-                                leading: resolvedLeading != null
-                                    ? Padding(
-                                        padding:
-                                            const EdgeInsetsDirectional.only(
-                                          end: 12,
-                                        ),
-                                        child: resolvedLeading,
-                                      )
-                                    : null,
-                                middle: resolvedTitleWidget,
-                                trailing: trailingActions != null
-                                    ? Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: trailingActions,
-                                      )
-                                    : null,
-                                centerMiddle: centerTitle,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Positioned.fill(
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.white.withOpacity(
+                                      isDarkMode ? 0.02 : 0.14),
+                                  Colors.transparent,
+                                ],
                               ),
                             ),
                           ),
-                          if (hasBottom)
-                            _AppBarBottomSection(
-                              children: bottom!,
-                              height: resolvedBottomHeight,
+                        ),
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          child: Container(
+                            height: 2,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
+                                colors: [
+                                  accentColor.withOpacity(
+                                      isDarkMode ? 0.28 : 0.18),
+                                  Colors.transparent,
+                                ],
+                              ),
                             ),
-                        ],
-                      ),
+                          ),
+                        ),
+                        IconTheme.merge(
+                          data: IconThemeData(
+                            color: resolvedForegroundColor,
+                            size: 22,
+                          ),
+                          child: DefaultTextStyle(
+                            style: defaultTitleStyle,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SizedBox(
+                                  height: toolbarHeight,
+                                  child: Padding(
+                                    padding: resolvedPadding,
+                                    child: NavigationToolbar(
+                                      leading: resolvedLeading != null
+                                          ? Padding(
+                                              padding:
+                                                  const EdgeInsetsDirectional
+                                                      .only(end: 12),
+                                              child: resolvedLeading,
+                                            )
+                                          : null,
+                                      middle: resolvedTitle,
+                                      trailing: trailingActions != null
+                                          ? Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: trailingActions,
+                                            )
+                                          : null,
+                                      centerMiddle: centerTitle,
+                                    ),
+                                  ),
+                                ),
+                                if (hasBottom) ...[
+                                  Divider(
+                                    height: 1,
+                                    thickness: 1,
+                                    indent: 20,
+                                    endIndent: 20,
+                                    color: resolvedBorderColor
+                                        .withOpacity(isDarkMode ? 0.28 : 0.15),
+                                  ),
+                                  _AppBarBottomSection(
+                                    children: bottom!,
+                                    height: resolvedBottomHeight,
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -553,6 +1093,7 @@ class UiUtils {
             ),
           ),
         ),
+      ),
       ),
     );
   }
@@ -996,7 +1537,7 @@ class UiUtils {
     bool? autoWidth,
     Widget? prefixWidget,
     EdgeInsetsGeometry? padding,
-    required VoidCallback onPressed,
+    required FutureOr<void> Function() onPressed,
     required String buttonTitle,
     bool? showProgressTitle,
     double? progressWidth,
@@ -1009,127 +1550,46 @@ class UiUtils {
     Color? disabledTextColor,
     VoidCallback? onTapDisabledButton,
     bool? disabled,
+    bool autoManageState = true,
+    bool autoDisableWhenInvalid = true,
+    List<TextEditingController>? requiredTextControllers,
+    List<ValueListenable<bool>>? enableConditions,
   }) {
     assert(() {
-      debugPrint('UiUtils.buildButton v3 ✔️');
+      debugPrint('UiUtils.buildButton v4');
       return true;
     }());
 
-    final ThemeData theme = Theme.of(context);
-
-    final bool blockInput = (disabled ?? false) || (isInProgress == true);
-    final Color baseButtonColor = buttonColor ?? context.color.territoryColor;
-    final Color fallbackDisabledBackground = Colors.grey.shade400;
-    final Color disabledBackgroundColor =
-        disabledColor ?? fallbackDisabledBackground;
-    final Color bg = blockInput ? disabledBackgroundColor : baseButtonColor;
-
-    // لون النص/الأيقونات/السبينر
-    final Color fg = textColor ?? context.color.textAutoAdapt(bg);
-    final Color disabledForeground =
-        disabledTextColor ?? theme.colorScheme.onSurface.withOpacity(0.6);
-
-    final Color contentColor = blockInput ? disabledForeground : fg;
-
-    final bool useWhiteProgress = bg.computeLuminance() < 0.5;
-    final Color progressColor = useWhiteProgress ? Colors.white : contentColor;
-    final String title = (isInProgress == true)
-        ? (titleWhenProgress ?? buttonTitle)
-        : buttonTitle;
-
-    final double resolvedProgressWidth = progressWidth ?? 24;
-    final double resolvedProgressHeight = progressHeight ?? 24;
-    final bool showStatusIcon =
-        isInProgress == true || isSuccess == true || isError == true;
-    final double statusGap = showStatusIcon
-        ? (isInProgress == true
-            ? (max(resolvedProgressWidth, resolvedProgressHeight) >= 22
-                ? 12
-                : 10)
-            : 12)
-        : 0;
-
-    Widget buildText(String t, Color c) => Flexible(
-          child: Text(
-            t,
-            overflow: TextOverflow.ellipsis,
-            softWrap: true,
-            textAlign: TextAlign.center,
-          ).color(c).size(fontSize ?? context.font.larger),
-        );
-
-    return Padding(
-      padding: outerPadding ?? EdgeInsets.zero,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: (blockInput && disabled == true) ? onTapDisabledButton : null,
-        child: IgnorePointer(
-          ignoring: blockInput,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              elevation: (showElevation ?? true) ? 1 : 0,
-              backgroundColor: bg,
-              foregroundColor: fg,
-              disabledBackgroundColor: disabledBackgroundColor,
-              disabledForegroundColor: disabledForeground,
-              minimumSize: Size(
-                autoWidth == true ? 0 : (width ?? double.infinity),
-                height ?? 56.rh(context),
-              ),
-              padding: padding ??
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(radius ?? 16),
-                side: border ?? BorderSide.none,
-              ),
-            ),
-            onPressed: blockInput
-                ? null
-                : () {
-                    HelperUtils.unfocus();
-                    onPressed.call();
-                  },
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 250),
-              transitionBuilder: (child, anim) =>
-                  FadeTransition(opacity: anim, child: child),
-              child: Row(
-                key: ValueKey("$isInProgress-$isSuccess-$isError-$title"),
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (isInProgress == true)
-                    UiUtils.progress(
-                      width: resolvedProgressWidth,
-                      height: resolvedProgressHeight,
-                      showWhite: useWhiteProgress,
-                      normalProgressColor: progressColor,
-                    ),
-                  if (isSuccess == true)
-                    Icon(Icons.check_circle, color: contentColor, size: 22),
-                  if (isError == true)
-                    Icon(Icons.error_outline, color: contentColor, size: 22),
-                  if (showStatusIcon) SizedBox(width: statusGap),
-                  if (isInProgress == true && (showProgressTitle ?? false))
-                    buildText(title, contentColor),
-                  if (isInProgress != true &&
-                      isSuccess != true &&
-                      isError != true) ...[
-                    if (prefixWidget != null) ...[
-                      IconTheme.merge(
-                        data: IconThemeData(color: contentColor),
-                        child: prefixWidget!,
-                      ),
-                      const SizedBox(width: 8),
-                    ],
-                    buildText(title, contentColor),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
+    return _UiSmartButton(
+      height: height,
+      width: width,
+      border: border,
+      titleWhenProgress: titleWhenProgress,
+      isInProgress: isInProgress,
+      isSuccess: isSuccess,
+      isError: isError,
+      fontSize: fontSize,
+      radius: radius,
+      autoWidth: autoWidth,
+      prefixWidget: prefixWidget,
+      padding: padding,
+      onPressed: onPressed,
+      buttonTitle: buttonTitle,
+      showProgressTitle: showProgressTitle,
+      progressWidth: progressWidth,
+      progressHeight: progressHeight,
+      showElevation: showElevation,
+      textColor: textColor,
+      buttonColor: buttonColor,
+      outerPadding: outerPadding,
+      disabledColor: disabledColor,
+      disabledTextColor: disabledTextColor,
+      onTapDisabledButton: onTapDisabledButton,
+      disabled: disabled,
+      autoManageState: autoManageState,
+      autoDisableWhenInvalid: autoDisableWhenInvalid,
+      requiredTextControllers: requiredTextControllers,
+      enableConditions: enableConditions,
     );
   }
 
@@ -1160,12 +1620,14 @@ class UiUtils {
   static void showFullScreenImage(BuildContext context,
       {required ImageProvider provider, VoidCallback? then}) {
     Navigator.of(context)
-        .push(BlurredRouter(
-            barrierDismiss: true,
-            barrierOpacity: 0.3,
-            builder: (BuildContext context) => FullScreenImageView(
-                  provider: provider,
-                )))
+        .push(AppPageRoute.build(
+          builder: (BuildContext context) => FullScreenImageView(
+            provider: provider,
+          ),
+          barrierDismissible: true,
+          barrierColor: Colors.black.withOpacity(0.3),
+          motionPattern: AppMotionPattern.glide,
+        ))
         .then((value) {
       then?.call();
     });
@@ -1407,12 +1869,15 @@ class UiUtils {
   static void imageGallaryView(BuildContext context,
       {required List images, VoidCallback? then, required int initalIndex}) {
     Navigator.push(
-        context,
-        MaterialPageRoute(
-            builder: (context) => GalleryView(
-                  images: images.cast<String>(), // ✅ تحويل القائمة لنوع String
-                  initialIndex: initalIndex,
-                )));
+      context,
+      AppPageRoute.build(
+        builder: (context) => GalleryView(
+          images: images.cast<String>(), // ✅ تحويل القائمة لنوع String
+          initialIndex: initalIndex,
+        ),
+        motionPattern: AppMotionPattern.glide,
+      ),
+    );
   }
 
 // وظيفتها عرض نافذة حوار (Dialog) مع تأثير ضبابي (Blur) خلفها،
@@ -1426,16 +1891,14 @@ class UiUtils {
   }) async {
     return await Navigator.push(
       context,
-      BlurredRouter(
-        barrierDismiss: true,
-        axisDirection: axisDirection,
-        barrierOpacity: barrierOpacity,
-        entryOffset: entryOffset,
+      AppPageRoute.build(
         builder: (context) {
-          // يكفي نتأكد إنه Widget ونرجعه
           if (dialoge is Widget) return dialoge as Widget;
           return const SizedBox.shrink();
         },
+        barrierDismissible: true,
+        barrierColor: Colors.black.withOpacity(barrierOpacity ?? 0.2),
+        motionPattern: AppMotionPattern.glide,
       ),
     );
   }
@@ -1540,6 +2003,62 @@ class _AppBarBackButton extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _AppBarTitleSection extends StatelessWidget {
+  const _AppBarTitleSection({
+    required this.title,
+    required this.subtitle,
+    required this.center,
+  });
+
+  final String? title;
+  final Widget? subtitle;
+  final bool center;
+
+  @override
+  Widget build(BuildContext context) {
+    final List<Widget> children = [];
+
+    if (title != null) {
+      children.add(
+        Text(
+          title!,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      );
+    }
+
+    if (subtitle != null) {
+      if (children.isNotEmpty) {
+        children.add(const SizedBox(height: 4));
+      }
+      children.add(
+        AnimatedOpacity(
+          opacity: 1,
+          duration: const Duration(milliseconds: 220),
+          child: subtitle!,
+        ),
+      );
+    }
+
+    if (children.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Align(
+      alignment: center
+          ? Alignment.center
+          : AlignmentDirectional.centerStart,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment:
+            center ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+        children: children,
       ),
     );
   }
@@ -2205,3 +2724,8 @@ class _AppBarBottomSection extends StatelessWidget {
     );
   }
 }
+
+
+
+
+

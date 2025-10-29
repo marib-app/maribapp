@@ -9,7 +9,6 @@ import 'package:marib/app/routes.dart';
 import 'package:marib/data/cubits/auth/authentication_cubit.dart';
 import 'package:marib/data/cubits/category/fetch_category_cubit.dart';
 import 'package:marib/data/model/category_model.dart';
-import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 import 'package:marib/ui/screens/widgets/custom_text_form_field.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/cloudState/cloud_state.dart';
@@ -42,6 +41,8 @@ import 'dart:async'; // للـ Timer
 import 'package:marib/data/cubits/system/fetch_system_settings_cubit.dart';
 import 'package:marib/utils/notification/notification_service.dart';
 import '../widgets/auth_status_bar.dart';
+import 'package:marib/app/navigation/app_page_route.dart';
+import 'package:marib/app/navigation/motion/route_motion.dart';
 
 class SignupScreen extends StatefulWidget {
   final String? selectedAccountType;
@@ -57,10 +58,10 @@ class SignupScreen extends StatefulWidget {
     this.fromSocialLogin,
   });
 
-  static BlurredRouter route(RouteSettings settings) {
+  static Route route(RouteSettings settings) {
     final args = settings.arguments as Map<String, dynamic>?;
 
-    return BlurredRouter(
+    return AppPageRoute.build(
       builder: (context) {
         return SignupScreen(
           selectedAccountType: args?['selectedAccountType'],
@@ -69,6 +70,8 @@ class SignupScreen extends StatefulWidget {
           fromSocialLogin: args?['fromSocialLogin'] ?? false,
         );
       },
+      settings: settings,
+      motionPattern: AppMotionPattern.glide,
     );
   }
 
@@ -650,7 +653,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
                                 onContinue: () {
                                   Navigator.pushReplacement(
                                     context,
-                                    MaterialPageRoute(
+                                    AppPageRoute.build(
                                       builder: (context) => SignupScreen(
                                         selectedAccountType:
                                             currentSelectedAccountType,
@@ -658,6 +661,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
                                         countryCode: widget.countryCode,
                                         fromSocialLogin: false,
                                       ),
+                                      motionPattern: AppMotionPattern.glide,
                                     ),
                                   );
                                 },
@@ -1451,3 +1455,5 @@ class _SignupScreenState extends CloudState<SignupScreen> {
 
   */
 }
+
+

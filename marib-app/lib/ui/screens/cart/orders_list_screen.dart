@@ -9,14 +9,17 @@ import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:marib/app/navigation/app_page_route.dart';
+import 'package:marib/app/navigation/motion/route_motion.dart';
 
 class OrdersListScreen extends StatefulWidget {
   const OrdersListScreen({super.key});
 
   static Route route(RouteSettings settings) {
-    return MaterialPageRoute(
+    return AppPageRoute.build(
       settings: settings,
       builder: (_) => const OrdersListScreen(),
+      motionPattern: AppMotionPattern.glide,
     );
   }
 
@@ -168,11 +171,9 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
   }
 
   Widget _buildLoadingSkeleton() {
-    final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    final Color baseColor =
-    isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.06);
-    final Color highlightColor =
-    isDark ? Colors.white.withOpacity(0.16) : Colors.black.withOpacity(0.12);
+    final colorScheme = Theme.of(context).colorScheme;
+    final Color baseColor = colorScheme.shimmerBaseColor;
+    final Color highlightColor = colorScheme.shimmerHighlightColor;
 
     return RefreshIndicator(
       onRefresh: _refresh,
@@ -675,9 +676,8 @@ class _OrderCardSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color borderColor = context.color.borderColor;
     final Color cardColor = context.color.secondaryColor;
-    final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    final Color fillColor =
-    isDark ? Colors.white.withOpacity(0.12) : Colors.black.withOpacity(0.08);
+    final colorScheme = Theme.of(context).colorScheme;
+    final Color fillColor = colorScheme.shimmerContentColor;
 
     Widget skeletonBox({double? width, double height = 12, double radius = 8}) {
       return Container(
@@ -759,3 +759,5 @@ class _OrderCardSkeleton extends StatelessWidget {
     );
   }
 }
+
+

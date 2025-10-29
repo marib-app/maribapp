@@ -3,13 +3,16 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:marib/data/cubits/service_requests_cubit.dart';
 import 'package:marib/data/model/service_request_model.dart';
+import 'package:marib/app/navigation/app_page_route.dart';
+import 'package:marib/app/navigation/motion/route_motion.dart';
 
 class ServiceRequestsScreen extends StatefulWidget {
   const ServiceRequestsScreen({super.key});
 
   static Route<void> route() {
-    return MaterialPageRoute<void>(
+    return AppPageRoute.build<void>(
       builder: (_) => const ServiceRequestsScreen(),
+      motionPattern: AppMotionPattern.glide,
     );
   }
 
@@ -463,3 +466,5 @@ class _ErrorBanner extends StatelessWidget {
     );
   }
 }
+
+

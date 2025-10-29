@@ -14,6 +14,8 @@ import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'add_network/add_network_sheet.dart';
 import 'add_network/plan_configuration_screen.dart';
+import 'package:marib/app/navigation/app_page_route.dart';
+import 'package:marib/app/navigation/motion/route_motion.dart';
 
 import 'sheets/plans_sheet.dart';
 import 'sheets/purchases_sheet.dart';
@@ -27,10 +29,11 @@ class WifiCabinScreen extends StatefulWidget {
   const WifiCabinScreen({super.key});
 
   static Route route(RouteSettings settings) {
-    return MaterialPageRoute(
+    return AppPageRoute.build(
       builder: (_) => const WifiCabinScreen(),
       settings: settings,
       maintainState: true,
+      motionPattern: AppMotionPattern.glide,
     );
   }
 
@@ -219,9 +222,10 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
   }
 
   Widget _buildShimmerGrid() {
-    final color = context.color.secondaryColor;
-    final base = color.withOpacity(0.35);
-    final highlight = color.withOpacity(0.18);
+    final colorScheme = Theme.of(context).colorScheme;
+    final base = colorScheme.shimmerBaseColor;
+    final highlight = colorScheme.shimmerHighlightColor;
+    final content = colorScheme.shimmerContentColor;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -254,7 +258,7 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
                     child: Container(
                       height: 70,
                       width: double.infinity,
-                      color: base,
+                      color: content,
                     ),
                   ),
                 ),
@@ -266,7 +270,7 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
                     height: 12,
                     width: 90,
                     decoration: BoxDecoration(
-                      color: base,
+                      color: content,
                       borderRadius: BorderRadius.circular(6),
                     ),
                   ),
@@ -279,7 +283,7 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
                     height: 10,
                     width: 60,
                     decoration: BoxDecoration(
-                      color: base,
+                      color: content,
                       borderRadius: BorderRadius.circular(6),
                     ),
                   ),
@@ -979,3 +983,5 @@ String? _normalizeText(dynamic value) {
 
   return _normalizeText(value.toString());
 }
+
+

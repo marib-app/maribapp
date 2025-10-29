@@ -134,7 +134,9 @@ class _TransactionScreenState extends State<TransactionScreen> {
 
   List<ManualPayment> _filteredTransactions(List<ManualPayment> transactions) {
     if (_selectedFilter == _TransactionsFilter.all) {
-      return List<ManualPayment>.from(transactions);
+      return transactions
+          .where((ManualPayment mp) => !_isServiceTransaction(mp))
+          .toList();
     }
 
     return transactions
@@ -144,7 +146,9 @@ class _TransactionScreenState extends State<TransactionScreen> {
 
   int _countForFilter(
       List<ManualPayment> transactions, _TransactionsFilter filter) {
-    if (filter == _TransactionsFilter.all) return transactions.length;
+    if (filter == _TransactionsFilter.all) {
+      return transactions.where((mp) => !_isServiceTransaction(mp)).length;
+    }
     return transactions.where((mp) => _matchesFilter(mp, filter)).length;
   }
 
@@ -177,6 +181,9 @@ class _TransactionScreenState extends State<TransactionScreen> {
 
     return null;
   }
+
+  bool _isServiceTransaction(ManualPayment mp) =>
+      _resolveCategory(mp) == _TransactionsFilter.services;
 
   void _onFilterSelected(_TransactionsFilter filter) {
     if (_selectedFilter == filter) return;
@@ -227,10 +234,10 @@ class _TransactionScreenState extends State<TransactionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final List<ManualPayment> transactions = _controller.transactions;
+    final List<ManualPayment> allTransactions = _controller.transactions;
     final List<ManualPayment> filteredTransactions =
-        _filteredTransactions(transactions);
-    final bool hasTransactions = transactions.isNotEmpty;
+        _filteredTransactions(allTransactions);
+    final bool hasTransactions = allTransactions.isNotEmpty;
     final bool hasFilteredResults = filteredTransactions.isNotEmpty;
     final bool loading = _controller.loading;
     final Object? error = _controller.error;
@@ -250,7 +257,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
         floatingActionButton: FloatingActionButton(
           heroTag: 'transactions_refresh_fab',
           onPressed: _controller.fetching ? null : _handleManualRefresh,
-          child: _controller.fetching && transactions.isEmpty
+          child: _controller.fetching && allTransactions.isEmpty
               ? const CircularProgressIndicator.adaptive()
               : const Icon(Icons.refresh),
         ),
@@ -261,7 +268,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
             slivers: <Widget>[
               if (hasTransactions)
                 SliverToBoxAdapter(
-                  child: _buildFilterBar(context, transactions),
+                  child: _buildFilterBar(context, allTransactions),
                 ),
               if (loading && !hasTransactions)
                 SliverFillRemaining(

@@ -342,9 +342,13 @@ extension _ChatListScreenUi on _ChatListScreenState {
                             height: 42,
                             clipBehavior: Clip.antiAlias,
                             decoration: BoxDecoration(
-                              color: Colors.grey,
-                              border:
-                              Border.all(width: 1.5, color: Colors.white),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .shimmerContentColor,
+                              border: Border.all(
+                                width: 1.5,
+                                color: Colors.white,
+                              ),
                               borderRadius: BorderRadius.circular(10),
                             ),
                           ),

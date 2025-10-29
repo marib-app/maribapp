@@ -42,7 +42,7 @@ class LoginScreen extends StatefulWidget {
   @override
   State<LoginScreen> createState() => LoginScreenState();
 
-  static BlurredRouter route(RouteSettings routeSettings) {
+  static Route route(RouteSettings routeSettings) {
     Map? args = routeSettings.arguments as Map?;
     return BlurredRouter(
       builder: (_) => LoginScreen(

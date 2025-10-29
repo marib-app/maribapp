@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:marib/ui/theme/extensions/shimmer_colors.dart';
 
 /// عناصر مساعدة مشتركة بين أقسام التوصيل والدفع في شاشة السلة.
 Widget buildShimmerLine(
@@ -7,15 +8,15 @@ Widget buildShimmerLine(
       double height = 12,
       double width = 120,
     }) {
-  final bool isDark = Theme.of(context).brightness == Brightness.dark;
+  final colorScheme = Theme.of(context).colorScheme;
   return Shimmer.fromColors(
-    baseColor: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
-    highlightColor: isDark ? Colors.grey.shade700 : Colors.grey.shade100,
+    baseColor: colorScheme.shimmerBaseColor,
+    highlightColor: colorScheme.shimmerHighlightColor,
     child: Container(
       height: height,
       width: width,
       decoration: BoxDecoration(
-        color: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
+        color: colorScheme.shimmerContentColor,
         borderRadius: BorderRadius.circular(8),
       ),
     ),

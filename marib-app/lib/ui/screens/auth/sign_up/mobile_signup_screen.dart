@@ -36,7 +36,7 @@ class MobileSignUpScreen extends StatefulWidget {
   @override
   State<MobileSignUpScreen> createState() => MobileSignUpScreenState();
 
-  static BlurredRouter route(RouteSettings routeSettings) {
+  static Route route(RouteSettings routeSettings) {
     Map? args = routeSettings.arguments as Map?;
     return BlurredRouter(
         builder: (_) => MobileSignUpScreen(

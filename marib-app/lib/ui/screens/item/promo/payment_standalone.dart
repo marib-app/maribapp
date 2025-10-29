@@ -12,6 +12,8 @@ import 'package:marib/utils/responsiveSize.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'dart:ui' as ui;
+import 'package:marib/app/navigation/app_page_route.dart';
+import 'package:marib/app/navigation/motion/route_motion.dart';
 
 
 
@@ -42,8 +44,10 @@ class PaymentStandalonePage extends StatefulWidget {
 
   const PaymentStandalonePage({super.key, this.amount});
 
-  static Route<bool> route({double? amount}) =>
-      MaterialPageRoute(builder: (_) => PaymentStandalonePage(amount: amount));
+  static Route<bool> route({double? amount}) => AppPageRoute.build(
+        builder: (_) => PaymentStandalonePage(amount: amount),
+        motionPattern: AppMotionPattern.glide,
+      );
 
   @override
   State<PaymentStandalonePage> createState() => _PaymentStandalonePageState();
@@ -491,9 +495,12 @@ class _PaymentStandalonePageState extends State<PaymentStandalonePage> {
         required double horizontal,
         required double vertical,
       }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final baseColor = isDark ? Colors.grey.shade800 : Colors.grey.shade300;
-    final highlightColor = isDark ? Colors.grey.shade600 : Colors.grey.shade100;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final colorScheme = theme.colorScheme;
+    final baseColor = colorScheme.shimmerBaseColor;
+    final highlightColor = colorScheme.shimmerHighlightColor;
+    final shimmerContentColor = colorScheme.shimmerContentColor;
 
     return Container(
       width: double.infinity,
@@ -518,7 +525,7 @@ class _PaymentStandalonePageState extends State<PaymentStandalonePage> {
               width: double.infinity,
               height: (90.0).rh(context).clamp(70.0, 110.0),
               decoration: BoxDecoration(
-                color: isDark ? Colors.grey.shade900 : Colors.white,
+                color: shimmerContentColor,
                 borderRadius: BorderRadius.circular((10.0).rw(context)),
               ),
             ),
@@ -652,15 +659,15 @@ class _PaymentStandalonePageState extends State<PaymentStandalonePage> {
   }
 
   Widget _buildShimmerLine(BuildContext context, {double height = 12, double width = 120}) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
     return Shimmer.fromColors(
-      baseColor: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
-      highlightColor: isDark ? Colors.grey.shade700 : Colors.grey.shade100,
+      baseColor: colorScheme.shimmerBaseColor,
+      highlightColor: colorScheme.shimmerHighlightColor,
       child: Container(
         height: height,
         width: width,
         decoration: BoxDecoration(
-          color: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
+          color: colorScheme.shimmerContentColor,
           borderRadius: BorderRadius.circular((8.0).rw(context)),
         ),
       ),
@@ -722,3 +729,5 @@ class _PaymentStandalonePageState extends State<PaymentStandalonePage> {
 //             textColor: Colors.white,
 //           ),
 //         ),
+
+

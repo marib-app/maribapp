@@ -50,7 +50,7 @@ class AddMoreDetailsScreen extends StatefulWidget {
     this.editingItem,
   });
 
-  static BlurredRouter route(RouteSettings settings) {
+  static Route route(RouteSettings settings) {
     final Map? args = settings.arguments as Map?;
 
     List<int>? resolvedCatIds;

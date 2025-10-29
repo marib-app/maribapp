@@ -19,6 +19,8 @@ import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/responsiveSize.dart';
 import 'package:marib/data/model/custom_field/custom_field_model.dart'
     show CustomFieldColorEntry;
+import 'package:marib/app/navigation/app_page_route.dart';
+import 'package:marib/app/navigation/motion/route_motion.dart';
 
 class ProductManagementScreen extends StatefulWidget {
   const ProductManagementScreen({super.key, required this.item});
@@ -28,7 +30,7 @@ class ProductManagementScreen extends StatefulWidget {
   static Route<dynamic> route(RouteSettings settings) {
     final ItemModel item = _resolveItem(settings.arguments);
 
-    return MaterialPageRoute(
+    return AppPageRoute.build(
       settings: settings,
       builder: (_) {
         if (!isEcommerceItem(item)) {
@@ -42,6 +44,7 @@ class ProductManagementScreen extends StatefulWidget {
           child: ProductManagementScreen(item: item),
         );
       },
+      motionPattern: AppMotionPattern.glide,
     );
   }
 
@@ -2342,3 +2345,5 @@ class _ErrorView extends StatelessWidget {
     );
   }
 }
+
+

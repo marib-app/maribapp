@@ -56,7 +56,7 @@ class SignUpMainScreen extends StatefulWidget {
   @override
   State<SignUpMainScreen> createState() => LoginScreenState();
 
-  static BlurredRouter route(RouteSettings routeSettings) {
+  static Route route(RouteSettings routeSettings) {
     final args = routeSettings.arguments as Map<String, dynamic>?;
     return BlurredRouter(builder: (_) => SignUpMainScreen(arguments: args));
   }

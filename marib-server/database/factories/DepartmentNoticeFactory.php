@@ -10,7 +10,7 @@ class DepartmentNoticeFactory extends Factory
         $startsAt = $this->faker->dateTimeBetween('-1 day', 'now');
 
         return [
-            'department' => $this->faker->randomElement(config('cart.departments', ['shein', 'computer', 'store'])),
+            'department' => $this->faker->randomElement(config('cart.departments', ['shein', 'computer', 'store', 'services'])),
             'title' => $this->faker->sentence(),
             'body' => $this->faker->paragraph(),
             'severity' => $this->faker->randomElement(['info', 'warning', 'critical']),

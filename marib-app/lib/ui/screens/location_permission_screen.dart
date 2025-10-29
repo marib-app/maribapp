@@ -14,6 +14,8 @@ import 'package:marib/utils/app_icon.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/api.dart';
+import 'package:marib/app/navigation/app_page_route.dart';
+import 'package:marib/app/navigation/motion/route_motion.dart';
 
 
 
@@ -23,7 +25,11 @@ class LocationPermissionScreen extends StatefulWidget {
   @override
   State<LocationPermissionScreen> createState() => _LocationPermissionScreenState();
 
-  static Route route(RouteSettings routeSettings) => MaterialPageRoute(builder: (_) => const LocationPermissionScreen());
+  static Route route(RouteSettings routeSettings) => AppPageRoute.build(
+        builder: (_) => const LocationPermissionScreen(),
+        settings: routeSettings,
+        motionPattern: AppMotionPattern.glide,
+      );
 }
 
 
@@ -374,4 +380,5 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> wit
   }
 
 }
+
 

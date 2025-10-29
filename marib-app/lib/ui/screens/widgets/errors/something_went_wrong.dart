@@ -1,9 +1,10 @@
 import 'package:lottie/lottie.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:marib/app/navigation/app_page_route.dart';
+import 'package:marib/app/navigation/motion/route_motion.dart';
 
 class SomethingWentWrong extends StatelessWidget {
   final FlutterErrorDetails? error;
@@ -166,8 +167,9 @@ class ErrorScreen extends StatelessWidget {
 
     Navigator.push(
       context,
-      MaterialPageRoute(
+      AppPageRoute.build(
         builder: (context) => ErrorDetailScreen(stackLines: filteredStackLines),
+        motionPattern: AppMotionPattern.glide,
       ),
     );
   }
@@ -212,3 +214,5 @@ String _formatStackTraceLine(String line) {
   final endIndex = line.lastIndexOf('(');
   return line.substring(startIndex, endIndex);
 }
+
+

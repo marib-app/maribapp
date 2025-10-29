@@ -7,7 +7,8 @@ import 'package:marib/data/repositories/competition_repository.dart';
 import 'package:marib/ui/screens/competitions/competition_share_info.dart';
 import 'package:marib/ui/screens/competitions/competition_support.dart';
 import 'package:marib/ui/screens/competitions/competitions_screen_ui.dart';
-import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
+import 'package:marib/app/navigation/app_page_route.dart';
+import 'package:marib/app/navigation/motion/route_motion.dart';
 
 
 class CompetitionScreen extends StatefulWidget {
@@ -16,12 +17,14 @@ class CompetitionScreen extends StatefulWidget {
 
 
   static Route route(RouteSettings routeSettings) {
-    return BlurredRouter(
+    return AppPageRoute.build(
+      settings: routeSettings,
       builder: (_) => BlocProvider(
         create: (_) =>
         CompetitionCubit(CompetitionRepository())..fetchCompetitionData(),
         child: const CompetitionScreen(),
       ),
+      motionPattern: AppMotionPattern.glide,
     );
   }
 
@@ -107,11 +110,12 @@ class _CompetitionScreenState extends State<CompetitionScreen>
   void _openInstructions() {
     final cubit = context.read<CompetitionCubit>();
     Navigator.of(context).push(
-      MaterialPageRoute(
+      AppPageRoute.build(
         builder: (_) => BlocProvider.value(
           value: cubit,
           child: const CompetitionShareInfoScreen(),
         ),
+        motionPattern: AppMotionPattern.glide,
       ),
     );
   }
@@ -170,5 +174,6 @@ class _CompetitionScreenState extends State<CompetitionScreen>
     );
   }
 }
+
 
 

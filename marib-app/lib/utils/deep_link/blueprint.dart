@@ -11,8 +11,8 @@ abstract class NativeDeepLinkUtility {
     nativeDeepLinkManager.handle(parse, processResult);
   }
 
-  /*MaterialPageRoute build(RouteSettings settings) {
-    return MaterialPageRoute(
+  /*AppPageRoute.build(RouteSettings settings) {
+    return AppPageRoute.build(
       builder: (context) {
         return NativeLinkWidget(
           settings: settings,

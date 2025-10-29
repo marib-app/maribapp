@@ -995,15 +995,14 @@ class _MobileOrEmailForm extends StatelessWidget {
         const SizedBox(height: 10),
         UiUtils.buildButton(
           context,
-          onPressed: isLoading ? () {} : onSubmit,
-          prefixWidget: isLoading
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2))
-              : null,
-          buttonTitle: isLoading ? "" : "signIn".translate(context),
+          onPressed: onSubmit,
+          buttonTitle: "signIn".translate(context),
           radius: 8,
+          isInProgress: isLoading,
+          requiredTextControllers: [
+            emailController,
+            passwordController,
+          ],
         ),
         const SizedBox(height: 2),
       ],
@@ -1189,6 +1188,7 @@ class _EnterPasswordEmailView extends StatelessWidget {
             onPressed: onSubmitEmailPassword,
             buttonTitle: "signIn".translate(context),
             radius: 8,
+            requiredTextControllers: [passwordController],
           ),
         ],
       ),

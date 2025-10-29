@@ -5,7 +5,8 @@ import 'package:marib/data/cubits/orders/order_payment_cubit.dart';
 import 'package:marib/data/model/orders/order_payment.dart';
 import 'package:marib/utils/payment/gatways/payment_webview.dart';
 import 'package:marib/utils/helper_utils.dart';
-
+import 'package:marib/app/navigation/app_page_route.dart';
+import 'package:marib/app/navigation/motion/route_motion.dart';
 
 
 class OrderPaymentSheet extends StatefulWidget {
@@ -92,7 +93,7 @@ class _OrderPaymentSheetState extends State<OrderPaymentSheet> {
 
               _webViewOpen = true;
               await Navigator.of(context).push(
-                MaterialPageRoute<void>(
+                AppPageRoute.build<void>(
                   builder: (_) => PaymentWebView(
                     authorizationUrl: action.authorizationUrl,
                     reference: action.reference,
@@ -110,6 +111,7 @@ class _OrderPaymentSheetState extends State<OrderPaymentSheet> {
                       context.read<OrderPaymentCubit>().cancelAction();
                     },
                   ),
+                  motionPattern: AppMotionPattern.glide,
                 ),
               );
               _webViewOpen = false;
@@ -275,3 +277,5 @@ class _OrderPaymentSheetState extends State<OrderPaymentSheet> {
     );
   }
 }
+
+

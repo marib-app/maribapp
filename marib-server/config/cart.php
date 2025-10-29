@@ -5,6 +5,7 @@ return [
         'shein',
         'computer',
         'store',
+        'services',
 
     ],
 
@@ -15,6 +16,7 @@ return [
         'shein' => (int) env('CART_SHEIN_ROOT_CATEGORY_ID', 4),
         'computer' => (int) env('CART_COMPUTER_ROOT_CATEGORY_ID', 5),
         'store' => (int) env('CART_STORE_ROOT_CATEGORY_ID', 6),
+        'services' => null,
         
 
     ],
@@ -26,6 +28,8 @@ return [
         'computer' => 'computer',
         'store_products' => 'store',
         'store' => 'store',
+        'service_requests' => 'services',
+        'services' => 'services',
 
     ],
 ];

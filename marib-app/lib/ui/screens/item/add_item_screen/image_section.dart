@@ -12,6 +12,8 @@ import 'package:marib/ui/screens/item/add_item_screen/widgets/image_adapter.dart
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
+import 'package:marib/app/navigation/app_page_route.dart';
+import 'package:marib/app/navigation/motion/route_motion.dart';
 
 mixin ImageSectionMixin<T extends StatefulWidget> on State<T> {
   late final GlobalKey<FormState> _formKey;
@@ -159,11 +161,12 @@ mixin ImageSectionMixin<T extends StatefulWidget> on State<T> {
                       return;
                     }
                     Navigator.of(context).push(
-                      MaterialPageRoute(
+                      AppPageRoute.build(
                         builder: (_) => ImageGalleryScreen(
                           images: mixedItemImageList,
                           initialIndex: i,
                         ),
+                        motionPattern: AppMotionPattern.glide,
                       ),
                     );
                   },
@@ -637,3 +640,5 @@ class _ImageGalleryScreenState extends State<ImageGalleryScreen> {
     );
   }
 }
+
+

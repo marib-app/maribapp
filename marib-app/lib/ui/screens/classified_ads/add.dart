@@ -101,7 +101,9 @@ class AddClassified extends StatelessWidget {
                           borderRadius:
                           BorderRadius.circular(ScreenScaler.s(1.5)),
                           animate: false,
-                          baseColor: Colors.grey.shade300,
+                          baseColor: Theme.of(context)
+                              .colorScheme
+                              .shimmerContentColor,
                         ),
                       ),
                     ),
@@ -168,4 +170,3 @@ class AddClassified extends StatelessWidget {
     );
   }
 }
-

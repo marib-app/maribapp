@@ -8,7 +8,7 @@ import 'route_motion.dart';
 class MotionSettingsController {
   MotionSettingsController._()
       : _defaultComposer = RouteMotionComposer(
-          pattern: AppMotionPattern.hero,
+          pattern: AppMotionPattern.glide,
         );
 
   static final MotionSettingsController instance = MotionSettingsController._();
@@ -50,7 +50,7 @@ class MotionSettingsController {
   /// Restores the controller to its initial state.
   void reset() {
     _defaultComposer = RouteMotionComposer(
-      pattern: AppMotionPattern.hero,
+      pattern: AppMotionPattern.glide,
     );
     clearOverrides();
   }
@@ -88,7 +88,7 @@ class MotionSettingsController {
 /// consistent page transitions according to global motion preferences.
 class MotionPageTransitionsBuilder extends PageTransitionsBuilder {
   const MotionPageTransitionsBuilder({
-    this.defaultPattern = AppMotionPattern.hero,
+    this.defaultPattern = AppMotionPattern.glide,
     this.sharedAxisType = SharedAxisTransitionType.scaled,
     this.pushDuration = const Duration(milliseconds: 220),
     Duration? popDuration,
@@ -179,3 +179,4 @@ class MotionPageTransitionsBuilder extends PageTransitionsBuilder {
     );
   }
 }
+

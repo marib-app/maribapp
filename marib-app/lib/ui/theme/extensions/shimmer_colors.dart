@@ -1,31 +1,32 @@
 import 'package:flutter/material.dart';
 
 extension ShimmerColors on ColorScheme {
-  static const _lightBase = Color(0xFFB8BEC9);
-  static const _lightHighlight = Color(0xFFE4E8F0);
+  static const _lightBase = Color(0xFFDADFE7);
+  static const _lightHighlight = Color(0xFFF4F6FB);
+  static const _lightContent = Color(0xFFE8ECF3);
 
-  Color _overlayOnSurface(Color base, double opacity) {
-    return Color.alphaBlend(onSurface.withOpacity(opacity), base);
+  static Color _blendOnSurface(ColorScheme scheme, Color base, double opacity) {
+    return Color.alphaBlend(scheme.onSurface.withOpacity(opacity), base);
   }
 
   Color get shimmerBaseColor {
     if (brightness == Brightness.dark) {
-      return _overlayOnSurface(surfaceVariant, 0.24);
+      return Color.alphaBlend(Colors.white.withOpacity(0.18), surfaceVariant);
     }
     return _lightBase;
   }
 
   Color get shimmerHighlightColor {
     if (brightness == Brightness.dark) {
-      return _overlayOnSurface(surface, 0.48);
+      return Color.alphaBlend(Colors.white.withOpacity(0.32), surface);
     }
     return _lightHighlight;
   }
 
   Color get shimmerContentColor {
     if (brightness == Brightness.dark) {
-      return _overlayOnSurface(surfaceVariant, 0.12);
+      return Color.alphaBlend(Colors.white.withOpacity(0.14), surfaceVariant);
     }
-    return _lightBase.withOpacity(0.60);
+    return _blendOnSurface(this, _lightContent, 0.08);
   }
 }

@@ -591,16 +591,15 @@ class _HeaderCard extends StatelessWidget {
 }
 
 Widget _buildShimmer(BuildContext context) {
-  final isDark = Theme.of(context).brightness == Brightness.dark;
-
-  final baseColor = isDark ? Colors.grey[800]! : Colors.grey[300]!;
-  final highlightColor = isDark ? Colors.grey[700]! : Colors.grey[100]!;
+  final colorScheme = Theme.of(context).colorScheme;
+  final baseColor = colorScheme.shimmerBaseColor;
+  final highlightColor = colorScheme.shimmerHighlightColor;
 
   return Shimmer.fromColors(
     baseColor: baseColor,
     highlightColor: highlightColor,
     child: Container(
-      color: baseColor,
+      color: colorScheme.shimmerContentColor,
     ),
   );
 }

@@ -6,9 +6,7 @@ import 'package:shimmer/shimmer.dart';
 import 'package:marib/data/cubits/category/fetch_category_cubit.dart';
 import 'package:marib/utils/slider_interface_mapper.dart';
 import 'package:flutter/foundation.dart';
-
-const _shimmerBaseColor = Color(0xFFB8BEC9);
-const _shimmerHighlightColor = Color(0xFFE4E8F0);
+import 'package:marib/ui/theme/extensions/shimmer_colors.dart';
 
 class PcSliderWidget extends StatefulWidget {
   final int parentId;
@@ -265,8 +263,10 @@ class _PcSliderWidgetState extends State<PcSliderWidget> {
 
   Widget _buildShimmer(Color barBg) {
     // ألوان موحّدة للشيمر
-    const base = _shimmerBaseColor;
-    const highlight = _shimmerHighlightColor;
+    final colorScheme = Theme.of(context).colorScheme;
+    final base = colorScheme.shimmerBaseColor;
+    final highlight = colorScheme.shimmerHighlightColor;
+    final content = colorScheme.shimmerContentColor;
 
     const widths = [72.0, 88.0, 64.0, 96.0, 70.0, 90.0, 68.0];
 
@@ -289,7 +289,7 @@ class _PcSliderWidgetState extends State<PcSliderWidget> {
                     width: widths[i % widths.length],
                     height: _kChipHeight,
                     decoration: BoxDecoration(
-                      color: base,
+                      color: content,
                       borderRadius: BorderRadius.circular(18),
                     ),
                   ),

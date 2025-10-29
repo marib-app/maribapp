@@ -290,7 +290,7 @@ class Routes {
       return AppPageRoute.build(
         settings: routeSettings,
         transition: AppPageRouteTransition.motion,
-        motionPattern: AppMotionPattern.hero,
+        motionPattern: AppMotionPattern.glide,
         forwardDuration: const Duration(milliseconds: 220),
         builder: (context) {
           return FutureBuilder<DataOutput<ItemModel>>(
@@ -343,7 +343,7 @@ class Routes {
         return AppPageRoute.build(
           settings: routeSettings,
           transition: AppPageRouteTransition.motion,
-          motionPattern: AppMotionPattern.hero,
+          motionPattern: AppMotionPattern.glide,
           forwardDuration: const Duration(milliseconds: 220),
           builder: (_) => const MapSearchScreen(),
         );
@@ -365,7 +365,7 @@ class Routes {
         return AppPageRoute.build(
           settings: routeSettings,
           transition: AppPageRouteTransition.motion,
-          motionPattern: AppMotionPattern.hero,
+          motionPattern: AppMotionPattern.glide,
           forwardDuration: const Duration(milliseconds: 220),
           builder: (context) => TemporarySectionScreen(
             catName: arguments['catName'] ?? '',
@@ -377,7 +377,7 @@ class Routes {
         return AppPageRoute.build(
           settings: routeSettings,
           transition: AppPageRouteTransition.motion,
-          motionPattern: AppMotionPattern.hero,
+          motionPattern: AppMotionPattern.glide,
           forwardDuration: const Duration(milliseconds: 220),
           builder: (context) => const SplashScreen(),
         );
@@ -385,7 +385,7 @@ class Routes {
         return AppPageRoute.build(
           settings: routeSettings,
           transition: AppPageRouteTransition.motion,
-          motionPattern: AppMotionPattern.hero,
+          motionPattern: AppMotionPattern.glide,
           forwardDuration: const Duration(milliseconds: 220),
           builder: (context) => const OnboardingScreen(),
         );
@@ -613,7 +613,7 @@ Route<T> _buildFadeBlurOverlay<T>({
   return AppPageRoute.build(
     settings: settings,
     transition: AppPageRouteTransition.motion,
-    motionPattern: AppMotionPattern.hero,
+    motionPattern: AppMotionPattern.glide,
     forwardDuration: const Duration(milliseconds: 220),
     builder: builder,
     barrierDismissible: barrierDismissible,
@@ -621,3 +621,5 @@ Route<T> _buildFadeBlurOverlay<T>({
     opaque: false,
   );
 }
+
+

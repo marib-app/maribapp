@@ -5,6 +5,7 @@ import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 import 'ad_image_source.dart';
 import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
+import 'package:marib/ui/theme/extensions/shimmer_colors.dart';
 
 class FullscreenGalleryPage extends StatefulWidget {
   final List<AdImageSource> images;
@@ -338,7 +339,9 @@ class _FullscreenGalleryPageState extends State<FullscreenGalleryPage> {
                         height: double.infinity,
                         borderRadius: BorderRadius.zero,
                         animate: false,
-                        baseColor: Colors.white24,
+                        baseColor: Theme.of(context)
+                            .colorScheme
+                            .shimmerContentColor,
                       ),
                     ),
                   ),

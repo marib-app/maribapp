@@ -6,7 +6,7 @@ import 'bank_account.dart';
 class BanksTestScreen extends StatefulWidget {
   const BanksTestScreen({super.key});
 
-  static Route route() => MaterialPageRoute(builder: (_) => const BanksTestScreen());
+  static Route route() => AppPageRoute.build(builder: (_) => const BanksTestScreen());
 
   @override
   State<BanksTestScreen> createState() => _BanksTestScreenState();

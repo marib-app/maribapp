@@ -303,10 +303,11 @@ class OrderStepContent extends StatelessWidget {
       body = _buildEmptyState(context);
     }
 
+    final colorScheme = Theme.of(context).colorScheme;
     final Widget effectiveBody = showShimmer
         ? Shimmer.fromColors(
-            baseColor: Colors.grey.shade300,
-            highlightColor: Colors.grey.shade100,
+            baseColor: colorScheme.shimmerBaseColor,
+            highlightColor: colorScheme.shimmerHighlightColor,
             child: body,
           )
         : body;

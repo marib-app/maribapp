@@ -15,6 +15,8 @@ import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/variant_key.dart';
+import 'package:marib/app/navigation/app_page_route.dart';
+import 'package:marib/app/navigation/motion/route_motion.dart';
 
 class ProductReviewScreen extends StatefulWidget {
   const ProductReviewScreen({
@@ -58,13 +60,14 @@ class ProductReviewScreen extends StatefulWidget {
       );
     }
 
-    return MaterialPageRoute(
+    return AppPageRoute.build(
       settings: settings,
       builder: (_) => ProductReviewScreen(
         item: item!,
         initialOptions: options,
         initialMessage: message,
       ),
+      motionPattern: AppMotionPattern.glide,
     );
   }
 
@@ -976,3 +979,5 @@ class _ErrorView extends StatelessWidget {
     );
   }
 }
+
+

@@ -5,15 +5,18 @@ import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'dart:math' as math;
 import 'package:marib/utils/ui_utils.dart';
+import 'package:marib/app/navigation/app_page_route.dart';
+import 'package:marib/app/navigation/motion/route_motion.dart';
 
 class OtherServicesScreen extends StatefulWidget {
   const OtherServicesScreen({super.key});
 
   /// استخدمها في onGenerateRoute
-  static Route route(RouteSettings s) => MaterialPageRoute(
+  static Route route(RouteSettings s) => AppPageRoute.build(
         builder: (_) => const OtherServicesScreen(),
         settings: s,
         maintainState: true,
+        motionPattern: AppMotionPattern.glide,
       );
 
   @override
@@ -132,7 +135,7 @@ class _OtherServicesScreenState extends State<OtherServicesScreen> {
               highlightColor: highlight,
               child: Container(
                 decoration: BoxDecoration(
-                  color: base,
+                  color: content,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 padding: const EdgeInsets.all(16),
@@ -270,3 +273,5 @@ class _OtherServiceCard extends StatelessWidget {
     );
   }
 }
+
+

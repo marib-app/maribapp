@@ -31,7 +31,7 @@ class AppPageRoute {
     Curve curve = Curves.easeOutQuart,
     bool maintainState = true,
     bool? opaque,
-    AppMotionPattern motionPattern = AppMotionPattern.hero,
+    AppMotionPattern motionPattern = AppMotionPattern.glide,
     SharedAxisTransitionType sharedAxisType = SharedAxisTransitionType.scaled,
     bool? reduceMotion,
     Duration? reverseDuration,

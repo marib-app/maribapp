@@ -3,16 +3,17 @@ import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/constant.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
-
-import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
+import 'package:marib/app/navigation/app_page_route.dart';
+import 'package:marib/app/navigation/motion/route_motion.dart';
 
 class MaintenanceMode extends StatelessWidget {
   const MaintenanceMode({super.key});
   static Route route(RouteSettings settings) {
-    return BlurredRouter(
+    return AppPageRoute.build(
       builder: (context) {
         return const MaintenanceMode();
       },
+      motionPattern: AppMotionPattern.glide,
     );
   }
 
@@ -37,3 +38,5 @@ class MaintenanceMode extends StatelessWidget {
     );
   }
 }
+
+

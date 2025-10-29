@@ -19,6 +19,8 @@ import 'dart:convert';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:marib/app/navigation/app_page_route.dart';
+import 'package:marib/app/navigation/motion/route_motion.dart';
 
 class OrderStepsScreen extends StatefulWidget {
   const OrderStepsScreen({super.key, this.orderId, this.initialDetails});
@@ -51,12 +53,13 @@ class OrderStepsScreen extends StatefulWidget {
     }
     orderId ??= initialDetails?.order.id;
 
-    return MaterialPageRoute(
+    return AppPageRoute.build(
       settings: routeSettings,
       builder: (_) => OrderStepsScreen(
         orderId: orderId,
         initialDetails: initialDetails,
       ),
+      motionPattern: AppMotionPattern.glide,
     );
   }
 
@@ -872,3 +875,5 @@ class _OrderStepsScreenState extends State<OrderStepsScreen> {
     );
   }
 }
+
+

@@ -165,13 +165,9 @@ class CurrencyScreenUI extends StatelessWidget {
   // ——— شيمر خفيف جدًا للوضعين ———
   Widget _buildLoadingShimmer(BuildContext context) {
     final isDark = _isDark(context);
-    // ألوان خفيفة جدًا
-    final base = isDark
-        ? Colors.white.withOpacity(0.08)
-        : Colors.black.withOpacity(0.06);
-    final highlight = isDark
-        ? Colors.white.withOpacity(0.16)
-        : Colors.black.withOpacity(0.12);
+    final colorScheme = Theme.of(context).colorScheme;
+    final base = colorScheme.shimmerBaseColor;
+    final highlight = colorScheme.shimmerHighlightColor;
 
     return Shimmer.fromColors(
       baseColor: base,
@@ -183,7 +179,7 @@ class CurrencyScreenUI extends StatelessWidget {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-              child: const _SkeletonBar(height: 44, radius: 12),
+              child: _SkeletonBar(height: 44, radius: 12),
             ),
           ),
           // عناصر قائمة (٦ صفوف)
@@ -193,23 +189,23 @@ class CurrencyScreenUI extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               child: Row(
                 children: [
-                  const _SkeletonCircle(size: 28),
+                  _SkeletonCircle(size: 28),
                   const SizedBox(width: 10),
                   // اسم العملة (سطر طويل قليلًا)
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const _SkeletonLine(
+                        _SkeletonLine(
                             widthFactor: 0.45, height: 12, radius: 6),
                         const SizedBox(height: 10),
                         // شارتا سعر صغيرتان يمينًا
                         Row(
                           children: [
-                            const _SkeletonPill(
+                            _SkeletonPill(
                                 width: 70, height: 22, radius: 999),
                             const SizedBox(width: 8),
-                            const _SkeletonPill(
+                            _SkeletonPill(
                                 width: 70, height: 22, radius: 999),
                           ],
                         ),
@@ -228,7 +224,7 @@ class CurrencyScreenUI extends StatelessWidget {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(12, 12, 12, 18),
-              child: const _SkeletonBar(height: 40, radius: 10),
+              child: _SkeletonBar(height: 40, radius: 10),
             ),
           ),
         ],
@@ -248,7 +244,7 @@ class _SkeletonBar extends StatelessWidget {
     return Container(
       height: height,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.shimmerContentColor,
         borderRadius: BorderRadius.circular(radius),
       ),
     );
@@ -265,8 +261,8 @@ class _SkeletonCircle extends StatelessWidget {
     return Container(
       width: size,
       height: size,
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.shimmerContentColor,
         shape: BoxShape.circle,
       ),
     );
@@ -288,7 +284,7 @@ class _SkeletonLine extends StatelessWidget {
       child: Container(
         height: height,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.shimmerContentColor,
           borderRadius: BorderRadius.circular(radius),
         ),
       ),
@@ -310,7 +306,7 @@ class _SkeletonPill extends StatelessWidget {
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.shimmerContentColor,
         borderRadius: BorderRadius.circular(radius),
       ),
     );

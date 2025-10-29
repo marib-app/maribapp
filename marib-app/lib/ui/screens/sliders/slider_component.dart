@@ -705,7 +705,11 @@ class _SliderComponentState extends State<SliderComponent>
                                     onTap: () => _handleTap(slider),
                                     child: LazyNetworkImage(
                                       imageUrl: slider.image ?? '',
+                                      width: bannerWidth,
+                                      height: kSliderBannerHeight,
                                       fit: BoxFit.cover,
+                                      fadeInDuration: Duration.zero,
+                                      fadeOutDuration: Duration.zero,
                                       placeholder: const ShimmerBox(),
                                       errorWidget:
                                           const ShimmerBox(animate: false),

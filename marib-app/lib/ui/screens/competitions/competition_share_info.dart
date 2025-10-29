@@ -10,6 +10,8 @@ import 'package:marib/data/repositories/competition_repository.dart';
 import 'package:flutter/material.dart' hide Colors;
 import 'package:flutter/material.dart';
 import 'dart:ui';
+import 'package:marib/app/navigation/app_page_route.dart';
+import 'package:marib/app/navigation/motion/route_motion.dart';
 
 
 
@@ -17,11 +19,12 @@ class CompetitionShareInfoScreen extends StatelessWidget {
   const CompetitionShareInfoScreen({super.key});
 
   static Route route() {
-    return MaterialPageRoute(
+    return AppPageRoute.build(
       builder: (_) => BlocProvider(
         create: (_) => CompetitionCubit(CompetitionRepository())..fetchCompetitionData(),
         child: const CompetitionShareInfoScreen(),
       ),
+      motionPattern: AppMotionPattern.glide,
     );
   }
 
@@ -233,3 +236,5 @@ class CompetitionShareInfoScreen extends StatelessWidget {
     );
   }
 }
+
+

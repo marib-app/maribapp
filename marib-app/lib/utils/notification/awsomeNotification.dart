@@ -6,6 +6,8 @@ import 'dart:math';
 
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:marib/app/routes.dart';
+import 'package:marib/app/navigation/app_page_route.dart';
+import 'package:marib/app/navigation/motion/route_motion.dart';
 import 'package:marib/ui/screens/chat/chat_screen.dart';
 
 import 'package:marib/data/cubits/chat/delete_message_cubit.dart';
@@ -232,65 +234,70 @@ class NotificationController {
       Future.delayed(
         Duration.zero,
         () {
-          Navigator.push(Constant.navigatorKey.currentContext!,
-              MaterialPageRoute(
-            builder: (context) {
-              return MultiBlocProvider(
-                providers: [
-                  BlocProvider(
-                    create: (context) => LoadChatMessagesCubit(),
+          Navigator.push(
+            Constant.navigatorKey.currentContext!,
+            AppPageRoute.build(
+              builder: (context) {
+                return MultiBlocProvider(
+                  providers: [
+                    BlocProvider(
+                      create: (context) => LoadChatMessagesCubit(),
+                    ),
+                    BlocProvider(
+                      create: (context) => SendMessageCubit(),
+                    ),
+                    BlocProvider(
+                      create: (context) => DeleteMessageCubit(),
+                    ),
+                  ],
+                  child: Builder(
+                    builder: (context) {
+                      final Map<String, dynamic> notificationData =
+                          Map<String, dynamic>.from(payload ?? {});
+                      final String? currency =
+                          NotificationService.extractCurrency(notificationData);
+                      final String? currencySymbol =
+                          NotificationService.extractCurrencySymbol(
+                              notificationData);
+                      final List<ChatParticipant>? participants =
+                          NotificationService.getCachedParticipants(
+                                (conversationId ?? '').toString(),
+                                itemOfferId: itemOfferIdParsed > 0
+                                    ? itemOfferIdParsed
+                                    : null,
+                                senderId: senderId?.toString(),
+                                itemId: itemId?.toString(),
+                              ) ??
+                              NotificationService.buildParticipantsFromNotification(
+                                data: notificationData,
+                              );
+                      return ChatScreen(
+                        profilePicture: userProfile ?? "",
+                        userName: username ?? "",
+                        itemImage: itemImage ?? "",
+                        itemTitle: itemName ?? "",
+                        userId: senderId ?? "",
+                        itemId: itemId ?? "",
+                        date: date ?? "",
+                        itemOfferId: itemOfferIdParsed,
+                        conversationId: (conversationId ?? '').toString(),
+                        itemPrice: NotificationService.getPrice(itemPrice!)!,
+                        itemOfferPrice:
+                            NotificationService.getPrice(itemOfferPrice),
+                        buyerId: HiveUtils.getUserId(),
+                        alreadyReview: false,
+                        isPurchased: 0,
+                        participants: participants,
+                        currency: currency,
+                        currencySymbol: currencySymbol,
+                      );
+                    },
                   ),
-                  BlocProvider(
-                    create: (context) => SendMessageCubit(),
-                  ),
-                  BlocProvider(
-                    create: (context) => DeleteMessageCubit(),
-                  ),
-                ],
-                child: Builder(builder: (context) {
-                  final Map<String, dynamic> notificationData =
-                      Map<String, dynamic>.from(payload ?? {});
-                  final String? currency =
-                      NotificationService.extractCurrency(notificationData);
-                  final String? currencySymbol =
-                      NotificationService.extractCurrencySymbol(
-                          notificationData);
-                  final List<ChatParticipant>? participants =
-                      NotificationService.getCachedParticipants(
-                            (conversationId ?? '').toString(),
-                            itemOfferId: itemOfferIdParsed > 0
-                                ? itemOfferIdParsed
-                                : null,
-                            senderId: senderId?.toString(),
-                            itemId: itemId?.toString(),
-                          ) ??
-                          NotificationService.buildParticipantsFromNotification(
-                            data: notificationData,
-                          );
-                  return ChatScreen(
-                    profilePicture: userProfile ?? "",
-                    userName: username ?? "",
-                    itemImage: itemImage ?? "",
-                    itemTitle: itemName ?? "",
-                    userId: senderId ?? "",
-                    itemId: itemId ?? "",
-                    date: date ?? "",
-                    itemOfferId: itemOfferIdParsed,
-                    conversationId: (conversationId ?? '').toString(),
-                    itemPrice: NotificationService.getPrice(itemPrice!)!,
-                    itemOfferPrice:
-                        NotificationService.getPrice(itemOfferPrice),
-                    buyerId: HiveUtils.getUserId(),
-                    alreadyReview: false,
-                    isPurchased: 0,
-                    participants: participants,
-                    currency: currency,
-                    currencySymbol: currencySymbol,
-                  );
-                }),
-              );
-            },
-          ));
+                );
+              },
+              motionPattern: AppMotionPattern.glide,
+            ),
+          );
         },
       );
     } else if (payload?['type'] == "offer") {
@@ -313,33 +320,35 @@ class NotificationController {
         Future.delayed(
           Duration.zero,
           () {
-            Navigator.push(Constant.navigatorKey.currentContext!,
-                MaterialPageRoute(
-              builder: (context) {
-                return MultiBlocProvider(
-                  providers: [
-                    BlocProvider(
-                      create: (context) => LoadChatMessagesCubit(),
-                    ),
-                    BlocProvider(
-                      create: (context) => SendMessageCubit(),
-                    ),
-                    BlocProvider(
-                      create: (context) => DeleteMessageCubit(),
-                    ),
-                  ],
-                  child: Builder(builder: (context) {
-                    final Map<String, dynamic> notificationData =
-                        Map<String, dynamic>.from(payload ?? {});
-                    final String? currency =
-                        NotificationService.extractCurrency(
-                      notificationData,
-                    );
-                    final String? currencySymbol =
-                        NotificationService.extractCurrencySymbol(
-                            notificationData);
-                    final List<ChatParticipant>? participants =
-                        NotificationService.getCachedParticipants(
+            Navigator.push(
+              Constant.navigatorKey.currentContext!,
+              AppPageRoute.build(
+                builder: (context) {
+                  return MultiBlocProvider(
+                    providers: [
+                      BlocProvider(
+                        create: (context) => LoadChatMessagesCubit(),
+                      ),
+                      BlocProvider(
+                        create: (context) => SendMessageCubit(),
+                      ),
+                      BlocProvider(
+                        create: (context) => DeleteMessageCubit(),
+                      ),
+                    ],
+                    child: Builder(
+                      builder: (context) {
+                        final Map<String, dynamic> notificationData =
+                            Map<String, dynamic>.from(payload ?? {});
+                        final String? currency =
+                            NotificationService.extractCurrency(
+                          notificationData,
+                        );
+                        final String? currencySymbol =
+                            NotificationService.extractCurrencySymbol(
+                                notificationData);
+                        final List<ChatParticipant>? participants =
+                            NotificationService.getCachedParticipants(
                               (conversationId ?? '').toString(),
                               itemOfferId: itemOfferIdParsed > 0
                                   ? itemOfferIdParsed
@@ -351,30 +360,33 @@ class NotificationController {
                                 .buildParticipantsFromNotification(
                               data: notificationData,
                             );
-                    return ChatScreen(
-                      profilePicture: userProfile ?? "",
-                      userName: username ?? "",
-                      itemImage: itemImage ?? "",
-                      itemTitle: itemName ?? "",
-                      userId: senderId ?? "",
-                      itemId: itemId ?? "",
-                      date: date ?? "",
-                      itemOfferId: itemOfferIdParsed,
-                      conversationId: (conversationId ?? '').toString(),
-                      itemPrice: NotificationService.getPrice(itemPrice!)!,
-                      itemOfferPrice:
-                          NotificationService.getPrice(itemOfferPrice),
-                      buyerId: HiveUtils.getUserId(),
-                      alreadyReview: false,
-                      isPurchased: 0,
-                      participants: participants,
-                      currency: currency,
-                      currencySymbol: currencySymbol,
-                    );
-                  }),
-                );
-              },
-            ));
+                        return ChatScreen(
+                          profilePicture: userProfile ?? "",
+                          userName: username ?? "",
+                          itemImage: itemImage ?? "",
+                          itemTitle: itemName ?? "",
+                          userId: senderId ?? "",
+                          itemId: itemId ?? "",
+                          date: date ?? "",
+                          itemOfferId: itemOfferIdParsed,
+                          conversationId: (conversationId ?? '').toString(),
+                          itemPrice: NotificationService.getPrice(itemPrice!)!,
+                          itemOfferPrice:
+                              NotificationService.getPrice(itemOfferPrice),
+                          buyerId: HiveUtils.getUserId(),
+                          alreadyReview: false,
+                          isPurchased: 0,
+                          participants: participants,
+                          currency: currency,
+                          currencySymbol: currencySymbol,
+                        );
+                      },
+                    ),
+                  );
+                },
+                motionPattern: AppMotionPattern.glide,
+              ),
+            );
           },
         );
         /* Future.delayed(Duration.zero, () {
@@ -439,3 +451,5 @@ class NotificationController {
     }
   }
 }
+
+

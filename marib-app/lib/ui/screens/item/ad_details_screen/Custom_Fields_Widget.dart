@@ -236,9 +236,12 @@ class _CustomFieldsWidgetState extends State<CustomFieldsWidget> {
     ];
 
     // 🌓 تحديد الثيم الحالي لاختيار ألوان الشيمر
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final baseColor = isDark ? Colors.grey.shade700 : Colors.grey.shade300;
-    final highlightColor = isDark ? Colors.grey.shade500 : Colors.grey.shade100;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final bool isDark = theme.brightness == Brightness.dark;
+    final baseColor = colorScheme.shimmerBaseColor;
+    final highlightColor = colorScheme.shimmerHighlightColor;
+    final contentColor = colorScheme.shimmerContentColor;
 
     return List.generate(
       showInitialLoading ? defaultCount : totalList.length,
@@ -267,7 +270,7 @@ class _CustomFieldsWidgetState extends State<CustomFieldsWidget> {
                         height: 30,
                         width: 30,
                         decoration: BoxDecoration(
-                          color: baseColor,
+                          color: contentColor,
                           borderRadius: BorderRadius.circular(5),
                         ),
                       ),
@@ -281,7 +284,7 @@ class _CustomFieldsWidgetState extends State<CustomFieldsWidget> {
                               height: 12,
                               width: width * 0.6,
                               decoration: BoxDecoration(
-                                color: baseColor,
+                                color: contentColor,
                                 borderRadius: BorderRadius.circular(4),
                               ),
                             ),
@@ -290,7 +293,7 @@ class _CustomFieldsWidgetState extends State<CustomFieldsWidget> {
                               height: 10,
                               width: width * 0.5,
                               decoration: BoxDecoration(
-                                color: baseColor,
+                                color: contentColor,
                                 borderRadius: BorderRadius.circular(4),
                               ),
                             ),

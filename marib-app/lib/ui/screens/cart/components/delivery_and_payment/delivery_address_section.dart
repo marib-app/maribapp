@@ -284,15 +284,15 @@ class DeliveryAddressSection extends StatelessWidget {
   }
 
   Widget _buildAddressShimmerCard(BuildContext context) {
-    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
     return Shimmer.fromColors(
-      baseColor: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
-      highlightColor: isDark ? Colors.grey.shade700 : Colors.grey.shade100,
+      baseColor: colorScheme.shimmerBaseColor,
+      highlightColor: colorScheme.shimmerHighlightColor,
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: isDark ? Colors.grey.shade800 : Colors.white,
+          color: colorScheme.shimmerContentColor,
           borderRadius: BorderRadius.circular(14),
         ),
         child: Column(
@@ -305,7 +305,7 @@ class DeliveryAddressSection extends StatelessWidget {
                 height: 14,
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: colorScheme.shimmerContentColor,
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),

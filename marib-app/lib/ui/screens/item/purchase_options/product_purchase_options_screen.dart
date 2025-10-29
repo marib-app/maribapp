@@ -7,6 +7,8 @@ import 'package:marib/data/repositories/item/item_purchase_options_repository.da
 import 'package:marib/data/model/item/purchase_options.dart';
 import 'package:marib/utils/variant_key.dart';
 import 'package:marib/utils/ecommerce_department.dart';
+import 'package:marib/app/navigation/app_page_route.dart';
+import 'package:marib/app/navigation/motion/route_motion.dart';
 
 class ProductPurchaseOptionsScreen extends StatefulWidget {
   const ProductPurchaseOptionsScreen({super.key, required this.item});
@@ -16,7 +18,7 @@ class ProductPurchaseOptionsScreen extends StatefulWidget {
   static Route<dynamic> route(RouteSettings settings) {
     final ItemModel item = _resolveItem(settings.arguments);
 
-    return MaterialPageRoute(
+    return AppPageRoute.build(
       settings: settings,
       builder: (_) {
         if (!isEcommerceItem(item)) {
@@ -29,6 +31,7 @@ class ProductPurchaseOptionsScreen extends StatefulWidget {
           child: ProductPurchaseOptionsScreen(item: item),
         );
       },
+      motionPattern: AppMotionPattern.glide,
     );
   }
 
@@ -521,3 +524,5 @@ class _EmptyState extends StatelessWidget {
     );
   }
 }
+
+

@@ -1000,12 +1000,10 @@ class _PromoteAdScreenState extends State<PromoteAdScreen> {
                             child: Shimmer.fromColors(
                               baseColor: Theme.of(context)
                                   .colorScheme
-                                  .primary
-                                  .withOpacity(0.3),
+                                  .shimmerBaseColor,
                               highlightColor: Theme.of(context)
                                   .colorScheme
-                                  .primary
-                                  .withOpacity(0.1),
+                                  .shimmerHighlightColor,
                               child: Container(
                                 width: 96,
                                 height: 96,
@@ -1759,9 +1757,10 @@ class _ShimmerBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final base = isDark ? Colors.grey.shade800 : Colors.grey.shade300;
-    final highlight = isDark ? Colors.grey.shade700 : Colors.grey.shade100;
+    final colorScheme = Theme.of(context).colorScheme;
+    final base = colorScheme.shimmerBaseColor;
+    final highlight = colorScheme.shimmerHighlightColor;
+    final content = colorScheme.shimmerContentColor;
     return Shimmer.fromColors(
       baseColor: base,
       highlightColor: highlight,
@@ -1770,7 +1769,7 @@ class _ShimmerBox extends StatelessWidget {
         height: height,
         width: width ?? double.infinity,
         decoration: BoxDecoration(
-          color: base,
+          color: content,
           borderRadius: BorderRadius.circular(radius),
         ),
       ),

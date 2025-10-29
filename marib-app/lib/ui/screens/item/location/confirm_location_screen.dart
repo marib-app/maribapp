@@ -62,7 +62,7 @@ class ConfirmLocationScreen extends StatefulWidget {
     required this.otherImage,
   }) : super(key: key);
 
-  static BlurredRouter route(RouteSettings settings) {
+  static Route route(RouteSettings settings) {
     Map? arguments = settings.arguments as Map?;
 
     return BlurredRouter(

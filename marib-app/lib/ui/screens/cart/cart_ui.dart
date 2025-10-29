@@ -1084,15 +1084,15 @@ class CartUI extends StatelessWidget {
 
   // ===== شيمرات العرض =====
   Widget _buildShimmerItem(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
     return Shimmer.fromColors(
-      baseColor: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
-      highlightColor: isDark ? Colors.grey.shade500 : Colors.grey.shade100,
+      baseColor: colorScheme.shimmerBaseColor,
+      highlightColor: colorScheme.shimmerHighlightColor,
       child: Container(
         margin: EdgeInsets.symmetric(vertical: 8.rh(context)),
         height: 100.rh(context),
         decoration: BoxDecoration(
-          color: isDark ? Colors.grey.shade800 : Colors.white,
+          color: colorScheme.shimmerContentColor,
           borderRadius: BorderRadius.circular(12),
         ),
       ),
@@ -1100,15 +1100,15 @@ class CartUI extends StatelessWidget {
   }
 
   Widget _buildShimmerLine(BuildContext context, {double height = 14, double width = 120}) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
     return Shimmer.fromColors(
-      baseColor: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
-      highlightColor: isDark ? Colors.grey.shade500 : Colors.grey.shade100,
+      baseColor: colorScheme.shimmerBaseColor,
+      highlightColor: colorScheme.shimmerHighlightColor,
       child: Container(
         height: height,
         width: width,
         decoration: BoxDecoration(
-          color: isDark ? Colors.grey.shade800 : Colors.white,
+          color: colorScheme.shimmerContentColor,
           borderRadius: BorderRadius.circular(8),
         ),
       ),

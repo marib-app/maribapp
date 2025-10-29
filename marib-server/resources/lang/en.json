@@ -286,5 +286,6 @@
     "wallet.filters.refunds": "Refunds",
     "departments.shein": "SHEIN Department",
     "departments.computer": "Computer Department",
-    "departments.store": "Store Department"
+    "departments.store": "Store Department",
+    "departments.services": "Services Department"
 }

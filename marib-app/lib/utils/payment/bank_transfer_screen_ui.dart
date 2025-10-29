@@ -106,7 +106,7 @@ extension _BankTransferScreenUi on _BankTransferScreenState {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       physics:
-          const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+          AppScrollBehavior.defaultPhysics,
       children: [
         Text(
           'اختر وسيلة الدفع المناسبة لك',

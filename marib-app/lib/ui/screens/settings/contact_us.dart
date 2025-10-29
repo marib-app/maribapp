@@ -279,7 +279,7 @@ class ContactUsState extends State<ContactUs> {
               duration: const Duration(milliseconds: 220),
               child: SingleChildScrollView(
                 key: const ValueKey('contactBody'),
-                physics: const BouncingScrollPhysics(),
+                physics: AppScrollBehavior.defaultPhysics,
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -509,7 +509,7 @@ class _EmailSendWidgetState extends State<EmailSendWidget> {
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
+              physics: AppScrollBehavior.defaultPhysics,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,

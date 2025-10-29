@@ -124,9 +124,7 @@ class SoonScreenState extends State<SoonScreen> with TickerProviderStateMixin {
             onRefresh: _refreshAll,
             child: CustomScrollView(
               controller: _scrollController,
-              physics: const BouncingScrollPhysics(
-                parent: AlwaysScrollableScrollPhysics(),
-              ),
+              physics: AppScrollBehavior.defaultPhysics,
               slivers: [
                 SliverToBoxAdapter(child: _buildHeroHeader(context)),
                 const SliverToBoxAdapter(child: SizedBox(height: 24)),
@@ -463,7 +461,7 @@ class SoonScreenState extends State<SoonScreen> with TickerProviderStateMixin {
                       end: _horizontalPadding,
                     ),
                     scrollDirection: Axis.horizontal,
-                    physics: const BouncingScrollPhysics(),
+                    physics: AppScrollBehavior.defaultPhysics,
                     itemBuilder: (context, index) {
                       final CategoryModel category = categories[index];
                       return _CategoryShortcut(
@@ -848,7 +846,7 @@ class _SectionShowcase extends StatelessWidget {
     height: 250,
     child: ListView.separated(
     scrollDirection: Axis.horizontal,
-    physics: const BouncingScrollPhysics(),
+    physics: AppScrollBehavior.defaultPhysics,
     itemBuilder: (context, index) => _HighlightedItemCard(
     item: items[index],
     onTap: () => onItemTap(items[index]),

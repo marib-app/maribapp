@@ -71,7 +71,7 @@ class ProfileScreenUI extends StatelessWidget {
           height: height * 0.7,
           child: TabBarView(
             controller: tabController,
-            physics: const BouncingScrollPhysics(),
+            physics: AppScrollBehavior.defaultPhysics,
             children: adTabs.map((tab) {
               final status = tab["status"];
               return MyItemTab(getItemsWithStatus: status);
@@ -388,7 +388,7 @@ class _ProfileTabBar extends StatelessWidget {
       child: TabBar(
         controller: controller,
         isScrollable: true,
-        physics: const BouncingScrollPhysics(),
+        physics: AppScrollBehavior.defaultPhysics,
 
         // تباعد أفضل للنصّ داخل التبويب
         labelPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

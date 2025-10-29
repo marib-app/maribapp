@@ -248,7 +248,7 @@ class NotificationsState extends State<Notifications> {
             child: ListView.separated(
               controller: _pageScrollController,
               physics: const AlwaysScrollableScrollPhysics(
-                parent: BouncingScrollPhysics(),
+                parent: AppScrollBehavior.defaultPhysics,
               ),
               padding: const EdgeInsets.all(10),
               separatorBuilder: (_, __) => const SizedBox(height: 12),

@@ -206,7 +206,7 @@ class UserProfileScreenState extends State<ShowUserProfileScreen>
           body: ScrollConfiguration(
             behavior: RemoveGlow(),
             child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
+              physics: AppScrollBehavior.defaultPhysics,
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               child: ProfileScreenUI(
                 // التبويبات + الحالات

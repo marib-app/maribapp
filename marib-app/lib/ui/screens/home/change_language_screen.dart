@@ -65,7 +65,7 @@ class LanguagesListScreen extends StatelessWidget {
           }
         },
         child: ListView.builder(
-            physics: const BouncingScrollPhysics(),
+            physics: AppScrollBehavior.defaultPhysics,
             itemCount: setting.length,
             padding: const EdgeInsets.symmetric(horizontal: 20),
             itemBuilder: (context, index) {

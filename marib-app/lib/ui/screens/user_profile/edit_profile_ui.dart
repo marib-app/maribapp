@@ -109,7 +109,7 @@ Widget buildUserProfileScreenUI({
             ScrollConfiguration(
               behavior: RemoveGlow(),
               child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
+                physics: AppScrollBehavior.defaultPhysics,
                 keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                 child: Padding(
                   padding: const EdgeInsets.all(8.0),

@@ -278,7 +278,7 @@ class _AlwaysBouncyScrollBehavior extends ScrollBehavior {
   const _AlwaysBouncyScrollBehavior();
   @override
   ScrollPhysics getScrollPhysics(BuildContext context) =>
-      const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics());
+      AppScrollBehavior.defaultPhysics;
   // إلغاء وميض التوهّج الأزرق/البرتقالي
   @override
   Widget buildOverscrollIndicator(BuildContext context, Widget child, ScrollableDetails details) {

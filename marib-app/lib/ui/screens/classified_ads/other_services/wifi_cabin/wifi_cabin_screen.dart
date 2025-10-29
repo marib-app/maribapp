@@ -101,7 +101,7 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
             title: 'wifiCabin'.translate(context),
           ),
           body: CustomScrollView(
-            physics: const BouncingScrollPhysics(),
+            physics: AppScrollBehavior.defaultPhysics,
             slivers: [
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),

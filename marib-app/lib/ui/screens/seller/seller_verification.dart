@@ -240,7 +240,7 @@ class _SellerVerificationScreenState
           key: _formKey,
           child: ListView(
             controller: _scrollController,
-            physics: const BouncingScrollPhysics(),
+            physics: AppScrollBehavior.defaultPhysics,
             shrinkWrap: true,
             /* crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,*/

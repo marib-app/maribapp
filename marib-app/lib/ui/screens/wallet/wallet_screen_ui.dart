@@ -426,7 +426,7 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
       ),
       body: PageView(
         controller: _pageController,
-        physics: const BouncingScrollPhysics(),
+        physics: AppScrollBehavior.defaultPhysics,
         children: [
           _buildTransactionsPage(),
           _buildActionsPage(),
@@ -441,8 +441,7 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
       onRefresh: _onRefresh,
       child: CustomScrollView(
         controller: _scrollController,
-        physics: const BouncingScrollPhysics(
-            parent: AlwaysScrollableScrollPhysics()),
+        physics: AppScrollBehavior.defaultPhysics,
         slivers: [
           SliverToBoxAdapter(child: _buildSummarySection()),
           SliverToBoxAdapter(child: _buildWithdrawalsSection()),

@@ -78,7 +78,7 @@ class _ReportItemScreenState extends State<ReportItemScreen> {
                 ListView.separated(
                   shrinkWrap: true,
                   itemCount: reasons?.length ?? 0,
-                  physics: const BouncingScrollPhysics(),
+                  physics: AppScrollBehavior.defaultPhysics,
                   separatorBuilder: (context, index) {
                     return const SizedBox(height: 10);
                   },

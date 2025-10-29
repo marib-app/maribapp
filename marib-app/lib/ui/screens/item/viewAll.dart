@@ -113,7 +113,7 @@ class _SectionItemsScreenState extends State<SectionItemsScreen> {
                     Expanded(
                       child: ListView.builder(
                         controller: _controller,
-                        physics: const BouncingScrollPhysics(),
+                        physics: AppScrollBehavior.defaultPhysics,
                         padding: const EdgeInsets.all(16.0),
                         itemCount: state.items.length,
                         shrinkWrap: true,

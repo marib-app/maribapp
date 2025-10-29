@@ -57,7 +57,7 @@ class ManualPaymentDetailsScreen extends StatelessWidget {
         ),
         body: SafeArea(
           child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
+            physics: AppScrollBehavior.defaultPhysics,
             padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
             child: ManualPaymentTile(
               manualPayment: manualPayment,

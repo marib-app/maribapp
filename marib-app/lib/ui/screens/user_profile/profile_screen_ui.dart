@@ -73,8 +73,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
         body: CustomScrollView(
           controller: _scroll,
-          physics: const BouncingScrollPhysics(
-              parent: AlwaysScrollableScrollPhysics()),
+          physics: AppScrollBehavior.defaultPhysics,
           slivers: [
             // بطاقة البروفايل الزجاجية
             SliverToBoxAdapter(

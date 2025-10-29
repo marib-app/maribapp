@@ -271,7 +271,7 @@ class _ItemListingSubscriptionPlansItemState
     return Expanded(
       flex: 10,
       child: ListView(
-        physics: const BouncingScrollPhysics(),
+        physics: AppScrollBehavior.defaultPhysics,
         shrinkWrap: true,
         children: [
           Text(widget.model.name!)
@@ -322,7 +322,7 @@ class _ItemListingSubscriptionPlansItemState
     return Expanded(
       flex: 10,
       child: ListView(
-        physics: const BouncingScrollPhysics(),
+        physics: AppScrollBehavior.defaultPhysics,
         shrinkWrap: true,
         children: [
           Text(widget.model.name!)

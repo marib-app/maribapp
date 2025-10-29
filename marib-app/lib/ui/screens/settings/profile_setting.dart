@@ -90,7 +90,7 @@ Widget contentWidget(
     },
     child: SingleChildScrollView(
       physics:
-      const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+      const AppScrollBehavior.defaultPhysics,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: AppHtml(
         data: state.data.toString(),

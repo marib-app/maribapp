@@ -626,7 +626,7 @@ class _SliderComponentState extends State<SliderComponent>
         : 1; // الحفاظ على صفحة واحدة عند غياب أي بنرات
     final pagePhysics = hasBanners
         ? (bannersLength == 1
-            ? const BouncingScrollPhysics()
+            ? AppScrollBehavior.defaultPhysics
             : const ClampingScrollPhysics())
         : const NeverScrollableScrollPhysics();
 

@@ -251,7 +251,7 @@ class OwnerActionBar extends StatelessWidget {
         padding: padding,
         child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
-          physics: const BouncingScrollPhysics(),
+          physics: AppScrollBehavior.defaultPhysics,
           child: row,
         ),
       );
@@ -269,7 +269,7 @@ class OwnerActionBar extends StatelessWidget {
         padding: padding,
         child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
-          physics: const BouncingScrollPhysics(),
+          physics: AppScrollBehavior.defaultPhysics,
           child: row,
         ),
       ),

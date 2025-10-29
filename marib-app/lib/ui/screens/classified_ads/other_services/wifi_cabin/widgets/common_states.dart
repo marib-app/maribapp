@@ -101,7 +101,7 @@ class WifiErrorState extends StatelessWidget {
 
         return SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-          physics: const BouncingScrollPhysics(),
+          physics: AppScrollBehavior.defaultPhysics,
           child: ConstrainedBox(
             constraints: BoxConstraints(minHeight: constraints.maxHeight),
             child: Center(child: content),
@@ -167,7 +167,7 @@ class WifiEmptyState extends StatelessWidget {
 
         return SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-          physics: const BouncingScrollPhysics(),
+          physics: AppScrollBehavior.defaultPhysics,
           child: ConstrainedBox(
             constraints: BoxConstraints(minHeight: constraints.maxHeight),
             child: Center(child: content),

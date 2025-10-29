@@ -105,7 +105,7 @@ class _ManualPaymentRequestsSheetState
                           child: ListView.builder(
                             controller: scrollController,
                             physics: const AlwaysScrollableScrollPhysics(
-                                parent: BouncingScrollPhysics()),
+                                parent: AppScrollBehavior.defaultPhysics),
                             padding: const EdgeInsets.only(bottom: 12),
                             itemCount: totalItems,
                             itemBuilder: (context, index) {
@@ -693,7 +693,7 @@ class _EmptyView extends StatelessWidget {
       onRefresh: onRefresh,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(
-            parent: BouncingScrollPhysics()),
+            parent: AppScrollBehavior.defaultPhysics),
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),

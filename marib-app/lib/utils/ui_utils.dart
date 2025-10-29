@@ -2539,7 +2539,7 @@ class BlurredRichDialog extends StatelessWidget implements BlurDialoge {
                         ConstrainedBox(
                           constraints: BoxConstraints(maxHeight: maxH),
                           child: SingleChildScrollView(
-                            physics: const BouncingScrollPhysics(),
+                            physics: AppScrollBehavior.defaultPhysics,
                             child: SelectableText.rich(
                               _linkify(
                                 body,

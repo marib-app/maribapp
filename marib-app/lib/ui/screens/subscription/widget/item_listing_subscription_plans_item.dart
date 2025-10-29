@@ -21,6 +21,7 @@ import 'package:marib/utils/payment/bank_transfer_args.dart';
 import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/ui/screens/Transaction_screen.dart'; // مسار شاشة المعاملات
 import 'package:marib/utils/payment/manual_payment_service.dart';
+import 'package:marib/app/app_scroll_behavior.dart';
 
 
 

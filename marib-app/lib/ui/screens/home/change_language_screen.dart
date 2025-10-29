@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:marib/data/cubits/category/fetch_category_cubit.dart';
+import 'package:marib/app/app_scroll_behavior.dart';
 
 class LanguagesListScreen extends StatelessWidget {
   const LanguagesListScreen({super.key});

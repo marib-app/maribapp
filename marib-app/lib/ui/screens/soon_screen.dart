@@ -11,6 +11,7 @@ import 'package:intl/intl.dart';
 import 'dart:math' as math;
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/ui_utils.dart';
+import 'package:marib/app/app_scroll_behavior.dart';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';

@@ -1,6 +1,7 @@
 // lib/ui/screens/user_profile/profile_screen.dart
 // هذا هو "ملف المنطق" وهو الملف الذي يُستورد كما كان من أي مكان آخر.
 // يُبقي الرمز ProfileScreen معرفاً (لأن الـ part أدناه يحتوي الواجهة).
+import 'package:marib/app/app_scroll_behavior.dart';
 
 import 'dart:io';
 import 'dart:ui' show Rect;

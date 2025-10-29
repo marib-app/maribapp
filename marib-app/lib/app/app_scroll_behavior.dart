@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 class AppScrollBehavior extends ScrollBehavior {
   const AppScrollBehavior();
 
+  static const ScrollPhysics defaultPhysics = ClampingScrollPhysics(
+    parent: AlwaysScrollableScrollPhysics(),
+  );
+
   @override
   Widget buildOverscrollIndicator(
       BuildContext context,
@@ -17,8 +21,7 @@ class AppScrollBehavior extends ScrollBehavior {
 
   @override
   ScrollPhysics getScrollPhysics(BuildContext context) {
-    return const ClampingScrollPhysics(
-      parent: AlwaysScrollableScrollPhysics(),
-    );
+    return defaultPhysics;
+
   }
 }

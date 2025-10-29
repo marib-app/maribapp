@@ -24,6 +24,7 @@ import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
 
 import 'profile_item_card.dart';
 import 'package:marib/app/app_scroll_behavior.dart';
+import 'package:marib/app/app_scroll_behavior.dart';
 
 
 const double sidePadding = Constant.defaultPadding;

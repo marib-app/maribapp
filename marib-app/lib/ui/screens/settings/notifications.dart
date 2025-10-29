@@ -22,6 +22,7 @@ import 'package:marib/ui/screens/widgets/errors/no_internet.dart';
 import 'package:marib/ui/screens/widgets/errors/something_went_wrong.dart';
 import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
 import 'package:marib/utils/hive_utils.dart';
+import 'package:marib/app/app_scroll_behavior.dart';
 
 /// =========
 /// Utils

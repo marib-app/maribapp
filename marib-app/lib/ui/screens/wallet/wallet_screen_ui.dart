@@ -32,6 +32,7 @@ import 'package:marib/utils/api.dart';
 
 import 'package:marib/data/cubits/wallet/manual_payment_requests_cubit.dart';
 import 'package:marib/utils/notification/notification_service.dart';
+import 'package:marib/app/app_scroll_behavior.dart';
 
 
 class WalletScreenUI extends StatefulWidget {

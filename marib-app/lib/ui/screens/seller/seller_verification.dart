@@ -19,6 +19,7 @@ import 'package:marib/ui/screens/item/add_item_screen/custom_filed_structure/cus
 import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 import 'package:marib/ui/screens/widgets/dynamic_field/dynamic_field.dart';
 import 'package:marib/ui/screens/widgets/custom_text_form_field.dart';
+import 'package:marib/app/app_scroll_behavior.dart';
 
 class SellerVerificationScreen extends StatefulWidget {
   final bool isResubmitted;

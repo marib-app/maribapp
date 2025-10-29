@@ -14,6 +14,7 @@ import 'package:marib/data/cubits/profile/profile_stats_cubit.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/responsiveSize.dart';
+import 'package:marib/app/app_scroll_behavior.dart';
 
 /// واجهة شاشة الملف الشخصي (عرض فقط) — تستقبل كل شيء عبر Params.
 /// لا يوجد منطق بيانات هنا؛ أي منطق يجب أن يبقى خارج هذا الملف.

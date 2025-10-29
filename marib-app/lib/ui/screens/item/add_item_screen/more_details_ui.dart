@@ -18,6 +18,7 @@ import 'package:marib/data/cubits/custom_field/fetch_custom_fields_cubit.dart';
 
 import 'package:marib/ui/screens/item/add_item_screen/custom_filed_structure/custom_field.dart'
     show CustomFieldBuilder; // ✅ تعريف النوع
+import 'package:marib/app/app_scroll_behavior.dart';
 
 class MoreDetailsUI extends StatelessWidget {
   const MoreDetailsUI({

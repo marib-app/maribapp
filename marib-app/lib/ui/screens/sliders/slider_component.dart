@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:marib/data/model/home_slider.dart';
 import 'package:marib/data/repositories/item/item_repository.dart';
@@ -21,6 +21,7 @@ import 'slider_shimmer.dart';
 import 'package:marib/ui/screens/widgets/lazy_network_image.dart';
 import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
 import 'slider_constants.dart';
+import 'package:marib/app/app_scroll_behavior.dart';
 
 const EdgeInsetsGeometry kSliderHorizontalPadding =
     EdgeInsets.symmetric(horizontal: 10);

@@ -24,6 +24,7 @@ import 'widgets/common_states.dart';
 import 'widgets/header_filter_bar.dart';
 import 'widgets/network_grid.dart';
 import 'widgets/service_overview.dart';
+import 'package:marib/app/app_scroll_behavior.dart';
 
 class WifiCabinScreen extends StatefulWidget {
   const WifiCabinScreen({super.key});

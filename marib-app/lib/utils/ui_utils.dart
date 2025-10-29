@@ -44,6 +44,7 @@ import 'dart:collection';
 
 import 'package:flutter/foundation.dart';
 import 'package:marib/ui/widgets/standard_bottom_sheet_scaffold.dart';
+import 'package:marib/app/app_scroll_behavior.dart';
 
 class _AdaptiveNetworkImage extends StatefulWidget {
   const _AdaptiveNetworkImage({

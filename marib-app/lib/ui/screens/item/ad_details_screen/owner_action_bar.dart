@@ -37,6 +37,7 @@ import 'package:marib/data/model/item/item_model.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/item_category_ids.dart';
 import 'package:marib/utils/currency_utils.dart';
+import 'package:marib/app/app_scroll_behavior.dart';
 
 class OwnerActionBar extends StatelessWidget {
   const OwnerActionBar({

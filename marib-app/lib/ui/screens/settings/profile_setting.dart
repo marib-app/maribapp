@@ -1,6 +1,7 @@
 import 'package:marib/ui/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:marib/app/app_scroll_behavior.dart';
 
 // ★ استبدل/عدّل هذا المسار حسب مكان AppHtml في مشروعك
 import 'package:marib/ui/screens/classified_ads/app_html.dart';
@@ -10,6 +11,7 @@ import 'package:marib/data/helper/widgets.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
+import 'package:marib/app/app_scroll_behavior.dart';
 
 class ProfileSettings extends StatefulWidget {
   final String? title;
@@ -76,10 +78,10 @@ class ProfileSettingsState extends State<ProfileSettings> {
 }
 
 Widget contentWidget(
-    ProfileSettingFetchSuccess state,
-    BuildContext context,
-    String param,
-    ) {
+  ProfileSettingFetchSuccess state,
+  BuildContext context,
+  String param,
+) {
   return RefreshIndicator(
     onRefresh: () async {
       // الدالة ترجع void، فقط استدعِها بدون await
@@ -89,8 +91,7 @@ Widget contentWidget(
       return;
     },
     child: SingleChildScrollView(
-      physics:
-      const AppScrollBehavior.defaultPhysics,
+      physics: AppScrollBehavior.defaultPhysics,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: AppHtml(
         data: state.data.toString(),

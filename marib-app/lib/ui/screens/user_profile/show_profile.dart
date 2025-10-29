@@ -30,6 +30,7 @@ import 'show_profile_ui.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/hive_utils.dart';
+import 'package:marib/app/app_scroll_behavior.dart';
 
 // شاشة عرض الملف الشخصي + الوصول لأزرار:
 // - مشاركة الملف الشخصي

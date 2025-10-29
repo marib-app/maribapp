@@ -15,6 +15,7 @@ import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 import 'package:marib/ui/screens/widgets/errors/no_data_found.dart';
 import 'package:marib/ui/screens/widgets/errors/no_internet.dart';
 import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
+import 'package:marib/app/app_scroll_behavior.dart';
 
 class SectionItemsScreen extends StatefulWidget {
   final String title;

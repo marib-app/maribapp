@@ -8,7 +8,7 @@ import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/payment/manual_payment.dart';
 import 'package:marib/utils/ui_utils.dart';
 
-import 'widgets/manual_payment_tile.dart';
+import 'package:marib/ui/screens/transaction/widgets/manual_payment_tile.dart';
 
 class ManualPaymentDetailsScreen extends StatelessWidget {
   const ManualPaymentDetailsScreen({

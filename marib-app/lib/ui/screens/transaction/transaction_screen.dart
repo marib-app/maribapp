@@ -10,10 +10,10 @@ import 'package:marib/utils/payment/manual_payment.dart';
 import 'package:marib/utils/payment/manual_payment_service.dart';
 import 'package:marib/utils/ui_utils.dart';
 
-import 'manual_payment_details_screen.dart';
-import 'manual_payments_controller.dart';
-import 'widgets/manual_payment_summary_card.dart';
-import 'widgets/transaction_error_banner.dart';
+import 'package:marib/ui/screens/transaction/manual_payment_details_screen.dart';
+import 'package:marib/ui/screens/transaction/manual_payments_controller.dart';
+import 'package:marib/ui/screens/transaction/widgets/manual_payment_summary_card.dart';
+import 'package:marib/ui/screens/transaction/widgets/transaction_error_banner.dart';
 
 enum _TransactionsFilter { all, orders, packages, services }
 
@@ -248,6 +248,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
           bottomHeight: 20,
         ),
         floatingActionButton: FloatingActionButton(
+          heroTag: 'transactions_refresh_fab',
           onPressed: _controller.fetching ? null : _handleManualRefresh,
           child: _controller.fetching && transactions.isEmpty
               ? const CircularProgressIndicator.adaptive()

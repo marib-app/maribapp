@@ -201,7 +201,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
           child: Text('تصفية المعاملات')
               .bold(weight: FontWeight.w600)
               .size(context.font.small)
-              .color(colors.onSurfaceVariant.withOpacity(0.8)),
+              .color(colors.onSurfaceVariant.withValues(alpha: 0.8)),
         ),
         SizedBox(
           height: 48,
@@ -312,15 +312,16 @@ class _TransactionScreenState extends State<TransactionScreen> {
                           Icon(
                             Icons.inbox_outlined,
                             size: 56,
-                            color:
-                                context.color.onSurfaceVariant.withOpacity(0.5),
+                            color: context.color.onSurfaceVariant
+                                .withValues(alpha: 0.5),
                           ),
                           const SizedBox(height: 12),
                           Text(
                             'لا توجد معاملات ضمن هذا التصنيف.',
                             textAlign: TextAlign.center,
-                          ).size(context.font.normal).color(
-                              context.color.onSurfaceVariant.withOpacity(0.8)),
+                          ).size(context.font.normal).color(context
+                              .color.onSurfaceVariant
+                              .withValues(alpha: 0.8)),
                         ],
                       ),
                     ),
@@ -407,11 +408,11 @@ class _FilterChip extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
                 color: selected
-                    ? colors.onPrimary.withOpacity(0.18)
-                    : colors.onSurfaceVariant.withOpacity(0.08),
+                    ? colors.onPrimary.withValues(alpha: 0.18)
+                    : colors.onSurfaceVariant.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(999),
               ),
-              child: Text('')
+              child: Text('$count')
                   .bold(weight: FontWeight.w600)
                   .size(12)
                   .color(selected ? colors.onPrimary : colors.onSurfaceVariant),

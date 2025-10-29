@@ -1,20 +1,16 @@
-import 'package:marib/data/model/service_request_model.dart';
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 
 import 'package:marib/app/routes.dart';
-
-// حقول الفئة (العامّة)
 import 'package:marib/data/cubits/custom_field/fetch_custom_fields_cubit.dart';
 import 'package:marib/data/model/custom_field/custom_field_model.dart';
-
-// بناة الحقول الديناميكية (new_code)
+import 'package:marib/data/model/service_request_model.dart';
 import 'package:marib/ui/screens/item/add_item_screen/custom_filed_structure/custom_field.dart'
     show CustomField, CustomFieldBuilder, resolveFieldLabel;
-
-// مخزن القيم (الموجود في مشروعكم)
 import 'package:marib/ui/screens/widgets/dynamic_field/dynamic_field.dart'
     as dynamic_fields;
 import 'package:marib/data/repositories/service_request_repository.dart';
@@ -23,9 +19,12 @@ import 'package:marib/utils/api.dart' show ApiHttpException;
 import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/utils/payment/bank_transfer_args.dart';
 import 'package:marib/utils/payment/bank_transfer_screen.dart';
-import 'package:marib/utils/payment/manual_payment_service.dart'
-    show ManualPaymentSubmissionResult;
-import 'service_add_more_details_screen_ui.dart';
+import 'package:marib/utils/payment/manual_payment_service.dart';
+import 'package:marib/utils/payment/manual_payment.dart';
+import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
+import 'package:marib/ui/screens/transaction/manual_payment_details_screen.dart';
+import 'package:marib/ui/screens/transaction/manual_payments_controller.dart';
+import 'package:marib/ui/screens/classified_ads/service_add_more_details_screen_ui.dart';
 
 class ServiceAddMoreDetailsScreen extends StatefulWidget {
   const ServiceAddMoreDetailsScreen({super.key});
@@ -69,6 +68,7 @@ class _ServiceAddMoreDetailsScreenState
 
   final ServiceRequestRepository _requestRepository =
       ServiceRequestRepository();
+  final ManualPaymentService _manualPaymentService = ManualPaymentService();
 
   static const List<String> _numericMaxKeys = <String>[
     'max',
@@ -238,7 +238,7 @@ class _ServiceAddMoreDetailsScreenState
     String t = (_str(m['type']) ??
             _str(m['field_type']) ??
             _str(m['input_type']) ??
-            'textbox')!
+            'textbox')
         .toLowerCase();
 
     switch (t) {
@@ -323,28 +323,33 @@ class _ServiceAddMoreDetailsScreenState
         _str(m['helper_text']) ??
         _str(m['info']);
 
+    final String? normalizedNoteText =
+        noteText != null && noteText.trim().isNotEmpty ? noteText.trim() : null;
+
     // ===== العنوان (نوسع المرادفات + منع أرقام صِرفة) =====
-    String? title = _str(m['label']) ??
+    String title = (_str(m['label']) ??
         _str(m['title']) ??
         _str(m['name']) ??
         _str(m['field_name']) ??
         _str(m['display_name']) ??
         _str(m['text']) ??
-        _str(m['placeholder']);
+        _str(m['placeholder']) ??
+        '')
+        .trim();
 
-    if (title == null || _isDigits(title)) {
+    if (title.isEmpty || _isDigits(title)) {
       // لو جتنا “2” مثل حالتك، لا نستخدمها عنوانًا
-      title = noteText ?? '—';
+      title = normalizedNoteText ?? '—';
     }
 
     m['title'] = title;
     m['label'] = m['label'] ?? title;
 
-    if (noteText != null) {
-      m['notes'] = noteText;
-      m['note'] = m['note'] ?? noteText;
-      m['hint'] = m['hint'] ?? noteText;
-      m['description'] = m['description'] ?? noteText;
+    if (normalizedNoteText != null) {
+      m['notes'] = normalizedNoteText;
+      m['note'] = m['note'] ?? normalizedNoteText;
+      m['hint'] = m['hint'] ?? normalizedNoteText;
+      m['description'] = m['description'] ?? normalizedNoteText;
     } else {
       m.remove('notes');
     }
@@ -357,7 +362,7 @@ class _ServiceAddMoreDetailsScreenState
         rawName == keyCandidate ||
         (rawName.startsWith('field_') && rawName.length <= 12);
 
-    if (shouldReplaceName && title != null && title.trim().isNotEmpty) {
+    if (shouldReplaceName && title.isNotEmpty) {
       m['name'] = title;
     } else if (rawName != null) {
       m['name'] = rawName;
@@ -1138,7 +1143,7 @@ class _ServiceAddMoreDetailsScreenState
         return;
       }
 
-      _onRequestSubmitted();
+      await _onRequestSubmitted();
     } on ApiHttpException catch (error) {
       if (error.statusCode == 402) {
         final handled = await _handlePaymentRequired(
@@ -1163,16 +1168,18 @@ class _ServiceAddMoreDetailsScreenState
     }
   }
 
-  void _onRequestSubmitted({
+  Future<void> _onRequestSubmitted({
     Map<String, dynamic>? subject,
     Map<String, dynamic>? next,
     String? transactionId,
-  }) {
+    ManualPayment? manualPaymentSnapshot,
+  }) async {
     if (!mounted) return;
 
     _clearStores();
     setState(() {
       _pendingServiceRequestId = null;
+      _submitting = false;
     });
 
     HelperUtils.showSnackBarMessage(
@@ -1183,14 +1190,22 @@ class _ServiceAddMoreDetailsScreenState
     final String? focusId = transactionId?.trim();
 
     if (focusId != null && focusId.isNotEmpty) {
-      final Map<String, dynamic> args = <String, dynamic>{
-        'focus_transaction_id': focusId,
-      };
+      if (manualPaymentSnapshot != null) {
+        unawaited(
+          Navigator.of(context).pushReplacement(
+            BlurredRouter(
+              builder: (_) => ManualPaymentDetailsScreen(
+                manualPayment: manualPaymentSnapshot,
+                dateFormat: DateFormat('d MMM yyyy, h:mm a', 'ar'),
+                pollInterval: ManualPaymentsController.pollInterval,
+              ),
+            ),
+          ),
+        );
+        return;
+      }
 
-      Navigator.of(context, rootNavigator: true).pushNamed(
-        Routes.transactionHistory,
-        arguments: args,
-      );
+      await _navigateToTransactionDetails(focusId);
       return;
     }
 
@@ -1263,6 +1278,10 @@ class _ServiceAddMoreDetailsScreenState
     final Map<String, dynamic>? navigationNext =
         _extractNextFromResult(paymentResult) ?? initialNext;
 
+    final ManualPayment? manualPaymentSnapshot =
+        _manualPaymentFromResult(paymentResult,
+            subject: navigationSubject, next: navigationNext);
+
     final String? transactionId = _extractPaymentTransactionId(
       paymentResult,
       fallback: fallbackTransaction,
@@ -1296,10 +1315,11 @@ class _ServiceAddMoreDetailsScreenState
         serviceRequestId: serviceRequestId,
       );
       submitted = true;
-      _onRequestSubmitted(
+      await _onRequestSubmitted(
         subject: navigationSubject,
         next: navigationNext,
         transactionId: transactionId,
+        manualPaymentSnapshot: manualPaymentSnapshot,
       );
       return true;
     } on ApiHttpException catch (err) {
@@ -1316,6 +1336,257 @@ class _ServiceAddMoreDetailsScreenState
     }
 
     return false;
+  }
+
+  Future<void> _navigateToTransactionDetails(String transactionId) async {
+    try {
+      final ManualPayment? manualPayment =
+          await _fetchManualPaymentByTransactionId(transactionId);
+
+      if (!mounted) return;
+
+      if (manualPayment == null) {
+        HelperUtils.showSnackBarMessage(
+          context,
+          'تعذّر العثور على تفاصيل المعاملة، سيتم فتح سجل المعاملات.',
+        );
+        unawaited(_openTransactionHistory(transactionId));
+        return;
+      }
+
+      unawaited(
+        Navigator.of(context, rootNavigator: true).pushReplacement(
+          BlurredRouter(
+            builder: (_) => ManualPaymentDetailsScreen(
+              manualPayment: manualPayment,
+              dateFormat: DateFormat('d MMM yyyy, h:mm a', 'ar'),
+              pollInterval: ManualPaymentsController.pollInterval,
+            ),
+          ),
+        ),
+      );
+      return;
+    } catch (error) {
+      if (!mounted) return;
+
+      HelperUtils.showSnackBarMessage(
+        context,
+        'تعذّر تحميل تفاصيل المعاملة، سيتم فتح سجل المعاملات.',
+      );
+      unawaited(_openTransactionHistory(transactionId));
+    }
+  }
+
+  Future<ManualPayment?> _fetchManualPaymentByTransactionId(
+    String transactionId,
+  ) async {
+    final String trimmedId = transactionId.trim();
+    if (trimmedId.isEmpty) {
+      return null;
+    }
+
+    ManualPayment? manualPayment;
+    for (int attempt = 0; attempt < 3; attempt++) {
+      final List<ManualPayment> manualPayments =
+          await _manualPaymentService.fetchMyManualPayments(
+        latestOnly: false,
+      );
+
+      manualPayment = _matchManualPayment(manualPayments, trimmedId);
+      if (manualPayment != null) {
+        return manualPayment;
+      }
+
+      if (attempt < 2) {
+        await Future<void>.delayed(const Duration(milliseconds: 600));
+      }
+    }
+
+    return manualPayment;
+  }
+
+  ManualPayment? _matchManualPayment(
+    Iterable<ManualPayment> manualPayments,
+    String transactionId,
+  ) {
+    final String trimmedId = transactionId.trim();
+    if (trimmedId.isEmpty) {
+      return null;
+    }
+
+    for (final ManualPayment payment in manualPayments) {
+      final Iterable<String?> candidates = <String?>[
+        payment.paymentTransactionId,
+        payment.manualPaymentId,
+        payment.transactionIdentifier,
+        payment.transactionReference,
+        payment.manualPaymentIdentifierLabel,
+      ];
+
+      for (final String? value in candidates) {
+        if (value == null) continue;
+        final String candidate = value.trim();
+        if (candidate.isEmpty) continue;
+        if (candidate == trimmedId) {
+          return payment;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  Future<void> _openTransactionHistory(String transactionId) async {
+    if (!mounted) {
+      return;
+    }
+
+    await Navigator.of(context, rootNavigator: true).pushReplacementNamed(
+      Routes.transactionHistory,
+      arguments: {'focus_transaction_id': transactionId},
+    );
+  }
+
+  ManualPayment? _manualPaymentFromResult(
+    dynamic result, {
+    Map<String, dynamic>? subject,
+    Map<String, dynamic>? next,
+  }) {
+    final Set<int> visited = <int>{};
+    final List<Map<String, dynamic>> candidates = <Map<String, dynamic>>[];
+
+    void collect(dynamic value) {
+      if (value == null) return;
+
+      if (value is ManualPaymentSubmissionResult) {
+        collect(value.manualPaymentRequest);
+        collect(value.paymentTransaction);
+        collect(value.subject);
+        collect(value.next);
+        collect(value.raw);
+        return;
+      }
+
+      if (value is Map<String, dynamic>) {
+        _collectManualPaymentMaps(value, candidates, visited);
+        return;
+      }
+
+      if (value is Map) {
+        _collectManualPaymentMaps(_normalizeMap(value), candidates, visited);
+        return;
+      }
+
+      if (value is Iterable) {
+        for (final dynamic element in value) {
+          collect(element);
+        }
+      }
+    }
+
+    collect(result);
+    collect(subject);
+    collect(next);
+
+    for (final Map<String, dynamic> map in candidates) {
+      try {
+        final ManualPayment manualPayment = ManualPayment.fromJson(map);
+        if ((manualPayment.paymentTransactionId?.isNotEmpty ?? false) ||
+            (manualPayment.manualPaymentId?.isNotEmpty ?? false)) {
+          return manualPayment;
+        }
+      } catch (_) {
+        continue;
+      }
+    }
+    return null;
+  }
+
+  void _collectManualPaymentMaps(
+    Map<String, dynamic>? map,
+    List<Map<String, dynamic>> output,
+    Set<int> visited,
+  ) {
+    if (map == null || map.isEmpty) {
+      return;
+    }
+
+    final Map<String, dynamic> normalized = Map<String, dynamic>.from(map);
+    if (!visited.add(identityHashCode(normalized))) {
+      return;
+    }
+
+    final Map<String, dynamic>? nestedManual =
+        _extractManualPaymentCandidate(normalized);
+    if (nestedManual != null) {
+      _collectManualPaymentMaps(nestedManual, output, visited);
+    }
+
+    if (_looksLikeManualPaymentMap(normalized)) {
+      output.add(normalized);
+    }
+
+    for (final dynamic value in normalized.values) {
+      if (value is Map<String, dynamic>) {
+        _collectManualPaymentMaps(value, output, visited);
+      } else if (value is Map) {
+        _collectManualPaymentMaps(_normalizeMap(value), output, visited);
+      } else if (value is Iterable) {
+        for (final dynamic entry in value) {
+          if (entry is Map<String, dynamic>) {
+            _collectManualPaymentMaps(entry, output, visited);
+          } else if (entry is Map) {
+            _collectManualPaymentMaps(_normalizeMap(entry), output, visited);
+          }
+        }
+      }
+    }
+  }
+
+  Map<String, dynamic>? _extractManualPaymentCandidate(
+    Map<String, dynamic> map,
+  ) {
+    for (final String key in map.keys) {
+      final String lowerKey = key.toLowerCase();
+      if (lowerKey == 'manual_payment' || lowerKey == 'manualpayment') {
+        final dynamic value = map[key];
+        if (value is Map<String, dynamic>) {
+          return value;
+        }
+        if (value is Map) {
+          return _normalizeMap(value);
+        }
+      }
+    }
+    return null;
+  }
+
+  bool _looksLikeManualPaymentMap(Map<String, dynamic> map) {
+    final Set<String> lowerKeys =
+        map.keys.map((dynamic key) => key.toString().toLowerCase()).toSet();
+    const Set<String> identifiers = <String>{
+      'payment_transaction_id',
+      'paymenttransactionid',
+      'manual_payment_id',
+      'manualpaymentid',
+      'transaction_identifier',
+      'transactionidentifier',
+    };
+    const Set<String> essentials = <String>{
+      'payment_gateway',
+      'paymentgateway',
+      'amount',
+      'currency',
+      'payable_type',
+      'payabletype',
+    };
+
+    final bool hasIdentifier =
+        lowerKeys.any((String key) => identifiers.contains(key));
+    final bool hasEssentials =
+        essentials.every((String key) => lowerKeys.contains(key));
+
+    return hasIdentifier || hasEssentials;
   }
 
   Future<bool> _handlePaymentRequired({

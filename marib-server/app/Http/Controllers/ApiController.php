@@ -8489,52 +8489,65 @@ public function storeRequestDevice(Request $request)
 
   public function sendOtp(Request $request, EnjazatikWhatsAppService $whatsApp)
     {
-
-        $otp = rand(100000, 999999);
-
-        $otpRecord = OTP::create([
-            'phone' => $request->country_code . $request->phone,
-            'otp' => $otp,
-            'type'=>$request->type,
-            'expires_at' => now()->addMinutes(5)->timestamp,
-      
+        $settings = CachingService::getSystemSettings([
+            'whatsapp_otp_enabled',
+            'whatsapp_otp_message_new_user',
+            'whatsapp_otp_message_forgot_password',
         ]);
 
 
-        $check = $whatsApp->checkNumber($request->country_code . $request->phone);
+        $otpEnabled = filter_var($settings['whatsapp_otp_enabled'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
+        if (!$otpEnabled) {
+            return ResponseService::errorResponse('خدمة رمز التحقق عبر واتساب غير مفعلة حالياً.');
+        }
+
+        $phone = $request->country_code . $request->phone;
+
+
+        $check = $whatsApp->checkNumber($phone);
 
         if (!($check['status'] ?? false)) {
             return ResponseService::errorResponse("عذرًا، هذا الرقم غير مرتبط بحساب واتساب.");
         }
 
-
-        $forgot_password =
-            "مرحبًا بك في *مارب بين يديك*! 🎉\n\n" .
-            "لتأكيد هويتك واستعادة الوصول إلى حسابك، نرسل لك رمز التحقق الخاص بك:\n\n" .
-            "*رمز التحقق:* $otp\n\n" .
-            "⚠️ *ملاحظة:* لا تشارك هذا الرمز مع أي شخص. إذا لم تطلب هذا الرمز، يرجى تجاهل هذه الرسالة.\n\n" .
-            "شكرًا لاختيارك *مارب بين يديك* ونتمنى لك تجربة مميزة وآمنة! 😊";
-
-        $new_user =
-            "مرحبًا بك في *مارب بين يديك*! 🎉\n\n" .
-            "نحن سعداء بانضمامك إلى عائلتنا.\n" .
-            "لتأكيد هويتك وضمان أمان حسابك، نرسل لك رمز التحقق الخاص بك:\n\n" .
-            "*رمز التحقق:* $otp\n\n" .
-            "⚠️ *ملاحظة:* لا تشارك هذا الرمز مع أي شخص. إذا لم تطلب هذا الرمز، يرجى تجاهل هذه الرسالة.\n\n" .
-            "شكرًا لاختيارك *مارب بين يديك* ونتمنى لك تجربة مميزة وآمنة! 😊";
-
-        if ($request->type == "new_user") {
-            // $whatsApp->sendMessage($request->phone, $new_user);
-
-            SendOtpWhatsAppJob::dispatch($request->country_code . $request->phone, $new_user);
-        } else {
-            // $whatsApp->sendMessage($request->phone, $forgot_password);
-
-            SendOtpWhatsAppJob::dispatch($request->country_code . $request->phone, $forgot_password);
-        }
+        $otp = rand(100000, 999999);
+        $type = $request->type === 'new_user' ? 'new_user' : 'forgot_password';
 
 
-        return ResponseService::successResponse("تم إرسال رمز التحقق عبر WhatsApp بنجاح.");
+        OTP::create([
+            'phone' => $phone,
+            'otp' => $otp,
+            'type' => $type,
+            'expires_at' => now()->addMinutes(5)->timestamp,
+        ]);
+
+        $defaultNewUserMessage = "مرحبًا بك في *مارب بين يديك*! 🎉\n\n"
+            . "نحن سعداء بانضمامك إلى عائلتنا.\n"
+            . "لتأكيد هويتك وضمان أمان حسابك، نرسل لك رمز التحقق الخاص بك:\n\n"
+            . "*رمز التحقق:* :otp\n\n"
+            . "⚠️ *ملاحظة:* لا تشارك هذا الرمز مع أي شخص. إذا لم تطلب هذا الرمز، يرجى تجاهل هذه الرسالة.\n\n"
+            . "شكرًا لاختيارك *مارب بين يديك* ونتمنى لك تجربة مميزة وآمنة! 😊";
+
+        $defaultForgotPasswordMessage = "مرحبًا بك في *مارب بين يديك*! 🎉\n\n"
+            . "لتأكيد هويتك واستعادة الوصول إلى حسابك، نرسل لك رمز التحقق الخاص بك:\n\n"
+            . "*رمز التحقق:* :otp\n\n"
+            . "⚠️ *ملاحظة:* لا تشارك هذا الرمز مع أي شخص. إذا لم تطلب هذا الرمز، يرجى تجاهل هذه الرسالة.\n\n"
+            . "شكرًا لاختيارك *مارب بين يديك* ونتمنى لك تجربة مميزة وآمنة! 😊";
+
+        $templates = [
+            'new_user' => $settings['whatsapp_otp_message_new_user'] ?? $defaultNewUserMessage,
+            'forgot_password' => $settings['whatsapp_otp_message_forgot_password'] ?? $defaultForgotPasswordMessage,
+        ];
+
+
+        $messageTemplate = $templates[$type];
+        $message = str_replace(':otp', $otp, $messageTemplate);
+
+        SendOtpWhatsAppJob::dispatch($phone, $message);
+
+
+        return ResponseService::successResponse('تم إرسال رمز التحقق عبر WhatsApp بنجاح.');
     }
 
 
@@ -8546,7 +8559,29 @@ public function storeRequestDevice(Request $request)
             'otp' => 'required|numeric',
         ]);
 
-        $otpRecord = OTP::where('phone', $request->country_code . $request->phone)
+        $otpEnabled = filter_var(CachingService::getSystemSettings('whatsapp_otp_enabled') ?? false, FILTER_VALIDATE_BOOLEAN);
+        $phone = $request->country_code . $request->phone;
+
+        $user = User::where('mobile', $request->phone)->first();
+
+        if (!$user) {
+            return ResponseService::errorResponse(
+                'المستخدم غير موجود لهذا الرقم',
+                404
+            );
+        }
+
+        if (!$otpEnabled) {
+            $user->email_verified_at = now();
+            $user->is_verified = 1;
+            $user->save();
+
+            return ResponseService::successResponse('تم التحقق بنجاح (تم تعطيل التحقق عبر واتساب حالياً).');
+        }
+
+        $otpRecord = OTP::where('phone', $phone)
+
+
             ->where('otp', $request->otp)
             ->first();
 
@@ -8567,23 +8602,13 @@ public function storeRequestDevice(Request $request)
         $otpRecord->expires_at = $otpRecord->expires_at - 270;
         $otpRecord->save();
 
-        $user = User::where('mobile', $request->phone)->first();
 
-        if (!$user) {
-            return ResponseService::errorResponse(
-                'المستخدم غير موجود لهذا الرقم',
-                404
-            );
-        }
-
-        // تعيين email_verified_at و is_verified عند التحقق من OTP
         $user->email_verified_at = now();
         $user->is_verified = 1;
         $user->save();
 
-        return ResponseService::successResponse(
-            'تم التحقق بنجاح'
-        );
+        return ResponseService::successResponse('تم التحقق بنجاح');
+
     }
 
     /**

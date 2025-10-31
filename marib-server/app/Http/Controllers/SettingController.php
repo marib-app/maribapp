@@ -97,6 +97,12 @@ class SettingController extends Controller {
             "whatsapp_enabled_shein" => "nullable|boolean",
             "whatsapp_number_computer"  => "nullable",
             "whatsapp_enabled_computer" => "nullable|boolean",
+
+            "whatsapp_otp_enabled" => "nullable|boolean",
+            "whatsapp_otp_message_new_user" => "nullable|string",
+            "whatsapp_otp_message_forgot_password" => "nullable|string",
+            "whatsapp_otp_token" => "nullable|string",
+
             "department_return_policy_shein" => "nullable|string",
             "department_return_policy_computer" => "nullable|string",
             "orders_deposit_shein_ratio" => "nullable|numeric|min:0|max:100",
@@ -184,6 +190,16 @@ class SettingController extends Controller {
 
 
 
+
+            foreach ([
+                'whatsapp_enabled_shein',
+                'whatsapp_enabled_computer',
+                'whatsapp_otp_enabled',
+            ] as $booleanKey) {
+                if (array_key_exists($booleanKey, $inputs)) {
+                    $inputs[$booleanKey] = filter_var($inputs[$booleanKey], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ? 1 : 0;
+                }
+            }
 
 
             $data = [];

@@ -12,7 +12,15 @@ class EnjazatikWhatsAppService
 
     public function __construct()
     {
-        $this->token = config('services.whatsapp.token');
+        $configuredToken = CachingService::getSystemSettings('whatsapp_otp_token');
+
+        if (!is_string($configuredToken) || $configuredToken === '') {
+            $configuredToken = config('services.whatsapp.token');
+        }
+
+        $this->token = $configuredToken;
+    
+    
     }
 
     public function checkNumber(string $phone): array

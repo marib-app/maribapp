@@ -718,6 +718,7 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
         Route::get('terms-conditions', [SettingController::class, 'page'])->name('settings.terms-conditions.index');
 
         Route::get('usage-guide', [SettingController::class, 'page'])->name('settings.usage-guide.index');
+        Route::get('whatsapp', [SettingController::class, 'page'])->name('settings.whatsapp.index');
 
 
         Route::get('firebase', [SettingController::class, 'page'])->name('settings.firebase.index');

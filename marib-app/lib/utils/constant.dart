@@ -50,6 +50,26 @@ class Constant {
   static List<SocialLink> socialLinks = const [];
   static Set<int> geoDisabledCategoryIds = <int>{};
 
+  /// Authentication helpers — default to enabled when backend flags are
+  /// missing so critical login options stay visible for first-time launches.
+  static bool get isMobileAuthEnabled => _isAuthEnabled(mobileAuthentication);
+  static bool get isGoogleAuthEnabled => _isAuthEnabled(googleAuthentication);
+  static bool get isEmailAuthEnabled => _isAuthEnabled(emailAuthentication);
+  static bool get isAppleAuthEnabled => _isAuthEnabled(appleAuthentication);
+
+  static bool _isAuthEnabled(String value) {
+    final String normalized = value.trim().toLowerCase();
+    if (normalized.isEmpty) {
+      return true;
+    }
+    if (normalized == '0' || normalized == 'false') {
+      return false;
+    }
+    return true;
+  }
+
+
+
   //
   static int otpTimeOutSecond = AppSettings.otpTimeOutSecond; //otp time out
   static int otpResendSecond = AppSettings.otpResendSecond; // resend otp timer

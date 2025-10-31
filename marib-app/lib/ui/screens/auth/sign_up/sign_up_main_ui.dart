@@ -311,8 +311,8 @@ class _FormCard extends StatelessWidget {
 
           const SizedBox(height: 14),
 
-          if (Constant.mobileAuthentication == "1" ||
-              Constant.emailAuthentication == "1")
+          if (Constant.isMobileAuthEnabled || Constant.isEmailAuthEnabled)
+
             _MobileAndEmailSection(vm: vm, callbacks: callbacks),
 
           const SizedBox(height: 16),

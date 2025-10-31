@@ -88,7 +88,7 @@ class LoginScreenState extends State<LoginScreen> {
   void initState() {
     super.initState();
 
-    if (Constant.mobileAuthentication == "1" && Constant.isDemoModeOn) {
+    if (Constant.isMobileAuthEnabled && Constant.isDemoModeOn) {
       isMobileNumberField = true;
       numberOrEmail = Constant.demoMobileNumber;
     }
@@ -365,7 +365,7 @@ class LoginScreenState extends State<LoginScreen> {
   }
 
   void _onContinueTap() {
-    if (Constant.mobileAuthentication != "1") return;
+    if (!Constant.isMobileAuthEnabled) return;
 
     phoneLoginPayload =
         PhoneLoginPayload(emailMobileTextController.text, countryCode ?? "");
@@ -509,7 +509,7 @@ class LoginScreenState extends State<LoginScreen> {
   }
 
   void _setDemoOTP() {
-    if (Constant.mobileAuthentication == "1" &&
+    if (Constant.isMobileAuthEnabled &&
         emailMobileTextController.text == Constant.demoMobileNumber) {
       otp = Constant.demoModeOTP;
     } else {
@@ -715,11 +715,11 @@ class LoginScreenState extends State<LoginScreen> {
                       onChangedNumberOrEmail: _onChangedInput,
 
                       // المتطلبات/التفعيل
-                      showMobileAuth: Constant.mobileAuthentication == "1",
+                      showMobileAuth: Constant.isMobileAuthEnabled,
                       showEmailAuth: false,
-                      showGoogle: Constant.googleAuthentication == "1",
+                      showGoogle: Constant.isGoogleAuthEnabled,
                       showApple:
-                          Constant.appleAuthentication == "1" && Platform.isIOS,
+                      Constant.isAppleAuthEnabled && Platform.isIOS,
 
                       // متابعة (تحويل إلى كلمة مرور الإيميل أو إرسال OTP للهاتف)
                       onTapContinue: () {

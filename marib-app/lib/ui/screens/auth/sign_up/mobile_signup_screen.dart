@@ -457,9 +457,9 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  if (Constant.emailAuthentication == '1') emailSignUp(),
-                  if (Constant.googleAuthentication == "1" ||
-                      Constant.appleAuthentication == "1")
+                  if (Constant.isEmailAuthEnabled) emailSignUp(),
+                  if (Constant.isGoogleAuthEnabled ||
+                      Constant.isAppleAuthEnabled)
                     googleAndAppleAuth(),
                   const SizedBox(
                     height: 24,
@@ -501,7 +501,7 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
         const SizedBox(
           height: 24,
         ),
-        if (Constant.googleAuthentication == "1")
+        if (Constant.isGoogleAuthEnabled)
           UiUtils.buildButton(context,
               prefixWidget: Padding(
                 padding: EdgeInsetsDirectional.only(end: 10.0),
@@ -523,7 +523,7 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
               radius: 8,
               height: 46,
               buttonTitle: "continueWithGoogle".translate(context)),
-        if (Constant.appleAuthentication == "1" && Platform.isIOS) ...[
+        if (Constant.isAppleAuthEnabled && Platform.isIOS) ...[
           const SizedBox(
             height: 12,
           ),

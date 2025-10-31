@@ -50,6 +50,7 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
       NumberFormat.currency(decimalDigits: 2, symbol: '');
   final DateFormat _dateTimeFormat = DateFormat('dd MMM yyyy, HH:mm');
   WalletNotificationRegistration? _walletScopeRegistration;
+  bool _consumedInitialRouteArgs = false;
 
   @override
   void initState() {
@@ -80,6 +81,31 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_consumedInitialRouteArgs) {
+      return;
+    }
+
+    final ModalRoute<Object?>? route = ModalRoute.of(context);
+    final Object? rawArgs = route?.settings.arguments;
+
+    if (rawArgs is Map) {
+      final Map<String, dynamic> args =
+          rawArgs.map((key, value) => MapEntry(key.toString(), value));
+      final String? requestedTab = args['initial_tab']?.toString().toLowerCase();
+
+      if (requestedTab == 'actions') {
+        _pageController.jumpToPage(1);
+      } else if (requestedTab == 'transactions') {
+        _pageController.jumpToPage(0);
+      }
+    }
+
+    _consumedInitialRouteArgs = true;
   }
 
   void _onScroll() {

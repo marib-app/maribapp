@@ -33,6 +33,9 @@ class ServicePaymentPage extends StatefulWidget {
 }
 
 class _ServicePaymentPageState extends State<ServicePaymentPage> {
+  static const String _nextRouteTransactionsHistory = 'transactions.history';
+  static const String _nextRouteWalletTransactions = 'wallet.transactions';
+
   late final int? _serviceId;
   late final int? _serviceRequestId;
   late final String _serviceTitle;
@@ -304,11 +307,12 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
 
     await Navigator.of(context).maybePop(resultPayload);
 
-
     Future.microtask(() {
-      rootNavigator.pushNamed(
-        Routes.transactionHistory,
-        arguments: {'focus_transaction_id': transactionId},
+      if (!mounted) return;
+      _navigateAfterPayment(
+        navigator: rootNavigator,
+        next: next,
+        transactionId: transactionId,
       );
     });
   }
@@ -418,6 +422,74 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
     }
     return <String, dynamic>{};
   }
+
+  void _navigateAfterPayment({
+    required NavigatorState navigator,
+    required Map<String, dynamic>? next,
+    required String transactionId,
+  }) {
+    final String? routeToken = _extractNextRoute(next);
+    final String targetTransactionId =
+        _extractNextTransactionId(next) ?? transactionId;
+
+    if (routeToken == _nextRouteWalletTransactions) {
+      navigator.pushNamed(
+        Routes.wallet,
+        arguments: {
+          'initial_tab': 'transactions',
+          'focus_transaction_id': targetTransactionId,
+        },
+      );
+      return;
+    }
+
+    if (routeToken != null && routeToken != _nextRouteTransactionsHistory) {
+      navigator.pushNamed(
+        Routes.transactionHistory,
+        arguments: {'focus_transaction_id': targetTransactionId},
+      );
+      return;
+    }
+
+    navigator.pushNamed(
+      Routes.transactionHistory,
+      arguments: {'focus_transaction_id': targetTransactionId},
+    );
+  }
+
+  String? _extractNextRoute(Map<String, dynamic>? next) {
+    if (next == null || next.isEmpty) {
+      return null;
+    }
+
+    final dynamic candidate =
+        next['route'] ?? next['redirect_route'] ?? next['redirect'] ?? next['screen'];
+
+    if (candidate is String) {
+      final String trimmed = candidate.trim();
+      return trimmed.isEmpty ? null : trimmed;
+    }
+
+    return null;
+  }
+
+  String? _extractNextTransactionId(Map<String, dynamic>? next) {
+    if (next == null || next.isEmpty) {
+      return null;
+    }
+
+    final dynamic candidate =
+        next['transaction_id'] ?? next['payment_transaction_id'] ?? next['id'];
+
+    if (candidate is String) {
+      final String trimmed = candidate.trim();
+      return trimmed.isEmpty ? null : trimmed;
+    }
+
+    if (candidate is num) {
+      return candidate.toString();
+    }
+
+    return null;
+  }
 }
-
-

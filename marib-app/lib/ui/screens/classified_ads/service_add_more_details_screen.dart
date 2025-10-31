@@ -48,6 +48,9 @@ class ServiceAddMoreDetailsScreen extends StatefulWidget {
 
 class _ServiceAddMoreDetailsScreenState
     extends State<ServiceAddMoreDetailsScreen> {
+  static const String _nextRouteTransactionsHistory = 'transactions.history';
+  static const String _nextRouteWalletTransactions = 'wallet.transactions';
+
   final _formKey = GlobalKey<FormState>();
   final ScrollController _scrollController = ScrollController();
 
@@ -1192,6 +1195,10 @@ class _ServiceAddMoreDetailsScreenState
     final String? focusId = transactionId?.trim();
 
     if (focusId != null && focusId.isNotEmpty) {
+      if (_tryNavigateUsingNext(next, focusId)) {
+        return;
+      }
+
       if (manualPaymentSnapshot != null) {
         unawaited(
           Navigator.of(context).pushReplacement(
@@ -1451,6 +1458,40 @@ class _ServiceAddMoreDetailsScreenState
     );
   }
 
+  bool _tryNavigateUsingNext(Map<String, dynamic>? next, String transactionId) {
+    final String? routeToken = _extractNextRoute(next);
+
+    if (routeToken == null) {
+      return false;
+    }
+
+    final NavigatorState navigator =
+        Navigator.of(context, rootNavigator: true);
+    final String targetTransactionId =
+        _extractNextTransactionId(next) ?? transactionId;
+
+    if (routeToken == _nextRouteWalletTransactions) {
+      navigator.pushReplacementNamed(
+        Routes.wallet,
+        arguments: {
+          'initial_tab': 'transactions',
+          'focus_transaction_id': targetTransactionId,
+        },
+      );
+      return true;
+    }
+
+    if (routeToken == _nextRouteTransactionsHistory) {
+      navigator.pushReplacementNamed(
+        Routes.transactionHistory,
+        arguments: {'focus_transaction_id': targetTransactionId},
+      );
+      return true;
+    }
+
+    return false;
+  }
+
   ManualPayment? _manualPaymentFromResult(
     dynamic result, {
     Map<String, dynamic>? subject,
@@ -1503,6 +1544,42 @@ class _ServiceAddMoreDetailsScreenState
         continue;
       }
     }
+    return null;
+  }
+
+  String? _extractNextRoute(Map<String, dynamic>? next) {
+    if (next == null || next.isEmpty) {
+      return null;
+    }
+
+    final dynamic candidate =
+        next['route'] ?? next['redirect_route'] ?? next['redirect'] ?? next['screen'];
+
+    if (candidate is String) {
+      final String trimmed = candidate.trim();
+      return trimmed.isEmpty ? null : trimmed;
+    }
+
+    return null;
+  }
+
+  String? _extractNextTransactionId(Map<String, dynamic>? next) {
+    if (next == null || next.isEmpty) {
+      return null;
+    }
+
+    final dynamic candidate =
+        next['transaction_id'] ?? next['payment_transaction_id'] ?? next['id'];
+
+    if (candidate is String) {
+      final String trimmed = candidate.trim();
+      return trimmed.isEmpty ? null : trimmed;
+    }
+
+    if (candidate is num) {
+      return candidate.toString();
+    }
+
     return null;
   }
 
@@ -1844,5 +1921,3 @@ class _ServiceAddMoreDetailsScreenState
     return null;
   }
 }
-
-

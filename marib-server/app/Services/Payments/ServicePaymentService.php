@@ -2,6 +2,7 @@
 
 namespace App\Services\Payments;
 
+use App\Models\ManualBank;
 use App\Models\ManualPaymentRequest;
 use App\Models\PaymentTransaction;
 use App\Models\Service;
@@ -39,7 +40,24 @@ class ServicePaymentService
      * @var array<string, array<int, string>>
      */
     private const LEGACY_METHOD_ALIASES = [
-        'manual_bank' => ['manual', 'manual_banks', 'bank_transfer'],
+        'manual_bank' => [
+            'manual',
+            'manual_banks',
+            'manual-bank',
+            'manual bank',
+            'manualbank',
+            'bank_transfer',
+            'banktransfer',
+            'bank',
+            'offline',
+            'internal',
+        ],
+        'east_yemen_bank' => [
+            'east',
+            'alsharq',
+            'al-sharq',
+            'bank_alsharq',
+        ],
         'wallet' => ['wallet_gateway', 'wallet_payment'],
     ];
 
@@ -139,9 +157,19 @@ class ServicePaymentService
         $method = $this->normalizePaymentMethod($rawMethod);
         $data['payment_method'] = $method;
 
+        // Avoid updating the DB column `payment_gateway` to 'manual_bank' before a
+        // manual_payment_request_id exists. The database has a BEFORE UPDATE
+        // trigger that will SIGNAL if a manual_bank PT does not reference a
+        // manual_payment_request. Defer setting the gateway until after we have
+        // attached/created the manual payment request.
+        $deferredGateway = null;
         if ($transaction->payment_gateway !== $method) {
-            $transaction->payment_gateway = $method;
-            $transaction->save();
+            if ($method === 'manual_bank' && ! $transaction->manual_payment_request_id) {
+                $deferredGateway = $method;
+            } else {
+                $transaction->payment_gateway = $method;
+                $transaction->save();
+            }
         }
 
         $manualContext = null;
@@ -189,6 +217,20 @@ class ServicePaymentService
 
         if ($transaction->manual_payment_request_id) {
             $options['manual_payment_request_id'] = $transaction->manual_payment_request_id;
+        }
+
+        // If we deferred setting the gateway earlier (to avoid DB trigger),
+        // apply it now before calling the fulfillment which may save the
+        // transaction and therefore invoke DB triggers.
+        if ($deferredGateway !== null) {
+            $transaction->payment_gateway = $deferredGateway;
+            // ensure manual_payment_request_id is present when setting manual_bank
+            if ($deferredGateway === 'manual_bank' && ! $transaction->manual_payment_request_id) {
+                throw ValidationException::withMessages([
+                    'manual_payment_request' => __('Manual payment request is required for manual bank payments.'),
+                ]);
+            }
+            $transaction->save();
         }
 
         $result = $this->fulfillmentService->fulfill(
@@ -289,6 +331,16 @@ class ServicePaymentService
         string $idempotencyKey,
         array $data = []
     ): PaymentTransaction {
+        $normalizedGateway = strtolower(trim($method));
+
+        if (in_array($normalizedGateway, ['manual-banks', 'manual bank', 'manualbank', 'bank', 'bank_transfer', 'banktransfer', 'offline', 'internal'], true)) {
+            $normalizedGateway = 'manual_bank';
+        } elseif (in_array($normalizedGateway, ['alsharq', 'al-sharq', 'bank_alsharq'], true)) {
+            $normalizedGateway = 'east_yemen_bank';
+        }
+
+        $method = $normalizedGateway;
+
         $existing = PaymentTransaction::query()
             ->where('user_id', $user->getKey())
             ->whereIn('payment_gateway', $this->expandLegacyMethods($method))
@@ -311,6 +363,10 @@ class ServicePaymentService
             if ($existing->payable_type !== ServiceRequest::class) {
                 $existing->payable_type = ServiceRequest::class;
                 $existing->save();
+            }
+
+            if ($method === 'wallet' && $existing->manual_payment_request_id) {
+                $this->detachManualPaymentArtifacts($existing);
             }
 
             return $existing;
@@ -348,6 +404,10 @@ class ServicePaymentService
                 $activeDuplicate->save();
             }
 
+            if ($method === 'wallet' && $activeDuplicate->manual_payment_request_id) {
+                $this->detachManualPaymentArtifacts($activeDuplicate);
+            }
+
             return $activeDuplicate;
         }
 
@@ -360,8 +420,79 @@ class ServicePaymentService
         }
 
         $meta = $this->buildInitialMeta($service, $amount, $currency, $method, $data);
+        $meta['context'] = [
+            'type' => 'service_request',
+            'service_request_id' => $serviceRequest->getKey(),
+            'user_id' => $user->getKey(),
+        ];
 
-        return PaymentTransaction::create([
+        $manualPaymentRequestId = null;
+        $manualPaymentRequest = null;
+        if (in_array($method, ['manual_bank', 'east_yemen_bank'], true)) {
+            $manualBank = $this->resolveManualBankForRequest($data);
+
+            if (! $manualBank instanceof ManualBank) {
+                throw ValidationException::withMessages([
+                    'manual_bank_id' => __('Please select a valid manual bank or configure a default bank.'),
+                ]);
+            }
+
+            $bankName = Arr::get($data, 'bank_name')
+                ?? Arr::get($data, 'transfer.bank_name')
+                ?? Arr::get($data, 'transfer.bank')
+                ?? Arr::get($data, 'payment.bank_name')
+                ?? $manualBank->name
+                ?? 'unspecified';
+
+            $manualPaymentRequest = ManualPaymentRequest::query()->firstOrCreate(
+                [
+                    'user_id' => $user->getKey(),
+                    'service_request_id' => $serviceRequest->getKey(),
+                    'status' => ManualPaymentRequest::STATUS_PENDING,
+                ],
+                [
+                    'manual_bank_id' => $manualBank->getKey(),
+                    'payable_type' => ServiceRequest::class,
+                    'payable_id' => $serviceRequest->getKey(),
+                    'amount' => $amount,
+                    'currency' => $currency,
+                    'bank_name' => $bankName,
+                ]
+            );
+
+            $manualRequestUpdates = [];
+            if ((int) $manualPaymentRequest->service_request_id !== $serviceRequest->getKey()) {
+                $manualRequestUpdates['service_request_id'] = $serviceRequest->getKey();
+            }
+
+            if ($manualPaymentRequest->payable_type !== ServiceRequest::class) {
+                $manualRequestUpdates['payable_type'] = ServiceRequest::class;
+            }
+
+            if ((int) $manualPaymentRequest->payable_id !== $serviceRequest->getKey()) {
+                $manualRequestUpdates['payable_id'] = $serviceRequest->getKey();
+            }
+
+            if ((int) $manualPaymentRequest->manual_bank_id !== $manualBank->getKey()) {
+                $manualRequestUpdates['manual_bank_id'] = $manualBank->getKey();
+            }
+
+            if ($manualRequestUpdates !== []) {
+                $manualPaymentRequest->forceFill($manualRequestUpdates)->saveQuietly();
+            }
+
+            $manualPaymentRequestId = $manualPaymentRequest->getKey();
+
+            $meta['transfer'] = array_merge(
+                ['bank_name' => $bankName],
+                isset($meta['transfer']) && is_array($meta['transfer']) ? $meta['transfer'] : []
+            );
+
+            $meta['transfer']['manual_bank_id'] = $manualBank->getKey();
+            $data['manual_bank_id'] = $manualBank->getKey();
+        }
+
+        $transaction = PaymentTransaction::create([
             'user_id' => $user->getKey(),
             'amount' => $amount,
             'currency' => $currency,
@@ -370,8 +501,21 @@ class ServicePaymentService
             'payable_type' => ServiceRequest::class,
             'payable_id' => $serviceRequest->getKey(),
             'idempotency_key' => $idempotencyKey,
+            'manual_payment_request_id' => $manualPaymentRequestId,
             'meta' => $meta,
         ]);
+
+        $serviceRequest->forceFill([
+            'payment_transaction_id' => $transaction->getKey(),
+        ])->save();
+
+        if ($manualPaymentRequest instanceof ManualPaymentRequest
+            && (int) $manualPaymentRequest->payment_transaction_id !== $transaction->getKey()) {
+            $manualPaymentRequest->payment_transaction_id = $transaction->getKey();
+            $manualPaymentRequest->save();
+        }
+
+        return $transaction;
     }
 
     /**
@@ -655,6 +799,127 @@ class ServicePaymentService
         }
 
         return $currency;
+    }
+
+    private function detachManualPaymentArtifacts(PaymentTransaction $transaction): void
+    {
+        $manualRequest = $transaction->manualPaymentRequest;
+
+        if ($manualRequest instanceof ManualPaymentRequest) {
+            $updates = [
+                'payment_transaction_id' => null,
+            ];
+
+            if ($manualRequest->status === ManualPaymentRequest::STATUS_PENDING) {
+                $updates['status'] = ManualPaymentRequest::STATUS_REJECTED;
+            }
+
+            $manualRequest->forceFill($updates)->saveQuietly();
+        }
+
+        $transaction->manual_payment_request_id = null;
+        $transaction->meta = $this->stripManualMeta($transaction->meta);
+        $transaction->saveQuietly();
+    }
+
+    private function stripManualMeta($meta): array
+    {
+        if (! is_array($meta)) {
+            return [];
+        }
+
+        unset($meta['manual'], $meta['manual_payment_request']);
+
+        if (isset($meta['transfer']) && is_array($meta['transfer'])) {
+            unset($meta['transfer']['bank_name'], $meta['transfer']['manual_bank_id']);
+
+            if ($meta['transfer'] === []) {
+                unset($meta['transfer']);
+            }
+        }
+
+        return $meta;
+    }
+
+    private function resolveManualBankForRequest(array $data): ?ManualBank
+    {
+        $manualBankId = $this->extractManualBankIdentifier($data);
+
+        if ($manualBankId !== null) {
+            $bank = ManualBank::query()->find($manualBankId);
+
+            if ($bank instanceof ManualBank) {
+                return $bank;
+            }
+        }
+
+        $configuredId = config('payments.default_manual_bank_id');
+
+        if ($configuredId !== null && $configuredId !== '') {
+            $normalizedId = is_numeric($configuredId) ? (int) $configuredId : null;
+
+            if ($normalizedId && $normalizedId > 0) {
+                $bank = ManualBank::query()->find($normalizedId);
+
+                if ($bank instanceof ManualBank) {
+                    return $bank;
+                }
+            }
+        }
+
+        $query = ManualBank::query();
+
+        if (ManualBank::supportsColumn('status')) {
+            $query->where('status', true);
+        } elseif (ManualBank::supportsColumn('is_active')) {
+            $query->where('is_active', true);
+        }
+
+        if (ManualBank::supportsColumn('display_order')) {
+            $query->orderBy('display_order');
+        }
+
+        return $query->orderBy('name')->orderBy('id')->first();
+    }
+
+    private function extractManualBankIdentifier(array $data): ?int
+    {
+        $candidates = [
+            Arr::get($data, 'manual_bank_id'),
+            Arr::get($data, 'bank_id'),
+            Arr::get($data, 'transfer.manual_bank_id'),
+            Arr::get($data, 'transfer.bank_id'),
+            Arr::get($data, 'payment.manual_bank_id'),
+            Arr::get($data, 'payment.bank_id'),
+        ];
+
+        foreach ($candidates as $candidate) {
+            if ($candidate instanceof ManualBank) {
+                return $candidate->getKey();
+            }
+
+            if (is_string($candidate)) {
+                $candidate = trim($candidate);
+            }
+
+            if ($candidate === null || $candidate === '' || $candidate === []) {
+                continue;
+            }
+
+            if (is_int($candidate) && $candidate > 0) {
+                return $candidate;
+            }
+
+            if (is_numeric($candidate)) {
+                $normalized = (int) $candidate;
+
+                if ($normalized > 0) {
+                    return $normalized;
+                }
+            }
+        }
+
+        return null;
     }
 
 }

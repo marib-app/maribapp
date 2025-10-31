@@ -67,7 +67,9 @@ class ManualPaymentRequestService
         PaymentTransaction $transaction,
         array $data = []
     ): ManualPaymentRequest {
-        $manualBankId = Arr::get($data, 'bank_id') ?? Arr::get($data, 'manual_bank_id');
+        $manualBankId = $this->normalizeManualBankIdentifier(
+            Arr::get($data, 'bank_id') ?? Arr::get($data, 'manual_bank_id')
+        );
         $bankAccountId = Arr::get($data, 'bank_account_id');
         $reference = Arr::get($data, 'reference');
         $note = Arr::get($data, 'note');
@@ -81,7 +83,7 @@ class ManualPaymentRequestService
         $supportsBankNameColumn = $this->manualPaymentSupportsBankNameColumn();
         $supportsBankAccountNameColumn = $this->manualPaymentSupportsBankAccountNameColumn();
 
-        if ($manualBankId) {
+        if ($manualBankId !== null) {
             $manualBank = ManualBank::query()->find($manualBankId);
         }
 
@@ -92,6 +94,7 @@ class ManualPaymentRequestService
             ]);
         }
 
+        $serviceRequestId = $this->resolveServiceRequestId($payableType, $payableId);
 
         $metaUpdates = [
             'source' => 'payments.manual',
@@ -105,12 +108,10 @@ class ManualPaymentRequestService
             'submitted_at' => now()->toIso8601String(),
         ];
 
-        if ($manualBankId) {
-            $normalizedManualBankId = (int) $manualBankId;
-
+        if ($manualBank instanceof ManualBank) {
+            $normalizedManualBankId = $manualBank->getKey();
             data_set($metaUpdates, 'bank.id', $normalizedManualBankId);
             data_set($metaUpdates, 'manual_bank.id', $normalizedManualBankId);
-        
         }
 
         if ($bankAccountId) {
@@ -222,6 +223,7 @@ class ManualPaymentRequestService
                 'manual_bank_id' => $manualBank?->getKey(),
                 'payable_type' => $payableType,
                 'payable_id' => $payableId,
+                'service_request_id' => $serviceRequestId,
                 'amount' => $transaction->amount,
                 'currency' => $transaction->currency,
                 'reference' => $reference ?? $existingRequest->reference,
@@ -256,6 +258,7 @@ class ManualPaymentRequestService
             'manual_bank_id' => $manualBank?->getKey(),
             'payable_type' => $payableType,
             'payable_id' => $payableId,
+            'service_request_id' => $serviceRequestId,
             'amount' => $transaction->amount,
             'currency' => $transaction->currency,
             'reference' => $reference,
@@ -307,28 +310,18 @@ class ManualPaymentRequestService
             return $trimmed === '' ? null : $trimmed;
         };
 
-        $manualBankId = Arr::get($data, 'manual_bank_id');
-
-        if ($manualBankId === null) {
-            $manualBankId = Arr::get($data, 'bank_id');
-        }
+        $manualBankId = $this->normalizeManualBankIdentifier(
+            Arr::get($data, 'manual_bank_id') ?? Arr::get($data, 'bank_id')
+        );
         $manualBank = null;
-
-        if ($manualBankId !== null && $manualBankId !== '') {
-            $manualBankId = (int) $manualBankId;
-
-            if ($manualBankId <= 0) {
-                $manualBankId = null;
-            }
-        } else {
-            $manualBankId = null;
-        }
-
 
         if ($manualBankId !== null) {
             $manualBank = ManualBank::query()->find($manualBankId);
-        }
 
+            if (! $manualBank instanceof ManualBank) {
+                $manualBankId = null;
+            }
+        }
 
         if (! $manualBank instanceof ManualBank && $manualBankId === null) {
             $manualBank = $this->resolveDefaultManualBank();
@@ -337,7 +330,6 @@ class ManualPaymentRequestService
                 $manualBankId = $manualBank->getKey();
             }
         }
-
 
         $supportsBankNameColumn = $this->manualPaymentSupportsBankNameColumn();
         $supportsBankAccountNameColumn = $this->manualPaymentSupportsBankAccountNameColumn();
@@ -399,9 +391,9 @@ class ManualPaymentRequestService
 
 
 
-        if ($manualBankId !== null) {
-            data_set($meta, 'bank.id', $manualBankId);
-            data_set($meta, 'manual_bank.id', $manualBankId);
+        if ($manualBank instanceof ManualBank) {
+            data_set($meta, 'bank.id', $manualBank->getKey());
+            data_set($meta, 'manual_bank.id', $manualBank->getKey());
         }
 
         if ($bankName !== null) {
@@ -422,12 +414,14 @@ class ManualPaymentRequestService
         $meta = $this->filterArrayRecursive($meta);
 
         $department = $this->determineDepartmentForOrderPayable($payableType, $payableId, null);
+        $serviceRequestId = $this->resolveServiceRequestId($payableType, $payableId);
 
         $attributes = [
             'user_id' => $user->getKey(),
-            'manual_bank_id' => $manualBankId,
+            'manual_bank_id' => $manualBank?->getKey(),
             'payable_type' => $payableType,
             'payable_id' => $payableId,
+            'service_request_id' => $serviceRequestId,
             'amount' => $transaction->amount,
             'currency' => $currency ?? $transaction->currency,
             'reference' => $reference,
@@ -1521,34 +1515,19 @@ class ManualPaymentRequestService
         mixed $payableId,
         ?ManualPaymentRequest $existingRequest
     ): ?string {
-        $charactersToTrim = " \t\n\r\0\x0B\"'";
+        $payableInt = is_numeric($payableId) ? (int) $payableId : null;
+        $serviceRequestId = $this->resolveServiceRequestId($payableType, $payableInt);
 
-        if (is_string($payableType)) {
-            $normalizedType = strtolower(trim((string) $payableType, $charactersToTrim));
-            $serviceAliases = [
-                'service',
-                'services',
-                strtolower(ServiceRequest::class),
-                strtolower('\\' . ServiceRequest::class),
-                'app\\models\\servicerequest',
-                'app\\servicerequest',
-                'service_request',
-                'service-request',
-            ];
-
-            if (in_array($normalizedType, $serviceAliases, true)) {
-                return DepartmentReportService::DEPARTMENT_SERVICES;
-            }
+        if ($serviceRequestId !== null) {
+            return DepartmentReportService::DEPARTMENT_SERVICES;
         }
 
         if (! ManualPaymentRequest::isOrderPayableType($payableType)) {
             return null;
         }
 
-        $orderId = is_numeric($payableId) ? (int) $payableId : null;
-
-        if ($orderId !== null) {
-            $department = $this->resolveOrderDepartment($orderId);
+        if ($payableInt !== null) {
+            $department = $this->resolveOrderDepartment($payableInt);
 
             if ($department !== null) {
                 return $department;
@@ -1568,6 +1547,75 @@ class ManualPaymentRequestService
 
 
 
+
+    private function resolveServiceRequestId(mixed $payableType, ?int $payableId): ?int
+    {
+        if ($payableId === null) {
+            return null;
+        }
+
+        $normalizedType = $this->normalizePayableTypeForComparison($payableType);
+
+        if ($normalizedType === null) {
+            return null;
+        }
+
+        $serviceAliases = [
+            'service',
+            'services',
+            strtolower(ServiceRequest::class),
+            strtolower('\\' . ServiceRequest::class),
+            'app\\models\\servicerequest',
+            'app\\servicerequest',
+            'service_request',
+            'service-request',
+        ];
+
+        if (! in_array($normalizedType, $serviceAliases, true)) {
+            return null;
+        }
+
+        return $payableId;
+    }
+
+    private function normalizePayableTypeForComparison(mixed $payableType): ?string
+    {
+        if (! is_string($payableType)) {
+            return null;
+        }
+
+        $charactersToTrim = " \t\n\r\0\x0B\"'";
+        $normalized = strtolower(trim((string) $payableType, $charactersToTrim));
+
+        return $normalized === '' ? null : $normalized;
+    }
+
+    private function normalizeManualBankIdentifier(mixed $value): ?int
+    {
+        if ($value instanceof ManualBank) {
+            return $value->getKey();
+        }
+
+        if (is_string($value)) {
+            $value = trim($value);
+        }
+
+        if ($value === null || $value === '' || $value === []) {
+            return null;
+        }
+
+        if (is_int($value)) {
+            return $value > 0 ? $value : null;
+        }
+
+        if (is_numeric($value)) {
+            $intValue = (int) $value;
+
+            return $intValue > 0 ? $intValue : null;
+        }
+
+        return null;
+    }
 
     private function resolveReceiptPath(array $data, ?ManualPaymentRequest $existing): string
     {

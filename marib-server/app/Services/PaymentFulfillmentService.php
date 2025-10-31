@@ -947,6 +947,8 @@ class PaymentFulfillmentService
         $walletTransaction = $options['wallet_transaction'] ?? null;
         $manualPaymentRequestId = $options['manual_payment_request_id'] ?? null;
 
+        $this->ensureServiceTransactionContext($transaction, $serviceRequest);
+
         if ($service instanceof Service) {
             $serviceUpdates = [];
 
@@ -1407,6 +1409,46 @@ class PaymentFulfillmentService
             default => $payableType,
         };
     }
+
+    private function ensureServiceTransactionContext(PaymentTransaction $transaction, ServiceRequest $serviceRequest): void
+    {
+        $meta = $transaction->meta;
+
+        if (! is_array($meta)) {
+            $meta = [];
+        }
+
+        $context = $meta['context'] ?? [];
+        if (! is_array($context)) {
+            $context = [];
+        }
+
+        $updated = false;
+
+        if (($context['type'] ?? null) !== 'service_request') {
+            $context['type'] = 'service_request';
+            $updated = true;
+        }
+
+        if (($context['service_request_id'] ?? null) !== $serviceRequest->getKey()) {
+            $context['service_request_id'] = $serviceRequest->getKey();
+            $updated = true;
+        }
+
+        if (($context['user_id'] ?? null) !== $serviceRequest->user_id) {
+            $context['user_id'] = $serviceRequest->user_id;
+            $updated = true;
+        }
+
+        if (! $updated) {
+            return;
+        }
+
+        $meta['context'] = $context;
+        $transaction->meta = $meta;
+        $transaction->saveQuietly();
+    }
+
     protected function mergeTransactionMeta(PaymentTransaction $transaction, array $meta): void
     {
         if (empty($meta)) {

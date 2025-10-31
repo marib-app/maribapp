@@ -9738,6 +9738,28 @@ public function storeRequestDevice(Request $request)
                 $existingManualPaymentRequest
             );
 
+            $serviceRequestId = null;
+            if (is_numeric($payableId)) {
+                $normalizedPayableType = is_string($resolvedPayableType)
+                    ? strtolower(trim($resolvedPayableType, " \t\n\r\0\x0B\"'"))
+                    : null;
+
+                if ($normalizedPayableType !== null) {
+                    $serviceAliases = [
+                        strtolower(ServiceRequest::class),
+                        strtolower('\\' . ServiceRequest::class),
+                        'app\\models\\servicerequest',
+                        'app\\servicerequest',
+                        'service_request',
+                        'service-request',
+                    ];
+
+                    if (in_array($normalizedPayableType, $serviceAliases, true)) {
+                        $serviceRequestId = (int) $payableId;
+                    }
+                }
+            }
+
 
             $manualPaymentAttributes = [
                 'user_id'        => $user->id,
@@ -9753,6 +9775,7 @@ public function storeRequestDevice(Request $request)
                 'status'         => ManualPaymentRequest::STATUS_PENDING,
                 'payable_type'   => $resolvedPayableType,
                 'payable_id'     => $payableId,
+                'service_request_id' => $serviceRequestId,
                 'department'     => $department,
                 'meta'           => empty($metaPayload) ? null : $metaPayload,
             ];

@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Throwable;
 use App\Models\Concerns\HasPaymentLabels;
+use App\Models\ServiceRequest;
 
 
 class ManualPaymentRequest extends Model
@@ -439,6 +440,7 @@ class ManualPaymentRequest extends Model
         'manual_bank_id',
         'payable_type',
         'payable_id',
+        'service_request_id',
         'amount',
         'currency',
         'department',
@@ -468,6 +470,7 @@ class ManualPaymentRequest extends Model
         'meta' => 'array',
         'reviewed_at' => 'datetime',
         'is_open' => 'boolean',
+        'service_request_id' => 'integer',
 
 
     ];
@@ -536,7 +539,12 @@ class ManualPaymentRequest extends Model
 
     }
 
-    /** قديم: المعاملة تشير للطلب عبر manual_payment_request_id */
+    public function serviceRequest(): BelongsTo
+    {
+        return $this->belongsTo(ServiceRequest::class);
+    }
+
+    /** Payment transaction created for this manual request (manual_payment_request_id foreign key). */
     public function paymentTransaction(): HasOne
     {
         return $this->hasOne(PaymentTransaction::class, 'manual_payment_request_id');

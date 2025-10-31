@@ -11,6 +11,7 @@ use App\Models\Order;
 use App\Models\PaymentTransaction;
 use App\Models\ServiceRequest;
 use App\Services\Logging\PaymentTrace;
+use App\Services\LegalNumberingService;
 use App\Services\Payments\OrderPaymentService;
 use App\Services\OrderCheckoutService;
 use App\Services\PaymentFulfillmentService;
@@ -28,7 +29,8 @@ class PaymentController extends Controller
     public function __construct(
         private readonly ServicePaymentService $servicePaymentService,
         private readonly OrderPaymentService $orderPaymentService,
-        private readonly PaymentFulfillmentService $paymentFulfillmentService
+        private readonly PaymentFulfillmentService $paymentFulfillmentService,
+        private readonly LegalNumberingService $legalNumberingService
     ) {
     }
 
@@ -138,6 +140,33 @@ class PaymentController extends Controller
             );
 
             $existing = $transaction;
+        }
+
+        if ($existing->payment_gateway === 'wallet'
+            && strtolower((string) $existing->payment_status) !== 'succeed') {
+            $existing = $this->servicePaymentService->confirm(
+                $request->user(),
+                $existing,
+                $existing->idempotency_key ?? $idempotencyKey,
+                [
+                    'currency' => $currency,
+                    'amount' => $validated['amount'] ?? null,
+                    'metadata' => $validated['metadata'] ?? null,
+                ]
+            )->fresh();
+
+            $serviceRequest->refresh();
+
+            $autoConfirmedStatus = $this->inferStatusCode($existing);
+
+            PaymentTrace::trace('payment.confirm.service', [
+                'user_id' => $userId,
+                'payable_type' => ServiceRequest::class,
+                'payable_id' => $serviceRequest->getKey(),
+                'payment_transaction_id' => $existing->getKey(),
+                'idempotency_key' => $existing->idempotency_key,
+                'status_code' => $autoConfirmedStatus,
+            ], $request);
         }
 
         $statusCode = $this->inferStatusCode($existing);
@@ -344,10 +373,7 @@ class PaymentController extends Controller
                 ? ManualPaymentRequestResource::make($manualRequest)->resolve()
                 : null,
             'subject' => SubjectResource::make($serviceRequest)->resolve(),
-            'next' => [
-                'resource' => 'service_requests',
-                'show_url' => url(sprintf('/api/service-requests/%d', $serviceRequest->getKey())),
-            ],
+            'next' => $this->buildNextNavigation($transaction, 'service', $serviceRequest->getKey()),
         ];
 
         return response()->json($response, $statusCode);
@@ -376,10 +402,7 @@ class PaymentController extends Controller
                 'number' => $order->order_number,
                 'status' => $order->payment_status ?? $order->status ?? null,
             ])->resolve(),
-            'next' => [
-                'resource' => 'orders',
-                'show_url' => url(sprintf('/api/orders/%d', $order->getKey())),
-            ],
+            'next' => $this->buildNextNavigation($transaction, 'order', $order->getKey()),
         ];
 
         return response()->json($response, $statusCode);
@@ -419,6 +442,66 @@ class PaymentController extends Controller
         }
 
         return 202;
+    }
+
+    private function buildNextNavigation(PaymentTransaction $transaction, string $context, int $subjectId): array
+    {
+        $canonical = ManualPaymentRequest::canonicalGateway($transaction->payment_gateway);
+
+        if ($canonical === null) {
+            $gatewayCode = $transaction->gateway_code;
+            if (is_string($gatewayCode) && $gatewayCode !== '') {
+                $canonical = ManualPaymentRequest::canonicalGateway($gatewayCode) ?? $gatewayCode;
+            }
+        }
+
+        if ($canonical === null && $transaction->manual_payment_request_id !== null) {
+            $canonical = 'manual_bank';
+        }
+
+        $canonical = is_string($canonical) ? strtolower(trim($canonical)) : null;
+
+        if ($canonical === 'manual_banks') {
+            $canonical = 'manual_bank';
+        }
+
+        if (in_array($canonical, ['manual_bank', 'east_yemen_bank'], true)) {
+            return [
+                'resource' => 'payment_transactions',
+                'route' => 'transactions.history',
+                'show_url' => url('/api/payment-transactions'),
+                'transaction_id' => (string) $transaction->getKey(),
+                'dismiss' => true,
+            ];
+        }
+
+        if ($canonical === 'wallet') {
+            return [
+                'resource' => 'wallet_transactions',
+                'route' => 'wallet.transactions',
+                'show_url' => url('/api/wallet/transactions'),
+                'transaction_id' => (string) $transaction->getKey(),
+                'dismiss' => true,
+            ];
+        }
+
+        if ($context === 'order') {
+            return [
+                'resource' => 'orders',
+                'route' => 'transactions.history',
+                'show_url' => url(sprintf('/api/orders/%d', $subjectId)),
+                'transaction_id' => (string) $transaction->getKey(),
+                'dismiss' => true,
+            ];
+        }
+
+        return [
+            'resource' => 'service_requests',
+            'route' => 'service_requests.show',
+            'show_url' => url(sprintf('/api/service-requests/%d', $subjectId)),
+            'transaction_id' => (string) $transaction->getKey(),
+            'dismiss' => true,
+        ];
     }
 
     private function normalizePaymentMethodForPurpose(string $method, string $purpose): string
@@ -482,15 +565,36 @@ class PaymentController extends Controller
 
     private function generateServiceRequestNumber(): string
     {
+        $department = 'services';
+        $nextIdentifier = (int) (ServiceRequest::query()->max('id') ?? 0) + 1;
+
+        $candidate = trim((string) $this->legalNumberingService->formatOrderNumber($nextIdentifier, $department));
+
+        if ($candidate === '') {
+            $candidate = (string) $nextIdentifier;
+        }
+
+        if ($this->serviceRequestNumberExists($candidate)) {
+            return $this->fallbackServiceRequestNumber();
+        }
+
+        return $candidate;
+    }
+
+    private function serviceRequestNumberExists(string $number): bool
+    {
+        return ServiceRequest::query()
+            ->where('request_number', $number)
+            ->exists();
+    }
+
+    private function fallbackServiceRequestNumber(): string
+    {
         $prefix = 'SR-' . now()->format('Ymd');
 
         do {
             $candidate = $prefix . '-' . Str::padLeft((string) random_int(0, 999999), 6, '0');
-        } while (
-            ServiceRequest::query()
-                ->where('request_number', $candidate)
-                ->exists()
-        );
+        } while ($this->serviceRequestNumberExists($candidate));
 
         return $candidate;
     }

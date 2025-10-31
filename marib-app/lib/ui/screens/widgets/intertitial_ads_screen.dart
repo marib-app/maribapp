@@ -15,11 +15,16 @@ class AdHelper {
   static InterstitialAd? _interstitialAd;
 
   static bool isAdLoaded = false;
+  static bool _isLoading = false;
 
   static void loadInterstitialAd() {
     if (Constant.isGoogleInterstitialAdsEnabled != "1") {
       return;
     }
+    if (_interstitialAd != null || isAdLoaded || _isLoading) {
+      return;
+    }
+    _isLoading = true;
     InterstitialAd.load(
         adUnitId: Platform.isAndroid
             ? Constant.interstitialAdIdAndroid //Android interstitial ad id
@@ -32,10 +37,12 @@ class AdHelper {
             print('$ad loaded');
             _interstitialAd = ad;
             isAdLoaded = true;
+            _isLoading = false;
             _interstitialAd!.setImmersiveMode(true);
           },
           onAdFailedToLoad: (LoadAdError error) {
             isAdLoaded = false;
+            _isLoading = false;
             _interstitialAd = null;
           },
         ));
@@ -46,6 +53,7 @@ class AdHelper {
       return;
     }
     if (_interstitialAd == null) {
+      loadInterstitialAd();
       return;
     }
     _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
@@ -64,5 +72,6 @@ class AdHelper {
     );
     _interstitialAd!.show();
     _interstitialAd = null;
+    isAdLoaded = false;
   }
 }

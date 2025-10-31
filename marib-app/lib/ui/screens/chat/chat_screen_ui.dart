@@ -264,7 +264,7 @@ extension _ChatScreenUi on _ChatScreenState {
                                           suffixIcon: IconButton(
                                             onPressed: () async {
                                               if (messageAttachment == null) {
-                                                FilePickerResult?
+                                                final FilePickerResult?
                                                     pickedAttachment =
                                                     await FilePicker.platform
                                                         .pickFiles(
@@ -277,15 +277,11 @@ extension _ChatScreenUi on _ChatScreenState {
                                                   ],
                                                 );
 
-                                                messageAttachment =
+                                                _setMessageAttachment(
                                                     pickedAttachment
-                                                        ?.files.first;
-                                                _updateInputMode();
-                                                setState(() {});
+                                                        ?.files.first);
                                               } else {
-                                                messageAttachment = null;
-                                                _updateInputMode();
-                                                setState(() {});
+                                                _setMessageAttachment(null);
                                               }
                                             },
                                             icon: messageAttachment != null
@@ -422,9 +418,7 @@ extension _ChatScreenUi on _ChatScreenState {
                                           );
                                           totalMessageCount++;
                                           controller.text = "";
-                                          messageAttachment = null;
-                                          _updateInputMode();
-                                          setState(() {});
+                                          _setMessageAttachment(null);
                                         },
                                         child: CircleAvatar(
                                           radius: 20,

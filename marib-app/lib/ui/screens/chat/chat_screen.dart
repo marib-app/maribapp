@@ -221,7 +221,6 @@ class _ChatScreenState extends State<ChatScreen>
       final bool hasText = controller.text.trim().isNotEmpty;
       _updateInputMode();
       _chatSyncController.onTypingChanged(hasText);
-      setState(() {});
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -625,9 +624,44 @@ class _ChatScreenState extends State<ChatScreen>
     }
   }
 
-  void _updateInputMode() {
+  void _setMessageAttachment(PlatformFile? attachment) {
+    _syncComposerState(updateAttachment: true, attachment: attachment);
+  }
+
+  void _syncComposerState({
+    required bool updateAttachment,
+    PlatformFile? attachment,
+  }) {
+    final PlatformFile? effectiveAttachment =
+        updateAttachment ? attachment : messageAttachment;
+    final bool attachmentChanged =
+        updateAttachment && !identical(messageAttachment, effectiveAttachment);
     final bool hasText = controller.text.trim().isNotEmpty;
-    showRecordButton = !hasText && messageAttachment == null;
+    final bool shouldShowRecord = !hasText && effectiveAttachment == null;
+    final bool recordChanged = showRecordButton != shouldShowRecord;
+
+    if (!attachmentChanged && !recordChanged) {
+      return;
+    }
+
+    if (!mounted) {
+      if (updateAttachment) {
+        messageAttachment = effectiveAttachment;
+      }
+      showRecordButton = shouldShowRecord;
+      return;
+    }
+
+    setState(() {
+      if (updateAttachment) {
+        messageAttachment = effectiveAttachment;
+      }
+      showRecordButton = shouldShowRecord;
+    });
+  }
+
+  void _updateInputMode() {
+    _syncComposerState(updateAttachment: false);
   }
 
   String? _presenceLabel(BuildContext context) {

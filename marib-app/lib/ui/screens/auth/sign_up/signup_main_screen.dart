@@ -602,6 +602,9 @@ class LoginScreenState extends State<SignUpMainScreen> {
           context,
           clearCacheBeforeFetch: true,
         );
+        if (Widgets.isLoadingShowing) {
+          Widgets.hideLoder(context);
+        }
         Navigator.pushNamed(
           context,
           Routes.otp,
@@ -627,7 +630,9 @@ class LoginScreenState extends State<SignUpMainScreen> {
           context, e.toString(), messageDuration: 3);
 
     } finally {
-      Widgets.hideLoder(context);
+      if (Widgets.isLoadingShowing) {
+        Widgets.hideLoder(context);
+      }
     }
   }
 

@@ -785,9 +785,27 @@ class ApiController extends Controller {
             }
 
             $type = $request->type;
-            $firebase_id = $request->firebase_id;            
+            $firebase_id = $request->firebase_id;
             $referralAttempt = null;
 
+            if ($request->filled('email')) {
+                $request->merge(['email' => Str::lower(trim($request->email))]);
+            }
+
+            if ($type === 'phone' && empty($request->email)) {
+                $generatedEmail = $this->generatePhoneSignupEmail(
+                    $request->country_code,
+                    $request->mobile
+                );
+
+                $request->merge(['email' => $generatedEmail]);
+
+                \Log::info('📧 Generated fallback email for phone signup', [
+                    'mobile' => $request->mobile,
+                    'country_code' => $request->country_code,
+                    'generated_email' => $generatedEmail,
+                ]);
+            }
 
             // البحث عن مستخدم موجود بـ Google firebase_id
             $existingGoogleUser = null;
@@ -11604,6 +11622,40 @@ public function storeRequestDevice(Request $request)
             return isset($availability[$columnName]);
         }));
     }
+
+
+    /**
+     * Generate a fallback email address for phone-based signups.
+     */
+    private function generatePhoneSignupEmail(?string $countryCode, ?string $mobile): string
+    {
+        $numericCountryCode = preg_replace('/\D+/', '', (string) $countryCode);
+        $numericMobile = preg_replace('/\D+/', '', (string) $mobile);
+
+        $identifier = trim($numericCountryCode . $numericMobile);
+
+        if ($identifier === '') {
+            $identifier = 'user_' . Str::uuid()->toString();
+        } else {
+            $identifier = 'user_' . $identifier;
+        }
+
+        $baseIdentifier = Str::lower($identifier);
+        $domain = 'phone.marib.app';
+        $email = $baseIdentifier . '@' . $domain;
+
+        if (! User::where('email', $email)->exists()) {
+            return $email;
+        }
+
+        do {
+            $email = $baseIdentifier . '_' . Str::lower(Str::random(6)) . '@' . $domain;
+        } while (User::where('email', $email)->exists());
+
+        return $email;
+    }
+
+
 
     /**
      * Retrieve and cache the available columns on the items table.

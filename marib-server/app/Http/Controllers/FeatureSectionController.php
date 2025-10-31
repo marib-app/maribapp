@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use App\Services\ResponseService;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Http\Request;
 use App\Services\FeatureSectionCategoryService;
 use Illuminate\Support\Facades\Auth;

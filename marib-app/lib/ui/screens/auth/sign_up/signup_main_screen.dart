@@ -508,6 +508,15 @@ class LoginScreenState extends State<SignUpMainScreen> {
     if (!form.validate()) return;
 
 
+    if (codeCtrl.text.trim().isEmpty) {
+      HelperUtils.showSnackBarMessage(
+        context,
+        'Please enter your referral code.',
+        messageDuration: 3,
+        type: MessageType.warning,
+      );
+      return;
+    }
 
     if (!agreed) {
       HelperUtils.showSnackBarMessage(
@@ -538,13 +547,13 @@ class LoginScreenState extends State<SignUpMainScreen> {
     }
 
     try {
-      final referralCode = codeCtrl.text.trim();
 
       final basePayload = <String, dynamic>{
         "name": usernameCtrl.text,
         "mobile": mobileCtrl.text,
         "password": passwordCtrl.text,
         "account_type": selectedAccountType ?? "1",
+        "code": codeCtrl.text.trim(),
         "email": emailCtrl.text,
         "country_code": countryCode?.toString() ?? "",
         "country_name": countryName ?? "Unknown",
@@ -553,9 +562,6 @@ class LoginScreenState extends State<SignUpMainScreen> {
         ...locationPayload,
       };
 
-      if (referralCode.isNotEmpty) {
-        basePayload["code"] = referralCode;
-      }
 
       Map<String, dynamic> payload;
 
@@ -602,9 +608,6 @@ class LoginScreenState extends State<SignUpMainScreen> {
           context,
           clearCacheBeforeFetch: true,
         );
-        if (Widgets.isLoadingShowing) {
-          Widgets.hideLoder(context);
-        }
         Navigator.pushNamed(
           context,
           Routes.otp,
@@ -630,9 +633,7 @@ class LoginScreenState extends State<SignUpMainScreen> {
           context, e.toString(), messageDuration: 3);
 
     } finally {
-      if (Widgets.isLoadingShowing) {
-        Widgets.hideLoder(context);
-      }
+      Widgets.hideLoder(context);
     }
   }
 

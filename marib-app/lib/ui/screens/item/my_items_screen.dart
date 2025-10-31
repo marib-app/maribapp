@@ -33,6 +33,12 @@ class MyItemState extends State<ItemsScreen> with TickerProviderStateMixin {
   }
 
   @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     sections = [
       {

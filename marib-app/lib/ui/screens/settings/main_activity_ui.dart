@@ -92,7 +92,7 @@ class MainActivityUI extends StatelessWidget {
               ),
               // (الزر الأوسط يبقى FAB منفصل)
               MainNavItem(
-                titleKey: "transactionHistory",
+                titleKey: "transaction",
                 svg: AppIcons.transaction,
                 activeSvg: AppIcons.transactionActive,
                 tab: MainTab.transactions,

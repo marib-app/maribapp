@@ -78,6 +78,13 @@ class _CategoryListState extends State<SubCategoryScreen>
   }
 
   @override
+  void dispose() {
+    controller.removeListener(pageScrollListen);
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return AnnotatedRegion(
       value: UiUtils.getSystemUiOverlayStyle(
@@ -263,7 +270,6 @@ class _CategoryListState extends State<SubCategoryScreen>
                     .read<FetchSubCategoriesCubit>()
                     .fetchSubCategories(categoryId: widget.catId);
               },
-              category: EmptyStateCategory.categories,
             );
           }
           return Column(

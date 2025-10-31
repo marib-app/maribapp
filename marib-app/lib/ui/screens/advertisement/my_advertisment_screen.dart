@@ -80,6 +80,13 @@ class _MyAdvertisementScreenState extends State<MyAdvertisementScreen> {
     super.didChangeDependencies();
   }
 
+  @override
+  void dispose() {
+    _pageScrollController.removeListener(_pageScroll);
+    _pageScrollController.dispose();
+    super.dispose();
+  }
+
   Color? statusColor(status) {
     if (status == 0) {
       return Colors.green;
@@ -144,7 +151,6 @@ class _MyAdvertisementScreenState extends State<MyAdvertisementScreen> {
                         .fetchMyPromotedItems();
                     setState(() {});
                   },
-                  category: EmptyStateCategory.advertisements,
                 );
               }
 

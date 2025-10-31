@@ -10,10 +10,54 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:marib/data/model/category_model.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class CategoryWidgetShein extends StatelessWidget {
+class CategoryWidgetShein extends StatefulWidget {
   final int?
       parentCategoryId; // The selected parent category ID (null or 0 = all)
   const CategoryWidgetShein({super.key, this.parentCategoryId});
+
+  @override
+  State<CategoryWidgetShein> createState() => _CategoryWidgetSheinState();
+}
+
+class _CategoryWidgetSheinState extends State<CategoryWidgetShein> {
+  late final PageController _pageController = PageController();
+  int _currentPage = 0;
+
+  @override
+  void didUpdateWidget(covariant CategoryWidgetShein oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.parentCategoryId != widget.parentCategoryId) {
+      _currentPage = 0;
+      _jumpToPageSafely(0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _jumpToPageSafely(int page) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_pageController.hasClients) {
+        return;
+      }
+      final int target = page < 0 ? 0 : page;
+      _pageController.jumpToPage(target);
+    });
+  }
+
+  void _ensurePageWithinBounds(int pageCount) {
+    if (pageCount <= 0) {
+      return;
+    }
+    final int maxPage = pageCount - 1;
+    if (_currentPage > maxPage) {
+      _currentPage = maxPage;
+      _jumpToPageSafely(_currentPage);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,12 +74,13 @@ class CategoryWidgetShein extends StatelessWidget {
             if (parentCategory.id == -1) return const SizedBox();
             // If no category is selected or 'All' is selected, show all subcategories of id 6
             List categoriesToShow;
-            if (parentCategoryId == null || parentCategoryId == 0) {
+            if (widget.parentCategoryId == null ||
+                widget.parentCategoryId == 0) {
               categoriesToShow = parentCategory.children ?? [];
             } else {
               // Find the selected category among children
               final selected = parentCategory.children?.firstWhere(
-                (cat) => cat.id == parentCategoryId,
+                (cat) => cat.id == widget.parentCategoryId,
                 orElse: () => CategoryModel(
                     id: -1, name: '', children: []), // Dummy fallback
               );
@@ -46,7 +91,8 @@ class CategoryWidgetShein extends StatelessWidget {
             // Split categories into pages of 12 (4 columns x 3 rows)
             final int itemsPerPage = 12;
             final bool showSpecialTile =
-            (parentCategoryId == null || parentCategoryId == 0);
+                (widget.parentCategoryId == null ||
+                    widget.parentCategoryId == 0);
             final bool hasCategories = categoriesToShow.isNotEmpty;
 
             // إذا لم يكن لدينا أي عناصر لنظهرها (ولا حتى الزر الخاص)
@@ -80,6 +126,8 @@ class CategoryWidgetShein extends StatelessWidget {
               return const SizedBox.shrink();
             }
 
+            _ensurePageWithinBounds(pages.length);
+
             return Padding(
               padding: const EdgeInsets.only(top: 10),
               child: SizedBox(
@@ -87,7 +135,8 @@ class CategoryWidgetShein extends StatelessWidget {
                 height: 300,
                 child: PageView.builder(
                   itemCount: pages.length,
-                  controller: PageController(),
+                  controller: _pageController,
+                  onPageChanged: (page) => _currentPage = page,
                   itemBuilder: (context, pageIndex) {
                     final page = pages[pageIndex];
                     return GridView.builder(

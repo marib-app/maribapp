@@ -11,6 +11,7 @@ import 'package:marib/utils/payment/manual_payment_service.dart'
     show ManualPaymentSubmissionResult;
 import 'package:marib/app/navigation/app_page_route.dart';
 import 'package:marib/app/navigation/motion/route_motion.dart';
+import 'dart:async';
 
 class ServicePaymentPage extends StatefulWidget {
   const ServicePaymentPage({super.key, this.args = const {}});
@@ -248,6 +249,10 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
       serviceRequestId: serviceRequestId,
     );
 
+    final NavigatorState rootNavigator =
+    Navigator.of(context, rootNavigator: true);
+
+
     final dynamic result = await BankTransferScreen.show(context, args);
 
     if (!mounted) {
@@ -297,12 +302,15 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
       if (next != null) 'next': next,
     };
 
-    Navigator.of(context, rootNavigator: true).pushNamed(
-      Routes.transactionHistory,
-      arguments: {'focus_transaction_id': transactionId},
-    );
+    await Navigator.of(context).maybePop(resultPayload);
 
-    Navigator.of(context).maybePop(resultPayload);
+
+    Future.microtask(() {
+      rootNavigator.pushNamed(
+        Routes.transactionHistory,
+        arguments: {'focus_transaction_id': transactionId},
+      );
+    });
   }
 
   String _formatAmount(double? amount, String? currency) {

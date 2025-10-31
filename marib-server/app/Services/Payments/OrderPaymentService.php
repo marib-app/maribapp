@@ -14,7 +14,6 @@ use App\Support\ManualPayments\TransferDetailsResolver;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use App\Services\Payments\TransactionAmountResolver;
 use App\Services\Payments\CreateOrLinkManualPaymentRequest;
@@ -43,6 +42,14 @@ class OrderPaymentService
         'manual_bank' => ['manual'],
         'east_yemen_bank' => ['bank_alsharq', 'bank_alsharq_bank'],
     ];
+
+    /**
+     * @return array<int, string>
+     */
+    public static function supportedMethods(): array
+    {
+        return self::SUPPORTED_METHODS;
+    }
 
 
     public function __construct(
@@ -459,19 +466,17 @@ class OrderPaymentService
         }
 
         $data['currency'] = $transactionCurrency;
+        $orderReference = $this->resolveOrderReference($order, $data);
 
         $meta = $this->buildTransactionMeta('initiated', $data);
         $meta = $this->mergeCurrencyMeta($meta, $order, $method, $amount, $data);
 
-
         $meta = array_replace_recursive($meta, [
             'order' => [
                 'id' => $order->getKey(),
-                'order_number' => $order->order_number,
+                'order_number' => $orderReference,
             ],
         ]);
-
-        $orderReference = $this->resolveUniqueOrderReference($order, $method, $idempotencyKey, $data);
 
 
 
@@ -494,61 +499,51 @@ class OrderPaymentService
     /**
      * @param array<string, mixed> $data
      */
-    private function resolveUniqueOrderReference(
-        Order $order,
-        string $method,
-        string $idempotencyKey,
-        array $data
-    ): ?string {
+    private function resolveOrderReference(Order $order, array $data): string
+    {
+        $legalReference = $this->determineLegalOrderReference($order);
         $rawReference = Arr::get($data, 'order_id');
 
-        if (! is_string($rawReference)) {
-            $rawReference = null;
+        if (! is_string($rawReference) || trim($rawReference) === '') {
+            return $legalReference;
         }
 
-        $normalizedReference = $rawReference !== null ? trim($rawReference) : '';
-        $hasCustomReference = $normalizedReference !== '';
+        $normalizedReference = trim($rawReference);
 
-        if (! $hasCustomReference) {
-            $normalizedReference = (string) $order->getKey();
+        if (! $this->referenceMatchesLegalSequence($normalizedReference, $legalReference)) {
+            throw ValidationException::withMessages([
+                'order_id' => __('The provided order reference does not match the legal numbering sequence.'),
+            ]);
         }
 
-        if ($normalizedReference === '') {
-            return null;
-        }
-
-        if (! $hasCustomReference) {
-            return $this->buildUniqueOrderReference($method, $normalizedReference, $idempotencyKey);
-        }
-
-        if (! $this->orderReferenceExists($method, $normalizedReference)) {
-            return $normalizedReference;
-        }
-
-        return $this->buildUniqueOrderReference($method, $normalizedReference, $idempotencyKey);
+        return $normalizedReference;
     }
 
-    private function buildUniqueOrderReference(string $method, string $baseReference, string $idempotencyKey): string
+    private function determineLegalOrderReference(Order $order): string
     {
-        $suffixKey = trim($idempotencyKey) !== '' ? $idempotencyKey : (string) Str::uuid();
-        $candidate = sprintf('%s:%s', $baseReference, $suffixKey);
-        $attempt = 1;
+        $current = trim((string) $order->order_number);
 
-        while ($this->orderReferenceExists($method, $candidate)) {
-            $candidate = sprintf('%s:%s:%d', $baseReference, $suffixKey, $attempt);
-            $attempt++;
+        if ($current !== '') {
+            return $current;
         }
 
-        return $candidate;
+        $refreshed = $order->refreshOrderNumber();
+        $refreshedNumber = trim((string) $refreshed->order_number);
+
+        if ($refreshedNumber !== '') {
+            return $refreshedNumber;
+        }
+
+        return (string) $order->getKey();
     }
 
-    private function orderReferenceExists(string $method, string $reference): bool
+    private function referenceMatchesLegalSequence(string $incoming, string $legalReference): bool
     {
-        return PaymentTransaction::query()
-            ->where('payment_gateway', $method)
-            ->where('order_id', $reference)
-            ->lockForUpdate()
-            ->exists();
+        if ($incoming === $legalReference) {
+            return true;
+        }
+
+        return strcasecmp($incoming, $legalReference) === 0;
     }
 
 

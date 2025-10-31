@@ -12,6 +12,7 @@ use App\Models\PaymentTransaction;
 use App\Models\ServiceRequest;
 use App\Services\Logging\PaymentTrace;
 use App\Services\Payments\OrderPaymentService;
+use App\Services\OrderCheckoutService;
 use App\Services\PaymentFulfillmentService;
 use App\Services\Payments\ServicePaymentService;
 use App\Support\Payments\PaymentGatewayCurrencyPolicy;
@@ -98,7 +99,7 @@ class PaymentController extends Controller
             $serviceRequest->save();
         }
 
-        $method = strtolower(trim($validated['payment_method']));
+        $method = $this->normalizePaymentMethodForPurpose($validated['payment_method'], 'service');
         $currency = strtoupper(trim($validated['currency']));
 
         if (! PaymentGatewayCurrencyPolicy::supports($method, $currency)) {
@@ -167,7 +168,7 @@ class PaymentController extends Controller
             ->where('user_id', $userId)
             ->findOrFail($validated['order_id']);
 
-        $method = strtolower(trim($validated['payment_method']));
+        $method = $this->normalizePaymentMethodForPurpose($validated['payment_method'], 'order');
         $currency = strtoupper(trim($validated['currency']));
 
         if (! PaymentGatewayCurrencyPolicy::supports($method, $currency)) {
@@ -175,6 +176,8 @@ class PaymentController extends Controller
                 'currency' => __('gateway_currency_unsupported'),
             ]);
         }
+
+        $order = $order->refreshOrderNumber();
 
         $idempotencyKey = $this->resolveIdempotencyKey($request, [
             'purpose' => 'order',
@@ -416,6 +419,43 @@ class PaymentController extends Controller
         }
 
         return 202;
+    }
+
+    private function normalizePaymentMethodForPurpose(string $method, string $purpose): string
+    {
+        $token = OrderCheckoutService::normalizePaymentMethod($method);
+
+        if ($token === null || trim($token) === '') {
+            $token = ManualPaymentRequest::canonicalGateway($method);
+        } else {
+            $token = ManualPaymentRequest::canonicalGateway($token) ?? $token;
+        }
+
+        if ($token === null || trim($token) === '') {
+            throw ValidationException::withMessages([
+                'payment_method' => __('Unsupported payment method.'),
+            ]);
+        }
+
+        $token = strtolower(trim($token));
+
+        $token = match ($token) {
+            'manual_banks' => 'manual_bank',
+            'bank_alsharq' => 'east_yemen_bank',
+            default => $token,
+        };
+
+        $allowed = $purpose === 'service'
+            ? ServicePaymentService::SUPPORTED_METHODS
+            : OrderPaymentService::supportedMethods();
+
+        if (! in_array($token, $allowed, true)) {
+            throw ValidationException::withMessages([
+                'payment_method' => __('Unsupported payment method.'),
+            ]);
+        }
+
+        return $token;
     }
 
     private function resolveIdempotencyKey(Request $request, array $components): string

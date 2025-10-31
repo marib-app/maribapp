@@ -31,6 +31,21 @@ php artisan cache:clear; php artisan config:clear ;  php artisan route:clear
 
 
 
+
+
+
+استطلاع قواعد البيانات 
+mysql -h 127.0.0.1 -u root -p -e "SHOW DATABASES;"
+
+حذف القاعده 
+mysql --default-character-set=utf8mb4 -h 127.0.0.1 -u root -p -e "DROP DATABASE IF EXISTS maribsrv;"
+
+
+
+
+
+
+
 # افتح اللوج وراقب كل الأخطاء المهمة
 Get-Content .\storage\logs\laravel.log -Tail 0 -Wait `
 | Select-String -Pattern "payment-requests|PaymentRequest|PaymentRequestTableQuery|SQLSTATE|QueryException|TypeError|ErrorException|Undefined|Base table|Call to"
@@ -170,10 +185,6 @@ TRUNCATE TABLE orders;
 SET FOREIGN_KEY_CHECKS=1;
 "@
 iex "$MYSQL `"$SQL`""
-
-
-
-
 
 
 

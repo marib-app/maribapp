@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paystack Popup Simulation</title>
+    <script>
+        // Simulating a successful payment response after 5 seconds
+        setTimeout(() => {
+            // Send the message back to the parent window
+            window.opener.postMessage({
+                status: 'success',
+                reference: 'your-payment-reference' // Simulated payment reference
+            }, window.opener.location.origin);
+            // Close the popup after sending the message
+            window.close();
+        }, 5000);
+    </script>
+</head>
+
+<body>
+    <h1>Paystack Payment Popup Simulation</h1>
+    <p>Your payment is being processed...</p>
+</body>
+
+</html>

@@ -1,4 +1,3 @@
-// database/migrations/2025_09_25_000001_add_meta_to_manual_payment_requests.php
 <?php
 
 use Illuminate\Database\Migrations\Migration;

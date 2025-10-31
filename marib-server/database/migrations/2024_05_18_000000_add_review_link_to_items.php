@@ -8,19 +8,25 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('items', function (Blueprint $table) {
-            if (! Schema::hasColumn('items', 'review_link')) {
-                $table->string('review_link')->nullable()->after('product_link');
+        if (! Schema::hasColumn('items', 'review_link')) {
+            if (Schema::hasColumn('items', 'product_link')) {
+                Schema::table('items', function (Blueprint $table) {
+                    $table->string('review_link')->nullable()->after('product_link');
+                });
+            } else {
+                Schema::table('items', function (Blueprint $table) {
+                    $table->string('review_link')->nullable(); // بدون after
+                });
             }
-        });
+        }
     }
 
     public function down(): void
     {
-        Schema::table('items', function (Blueprint $table) {
-            if (Schema::hasColumn('items', 'review_link')) {
+        if (Schema::hasColumn('items', 'review_link')) {
+            Schema::table('items', function (Blueprint $table) {
                 $table->dropColumn('review_link');
-            }
-        });
+            });
+        }
     }
 };

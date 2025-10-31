@@ -5,8 +5,9 @@
     $manualPayment = $request instanceof ManualPaymentRequest ? $request : null;
     $paymentTransaction = $transaction instanceof PaymentTransaction ? $transaction : null;
 
-    $reference = $manualPayment?->reference
-        ?? $paymentTransaction?->payment_id
+    use App\Support\Payments\ReferencePresenter;
+
+    $reference = ReferencePresenter::forManualRequest($manualPayment, $paymentTransaction)
         ?? ($manualPayment?->getKey() ? __('Manual Payment #:id', ['id' => $manualPayment->getKey()]) : __('Manual Payment'));
 
     $submittedAt = $manualPayment?->created_at ?? $paymentTransaction?->created_at;
@@ -41,9 +42,7 @@
 
     $statusDisplay = $paymentStatusLabel ?? __('Pending');
 
-    $transactionIdDisplay = $transactionId
-        ?? $paymentTransaction?->payment_id
-        ?? ($paymentTransaction?->getKey() ? ('#' . $paymentTransaction->getKey()) : null);
+    $transactionIdDisplay = $transactionId ?? ReferencePresenter::forTransaction($paymentTransaction);
 @endphp
 
 <div class="row g-3">

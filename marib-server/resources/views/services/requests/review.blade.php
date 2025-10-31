@@ -37,8 +37,9 @@
         ? route('payment-requests.review', $manualPayment)
         : null;
 
-    $transactionIdDisplay = $transaction?->payment_id
-        ?? $transaction?->payment_signature
+    use App\Support\Payments\ReferencePresenter;
+
+    $transactionIdDisplay = ReferencePresenter::forTransaction($transaction)
         ?? ($serviceRequest->payment_transaction_id ? ('#' . $serviceRequest->payment_transaction_id) : null);
 
     $fieldEntries = is_array($fieldEntries ?? null) ? $fieldEntries : [];
@@ -147,7 +148,7 @@
     if ($manualPayment) {
         $paymentInfoRows[] = [
             'label' => __('Reference'),
-            'value' => $normalizeDisplayString($manualPayment->reference) ?? __('N/A'),
+            'value' => $normalizeDisplayString(ReferencePresenter::forManualRequest($manualPayment, $transaction)) ?? __('N/A'),
         ];
 
         $paymentInfoRows[] = [

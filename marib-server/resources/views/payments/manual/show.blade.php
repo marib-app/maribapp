@@ -292,10 +292,27 @@
         ? number_format((float) $request->amount, 2) . ' ' . $request->currency
         : ($normalizeDisplayString($request->amount) ?? __('N/A'));
 
+    // Prefer canonical transaction identifier for requests linked to a payment transaction.
+    $displayReference = null;
+
+    if ($paymentTransaction instanceof \App\Models\PaymentTransaction) {
+        $txRef = $paymentTransaction->payment_id ?? $paymentTransaction->payment_signature ?? null;
+
+        if ($txRef === null || (is_string($txRef) && trim($txRef) === '')) {
+            $txRef = 'TX-' . $paymentTransaction->getKey();
+        }
+
+        $displayReference = $normalizeDisplayString($txRef);
+    }
+
+    if ($displayReference === null) {
+        $displayReference = $normalizeDisplayString($request->reference);
+    }
+
     $paymentInfoRows = [
         [
             'label' => __('Reference'),
-            'value' => $normalizeDisplayString($request->reference) ?? __('N/A'),
+            'value' => $displayReference ?? __('N/A'),
         ],
         [
             'label' => __('Amount'),

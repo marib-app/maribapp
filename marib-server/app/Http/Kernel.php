@@ -51,6 +51,7 @@ class Kernel extends HttpKernel {
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
             'throttle:api',
             InitializeApiMetrics::class,
+            \App\Http\Middleware\StripNumberFields::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
             \App\Http\Middleware\CompressJsonResponse::class,
 

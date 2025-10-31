@@ -628,7 +628,11 @@ class PaymentRequestTableQuery
                 self::statusExpression($paymentTransactionStatusSource) . ' as status_group'
 
             )
-            ->selectRaw("COALESCE(mpr.reference, CONCAT('TX-', pt.id)) as reference")
+            // Use the transaction's payment_id (gateway reference) if present,
+            // otherwise fall back to a TX-<id> token. Do not prefer mpr.reference here
+            // because that may contain a transfer/reference provided on the manual
+            // payment request and would make PT rows show the transfer number.
+            ->selectRaw("COALESCE(NULLIF(pt.payment_id, ''), CONCAT('TX-', pt.id)) as reference")
             ->selectRaw('pt.created_at')
             ->selectRaw($departmentSelect)
             ->selectRaw($paymentManualBankNameSelect . ' as manual_bank_name')

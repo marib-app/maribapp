@@ -15,6 +15,7 @@ use App\Services\WalletService;
 use App\Services\Payments\ManualPaymentRequestService;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Arr;
+use App\Support\InputSanitizer;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use RuntimeException;
@@ -53,6 +54,9 @@ class PackagePaymentService
      */
     public function initiate(User $user, Package $package, string $method, string $idempotencyKey, array $data = []): PaymentTransaction
     {
+        // sanitize client input: strip any *_number fields
+        $data = InputSanitizer::stripNumberFields($data);
+
         $method = $this->normalizePaymentMethod($method);
 
 
@@ -70,6 +74,9 @@ class PackagePaymentService
      */
     public function confirm(User $user, PaymentTransaction $transaction, string $idempotencyKey, array $data = []): PaymentTransaction
     {
+        // sanitize client input: strip any *_number fields
+        $data = InputSanitizer::stripNumberFields($data);
+
         if ($transaction->payment_status === 'succeed') {
             return $transaction;
         }
@@ -199,6 +206,9 @@ class PackagePaymentService
      */
     public function createManual(User $user, Package $package, string $idempotencyKey, array $data = []): PaymentTransaction
     {
+        // sanitize client input: strip any *_number fields
+        $data = InputSanitizer::stripNumberFields($data);
+
         return $this->db->transaction(function () use ($user, $package, $idempotencyKey, $data) {
             $method = 'manual_bank';
             $data['payment_method'] = $method;

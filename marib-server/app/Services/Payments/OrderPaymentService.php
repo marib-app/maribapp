@@ -13,6 +13,7 @@ use App\Services\WalletService;
 use App\Support\ManualPayments\TransferDetailsResolver;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Arr;
+use App\Support\InputSanitizer;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use App\Services\Payments\TransactionAmountResolver;
@@ -67,6 +68,9 @@ class OrderPaymentService
      */
     public function initiate(User $user, Order $order, string $method, string $idempotencyKey, array $data = []): PaymentTransaction
     {
+        // sanitize client input: strip any *_number fields
+        $data = InputSanitizer::stripNumberFields($data);
+
         $method = $this->normalizePaymentMethod($method);
 
         $data['payment_method'] = $method;
@@ -89,6 +93,9 @@ class OrderPaymentService
      */
     public function confirm(User $user, PaymentTransaction $transaction, string $idempotencyKey, array $data = []): PaymentTransaction
     {
+        // sanitize client input: strip any *_number fields
+        $data = InputSanitizer::stripNumberFields($data);
+
         if ($transaction->payment_status === 'succeed') {
             return $transaction;
         }
@@ -232,6 +239,9 @@ class OrderPaymentService
      */
     public function createManual(User $user, Order $order, string $idempotencyKey, array $data = []): PaymentTransaction
     {
+        // sanitize client input: strip any *_number fields
+        $data = InputSanitizer::stripNumberFields($data);
+
         return $this->db->transaction(function () use ($user, $order, $idempotencyKey, $data) {
             $method = $this->normalizePaymentMethod('manual_bank');
             $data['payment_method'] = $method;
@@ -431,8 +441,16 @@ class OrderPaymentService
             }
 
             if ($existing->payment_gateway !== $method) {
-                $existing->payment_gateway = $method;
-                $existing->save();
+                // Do not set payment_gateway to 'manual_bank' on an existing transaction
+                // if it does not yet reference a ManualPaymentRequest. The DB has a
+                // BEFORE UPDATE trigger that will SIGNAL in that case. Defer
+                // setting to 'manual_bank' until a manual_payment_request_id exists.
+                if ($method === 'manual_bank' && ! $existing->manual_payment_request_id) {
+                    // leave existing gateway as-is for now
+                } else {
+                    $existing->payment_gateway = $method;
+                    $existing->save();
+                }
             }
 
 
@@ -480,11 +498,21 @@ class OrderPaymentService
 
 
 
+        $gatewayForInsert = $method;
+
+        // If we're creating a manual_bank transaction but no manual_payment_request_id
+        // is present in the payload, avoid inserting payment_gateway='manual_bank'
+        // because DB triggers will reject that. Insert with an empty gateway and
+        // let the manual-linker attach the manual request and then set the gateway.
+        if ($method === 'manual_bank' && empty($data['manual_payment_request_id'])) {
+            $gatewayForInsert = '';
+        }
+
         return PaymentTransaction::create([
             'user_id' => $user->getKey(),
             'amount' => $amount,
             'currency' => $transactionCurrency,
-            'payment_gateway' => $method,
+            'payment_gateway' => $gatewayForInsert,
             'order_id' => $orderReference,
 
             'payment_status' => 'pending',
@@ -581,12 +609,8 @@ class OrderPaymentService
                 ?? Arr::get($data, 'note')
         );
 
-        $bankId = Arr::get($data, 'manual_bank_id')
-            ?? Arr::get($data, 'bank_id')
-            ?? Arr::get($data, 'payment.bank_id');
-
+        $bankId = Arr::get($data, 'manual_bank_id') ?? Arr::get($data, 'bank_id');
         $normalizedBankId = $this->normalizeManualBankId($bankId);
-
         $hasTransferDetails = $senderName !== null
             || $transferReference !== null
             || $note !== null

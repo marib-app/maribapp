@@ -174,10 +174,17 @@
                                         <td>
                                             <div class="small text-muted">
                                                 @if($transaction->manualPaymentRequest)
-                                                    <div>{{ __('Manual payment request') }}: {{ $transaction->manualPaymentRequest->reference ?? $transaction->manualPaymentRequest->getKey() }}</div>
+                                                    @php
+                                                        use App\Support\Payments\ReferencePresenter;
+                                                        $mprRef = ReferencePresenter::forManualRequest($transaction->manualPaymentRequest, $transaction->paymentTransaction ?? null);
+                                                    @endphp
+                                                    <div>{{ __('Manual payment request') }}: {{ $mprRef ?? $transaction->manualPaymentRequest->getKey() }}</div>
                                                 @endif
                                                 @if($transaction->paymentTransaction)
-                                                    <div>{{ __('Payment transaction') }}: {{ $transaction->paymentTransaction->order_id ?? $transaction->paymentTransaction->getKey() }}</div>
+                                                    @php
+                                                        $txRef = ReferencePresenter::forTransaction($transaction->paymentTransaction);
+                                                    @endphp
+                                                    <div>{{ __('Payment transaction') }}: {{ $txRef ?? $transaction->paymentTransaction->getKey() }}</div>
                                                 @endif
                                                 @if($metaReason)
                                                     <div>{{ __('Reason') }}: {{ Str::headline($metaReason) }}</div>

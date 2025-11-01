@@ -330,6 +330,49 @@ class ManualPaymentSubmissionResult {
     );
   }
 
+
+  static int? _parseInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is num) {
+      if (!value.isFinite) {
+        return null;
+      }
+      final int candidate = value.toInt();
+      if ((value - candidate).abs() < 1e-6) {
+        return candidate;
+      }
+      return null;
+    }
+    final String normalized = value.toString().trim();
+    if (normalized.isEmpty) return null;
+    final int? direct = int.tryParse(normalized);
+    if (direct != null) {
+      return direct;
+    }
+    final double? asDouble = double.tryParse(normalized);
+    if (asDouble != null && asDouble.isFinite) {
+      final int candidate = asDouble.toInt();
+      if ((asDouble - candidate).abs() < 1e-6) {
+        return candidate;
+      }
+    }
+    if (normalized.contains('.')) {
+      return null;
+    }
+    final Match? match = RegExp(r'-?\d+').firstMatch(normalized);
+    if (match != null) {
+      return int.tryParse(match.group(0)!);
+    }
+    return null;
+  }
+
+  int? get manualPaymentIdAsInt => _parseInt(manualPaymentId);
+
+  int? get paymentTransactionIdAsInt => _parseInt(paymentTransactionId);
+
+
+
   static String? _parseIdentifier(dynamic value) {
     if (value == null) return null;
     if (value is String) {

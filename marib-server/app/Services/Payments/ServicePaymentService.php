@@ -231,19 +231,20 @@ class ServicePaymentService
                 $this->detachManualPaymentArtifacts($transaction, 'wallet');
 
 
-                $metaSource = $this->stripManualMeta($transaction->meta ?? []);
-                $meta = $this->mergeServiceMeta($metaSource, $service, $data);
-                $meta = $this->mergePaymentPayloadMeta($meta, $transaction, $data);
-
             }
-            $meta = $this->stripManualMeta($meta);
+
+
+            $walletMetaSource = $this->stripManualMeta($transaction->meta ?? []);
+            $walletMeta = $this->mergeServiceMeta($walletMetaSource, $service, $data);
+            $walletMeta = $this->mergePaymentPayloadMeta($walletMeta, $transaction, $data);
+            $walletMeta = $this->stripManualMeta($walletMeta);
 
             return $this->confirmWalletPayment(
                 $user,
                 $serviceRequest,
                 $service,
                 $transaction,
-                $meta,
+                $walletMeta,
                 $idempotencyKey,
                 $data
             );

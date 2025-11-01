@@ -277,17 +277,31 @@ class PaymentController extends Controller
             $validated['idempotency_key'] ?? null
         );
 
-        $result = $this->paymentFulfillmentService->fulfill(
-            $transaction,
-            ServiceRequest::class,
-            $serviceRequest->getKey(),
-            $userId,
-            [
-                'payment_gateway' => $transaction->payment_gateway,
-            ]
-        );
+        $idempotencyKey = $validated['idempotency_key']
+            ?? $transaction->idempotency_key
+            ?? Str::uuid()->toString();
 
-        $freshTransaction = $result['transaction'] ?? $transaction->fresh();
+        if (! $transaction->idempotency_key) {
+            $transaction->idempotency_key = $idempotencyKey;
+            $transaction->save();
+            $transaction->refresh();
+        }
+
+        $confirmationPayload = [];
+        $explicitMethod = $request->input('payment_method');
+
+        if (is_string($explicitMethod) && $explicitMethod !== '') {
+            $confirmationPayload['payment_method'] = $explicitMethod;
+        }
+
+        $freshTransaction = $this->servicePaymentService->confirm(
+            $request->user(),
+            $transaction,
+            $idempotencyKey,
+            $confirmationPayload
+        )->fresh();
+
+        
         $serviceRequest->refresh();
 
         $statusCode = $this->inferStatusCode($freshTransaction);

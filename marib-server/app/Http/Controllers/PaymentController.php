@@ -19,6 +19,7 @@ use App\Services\OrderCheckoutService;
 use ReflectionClass;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
+use App\Services\LegalNumberingService;
 
 use App\Models\PaymentConfiguration;
 use App\Models\WalletAccount;
@@ -44,7 +45,9 @@ class PaymentController extends Controller
         private readonly PackagePaymentService $packagePaymentService,
         private readonly ServicePaymentService $servicePaymentService,
         private readonly ManualPaymentRequestService $manualPaymentRequestService,
-        private readonly CreateOrLinkManualPaymentRequest $manualPaymentLinker        
+        private readonly CreateOrLinkManualPaymentRequest $manualPaymentLinker,
+        private readonly LegalNumberingService $legalNumberingService
+        
         )
     {
     }
@@ -201,8 +204,9 @@ class PaymentController extends Controller
             $serviceRequest = ServiceRequest::query()
                 ->whereKey($validated['service_request_id'])
                 ->where('user_id', $request->user()->getKey())
-                ->firstOrFail()
-                ->loadMissing('service');
+                ->firstOrFail();
+
+            $serviceRequest->loadMissing('service');
 
             if (! $serviceRequest->service || (int) $serviceRequest->service_id !== (int) $validated['service_id']) {
                 return response()->json([
@@ -212,6 +216,7 @@ class PaymentController extends Controller
                     ],
                 ], 422);
             }
+            $this->ensureServiceRequestNumber($serviceRequest);
 
             if ($conflictResponse = $this->guardServicePaymentIdempotency($serviceRequest, $validated['payment_method'])) {
                 return $conflictResponse;
@@ -1169,7 +1174,7 @@ class PaymentController extends Controller
         $existingTransaction = PaymentTransaction::query()
             ->where('payable_type', ServiceRequest::class)
             ->where('payable_id', $serviceRequest->getKey())
-            ->where('payment_gateway', $normalizedMethod)
+            ->whereIn('payment_gateway', $this->servicePaymentService->paymentGatewayAliases($normalizedMethod))
             ->orderByDesc('id')
             ->first();
 
@@ -1219,6 +1224,27 @@ class PaymentController extends Controller
 
         return null;
     }
+
+
+    private function ensureServiceRequestNumber(ServiceRequest $serviceRequest): void
+    {
+        $current = trim((string) $serviceRequest->request_number);
+
+        if ($current !== '') {
+            return;
+        }
+
+        $reference = trim((string) $this->legalNumberingService->formatOrderNumber($serviceRequest->getKey(), 'services'));
+
+        if ($reference === '') {
+            $reference = (string) $serviceRequest->getKey();
+        }
+
+        $serviceRequest->request_number = $reference;
+        $serviceRequest->save();
+    }
+
+
 
     private function paymentMethodLabel(string $method): string
     {

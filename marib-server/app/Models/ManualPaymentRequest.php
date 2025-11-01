@@ -258,6 +258,63 @@ class ManualPaymentRequest extends Model
         return array_values(array_unique(array_filter($normalized)));
     }
 
+
+
+    /**
+     * Retrieve the known aliases for a canonical payment gateway identifier.
+     *
+     * @return array<int, string>
+     */
+    public static function gatewayAliasesFor(string $canonical): array
+    {
+        $normalized = strtolower(trim($canonical));
+
+        if ($normalized === '' || $normalized === 'null') {
+            return [];
+        }
+
+        $lookupKey = $normalized === 'manual_bank' ? 'manual_banks' : $normalized;
+        $aliases = self::GATEWAY_ALIASES[$lookupKey] ?? [];
+
+        if ($lookupKey === 'manual_banks') {
+            $aliases = array_merge($aliases, [
+                'manual_bank',
+                'manual_banks',
+                'manual bank',
+                'manual banks',
+                'manual-bank',
+                'manual-banks',
+            ]);
+        } elseif ($lookupKey === 'wallet') {
+            $aliases[] = 'wallet';
+        } elseif ($lookupKey === 'east_yemen_bank') {
+            $aliases[] = 'east_yemen_bank';
+        } elseif ($lookupKey === 'cash') {
+            $aliases[] = 'cash';
+        }
+
+        $aliases[] = $normalized;
+
+        if ($lookupKey !== $normalized) {
+            $aliases[] = $lookupKey;
+        }
+
+        $normalizedAliases = array_map(
+            static function ($alias) {
+                if (! is_string($alias)) {
+                    return null;
+                }
+
+                $trimmed = trim($alias);
+
+                return $trimmed === '' ? null : $trimmed;
+            },
+            $aliases
+        );
+
+        return array_values(array_unique(array_filter($normalizedAliases)));
+    }
+
     /**
      * Canonical aliases representing the wallet gateway values.
      *

@@ -207,6 +207,9 @@ class Routes {
   static const myAdvertisment = '/myAdvertisment';
   static const transactionHistory = '/transactionHistory';
   static const wallet = '/wallet';
+  static const walletTransactionDetails = '/wallet/transaction-details';
+  static const paymentRequestDetails = '/wallet/payment-request-details';
+
 
   static const personalizedItemScreen = '/personalizedItemScreen';
   static const myItemScreen = '/myItemScreen';

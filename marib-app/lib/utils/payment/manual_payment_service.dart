@@ -1934,4 +1934,40 @@ class ManualPaymentService {
       throw ApiException(error.toString());
     }
   }
+
+
+
+
+  Future<ManualPayment?> fetchManualPaymentRequestById(int manualRequestId) async {
+    final payments = await fetchMyManualPayments(latestOnly: false);
+    final String target = manualRequestId.toString();
+
+    bool _matches(String? value) {
+      if (value == null) return false;
+      final trimmed = value.trim();
+      if (trimmed.isEmpty) return false;
+      return trimmed == target;
+    }
+
+    for (final ManualPayment payment in payments) {
+      if (_matches(payment.manualPaymentId) ||
+          _matches(payment.paymentTransactionId) ||
+          _matches(payment.transactionIdentifier) ||
+          _matches(payment.transactionReference) ||
+          _matches(payment.manualReference)) {
+        return payment;
+      }
+      final manualData = payment.manualPaymentData;
+      if (manualData != null) {
+        final dynamic candidate = manualData['id'] ?? manualData['manual_payment_id'];
+        if (_matches(candidate?.toString())) {
+          return payment;
+        }
+      }
+    }
+
+    return null;
+  }
+
+
 }

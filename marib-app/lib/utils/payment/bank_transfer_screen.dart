@@ -26,6 +26,8 @@ import 'package:marib/utils/currency_utils.dart';
 import 'package:marib/utils/payment/east_yemen_bank_config.dart';
 import 'package:marib/ui/widgets/standard_bottom_sheet_scaffold.dart';
 import 'package:marib/utils/money_formatter.dart';
+import 'package:marib/utils/payment/payment_route_result.dart';
+
 
 part 'bank_transfer_screen_ui.dart';
 
@@ -1276,7 +1278,14 @@ class _BankTransferScreenState extends State<BankTransferScreen>
             subject: result.subject ?? _subject,
             next: result.next ?? _next,
           );
-          _closeWithResult(enriched);
+          final PaymentRouteResult? routeResult =
+          _buildPaymentRouteResult(enriched);
+          if (routeResult != null) {
+            _closeWithResult(routeResult);
+          } else {
+            _closeWithResult(enriched);
+          }
+
         });
       }
     } catch (e) {
@@ -1286,6 +1295,141 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       if (mounted) setState(() => _submitting = false);
     }
   }
+
+
+
+  PaymentRouteResult? _buildPaymentRouteResult(
+      ManualPaymentSubmissionResult result) {
+    final int? transactionId = _extractPaymentTransactionId(result);
+
+    if (_usingWallet) {
+      if (transactionId != null) {
+        return PaymentRouteResult.wallet(transactionId);
+      }
+      return null;
+    }
+
+    final int? manualRequestId = _extractManualPaymentRequestId(result);
+    if (manualRequestId != null) {
+      return PaymentRouteResult.bank(manualRequestId);
+    }
+
+    if (transactionId != null) {
+      return PaymentRouteResult.wallet(transactionId);
+    }
+
+    return null;
+  }
+
+  int? _extractManualPaymentRequestId(ManualPaymentSubmissionResult result) {
+    final int? direct = result.manualPaymentIdAsInt;
+    if (direct != null) {
+      return direct;
+    }
+
+    int? parseFrom(Map<String, dynamic>? source) {
+      if (source == null || source.isEmpty) {
+        return null;
+      }
+      for (final key in const [
+        'manual_payment_request_id',
+        'manualPaymentRequestId',
+        'manual_payment_id',
+        'manualPaymentId',
+        'id',
+      ]) {
+        if (!source.containsKey(key)) continue;
+        final parsed = _parseInt(source[key]);
+        if (parsed != null) {
+          return parsed;
+        }
+      }
+      return null;
+    }
+
+    final Map<String, dynamic>? manualRequest = result.manualPaymentRequest;
+    final int? fromManual = parseFrom(manualRequest);
+    if (fromManual != null) {
+      return fromManual;
+    }
+
+    final Map<String, dynamic>? subject = result.subject;
+    final int? fromSubject = parseFrom(subject);
+    if (fromSubject != null) {
+      return fromSubject;
+    }
+
+    return parseFrom(result.raw);
+  }
+
+  int? _extractPaymentTransactionId(ManualPaymentSubmissionResult result) {
+    final int? direct = result.paymentTransactionIdAsInt;
+    if (direct != null) {
+      return direct;
+    }
+
+    int? parseFrom(Map<String, dynamic>? source) {
+      if (source == null || source.isEmpty) {
+        return null;
+      }
+      for (final key in const [
+        'payment_transaction_id',
+        'paymentTransactionId',
+        'transaction_id',
+        'transactionId',
+        'id',
+      ]) {
+        if (!source.containsKey(key)) continue;
+        final parsed = _parseInt(source[key]);
+        if (parsed != null) {
+          return parsed;
+        }
+      }
+      return null;
+    }
+
+    final Map<String, dynamic>? transaction = result.paymentTransaction;
+    final int? fromTransaction = parseFrom(transaction);
+    if (fromTransaction != null) {
+      return fromTransaction;
+    }
+
+    final Map<String, dynamic>? manualRequest = result.manualPaymentRequest;
+    final int? fromManual = parseFrom(manualRequest);
+    if (fromManual != null) {
+      return fromManual;
+    }
+
+    final Map<String, dynamic>? next = result.next;
+    final int? fromNext = parseFrom(next);
+    if (fromNext != null) {
+      return fromNext;
+    }
+
+    return parseFrom(result.raw);
+  }
+
+  int? _parseInt(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+    if (value is int) {
+      return value;
+    }
+    if (value is num) {
+      return value.toInt();
+    }
+    final String normalized =
+    value is String ? value.trim() : value.toString().trim();
+    if (normalized.isEmpty) {
+      return null;
+    }
+    return int.tryParse(normalized);
+  }
+
+
+
+
 
   Future<void> _handleConfirmPressed() async {
     if (_submitting) return;

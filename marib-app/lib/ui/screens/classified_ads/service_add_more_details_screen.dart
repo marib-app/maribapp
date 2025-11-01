@@ -26,6 +26,12 @@ import 'package:marib/ui/screens/transaction/manual_payments_controller.dart';
 import 'package:marib/ui/screens/classified_ads/service_add_more_details_screen_ui.dart';
 import 'package:marib/app/navigation/app_page_route.dart';
 import 'package:marib/app/navigation/motion/route_motion.dart';
+import 'package:marib/utils/payment/payment_route_result.dart';
+
+
+
+
+
 
 class ServiceAddMoreDetailsScreen extends StatefulWidget {
   const ServiceAddMoreDetailsScreen({super.key});
@@ -1130,7 +1136,7 @@ class _ServiceAddMoreDetailsScreenState
           ((request.paymentStatus ?? '').toLowerCase() != 'paid');
 
       if (paymentPending) {
-        final bool handled = await _startManualPaymentFlow(
+        final PaymentRouteResult? routeResult = await _startManualPaymentFlow(
           serviceId: _serviceId!,
           serviceRequestId: request.id,
           amount: _amount!,
@@ -1141,7 +1147,8 @@ class _ServiceAddMoreDetailsScreenState
           fallbackTransaction: request.paymentTransactionId,
         );
 
-        if (handled) {
+        if (routeResult != null) {
+          await _handlePaymentRouteNavigation(routeResult);
           return;
         }
 
@@ -1151,11 +1158,12 @@ class _ServiceAddMoreDetailsScreenState
       await _onRequestSubmitted();
     } on ApiHttpException catch (error) {
       if (error.statusCode == 402) {
-        final handled = await _handlePaymentRequired(
+        final PaymentRouteResult? paymentRoute = await _handlePaymentRequired(
           error: error,
         );
 
-        if (handled) {
+        if (paymentRoute != null) {
+          await _handlePaymentRouteNavigation(paymentRoute);
           return;
         }
       }
@@ -1224,7 +1232,7 @@ class _ServiceAddMoreDetailsScreenState
     }
   }
 
-  Future<bool> _startManualPaymentFlow({
+  Future<PaymentRouteResult?> _startManualPaymentFlow({
     required int serviceId,
     required int serviceRequestId,
     required double amount,
@@ -1233,10 +1241,9 @@ class _ServiceAddMoreDetailsScreenState
     String? serviceTitle,
     String? initialGateway,
     dynamic fallbackTransaction,
-    Map<String, dynamic>? initialSubject,
-    Map<String, dynamic>? initialNext,
+
   }) async {
-    if (!mounted) return false;
+    if (!mounted) return null;
 
     _pendingServiceRequestId = serviceRequestId;
 
@@ -1246,7 +1253,7 @@ class _ServiceAddMoreDetailsScreenState
         context,
         'Please sign in to continue with the payment.',
       );
-      return false;
+      return null;
     }
 
     final String? normalizedCurrency =
@@ -1276,25 +1283,31 @@ class _ServiceAddMoreDetailsScreenState
     final dynamic paymentResult = await BankTransferScreen.show(context, args);
 
     if (!mounted) {
-      return false;
+      return null;
     }
 
     if (paymentResult == null || paymentResult == false) {
-      return false;
+      return null;
     }
 
-    final Map<String, dynamic>? navigationSubject =
-        _extractSubjectFromResult(paymentResult) ?? initialSubject;
-    final Map<String, dynamic>? navigationNext =
-        _extractNextFromResult(paymentResult) ?? initialNext;
+    PaymentRouteResult? routeResult;
+    if (paymentResult is PaymentRouteResult) {
+      routeResult = paymentResult;
+    } else if (paymentResult is ManualPaymentSubmissionResult) {
+      routeResult = _buildRouteResultFromSubmission(paymentResult);
+    }
 
-    final ManualPayment? manualPaymentSnapshot =
-        _manualPaymentFromResult(paymentResult,
-            subject: navigationSubject, next: navigationNext);
+    if (routeResult == null) {
+      HelperUtils.showSnackBarMessage(
+        context,
+        'Unable to determine payment result.',
+      );
+      return null;
+    }
 
-    final String? transactionId = _extractPaymentTransactionId(
-      paymentResult,
-      fallback: fallbackTransaction,
+    final int? transactionId = await _resolveTransactionIdForRoute(
+      routeResult,
+      fallbackTransaction: fallbackTransaction,
     );
 
     if (transactionId == null) {
@@ -1302,16 +1315,7 @@ class _ServiceAddMoreDetailsScreenState
         context,
         'Unable to determine payment transaction.',
       );
-      return false;
-    }
-
-    final int? numericTransactionId = int.tryParse(transactionId);
-    if (numericTransactionId == null) {
-      HelperUtils.showSnackBarMessage(
-        context,
-        'Unable to parse payment transaction id.',
-      );
-      return false;
+      return null;
     }
 
     setState(() => _submitting = true);
@@ -1321,23 +1325,18 @@ class _ServiceAddMoreDetailsScreenState
       await _requestRepository.createRequest(
         serviceId: serviceId,
         serviceUid: _serviceUid,
-        paymentTransactionId: numericTransactionId,
+        paymentTransactionId: transactionId,
         serviceRequestId: serviceRequestId,
       );
       submitted = true;
-      await _onRequestSubmitted(
-        subject: navigationSubject,
-        next: navigationNext,
-        transactionId: transactionId,
-        manualPaymentSnapshot: manualPaymentSnapshot,
-      );
-      return true;
+      await _handlePostPaymentSubmission();
+      return routeResult;
     } on ApiHttpException catch (err) {
-      if (!mounted) return false;
+      if (!mounted) return null;
       final String message = err.errorMessage ?? err.payload ?? err.toString();
       HelperUtils.showSnackBarMessage(context, '$message');
     } catch (err) {
-      if (!mounted) return false;
+      if (!mounted) return null;
       HelperUtils.showSnackBarMessage(context, '$err');
     } finally {
       if (!submitted && mounted) {
@@ -1345,8 +1344,193 @@ class _ServiceAddMoreDetailsScreenState
       }
     }
 
-    return false;
+    return null;
   }
+
+
+
+
+  Future<void> _handlePostPaymentSubmission() async {
+    if (!mounted) return;
+    _clearStores();
+    setState(() {
+      _pendingServiceRequestId = null;
+      _submitting = false;
+    });
+    HelperUtils.showSnackBarMessage(
+      context,
+      'Request submitted successfully.',
+    );
+  }
+
+  PaymentRouteResult? _buildRouteResultFromSubmission(
+      ManualPaymentSubmissionResult submission) {
+    final int? manualRequestId = submission.manualPaymentIdAsInt ??
+        _extractIdFromMap(
+          submission.manualPaymentRequest,
+          const [
+            'manual_payment_request_id',
+            'manualPaymentRequestId',
+            'manual_payment_id',
+            'manualPaymentId',
+            'id',
+          ],
+        ) ??
+        _extractIdFromMap(
+          submission.raw,
+          const [
+            'manual_payment_request_id',
+            'manualPaymentRequestId',
+            'manual_payment_id',
+            'manualPaymentId',
+            'id',
+          ],
+        );
+
+    if (manualRequestId != null) {
+      return PaymentRouteResult.bank(manualRequestId);
+    }
+
+    final int? transactionId = submission.paymentTransactionIdAsInt ??
+        _extractIdFromMap(
+          submission.paymentTransaction,
+          const [
+            'payment_transaction_id',
+            'paymentTransactionId',
+            'transaction_id',
+            'transactionId',
+            'id',
+          ],
+        ) ??
+        _extractIdFromMap(
+          submission.raw,
+          const [
+            'payment_transaction_id',
+            'paymentTransactionId',
+            'transaction_id',
+            'transactionId',
+            'id',
+          ],
+        );
+
+    if (transactionId != null) {
+      return PaymentRouteResult.wallet(transactionId);
+    }
+
+    return null;
+  }
+
+  int? _extractIdFromMap(
+      Map<String, dynamic>? source,
+      List<String> keys,
+      ) {
+    if (source == null || source.isEmpty) {
+      return null;
+    }
+    for (final key in keys) {
+      if (!source.containsKey(key)) continue;
+      final int? value = _flexInt(source[key]);
+      if (value != null) {
+        return value;
+      }
+    }
+    return null;
+  }
+
+  Future<int?> _resolveTransactionIdForRoute(
+      PaymentRouteResult routeResult, {
+        dynamic fallbackTransaction,
+      }) async {
+    if (routeResult.kind == PaymentRouteKind.walletSuccess) {
+      final int? direct = routeResult.walletTxnId;
+      if (direct != null) {
+        return direct;
+      }
+      final String? fallback =
+      _extractPaymentTransactionId(fallbackTransaction);
+      return fallback == null ? null : int.tryParse(fallback);
+    }
+
+    final int? manualRequestId = routeResult.manualRequestId;
+    if (manualRequestId != null) {
+      ManualPayment? manualPayment =
+      await _manualPaymentService.fetchManualPaymentRequestById(
+        manualRequestId,
+      );
+
+      if (manualPayment == null) {
+        for (int attempt = 0; attempt < 2 && manualPayment == null; attempt++) {
+          await Future<void>.delayed(const Duration(milliseconds: 500));
+          manualPayment = await _manualPaymentService.fetchManualPaymentRequestById(
+            manualRequestId,
+          );
+        }
+      }
+
+      final int? fromManual = _transactionIdFromManualPayment(manualPayment);
+      if (fromManual != null) {
+        return fromManual;
+      }
+    }
+
+    final String? fallback = _extractPaymentTransactionId(fallbackTransaction);
+    return fallback == null ? null : int.tryParse(fallback);
+  }
+
+  int? _transactionIdFromManualPayment(ManualPayment? manualPayment) {
+    if (manualPayment == null) {
+      return null;
+    }
+
+    final List<dynamic> candidates = <dynamic>[
+      manualPayment.paymentTransactionId,
+      manualPayment.manualPaymentId,
+      manualPayment.transactionIdentifier,
+      manualPayment.transactionReference,
+      manualPayment.manualPaymentData?['payment_transaction_id'],
+      manualPayment.manualPaymentData?['transaction_id'],
+      manualPayment.manualPaymentData?['id'],
+    ];
+
+    for (final dynamic candidate in candidates) {
+      final int? parsed = _flexInt(candidate);
+      if (parsed != null) {
+        return parsed;
+      }
+    }
+
+    return null;
+  }
+
+  Future<void> _handlePaymentRouteNavigation(
+      PaymentRouteResult result) async {
+    if (!mounted) return;
+
+    final NavigatorState navigator = Navigator.of(context);
+    final NavigatorState rootNavigator =
+    Navigator.of(context, rootNavigator: true);
+
+    navigator.pop();
+
+    Future.microtask(() {
+      if (result.kind == PaymentRouteKind.walletSuccess &&
+          result.walletTxnId != null) {
+        rootNavigator.pushNamed(
+          Routes.walletTransactionDetails,
+          arguments: {'id': result.walletTxnId},
+        );
+      } else if (result.kind == PaymentRouteKind.bankTransferCreated &&
+          result.manualRequestId != null) {
+        rootNavigator.pushNamed(
+          Routes.paymentRequestDetails,
+          arguments: {'id': result.manualRequestId},
+        );
+      }
+    });
+  }
+
+
+
 
   Future<void> _navigateToTransactionDetails(String transactionId) async {
     try {
@@ -1670,10 +1854,10 @@ class _ServiceAddMoreDetailsScreenState
     return hasIdentifier || hasEssentials;
   }
 
-  Future<bool> _handlePaymentRequired({
+  Future<PaymentRouteResult?> _handlePaymentRequired({
     required ApiHttpException error,
   }) async {
-    if (!mounted) return false;
+    if (!mounted) return null;
 
     final Map<String, dynamic> payload = _normalizeMap(error.payload);
 
@@ -1695,7 +1879,7 @@ class _ServiceAddMoreDetailsScreenState
         context,
         'Missing service request identifier. Please try again.',
       );
-      return false;
+      return null;
     }
 
     if (mounted) {
@@ -1709,7 +1893,7 @@ class _ServiceAddMoreDetailsScreenState
         context,
         'Unable to determine the service for payment.',
       );
-      return false;
+      return null;
     }
 
     final double? amount =
@@ -1719,7 +1903,7 @@ class _ServiceAddMoreDetailsScreenState
         context,
         'Payment amount is missing or invalid.',
       );
-      return false;
+      return null;
     }
 
     final String? currencyCandidate = _stringify(
@@ -1734,7 +1918,7 @@ class _ServiceAddMoreDetailsScreenState
     final String? serviceTitle =
         _stringify(payload['service_title'] ?? payload['serviceName']);
 
-    final bool handled = await _startManualPaymentFlow(
+    final PaymentRouteResult? routeResult = await _startManualPaymentFlow(
       serviceId: serviceId,
       serviceRequestId: serviceRequestId,
       amount: amount,
@@ -1746,7 +1930,7 @@ class _ServiceAddMoreDetailsScreenState
           payload['payment_transaction'] ?? payload['payment_transaction_id'],
     );
 
-    return handled;
+    return routeResult;
   }
 
   Map<String, dynamic>? _extractSubjectFromResult(dynamic value) {

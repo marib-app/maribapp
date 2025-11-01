@@ -4,9 +4,7 @@ namespace App\Queries;
 
 
 use App\Models\ManualPaymentRequest;
-use App\Models\PaymentTransaction;
 use App\Models\WalletTransaction;
-use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -103,20 +101,8 @@ class PaymentRequestTableQuery
 
         $supportsPaymentGatewayName = Schema::hasTable('payment_transactions')
             && Schema::hasColumn('payment_transactions', 'payment_gateway_name');
-
-        try {
-            $paymentTransactionConnection = PaymentTransaction::query()->getConnection();
-            $supportsPaymentTransactionMeta = self::connectionHasColumn(
-                $paymentTransactionConnection,
-                'payment_transactions',
-                'meta'
-            );
-
-
-        } catch (Throwable $exception) {
-            $supportsPaymentTransactionMeta = false;
-
-        }
+        $supportsPaymentTransactionMeta = Schema::hasTable('payment_transactions')
+            && Schema::hasColumn('payment_transactions', 'meta');
         $supportsWalletMeta = Schema::hasTable('wallet_transactions')
             && Schema::hasColumn('wallet_transactions', 'meta');
 
@@ -134,13 +120,6 @@ class PaymentRequestTableQuery
 
         if ($supportsDepartment) {
             $departmentParts[] = "NULLIF(mpr.department, '')";
-        }
-
-
-        if ($supportsPaymentTransactionMeta) {
-            $departmentParts[] = "NULLIF(TRIM(JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.service.department'))), '')";
-            $departmentParts[] = "NULLIF(TRIM(JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.service.section'))), '')";
-            $departmentParts[] = "NULLIF(TRIM(JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.service.category_title'))), '')";
         }
 
         $departmentSelect = $departmentParts === []
@@ -1104,22 +1083,6 @@ class PaymentRequestTableQuery
 
             return $trimmed !== '' && strtoupper($trimmed) !== 'NULL';
         }));
-    }
-
-
-    private static function connectionHasColumn(ConnectionInterface $connection, string $table, string $column): bool
-    {
-        try {
-            $schema = $connection->getSchemaBuilder();
-
-            if (! $schema->hasTable($table)) {
-                return false;
-            }
-
-            return in_array($column, $schema->getColumnListing($table), true);
-        } catch (Throwable $exception) {
-            return false;
-        }
     }
 
     private static function sqlList(array $values): string

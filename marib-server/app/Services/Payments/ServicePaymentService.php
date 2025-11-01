@@ -8,12 +8,10 @@ use App\Models\PaymentTransaction;
 use App\Models\Service;
 use App\Models\ServiceRequest;
 use App\Models\User;
-use App\Models\WalletTransaction;
 use App\Services\OrderCheckoutService;
 use App\Services\PaymentFulfillmentService;
 use App\Services\Payments\CreateOrLinkManualPaymentRequest;
 use App\Services\Payments\Concerns\HandlesManualBankConfirmation;
-use App\Services\LegalNumberingService;
 use App\Services\WalletService;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Arr;
@@ -71,7 +69,6 @@ class ServicePaymentService
         private readonly PaymentFulfillmentService $fulfillmentService,
         private readonly ManualPaymentRequestService $manualPaymentRequestService,
         private readonly CreateOrLinkManualPaymentRequest $manualPaymentLinker,
-        private readonly LegalNumberingService $legalNumberingService,
     ) {
     }
 
@@ -85,7 +82,7 @@ class ServicePaymentService
 
         $normalizedMethod = $this->normalizePaymentMethod($method);
 
-        $serviceRequest->loadMissing(['service', 'service.category']);
+        $serviceRequest->loadMissing('service');
         $service = $serviceRequest->service;
 
         if (! $service instanceof Service) {
@@ -150,7 +147,7 @@ class ServicePaymentService
             ]);
         }
 
-        $serviceRequest->loadMissing(['service', 'service.category']);
+        $serviceRequest->loadMissing('service');
         $service = $serviceRequest->service;
 
         if (! $service instanceof Service) {
@@ -201,18 +198,6 @@ class ServicePaymentService
             }
         }
 
-
-        $manualRequest = $manualContext['manual_payment_request'] ?? $transaction->manualPaymentRequest;
-
-        $department = $this->resolvePaymentDepartment(
-            $serviceRequest,
-            $service,
-            $manualRequest instanceof ManualPaymentRequest ? $manualRequest : null
-        );
-
-        $data['department'] = $department;
-
-
         $meta = $this->mergeServiceMeta($transaction->meta ?? [], $service, $data);
         $meta = $this->mergePaymentPayloadMeta($meta, $transaction, $data);
 
@@ -234,43 +219,9 @@ class ServicePaymentService
         ];
 
         if ($method === 'wallet') {
-            $walletTransaction = $this->debitWallet($user, $transaction, $idempotencyKey, $service, $data, $meta);
+            $walletTransaction = $this->debitWallet($user, $transaction, $idempotencyKey, $service, $data);
             $options['wallet_transaction'] = $walletTransaction;
-
-            $meta = array_replace_recursive($meta, [
-                'wallet' => [
-                    'transaction_id' => $walletTransaction->getKey(),
-                    'idempotency_key' => $walletTransaction->idempotency_key,
-                    'currency' => $walletTransaction->currency,
-                ],
-            ]);
-            $options['meta'] = $meta;
         }
-
-        if (in_array($method, ['manual_bank', 'east_yemen_bank'], true)) {
-            $department = $this->resolvePaymentDepartment(
-                $serviceRequest,
-                $service,
-                $manualRequest instanceof ManualPaymentRequest ? $manualRequest : null
-            );
-            $officialReference = $this->legalNumberingService->formatPaymentNumber(
-                $transaction->getKey(),
-                $department,
-                $transaction->payment_id
-            );
-            $meta = $this->embedOfficialPaymentReference(
-                $options['meta'],
-                $officialReference,
-                $options['payment_reference'] ?? null
-            );
-            $options['meta'] = $meta;
-            $options['payment_reference'] = $officialReference;
-            $transaction->payment_id = $officialReference;
-
-        }
-
-        $options['meta'] = $meta;
-
 
         if ($transaction->manual_payment_request_id) {
             $options['manual_payment_request_id'] = $transaction->manual_payment_request_id;
@@ -357,11 +308,6 @@ class ServicePaymentService
             );
 
             $transaction->manual_payment_request_id = $manualRequest->getKey();
-
-
-            $department = $this->resolvePaymentDepartment($serviceRequest, $service, $manualRequest);
-            $data['department'] = $department;
-
 
             $meta = $this->mergeServiceMeta($transaction->meta ?? [], $service, $data);
             $meta = $this->mergeManualPayloadMeta($meta, $data, $transaction);
@@ -484,10 +430,6 @@ class ServicePaymentService
             $currency = $this->assertWalletCurrencyCompatibility($user, $currency, true);
         }
 
-
-        $service->loadMissing('category');
-
-
         $meta = $this->buildInitialMeta($service, $amount, $currency, $method, $data);
         $meta['context'] = [
             'type' => 'service_request',
@@ -560,17 +502,6 @@ class ServicePaymentService
             $meta['transfer']['manual_bank_id'] = $manualBank->getKey();
             $data['manual_bank_id'] = $manualBank->getKey();
         }
-
-
-        $department = $this->resolvePaymentDepartment(
-            $serviceRequest,
-            $service,
-            $manualPaymentRequest instanceof ManualPaymentRequest ? $manualPaymentRequest : null
-        );
-
-        $data['department'] = $department;
-        $meta = $this->mergeServiceMeta($meta, $service, $data);
-
 
         $transaction = PaymentTransaction::create([
             'user_id' => $user->getKey(),
@@ -663,66 +594,17 @@ class ServicePaymentService
             'price' => $service->price !== null ? (float) $service->price : null,
             'currency' => $service->currency,
             'service_uid' => $service->service_uid,
-            'category_id' => $service->category_id !== null ? (int) $service->category_id : null,
         ], static fn ($value) => $value !== null && $value !== '');
 
-        $categoryTitle = $this->resolveServiceCategoryTitle($service);
-
-        if ($categoryTitle !== null) {
-            $serviceMeta['category_title'] = $categoryTitle;
-            $serviceMeta['department'] = $categoryTitle;
-            $serviceMeta['section'] = $categoryTitle;
-        }
-
-        $existingServiceMeta = Arr::get($meta, 'service');
-
-        if (! is_array($existingServiceMeta)) {
-            $existingServiceMeta = [];
-        }
-
-        foreach ($serviceMeta as $key => $value) {
-            if ($value === null || $value === '') {
-                continue;
-            }
-
-            if (! array_key_exists($key, $existingServiceMeta) || $this->isEmptyValue($existingServiceMeta[$key])) {
-                $existingServiceMeta[$key] = $value;
-            }
-        }
-
-        $departmentOverride = Arr::get($data, 'department');
-
-        if (is_string($departmentOverride)) {
-            $departmentOverride = trim($departmentOverride);
-
-            if ($departmentOverride !== '') {
-                $existingServiceMeta['department'] = $departmentOverride;
-
-                if (! array_key_exists('section', $existingServiceMeta) || $this->isEmptyValue($existingServiceMeta['section'] ?? null)) {
-                    $existingServiceMeta['section'] = $departmentOverride;
-                }
-
-                if (! array_key_exists('category_title', $existingServiceMeta)
-                    || $this->isEmptyValue($existingServiceMeta['category_title'] ?? null)) {
-                    $existingServiceMeta['category_title'] = $departmentOverride;
-                }
-            }
-        }
-
+        $meta['service'] = array_replace_recursive($serviceMeta, Arr::get($meta, 'service', []));
 
         if (isset($data['payment_transaction_id'])) {
-            $existingServiceMeta['payment_transaction_id'] = $data['payment_transaction_id'];
+            $meta['service']['payment_transaction_id'] = $data['payment_transaction_id'];
         }
 
         if (isset($data['reference']) && is_string($data['reference']) && trim($data['reference']) !== '') {
-            $existingServiceMeta['reference'] = trim((string) $data['reference']);
-
+            $meta['service']['reference'] = trim((string) $data['reference']);
         }
-
-        $meta['service'] = $existingServiceMeta;
-
-
-
 
         return $meta;
     }
@@ -795,58 +677,22 @@ class ServicePaymentService
     /**
      * @param array<string, mixed> $data
      */
-
-    private function debitWallet(
-        User $user,
-        PaymentTransaction $transaction,
-        string $idempotencyKey,
-        Service $service,
-        array $data = [],
-        array $meta = []
-    ) {
+    private function debitWallet(User $user, PaymentTransaction $transaction, string $idempotencyKey, Service $service, array $data = [])
+    {
         try {
-            $walletTransactionId = Arr::get($meta, 'wallet.transaction_id')
-                ?? Arr::get($transaction->meta, 'wallet.transaction_id');
-
-            if ($walletTransactionId) {
-                $existing = WalletTransaction::query()
-                    ->whereKey((int) $walletTransactionId)
-                    ->lockForUpdate()
-                    ->first();
-
-                if ($existing instanceof WalletTransaction) {
-                    return $existing;
-                }
-            }
-
-
             $currency = strtoupper((string) ($transaction->currency ?? $this->resolveServiceCurrency($service, $data)));
 
-            $baseMeta = is_array($transaction->meta) ? $transaction->meta : [];
+            // Add category/section info to meta so UI can show the correct section instead of "unknown"
+            $extraMeta = [
+                'service_id' => $service->getKey(),
+                'service_title' => $service->title,
+                'category_id' => $service->category_id ?? null,
+                'category_title' => optional($service->category)->title ?? null,
+                // also provide 'section' key if frontend expects it
+                'section' => optional($service->category)->title ?? null,
+            ];
 
-            if ($meta !== []) {
-                $baseMeta = array_replace_recursive($baseMeta, $meta);
-            }
-
-            $categoryTitle = $this->resolveServiceCategoryTitle($service);
-
-            if (! isset($baseMeta['service']) || ! is_array($baseMeta['service'])) {
-                $baseMeta['service'] = [];
-            }
-
-            $baseMeta['service']['id'] = $service->getKey();
-            $baseMeta['service']['title'] = $service->title;
-
-            if ($service->category_id !== null) {
-                $baseMeta['service']['category_id'] = (int) $service->category_id;
-            }
-
-            if ($categoryTitle !== null) {
-                $baseMeta['service']['category_title'] = $categoryTitle;
-                $baseMeta['service']['department'] = $categoryTitle;
-                $baseMeta['service']['section'] = $categoryTitle;
-            }
-
+            $meta = array_merge($transaction->meta ?? [], $extraMeta);
 
             // Diagnostic log to help trace wallet debits for services
             Log::info('ServicePaymentService: debitWallet invoked', [
@@ -854,12 +700,12 @@ class ServicePaymentService
                 'payment_transaction_id' => $transaction->getKey(),
                 'amount' => $transaction->amount,
                 'currency' => $currency,
-                'meta_keys' => array_keys($baseMeta),
+                'meta_keys' => array_keys($meta),
             ]);
 
             return $this->walletService->debit($user, $idempotencyKey, (float) $transaction->amount, [
                 'payment_transaction' => $transaction,
-                'meta' => $baseMeta,
+                'meta' => $meta,
                 'currency' => $currency,
             ]);
         } catch (RuntimeException $exception) {
@@ -888,40 +734,6 @@ class ServicePaymentService
                 'amount' => $amount,
             ],
         ];
-
-
-        if ($service->category_id !== null) {
-            $meta['service']['category_id'] = (int) $service->category_id;
-        }
-
-        $categoryTitle = $this->resolveServiceCategoryTitle($service);
-
-        if ($categoryTitle !== null) {
-            $meta['service']['category_title'] = $categoryTitle;
-            $meta['service']['department'] = $categoryTitle;
-            $meta['service']['section'] = $categoryTitle;
-        }
-
-        $departmentOverride = Arr::get($data, 'department');
-
-        if (is_string($departmentOverride)) {
-            $departmentOverride = trim($departmentOverride);
-
-            if ($departmentOverride !== '') {
-                $meta['service']['department'] = $departmentOverride;
-
-                if (! array_key_exists('section', $meta['service']) || $this->isEmptyValue($meta['service']['section'] ?? null)) {
-                    $meta['service']['section'] = $departmentOverride;
-                }
-
-                if (! array_key_exists('category_title', $meta['service'])
-                    || $this->isEmptyValue($meta['service']['category_title'] ?? null)) {
-                    $meta['service']['category_title'] = $departmentOverride;
-                }
-            }
-        }
-
- 
 
         if (isset($data['metadata']) && is_array($data['metadata'])) {
             $meta['payload']['metadata'] = $data['metadata'];
@@ -969,28 +781,6 @@ class ServicePaymentService
 
         return strtoupper($currency);
     }
-
-    private function resolveServiceCategoryTitle(Service $service): ?string
-    {
-        $service->loadMissing('category');
-
-        $category = $service->category;
-
-        if (! $category) {
-            return null;
-        }
-
-        $title = $category->translated_name ?? $category->name ?? null;
-
-        if (! is_string($title)) {
-            return null;
-        }
-
-        $trimmed = trim($title);
-
-        return $trimmed !== '' ? $trimmed : null;
-    }
-
 
     private function normalizePaymentMethod(?string $method): string
     {
@@ -1041,66 +831,6 @@ class ServicePaymentService
         return $currency;
     }
 
-    private function resolvePaymentDepartment(
-        ServiceRequest $serviceRequest,
-        Service $service,
-        ?ManualPaymentRequest $manualRequest = null
-    ): string {
-        $candidates = [
-            $manualRequest?->department ?? null,
-            Arr::get($serviceRequest->payload ?? [], 'department'),
-            $this->resolveServiceCategoryTitle($service),
-            'services',
-        ];
-
-        foreach ($candidates as $candidate) {
-            if (is_string($candidate)) {
-                $trimmed = trim($candidate);
-
-                if ($trimmed !== '') {
-                    return $this->legalNumberingService->normalizeDepartment($trimmed);
-                }
-            }
-        }
-
-        return $this->legalNumberingService->normalizeDepartment(null);
-    }
-
-    private function embedOfficialPaymentReference(
-        array $meta,
-        string $officialReference,
-        ?string $userReference = null
-    ): array {
-        data_set($meta, 'payment_reference', $officialReference);
-        data_set($meta, 'payload.official_reference', $officialReference);
-        data_set($meta, 'payload.canonical_reference', $officialReference);
-        data_set($meta, 'service.payment_reference', $officialReference);
-
-        if (is_string($userReference) && trim($userReference) !== '') {
-            $trimmed = trim($userReference);
-            data_set($meta, 'manual.user_reference', $trimmed);
-            data_set($meta, 'manual.reference', $trimmed);
-            data_set($meta, 'payload.reference', $trimmed);
-        }
-
-        return $meta;
-    }
-
-    private function isEmptyValue($value): bool
-    {
-        if ($value === null) {
-            return true;
-        }
-
-        if (is_string($value)) {
-            return trim($value) === '';
-        }
-
-        return false;
-    }
-
-
-
     private function detachManualPaymentArtifacts(PaymentTransaction $transaction): void
     {
         $manualRequest = $transaction->manualPaymentRequest;
@@ -1119,10 +849,6 @@ class ServicePaymentService
 
         $transaction->manual_payment_request_id = null;
         $transaction->meta = $this->stripManualMeta($transaction->meta);
-        $transaction->payment_gateway_name = null;
-        $transaction->gateway_label = null;
-        $transaction->channel_label = null;
-        $transaction->payment_gateway_label = null;
         $transaction->saveQuietly();
     }
 

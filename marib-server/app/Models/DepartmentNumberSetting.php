@@ -13,16 +13,13 @@ class DepartmentNumberSetting extends Model
         'legal_numbering_enabled',
         'order_prefix',
         'invoice_prefix',
-        'payment_prefix',
         'next_order_number',
         'next_invoice_number',
-        'next_payment_number',
     ];
 
     protected $casts = [
         'legal_numbering_enabled' => 'bool',
         'next_order_number' => 'int',
         'next_invoice_number' => 'int',
-        'next_payment_number' => 'int',
     ];
 }

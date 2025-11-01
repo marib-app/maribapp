@@ -134,9 +134,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
 
   List<ManualPayment> _filteredTransactions(List<ManualPayment> transactions) {
     if (_selectedFilter == _TransactionsFilter.all) {
-      return transactions
-          .where((ManualPayment mp) => !_isServiceTransaction(mp))
-          .toList();
+      return List<ManualPayment>.from(transactions);
     }
 
     return transactions
@@ -147,7 +145,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
   int _countForFilter(
       List<ManualPayment> transactions, _TransactionsFilter filter) {
     if (filter == _TransactionsFilter.all) {
-      return transactions.where((mp) => !_isServiceTransaction(mp)).length;
+      return transactions.length;
     }
     return transactions.where((mp) => _matchesFilter(mp, filter)).length;
   }
@@ -181,9 +179,6 @@ class _TransactionScreenState extends State<TransactionScreen> {
 
     return null;
   }
-
-  bool _isServiceTransaction(ManualPayment mp) =>
-      _resolveCategory(mp) == _TransactionsFilter.services;
 
   void _onFilterSelected(_TransactionsFilter filter) {
     if (_selectedFilter == filter) return;

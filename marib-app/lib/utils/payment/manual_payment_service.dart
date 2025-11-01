@@ -10,6 +10,7 @@ import 'package:meta/meta.dart';
 import 'package:marib/utils/payment/east_yemen_bank_config.dart';
 
 const String manualPaymentWalletTopUpPurpose = 'wallet_top_up';
+const String _fallbackCurrencyCode = 'YER';
 
 const Set<String> _zeroDecimalCurrencies = {
   'BIF',
@@ -653,7 +654,9 @@ class ManualPaymentService {
   }) {
     final String purposeValue = purpose.trim();
     final String methodValue = paymentMethod.trim();
-    final String currencyValue = currency.trim();
+    final String trimmedCurrency = currency.trim();
+    final String currencyValue =
+        trimmedCurrency.isNotEmpty ? trimmedCurrency.toUpperCase() : _fallbackCurrencyCode;
     final String normalizedPurpose = purposeValue.toLowerCase();
 
     final Map<String, dynamic> payload = <String, dynamic>{};
@@ -667,7 +670,7 @@ class ManualPaymentService {
     }
 
     if (currencyValue.isNotEmpty) {
-      payload['currency'] = currencyValue.toUpperCase();
+      payload['currency'] = currencyValue;
     }
 
     if (normalizedPurpose == 'order' && orderId != null) {
@@ -1166,13 +1169,14 @@ class ManualPaymentService {
               ? normalizedCurrency.toUpperCase()
               : null;
 
+      final String resolvedCurrency =
+          (upperCurrency != null && upperCurrency.isNotEmpty)
+              ? upperCurrency
+              : _fallbackCurrencyCode;
+
       String? formattedAmount;
       if (amount != null && amount > 0) {
-        if (upperCurrency != null && upperCurrency.isNotEmpty) {
-          formattedAmount = formatManualPaymentAmount(amount, upperCurrency);
-        } else {
-          formattedAmount = amount.toStringAsFixed(2);
-        }
+        formattedAmount = formatManualPaymentAmount(amount, resolvedCurrency);
       }
 
       final int? sanitizedOrderId =
@@ -1180,12 +1184,10 @@ class ManualPaymentService {
 
       final String purposeForBody = resolvedPurpose ?? '';
       final String methodForBody = apiPaymentMethod ?? '';
-      final String currencyForBody = upperCurrency ?? '';
-
       final Map<String, dynamic> body = ManualPaymentService.buildPaymentBody(
         purpose: purposeForBody,
         paymentMethod: methodForBody,
-        currency: currencyForBody,
+        currency: resolvedCurrency,
         orderId: sanitizedOrderId,
         serviceId: serviceId,
         serviceRequestId: serviceRequestId,

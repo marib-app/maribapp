@@ -19,6 +19,7 @@ use App\Support\InputSanitizer;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use RuntimeException;
+use Illuminate\Support\Facades\Log;
 
 class ServicePaymentService
 {
@@ -681,11 +682,30 @@ class ServicePaymentService
         try {
             $currency = strtoupper((string) ($transaction->currency ?? $this->resolveServiceCurrency($service, $data)));
 
+            // Add category/section info to meta so UI can show the correct section instead of "unknown"
+            $extraMeta = [
+                'service_id' => $service->getKey(),
+                'service_title' => $service->title,
+                'category_id' => $service->category_id ?? null,
+                'category_title' => optional($service->category)->title ?? null,
+                // also provide 'section' key if frontend expects it
+                'section' => optional($service->category)->title ?? null,
+            ];
+
+            $meta = array_merge($transaction->meta ?? [], $extraMeta);
+
+            // Diagnostic log to help trace wallet debits for services
+            Log::info('ServicePaymentService: debitWallet invoked', [
+                'user_id' => $user->getKey(),
+                'payment_transaction_id' => $transaction->getKey(),
+                'amount' => $transaction->amount,
+                'currency' => $currency,
+                'meta_keys' => array_keys($meta),
+            ]);
+
             return $this->walletService->debit($user, $idempotencyKey, (float) $transaction->amount, [
                 'payment_transaction' => $transaction,
-                'meta' => array_merge($transaction->meta ?? [], [
-                    'service_id' => $service->getKey(),
-                ]),
+                'meta' => $meta,
                 'currency' => $currency,
             ]);
         } catch (RuntimeException $exception) {

@@ -241,7 +241,7 @@ class _ClassifiedScreenState extends State<ClassifiedScreen> {
             if (state is FetchServicesInProgress) {
               return Column(
                 children: [
-                  const SliderShimmer(),
+                  SliderWidget(interfaceType: widget.interfaceType),
                   Expanded(child: buildClassifiedShimmerGrid(context)),
                 ],
               );
@@ -592,7 +592,7 @@ Widget buildClassifiedShimmerGrid(BuildContext context) {
     padding: EdgeInsets.all(ScreenScaler.s(8)),
     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
       crossAxisCount: 3,
-      crossAxisSpacing: ScreenScaler.s(6),
+      crossAxisSpacing: ScreenScaler.s(8),
       mainAxisSpacing: ScreenScaler.s(8),
       childAspectRatio: 0.54,
     ),

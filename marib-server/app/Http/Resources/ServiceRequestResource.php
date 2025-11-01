@@ -4,7 +4,6 @@ namespace App\Http\Resources;
 
 use App\Models\Service;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Arr;
 
 class ServiceRequestResource extends JsonResource
 {
@@ -107,11 +106,26 @@ class ServiceRequestResource extends JsonResource
         $keysList = is_array($keys) ? $keys : [$keys];
 
         foreach ($keysList as $key) {
-            if (! is_string($key) || $key === '') {
+            $lookupKey = null;
+
+            if (is_string($key) && $key !== '') {
+                $lookupKey = $key;
+            } elseif (is_array($key)) {
+                $segments = array_values(array_filter(
+                    $key,
+                    static fn ($segment) => is_string($segment) && $segment !== ''
+                ));
+
+                if ($segments !== []) {
+                    $lookupKey = implode('.', $segments);
+                }
+            }
+
+            if ($lookupKey === null) {
                 continue;
             }
 
-            $value = Arr::get($this->resource, $key);
+            $value = data_get($this->resource, $lookupKey);
 
             if ($value !== null) {
                 return $value;

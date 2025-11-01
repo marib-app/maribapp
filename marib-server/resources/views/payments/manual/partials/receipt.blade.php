@@ -96,6 +96,48 @@
         $isImage = in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'svgz', 'heic', 'heif'], true);
     }
 
+    // Fallbacks: check for base64/data URIs or raw base64 stored in meta fields, and attempt to resolve
+    // storage path to public URL if earlier resolution failed.
+    if (! $receiptUrl) {
+        // common meta locations for embedded/base64 data
+        $maybeBase64 = data_get($rawMeta, 'receipt.data')
+            ?? data_get($rawMeta, 'transfer.receipt_data')
+            ?? data_get($rawMeta, 'transfer_details.receipt_data')
+            ?? data_get($rawMeta, 'attachments.0.data');
+
+        if (is_string($maybeBase64) && trim($maybeBase64) !== '') {
+            $maybeBase64Trim = trim($maybeBase64);
+
+            // If already a data URI, use it directly.
+            if (str_starts_with($maybeBase64Trim, 'data:')) {
+                $receiptUrl = $maybeBase64Trim;
+                $isImage = str_starts_with(strtolower($maybeBase64Trim), 'data:image/');
+            } else {
+                // Try to detect raw base64 by checking length and allowed chars (very permissive).
+                $base64Candidate = preg_replace('/\s+/', '', $maybeBase64Trim);
+                if (preg_match('/^[A-Za-z0-9+\/=]+$/', $base64Candidate) && strlen($base64Candidate) > 100) {
+                    // assume PNG if unknown
+                    $receiptUrl = 'data:image/png;base64,' . $base64Candidate;
+                    $isImage = true;
+                }
+            }
+        }
+    }
+
+    // If we have a path (not a full URL) try to build a public storage URL as a last resort.
+    if ($receiptUrl && ! filter_var($receiptUrl, FILTER_VALIDATE_URL) && ! str_starts_with($receiptUrl, 'data:')) {
+        try {
+            // Attempt the storage url again via the public storage path helper
+            $possible = url('storage/' . ltrim($receiptUrl, '/'));
+
+            if (is_string($possible) && trim($possible) !== '') {
+                $receiptUrl = $possible;
+            }
+        } catch (Throwable) {
+            // ignore
+        }
+    }
+
     $downloadName = null;
 
     if (is_string($receiptName) && trim($receiptName) !== '') {

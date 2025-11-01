@@ -3,7 +3,6 @@
 namespace App\Http\Resources;
 
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Arr;
 
 class OrderResource extends JsonResource
 {
@@ -32,7 +31,7 @@ class OrderResource extends JsonResource
 
     private function stringValue(string|array $keys): ?string
     {
-        $value = Arr::get($this->resource, $keys);
+        $value = $this->valueForKeys($keys);
 
         if (! is_string($value)) {
             return null;
@@ -45,7 +44,7 @@ class OrderResource extends JsonResource
 
     private function integerValue(string|array $keys): ?int
     {
-        $value = Arr::get($this->resource, $keys);
+        $value = $this->valueForKeys($keys);
 
         if (! is_numeric($value)) {
             return null;
@@ -56,7 +55,7 @@ class OrderResource extends JsonResource
 
     private function numericValue(string|array $keys): ?float
     {
-        $value = Arr::get($this->resource, $keys);
+        $value = $this->valueForKeys($keys);
 
         if (! is_numeric($value)) {
             return null;
@@ -67,7 +66,7 @@ class OrderResource extends JsonResource
 
     private function dateTimeValue(string $key): ?string
     {
-        $value = Arr::get($this->resource, $key);
+        $value = $this->valueForKeys($key);
 
         if ($value instanceof \DateTimeInterface) {
             return $value->format(\DateTimeInterface::ATOM);
@@ -77,6 +76,40 @@ class OrderResource extends JsonResource
             $trimmed = trim($value);
 
             return $trimmed === '' ? null : $trimmed;
+        }
+
+        return null;
+}
+
+    private function valueForKeys(string|array $keys): mixed
+    {
+        $keysList = is_array($keys) ? $keys : [$keys];
+
+        foreach ($keysList as $key) {
+            $lookupKey = null;
+
+            if (is_string($key) && $key !== '') {
+                $lookupKey = $key;
+            } elseif (is_array($key)) {
+                $segments = array_values(array_filter(
+                    $key,
+                    static fn ($segment) => is_string($segment) && $segment !== ''
+                ));
+
+                if ($segments !== []) {
+                    $lookupKey = implode('.', $segments);
+                }
+            }
+
+            if ($lookupKey === null) {
+                continue;
+            }
+
+            $value = data_get($this->resource, $lookupKey);
+
+            if ($value !== null) {
+                return $value;
+            }
         }
 
         return null;

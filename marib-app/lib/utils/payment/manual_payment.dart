@@ -173,6 +173,7 @@ class ManualPayment {
         mapify(metadata?['manual_bank']);
     final bankMeta = manualBankData ?? mapify(metadata?['bank']);
     final manualMeta = mapify(metadata?['manual']);
+    final Map<String, dynamic>? payloadMeta = mapify(metadata?['payload']);
 
     final paymentTransactionId = toStr(
         json['payment_transaction_id'] ?? json['transaction_id'] ?? json['id']);
@@ -208,7 +209,15 @@ class ManualPayment {
               json['payment_gateway_normalized'],
         ) ??
         paymentGatewayRaw;
-    final canonicalGateway = _canonicalGateway(gatewayKeyCandidate);
+    String canonicalGateway = _canonicalGateway(gatewayKeyCandidate);
+
+    final String? payloadMethod = toStr(payloadMeta?['payment_method']);
+    final String canonicalFromPayload = _canonicalGateway(payloadMethod);
+    if (canonicalGateway == 'manual_bank' &&
+        canonicalFromPayload.isNotEmpty &&
+        canonicalFromPayload != 'manual_bank') {
+      canonicalGateway = canonicalFromPayload;
+    }
 
     final paymentStatus = toStr(
           json['payment_status'] ??
@@ -310,6 +319,60 @@ class ManualPayment {
         ? null
         : Map<String, dynamic>.unmodifiable(manualBankData);
 
+    String? rawPayableType = toStr(
+      json['payable_type'] ??
+          manualData?['payable_type'] ??
+          metadata?['payable_type'] ??
+          context?['payable_type'],
+    );
+
+    bool matchesService(dynamic value) {
+      final String? str = toStr(value);
+      if (str == null) return false;
+      final String normalized = str.toLowerCase().trim();
+      if (normalized.isEmpty) return false;
+      return normalized.contains('service');
+    }
+
+    bool isServiceRequest = matchesService(rawPayableType) ||
+        matchesService(context?['type']) ||
+        matchesService(metadata?['type']);
+
+    final Map<String, dynamic>? serviceMeta =
+        mapify(metadata?['service']) ??
+            mapify(payloadMeta?['service']) ??
+            mapify(context?['service']) ??
+            mapify(json['service']) ??
+            mapify(manualData?['service']);
+
+    final int? serviceRequestId = toInt(
+      json['service_request_id'] ??
+          manualData?['service_request_id'] ??
+          metadata?['service_request_id'] ??
+          context?['service_request_id'] ??
+          serviceMeta?['service_request_id'],
+    );
+
+    if (serviceRequestId != null) {
+      isServiceRequest = true;
+    }
+
+    final String? serviceTitleCandidate = toStr(
+      serviceMeta?['title'] ??
+          serviceMeta?['name'] ??
+          context?['service_title'] ??
+          metadata?['service_title'],
+    );
+
+    String? serviceDetailsLabel;
+    if (serviceTitleCandidate != null && serviceRequestId != null) {
+      serviceDetailsLabel = '$serviceTitleCandidate (#$serviceRequestId)';
+    } else if (serviceTitleCandidate != null) {
+      serviceDetailsLabel = serviceTitleCandidate;
+    } else if (serviceRequestId != null) {
+      serviceDetailsLabel = '#$serviceRequestId';
+    }
+
     return ManualPayment(
       manualPaymentId: toStr(json['manual_payment_id'] ?? manualData?['id']),
       paymentTransactionId: paymentTransactionId,
@@ -340,12 +403,14 @@ class ManualPayment {
             metadata?['message'],
       ),
       receiptUrl: toStr(json['receipt_url'] ?? manualData?['receipt_url']),
-      payableType: toStr(json['payable_type'] ?? manualData?['payable_type']),
+      payableType: rawPayableType,
       payableId: toInt(json['payable_id'] ?? manualData?['payable_id']),
       payable: payable,
       context: context,
       metadata: metadata,
       manualPaymentData: manualData,
+      isServiceRequest: isServiceRequest,
+      serviceDetailsLabel: serviceDetailsLabel,
     );
   }
 

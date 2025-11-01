@@ -205,7 +205,14 @@ class ServicePaymentService
             }
         }
 
-        $meta = $this->mergeServiceMeta($transaction->meta ?? [], $service, $data);
+        $metaSource = $transaction->meta ?? [];
+
+        if ($method === 'wallet') {
+            $metaSource = $this->stripManualMeta($metaSource);
+        }
+
+        $meta = $this->mergeServiceMeta($metaSource, $service, $data);
+        
         $meta = $this->mergePaymentPayloadMeta($meta, $transaction, $data);
 
         if ($manualContext !== null) {
@@ -222,6 +229,12 @@ class ServicePaymentService
         if ($method === 'wallet') {
             if ($transaction->manual_payment_request_id) {
                 $this->detachManualPaymentArtifacts($transaction, 'wallet');
+
+
+                $metaSource = $this->stripManualMeta($transaction->meta ?? []);
+                $meta = $this->mergeServiceMeta($metaSource, $service, $data);
+                $meta = $this->mergePaymentPayloadMeta($meta, $transaction, $data);
+
             }
 
             return $this->confirmWalletPayment(

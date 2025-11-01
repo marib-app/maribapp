@@ -175,7 +175,11 @@ class ServicePaymentService
         // attached/created the manual payment request.
         $deferredGateway = null;
         if ($transaction->payment_gateway !== $method) {
-            if ($method === 'manual_bank' && ! $transaction->manual_payment_request_id) {
+            if ($method === 'wallet' && $transaction->manual_payment_request_id) {
+                $this->detachManualPaymentArtifacts($transaction, 'wallet', false);
+                $transaction->payment_gateway = $method;
+                $transaction->save();
+            } elseif ($method === 'manual_bank' && ! $transaction->manual_payment_request_id) {
                 $deferredGateway = $method;
             } else {
                 $transaction->payment_gateway = $method;
@@ -217,7 +221,7 @@ class ServicePaymentService
 
         if ($method === 'wallet') {
             if ($transaction->manual_payment_request_id) {
-                $this->detachManualPaymentArtifacts($transaction);
+                $this->detachManualPaymentArtifacts($transaction, 'wallet');
             }
 
             return $this->confirmWalletPayment(
@@ -514,7 +518,14 @@ class ServicePaymentService
                 ]);
             }
 
+            $shouldDetachManual = $method === 'wallet' && $existing->manual_payment_request_id;
+
             if ($existing->payment_gateway !== $method) {
+                if ($shouldDetachManual) {
+                    $this->detachManualPaymentArtifacts($existing, 'wallet', false);
+                    $shouldDetachManual = false;
+                }
+
                 $existing->payment_gateway = $method;
                 $existing->save();
             }
@@ -524,8 +535,8 @@ class ServicePaymentService
                 $existing->save();
             }
 
-            if ($method === 'wallet' && $existing->manual_payment_request_id) {
-                $this->detachManualPaymentArtifacts($existing);
+            if ($shouldDetachManual) {
+                $this->detachManualPaymentArtifacts($existing, 'wallet');
             }
 
             return $existing;
@@ -559,12 +570,19 @@ class ServicePaymentService
                 $needsUpdate = true;
             }
 
+            $shouldDetachManual = $method === 'wallet' && $activeDuplicate->manual_payment_request_id;
+
             if ($needsUpdate) {
+                if ($shouldDetachManual) {
+                    $this->detachManualPaymentArtifacts($activeDuplicate, 'wallet', false);
+                    $shouldDetachManual = false;
+                }
+
                 $activeDuplicate->save();
             }
 
-            if ($method === 'wallet' && $activeDuplicate->manual_payment_request_id) {
-                $this->detachManualPaymentArtifacts($activeDuplicate);
+            if ($shouldDetachManual) {
+                $this->detachManualPaymentArtifacts($activeDuplicate, 'wallet');
             }
 
             return $activeDuplicate;
@@ -981,7 +999,12 @@ class ServicePaymentService
         return $currency;
     }
 
-    private function detachManualPaymentArtifacts(PaymentTransaction $transaction): void
+    private function detachManualPaymentArtifacts(
+        PaymentTransaction $transaction,
+        ?string $nextGateway = null,
+        bool $persistTransaction = true
+    ): void
+    
     {
         $manualRequest = $transaction->manualPaymentRequest;
 
@@ -999,7 +1022,19 @@ class ServicePaymentService
 
         $transaction->manual_payment_request_id = null;
         $transaction->meta = $this->stripManualMeta($transaction->meta);
-        $transaction->saveQuietly();
+
+        if ($nextGateway !== null) {
+            $transaction->payment_gateway = $nextGateway;
+        }
+
+        if ($persistTransaction) {
+            if ($transaction->payment_gateway === 'manual_bank' && $transaction->manual_payment_request_id === null) {
+                return;
+            }
+
+            $transaction->saveQuietly();
+        }
+    
     }
 
     private function stripManualMeta($meta): array

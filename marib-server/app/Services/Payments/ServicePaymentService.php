@@ -236,6 +236,7 @@ class ServicePaymentService
                 $meta = $this->mergePaymentPayloadMeta($meta, $transaction, $data);
 
             }
+            $meta = $this->stripManualMeta($meta);
 
             return $this->confirmWalletPayment(
                 $user,

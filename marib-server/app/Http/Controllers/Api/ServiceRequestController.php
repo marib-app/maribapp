@@ -390,7 +390,7 @@ class ServiceRequestController extends Controller
                 $notificationResponse = NotificationService::sendFcmNotification(
                     $tokens,
                     'طلبك قيد المراجعة',
-                    'تم إرسال طلبك بنجاح. طلبك الآن قيد المراجعة وسيتم التواصل معك فور مراجعة الطلب، وستصلك إشعارات بأي تحديث.',
+                    'تم إرسال طلبك بنجاح. طلبك الآن قيد المراجعة وسيتم التواصل معك فور مراجعة الطلب .',
                     'service-request-created',
                     [
                         'data' => json_encode($notificationPayload, JSON_UNESCAPED_UNICODE),

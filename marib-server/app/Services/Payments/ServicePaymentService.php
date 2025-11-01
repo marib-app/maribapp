@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use App\Support\Payments\PaymentLabelService;
 use InvalidArgumentException;
+use App\Models\WalletAccount;
 
 
 class ServicePaymentService
@@ -74,6 +75,98 @@ class ServicePaymentService
         private readonly CreateOrLinkManualPaymentRequest $manualPaymentLinker,
     ) {
     }
+
+
+    /**
+     * @param array<string, mixed> $data
+     * @return array{amount: float, currency: string}
+     */
+    public function resolvePaymentQuote(Service $service, array $data = []): array
+    {
+        $amount = $this->resolveServiceAmount($service, $data);
+        $currency = $this->resolveServiceCurrency($service, $data);
+
+        return [
+            'amount' => $amount,
+            'currency' => strtoupper($currency),
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     * @return array<int, string>
+     */
+    public function determineAvailableGateways(
+        User $user,
+        ServiceRequest $serviceRequest,
+        Service $service,
+        array $data = []
+    ): array {
+        try {
+            $quote = $this->resolvePaymentQuote($service, $data);
+        } catch (ValidationException $exception) {
+            Log::warning('service_payment.quote_resolution_failed', [
+                'service_id' => $service->getKey(),
+                'service_request_id' => $serviceRequest->getKey(),
+                'user_id' => $user->getKey(),
+                'message' => $exception->getMessage(),
+            ]);
+
+            $fallbackCurrency = strtoupper((string) ($service->currency ?: config('app.currency', 'YER')));
+            $quote = [
+                'amount' => max(0.0, (float) ($service->price ?? 0.0)),
+                'currency' => $fallbackCurrency,
+            ];
+        }
+
+        $walletAccount = $this->walletService->findAccount($user, $quote['currency']);
+        $walletBalance = $walletAccount instanceof WalletAccount ? (float) $walletAccount->balance : 0.0;
+        $walletSufficient = $quote['amount'] > 0
+            ? $walletBalance >= $quote['amount']
+            : $walletBalance > 0;
+
+        if ($walletSufficient) {
+            return ['wallet'];
+        }
+
+        return array_values(array_unique(self::SUPPORTED_METHODS));
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     * @return array{amount: float, currency: string}
+     */
+    private function resolveQuoteWithFallback(
+        ?PaymentTransaction $transaction,
+        Service $service,
+        array $data = []
+    ): array {
+        try {
+            return $this->resolvePaymentQuote($service, $data);
+        } catch (ValidationException $exception) {
+            $amount = $transaction?->amount;
+
+            if ($amount === null || (float) $amount <= 0) {
+                throw $exception;
+            }
+
+            $currency = $transaction?->currency
+                ?? $service->currency
+                ?? config('app.currency', 'YER');
+
+            Log::notice('service_payment.quote_fallback', [
+                'service_id' => $service->getKey(),
+                'transaction_id' => $transaction?->getKey(),
+                'message' => $exception->getMessage(),
+            ]);
+
+            return [
+                'amount' => round((float) $amount, 2),
+                'currency' => strtoupper((string) $currency),
+            ];
+        }
+    }
+
 
     /**
      * @param array<string, mixed> $data
@@ -204,6 +297,22 @@ class ServicePaymentService
                 $data = $manualContext['data'];
             }
         }
+
+        $quote = $this->resolveQuoteWithFallback($transaction, $service, $data);
+        $resolvedCurrency = $quote['currency'];
+
+        if ($method === 'wallet') {
+            $resolvedCurrency = $this->assertWalletCurrencyCompatibility($user, $resolvedCurrency, false);
+        }
+
+        $transaction->forceFill([
+            'amount' => round($quote['amount'], 2),
+            'currency' => strtoupper($resolvedCurrency),
+        ]);
+
+        $data['amount'] = $quote['amount'];
+        $data['currency'] = $resolvedCurrency;
+
 
         $metaSource = $transaction->meta ?? [];
 
@@ -533,25 +642,39 @@ class ServicePaymentService
                 ]);
             }
 
-            $shouldDetachManual = $method === 'wallet' && $existing->manual_payment_request_id;
+            $quote = $this->resolveQuoteWithFallback($existing, $service, $data);
+            $currency = $quote['currency'];
+
+
+            if ($method === 'wallet' && $existing->manual_payment_request_id) {
+                $this->detachManualPaymentArtifacts($existing, 'wallet', false);
+            }
+
+            if ($method === 'wallet') {
+                $currency = $this->assertWalletCurrencyCompatibility($user, $currency, true);
+            }
 
             if ($existing->payment_gateway !== $method) {
-                if ($shouldDetachManual) {
-                    $this->detachManualPaymentArtifacts($existing, 'wallet', false);
-                    $shouldDetachManual = false;
-                }
 
                 $existing->payment_gateway = $method;
-                $existing->save();
             }
 
             if ($existing->payable_type !== ServiceRequest::class) {
                 $existing->payable_type = ServiceRequest::class;
-                $existing->save();
+
             }
 
-            if ($shouldDetachManual) {
-                $this->detachManualPaymentArtifacts($existing, 'wallet');
+            $payloadData = array_replace($data, [
+                'currency' => $currency,
+                'amount' => $quote['amount'],
+                'payment_method' => $method,
+            ]);
+
+            $this->applyQuoteToTransaction($existing, $service, $method, $payloadData, $quote['amount'], $currency);
+
+            if ($existing->isDirty()) {
+                $existing->save();
+
             }
 
             return $existing;
@@ -568,44 +691,53 @@ class ServicePaymentService
             ->first();
 
         if ($activeDuplicate) {
-            $needsUpdate = false;
+            $quote = $this->resolveQuoteWithFallback($activeDuplicate, $service, $data);
+            $currency = $quote['currency'];
+
+            if ($method === 'wallet' && $activeDuplicate->manual_payment_request_id) {
+                $this->detachManualPaymentArtifacts($activeDuplicate, 'wallet', false);
+            }
+
+            if ($method === 'wallet') {
+                $currency = $this->assertWalletCurrencyCompatibility($user, $currency, true);
+            }
+
 
             if ($activeDuplicate->payment_gateway !== $method) {
                 $activeDuplicate->payment_gateway = $method;
-                $needsUpdate = true;
             }
 
             if ($activeDuplicate->payable_type !== ServiceRequest::class) {
                 $activeDuplicate->payable_type = ServiceRequest::class;
-                $needsUpdate = true;
             }
 
             if (! $activeDuplicate->idempotency_key || trim((string) $activeDuplicate->idempotency_key) === '') {
                 $activeDuplicate->idempotency_key = $idempotencyKey;
-                $needsUpdate = true;
             }
 
-            $shouldDetachManual = $method === 'wallet' && $activeDuplicate->manual_payment_request_id;
+            $payloadData = array_replace($data, [
+                'currency' => $currency,
+                'amount' => $quote['amount'],
+                'payment_method' => $method,
+            ]);
 
-            if ($needsUpdate) {
-                if ($shouldDetachManual) {
-                    $this->detachManualPaymentArtifacts($activeDuplicate, 'wallet', false);
-                    $shouldDetachManual = false;
-                }
+            $this->applyQuoteToTransaction($activeDuplicate, $service, $method, $payloadData, $quote['amount'], $currency);
+
+            if ($activeDuplicate->isDirty()) {
 
                 $activeDuplicate->save();
             }
 
-            if ($shouldDetachManual) {
-                $this->detachManualPaymentArtifacts($activeDuplicate, 'wallet');
-            }
+
 
             return $activeDuplicate;
         }
 
-        $amount = $this->resolveServiceAmount($service, $data);
+        $quote = $this->resolvePaymentQuote($service, $data);
 
-        $currency = $this->resolveServiceCurrency($service, $data);
+
+        $amount = $quote['amount'];
+        $currency = $quote['currency'];
 
         if ($method === 'wallet') {
             $currency = $this->assertWalletCurrencyCompatibility($user, $currency, true);
@@ -757,6 +889,63 @@ class ServicePaymentService
         }
     }
 
+
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function applyQuoteToTransaction(
+        PaymentTransaction $transaction,
+        Service $service,
+        string $method,
+        array $data,
+        float $amount,
+        string $currency,
+        bool $persist = false
+    ): PaymentTransaction {
+        $normalizedAmount = round($amount, 2);
+        $normalizedCurrency = strtoupper($currency);
+
+        $transaction->forceFill([
+            'amount' => $normalizedAmount,
+            'currency' => $normalizedCurrency,
+        ]);
+
+        $meta = $transaction->meta ?? [];
+        if (! is_array($meta)) {
+            $meta = [];
+        }
+
+        $payloadData = array_replace($data, [
+            'payment_method' => $method,
+            'amount' => $normalizedAmount,
+            'currency' => $normalizedCurrency,
+        ]);
+
+        $meta = $this->mergeServiceMeta($meta, $service, $payloadData);
+        $meta = $this->mergePaymentPayloadMeta($meta, $transaction, $payloadData);
+
+        $payload = Arr::get($meta, 'payload');
+        if (! is_array($payload)) {
+            $payload = [];
+        }
+
+        $payload['amount'] = $normalizedAmount;
+        $payload['currency'] = $normalizedCurrency;
+        $payload['payment_method'] = $method;
+
+        $meta['payload'] = $payload;
+
+        $transaction->meta = $meta;
+
+        if ($persist && $transaction->isDirty()) {
+            $transaction->save();
+        }
+
+        return $transaction;
+    }
+
+
     /**
      * @param array<string, mixed>|null $meta
      * @param array<string, mixed> $data
@@ -807,6 +996,7 @@ class ServicePaymentService
             'payment_method' => $data['payment_method'] ?? null,
             'reference' => $data['reference'] ?? null,
             'currency' => $data['currency'] ?? $transaction->currency,
+            'amount' => $data['amount'] ?? ($transaction->amount !== null ? (float) $transaction->amount : null),
         ], static fn ($value) => $value !== null && $value !== ''));
 
         if (isset($data['metadata']) && is_array($data['metadata'])) {

@@ -310,6 +310,39 @@ class ServiceRequestController extends Controller
                         ->first();
                 }
 
+
+                try {
+                    $quote = $this->servicePaymentService->resolvePaymentQuote($service);
+                } catch (ValidationException $exception) {
+                    $quote = [
+                        'amount' => max(0.0, (float) ($service->price ?? 0.0)),
+                        'currency' => strtoupper((string) ($service->currency ?: config('app.currency', 'YER'))),
+                    ];
+
+                    Log::warning('service_request.payment_quote_fallback', [
+                        'service_id' => $service->getKey(),
+                        'service_request_id' => $serviceRequest->getKey(),
+                        'user_id' => $user->getKey(),
+                        'message' => $exception->getMessage(),
+                    ]);
+                }
+
+                $availableGateways = $this->servicePaymentService->determineAvailableGateways(
+                    $user,
+                    $serviceRequest,
+                    $service,
+                    ['amount' => $quote['amount'], 'currency' => $quote['currency']]
+                );
+
+                $manualAllowed = in_array('manual_bank', $availableGateways, true);
+                $manualPaymentRequestId = $manualAllowed ? $manualRequest?->getKey() : null;
+
+                if (! $manualAllowed) {
+                    $latestTransaction = null;
+                }
+
+
+
                 return response()->json([
                     'message' => __('Payment is required to request this service.'),
                     'code' => 'payment_required',
@@ -320,11 +353,12 @@ class ServiceRequestController extends Controller
                     'service_id' => $service->id,
                     'service_uid' => $service->service_uid,
                     'service_title' => $service->title,
-                    'amount' => $service->price !== null ? (float) $service->price : null,
-                    'currency' => $service->currency,
+                    'amount' => $quote['amount'],
+                    'currency' => $quote['currency'],
                     'price_note' => $service->price_note,
-                    'allowed_gateways' => ['wallet', 'manual_bank'],
-                    'manual_payment_request_id' => $manualRequest?->getKey(),
+                    'allowed_gateways' => $availableGateways,
+                    'available_gateways' => $availableGateways,
+                    'manual_payment_request_id' => $manualPaymentRequestId,
                     'payment_transaction_id' => $latestTransaction?->getKey(),
                     'payment_intent_id' => $latestTransaction?->idempotency_key,
                     'payment_transaction_status' => $latestTransaction?->payment_status,

@@ -40,15 +40,18 @@ mysql --default-character-set=utf8mb4 -h 127.0.0.1 -u root -p -e "DROP DATABASE 
 
 
 
+انشاء نسخه من main في الحساب الى فرع برقم متسلسل 
+
+git fetch --tags; $prefix='backup_maribsrv_'; $n=(git tag -l "$prefix*" | % { $_ -replace '^backup_maribsrv_','' } | ? { $_ -match '^\d+$' } | % { [int]$_ } | sort -Descending | select -First 1); $next= if($n){$n+1}else{1}; $tag="$prefix$next"; git tag -a $tag origin/main -m "backup of origin/main ($tag)"; git push origin $tag
+
+
+
 
 
 
 # افتح اللوج وراقب كل الأخطاء المهمة
 Get-Content .\storage\logs\laravel.log -Tail 0 -Wait `
 | Select-String -Pattern "payment-requests|PaymentRequest|PaymentRequestTableQuery|SQLSTATE|QueryException|TypeError|ErrorException|Undefined|Base table|Call to"
-
-
-
 
 
 // نسخه احتياطية مرقمه 

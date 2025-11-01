@@ -218,6 +218,46 @@ class PaymentController extends Controller
             }
             $this->ensureServiceRequestNumber($serviceRequest);
 
+
+            $service = $serviceRequest->service;
+
+            $availableGateways = $this->servicePaymentService->determineAvailableGateways(
+                $request->user(),
+                $serviceRequest,
+                $service,
+                $validated
+            );
+
+            $normalizedSelectedMethod = $this->normalizeGatewayToken($validated['payment_method'] ?? null);
+            $selectedMethod = $normalizedSelectedMethod ?? ($validated['payment_method'] ?? null);
+
+            if ($availableGateways !== []) {
+                $canonicalSelected = $normalizedSelectedMethod;
+
+                if ($canonicalSelected === null || ! in_array($canonicalSelected, $availableGateways, true)) {
+                    $fallbackMethod = $availableGateways[0];
+                    Log::info('payments.service.gateway_overridden', [
+                        'user_id' => $request->user()->getKey(),
+                        'service_request_id' => $serviceRequest->getKey(),
+                        'requested_method' => $selectedMethod,
+                        'fallback_method' => $fallbackMethod,
+                        'idempotency_key' => $idempotencyKey,
+                    ]);
+                    $canonicalSelected = $fallbackMethod;
+                }
+
+                $selectedMethod = $canonicalSelected;
+                $validated['payment_method'] = $selectedMethod;
+                $methodResponsePayload = $this->filterPaymentMethodsByAvailability(
+                    $methodResponsePayload,
+                    $availableGateways,
+                    $selectedMethod
+                );
+            } else {
+                $service = $serviceRequest->service;
+            }
+
+
             if ($conflictResponse = $this->guardServicePaymentIdempotency($serviceRequest, $validated['payment_method'])) {
                 return $conflictResponse;
             }
@@ -234,19 +274,18 @@ class PaymentController extends Controller
 
             $freshTransaction = $transaction->fresh();
 
-            $service = $serviceRequest->service;
+            $responsePayload = array_merge(
+                $methodResponsePayload,
+                [
+                    'message' => __('تم إنشاء عملية الدفع بنجاح.'),
+                    'status' => $freshTransaction?->payment_status,
 
-                $responsePayload = array_merge(
-                    $methodResponsePayload,
-                    [
-                        'message' => __('تم إنشاء عملية الدفع بنجاح.'),
-                        'status' => $freshTransaction?->payment_status,
                         'payment_transaction_id' => $freshTransaction?->getKey(),
                         'payment_intent_id' => $freshTransaction?->idempotency_key,
                         'receipt_no' => $freshTransaction?->receipt_no,
-                        'transaction' => $freshTransaction,
-                        'payment_transaction' => $freshTransaction,
-                        'service_request_id' => $serviceRequest->getKey(),
+                    'transaction' => $freshTransaction,
+                    'payment_transaction' => $freshTransaction,
+                    'service_request_id' => $serviceRequest->getKey(),
                     'service' => [
                         'id' => $service->getKey(),
                         'title' => $service->title,
@@ -255,10 +294,17 @@ class PaymentController extends Controller
                         'service_uid' => $service->service_uid,
                         'price_note' => $service->price_note,
                     ],
+
+                    'available_gateways' => $availableGateways,
+                    'allowed_gateways' => $availableGateways,
+
                 ]
             );
 
-            if ($freshTransaction?->manualPaymentRequest instanceof ManualPaymentRequest) {
+            if (
+                in_array('manual_bank', $availableGateways, true)
+                && $freshTransaction?->manualPaymentRequest instanceof ManualPaymentRequest
+            ) {
                 $manualPaymentRequest = $freshTransaction->manualPaymentRequest;
 
                 $manualPaymentRequest->loadMissing(
@@ -1272,6 +1318,219 @@ class PaymentController extends Controller
             'cash' => __('الدفع عند الاستلام'),
             default => null,
         };
+    }
+
+
+    /**
+     * @param array<string, mixed> $payload
+     * @param array<int, string> $availableGateways
+     */
+    private function filterPaymentMethodsByAvailability(
+        array $payload,
+        array $availableGateways,
+        ?string $selectedMethod
+    ): array {
+        $normalizedAvailable = array_values(array_unique(array_filter(
+            array_map([$this, 'normalizeGatewayToken'], $availableGateways),
+            static fn ($value) => is_string($value) && $value !== ''
+        )));
+
+        if ($normalizedAvailable === []) {
+            return $payload;
+        }
+
+        $payload['available_gateways'] = $normalizedAvailable;
+        $payload['allowed_gateways'] = $normalizedAvailable;
+
+        foreach (['allowed_payment_methods', 'payment_method_tokens'] as $tokenKey) {
+            $tokens = isset($payload[$tokenKey]) && is_array($payload[$tokenKey]) ? $payload[$tokenKey] : [];
+            $filteredTokens = $this->filterMethodTokensByAvailability($tokens, $normalizedAvailable);
+
+            if ($filteredTokens === []) {
+                $filteredTokens = $normalizedAvailable;
+            }
+
+            $payload[$tokenKey] = $filteredTokens;
+        }
+
+        $payload['allowed_payment_method_options'] = $this->filterMethodOptionEntries(
+            isset($payload['allowed_payment_method_options']) && is_array($payload['allowed_payment_method_options'])
+                ? $payload['allowed_payment_method_options']
+                : [],
+            $normalizedAvailable
+        );
+
+        foreach (['available_methods', 'available_payment_methods', 'payment_methods'] as $listKey) {
+            $payload[$listKey] = $this->filterMethodListEntries(
+                isset($payload[$listKey]) && is_array($payload[$listKey]) ? $payload[$listKey] : [],
+                $normalizedAvailable
+            );
+        }
+
+        if ($payload['allowed_payment_method_options'] === []) {
+            $payload['allowed_payment_method_options'] = array_map(function (string $method) {
+                return [
+                    'token' => $method,
+                    'method' => $method,
+                    'payment_method' => $method,
+                    'id' => $method,
+                    'label' => $this->paymentMethodLabel($method),
+                    'gateway' => $this->paymentMethodGatewayLabel($method),
+                    'is_default' => false,
+                    'tokens' => [$method],
+                ];
+            }, $normalizedAvailable);
+        }
+
+        foreach (['available_methods', 'available_payment_methods', 'payment_methods'] as $listKey) {
+            if ($payload[$listKey] === []) {
+                $payload[$listKey] = array_map(function (string $method) {
+                    return array_filter([
+                        'id' => $method,
+                        'label' => $this->paymentMethodLabel($method),
+                        'gateway' => $this->paymentMethodGatewayLabel($method),
+                        'is_default' => false,
+                        'tokens' => [$method],
+                    ], static fn ($value) => $value !== null);
+                }, $normalizedAvailable);
+            }
+        }
+
+        $selectedNormalized = $this->normalizeGatewayToken($selectedMethod);
+
+        if ($selectedNormalized === null || ! in_array($selectedNormalized, $normalizedAvailable, true)) {
+            $selectedNormalized = $normalizedAvailable[0];
+        }
+
+        foreach ($payload['allowed_payment_method_options'] as &$option) {
+            if (! is_array($option)) {
+                continue;
+            }
+
+            $method = $this->normalizeGatewayToken($option['method'] ?? $option['payment_method'] ?? $option['id'] ?? null);
+            $option['is_default'] = $method === $selectedNormalized;
+        }
+        unset($option);
+
+        foreach (['available_methods', 'available_payment_methods', 'payment_methods'] as $listKey) {
+            foreach ($payload[$listKey] as &$entry) {
+                if (! is_array($entry)) {
+                    continue;
+                }
+
+                $method = $this->normalizeGatewayToken($entry['id'] ?? null);
+                $entry['is_default'] = $method === $selectedNormalized;
+            }
+            unset($entry);
+        }
+
+        if (! in_array($selectedNormalized, $payload['allowed_payment_methods'], true)) {
+            $payload['allowed_payment_methods'][] = $selectedNormalized;
+            $payload['allowed_payment_methods'] = array_values(array_unique($payload['allowed_payment_methods']));
+        }
+
+        if (! in_array($selectedNormalized, $payload['payment_method_tokens'], true)) {
+            $payload['payment_method_tokens'][] = $selectedNormalized;
+            $payload['payment_method_tokens'] = array_values(array_unique($payload['payment_method_tokens']));
+        }
+
+        $payload['default_payment_method'] = $selectedNormalized;
+        $payload['preferred_payment_method'] = $selectedNormalized;
+        $payload['payment_method'] = $selectedNormalized;
+        $payload['selected_payment_method'] = $selectedNormalized;
+
+        return $payload;
+    }
+
+    /**
+     * @param array<int, mixed> $tokens
+     * @param array<int, string> $availableGateways
+     * @return array<int, string>
+     */
+    private function filterMethodTokensByAvailability(array $tokens, array $availableGateways): array
+    {
+        $filtered = [];
+
+        foreach ($tokens as $token) {
+            if (! is_string($token) || $token === '') {
+                continue;
+            }
+
+            $normalized = $this->normalizeGatewayToken($token);
+
+            if ($normalized !== null && in_array($normalized, $availableGateways, true)) {
+                $filtered[] = (string) $token;
+            }
+        }
+
+        return array_values(array_unique($filtered));
+    }
+
+    /**
+     * @param array<int, mixed> $options
+     * @param array<int, string> $availableGateways
+     * @return array<int, array<string, mixed>>
+     */
+    private function filterMethodOptionEntries(array $options, array $availableGateways): array
+    {
+        $filtered = [];
+
+        foreach ($options as $option) {
+            if (! is_array($option)) {
+                continue;
+            }
+
+            $method = $this->normalizeGatewayToken($option['method'] ?? $option['payment_method'] ?? $option['id'] ?? null);
+
+            if ($method === null || ! in_array($method, $availableGateways, true)) {
+                continue;
+            }
+
+            $filtered[] = $option;
+        }
+
+        return array_values($filtered);
+    }
+
+    /**
+     * @param array<int, mixed> $entries
+     * @param array<int, string> $availableGateways
+     * @return array<int, array<string, mixed>>
+     */
+    private function filterMethodListEntries(array $entries, array $availableGateways): array
+    {
+        $filtered = [];
+
+        foreach ($entries as $entry) {
+            if (! is_array($entry)) {
+                continue;
+            }
+
+            $method = $this->normalizeGatewayToken($entry['id'] ?? null);
+
+            if ($method === null || ! in_array($method, $availableGateways, true)) {
+                continue;
+            }
+
+            $filtered[] = $entry;
+        }
+
+        return array_values($filtered);
+    }
+
+    private function normalizeGatewayToken($method): ?string
+    {
+        if (! is_string($method) || trim($method) === '') {
+            return null;
+        }
+
+        $normalized = OrderCheckoutService::normalizePaymentMethod($method);
+
+        if (is_string($normalized) && $normalized !== '') {
+            return mb_strtolower($normalized);
+        }
+
+        return mb_strtolower($method);
     }
 
 

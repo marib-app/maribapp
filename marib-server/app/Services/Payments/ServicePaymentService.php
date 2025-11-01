@@ -321,13 +321,14 @@ class ServicePaymentService
         if ($method === 'wallet') {
             if ($transaction->manual_payment_request_id) {
                 $this->detachManualPaymentArtifacts($transaction, 'wallet');
+                $metaSource = $transaction->meta ?? [];
 
 
             }
 
 
-            $sanitizedMetaSource = $this->stripManualMeta($transaction->meta ?? []);
-            $meta = $this->mergeServiceMeta($sanitizedMetaSource, $service, $data);
+            $meta = $this->stripManualMeta($metaSource);
+            $meta = $this->mergeServiceMeta($meta, $service, $data);
             $meta = $this->mergePaymentPayloadMeta($meta, $transaction, $data);
             $meta = $this->stripManualMeta($meta);
 

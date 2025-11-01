@@ -318,6 +318,172 @@ class PaymentController extends Controller
         return $this->buildServiceResponse($freshTransaction, $serviceRequest, $statusCode);
     }
 
+
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildServicePaymentConfirmationPayload(Request $request, PaymentTransaction $transaction): array
+    {
+        $input = $request->all();
+        $payload = [];
+
+        $arrayKeys = [
+            'metadata',
+            'attachments',
+            'transfer',
+            'payment',
+        ];
+
+        foreach ($arrayKeys as $key) {
+            if (array_key_exists($key, $input) && is_array($input[$key])) {
+                $payload[$key] = $input[$key];
+            }
+        }
+
+        $scalarKeys = [
+            'amount',
+            'currency',
+            'reference',
+            'note',
+            'receipt_path',
+            'bank_name',
+            'manual_bank_id',
+            'bank_id',
+            'bank_account_id',
+            'manual_payment_request_id',
+        ];
+
+        foreach ($scalarKeys as $key) {
+            if (array_key_exists($key, $input)) {
+                $payload[$key] = $input[$key];
+            }
+        }
+
+        if (! array_key_exists('manual_bank_id', $payload) && isset($payload['bank_id'])) {
+            $payload['manual_bank_id'] = $payload['bank_id'];
+        }
+
+        if ($transaction->manual_payment_request_id && ! array_key_exists('manual_payment_request_id', $payload)) {
+            $payload['manual_payment_request_id'] = $transaction->manual_payment_request_id;
+        }
+
+        if (! array_key_exists('manual_bank_id', $payload)) {
+            $manualBankFromMeta = data_get($transaction->meta, 'payload.manual_bank_id')
+                ?? data_get($transaction->meta, 'manual_payment_request.manual_bank_id');
+
+            if ($manualBankFromMeta !== null && $manualBankFromMeta !== '') {
+                $payload['manual_bank_id'] = $manualBankFromMeta;
+            }
+        }
+
+        if (! array_key_exists('currency', $payload)) {
+            $currencyFromMeta = data_get($transaction->meta, 'payload.currency');
+
+            if (is_string($currencyFromMeta) && $currencyFromMeta !== '') {
+                $payload['currency'] = $currencyFromMeta;
+            } elseif (is_string($transaction->currency) && $transaction->currency !== '') {
+                $payload['currency'] = $transaction->currency;
+            }
+        }
+
+        if (! array_key_exists('amount', $payload) && $transaction->amount !== null) {
+            $payload['amount'] = $transaction->amount;
+        }
+
+        $methodHint = $this->resolveServicePaymentMethodHint($request, $transaction, $payload);
+
+        if ($methodHint === null) {
+            throw ValidationException::withMessages([
+                'payment_method' => __('Unable to determine payment method for confirmation.'),
+            ]);
+        }
+
+        $payload['payment_method'] = $methodHint;
+
+        unset($payload['bank_id']);
+
+        return $payload;
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     */
+    private function resolveServicePaymentMethodHint(
+        Request $request,
+        PaymentTransaction $transaction,
+        array $payload
+    ): ?string {
+        $candidates = [];
+
+        foreach (['payment_method', 'payment_gateway', 'gateway', 'method', 'channel', 'paymentMethod'] as $key) {
+            $value = $request->input($key);
+
+            if (is_string($value)) {
+                $candidates[] = $value;
+            }
+        }
+
+        if (isset($payload['payment_method']) && is_string($payload['payment_method'])) {
+            $candidates[] = $payload['payment_method'];
+        }
+
+        $meta = is_array($transaction->meta) ? $transaction->meta : [];
+        $metaCandidates = [
+            data_get($meta, 'payload.payment_method'),
+            data_get($meta, 'payload.payment_gateway'),
+            data_get($meta, 'payload.gateway'),
+            data_get($meta, 'payment_method'),
+            data_get($meta, 'gateway'),
+            data_get($meta, 'manual.payment_method'),
+            data_get($meta, 'manual.payment_gateway'),
+            data_get($meta, 'manual.gateway'),
+        ];
+
+        foreach ($metaCandidates as $candidate) {
+            if (is_string($candidate)) {
+                $candidates[] = $candidate;
+            }
+        }
+
+        if (is_string($transaction->payment_gateway)) {
+            $candidates[] = $transaction->payment_gateway;
+        }
+
+        if ($transaction->manual_payment_request_id) {
+            $candidates[] = 'manual_bank';
+        }
+
+        foreach ($candidates as $candidate) {
+            $normalized = $this->normalizeServicePaymentMethodHint($candidate);
+
+            if ($normalized === null) {
+                continue;
+            }
+
+            try {
+                return $this->normalizePaymentMethodForPurpose($normalized, 'service');
+            } catch (ValidationException $exception) {
+                // Ignore invalid hints and continue searching other candidates.
+            }
+        }
+
+        return null;
+    }
+
+    private function normalizeServicePaymentMethodHint(?string $candidate): ?string
+    {
+        if (! is_string($candidate)) {
+            return null;
+        }
+
+        $trimmed = trim($candidate);
+
+        return $trimmed === '' ? null : $trimmed;
+    }
+
+
+    
     private function confirmOrderPayment(Request $request, int $userId): JsonResponse
     {
         $validated = $request->validate([

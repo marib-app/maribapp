@@ -6,6 +6,7 @@ namespace App\Queries;
 use App\Models\ManualPaymentRequest;
 use App\Models\PaymentTransaction;
 use App\Models\WalletTransaction;
+use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -105,13 +106,16 @@ class PaymentRequestTableQuery
 
         try {
             $paymentTransactionConnection = PaymentTransaction::query()->getConnection();
-            $paymentTransactionSchema = Schema::connection($paymentTransactionConnection->getName());
+            $supportsPaymentTransactionMeta = self::connectionHasColumn(
+                $paymentTransactionConnection,
+                'payment_transactions',
+                'meta'
+            );
 
-            $supportsPaymentTransactionMeta = $paymentTransactionSchema->hasTable('payment_transactions')
-                && $paymentTransactionSchema->hasColumn('payment_transactions', 'meta');
+
         } catch (Throwable $exception) {
-            $supportsPaymentTransactionMeta = Schema::hasTable('payment_transactions')
-                && Schema::hasColumn('payment_transactions', 'meta');
+            $supportsPaymentTransactionMeta = false;
+
         }
         $supportsWalletMeta = Schema::hasTable('wallet_transactions')
             && Schema::hasColumn('wallet_transactions', 'meta');
@@ -1100,6 +1104,22 @@ class PaymentRequestTableQuery
 
             return $trimmed !== '' && strtoupper($trimmed) !== 'NULL';
         }));
+    }
+
+
+    private static function connectionHasColumn(ConnectionInterface $connection, string $table, string $column): bool
+    {
+        try {
+            $schema = $connection->getSchemaBuilder();
+
+            if (! $schema->hasTable($table)) {
+                return false;
+            }
+
+            return in_array($column, $schema->getColumnListing($table), true);
+        } catch (Throwable $exception) {
+            return false;
+        }
     }
 
     private static function sqlList(array $values): string

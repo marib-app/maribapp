@@ -7,8 +7,10 @@
         ManualPaymentRequest::STATUS_REJECTED => '<span class="badge bg-danger">' . __('Rejected') . '</span>',
         default => '<span class="badge bg-warning text-dark">' . __('Pending') . '</span>',
     };
-    $transactionBreadcrumb = __('Transaction #:id', ['id' => $transaction->id]);
-    $transactionTitle = $request->reference ?? __('Payment Transaction #:id', ['id' => $transaction->payment_transaction_id ?? $transaction->id]);
+    $receiptDisplay = $transaction->receipt_no ?? ('PT-' . $transaction->id);
+    $transactionBreadcrumb = __('Transaction #:id', ['id' => $receiptDisplay]);
+    $transactionTitle = $request->reference ?? __('Payment Transaction #:id', ['id' => $receiptDisplay]);
+    
 @endphp
 
 @section('title')

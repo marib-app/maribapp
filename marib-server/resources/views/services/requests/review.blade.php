@@ -40,8 +40,9 @@
     use App\Support\Payments\ReferencePresenter;
 
     $transactionIdDisplay = ReferencePresenter::forTransaction($transaction)
-        ?? ($serviceRequest->payment_transaction_id ? ('#' . $serviceRequest->payment_transaction_id) : null);
-
+        ?? ($transaction?->receipt_no
+            ?? ($serviceRequest->payment_transaction_id ? ('#' . $serviceRequest->payment_transaction_id) : null));
+            
     $fieldEntries = is_array($fieldEntries ?? null) ? $fieldEntries : [];
     $attachmentEntries = is_array($attachmentEntries ?? null) ? $attachmentEntries : [];
     $timelineData = is_array($timelineData ?? null) ? $timelineData : [];

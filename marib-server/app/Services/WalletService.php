@@ -19,6 +19,7 @@ use Illuminate\Support\Str;
 
 use Illuminate\Support\Facades\DB;
 use App\Services\NotificationService;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 use InvalidArgumentException;
 use RuntimeException;
@@ -35,6 +36,71 @@ class WalletService
     public function debit(User $user, string $idempotencyKey, float $amount, array $options = []): WalletTransaction
     {
         return $this->record($user, 'debit', $idempotencyKey, $amount, $options);
+    }
+
+
+    public function ensureSufficient(User|int $user, float $amount, string $currency): void
+    {
+        if ($amount <= 0) {
+            return;
+        }
+
+        $userModel = $user instanceof User ? $user : User::query()->find($user);
+
+        if (! $userModel instanceof User) {
+            throw new InvalidArgumentException('Unable to resolve user for wallet balance verification.');
+        }
+
+        $normalizedCurrency = strtoupper($currency);
+
+        $account = WalletAccount::query()
+            ->where('user_id', $userModel->getKey())
+            ->where('currency', $normalizedCurrency)
+            ->lockForUpdate()
+            ->first();
+
+        if (! $account instanceof WalletAccount || (float) $account->balance < $amount) {
+            throw new HttpException(402, __('رصيد المحفظة غير كافٍ.'));
+        }
+    }
+
+    public function deductAndLog(
+        User|int $user,
+        float $amount,
+        string $currency,
+        string $reason,
+        ?int $relatedPaymentTransactionId = null,
+        ?string $idempotencyKey = null,
+        array $meta = []
+    ): WalletTransaction {
+        if ($amount <= 0) {
+            throw new InvalidArgumentException('Amount must be greater than zero.');
+        }
+
+        $userModel = $user instanceof User ? $user : User::query()->find($user);
+
+        if (! $userModel instanceof User) {
+            throw new InvalidArgumentException('Unable to resolve user for wallet deduction.');
+        }
+
+        $normalizedCurrency = strtoupper($currency);
+
+        $metaPayload = array_replace_recursive([
+            'reason' => $reason,
+        ], $meta);
+
+        $options = [
+            'currency' => $normalizedCurrency,
+            'meta' => $metaPayload,
+        ];
+
+        if ($relatedPaymentTransactionId !== null) {
+            $options['payment_transaction_id'] = $relatedPaymentTransactionId;
+        }
+
+        $idempotency = $idempotencyKey ?? (string) Str::uuid();
+
+        return $this->debit($userModel, $idempotency, $amount, $options);
     }
 
     protected function record(User $user, string $direction, string $idempotencyKey, float $amount, array $options = []): WalletTransaction

@@ -49,6 +49,7 @@ class PaymentTransactionResource extends JsonResource
 
         return [
             'id' => $this->id,
+            'receipt_no' => $this->receipt_no,
             'status' => $this->payment_status,
             'amount' => isset($this->amount) ? (float) $this->amount : null,
             'currency' => $this->currency,

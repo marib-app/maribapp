@@ -194,6 +194,7 @@ class ManualPaymentRequestResource extends JsonResource
             'payable_type' => $this->payable_type,
             'payable_id' => $this->payable_id,
             'payment_transaction_id' => $paymentTransaction?->id,
+            'receipt_no' => $paymentTransaction?->receipt_no,
             'transfer_details' => $transferDetails,
 
 
@@ -233,9 +234,9 @@ class ManualPaymentRequestResource extends JsonResource
             'transaction_status' => $paymentStatus,
 
             'receipt_url' => $this->generateSignedUrl($this->receipt_path),
-
             'transaction_id' => $paymentTransaction?->id,
             'payment_transaction_id' => $paymentTransaction?->id,
+            'receipt_no' => $paymentTransaction?->receipt_no,
             'service_request_id' => $serviceRequestId,
             'transaction_identifier' => $paymentTransaction?->payment_id
                 ?? $paymentTransaction?->payment_signature
@@ -268,6 +269,7 @@ class ManualPaymentRequestResource extends JsonResource
                 'currency' => $paymentTransaction->currency,
                 'payment_method' => $paymentTransaction->payment_method,
                 'payment_gateway' => $paymentTransaction->payment_gateway,
+                'receipt_no' => $paymentTransaction->receipt_no,
                 'manual_payment_request_id' => $paymentTransaction->manual_payment_request_id,
 
                 'receipt_url' => $this->generateSignedUrl($paymentTransaction->receipt_path ?? $this->receipt_path),

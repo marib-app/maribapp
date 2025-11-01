@@ -128,6 +128,29 @@ class PaymentLabelService
 
     }
 
+
+    public static function normalizeGateway(?string $gateway): ?string
+    {
+        if (! is_string($gateway)) {
+            return null;
+        }
+
+        $canonical = ManualPaymentRequest::canonicalGateway($gateway);
+
+        if ($canonical === null || trim($canonical) === '') {
+            return null;
+        }
+
+        $normalized = Str::lower(trim($canonical));
+
+        return match ($normalized) {
+            'manual_banks' => 'manual_bank',
+            'east_yemen_bank', 'bank_alsharq', 'bank_alsharq_bank' => 'bank_alsharq',
+            default => $normalized,
+        };
+    }
+
+
     /**
      * @return array{gateway_key: string|null, gateway_label: string|null, bank_name: string|null, channel_label: string|null, bank_label: string|null}
      */

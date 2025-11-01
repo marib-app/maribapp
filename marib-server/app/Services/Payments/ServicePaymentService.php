@@ -8,7 +8,6 @@ use App\Models\PaymentTransaction;
 use App\Models\Service;
 use App\Models\ServiceRequest;
 use App\Models\User;
-use App\Services\OrderCheckoutService;
 use App\Services\PaymentFulfillmentService;
 use App\Services\Payments\CreateOrLinkManualPaymentRequest;
 use App\Services\Payments\Concerns\HandlesManualBankConfirmation;
@@ -17,9 +16,13 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Arr;
 use App\Support\InputSanitizer;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Validation\ValidationException; 
 use RuntimeException;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
+use App\Support\Payments\PaymentLabelService;
+use InvalidArgumentException;
+
 
 class ServicePaymentService
 {
@@ -212,16 +215,30 @@ class ServicePaymentService
             $transaction->manual_payment_request_id = $manualContext['manual_payment_request']->getKey();
         }
 
+        if ($method === 'wallet') {
+            if ($transaction->manual_payment_request_id) {
+                $this->detachManualPaymentArtifacts($transaction);
+            }
+
+            return $this->confirmWalletPayment(
+                $user,
+                $serviceRequest,
+                $service,
+                $transaction,
+                $meta,
+                $idempotencyKey,
+                $data
+            );
+        }
+
+
+
         $options = [
             'payment_gateway' => $method,
             'meta' => $meta,
             'payment_reference' => $data['reference'] ?? null,
         ];
 
-        if ($method === 'wallet') {
-            $walletTransaction = $this->debitWallet($user, $transaction, $idempotencyKey, $service, $data);
-            $options['wallet_transaction'] = $walletTransaction;
-        }
 
         if ($transaction->manual_payment_request_id) {
             $options['manual_payment_request_id'] = $transaction->manual_payment_request_id;
@@ -273,6 +290,137 @@ class ServicePaymentService
 
         return $transaction->fresh();
     }
+
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function confirmWalletPayment(
+        User $user,
+        ServiceRequest $serviceRequest,
+        Service $service,
+        PaymentTransaction $transaction,
+        array $meta,
+        string $idempotencyKey,
+        array $data = []
+    ): PaymentTransaction {
+        $amount = (float) ($transaction->amount ?? $this->resolveServiceAmount($service, $data));
+
+        if ($amount <= 0) {
+            throw ValidationException::withMessages([
+                'payment' => __('لا يوجد مبلغ صالح للسحب من المحفظة.'),
+            ]);
+        }
+
+        $currency = $transaction->currency ?? $this->resolveServiceCurrency($service, $data);
+        $currency = $this->assertWalletCurrencyCompatibility($user, $currency, false);
+
+        $context = [
+            'type' => 'service_request',
+            'id' => $serviceRequest->getKey(),
+            'department' => 'services',
+        ];
+
+        $existingContext = Arr::get($meta, 'context');
+
+        if (is_array($existingContext)) {
+            $context = array_replace_recursive($context, $existingContext);
+        }
+
+        $metaWithContext = array_replace_recursive($meta, ['context' => $context]);
+
+        $reference = null;
+        if (isset($data['reference']) && is_string($data['reference'])) {
+            $trimmedReference = trim($data['reference']);
+            $reference = $trimmedReference === '' ? null : $trimmedReference;
+        }
+
+        return $this->db->transaction(function () use (
+            $user,
+            $serviceRequest,
+            $service,
+            $transaction,
+            $metaWithContext,
+            $currency,
+            $amount,
+            $idempotencyKey,
+            $reference
+        ) {
+            $this->walletService->ensureSufficient($user, $amount, $currency);
+
+            $transaction->forceFill([
+                'payment_gateway' => 'wallet',
+                'currency' => $currency,
+                'payable_type' => ServiceRequest::class,
+                'payable_id' => $serviceRequest->getKey(),
+                'payment_status' => 'succeed',
+                'meta' => $metaWithContext,
+            ]);
+
+            if ($reference !== null) {
+                $transaction->payment_id = $reference;
+            }
+
+            $transaction->save();
+
+            $walletMeta = array_replace_recursive($metaWithContext, [
+                'context' => [
+                    'type' => 'service_request',
+                    'id' => $serviceRequest->getKey(),
+                    'department' => 'services',
+                ],
+            ]);
+
+            $walletTransaction = $this->walletService->deductAndLog(
+                $user,
+                $amount,
+                $currency,
+                'service_request',
+                $transaction->getKey(),
+                $idempotencyKey,
+                $walletMeta
+            );
+
+            if (Schema::hasColumn($transaction->getTable(), 'wallet_transaction_id')) {
+                $transaction->wallet_transaction_id = $walletTransaction->getKey();
+                $transaction->save();
+            }
+
+            $options = [
+                'payment_gateway' => 'wallet',
+                'meta' => $metaWithContext,
+                'payment_reference' => $reference,
+                'wallet_transaction' => $walletTransaction,
+            ];
+
+            $result = $this->fulfillmentService->fulfill(
+                $transaction,
+                ServiceRequest::class,
+                $serviceRequest->getKey(),
+                $user->getKey(),
+                $options
+            );
+
+            if ($result['error'] ?? true) {
+                throw ValidationException::withMessages([
+                    'payment' => $result['message'] ?? __('تعذر إكمال عملية الدفع حالياً.'),
+                ]);
+            }
+
+            if (
+                $serviceRequest->payment_transaction_id !== $transaction->getKey()
+                || $serviceRequest->payment_status !== 'paid'
+            ) {
+                $serviceRequest->forceFill([
+                    'payment_transaction_id' => $transaction->getKey(),
+                    'payment_status' => 'paid',
+                ])->save();
+            }
+
+            return $transaction->fresh();
+        });
+    }
+
 
     /**
      * تسجيل دفع يدوي لخدمة مدفوعة.
@@ -784,23 +932,25 @@ class ServicePaymentService
 
     private function normalizePaymentMethod(?string $method): string
     {
-        $normalizedMethod = OrderCheckoutService::normalizePaymentMethod($method);
+        $gateway = PaymentLabelService::normalizeGateway($method);
 
-        if (! is_string($normalizedMethod) || $normalizedMethod === '') {
-            throw ValidationException::withMessages([
-                'payment_method' => __('طريقة الدفع غير مدعومة لهذه الخدمة.'),
-            ]);
+        if ($gateway === null) {
+            throw new InvalidArgumentException('Unsupported gateway');
+
+
         }
 
-        $normalizedMethod = mb_strtolower($normalizedMethod);
-
-        if (! in_array($normalizedMethod, self::SUPPORTED_METHODS, true)) {
-            throw ValidationException::withMessages([
-                'payment_method' => __('طريقة الدفع غير مدعومة لهذه الخدمة.'),
-            ]);
+        if (! in_array($gateway, ['wallet', 'manual_bank', 'bank_alsharq', 'cash'], true)) {
+            throw new InvalidArgumentException('Unsupported gateway');
         }
 
-        return $normalizedMethod;
+
+        if ($gateway === 'cash') {
+            throw new InvalidArgumentException('Unsupported gateway');
+        }
+
+        return $gateway === 'bank_alsharq' ? 'east_yemen_bank' : $gateway;
+
     }
 
     /**

@@ -236,16 +236,17 @@ class PaymentController extends Controller
 
             $service = $serviceRequest->service;
 
-            $responsePayload = array_merge(
-                $methodResponsePayload,
-                [
-                    'message' => __('تم إنشاء عملية الدفع بنجاح.'),
-                    'status' => $freshTransaction?->payment_status,
-                    'payment_transaction_id' => $freshTransaction?->getKey(),
-                    'payment_intent_id' => $freshTransaction?->idempotency_key,
-                    'transaction' => $freshTransaction,
-                    'payment_transaction' => $freshTransaction,
-                    'service_request_id' => $serviceRequest->getKey(),
+                $responsePayload = array_merge(
+                    $methodResponsePayload,
+                    [
+                        'message' => __('تم إنشاء عملية الدفع بنجاح.'),
+                        'status' => $freshTransaction?->payment_status,
+                        'payment_transaction_id' => $freshTransaction?->getKey(),
+                        'payment_intent_id' => $freshTransaction?->idempotency_key,
+                        'receipt_no' => $freshTransaction?->receipt_no,
+                        'transaction' => $freshTransaction,
+                        'payment_transaction' => $freshTransaction,
+                        'service_request_id' => $serviceRequest->getKey(),
                     'service' => [
                         'id' => $service->getKey(),
                         'title' => $service->title,
@@ -292,6 +293,7 @@ class PaymentController extends Controller
                     'status' => $freshTransaction?->payment_status,
                     'payment_transaction_id' => $freshTransaction?->getKey(),
                     'payment_intent_id' => $freshTransaction?->idempotency_key,
+                    'receipt_no' => $freshTransaction?->receipt_no,
                     'transaction' => $freshTransaction,
                     'payment_transaction' => $freshTransaction,
                 ]
@@ -319,6 +321,7 @@ class PaymentController extends Controller
                 'status' => $freshTransaction?->payment_status,
                 'payment_transaction_id' => $freshTransaction?->getKey(),
                 'payment_intent_id' => $freshTransaction?->idempotency_key,
+                'receipt_no' => $freshTransaction?->receipt_no,
                 'transaction' => $freshTransaction,
                 'payment_transaction' => $freshTransaction,
             ]
@@ -391,9 +394,12 @@ class PaymentController extends Controller
             );
         }
 
+        $freshUpdated = $updated->fresh();
+
         return response()->json([
             'message' => __('تم تأكيد عملية الدفع.'),
-            'transaction' => $updated->fresh(),
+            'receipt_no' => $freshUpdated?->receipt_no,
+            'transaction' => $freshUpdated,
         ]);
     }
 

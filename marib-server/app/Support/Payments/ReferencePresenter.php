@@ -22,6 +22,13 @@ class ReferencePresenter
             return trim($ref);
         }
 
+
+        $receipt = $tx->receipt_no ?? null;
+
+        if (is_string($receipt) && trim($receipt) !== '') {
+            return trim($receipt);
+        }
+
         return 'TX-' . $tx->getKey();
     }
 

@@ -17,6 +17,7 @@ use App\Support\Payments\PaymentLabelService;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class PaymentTransaction extends Model
 {
@@ -49,6 +50,11 @@ class PaymentTransaction extends Model
 
 
     ];
+
+    protected $appends = [
+        'receipt_no',
+    ];
+
 
     protected $casts = [
         'meta' => 'array',
@@ -126,7 +132,12 @@ class PaymentTransaction extends Model
 
     public function walletTransaction(): BelongsTo
     {
-        return $this->belongsTo(WalletTransaction::class, 'payable_id');
+        $foreignKey = Schema::hasColumn($this->getTable(), 'wallet_transaction_id')
+            ? 'wallet_transaction_id'
+            : 'payable_id';
+
+        return $this->belongsTo(WalletTransaction::class, $foreignKey);
+    
     }
 
     public function payableIsWalletTransaction(): bool
@@ -204,4 +215,29 @@ class PaymentTransaction extends Model
 
         return is_string($label) ? $label : '';
     }
+
+
+    public function getReceiptNoAttribute(): string
+    {
+        $manualNumber = optional($this->manualPaymentRequest)->number;
+
+        if (is_string($manualNumber) && trim($manualNumber) !== '') {
+            return trim($manualNumber);
+        }
+
+        $walletNumber = optional($this->walletTransaction)->number;
+
+        if (is_string($walletNumber) && trim($walletNumber) !== '') {
+            return trim($walletNumber);
+        }
+
+        $year = optional($this->created_at)->format('Y') ?? date('Y');
+
+        if (strtolower((string) $this->payment_gateway) === 'wallet') {
+            return sprintf('WAL-%s-%06d', $year, $this->getKey());
+        }
+
+        return sprintf('PT-%s-%06d', $year, $this->getKey());
+    }
+
 }

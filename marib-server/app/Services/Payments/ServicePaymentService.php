@@ -234,10 +234,10 @@ class ServicePaymentService
             }
 
 
-            $walletMetaSource = $this->stripManualMeta($transaction->meta ?? []);
-            $walletMeta = $this->mergeServiceMeta($walletMetaSource, $service, $data);
-            $walletMeta = $this->mergePaymentPayloadMeta($walletMeta, $transaction, $data);
-            $walletMeta = $this->stripManualMeta($walletMeta);
+            $sanitizedMetaSource = $this->stripManualMeta($transaction->meta ?? []);
+            $meta = $this->mergeServiceMeta($sanitizedMetaSource, $service, $data);
+            $meta = $this->mergePaymentPayloadMeta($meta, $transaction, $data);
+            $walletMeta = $this->stripManualMeta($meta);
 
             return $this->confirmWalletPayment(
                 $user,

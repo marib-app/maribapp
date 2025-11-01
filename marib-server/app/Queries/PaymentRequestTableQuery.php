@@ -4,6 +4,7 @@ namespace App\Queries;
 
 
 use App\Models\ManualPaymentRequest;
+use App\Models\PaymentTransaction;
 use App\Models\WalletTransaction;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
@@ -101,8 +102,17 @@ class PaymentRequestTableQuery
 
         $supportsPaymentGatewayName = Schema::hasTable('payment_transactions')
             && Schema::hasColumn('payment_transactions', 'payment_gateway_name');
-        $supportsPaymentTransactionMeta = Schema::hasTable('payment_transactions')
-            && Schema::hasColumn('payment_transactions', 'meta');
+
+        try {
+            $paymentTransactionConnection = PaymentTransaction::query()->getConnection();
+            $paymentTransactionSchema = Schema::connection($paymentTransactionConnection->getName());
+
+            $supportsPaymentTransactionMeta = $paymentTransactionSchema->hasTable('payment_transactions')
+                && $paymentTransactionSchema->hasColumn('payment_transactions', 'meta');
+        } catch (Throwable $exception) {
+            $supportsPaymentTransactionMeta = Schema::hasTable('payment_transactions')
+                && Schema::hasColumn('payment_transactions', 'meta');
+        }
         $supportsWalletMeta = Schema::hasTable('wallet_transactions')
             && Schema::hasColumn('wallet_transactions', 'meta');
 
@@ -120,6 +130,13 @@ class PaymentRequestTableQuery
 
         if ($supportsDepartment) {
             $departmentParts[] = "NULLIF(mpr.department, '')";
+        }
+
+
+        if ($supportsPaymentTransactionMeta) {
+            $departmentParts[] = "NULLIF(TRIM(JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.service.department'))), '')";
+            $departmentParts[] = "NULLIF(TRIM(JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.service.section'))), '')";
+            $departmentParts[] = "NULLIF(TRIM(JSON_UNQUOTE(JSON_EXTRACT(pt.meta, '$.service.category_title'))), '')";
         }
 
         $departmentSelect = $departmentParts === []

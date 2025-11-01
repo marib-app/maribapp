@@ -988,7 +988,10 @@ class PaymentFulfillmentService
         foreach (['payment_note', 'payment_comment', 'notes', 'comment'] as $commentColumn) {
             if (Schema::hasColumn($serviceRequest->getTable(), $commentColumn)) {
                 $existingComment = (string) $serviceRequest->getAttribute($commentColumn);
-                $comment = sprintf('Paid via manual transaction #%d', $transaction->getKey());
+                $gateway = strtolower((string) $transaction->payment_gateway);
+                $source = $gateway === 'wallet' ? 'wallet transaction' : 'manual transaction';
+                $comment = sprintf('Paid via %s #%d', $source, $transaction->getKey());
+                
                 $requestUpdates[$commentColumn] = trim($existingComment === '' ? $comment : $existingComment . PHP_EOL . $comment);
                 break;
             }

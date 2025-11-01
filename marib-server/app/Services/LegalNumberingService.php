@@ -6,6 +6,7 @@ use App\Models\DepartmentNumberSetting;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
+use InvalidArgumentException;
 
 class LegalNumberingService
 {
@@ -19,6 +20,18 @@ class LegalNumberingService
 
         return $issued ?? (string) $id;
     }
+
+    public function formatPaymentNumber(int $id, ?string $department = null, ?string $currentNumber = null): string
+    {
+        $issued = $this->issuePaymentNumber($department, $currentNumber);
+
+        if ($issued !== null) {
+            return $issued;
+        }
+
+        return $this->fallbackPaymentNumber($department, $id);
+    }
+
 
     public function generateInvoiceNumber(?string $department = null): string
     {
@@ -42,6 +55,8 @@ class LegalNumberingService
             'invoice_prefix' => $this->normalizePrefix(Arr::get($attributes, 'invoice_prefix')),
             'next_order_number' => $this->normalizeSequence(Arr::get($attributes, 'next_order_number', 1)),
             'next_invoice_number' => $this->normalizeSequence(Arr::get($attributes, 'next_invoice_number', 1)),
+            'payment_prefix' => $this->normalizePrefix(Arr::get($attributes, 'payment_prefix')),
+            'next_payment_number' => $this->normalizeSequence(Arr::get($attributes, 'next_payment_number', 1)),
         ];
 
         $setting = DepartmentNumberSetting::query()->updateOrCreate(
@@ -95,8 +110,20 @@ class LegalNumberingService
                 return $currentNumber;
             }
 
-            $sequenceField = $type === 'order' ? 'next_order_number' : 'next_invoice_number';
-            $prefixField = $type === 'order' ? 'order_prefix' : 'invoice_prefix';
+
+            $sequenceField = match ($type) {
+                'order' => 'next_order_number',
+                'invoice' => 'next_invoice_number',
+                'payment' => 'next_payment_number',
+                default => throw new InvalidArgumentException('Unsupported numbering type: ' . $type),
+            };
+
+            $prefixField = match ($type) {
+                'order' => 'order_prefix',
+                'invoice' => 'invoice_prefix',
+                'payment' => 'payment_prefix',
+                default => throw new InvalidArgumentException('Unsupported numbering type: ' . $type),
+            };
 
             $sequence = $setting->{$sequenceField};
 
@@ -107,10 +134,27 @@ class LegalNumberingService
         }, 5);
     }
 
+
+    private function issuePaymentNumber(?string $department, ?string $currentNumber = null): ?string
+    {
+        return $this->issueNumber($department, 'payment', $currentNumber);
+    }
+
     private function matchesExistingNumber(string $number, DepartmentNumberSetting $setting, string $type): bool
     {
-        $sequenceField = $type === 'order' ? 'next_order_number' : 'next_invoice_number';
-        $prefix = $type === 'order' ? $setting->order_prefix : $setting->invoice_prefix;
+        $sequenceField = match ($type) {
+            'order' => 'next_order_number',
+            'invoice' => 'next_invoice_number',
+            'payment' => 'next_payment_number',
+            default => throw new InvalidArgumentException('Unsupported numbering type: ' . $type),
+        };
+
+        $prefix = match ($type) {
+            'order' => $setting->order_prefix,
+            'invoice' => $setting->invoice_prefix,
+            'payment' => $setting->payment_prefix,
+            default => throw new InvalidArgumentException('Unsupported numbering type: ' . $type),
+        };
 
         if ($prefix !== null && $prefix !== '') {
             return str_starts_with($number, $prefix);
@@ -154,6 +198,15 @@ class LegalNumberingService
 
         return $prefix . 'INV-' . Str::upper(Str::random(8));
     }
+
+
+    private function fallbackPaymentNumber(?string $department, int $id): string
+    {
+        $prefix = $this->sanitizeDepartmentPrefix($department);
+
+        return $prefix . 'PAY-' . Str::padLeft((string) $id, 6, '0');
+    }
+
 
     private function sanitizeDepartmentPrefix(?string $department): string
     {

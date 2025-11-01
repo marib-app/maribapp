@@ -932,10 +932,14 @@ class FeatureSectionController extends Controller {
     private function normalizePriceValue(mixed $value): ?float
 
     {
-         return FeaturedSectionQueryHelper::normalizePrice($value);
+        return FeaturedSectionQueryHelper::normalizePrice($value);
 
     }
 
+    private function normalizeSectionPrice(mixed $value): ?float
+    {
+        return FeaturedSectionQueryHelper::normalizePrice($value);
+    }
 
     /**
      * @param array<string, mixed> $data

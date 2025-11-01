@@ -316,24 +316,7 @@ class ServicePaymentService
 
         $metaSource = $transaction->meta ?? [];
 
-        if ($method === 'wallet') {
-            $metaSource = $this->stripManualMeta($metaSource);
-        }
 
-        $meta = $this->mergeServiceMeta($metaSource, $service, $data);
-        
-        $meta = $this->mergePaymentPayloadMeta($meta, $transaction, $data);
-
-        if ($manualContext !== null) {
-            $meta = $this->mergeManualConfirmationMeta(
-                $meta,
-                $data,
-                $manualContext['manual_payment_request'],
-                $transaction,
-                $idempotencyKey
-            );
-            $transaction->manual_payment_request_id = $manualContext['manual_payment_request']->getKey();
-        }
 
         if ($method === 'wallet') {
             if ($transaction->manual_payment_request_id) {
@@ -346,20 +329,33 @@ class ServicePaymentService
             $sanitizedMetaSource = $this->stripManualMeta($transaction->meta ?? []);
             $meta = $this->mergeServiceMeta($sanitizedMetaSource, $service, $data);
             $meta = $this->mergePaymentPayloadMeta($meta, $transaction, $data);
-            $walletMeta = $this->stripManualMeta($meta);
+            $meta = $this->stripManualMeta($meta);
 
             return $this->confirmWalletPayment(
                 $user,
                 $serviceRequest,
                 $service,
                 $transaction,
-                $walletMeta,
+                $meta,
                 $idempotencyKey,
                 $data
             );
         }
 
+        $meta = $this->mergeServiceMeta($metaSource, $service, $data);
 
+        $meta = $this->mergePaymentPayloadMeta($meta, $transaction, $data);
+
+        if ($manualContext !== null) {
+            $meta = $this->mergeManualConfirmationMeta(
+                $meta,
+                $data,
+                $manualContext['manual_payment_request'],
+                $transaction,
+                $idempotencyKey
+            );
+            $transaction->manual_payment_request_id = $manualContext['manual_payment_request']->getKey();
+        }
 
         $options = [
             'payment_gateway' => $method,

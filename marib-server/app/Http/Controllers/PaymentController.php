@@ -231,10 +231,33 @@ class PaymentController extends Controller
             $normalizedSelectedMethod = $this->normalizeGatewayToken($validated['payment_method'] ?? null);
             $selectedMethod = $normalizedSelectedMethod ?? ($validated['payment_method'] ?? null);
 
+            $explicitWalletRequest = $normalizedSelectedMethod === 'wallet';
+            if (! $explicitWalletRequest && isset($validated['payment_method'])) {
+                $explicitWalletRequest = $this->normalizeGatewayToken($validated['payment_method']) === 'wallet';
+            }
+
             if ($availableGateways !== []) {
                 $canonicalSelected = $normalizedSelectedMethod;
 
                 if ($canonicalSelected === null || ! in_array($canonicalSelected, $availableGateways, true)) {
+                    if ($explicitWalletRequest) {
+                        Log::warning('payments.service.wallet_unavailable', [
+                            'user_id' => $request->user()->getKey(),
+                            'service_request_id' => $serviceRequest->getKey(),
+                            'requested_method' => $selectedMethod,
+                            'available_gateways' => $availableGateways,
+                            'idempotency_key' => $idempotencyKey,
+                        ]);
+
+                        return response()->json([
+                            'message' => __('الدفع بالمحفظة غير متاح حالياً.'),
+                            'errors' => [
+                                'payment_method' => [__('الدفع بالمحفظة غير متاح حالياً.')],
+                            ],
+                        ], 422);
+                    }
+
+
                     $fallbackMethod = $availableGateways[0];
                     Log::info('payments.service.gateway_overridden', [
                         'user_id' => $request->user()->getKey(),

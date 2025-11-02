@@ -1042,10 +1042,34 @@ class OrderPaymentService
     {
         try {
 
+            $existingIdempotency = is_string($transaction->idempotency_key)
+                ? trim($transaction->idempotency_key)
+                : '';
+            $normalizedIdempotencyKey = trim($idempotencyKey);
+
+            if ($existingIdempotency === '' && $normalizedIdempotencyKey !== '') {
+                $transaction->idempotency_key = $normalizedIdempotencyKey;
+                $transaction->saveQuietly();
+                $walletIdempotencyKey = $normalizedIdempotencyKey;
+            } else {
+                if ($existingIdempotency !== '' && $normalizedIdempotencyKey !== '' && $existingIdempotency !== $normalizedIdempotencyKey) {
+                    Log::notice('order_payment.wallet_idempotency_mismatch', [
+                        'transaction_id' => $transaction->getKey(),
+                        'stored_idempotency_key' => $existingIdempotency,
+                        'incoming_idempotency_key' => $normalizedIdempotencyKey,
+                    ]);
+                }
+
+                $walletIdempotencyKey = $existingIdempotency !== ''
+                    ? $existingIdempotency
+                    : $normalizedIdempotencyKey;
+            }
+
+
             $currency = strtoupper((string) ($data['currency'] ?? $transaction->currency ?? config('app.currency', 'SAR')));
 
 
-            return $this->walletService->debit($user, $idempotencyKey, (float) $transaction->amount, [
+            return $this->walletService->debit($user, $walletIdempotencyKey, (float) $transaction->amount, [
                 'payment_transaction' => $transaction,
                 'meta' => array_merge($transaction->meta ?? [], [
                     'order_id' => $transaction->payable_id,

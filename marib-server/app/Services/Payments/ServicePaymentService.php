@@ -489,6 +489,31 @@ class ServicePaymentService
         ) {
             $this->walletService->ensureSufficient($user, $amount, $currency);
 
+
+            $existingIdempotency = is_string($transaction->idempotency_key)
+                ? trim($transaction->idempotency_key)
+                : '';
+            $normalizedIdempotencyKey = trim($idempotencyKey);
+
+            if ($existingIdempotency === '') {
+                $transaction->idempotency_key = $normalizedIdempotencyKey;
+                $walletIdempotencyKey = $normalizedIdempotencyKey;
+            } else {
+                if ($existingIdempotency !== $normalizedIdempotencyKey && $normalizedIdempotencyKey !== '') {
+                    Log::notice('service_payment.wallet_idempotency_mismatch', [
+                        'transaction_id' => $transaction->getKey(),
+                        'stored_idempotency_key' => $existingIdempotency,
+                        'incoming_idempotency_key' => $normalizedIdempotencyKey,
+                    ]);
+                }
+
+                $walletIdempotencyKey = $existingIdempotency;
+            }
+
+            if ($walletIdempotencyKey === '') {
+                $walletIdempotencyKey = $normalizedIdempotencyKey;
+            }
+
             $transaction->forceFill([
                 'payment_gateway' => 'wallet',
                 'currency' => $currency,
@@ -518,7 +543,7 @@ class ServicePaymentService
                 $currency,
                 'service_request',
                 $transaction->getKey(),
-                $idempotencyKey,
+                $walletIdempotencyKey,
                 $walletMeta
             );
 

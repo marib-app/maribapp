@@ -390,7 +390,31 @@ class PackagePaymentService
         }
 
         try {
-            return $this->walletService->debit($user, $idempotencyKey, $amount, array_merge($options, [
+            $existingIdempotency = is_string($transaction->idempotency_key)
+                ? trim($transaction->idempotency_key)
+                : '';
+            $normalizedIdempotencyKey = trim($idempotencyKey);
+
+            if ($existingIdempotency === '' && $normalizedIdempotencyKey !== '') {
+                $transaction->idempotency_key = $normalizedIdempotencyKey;
+                $transaction->saveQuietly();
+                $walletIdempotencyKey = $normalizedIdempotencyKey;
+            } else {
+                if ($existingIdempotency !== '' && $normalizedIdempotencyKey !== '' && $existingIdempotency !== $normalizedIdempotencyKey) {
+                    Log::notice('package_payment.wallet_idempotency_mismatch', [
+                        'transaction_id' => $transaction->getKey(),
+                        'stored_idempotency_key' => $existingIdempotency,
+                        'incoming_idempotency_key' => $normalizedIdempotencyKey,
+                    ]);
+                }
+
+                $walletIdempotencyKey = $existingIdempotency !== ''
+                    ? $existingIdempotency
+                    : $normalizedIdempotencyKey;
+            }
+
+            return $this->walletService->debit($user, $walletIdempotencyKey, $amount, array_merge($options, [
+                
                 'payment_transaction' => $transaction,
             ]));
         } catch (RuntimeException $exception) {

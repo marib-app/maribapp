@@ -9,6 +9,7 @@ use App\Http\Resources\Payments\SubjectResource;
 use App\Models\ManualPaymentRequest;
 use App\Models\Order;
 use App\Models\PaymentTransaction;
+use App\Models\Service;
 use App\Models\ServiceRequest;
 use App\Services\Logging\PaymentTrace;
 use App\Services\LegalNumberingService;
@@ -110,7 +111,13 @@ class PaymentController extends Controller
             ]);
         }
 
-        $idempotencyKey = $this->resolveIdempotencyKey($request, [
+        $requestUser = $request->user() ?? Auth::user();
+
+        if (! $requestUser) {
+            return response()->json(['message' => __('Unauthenticated.')], 401);
+        }
+
+        $requestedIdempotencyKey = $this->resolveIdempotencyKey($request, [
             'purpose' => 'service',
             'user' => $userId,
             'service_request' => $serviceRequest->getKey(),
@@ -119,10 +126,9 @@ class PaymentController extends Controller
             'amount' => $validated['amount'] ?? $serviceRequest->service?->price ?? '',
         ]);
 
-        $existing = PaymentTransaction::query()
-            ->where('user_id', $userId)
-            ->where('idempotency_key', $idempotencyKey)
-            ->first();
+        $idempotencyKey = Str::orderedUuid()->toString();
+
+        $existing = null;
 
         if (! $existing) {
             $data = [
@@ -132,7 +138,7 @@ class PaymentController extends Controller
             ];
 
             $transaction = $this->servicePaymentService->initiate(
-                $request->user(),
+                $requestUser,
                 $serviceRequest,
                 $method,
                 $idempotencyKey,
@@ -145,7 +151,7 @@ class PaymentController extends Controller
         if ($existing->payment_gateway === 'wallet'
             && strtolower((string) $existing->payment_status) !== 'succeed') {
             $existing = $this->servicePaymentService->confirm(
-                $request->user(),
+                $requestUser,
                 $existing,
                 $existing->idempotency_key ?? $idempotencyKey,
                 [
@@ -165,11 +171,88 @@ class PaymentController extends Controller
                 'payable_id' => $serviceRequest->getKey(),
                 'payment_transaction_id' => $existing->getKey(),
                 'idempotency_key' => $existing->idempotency_key,
+                'requested_idempotency_key' => $requestedIdempotencyKey,
                 'status_code' => $autoConfirmedStatus,
             ], $request);
         }
 
+        $serviceRequest->refresh()->loadMissing('service');
+        $existing = $existing->fresh();
+
+        $service = $serviceRequest->service;
+        $quote = null;
+
+        if ($service instanceof Service) {
+            try {
+                $quote = $this->servicePaymentService->resolvePaymentQuote($service);
+            } catch (ValidationException $exception) {
+                $fallbackCurrency = strtoupper(
+                    (string) ($existing->currency ?? $currency ?? $service->currency ?? config('app.currency', 'YER'))
+                );
+
+                $quote = [
+                    'amount' => max(0.0, (float) ($existing->amount ?? 0.0)),
+                    'currency' => $fallbackCurrency,
+                ];
+            }
+
+            $existing->forceFill([
+                'amount' => $quote['amount'],
+                'currency' => $quote['currency'],
+            ]);
+
+            $meta = $existing->meta ?? [];
+
+            if (is_array($meta)) {
+                data_set($meta, 'payload.amount', $quote['amount']);
+                data_set($meta, 'payload.currency', $quote['currency']);
+                data_set($meta, 'payload.payment_method', $existing->payment_gateway);
+                $existing->meta = $meta;
+            }
+
+            if ($existing->isDirty(['amount', 'currency', 'meta'])) {
+                $existing->save();
+                $existing = $existing->fresh();
+            }
+        }
+
         $statusCode = $this->inferStatusCode($existing);
+
+        if ($statusCode === 200 && strtolower((string) $existing->payment_gateway) === 'wallet') {
+            ManualPaymentRequest::query()
+                ->where('payable_type', ServiceRequest::class)
+                ->where('payable_id', $serviceRequest->getKey())
+                ->whereIn('status', ManualPaymentRequest::OPEN_STATUSES)
+                ->get()
+                ->each(static function (ManualPaymentRequest $manualRequest): void {
+                    $updates = [
+                        'payment_transaction_id' => null,
+                        'status' => ManualPaymentRequest::STATUS_REJECTED,
+                    ];
+
+                    $manualRequest->forceFill($updates)->saveQuietly();
+                });
+        }
+
+        $availableGateways = [];
+
+        if ($service instanceof Service && $quote !== null) {
+            $normalizedGateway = strtolower((string) $existing->payment_gateway);
+
+            if ($normalizedGateway === 'wallet' && $statusCode === 200) {
+                $availableGateways = ['wallet'];
+            } else {
+                $availableGateways = $this->servicePaymentService->determineAvailableGateways(
+                    $requestUser,
+                    $serviceRequest,
+                    $service,
+                    [
+                        'amount' => $quote['amount'],
+                        'currency' => $quote['currency'],
+                    ]
+                );
+            }
+        }
 
         PaymentTrace::trace('payment.initiate.service', [
             'user_id' => $userId,
@@ -177,10 +260,11 @@ class PaymentController extends Controller
             'payable_id' => $serviceRequest->getKey(),
             'payment_transaction_id' => $existing->getKey(),
             'idempotency_key' => $existing->idempotency_key,
+            'requested_idempotency_key' => $requestedIdempotencyKey,
             'status_code' => $statusCode,
         ], $request);
 
-        return $this->buildServiceResponse($existing, $serviceRequest, $statusCode);
+        return $this->buildServiceResponse($existing, $serviceRequest, $statusCode, $availableGateways);
     }
 
     private function initiateOrderPayment(Request $request, int $userId): JsonResponse
@@ -535,13 +619,23 @@ class PaymentController extends Controller
         return $this->buildOrderResponse($freshTransaction, $order, $statusCode);
     }
 
-    private function buildServiceResponse(PaymentTransaction $transaction, ServiceRequest $serviceRequest, int $statusCode): JsonResponse
+    private function buildServiceResponse(
+        PaymentTransaction $transaction,
+        ServiceRequest $serviceRequest,
+        int $statusCode,
+        ?array $availableGateways = null
+    ): JsonResponse
     {
         $transaction->loadMissing([
             'manualPaymentRequest.manualBank',
             'manualPaymentRequest.paymentTransaction.order',
             'manualPaymentRequest.paymentTransaction.walletTransaction',
         ]);
+
+        if ($transaction->manual_payment_request_id === null
+            || strtolower((string) $transaction->payment_gateway) === 'wallet') {
+            $transaction->setRelation('manualPaymentRequest', null);
+        }
 
         $manualRequest = $transaction->manualPaymentRequest instanceof ManualPaymentRequest
             ? $transaction->manualPaymentRequest
@@ -554,7 +648,19 @@ class PaymentController extends Controller
                 : null,
             'subject' => SubjectResource::make($serviceRequest)->resolve(),
             'next' => $this->buildNextNavigation($transaction, 'service', $serviceRequest->getKey()),
+            'payment_transaction_id' => $transaction->getKey(),
+            'payment_intent_id' => $transaction->idempotency_key,
         ];
+
+        if (is_array($availableGateways)) {
+            $normalizedGateways = array_values(array_unique(array_filter(
+                $availableGateways,
+                static fn ($value) => is_string($value) && $value !== ''
+            )));
+
+            $response['available_gateways'] = $normalizedGateways;
+            $response['allowed_gateways'] = $normalizedGateways;
+        }
 
         return response()->json($response, $statusCode);
     }

@@ -8,6 +8,7 @@ use App\Models\PaymentTransaction;
 use App\Models\Service;
 use App\Models\ServiceRequest;
 use App\Models\User;
+use App\Services\LegalNumberingService;
 use App\Services\PaymentFulfillmentService;
 use App\Services\Payments\CreateOrLinkManualPaymentRequest;
 use App\Services\Payments\Concerns\HandlesManualBankConfirmation;
@@ -73,6 +74,7 @@ class ServicePaymentService
         private readonly PaymentFulfillmentService $fulfillmentService,
         private readonly ManualPaymentRequestService $manualPaymentRequestService,
         private readonly CreateOrLinkManualPaymentRequest $manualPaymentLinker,
+        private readonly LegalNumberingService $legalNumberingService,
     ) {
     }
 
@@ -299,6 +301,20 @@ class ServicePaymentService
         }
 
         $quote = $this->resolveQuoteWithFallback($transaction, $service, $data);
+
+        if ($method === 'wallet') {
+            try {
+                $quote = $this->resolvePaymentQuote($service);
+            } catch (ValidationException $exception) {
+                Log::notice('service_payment.wallet_quote_resolution_failed', [
+                    'service_id' => $service->getKey(),
+                    'service_request_id' => $serviceRequest->getKey(),
+                    'transaction_id' => $transaction->getKey(),
+                    'message' => $exception->getMessage(),
+                ]);
+            }
+        }
+
         $resolvedCurrency = $quote['currency'];
 
         if ($method === 'wallet') {
@@ -358,10 +374,13 @@ class ServicePaymentService
             $transaction->manual_payment_request_id = $manualContext['manual_payment_request']->getKey();
         }
 
+        $paymentReference = $this->resolveServiceRequestReference($serviceRequest);
+
+
         $options = [
             'payment_gateway' => $method,
             'meta' => $meta,
-            'payment_reference' => $data['reference'] ?? null,
+            'payment_reference' => $paymentReference,
         ];
 
 
@@ -454,11 +473,8 @@ class ServicePaymentService
 
         $metaWithContext = array_replace_recursive($meta, ['context' => $context]);
 
-        $reference = null;
-        if (isset($data['reference']) && is_string($data['reference'])) {
-            $trimmedReference = trim($data['reference']);
-            $reference = $trimmedReference === '' ? null : $trimmedReference;
-        }
+        $reference = $this->resolveServiceRequestReference($serviceRequest);
+
 
         return $this->db->transaction(function () use (
             $user,
@@ -588,7 +604,7 @@ class ServicePaymentService
             $transaction->payable_type = ServiceRequest::class;
             $transaction->payable_id = $serviceRequest->getKey();
             $transaction->payment_status = Arr::get($data, 'auto_confirm') ? 'succeed' : 'pending';
-            $transaction->payment_id = $data['reference'] ?? $transaction->payment_id;
+            $transaction->payment_id = $this->resolveServiceRequestReference($serviceRequest);
             $transaction->meta = $meta;
             $transaction->save();
 
@@ -976,6 +992,29 @@ class ServicePaymentService
         return $meta;
     }
 
+    private function resolveServiceRequestReference(ServiceRequest $serviceRequest): string
+    {
+        $current = trim((string) $serviceRequest->request_number);
+
+        if ($current !== '') {
+            return $current;
+        }
+
+        $issued = trim((string) $this->legalNumberingService->formatOrderNumber(
+            $serviceRequest->getKey(),
+            'services'
+        ));
+
+        $reference = $issued !== '' ? $issued : (string) $serviceRequest->getKey();
+
+        if ($reference !== $serviceRequest->request_number) {
+            $serviceRequest->forceFill(['request_number' => $reference])->save();
+        }
+
+        return $reference;
+    }
+
+
     /**
      * @param array<string, mixed> $meta
      * @param array<string, mixed> $data
@@ -1224,6 +1263,8 @@ class ServicePaymentService
 
         $transaction->manual_payment_request_id = null;
         $transaction->meta = $this->stripManualMeta($transaction->meta);
+
+        $transaction->setRelation('manualPaymentRequest', null);
 
         if ($nextGateway !== null) {
             $transaction->payment_gateway = $nextGateway;

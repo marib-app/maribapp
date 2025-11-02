@@ -7,6 +7,7 @@ use App\Models\UserFcmToken;
 use App\Services\NotificationService;
 use App\Http\Controllers\Controller;
 use App\Models\Service;
+use App\Services\LegalNumberingService;
 use App\Models\ServiceRequest;
 use App\Services\Payments\ServicePaymentService;
 use App\Services\ServiceCustomFieldSubmissionService;
@@ -26,8 +27,10 @@ class ServiceRequestController extends Controller
 {
     public function __construct(
         private ServiceCustomFieldSubmissionService $submissionService,
-        private ServicePaymentService $servicePaymentService
-    ) {
+        private ServicePaymentService $servicePaymentService,
+        private LegalNumberingService $legalNumberingService,
+        
+        ) {
     }
 
     private function transactionMatchesServiceRequest(?PaymentTransaction $transaction, ServiceRequest $serviceRequest, Service $service): bool
@@ -222,13 +225,13 @@ class ServiceRequestController extends Controller
             $serviceRequest = new ServiceRequest();
             $serviceRequest->service_id = $service->id;
             $serviceRequest->user_id = $user->id;
-            $serviceRequest->request_number = $this->generateRequestNumber();
+            $serviceRequest->request_number = $this->generateRequestNumber($serviceRequest);
         } elseif ($serviceRequest->trashed()) {
             $serviceRequest->restore();
         }
 
         if (! $serviceRequest->request_number) {
-            $serviceRequest->request_number = $this->generateRequestNumber();
+            $serviceRequest->request_number = $this->generateRequestNumber($serviceRequest);
         }
 
         $serviceRequest->status = 'review';
@@ -609,26 +612,49 @@ class ServiceRequestController extends Controller
         ];
     }
 
-    private function generateRequestNumber(): string
+    private function generateRequestNumber(?ServiceRequest $serviceRequest = null): string
+    {
+        $department = 'services';
+        $nextIdentifier = $serviceRequest?->exists
+            ? (int) $serviceRequest->getKey()
+            : (int) (ServiceRequest::query()->max('id') ?? 0) + 1;
+
+        $candidate = trim((string) $this->legalNumberingService->formatOrderNumber(
+            $nextIdentifier,
+            $department,
+            $serviceRequest?->request_number
+        ));
+
+        if ($candidate === '') {
+            $candidate = (string) $nextIdentifier;
+        }
+
+        if ($this->requestNumberExists($candidate, $serviceRequest)) {
+            return $this->fallbackRequestNumber($serviceRequest);
+        }
+
+        return $candidate;
+    }
+
+    private function requestNumberExists(string $number, ?ServiceRequest $ignore = null): bool
+    {
+        $query = ServiceRequest::query()->where('request_number', $number);
+
+        if ($ignore?->exists) {
+            $query->whereKeyNot($ignore->getKey());
+        }
+
+        return $query->exists();
+    }
+
+    private function fallbackRequestNumber(?ServiceRequest $ignore = null): string
     {
         $prefix = 'SR-' . now()->format('Ymd');
-        $attempt = 0;
 
         do {
-            $suffix = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-            $candidate = "{$prefix}-{$suffix}";
+            $candidate = $prefix . '-' . Str::padLeft((string) random_int(0, 999999), 6, '0');
+        } while ($this->requestNumberExists($candidate, $ignore));
 
-            $exists = ServiceRequest::query()
-                ->where('request_number', $candidate)
-                ->exists();
-
-            if (! $exists) {
-                return $candidate;
-            }
-
-            $attempt++;
-        } while ($attempt < 10);
-
-        return $prefix . '-' . Str::upper(Str::random(6));
+        return $candidate;
     }
 }

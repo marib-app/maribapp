@@ -271,7 +271,7 @@ class ServicePaymentService
         $deferredGateway = null;
         if ($transaction->payment_gateway !== $method) {
             if ($method === 'wallet' && $transaction->manual_payment_request_id) {
-                $this->detachManualPaymentArtifacts($transaction, 'wallet', false);
+                $this->detachManualPaymentArtifacts($transaction, 'wallet', true);
                 $transaction->payment_gateway = $method;
                 $transaction->save();
             } elseif ($method === 'manual_bank' && ! $transaction->manual_payment_request_id) {
@@ -660,7 +660,7 @@ class ServicePaymentService
 
 
             if ($method === 'wallet' && $existing->manual_payment_request_id) {
-                $this->detachManualPaymentArtifacts($existing, 'wallet', false);
+                $this->detachManualPaymentArtifacts($existing, 'wallet', true);
             }
 
             if ($method === 'wallet') {
@@ -708,7 +708,7 @@ class ServicePaymentService
             $currency = $quote['currency'];
 
             if ($method === 'wallet' && $activeDuplicate->manual_payment_request_id) {
-                $this->detachManualPaymentArtifacts($activeDuplicate, 'wallet', false);
+                $this->detachManualPaymentArtifacts($activeDuplicate, 'wallet', true);
             }
 
             if ($method === 'wallet') {

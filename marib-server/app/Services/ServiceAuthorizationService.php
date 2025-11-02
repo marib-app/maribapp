@@ -31,9 +31,14 @@ class ServiceAuthorizationService
 
         $serviceModel = $service instanceof Service ? $service : Service::find($service);
 
-        if (!$serviceModel) {
+        if (! $serviceModel) {
             return false;
         }
+
+        if ($this->userOwnsService($user, $serviceModel)) {
+            return true;
+        }
+
 
         return $this->userCanManageCategory($user, $serviceModel->category_id);
     }
@@ -81,23 +86,37 @@ class ServiceAuthorizationService
             return $query;
         }
 
-        if ($column === 'services.id') {
-            $serviceIds = $this->getManagedServiceIds($user);
+        $managedServiceIds = $this->getManagedServiceIds($user);
 
-            if (empty($serviceIds)) {
+
+        if ($column === 'services.id') {
+            if (empty($managedServiceIds)) {
                 return $query->whereRaw('1 = 0');
             }
 
-            return $query->whereIn($column, $serviceIds);
+            return $query->whereIn($column, $managedServiceIds);
         }
 
         $categoryIds = $this->getManagedCategoryIds($user);
-        
-        if (empty($categoryIds)) {
+
+        if (empty($categoryIds) && empty($managedServiceIds)) {
             return $query->whereRaw('1 = 0');
         }
 
-        return $query->whereIn($column, $categoryIds);
+        return $query->where(function (Builder $builder) use ($column, $categoryIds, $managedServiceIds) {
+            $appliedCategoryCondition = false;
+
+            if (! empty($categoryIds)) {
+                $builder->whereIn($column, $categoryIds);
+                $appliedCategoryCondition = true;
+            }
+
+            if (! empty($managedServiceIds)) {
+                $method = $appliedCategoryCondition ? 'orWhereIn' : 'whereIn';
+                $builder->{$method}('services.id', $managedServiceIds);
+            }
+        });
+    
     }
 
     public function restrictServiceRequestQuery(Builder $query, User $user): Builder
@@ -107,27 +126,50 @@ class ServiceAuthorizationService
         }
 
         $categoryIds = $this->getManagedCategoryIds($user);
+        $serviceIds = $this->getManagedServiceIds($user);
 
-        if (empty($categoryIds)) {
+        if (empty($categoryIds) && empty($serviceIds)) {
             return $query->whereRaw('1 = 0');
         }
 
-               return $query->whereHas('service', static function (Builder $serviceQuery) use ($categoryIds) {
-            $serviceQuery->whereIn('category_id', $categoryIds);
+        return $query->where(function (Builder $builder) use ($categoryIds, $serviceIds) {
+            $appliedCondition = false;
+
+            if (! empty($serviceIds)) {
+                $builder->whereIn('service_requests.service_id', $serviceIds);
+                $appliedCondition = true;
+            }
+
+            if (! empty($categoryIds)) {
+                $method = $appliedCondition ? 'orWhereHas' : 'whereHas';
+                $builder->{$method}('service', static function (Builder $serviceQuery) use ($categoryIds) {
+                    $serviceQuery->whereIn('category_id', $categoryIds);
+                });
+            }
         });
     }
 
     public function getManagedServiceIds(User $user): array
     {
+
+        $serviceIds = [];
+
         $categoryIds = $this->getManagedCategoryIds($user);
 
-        if (empty($categoryIds)) {
-            return [];
+        if (! empty($categoryIds)) {
+            $serviceIds = Service::query()
+                ->whereIn('category_id', $categoryIds)
+                ->pluck('id')
+                ->all();
         }
 
-        return Service::query()
-            ->whereIn('category_id', $categoryIds)
-            ->pluck('id')
+        $ownedServiceIds = $this->getOwnedServiceIds($user);
+
+        if (! empty($ownedServiceIds)) {
+            $serviceIds = array_merge($serviceIds, $ownedServiceIds);
+        }
+
+        return collect($serviceIds)
 
 
             ->filter()
@@ -136,6 +178,41 @@ class ServiceAuthorizationService
             ->values()
             ->all();
     }
+
+
+    public function getOwnedServiceIds(User $user): array
+    {
+        return Service::query()
+            ->where(static function (Builder $builder) use ($user) {
+                $builder->where('owner_id', $user->getKey());
+
+                $builder->orWhere(static function (Builder $directQuery) use ($user) {
+                    $directQuery
+                        ->where('direct_to_user', true)
+                        ->where('direct_user_id', $user->getKey());
+                });
+            })
+            ->pluck('id')
+            ->filter()
+            ->map(static fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    private function userOwnsService(User $user, Service $service): bool
+    {
+        if ((int) $service->owner_id === $user->getKey()) {
+            return true;
+        }
+
+        if ($service->direct_to_user && (int) $service->direct_user_id === $user->getKey()) {
+            return true;
+        }
+
+        return false;
+    }
+
 
     public function getManagedCategoryIds(User $user): array
     {

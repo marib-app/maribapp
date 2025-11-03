@@ -17,7 +17,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hive_flutter/adapters.dart';
 
-
 import 'package:marib/data/model/item/item_model.dart';
 
 import 'package:marib/ui/screens/widgets/errors/no_data_found.dart';
@@ -35,10 +34,6 @@ import 'package:marib/ui/widgets/slivers/catalog_scroll_view.dart';
 import 'package:marib/ui/widgets/slivers/catalog_section.dart';
 
 import 'package:flutter/foundation.dart';
-
-
-
-
 
 class SearchScreen extends StatefulWidget {
   final bool autoFocus;
@@ -339,7 +334,6 @@ class SearchScreenState extends State<SearchScreen>
       return sections;
     }
     return const [];
-
   }
 
   List<CatalogSection> _buildPopularSections(
@@ -524,10 +518,10 @@ class SearchScreenState extends State<SearchScreen>
       child: NoDataFound(
         onTap: () {
           context.read<SearchItemCubit>().searchItem(
-            searchController.text,
-            page: 1,
-            filter: filter,
-          );
+                searchController.text,
+                page: 1,
+                filter: filter,
+              );
         },
         category: EmptyStateCategory.search,
       ),
@@ -541,24 +535,37 @@ class SearchScreenState extends State<SearchScreen>
     if (isOffline) {
       return CatalogBoxSection(
         key: const ValueKey('search-offline'),
-        padding:
-        EdgeInsets.symmetric(horizontal: sidePadding, vertical: 16),
+        padding: EdgeInsets.symmetric(horizontal: sidePadding, vertical: 16),
         child: NoInternet(
           onRetry: () {
             context.read<SearchItemCubit>().searchItem(
-              searchController.text,
-              page: 1,
-              filter: filter,
-            );
+                  searchController.text,
+                  page: 1,
+                  filter: filter,
+                );
           },
         ),
       );
     }
 
+    final String rawMessage = state.errorMessage.trim();
+    final String? details = rawMessage.isEmpty ? null : rawMessage;
+
     return CatalogBoxSection(
       key: const ValueKey('search-error'),
       padding: EdgeInsets.symmetric(horizontal: sidePadding, vertical: 16),
-      child: const SomethingWentWrong(),
+      child: SomethingWentWrong(
+        title: 'تعذر تحميل نتائج البحث',
+        description: 'حدث خطأ أثناء جلب نتائج البحث. حاول مرة أخرى خلال لحظات.',
+        details: details,
+        onReload: () {
+          context.read<SearchItemCubit>().searchItem(
+                searchController.text,
+                page: 1,
+                filter: filter,
+              );
+        },
+      ),
     );
   }
 
@@ -569,8 +576,7 @@ class SearchScreenState extends State<SearchScreen>
     if (isOffline) {
       return CatalogBoxSection(
         key: const ValueKey('popular-offline'),
-        padding:
-         EdgeInsets.symmetric(horizontal: sidePadding, vertical: 16),
+        padding: EdgeInsets.symmetric(horizontal: sidePadding, vertical: 16),
         child: NoInternet(
           onRetry: () {
             context.read<FetchPopularItemsCubit>().fetchPopularItems();
@@ -578,10 +584,21 @@ class SearchScreenState extends State<SearchScreen>
         ),
       );
     }
+
+    final String rawMessage = state.error?.toString().trim() ?? '';
+
     return CatalogBoxSection(
       key: const ValueKey('popular-error'),
-      padding:  EdgeInsets.symmetric(horizontal: sidePadding, vertical: 16),
-      child: const SomethingWentWrong(),
+      padding: EdgeInsets.symmetric(horizontal: sidePadding, vertical: 16),
+      child: SomethingWentWrong(
+        title: 'تعذر تحميل العناصر المقترحة',
+        description:
+            'واجهنا مشكلة في تحميل العناصر المقترحة. يرجى المحاولة مرة أخرى.',
+        details: rawMessage.isEmpty ? null : rawMessage,
+        onReload: () {
+          context.read<FetchPopularItemsCubit>().fetchPopularItems();
+        },
+      ),
     );
   }
 
@@ -591,8 +608,6 @@ class SearchScreenState extends State<SearchScreen>
 
     setState(() {});
   }
-
-
 
   ///This will call api after some delay
   void itemSearch() {
@@ -761,7 +776,6 @@ class SearchScreenState extends State<SearchScreen>
     setState(() {});
   }
 
-
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -793,7 +807,6 @@ class SearchScreenState extends State<SearchScreen>
 
   Widget bodyData() {
     return BlocBuilder<SearchItemCubit, SearchItemState>(
-
       builder: (context, searchState) {
         return BlocBuilder<FetchPopularItemsCubit, FetchPopularItemsState>(
           builder: (context, popularState) {
@@ -818,8 +831,6 @@ class SearchScreenState extends State<SearchScreen>
     await box.clear();
     setState(() {});
   }
-
-
 
   void insertNewItem(ItemModel model) {
     var box = Hive.box(HiveKeys.historyBox);
@@ -846,7 +857,6 @@ class SearchScreenState extends State<SearchScreen>
 
     setState(() {});
   }
-
 
   Widget setSearchIcon() {
     return Padding(
@@ -881,7 +891,6 @@ class SearchScreenState extends State<SearchScreen>
     super.dispose();
   }
 
-
   @visibleForTesting
   ScrollController get scrollController => _scrollController;
 }
@@ -891,16 +900,13 @@ enum _DebounceScope { search, scroll }
 @visibleForTesting
 typedef DebounceScope = _DebounceScope;
 
-
 class _SearchDebounceCoordinator {
   _SearchDebounceCoordinator(Duration duration)
       : duration = duration,
         _timers = <_DebounceScope, Timer>{};
 
-
   final Duration duration;
   final Map<_DebounceScope, Timer> _timers;
-
 
   void run(_DebounceScope scope, VoidCallback action) {
     _timers[scope]?.cancel();
@@ -914,5 +920,6 @@ class _SearchDebounceCoordinator {
     _timers.clear();
   }
 }
+
 @visibleForTesting
 typedef SearchDebounceCoordinator = _SearchDebounceCoordinator;

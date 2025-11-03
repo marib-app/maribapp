@@ -1,56 +1,125 @@
-import 'package:lottie/lottie.dart';
-import 'package:marib/ui/theme/theme.dart';
-import 'package:marib/utils/extensions/extensions.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:marib/app/navigation/app_page_route.dart';
 import 'package:marib/app/navigation/motion/route_motion.dart';
+import 'package:marib/ui/theme/theme.dart';
+import 'package:marib/utils/extensions/extensions.dart';
+
 
 class SomethingWentWrong extends StatelessWidget {
   final FlutterErrorDetails? error;
   final VoidCallback? onReload;
+  final String? title;
+  final String? description;
+  final String? details;
+  final String? actionLabel;
+  final IconData? icon;
 
-  const SomethingWentWrong({super.key, this.error, this.onReload});
+
+  const SomethingWentWrong({
+    super.key,
+    this.error,
+    this.onReload,
+    this.title,
+    this.description,
+    this.details,
+    this.actionLabel,
+    this.icon,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.color;
 
     final theme = Theme.of(context);
     final onSurface = theme.colorScheme.onSurface;
 
+    final String resolvedTitle = title ?? 'somethingWentWrong'.translate(context);
+    final String resolvedDescription = description ??
+        'تعذر إكمال العملية حالياً. حاول مرة أخرى بعد قليل أو تواصل مع فريق الدعم عند تكرار المشكلة.';
+    final String? rawDetails = (details ?? error?.exceptionAsString())?.trim();
+    final String? resolvedDetails =
+    (rawDetails == null || rawDetails.isEmpty) ? null : rawDetails;
+    final IconData resolvedIcon = icon ?? Icons.error_outline_rounded;
+    final String resolvedActionLabel =
+        actionLabel ?? 'retry'.translate(context);
+
     return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Lottie.asset(
-            'assets/lottie/no_internet.json', // Replace with your Lottie file path
-            width: 200, // Adjust the width as needed
-            height: 200, // Adjust the height as needed
-            fit: BoxFit.fill, // Adjust the fit if necessary
-          ),
-          if (onReload != null) ...[
-            const SizedBox(height: 24),
-            OutlinedButton(
-              onPressed: onReload,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: onSurface,
-                side: BorderSide(
-                  color: onSurface.withOpacity(0.3),
+      child: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+          Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: palette.territoryColor.withOpacity(0.1),
+            shape: BoxShape.circle,
                 ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+          child: Icon(
+            resolvedIcon,
+            size: 56,
+            color: palette.territoryColor,
                 ),
               ),
-              child: Text(
-                'إعادة تحميل',
-              ).size(context.font.large).bold(weight: FontWeight.w600),
-            ),
-          ],
-        ],
+                const SizedBox(height: 20),
+                Text(
+                  resolvedTitle,
+                  textAlign: TextAlign.center,
+                )
+                    .size(context.font.extraLarge)
+                    .color(onSurface)
+                    .bold(weight: FontWeight.w700),
+                const SizedBox(height: 12),
+                Text(
+                  resolvedDescription,
+                  textAlign: TextAlign.center,
+                ).size(context.font.large).color(onSurface.withOpacity(0.75)),
+                if (resolvedDetails != null) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.secondaryColor,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: palette.borderColor),
+                    ),
+                    child: SelectableText(
+                      resolvedDetails,
+                      textAlign: TextAlign.center,
+                  ),
+                  ),
+                ],
+                if (onReload != null) ...[
+                  const SizedBox(height: 24),
+                  OutlinedButton(
+                    onPressed: onReload,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: onSurface,
+                      side: BorderSide(
+                        color: onSurface.withOpacity(0.3),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: Text(resolvedActionLabel)
+                        .size(context.font.large)
+                        .bold(weight: FontWeight.w600),
+                  ),
+                ],
+              ],
+          ),
+        ),
       ),
     );
     // UiUtils.getSvg(

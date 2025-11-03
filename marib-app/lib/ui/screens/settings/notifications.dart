@@ -85,7 +85,6 @@ class NotificationsState extends State<Notifications> {
 
   String? _userId;
 
-
   Set<String> _readIds = <String>{};
   bool _isPaging = false;
   bool _adShown = false;
@@ -166,7 +165,15 @@ class NotificationsState extends State<Notifications> {
                     .fetchNotifications(),
               );
             }
-            return const SomethingWentWrong();
+            final String message = state.errorMessage.toString().trim();
+            return SomethingWentWrong(
+              title: 'تعذر تحميل الإشعارات',
+              description:
+                  'حدث خلل مفاجئ أثناء تحميل قائمة الإشعارات. حاول مرة أخرى أو حدّث الصفحة.',
+              details: message.isEmpty ? null : message,
+              onReload: () =>
+                  context.read<FetchNotificationsCubit>().fetchNotifications(),
+            );
           }
           if (state is FetchNotificationsSuccess) {
             if (state.notificationdata.isEmpty) {

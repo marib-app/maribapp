@@ -18,6 +18,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/currency_utils.dart';
+import 'package:flutter/foundation.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -32,6 +33,7 @@ class CartScreen extends StatefulWidget {
 
 class _CartScreenState extends State<CartScreen> {
   bool _loading = true;
+  String? _loadErrorMessage;
 
   bool _selectAll = false;
   final Set<String> _selectedItems = <String>{};
@@ -57,7 +59,11 @@ class _CartScreenState extends State<CartScreen> {
 
   // TODO: اربط بمصدر بياناتك الحقيقي بدلاً من أي بيانات مؤقتة.
   Future<void> _initLoad() async {
-    setState(() => _loading = true);
+    setState(() {
+      _loading = true;
+      _loadErrorMessage = null;
+    });
+
     try {
       // مثال: await context.read<CartCubit>().loadCartFromApi();
       // ملاحظة: عند وصول البيانات، لا تنسَ ضبط الاختيارات/الافتراضي حسب حاجتك.
@@ -525,6 +531,7 @@ class _CartScreenState extends State<CartScreen> {
           subtotal: subtotal,
           currency: _resolveCartCurrencyLabel(cartState),
           currencyCode: _resolveCartCurrencyCode(cartState),
+          loadErrorMessage: _loadErrorMessage,
           selectAll: _selectAll,
           selectedItemIds: _selectedItems,
           whatsappBottom: _whatsappBottom,
@@ -570,6 +577,8 @@ class _CartScreenState extends State<CartScreen> {
           deliveryPaymentOptions: cartState.deliveryPaymentOptions,
           deliveryPaymentTiming: cartState.deliveryPaymentTiming,
           onSelectDeliveryPaymentTiming: _updateDeliveryPaymentTiming,
+          onRetry: () => _initLoad(),
+          onRefresh: _initLoad,
         ),
       ),
     );

@@ -15,8 +15,6 @@ import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/currency_utils.dart';
 import 'package:marib/utils/money_formatter.dart';
 
-
-
 class CartUI extends StatelessWidget {
   // مدخلات الحالة
   final bool isLoading;
@@ -25,6 +23,7 @@ class CartUI extends StatelessWidget {
   final List<CartDiscount> discounts;
   final String? currency;
   final String? currencyCode;
+  final String? loadErrorMessage;
 
   final String? supportWhatsappLabel;
   final String? supportWhatsappNumber;
@@ -56,7 +55,8 @@ class CartUI extends StatelessWidget {
   final List<dynamic>? deliveryPaymentOptions;
   final String? deliveryPaymentTiming;
   final ValueChanged<String>? onSelectDeliveryPaymentTiming;
-
+  final VoidCallback? onRetry;
+  final Future<void> Function()? onRefresh;
 
   const CartUI({
     super.key,
@@ -66,7 +66,7 @@ class CartUI extends StatelessWidget {
     required this.discounts,
     required this.currency,
     this.currencyCode,
-
+    this.loadErrorMessage,
     required this.couponController,
     required this.couponInProgress,
     required this.couponError,
@@ -92,6 +92,8 @@ class CartUI extends StatelessWidget {
     this.supportWhatsappNumber,
     this.supportWhatsappUrl,
     this.supportWhatsappMessage,
+    this.onRetry,
+    this.onRefresh,
   });
 
   @override
@@ -106,7 +108,7 @@ class CartUI extends StatelessWidget {
       }
       final String? codeCandidate = cart.currencyCode ?? cart.currency;
       final String? normalizedCode =
-      CurrencyUtils.normalizeCurrencyCode(codeCandidate);
+          CurrencyUtils.normalizeCurrencyCode(codeCandidate);
       if (normalizedCode != null && normalizedCode.isNotEmpty) {
         fallbackCurrencyCode ??= normalizedCode;
       }
@@ -132,11 +134,11 @@ class CartUI extends StatelessWidget {
     }();
 
     final String localizedFallbackRaw =
-    UiUtils.getTranslatedLabel(context, 'notAvailable');
-    final String fallbackStoreName =
-    localizedFallbackRaw == 'notAvailable' ? 'غير متوفر' : localizedFallbackRaw;
+        UiUtils.getTranslatedLabel(context, 'notAvailable');
+    final String fallbackStoreName = localizedFallbackRaw == 'notAvailable'
+        ? 'غير متوفر'
+        : localizedFallbackRaw;
     final String resolvedStoreName = storeName ?? fallbackStoreName;
-
 
     final String? whatsappLabelRaw = supportWhatsappLabel?.trim();
     final String? whatsappNumberRaw = supportWhatsappNumber?.trim();
@@ -183,7 +185,6 @@ class CartUI extends StatelessWidget {
 
     void showWhatsappSnack(String message) {
       HelperUtils.showSnackBarMessage(context, message);
-
     }
 
     Uri? buildWhatsappUri() {
@@ -197,7 +198,8 @@ class CartUI extends StatelessWidget {
         return null;
       }
 
-      final StringBuffer buffer = StringBuffer('https://wa.me/$sanitizedNumber');
+      final StringBuffer buffer =
+          StringBuffer('https://wa.me/$sanitizedNumber');
       if (whatsappMessageRaw != null && whatsappMessageRaw.isNotEmpty) {
         buffer.write('?text=${Uri.encodeComponent(whatsappMessageRaw)}');
       }
@@ -223,8 +225,6 @@ class CartUI extends StatelessWidget {
         showWhatsappSnack('تعذر فتح تطبيق الواتساب.');
       }
     }
-
-
 
     Widget buildCouponFeedback(String message) {
       final Color accent = Colors.redAccent;
@@ -258,8 +258,6 @@ class CartUI extends StatelessWidget {
       );
     }
 
-
-
     Widget? buildSafetyTipsBanner() {
       final CartSafetyTipsPayload? payload = safetyTips;
       if (payload == null || !payload.showAsBanner) {
@@ -272,7 +270,7 @@ class CartUI extends StatelessWidget {
       }
 
       final List<CartSafetyTipAction> actionable = tip.actions.where(
-            (CartSafetyTipAction action) {
+        (CartSafetyTipAction action) {
           if (action.isNavigate) {
             return action.navigatesToCart;
           }
@@ -322,7 +320,7 @@ class CartUI extends StatelessWidget {
                         tip.description ?? '',
                         style: TextStyle(
                           color:
-                          context.color.textDefaultColor.withOpacity(0.85),
+                              context.color.textDefaultColor.withOpacity(0.85),
                           height: 1.4,
                         ),
                       ),
@@ -371,7 +369,6 @@ class CartUI extends StatelessWidget {
     }
 
     final Widget? safetyBanner = buildSafetyTipsBanner();
-
 
     String _formatTotalAmount(double value) {
       return moneyFormatter.format(value);
@@ -437,7 +434,8 @@ class CartUI extends StatelessWidget {
             ),
             if (applied && (discount.code?.trim().isNotEmpty ?? false))
               IconButton(
-                onPressed: couponInProgress ? null : () => onRemoveCoupon(discount),
+                onPressed:
+                    couponInProgress ? null : () => onRemoveCoupon(discount),
                 icon: Icon(Icons.close, color: accent),
               ),
           ],
@@ -475,7 +473,7 @@ class CartUI extends StatelessWidget {
                     hintText: 'أدخل رمز القسيمة',
                     filled: true,
                     fillColor:
-                    isDarkInput ? Colors.grey.shade900 : Colors.white,
+                        isDarkInput ? Colors.grey.shade900 : Colors.white,
                     border: border,
                     enabledBorder: border,
                     focusedBorder: border.copyWith(
@@ -483,28 +481,29 @@ class CartUI extends StatelessWidget {
                         color: context.color.territoryColor,
                       ),
                     ),
-                    contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 12),
                   ),
                   onSubmitted: (_) => onApplyCoupon(),
                 ),
               ),
               const SizedBox(width: 8),
               ElevatedButton(
-                onPressed: (!couponInProgress && !isLoading) ? onApplyCoupon : null,
+                onPressed:
+                    (!couponInProgress && !isLoading) ? onApplyCoupon : null,
                 style: ElevatedButton.styleFrom(
                   padding:
-                  const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                      const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
                 child: couponInProgress
                     ? const SizedBox(
-                  height: 18,
-                  width: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
                     : const Text('تطبيق'),
               ),
             ],
@@ -521,7 +520,6 @@ class CartUI extends StatelessWidget {
       );
     }
 
-
     String? _stringValue(dynamic value) {
       if (value == null) return null;
       if (value is String) {
@@ -531,14 +529,13 @@ class CartUI extends StatelessWidget {
       return value.toString();
     }
 
-
     Map<String, dynamic>? _castToStringKeyedMap(dynamic value) {
       if (value is Map<String, dynamic>) {
         return value;
       }
       if (value is Map) {
         return value.map(
-              (dynamic key, dynamic value) => MapEntry(key.toString(), value),
+          (dynamic key, dynamic value) => MapEntry(key.toString(), value),
         );
       }
       return null;
@@ -627,7 +624,7 @@ class CartUI extends StatelessWidget {
         addDescription(map['details']);
 
         final String? description =
-        descriptionParts.isEmpty ? null : descriptionParts.join('\n');
+            descriptionParts.isEmpty ? null : descriptionParts.join('\n');
 
         final bool isDisabled = (_asBool(map['disabled']) ?? false) ||
             (_asBool(map['enabled']) == false);
@@ -658,7 +655,7 @@ class CartUI extends StatelessWidget {
 
     Widget? buildDeliveryPaymentTimingSection() {
       final List<_DeliveryTimingOption> options =
-      _normalizeDeliveryTimingOptions(deliveryPaymentOptions);
+          _normalizeDeliveryTimingOptions(deliveryPaymentOptions);
       if (options.isEmpty) {
         return null;
       }
@@ -670,11 +667,12 @@ class CartUI extends StatelessWidget {
 
       final bool containsSelected = resolvedSelectedValue != null &&
           options.any(
-                (_DeliveryTimingOption option) => option.value == resolvedSelectedValue,
+            (_DeliveryTimingOption option) =>
+                option.value == resolvedSelectedValue,
           );
       if (!containsSelected) {
         final _DeliveryTimingOption preselected = options.firstWhere(
-              (_DeliveryTimingOption option) => option.isInitiallySelected,
+          (_DeliveryTimingOption option) => option.isInitiallySelected,
           orElse: () => options.first,
         );
         resolvedSelectedValue = preselected.value;
@@ -693,9 +691,8 @@ class CartUI extends StatelessWidget {
         return text != null && text.isNotEmpty;
       }
 
-      final bool useSegmented =
-          options.length <= 3 && options.every((option) => !hasDescription(option));
-
+      final bool useSegmented = options.length <= 3 &&
+          options.every((option) => !hasDescription(option));
 
       final Color accent = context.color.territoryColor;
 
@@ -736,10 +733,11 @@ class CartUI extends StatelessWidget {
                 final Color textColor = isSelected
                     ? accent
                     : isEnabled
-                    ? context.color.textDefaultColor
-                    : context.color.textDefaultColor.withOpacity(0.4);
+                        ? context.color.textDefaultColor
+                        : context.color.textDefaultColor.withOpacity(0.4);
                 return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   child: Text(
                     option.label,
                     style: TextStyle(
@@ -779,7 +777,8 @@ class CartUI extends StatelessWidget {
             return Container(
               margin: const EdgeInsets.only(bottom: 8),
               decoration: BoxDecoration(
-                color: isSelected ? accent.withOpacity(0.08) : Colors.transparent,
+                color:
+                    isSelected ? accent.withOpacity(0.08) : Colors.transparent,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: RadioListTile<String>(
@@ -787,13 +786,13 @@ class CartUI extends StatelessWidget {
                 groupValue: resolvedSelectedValue,
                 onChanged: isEnabled
                     ? (String? value) {
-                  if (value == null) {
-                    return;
-                  }
-                  if (value != resolvedSelectedValue) {
-                    onSelectDeliveryPaymentTiming?.call(value);
-                  }
-                }
+                        if (value == null) {
+                          return;
+                        }
+                        if (value != resolvedSelectedValue) {
+                          onSelectDeliveryPaymentTiming?.call(value);
+                        }
+                      }
                     : null,
                 activeColor: accent,
                 dense: true,
@@ -809,20 +808,20 @@ class CartUI extends StatelessWidget {
                 subtitle: option.description == null
                     ? null
                     : Text(
-                  option.description!,
-                  style: TextStyle(
-                    color: context.color.textDefaultColor.withOpacity(0.75),
-                    fontSize: 13,
-                    height: 1.35,
-                  ),
-                ),
+                        option.description!,
+                        style: TextStyle(
+                          color:
+                              context.color.textDefaultColor.withOpacity(0.75),
+                          fontSize: 13,
+                          height: 1.35,
+                        ),
+                      ),
                 controlAffinity: ListTileControlAffinity.trailing,
               ),
             );
           }).toList(),
         );
       }
-
 
       return Container(
         width: double.infinity,
@@ -851,18 +850,286 @@ class CartUI extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            if (useSegmented) buildSegmentedSelector() else buildRadioSelector(),
-
+            if (useSegmented)
+              buildSegmentedSelector()
+            else
+              buildRadioSelector(),
           ],
         ),
       );
     }
 
-
-
     final Widget? deliveryTimingSection = buildDeliveryPaymentTimingSection();
 
+    ScrollPhysics buildScrollPhysics() {
+      if (onRefresh != null) {
+        return const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        );
+      }
+      return const BouncingScrollPhysics();
+    }
 
+    Widget wrapWithRefreshIndicator(Widget child) {
+      if (onRefresh == null) {
+        return child;
+      }
+      return RefreshIndicator(
+        onRefresh: onRefresh!,
+        color: context.color.territoryColor,
+        backgroundColor: context.color.secondaryColor,
+        displacement: 32,
+        child: child,
+      );
+    }
+
+    String resolveLoadErrorMessage() {
+      final String? trimmed = loadErrorMessage?.trim();
+      if (trimmed != null && trimmed.isNotEmpty) {
+        return trimmed;
+      }
+      return 'حدث خطأ أثناء تحميل السلة. حاول مرة أخرى.';
+    }
+
+    Widget buildErrorPlaceholder() {
+      final Color accent = Colors.redAccent;
+      return Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+            decoration: BoxDecoration(
+              color: context.color.secondaryColor,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: accent.withOpacity(0.25)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 18,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.error_outline, color: accent, size: 44),
+                const SizedBox(height: 12),
+                Text(
+                  resolveLoadErrorMessage(),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: context.color.textDefaultColor,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    height: 1.45,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                if (onRetry != null)
+                  ElevatedButton.icon(
+                    onPressed: onRetry,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('إعادة المحاولة'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    final bool showLoadErrorState = !isLoading &&
+        (loadErrorMessage?.trim().isNotEmpty ?? false) &&
+        cartItems.isEmpty;
+    final ScrollPhysics scrollPhysics = buildScrollPhysics();
+    final bool hasCartItems = cartItems.isNotEmpty;
+    final bool hideCartControls = !isLoading && cartItems.isEmpty;
+    final bool showEmptyGuidance = hideCartControls && !showLoadErrorState;
+    final bool showErrorGuidance = hideCartControls && showLoadErrorState;
+
+    Widget buildEmptyPlaceholder() {
+      final Color accent = context.color.territoryColor;
+      return Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            decoration: BoxDecoration(
+              color: context.color.secondaryColor,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: accent.withOpacity(0.25)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 18,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.shopping_cart_outlined,
+                  color: accent,
+                  size: 48,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'سلة المشتريات فارغة',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: context.color.textDefaultColor,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'ابدأ التسوق الآن لإضافة منتجاتك المفضلة.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: context.color.textDefaultColor.withOpacity(0.75),
+                    height: 1.45,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).maybePop(),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 14,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    backgroundColor: accent,
+                  ),
+                  child: const Text('تسوق الآن'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    Widget buildCartList() {
+      if (!isLoading && cartItems.isEmpty) {
+        return wrapWithRefreshIndicator(
+          ListView(
+            physics: scrollPhysics,
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            children: [
+              const SizedBox(height: 24),
+              buildEmptyPlaceholder(),
+              const SizedBox(height: 48),
+            ],
+          ),
+        );
+      }
+
+      return wrapWithRefreshIndicator(
+        ListView.separated(
+          physics: scrollPhysics,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          itemCount: isLoading ? 5 : cartItems.length + 1,
+          itemBuilder: (context, index) {
+            if (index == 0) {
+              return Padding(
+                padding: EdgeInsets.symmetric(vertical: 8.rh(context)),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    GestureDetector(
+                      onTap: onToggleSelectAll,
+                      child: Icon(
+                        selectAll
+                            ? Icons.check_circle
+                            : Icons.radio_button_unchecked,
+                        color: selectAll ? Colors.green : Colors.grey,
+                        size: 22,
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        const Icon(Icons.storefront_outlined, size: 20),
+                        const SizedBox(width: 4),
+                        isLoading
+                            ? _buildShimmerLine(context, width: 140, height: 12)
+                            : Text(
+                                resolvedStoreName,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: context.color.textDefaultColor,
+                                ),
+                              ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            if (isLoading) {
+              return _buildShimmerItem(context);
+            }
+
+            final Cart item = cartItems[index - 1];
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              decoration: BoxDecoration(
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: CartHorizontalCard(
+                item: item,
+                showCheckbox: true,
+                isSelected: selectedItemIds.contains(item.selectionKey),
+                onToggleSelect: () => onToggleSelectItem(item),
+                buttonShape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            );
+          },
+        ),
+      );
+    }
+
+    Widget buildErrorContent() {
+      return wrapWithRefreshIndicator(
+        ListView(
+          physics: scrollPhysics,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          children: [
+            const SizedBox(height: 32),
+            buildErrorPlaceholder(),
+            const SizedBox(height: 48),
+          ],
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: context.color.primaryColor,
@@ -879,156 +1146,91 @@ class CartUI extends StatelessWidget {
                   children: [
                     BackButton(color: context.color.textColorDark),
                     const SizedBox(width: 8),
-                    Text("سلة المشتريات", style: TextStyle(color: context.color.textColorDark)),
+                    Text("سلة المشتريات",
+                        style: TextStyle(color: context.color.textColorDark)),
                     const Spacer(),
-                    IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red, size: 26),
-                      onPressed: onTapDeleteAll,
-                    ),
+                    if (hasCartItems)
+                      IconButton(
+                        icon: const Icon(Icons.delete,
+                            color: Colors.red, size: 26),
+                        onPressed: isLoading ? null : onTapDeleteAll,
+                      ),
                   ],
                 ),
               ),
               if (safetyBanner != null) safetyBanner,
               Expanded(
-                child: ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemCount: isLoading ? 5 : cartItems.length + 1,
-                  itemBuilder: (context, index) {
-                    if (index == 0) {
-                      return Padding(
-                        padding: EdgeInsets.symmetric(vertical: 8.rh(context)),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            GestureDetector(
-                              onTap: onToggleSelectAll,
-                              child: Icon(
-                                selectAll ? Icons.check_circle : Icons.radio_button_unchecked,
-                                color: selectAll ? Colors.green : Colors.grey,
-                                size: 22,
-                              ),
-                            ),
-                            Row(
-                              children: [
-                                const Icon(Icons.storefront_outlined, size: 20),
-                                const SizedBox(width: 4),
-                                isLoading
-                                    ? _buildShimmerLine(context, width: 140, height: 12)
-                                    : Text(
-                                  resolvedStoreName,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: context.color.textDefaultColor,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-
-                    if (isLoading) {
-                      return _buildShimmerItem(context);
-                    }
-
-                    final item = cartItems[index - 1];
-                    return AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
-                      decoration: BoxDecoration(
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.08),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: CartHorizontalCard(
-                        item: item,
-                        showCheckbox: true,
-                        isSelected: selectedItemIds.contains(item.selectionKey),
-                        onToggleSelect: () => onToggleSelectItem(item),
-                        buttonShape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                    );
-                  },
-                ),
+                child:
+                    showLoadErrorState ? buildErrorContent() : buildCartList(),
               ),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.only(top: 10, left: 16, right: 16, bottom: 24),
+                padding: const EdgeInsets.only(
+                    top: 10, left: 16, right: 16, bottom: 24),
                 decoration: BoxDecoration(
                   color: context.color.territoryColor.withOpacity(0.4),
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(18)),
                 ),
                 child: Column(
                   children: [
-                    if (!isLoading && showCouponSection) ...[
+                    if (!hideCartControls &&
+                        !isLoading &&
+                        showCouponSection) ...[
                       buildCouponSection(),
                       const SizedBox(height: 16),
                     ],
-
-
-                    if (!isLoading && deliveryTimingSection != null) ...[
+                    if (!hideCartControls &&
+                        !isLoading &&
+                        deliveryTimingSection != null) ...[
                       deliveryTimingSection,
                       const SizedBox(height: 16),
                     ],
-
-
-
-
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      decoration: BoxDecoration(
-                        color: context.color.secondaryColor,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: context.color.borderColor,
-
+                    if (!hideCartControls)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 14),
+                        decoration: BoxDecoration(
+                          color: context.color.secondaryColor,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: context.color.borderColor,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: isDark
+                                  ? Colors.black.withOpacity(0.22)
+                                  : Colors.black.withOpacity(0.08),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: isDark
-                                ? Colors.black.withOpacity(0.22)
-                                : Colors.black.withOpacity(0.08),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            "المبلغ الإجمالي",
-
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: context.color.textDefaultColor,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              "المبلغ الإجمالي",
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: context.color.textDefaultColor,
+                              ),
                             ),
-                          ),
-                          isLoading
-                              ? _buildShimmerLine(context, width: 80)
-                              : Text(
-                            _formatTotalAmount(subtotal),
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                              color: context.color.textDefaultColor,
-                            ),
-                          ),
-                        ],
+                            isLoading
+                                ? _buildShimmerLine(context, width: 80)
+                                : Text(
+                                    _formatTotalAmount(subtotal),
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w700,
+                                      color: context.color.textDefaultColor,
+                                    ),
+                                  ),
+                          ],
+                        ),
                       ),
-                    ),
-
-
-                    const SizedBox(height: 16),
+                    if (!hideCartControls) const SizedBox(height: 16),
                     UiUtils.buildButton(
                       context,
                       onPressed: onContinueToPayment,
@@ -1036,7 +1238,42 @@ class CartUI extends StatelessWidget {
                       radius: 12,
                       width: double.infinity,
                       height: 40,
+                      disabled: hideCartControls || isLoading,
+                      onTapDisabledButton: hideCartControls
+                          ? () => HelperUtils.showSnackBarMessage(
+                                context,
+                                showEmptyGuidance
+                                    ? 'أضف منتجات إلى السلة للمتابعة إلى الدفع.'
+                                    : 'انتظر حتى يتم تحميل السلة قبل المتابعة.',
+                              )
+                          : null,
                     ),
+                    if (showEmptyGuidance) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        'سلتك فارغة حالياً. أضف منتجات للمتابعة إلى الدفع.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color:
+                              context.color.textDefaultColor.withOpacity(0.7),
+                          fontSize: 13,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                    if (showErrorGuidance) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        'تعذر المتابعة قبل تحميل السلة بنجاح. حاول تحديث الصفحة أو إعادة المحاولة.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color:
+                              context.color.textDefaultColor.withOpacity(0.7),
+                          fontSize: 13,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -1099,7 +1336,8 @@ class CartUI extends StatelessWidget {
     );
   }
 
-  Widget _buildShimmerLine(BuildContext context, {double height = 14, double width = 120}) {
+  Widget _buildShimmerLine(BuildContext context,
+      {double height = 14, double width = 120}) {
     final colorScheme = Theme.of(context).colorScheme;
     return Shimmer.fromColors(
       baseColor: colorScheme.shimmerBaseColor,
@@ -1115,8 +1353,6 @@ class CartUI extends StatelessWidget {
     );
   }
 }
-
-
 
 class _DeliveryTimingOption {
   const _DeliveryTimingOption({

@@ -18,8 +18,7 @@ use App\Services\Logging\PaymentTrace;
 use App\Services\NotificationService;
 use App\Services\Payments\TransactionAmountResolver;
 use App\Models\User;
-use App\Models\WifiPlan;
-use App\Services\Wifi\WifiCodeAssignmentService;
+
 
 use App\Models\PaymentTransaction;
 use App\Models\UserFcmToken;
@@ -133,10 +132,6 @@ class PaymentFulfillmentService
                         break;
                     case ServiceRequest::class:
                         $serviceRequestModel = $this->handleServicePayment($transaction, $payableId, $userId, $options);
-                        break;
-
-                    case WifiPlan::class:
-                        $this->handleWifiPlanPurchase($transaction, $payableId, $userId, $options);
                         break;
 
 
@@ -1051,37 +1046,6 @@ class PaymentFulfillmentService
     }
 
 
-    protected function handleWifiPlanPurchase(PaymentTransaction $transaction, ?int $planId, int $userId, array $options = []): void
-    {
-        if (empty($planId)) {
-            throw new InvalidArgumentException('Wi-Fi plan id is required to fulfill the transaction.');
-        }
-
-        $plan = WifiPlan::findOrFail($planId);
-        $buyer = User::findOrFail($userId);
-
-        /** @var WifiCodeAssignmentService $assignmentService */
-        $assignmentService = app(WifiCodeAssignmentService::class);
-
-        $assignment = $assignmentService->assign($plan, $buyer, $transaction, [
-            'amount' => (float) ($options['amount'] ?? $transaction->amount ?? $plan->price),
-        ]);
-
-        $meta = $transaction->meta ?? [];
-
-        $meta['wifi_code_id'] = $assignment['code']->getKey();
-        $meta['wifi_plan_id'] = $plan->getKey();
-        $meta['wifi_network_id'] = $plan->wifi_network_id;
-        $meta['wifi_purchase'] = array_merge($meta['wifi_purchase'] ?? [], [
-            'gross_amount' => $assignment['gross_amount'],
-            'commission_amount' => $assignment['commission_amount'],
-            'net_amount' => $assignment['net_amount'],
-        ]);
-
-        $transaction->forceFill([
-            'meta' => $meta,
-        ])->save();
-    }
 
 
     protected function sendDefaultNotification(PaymentTransaction $transaction, string $normalizedType, int $userId, array $options = []): void
@@ -1317,9 +1281,7 @@ class PaymentFulfillmentService
                 return 'service';
             }
 
-            if (str_contains($alias, 'wifi')) {
-                return 'wifi_plan';
-            }
+
 
             if (str_contains($alias, 'wallet') || str_contains($alias, 'topup') || str_contains($alias, 'top-up')) {
                 return 'wallet_top_up';

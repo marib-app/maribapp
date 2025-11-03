@@ -5,9 +5,6 @@ use App\Models\User;
 
 use App\Models\Setting;
 use App\Models\UserFcmToken;
-use App\Models\WifiCode;
-use App\Models\WifiNetwork;
-use App\Models\WifiPlan;
 use Google\Client;
 use Google\Exception;
 use Illuminate\Support\Facades\Storage;
@@ -609,55 +606,6 @@ class NotificationService {
     }
 
 
-
-    public static function notifyWifiBuyerCodeReady(User $user, WifiNetwork $network, WifiPlan $plan, WifiCode $code): void
-    {
-        $tokens = UserFcmToken::where('user_id', $user->getKey())->pluck('fcm_token')->filter()->values()->all();
-
-        if (empty($tokens)) {
-            return;
-        }
-
-        $title = __('Wi-Fi code ready');
-        $message = __('Your access code for :network (:plan) is ready.', [
-            'network' => $network->name,
-            'plan' => $plan->name,
-        ]);
-
-        $data = [
-            'wifi_network_id' => $network->getKey(),
-            'wifi_plan_id' => $plan->getKey(),
-            'wifi_code_id' => $code->getKey(),
-            'type' => 'wifi_code',
-        ];
-
-        self::sendFcmNotification($tokens, $title, $message, 'wifi_code', $data);
-    }
-
-    public static function notifyWifiOwnerPurchase(User $owner, User $buyer, WifiNetwork $network, WifiPlan $plan, WifiCode $code): void
-    {
-        $tokens = UserFcmToken::where('user_id', $owner->getKey())->pluck('fcm_token')->filter()->values()->all();
-
-        if (empty($tokens)) {
-            return;
-        }
-
-        $title = __('New Wi-Fi plan sold');
-        $message = __(':buyer purchased the :plan plan on :network.', [
-            'buyer' => $buyer->name ?? __('A customer'),
-            'plan' => $plan->name,
-            'network' => $network->name,
-        ]);
-
-        $data = [
-            'wifi_network_id' => $network->getKey(),
-            'wifi_plan_id' => $plan->getKey(),
-            'wifi_code_id' => $code->getKey(),
-            'type' => 'wifi_sale',
-        ];
-
-        self::sendFcmNotification($tokens, $title, $message, 'wifi_sale', $data);
-    }
 
 
     protected static function extractFcmErrorCode(array $response): ?string

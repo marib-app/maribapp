@@ -63,13 +63,7 @@ return [
 
 
 
-    'wifi' => [
-        'base_url' => env('WIFI_SERVICE_BASE_URL'),
-        'token' => env('WIFI_SERVICE_TOKEN'),
-        'timeout' => env('WIFI_SERVICE_TIMEOUT', 10),
-        'verify_ssl' => env('WIFI_SERVICE_VERIFY_SSL'),
-        'ca_path' => env('WIFI_SERVICE_CA_PATH'),
-    ],
+
 
 
     'fcm' => [

@@ -40,9 +40,6 @@ class SystemUpgradeSeeder extends Seeder {
                 'custom' => ['manage']
             ],
 
-            'wifi-cabin'                  => [
-                'custom' => ['manage', 'manage-all']
-            ],
 
             'slider'                      => [
                 'only' => ['create', 'delete', 'list']
@@ -85,17 +82,14 @@ class SystemUpgradeSeeder extends Seeder {
         Permission::upsert($permissions, ['name'], ['name']);
 
         $paymentPermissions = ['manual-payments-list', 'manual-payments-review', 'wallet-manage'];
-        $wifiCabinPermissions = [
-            'Super Admin' => ['wifi-cabin-manage', 'wifi-cabin-manage-all'],
-            'Admin' => ['wifi-cabin-manage'],
-        ];
 
-        Role::whereIn('name', ['Super Admin', 'Admin'])->each(static function (Role $role) use ($paymentPermissions, $wifiCabinPermissions) {
-            
+        
+        Role::whereIn('name', ['Super Admin', 'Admin'])->each(static function (Role $role) use ($paymentPermissions) {
+
+
+
             $role->givePermissionTo($paymentPermissions);
-                if (array_key_exists($role->name, $wifiCabinPermissions)) {
-                $role->givePermissionTo($wifiCabinPermissions[$role->name]);
-            }
+
         });
 
 

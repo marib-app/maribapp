@@ -6,9 +6,7 @@ use App\Http\Controllers\AddressController;
 use App\Http\Controllers\Api\DeliveryPriceCalculatorController;
 use App\Http\Controllers\Api\MetalRateController as PublicMetalRateController;
 use App\Http\Controllers\Api\MetalRateManagementController;
-use App\Http\Controllers\WifiCabinApiController;
 use App\Http\Controllers\Api\AdDraftController;
-use App\Http\Controllers\WifiPaymentGatewayController;
 use App\Http\Controllers\ApiController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\ServiceRequestController as ApiServiceRequestController;
@@ -19,14 +17,8 @@ use App\Http\Controllers\OrderApiController;
 use App\Http\Controllers\Api\PaymentController as ApiPaymentController;
 use App\Http\Controllers\PaymentController as LegacyPaymentController;
 use App\Http\Controllers\Payments\PaymentWebhookController;
-use App\Http\Controllers\WifiCodeBatchController;
-use App\Http\Controllers\WifiNetworkController;
-use App\Http\Controllers\WifiPlanController;
-use App\Http\Controllers\WifiOwnerPlanSummaryController;
-use App\Http\Controllers\WifiPurchaseController;
 use App\Http\Controllers\ProductPurchaseOptionsController;
 use App\Http\Controllers\ItemPurchaseManagementController;
-use App\Http\Controllers\WifiCodeRevealController;
 use App\Http\Controllers\Api\UserPreferenceController;
 
 Route::get('diag', fn() => response('ok', 200));
@@ -53,25 +45,7 @@ Route::get('products/{item}/purchase-options', [ProductPurchaseOptionsController
 Route::get('metal-rates', [PublicMetalRateController::class, 'index']);
 
     
-Route::prefix('wifi-cabin')
-    ->middleware(['auth:sanctum', 'permission:wifi-cabin-manage'])
-    ->group(function () {
-        Route::get('networks', [WifiCabinApiController::class, 'networks']);
-        Route::get('plans', [WifiCabinApiController::class, 'plans']);
-        Route::get('networks/{network}/plans', [WifiCabinApiController::class, 'networkPlans']);
-        Route::get('balances', [WifiCabinApiController::class, 'balances']);
-        Route::get('alerts', [WifiCabinApiController::class, 'alerts']);
-        Route::get('networks/{network}', [WifiCabinApiController::class, 'network']);
-        Route::get('owner-requests', [WifiCabinApiController::class, 'ownerRequests']);
 
-        Route::post('owner-requests/{batch}/approve', [WifiCabinApiController::class, 'approveOwnerRequest'])
-            ->whereNumber('batch');
-        Route::post('owner-requests/{batch}/reject', [WifiCabinApiController::class, 'rejectOwnerRequest'])
-            ->whereNumber('batch');
-
-        Route::get('networks/{network}/stock', [WifiCabinApiController::class, 'networkStock']);
-        Route::get('networks/{network}/alerts', [WifiCabinApiController::class, 'networkAlerts']);
-    });
 
 
 /* Authenticated Routes */
@@ -87,36 +61,7 @@ Route::prefix('wifi-cabin')
         ->whereNumber('item');
 
 
-    Route::prefix('wifi')->group(function () {
-        Route::get('networks', [WifiNetworkController::class, 'index']);
-        Route::post('networks', [WifiNetworkController::class, 'store']);
-        Route::put('networks/{network}', [WifiNetworkController::class, 'update'])->whereNumber('network');
-        Route::get('networks/{network}/plans', [WifiPlanController::class, 'index'])->whereNumber('network');
-        Route::post('networks/{network}/plans', [WifiPlanController::class, 'store'])->whereNumber('network');
 
-        Route::get('plans/available', [WifiOwnerPlanSummaryController::class, 'available']);
-
-
-        Route::get('plans', WifiOwnerPlanSummaryController::class);
-
-        Route::put('plans/{plan}', [WifiPlanController::class, 'update'])->whereNumber('plan');
-
-        Route::get('payment-gateways', [WifiPaymentGatewayController::class, 'index']);
-
-        Route::post('plans/{plan}/batches', [WifiCodeBatchController::class, 'store'])->whereNumber('plan');
-        Route::post('plans/{plan}/purchase', [WifiPlanController::class, 'purchase'])->whereNumber('plan');
-        Route::post('plans/purchase/webhook', [WifiPlanController::class, 'webhook'])
-            ->withoutMiddleware(['auth:sanctum']);
-            
-        Route::get('codes/mine', [WifiPurchaseController::class, 'index']);
-        Route::get('purchases', [WifiPurchaseController::class, 'index']);
-        Route::get('orders/{transaction}/code', [WifiPurchaseController::class, 'show'])
-            ->whereNumber('transaction');
-
-        Route::post('codes/{code}/events', [WifiCodeRevealController::class, 'store'])
-            ->whereNumber('code');
-
-    });
 
 
 

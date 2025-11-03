@@ -21,6 +21,25 @@
     ];
         
             
+
+    $requestedCategoryId = request()->query('category_id');
+    if (is_scalar($requestedCategoryId)) {
+        $requestedCategoryId = (int) $requestedCategoryId;
+        if ($requestedCategoryId <= 0) {
+            $requestedCategoryId = null;
+        }
+    } else {
+        $requestedCategoryId = null;
+    }
+
+    if ($requestedCategoryId === null && $category?->id) {
+        $requestedCategoryId = (int) $category->id;
+    }
+
+    $backToRequestsUrl = $requestedCategoryId
+        ? route('service.requests.index', ['category_id' => $requestedCategoryId])
+        : route('service.requests.index');
+
     $fieldEntries = is_array($fieldEntries ?? null) ? $fieldEntries : [];
     $attachmentEntries = is_array($attachmentEntries ?? null) ? $attachmentEntries : [];
 
@@ -59,7 +78,7 @@
             </div>
             <div class="col-12 col-md-6 order-md-2 order-first">
                 <div class="d-flex flex-wrap justify-content-md-end gap-2">
-                    <a href="{{ route('service.requests.index') }}" class="btn btn-outline-primary">
+                    <a href="{{ $backToRequestsUrl }}" class="btn btn-outline-primary">
                         <i class="bi bi-arrow-left"></i> {{ __('Back to Requests') }}
                     </a>
                     @if($isPaidService && $manualPaymentReviewUrl)

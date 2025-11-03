@@ -62,7 +62,15 @@ class ServiceRequestController extends Controller
             ->whereIn('id', self::SERVICE_CATEGORY_IDS)
             ->orderBy('name');
 
-        $selectedCategoryId = $request->input('category_id');
+        $rawCategoryId = $request->input('category_id');
+        $selectedCategoryId = null;
+        if (is_scalar($rawCategoryId)) {
+            $candidateId = (int) $rawCategoryId;
+            if ($candidateId > 0) {
+                $selectedCategoryId = $candidateId;
+            }
+        }
+        
         $selectedCategory = null;
 
         $user = Auth::user();
@@ -88,6 +96,14 @@ class ServiceRequestController extends Controller
             }
         }
 
+        if (!$selectedCategory) {
+            $fallbackCategory = (clone $categoryQuery)->first(['id', 'name']);
+            if ($fallbackCategory) {
+                return redirect()->route('service.requests.index', [
+                    'category_id' => $fallbackCategory->id,
+                ]);
+            }
+        }
 
         $statsBaseQuery = ServiceRequest::query()->withTrashed();
 
@@ -234,9 +250,16 @@ class ServiceRequestController extends Controller
 
                 // زر "عرض" → يفتح المودال ويملأ #custom_fields من data-json
                 if (Auth::user()->can('service-requests-list') || Auth::user()->can('service-requests-update')) {
+                    $categoryIdForRow = $r->service?->category_id;
+                    $reviewRouteParameters = ['serviceRequest' => $r->id];
+                    if (!empty($categoryIdForRow)) {
+                        $reviewRouteParameters['category_id'] = $categoryIdForRow;
+                    }
+
+
                     $operate .= BootstrapTableService::button(
                         'fa fa-eye',
-                        route('service.requests.review', $r->id),
+                        route('service.requests.review', $reviewRouteParameters),
                         ['btn-outline-primary', 'btn-sm'],
 
 
@@ -265,7 +288,6 @@ class ServiceRequestController extends Controller
                     'submitted_at'    => optional($r->created_at)->format('Y-m-d H:i'),
                     'created_at'      => optional($r->created_at)->toDateTimeString(),
                     'updated_at'      => optional($r->updated_at)->toDateTimeString(),
-                    'active_status'   => empty($r->deleted_at),         // IF deleted_at is empty => true
                     'operate'         => $operate,
                     'custom_fields'   => array_map(static function (array $entry) {
                         return [
@@ -297,7 +319,7 @@ class ServiceRequestController extends Controller
 
 
 
-    public function show($id)
+    public function show(Request $request, $id)
     {
         ResponseService::noAnyPermissionThenRedirect([
             'service-requests-list',
@@ -305,7 +327,17 @@ class ServiceRequestController extends Controller
             'service-requests-delete',
         ]);
 
-        return redirect()->route('service.requests.review', $id);
+        $parameters = ['serviceRequest' => $id];
+        $rawCategory = $request->query('category_id');
+        if (is_scalar($rawCategory)) {
+            $candidate = (int) $rawCategory;
+            if ($candidate > 0) {
+                $parameters['category_id'] = $candidate;
+            }
+        }
+
+        return redirect()->route('service.requests.review', $parameters);
+    
     }
 
 

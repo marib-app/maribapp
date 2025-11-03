@@ -63,6 +63,8 @@ class HomeTabView extends StatefulWidget {
   final ValueChanged<bool>? onLoadMore;
   final ValueChanged<bool>? onScrollDirectionChanged;
   final List<int>? sellerCategoryIds;
+  final String? interfaceType;
+  final String? rootCategoryName;
 
   const HomeTabView({
     required this.selectedCategoryId,
@@ -85,6 +87,8 @@ class HomeTabView extends StatefulWidget {
     this.sortBy,
     this.filter,
     this.onLoadMore,
+    this.interfaceType,
+    this.rootCategoryName,
     super.key,
   });
 
@@ -1167,15 +1171,47 @@ class _HomeTabViewState extends State<HomeTabView> {
                                     // في فئة علوية ≠ "الكل": اضغط فرعيّة ⇒ فلترة مباشرة وتظليل الفرعيّة
                                     onSubcatPick: (c) {
                                       final int? categoryId = c.id;
-                                      if (categoryId == null ||
-                                          categoryId <= 0) {
-                                        return;
+                                      final bool isAllCategory =
+                                          categoryId == null || categoryId <= 0;
+
+                                      setState(() {
+                                        _activeSubcatId =
+                                            isAllCategory ? null : categoryId;
+                                      });
+
+                                      final String baseCategoryId =
+                                          widget.categoryId;
+                                      final String targetCategoryId =
+                                          isAllCategory
+                                              ? baseCategoryId
+                                              : categoryId.toString();
+
+                                      final String? rawName = c.name;
+                                      final String categoryName =
+                                          (rawName?.trim().isNotEmpty ?? false)
+                                              ? rawName!.trim()
+                                              : (widget.rootCategoryName ??
+                                                  '');
+
+                                      final List<String> categoryPath =
+                                          <String>[baseCategoryId];
+                                      if (!isAllCategory &&
+                                          targetCategoryId != baseCategoryId) {
+                                        categoryPath.add(targetCategoryId);
                                       }
 
-                                      setState(
-                                          () => _activeSubcatId = categoryId);
-                                      _fetchItemsForCategory(categoryId);
-                                      _scheduleScrollReset();
+                                      FocusScope.of(context).unfocus();
+                                      Navigator.pushNamed(
+                                        context,
+                                        Routes.itemsList,
+                                        arguments: {
+                                          'catID': targetCategoryId,
+                                          'catName': categoryName,
+                                          'categoryIds': categoryPath,
+                                          'interfaceType':
+                                              widget.interfaceType ?? '',
+                                        },
+                                      );
                                     },
                                   ),
                                   SizedBox(

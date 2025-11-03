@@ -289,6 +289,8 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
                   showShimmer: widget.showShimmer,
                   sliderRefreshToken: widget.sliderRefreshToken,
                   sellerCategoryIds: _sellerCategoryIds,
+                  interfaceType: widget.interfaceType,
+                  rootCategoryName: widget.categoryName,
 
                   // موجودة عندك مسبقًا:
                   currentSortBy: widget.sortBy,

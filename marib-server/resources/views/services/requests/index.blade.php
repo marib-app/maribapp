@@ -18,33 +18,154 @@
 
     .requests-stats-row { margin-bottom: 1.5rem; }
     .requests-stat-card {
-        border: 1px solid #e9ecef;
-        border-radius: 1rem;
-        padding: 1.25rem 1.5rem;
-        background: linear-gradient(135deg, rgba(13, 110, 253, 0.08), rgba(13, 110, 253, 0.02));
-        box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+        --stat-color: #0d6efd;
+        --stat-soft: rgba(13, 110, 253, 0.35);
+        --stat-bg-start: rgba(13, 110, 253, 0.16);
+        --stat-bg-end: rgba(13, 110, 253, 0.05);
+        --stat-border: rgba(13, 110, 253, 0.2);
+        border-radius: 1.2rem;
+        padding: 1.35rem 1.4rem;
+        background: linear-gradient(135deg, var(--stat-bg-start), var(--stat-bg-end));
+        border: 1px solid var(--stat-border);
+        box-shadow: 0 18px 38px rgba(15, 23, 42, 0.12);
         display: flex;
         flex-direction: column;
-        gap: 0.5rem;
+        gap: 1rem;
+        position: relative;
+        overflow: hidden;
         min-height: 100%;
     }
+
+
+    .requests-stat-card::after {
+        content: '';
+        position: absolute;
+        inset: auto 16px -40px auto;
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.22);
+    }
+    .requests-stat-card > * {
+        position: relative;
+        z-index: 1;
+    }
+    .requests-stat-card__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+    .requests-stat-card__icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background-color: rgba(255, 255, 255, 0.65);
+        color: var(--stat-color);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.6rem;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+    }
+    .requests-stat-card__figures {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 0.35rem;
+    }
+
     .requests-stat-card__label {
-        color: #6c757d;
-        font-size: 0.8rem;
-        letter-spacing: 0.05em;
+        color: rgba(33, 37, 41, 0.75);
+        font-size: 0.75rem;
+        letter-spacing: 0.08em;
         text-transform: uppercase;
         font-weight: 600;
     }
     .requests-stat-card__value {
-        font-size: 1.8rem;
+        font-size: 2rem;
         font-weight: 700;
-        color: #0d6efd;
+        color: var(--stat-color);
         line-height: 1.1;
     }
     .requests-stat-card__indicator {
-        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        font-size: 0.95rem;
         font-weight: 500;
-        color: #212529;
+        color: rgba(33, 37, 41, 0.85);
+    }
+    .requests-stat-card__indicator-share {
+        padding: 0.15rem 0.65rem;
+        border-radius: 999px;
+        background-color: rgba(255, 255, 255, 0.7);
+        color: var(--stat-color);
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+    .requests-stat-card__progress {
+        width: 100%;
+        height: 6px;
+        border-radius: 999px;
+        background-color: rgba(255, 255, 255, 0.55);
+        overflow: hidden;
+    }
+    .requests-stat-card__progress-bar {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, var(--stat-color), var(--stat-soft));
+        transition: width 0.4s ease;
+    }
+    .requests-stat-card--warning {
+        --stat-color: #d39e00;
+        --stat-soft: rgba(211, 158, 0, 0.38);
+        --stat-bg-start: rgba(211, 158, 0, 0.2);
+        --stat-bg-end: rgba(211, 158, 0, 0.06);
+        --stat-border: rgba(211, 158, 0, 0.28);
+    }
+    .requests-stat-card--success {
+        --stat-color: #198754;
+        --stat-soft: rgba(25, 135, 84, 0.35);
+        --stat-bg-start: rgba(25, 135, 84, 0.18);
+        --stat-bg-end: rgba(25, 135, 84, 0.06);
+        --stat-border: rgba(25, 135, 84, 0.28);
+    }
+    .requests-stat-card--danger {
+        --stat-color: #dc3545;
+        --stat-soft: rgba(220, 53, 69, 0.35);
+        --stat-bg-start: rgba(220, 53, 69, 0.18);
+        --stat-bg-end: rgba(220, 53, 69, 0.06);
+        --stat-border: rgba(220, 53, 69, 0.28);
+    }
+    .requests-stat-card--info {
+        --stat-color: #0dcaf0;
+        --stat-soft: rgba(13, 202, 240, 0.35);
+        --stat-bg-start: rgba(13, 202, 240, 0.2);
+        --stat-bg-end: rgba(13, 202, 240, 0.06);
+        --stat-border: rgba(13, 202, 240, 0.28);
+    }
+    .requests-stat-card--primary {
+        --stat-color: #0d6efd;
+        --stat-soft: rgba(13, 110, 253, 0.35);
+        --stat-bg-start: rgba(13, 110, 253, 0.16);
+        --stat-bg-end: rgba(13, 110, 253, 0.05);
+        --stat-border: rgba(13, 110, 253, 0.2);
+    }
+    @media (max-width: 576px) {
+        .requests-stat-card {
+            padding: 1.1rem 1.2rem;
+        }
+        .requests-stat-card__value {
+            font-size: 1.7rem;
+        }
+        .requests-stat-card__icon {
+            width: 42px;
+            height: 42px;
+            font-size: 1.4rem;
+        }
     }
 
 
@@ -122,43 +243,84 @@
                 </div>
 
                 {{-- نظرة عامة سريعة --}}
-                <div class="row g-3 requests-stats-row">
-                    <div class="col-sm-6 col-xl-3">
-                        <div class="requests-stat-card">
-                            <span class="requests-stat-card__label">{{ __('Total Requests') }}</span>
-                            <span class="requests-stat-card__value">{{ number_format($stats['total'] ?? 0) }}</span>
-                            <span class="requests-stat-card__indicator text-muted">{{ __('Requests') }}</span>
-                        </div>
-                    </div>
-                    <div class="col-sm-6 col-xl-3">
-                        <div class="requests-stat-card">
-                            <span class="requests-stat-card__label">{{ __('Under Review') }}</span>
-                            <span class="requests-stat-card__value text-warning">{{ number_format($stats['review'] ?? 0) }}</span>
-                            <span class="requests-stat-card__indicator">{{ __('Requests') }}</span>
-                        </div>
-                    </div>
-                    <div class="col-sm-6 col-xl-3">
-                        <div class="requests-stat-card">
-                            <span class="requests-stat-card__label">{{ __('Approved') }}</span>
-                            <span class="requests-stat-card__value text-success">{{ number_format($stats['approved'] ?? 0) }}</span>
-                            <span class="requests-stat-card__indicator">{{ __('Requests') }}</span>
-                        </div>
-                    </div>
-                    <div class="col-sm-6 col-xl-3">
-                        <div class="requests-stat-card">
-                            <span class="requests-stat-card__label">{{ __('Rejected') }}</span>
-                            <span class="requests-stat-card__value text-danger">{{ number_format($stats['rejected'] ?? 0) }}</span>
-                            <span class="requests-stat-card__indicator">{{ __('Requests') }}</span>
-                        </div>
-                    </div>
-                    <div class="col-sm-6 col-xl-3">
-                        <div class="requests-stat-card">
-                            <span class="requests-stat-card__label">{{ __('Sold Out') }}</span>
-                            <span class="requests-stat-card__value text-info">{{ number_format($stats['sold_out'] ?? 0) }}</span>
-                            <span class="requests-stat-card__indicator">{{ __('Requests') }}</span>
 
+                @php
+                    $totalRequests = (int) ($stats['total'] ?? 0);
+                    $share = static function (int $value) use ($totalRequests): string {
+                        if ($totalRequests <= 0) {
+                            return '0%';
+                        }
+
+                        $percentage = ($value / max($totalRequests, 1)) * 100;
+                        $decimals = $percentage >= 10 ? 0 : 1;
+                        $formatted = number_format($percentage, $decimals, '.', '');
+                        $formatted = rtrim(rtrim($formatted, '0'), '.');
+
+                        return $formatted . '%';
+                    };
+
+                    $statCards = [
+                        [
+                            'label' => __('Total Requests'),
+                            'value' => $totalRequests,
+                            'icon' => 'bi-clipboard-data',
+                            'variant' => 'primary',
+                        ],
+                        [
+                            'label' => __('Under Review'),
+                            'value' => (int) ($stats['review'] ?? 0),
+                            'icon' => 'bi-hourglass-split',
+                            'variant' => 'warning',
+                        ],
+                        [
+                            'label' => __('Approved'),
+                            'value' => (int) ($stats['approved'] ?? 0),
+                            'icon' => 'bi-check-circle',
+                            'variant' => 'success',
+                        ],
+                        [
+                            'label' => __('Rejected'),
+                            'value' => (int) ($stats['rejected'] ?? 0),
+                            'icon' => 'bi-x-circle',
+                            'variant' => 'danger',
+                        ],
+                        [
+                            'label' => __('Sold Out'),
+                            'value' => (int) ($stats['sold_out'] ?? 0),
+                            'icon' => 'bi-bag-x',
+                            'variant' => 'info',
+                        ],
+                    ];
+                @endphp
+
+                <div class="row g-3 requests-stats-row">
+                    @foreach ($statCards as $card)
+                        @php
+                            $progress = $totalRequests > 0
+                                ? max(0, min(100, round(($card['value'] / max($totalRequests, 1)) * 100, 1)))
+                                : 0;
+                        @endphp
+                        <div class="col-12 col-sm-6 col-xl-3">
+                            <div class="requests-stat-card requests-stat-card--{{ $card['variant'] }}">
+                                <div class="requests-stat-card__header">
+                                    <div class="requests-stat-card__icon">
+                                        <i class="bi {{ $card['icon'] }}"></i>
+                                    </div>
+                                    <div class="requests-stat-card__figures">
+                                        <span class="requests-stat-card__label">{{ $card['label'] }}</span>
+                                        <span class="requests-stat-card__value">{{ number_format($card['value']) }}</span>
+                                    </div>
+                                </div>
+                                <div class="requests-stat-card__indicator">
+                                    <span>{{ __('Requests') }}</span>
+                                    <span class="requests-stat-card__indicator-share">{{ $share($card['value']) }}</span>
+                                </div>
+                                <div class="requests-stat-card__progress">
+                                    <span class="requests-stat-card__progress-bar" style="width: {{ $progress }}%;"></span>
+                                </div>
+                            </div>
                         </div>
-                    </div>
+                    @endforeach
                 </div>
 
                 {{-- الجدول --}}
@@ -207,9 +369,7 @@
                                 <th data-field="description" data-align="center" data-sortable="true" data-visible="false" data-formatter="descriptionFormatter">{{ __('Description') }}</th>
                                 <th data-field="user.name" data-sort-name="user_name" data-sortable="true" data-visible="false">{{ __('User') }}</th>
                                 <th data-field="status" data-sortable="true" data-filter-control="select" data-escape="false" data-visible="false" data-formatter="itemStatusFormatter">{{ __('Status') }}</th>
-                                @can('service-requests-update')
-                                    <th data-field="active_status" data-sortable="true" data-sort-name="deleted_at" data-escape="false" data-formatter="statusSwitchFormatter">{{ __('Active') }}</th>
-                                @endcan
+
 
                                 <th data-field="rejected_reason" data-sortable="true" data-visible="false">{{ __('Rejected Reason') }}</th>
 

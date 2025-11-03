@@ -9699,18 +9699,10 @@ public function storeRequestDevice(Request $request)
                 if ($existingTransaction && strtolower($existingTransaction->payment_status) === 'succeed') {
                     DB::commit();
 
-                    if ($existingManualPaymentRequest) {
-                        $existingManualPaymentRequest->loadMissing('manualBank', 'payable', 'paymentTransaction');
-
-                        ResponseService::successResponse(
-                            'Transaction already processed',
-                            ManualPaymentRequestResource::make($existingManualPaymentRequest)->resolve()
-                        );
-                    }
 
                     $existingTransaction->loadMissing('manualPaymentRequest.manualBank', 'order');
 
-                    ResponseService::successResponse(
+                    return ResponseService::successResponse(
                         'Transaction already processed',
                         PaymentTransactionResource::make($existingTransaction)->resolve()
                     );

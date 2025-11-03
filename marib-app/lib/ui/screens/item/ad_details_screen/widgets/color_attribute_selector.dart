@@ -60,7 +60,7 @@ class ColorAttributeSelectorSection extends StatelessWidget {
               scrollDirection: Axis.horizontal,
               padding: EdgeInsets.zero,
               itemCount: descriptors.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 14),
+              separatorBuilder: (_, __) => const SizedBox(width: 6),
               itemBuilder: (context, index) {
                 final descriptor = descriptors[index];
                 final selected = currentValue == descriptor.rawValue;
@@ -211,7 +211,7 @@ class ColorSwatchChip extends StatelessWidget {
               borderRadius: BorderRadius.circular(32),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 180),
-                width: 56,
+                width: 40,
                 height: 56,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,

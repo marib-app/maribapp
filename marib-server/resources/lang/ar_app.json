@@ -591,6 +591,7 @@
     "departments.store": "قسم المتجر",
     "departments.services": "قسم الخدمات",
     "Product Link": "رابط المنتج",
+    "localServices": " خدمات محلية",
     "Continue Purchase": "متابعة الشراء",
     "Verify Product": "تحقق من المنتج",
     "tips.shein.body": "يرجى التحقق من رابط المنتج على شي إن قبل إتمام عملية الشراء.",
@@ -604,4 +605,5 @@
     "payment_under_review": "الدفع قيد المراجعة.",
     "payment_under_review_with_reference": "لا يمكن تحديث الطلب لوجود طلب دفع يدوي رقم #:id قيد المراجعة. يرجى إتمام المراجعة عبر الرابط: :url",
     "manual_payment.decide.only_pending": "يمكن معالجة الطلبات المفتوحة فقط."
+
 }

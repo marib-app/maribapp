@@ -9902,6 +9902,61 @@ public function storeRequestDevice(Request $request)
                     $paymentTransaction = $paymentTransaction->fresh();
                 }
 
+                if ($existingManualPaymentRequest) {
+                    $existingStatus = $existingManualPaymentRequest->status;
+                    $resolutionTimestamp = Carbon::now();
+
+                    $resolutionDetails = array_filter([
+                        'type' => 'wallet_payment_replacement',
+                        'resolved_at' => $resolutionTimestamp->toIso8601String(),
+                        'payment_transaction_id' => $paymentTransaction->getKey(),
+                        'wallet_transaction_id' => $walletTransaction->getKey(),
+                        'wallet_idempotency_key' => $walletTransaction->idempotency_key,
+                    ], static fn($value) => $value !== null && $value !== '');
+
+                    $metaUpdatesForExistingRequest = [
+                        'resolution' => $resolutionDetails,
+                    ];
+
+                    data_set($metaUpdatesForExistingRequest, 'manual.resolution', $resolutionDetails);
+
+                    if ($walletTransaction) {
+                        data_set($metaUpdatesForExistingRequest, 'wallet.transaction_id', $walletTransaction->getKey());
+                        data_set($metaUpdatesForExistingRequest, 'wallet.idempotency_key', $walletTransaction->idempotency_key);
+                        data_set($metaUpdatesForExistingRequest, 'wallet.balance_after', (float) $walletTransaction->balance_after);
+                    }
+
+                    $existingMetaPayload = is_array($existingManualPaymentRequest->meta)
+                        ? $existingManualPaymentRequest->meta
+                        : [];
+
+                    $mergedExistingMeta = $this->mergeManualPaymentMeta(
+                        $existingMetaPayload,
+                        $metaUpdatesForExistingRequest
+                    );
+
+                    $existingManualPaymentRequest->forceFill([
+                        'status' => ManualPaymentRequest::STATUS_REJECTED,
+                        'reviewed_at' => $resolutionTimestamp,
+                        'meta' => empty($mergedExistingMeta) ? null : $mergedExistingMeta,
+                    ])->save();
+
+                    if ($existingStatus !== ManualPaymentRequest::STATUS_REJECTED) {
+                        ManualPaymentRequestHistory::create([
+                            'manual_payment_request_id' => $existingManualPaymentRequest->getKey(),
+                            'user_id' => $user->id,
+                            'status' => ManualPaymentRequest::STATUS_REJECTED,
+                            'note' => 'Automatically cancelled after wallet payment.',
+                            'meta' => array_filter([
+                                'action' => 'wallet_payment_resolution',
+                                'payment_transaction_id' => $paymentTransaction->getKey(),
+                                'wallet_transaction_id' => $walletTransaction->getKey(),
+                                'wallet_idempotency_key' => $walletTransaction->idempotency_key,
+                            ], static fn($value) => $value !== null && $value !== ''),
+                        ]);
+                    }
+                }
+
                 DB::commit();
 
 

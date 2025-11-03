@@ -8,11 +8,8 @@
 <style>
     .card-body { overflow-x: hidden; }
     .table-responsive { overflow-x: auto; margin-bottom: 1rem; }
-    .select2-container { width: 100% !important; }
     #filters select { height: 45px; font-size: 1.1rem; padding: 8px 12px; }
     #filters label { font-size: 1.1rem; font-weight: 600; margin-bottom: 8px; }
-    .select2-container--default .select2-selection--single { height: 45px !important; padding: 8px 0; }
-    .select2-container--default .select2-selection--single .select2-selection__arrow { height: 45px !important; }
     #table_list { width: 100%; }
 
     .btn-with-label {
@@ -68,13 +65,12 @@
                                 </select>
                             </div>
                             <div class="col-md-8 mb-3">
-                                <label for="category_filter" class="d-block">{{__("Category")}}</label>
-                                <select class="form-control select2" id="category_filter" name="category_filter" style="width: 100%;">
-                                    <option value="">{{__("All Categories")}}</option>
-                                    @foreach($categories as $category)
-                                        <option value="{{ $category->id }}">{{ $category->name }}</option>
-                                    @endforeach
-                                </select>
+                                <label class="d-block">{{__("Category")}}</label>
+                                @if($selectedCategory)
+                                    <div class="form-control-plaintext fw-semibold">{{ $selectedCategory->name }}</div>
+                                @else
+                                    <div class="form-control-plaintext text-muted">{{__("All Categories")}}</div>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -116,7 +112,7 @@
                             <tr>
                                 <th data-field="id" data-sortable="true">{{ __('ID') }}</th>
                                 <th data-field="name" data-sortable="true">{{ __('Name') }}</th>
-                                <th data-field="category.name" data-sortable="true" data-formatter="serviceTypeFormatter" data-filter-control="select">{{ __('نوع الخدمة') }}</th>
+                                <th data-field="category.name" data-sortable="true" data-formatter="serviceTypeFormatter">{{ __('نوع الخدمة') }}</th>
                                 <th data-field="description" data-align="center" data-sortable="true" data-formatter="descriptionFormatter">{{ __('Description') }}</th>
                                 <th data-field="user.name" data-sort-name="user_name" data-sortable="true">{{ __('User') }}</th>
 
@@ -200,6 +196,7 @@
 @section('script')
 <script>
     function updateApprovalSuccess() { $('#editStatusModal').modal('hide'); }
+    const CATEGORY_ID = @json($selectedCategoryId);
 
     // اسم الفئة كبادج
     function serviceTypeFormatter(value, row) {
@@ -254,8 +251,8 @@
 
     // تمرير الفلاتر للسيرفر
     function queryParams(params) {
-        return {
-            category_filter: $('#category_filter').val(),
+        const query = {
+
             status_filter: $('#filter').val(),
             offset: params.offset,
             limit: params.limit,
@@ -264,6 +261,15 @@
             order: params.order,
             filter: params.filter
         };
+
+
+        if (CATEGORY_ID !== null && CATEGORY_ID !== undefined && CATEGORY_ID !== '') {
+            query.category_id = CATEGORY_ID;
+        }
+
+        return query;
+
+
     }
 
     // أدوات مساعدة
@@ -275,25 +281,10 @@
     }
 
     $(document).ready(function() {
-        $('#category_filter').select2({
-            placeholder: "{{__('Search Categories')}}",
-            allowClear: true,
-            width: '100%',
-            dropdownAutoWidth: true,
-            dropdownParent: $('#filters')
-        });
 
-        setTimeout(function() {
-            $('.select2-selection__rendered').css('line-height', '30px');
-        }, 100);
-
-        $(window).resize(function() {
-            $('#category_filter').select2({ width: '100%' });
-            $('.select2-selection__rendered').css('line-height', '30px');
-        });
 
         // تحديث الجدول عند تغيير الفلاتر
-        $('#category_filter, #filter').on('change', function() {
+        $('#filter').on('change', function() {
             let opts = $('#table_list').bootstrapTable('getOptions');
             opts.pageNumber = 1;
             $('#table_list').bootstrapTable('refresh');

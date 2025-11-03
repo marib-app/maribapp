@@ -49,7 +49,7 @@ class ServiceRequestController extends Controller
     /* =========================================================================
      | شاشة الطلبات (الفلاتر الأساسية)
      |=========================================================================*/
-    public function index()
+    public function index(Request $request)
     {
         // نحافظ على نفس الأذونات الحالية
         ResponseService::noAnyPermissionThenRedirect([
@@ -58,29 +58,40 @@ class ServiceRequestController extends Controller
             'service-requests-delete',
         ]);
 
-        // نقرأ فقط id,name لتجنّب أي أعمدة غير موجودة
-        $categories = Category::whereIn('id', self::SERVICE_CATEGORY_IDS)
-            ->orderBy('name')
-            ->get(['id', 'name']);
-
-
-        $categoryQuery = Category::whereIn('id', self::SERVICE_CATEGORY_IDS)
+        $categoryQuery = Category::query()
+            ->whereIn('id', self::SERVICE_CATEGORY_IDS)
             ->orderBy('name');
+
+        $selectedCategoryId = $request->input('category_id');
+        $selectedCategory = null;
 
         $user = Auth::user();
         if ($user && !$this->serviceAuthorizationService->userHasFullAccess($user)) {
             $categoryIds = $this->serviceAuthorizationService->getManagedCategoryIds($user);
             if (empty($categoryIds)) {
-                $categories = collect();
+                $categoryQuery->whereRaw('1 = 0');
+                $selectedCategoryId = null;
             } else {
-                $categories = $categoryQuery->whereIn('id', $categoryIds)->get(['id', 'name']);
+                $categoryQuery->whereIn('id', $categoryIds);
             }
-        } else {
-            $categories = $categoryQuery->get(['id', 'name']);
+
         }
 
+        if ($selectedCategoryId) {
+            $selectedCategory = (clone $categoryQuery)
+                ->where('id', $selectedCategoryId)
+                ->first(['id', 'name']);
 
-        return view('services.requests.index', compact('categories'));
+
+            if (!$selectedCategory) {
+                $selectedCategoryId = null;
+            }
+        }
+
+        return view('services.requests.index', [
+            'selectedCategory' => $selectedCategory,
+            'selectedCategoryId' => $selectedCategory?->id,
+        ]);
     }
 
     /* =========================================================================

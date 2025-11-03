@@ -84,13 +84,7 @@
 
     ];
 
-    $supportsRequestsTab = $supportsServiceRequests && (
-        $servicePermissions['manageRequests'] ||
-        $servicePermissions['requestsCreate'] ||
-        $servicePermissions['requestsUpdate'] ||
-        $servicePermissions['requestsDelete'] ||
-        $canManageCategoryRequests
-    );
+
 
     $canAccessRequestsIndex = $supportsServiceRequests && (
         $servicePermissions['manageRequests'] ||
@@ -119,15 +113,7 @@
                             <span class="ms-1">{{ __('Services') }}</span>
                         </button>
                     </li>
-                    @if ($supportsRequestsTab)
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="requests-tab" data-bs-toggle="tab" data-bs-target="#requests-pane"
-                                    type="button" role="tab" aria-controls="requests-pane" aria-selected="false">
-                                <i class="bi bi-clipboard-check"></i>
-                                <span class="ms-1">{{ __('Requests') }}</span>
-                            </button>
-                        </li>
-                    @endif
+
                     <li class="nav-item" role="presentation">
                         <button class="nav-link" id="reviews-tab" data-bs-toggle="tab" data-bs-target="#reviews-pane"
                                 type="button" role="tab" aria-controls="reviews-pane" aria-selected="false">
@@ -139,7 +125,7 @@
 
                     @if ($canAccessRequestsIndex)
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link" href="{{ route('service.requests.index') }}">
+                            <a class="nav-link" href="{{ route('service.requests.index', ['category_id' => $category->id]) }}">
                                 <i class="bi bi-list-check"></i>
                                 <span class="ms-1">{{ __('Service Requests') }}</span>
                             </a>
@@ -242,189 +228,7 @@
 
                     </div>
 
-                    @if ($supportsRequestsTab)
-                        <div class="tab-pane fade" id="requests-pane" role="tabpanel" aria-labelledby="requests-tab">
 
-
-                            <div class="row g-3 mb-4">
-                                <div class="col-12 col-md-3 col-sm-6">
-                                    <div class="card h-100 shadow-sm border-0 bg-light">
-                                        <div class="card-body">
-                                            <div class="text-muted small">{{ __('Department') }}</div>
-                                            <div class="fw-semibold">{{ $categoryDepartmentLabel }}</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                @if(!empty($categoryRequestsStats))
-                                    <div class="col-12 col-md-3 col-sm-6">
-                                        <div class="card h-100 shadow-sm border-0">
-                                            <div class="card-body">
-                                                <div class="text-muted small">{{ __('Total Requests') }}</div>
-                                                <div class="fw-bold">{{ number_format($categoryRequestsStats['total'] ?? 0) }}</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-12 col-md-3 col-sm-6">
-                                        <div class="card h-100 shadow-sm border-0">
-                                            <div class="card-body">
-                                                <div class="text-muted small">{{ __('Under Review') }}</div>
-                                                <div class="fw-bold">{{ number_format($categoryRequestsStats['review'] ?? 0) }}</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-12 col-md-3 col-sm-6">
-                                        <div class="card h-100 shadow-sm border-0">
-                                            <div class="card-body">
-                                                <div class="text-muted small">{{ __('Approved') }}</div>
-                                                <div class="fw-bold">{{ number_format($categoryRequestsStats['approved'] ?? 0) }}</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-12 col-md-3 col-sm-6">
-                                        <div class="card h-100 shadow-sm border-0">
-                                            <div class="card-body">
-                                                <div class="text-muted small">{{ __('Rejected') }}</div>
-                                                <div class="fw-bold">{{ number_format($categoryRequestsStats['rejected'] ?? 0) }}</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-12 col-md-3 col-sm-6">
-                                        <div class="card h-100 shadow-sm border-0">
-                                            <div class="card-body">
-                                                <div class="text-muted small">{{ __('Sold Out') }}</div>
-                                                <div class="fw-bold">{{ number_format($categoryRequestsStats['sold_out'] ?? 0) }}</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                @endif
-                            </div>
-
-                            <div id="requestsFilters" class="row g-3 align-items-end mb-3">
-                                <div class="col-12 col-md-4 col-lg-3">
-                                    <label for="requests_status_filter" class="form-label">{{ __('Status') }}</label>
-                                    <select id="requests_status_filter" class="form-select">
-                                        <option value="">{{ __('All') }}</option>
-                                        <option value="review">{{ __('Under Review') }}</option>
-                                        <option value="approved">{{ __('Approved') }}</option>
-                                        <option value="rejected">{{ __('Rejected') }}</option>
-                                        <option value="sold out">{{ __('Sold Out') }}</option>
-                                    </select>
-                                </div>
-                            </div>
-
-
-                            @php
-                                $canViewRequestsTable = $servicePermissions['manageRequests'];
-                                $showRequestActions = $servicePermissions['manageRequests']
-                                    || $servicePermissions['requestsUpdate']
-                                    || $servicePermissions['requestsDelete'];
-                            @endphp
-
-                            @if ($canViewRequestsTable)
-                                <div class="table-responsive">
-                                    <table
-                                        class="table-borderless table-striped"
-                                        aria-describedby="requestsTableCaption"
-                                        id="requestsTable"
-                                        data-toggle="table"
-                                        data-url="{{ route('service.requests.datatable', ['category_id' => $category->id]) }}"
-                                        data-click-to-select="true"
-                                        data-side-pagination="server"
-                                        data-pagination="true"
-                                        data-page-list="[5, 10, 20, 50, 100, 200]"
-                                        data-search="true"
-                                        data-show-columns="true"
-                                        data-show-refresh="true"
-                                        data-trim-on-search="false"
-                                        data-escape="true"
-                                        data-responsive="true"
-                                        data-sort-name="id"
-                                        data-sort-order="desc"
-                                        data-pagination-successively-size="3"
-                                        data-mobile-responsive="true"
-                                        data-query-params="categoryRequestsQueryParams"
-                                        data-toolbar="#requestsFilters"
-                                        @if($showRequestActions) data-filter-control="false" @endif
-                                    >
-                                        <thead class="thead-dark">
-                                        <tr>
-                                            <th data-field="id" data-sortable="true">{{ __('ID') }}</th>
-                                            <th data-field="name" data-sortable="true">{{ __('Service') }}</th>
-                                            <th data-field="user.name" data-sort-name="user_name" data-sortable="true">{{ __('User') }}</th>
-                                            <th data-field="description" data-formatter="requestDescriptionFormatter" data-escape="false">{{ __('Summary') }}</th>
-                                            <th data-field="status" data-sortable="true" data-formatter="requestStatusFormatter" data-escape="false">{{ __('Status') }}</th>
-                                            <th data-field="created_at" data-sortable="true">{{ __('Created At') }}</th>
-                                            @if ($showRequestActions)
-                                                <th data-field="operate" data-align="center" data-sortable="false" data-events="itemEvents" data-escape="false">{{ __('Action') }}</th>
-                                            @endif
-                                        </tr>
-                                        </thead>
-                                    </table>
-                                </div>
-                            @else
-                                <div class="alert alert-info" role="alert">
-                                    <i class="bi bi-info-circle me-2"></i>
-                                    {{ __('You do not have permission to view the service requests for this category.') }}
-                                </div>
-                            @endif
-                            
-
-
-
-
-
-
-                            
-
-                           <div id="requestsTableCaption" class="visually-hidden">{{ __('Service requests for the current category') }}</div>
-
-                            {{-- Request details modal --}}
-                            <div id="editModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="requestDetailsLabel" aria-hidden="true">
-                                <div class="modal-dialog modal-lg">
-                                    <div class="modal-content">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title" id="requestDetailsLabel">{{ __('Service Request Details') }}</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __('Close') }}"></button>
-                                        </div>
-                                        <div class="modal-body">
-                                            <div class="center" id="custom_fields"></div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {{-- Request status modal --}}
-                            <div id="editStatusModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="requestStatusLabel" aria-hidden="true">
-                                <div class="modal-dialog">
-                                    <div class="modal-content">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title" id="requestStatusLabel">{{ __('Status') }}</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __('Close') }}"></button>
-                                        </div>
-                                        <div class="modal-body">
-                                            <form class="edit-form" action="" method="POST" data-success-function="updateApprovalSuccess">
-                                                @csrf
-                                                <div class="row">
-                                                    <div class="col-md-12">
-                                                        <select name="status" class="form-select" id="status" aria-label="{{ __('Status') }}">
-                                                            <option value="review">{{ __('Under Review') }}</option>
-                                                            <option value="approved">{{ __('Approve') }}</option>
-                                                            <option value="rejected">{{ __('Reject') }}</option>
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                                <div id="rejected_reason_container" class="col-md-12" style="display:none;">
-                                                    <label for="rejected_reason" class="mandatory form-label">{{ __('Reason') }}</label>
-                                                    <textarea name="rejected_reason" id="rejected_reason" class="form-control" placeholder="{{ __('Reason') }}"></textarea>
-                                                </div>
-                                                <input type="submit" value="{{ __('Save') }}" class="btn btn-primary mt-3">
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    @endif
 
                     <div class="tab-pane fade" id="reviews-pane" role="tabpanel" aria-labelledby="reviews-tab">
                         <div id="reviewsFilters" class="row g-3 align-items-end mb-3">
@@ -575,7 +379,6 @@
     const CATEGORY_ROUTE_TEMPLATE = "{{ route('services.category', ['category' => '__CATEGORY__']) }}";
     const CATEGORY_ID = Number("{{ (int) $category->id }}");
 
-    const REQUESTS_INDEX_URL = "{{ route('service.requests.datatable', ['category_id' => $category->id]) }}";
     const CATEGORY_REVIEWS_URL = "{{ route('services.category.reviews', $category) }}";
     
     const STATUS_URL = "{{ route('common.status.change') }}";
@@ -664,26 +467,6 @@
             ? `<span class="badge bg-success">${LABELS.active}</span>`
             : `<span class="badge bg-danger">${LABELS.inactive}</span>`;
     }
-
-
-
-
-
-    function requestStatusBadge(status) {
-        switch (status) {
-            case 'approved':
-                return '<span class="badge bg-success">' + LABELS.approved + '</span>';
-            case 'rejected':
-                return '<span class="badge bg-danger">' + LABELS.rejected + '</span>';
-            case 'sold out':
-                return '<span class="badge bg-warning text-dark">' + LABELS.soldOut + '</span>';
-            case 'review':
-            default:
-                return '<span class="badge bg-info text-dark">' + LABELS.underReview + '</span>';
-        }
-    }
-
-
 
 
 
@@ -1069,12 +852,7 @@
         $('#status_filter, #is_main_filter, #is_paid_filter, #has_cf_filter, #direct_user_filter')
             .on('change', function () { servicesFilterForm.trigger('submit'); });
 
-        const requestsTable = $('#requestsTable');
-        $('#requests_status_filter').on('change', function () {
-            if (requestsTable.length) {
-                requestsTable.bootstrapTable('refresh', { silent: true });
-            }
-        });
+
 
         const reviewsTable = $('#reviewsTable');
         $('#reviews_status_filter').on('change', function () {
@@ -1110,24 +888,6 @@
 
 
 
-    function categoryRequestsQueryParams(params = {}) {
-        const query = {
-            ...params,
-            category_id: CATEGORY_ID,
-        };
-
-        const status = $('#requests_status_filter').val();
-        if (status) {
-            query.status = status;
-            query.status_filter = status;
-
-
-
-        }
-
-        return query;
-    }
-
     function categoryReviewsQueryParams(params = {}) {
         const query = {
             ...params,
@@ -1142,7 +902,6 @@
         return query;
     }
 
-    window.categoryRequestsQueryParams = categoryRequestsQueryParams;
     window.categoryReviewsQueryParams = categoryReviewsQueryParams;
 
     window.deleteService = deleteService;

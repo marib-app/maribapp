@@ -3,7 +3,6 @@ import 'dart:math';
 
 import 'package:marib/app/routes.dart';
 import 'package:marib/data/cubits/item/fetch_item_from_category_cubit.dart';
-import 'package:marib/ui/screens/sliders/slider_widget.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/hive_utils.dart';
@@ -336,8 +335,7 @@ class ItemsListState extends State<ItemsList> {
               title: selectedcategoryName == ""
                   ? widget.categoryName
                   : selectedcategoryName),
-          bottomNavigationBar: bottomWidget(),
-          body: BlocBuilder<FetchItemFromCategoryCubit,
+                    body: BlocBuilder<FetchItemFromCategoryCubit,
               FetchItemFromCategoryState>(
             builder: (context, state) {
               final sections = _buildSectionsForState(context, state);
@@ -604,12 +602,7 @@ class ItemsListState extends State<ItemsList> {
   List<CatalogSection> _buildSectionsForState(
       BuildContext context, FetchItemFromCategoryState state) {
     final sections = <CatalogSection>[
-      CatalogBoxSection(
-        key: const ValueKey('items_slider_section'),
-        child: SliderWidget(
-          interfaceType: widget.interfaceType,
-        ),
-      ),
+
       _buildSearchHeaderSection(context),
     ];
 

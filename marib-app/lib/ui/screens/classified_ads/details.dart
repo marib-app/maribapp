@@ -137,7 +137,6 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
   bool _error = false;
   String? _errorMsg;
   bool _isProcessing = false; // لمنع تكرار النقر على زر الاستمرار
-  bool _fabVisible = true;    // لإظهار/إخفاء زر المشاركة العائم
   bool _isReporting = false;
   final MyServicesRepository _ownerRepository = MyServicesRepository();
   bool _statusUpdating = false;
@@ -548,12 +547,22 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
     return null;
   }
 
-  _NextAction _computeAction() {
+  bool _hasDirectChat() {
     final j = _data?.toJson() ?? {};
 
     // direct_to_user
-    final direct = _asBoolFlex(j['direct_to_user']) || _asBoolFlex((_data as dynamic)?.directToUser);
+    final direct =
+        _asBoolFlex(j['direct_to_user']) || _asBoolFlex((_data as dynamic)?.directToUser);
+
     final directUserId = j['direct_user_id'] ?? (_data as dynamic)?.directUserId;
+
+
+    return direct && _asIntFlex(directUserId) != null;
+  }
+
+  _NextAction _computeAction() {
+    final j = _data?.toJson() ?? {};
+
 
     // has_custom_fields + service_fields_schema (نص/مصفوفة/خريطة)
     final dynamic schemaRaw = j['service_fields_schema'] ?? (_data as dynamic)?.serviceFieldsSchema;
@@ -575,7 +584,6 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
     final priceNum = _asNumFlex(j['price']) ?? _asNumFlex((_data as dynamic)?.price) ?? 0;
     final isPaid = isPaidFlag || (priceNum > 0);
 
-    if (direct && _asIntFlex(directUserId) != null) return _NextAction.chat;
     if (hasCF) return _NextAction.customFields;
     if (isPaid) return _NextAction.payment;
     return _NextAction.none;
@@ -583,6 +591,10 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
 
   Future<void> _handleContinue(BuildContext context) async {
     if (_data == null) return;
+
+    final action = _computeAction();
+    if (action == _NextAction.none) return;
+
 
     // تحقق تسجيل الدخول وفق توقيع مشروعك (onNotGuest)
     var logged = false;
@@ -592,10 +604,8 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
     );
     if (!logged) return;
 
-    switch (_computeAction()) {
-      case _NextAction.chat:
-        await _openChat(context);
-        break;
+    switch (action) {
+
       case _NextAction.customFields:
         await _openCustomFields(context);
         break;
@@ -608,7 +618,35 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
     }
   }
 
+  Future<void> _handleChatTap(BuildContext context) async {
+    if (!_hasDirectChat()) return;
 
+    var logged = false;
+    UiUtils.checkUser(
+      context: context,
+      onNotGuest: () => logged = true,
+    );
+    if (!logged) return;
+
+    await _openChat(context);
+  }
+
+
+
+  Future<void> _executeNextAction(BuildContext context) async {
+    if (_isProcessing) return;
+    setState(() => _isProcessing = true);
+    try {
+      await _handleContinue(context);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
+    }
+  }
 
 
 
@@ -1074,7 +1112,9 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
     final String? dateLine = _data?.createdAt != null
         ? 'تمت اضافة الخدمة : ${_data!.createdAt.toString().formatDate()}'
         : null;
-    final bool hideActionButton = _isServiceOwner;
+    final bool hideActionButton =
+        _isServiceOwner || (!_loading && _computeAction() == _NextAction.none);
+    final bool chatRedirectEnabled = !_loading && _hasDirectChat();
 
     return ClassifiedDetailsUI(
       // الحالة/المعطيات
@@ -1087,7 +1127,7 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
       ratingText: ratingText,
       directiveHidden: hideActionButton,
       buttonTitle: buttonTitle,
-      fabVisible: _fabVisible,
+      chatRedirectEnabled: chatRedirectEnabled,
       isReporting: _isReporting,
       ownerPanel: _buildOwnerPanel(context),
 
@@ -1146,28 +1186,17 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
         );
       },
 
-      onContinueTap: () async {
-        if (_isProcessing) return;
-        setState(() => _isProcessing = true);
-        try {
-          await _handleContinue(context);
-        } catch (e) {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(e.toString())),
-          );
-        } finally {
-          if (mounted) setState(() => _isProcessing = false);
-        }
-      },
+      onChatTap: chatRedirectEnabled
+          ? () {
+        _handleChatTap(context);
+      }
+          : null,
 
-      onFabVisibilityChange: (visible) {
-        if (visible != _fabVisible) {
-          setState(() => _fabVisible = visible);
-        }
+      onContinueTap: () {
+        _executeNextAction(context);
       },
     );
   }
 }
 
-enum _NextAction { chat, customFields, payment, none }
+enum _NextAction { customFields, payment, none }

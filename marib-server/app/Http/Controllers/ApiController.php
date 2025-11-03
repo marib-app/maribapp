@@ -9708,7 +9708,13 @@ public function storeRequestDevice(Request $request)
                         );
                     }
 
-                    ResponseService::successResponse('Transaction already processed');
+                    $existingTransaction->loadMissing('manualPaymentRequest.manualBank', 'order');
+
+                    ResponseService::successResponse(
+                        'Transaction already processed',
+                        PaymentTransactionResource::make($existingTransaction)->resolve()
+                    );
+                
                 }
             }
 
@@ -9761,25 +9767,29 @@ public function storeRequestDevice(Request $request)
             }
 
 
-            $manualPaymentAttributes = [
-                'user_id'        => $user->id,
-
-                'manual_bank_id' => $paymentMethod === 'manual_bank' ? $request->manual_bank_id : null,
-                'amount'         => $request->amount,
-                'currency'       => $currency,
+        $manualPaymentAttributes = [
+            'user_id'        => $user->id,
 
 
-                'reference'      => $request->reference,
-                'user_note'      => $request->user_note,
-                'receipt_path'   => $receiptPath,
-                'status'         => ManualPaymentRequest::STATUS_PENDING,
-                'payable_type'   => $resolvedPayableType,
-                'payable_id'     => $payableId,
-                'service_request_id' => $serviceRequestId,
-                'department'     => $department,
-                'meta'           => empty($metaPayload) ? null : $metaPayload,
-            ];
+            'manual_bank_id' => $paymentMethod === 'manual_bank' ? $request->manual_bank_id : null,
+            'amount'         => $request->amount,
+            'currency'       => $currency,
 
+
+            'reference'      => $request->reference,
+            'user_note'      => $request->user_note,
+            'receipt_path'   => $receiptPath,
+            'status'         => ManualPaymentRequest::STATUS_PENDING,
+            'payable_type'   => $resolvedPayableType,
+            'payable_id'     => $payableId,
+            'service_request_id' => $serviceRequestId,
+            'department'     => $department,
+            'meta'           => empty($metaPayload) ? null : $metaPayload,
+        ];
+
+        $manualPaymentRequest = null;
+
+        if ($paymentMethod !== 'wallet') {
             if ($existingManualPaymentRequest) {
 
 
@@ -9793,17 +9803,17 @@ public function storeRequestDevice(Request $request)
 
                 $manualPaymentRequest = ManualPaymentRequest::create($manualPaymentAttributes);
             }
-
+        }
             if ($paymentMethod === 'wallet') {
                 $transactionMeta = $existingTransaction?->meta ?? [];
-                $transactionMeta = array_replace_recursive($transactionMeta, $metaPayload ?? []);
+                $transactionMeta = array_replace_recursive($transactionMeta, is_array($metaPayload) ? $metaPayload : []);
                 data_set($transactionMeta, 'wallet.idempotency_key', $walletIdempotencyKey);
 
                 if ($existingTransaction) {
                     $existingTransaction->forceFill([
                         'user_id' => $user->id,
-                        'manual_payment_request_id' => $manualPaymentRequest->id,
-                        'amount' => $manualPaymentRequest->amount,
+                        'manual_payment_request_id' => null,
+                        'amount' => (float) $request->amount,
                         'currency' => $currency,
                         'receipt_path' => $receiptPath,
                         'payment_gateway' => 'wallet',
@@ -9814,88 +9824,74 @@ public function storeRequestDevice(Request $request)
                             ? $payableId
                             : null,
                         'order_id' => $walletIdempotencyKey,
-                        'meta' => $transactionMeta,
+                        'meta' => empty($transactionMeta) ? null : $transactionMeta,
                     ])->save();
 
                     $paymentTransaction = $existingTransaction->fresh();
                 } else {
                     $paymentTransaction = PaymentTransaction::create([
-                        'user_id'                   => $user->id,
-                        'manual_payment_request_id' => $manualPaymentRequest->id,
-                        'amount'                    => $manualPaymentRequest->amount,
-                        'currency'                  => $currency,
-                        'receipt_path'              => $receiptPath,
-                        'payment_gateway'           => 'wallet',
-                        'payment_status'            => 'pending',
-                        'payable_type'              => ($resolvedPayableType && $resolvedPayableType !== ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP)
+                        'user_id' => $user->id,
+                        'manual_payment_request_id' => null,
+                        'amount' => (float) $request->amount,
+                        'currency' => $currency,
+                        'receipt_path' => $receiptPath,
+                        'payment_gateway' => 'wallet',
+                        'payment_status' => 'pending',
+                        'payable_type' => ($resolvedPayableType && $resolvedPayableType !== ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP)
                             ? $resolvedPayableType
                             : null,
-                        'payable_id'                => ($resolvedPayableType && $resolvedPayableType !== ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP)
+                        'payable_id' => ($resolvedPayableType && $resolvedPayableType !== ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP)
                             ? $payableId
                             : null,
-                        'order_id'                  => $walletIdempotencyKey,
-                        'meta'                      => empty($transactionMeta) ? null : $transactionMeta,
+                        'order_id' => $walletIdempotencyKey,
+                        'meta' => empty($transactionMeta) ? null : $transactionMeta,
                     ]);
                 }
+                $paymentTransaction = $paymentTransaction->fresh();
 
                 $walletTransaction = $this->debitWalletTransaction(
-                    $paymentTransaction->fresh(),
+                    $paymentTransaction,
                     $user,
                     $walletIdempotencyKey,
-                    (float) $manualPaymentRequest->amount,
+                    (float) $request->amount,
                     [
-                        'manual_payment_request_id' => $manualPaymentRequest->id,
-                        'meta' => [
+                        'meta' => array_filter([
+
                             'context' => 'manual_payment',
-                            'payable_type' => $manualPaymentRequest->payable_type,
-                            'payable_id' => $manualPaymentRequest->payable_id,
-                            'manual_payment_request_id' => $manualPaymentRequest->id,
-                        ],
+                            'payable_type' => $resolvedPayableType,
+                            'payable_id' => $payableId,
+                        ], static fn($value) => $value !== null),
                     ]
                 );
 
                 $transactionMeta = $paymentTransaction->meta ?? [];
+                $transactionMeta = array_replace_recursive($transactionMeta, is_array($metaPayload) ? $metaPayload : []);
                 data_set($transactionMeta, 'wallet.transaction_id', $walletTransaction->getKey());
                 data_set($transactionMeta, 'wallet.balance_after', (float) $walletTransaction->balance_after);
                 data_set($transactionMeta, 'wallet.idempotency_key', $walletTransaction->idempotency_key);
 
                 $paymentTransaction->forceFill([
-                    'meta' => $transactionMeta,
+                    'meta' => empty($transactionMeta) ? null : $transactionMeta,
+
                 ])->save();
 
-                $requestMeta = array_replace_recursive($manualPaymentRequest->meta ?? [], [
-                    'wallet' => [
-                        'transaction_id' => $walletTransaction->getKey(),
-                        'idempotency_key' => $walletTransaction->idempotency_key,
-                        'balance_after' => (float) $walletTransaction->balance_after,
-                    ],
-                ]);
-
-                $manualPaymentRequest->forceFill([
-                    'status' => ManualPaymentRequest::STATUS_APPROVED,
-                    'reviewed_at' => now(),
-                    'meta' => $requestMeta,
-                ])->save();
-
-                $options = [
-                    'payment_gateway' => 'wallet',
-                    'manual_payment_request_id' => $manualPaymentRequest->id,
-                    'wallet_transaction' => $walletTransaction,
-                    'meta' => $transactionMeta,
-                ];
-
-                $shouldFulfill = !empty($manualPaymentRequest->payable_type)
-                    && $manualPaymentRequest->payable_type !== ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP;
+                $shouldFulfill = !empty($resolvedPayableType)
+                    && $resolvedPayableType !== ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP;
 
                 $message = 'Manual payment completed successfully';
+                $paymentTransaction = $paymentTransaction->fresh();
 
                 if ($shouldFulfill) {
                     $result = $this->paymentFulfillmentService->fulfill(
-                        $paymentTransaction->fresh(),
-                        $manualPaymentRequest->payable_type,
-                        $manualPaymentRequest->payable_id,
+                        $paymentTransaction,
+                        $resolvedPayableType,
+                        $payableId,
                         $user->id,
-                        $options
+                        [
+                            'payment_gateway' => 'wallet',
+                            'wallet_transaction' => $walletTransaction,
+                            'meta' => $transactionMeta,
+                        ]
                     );
 
                     if ($result['error']) {
@@ -9905,20 +9901,24 @@ public function storeRequestDevice(Request $request)
                     $message = $result['message'] === 'Transaction already processed'
                         ? 'Transaction already processed'
                         : 'Manual payment completed successfully';
+                    $paymentTransaction = $result['transaction'] ?? $paymentTransaction->fresh();
+                } else {
+                    $paymentTransaction->forceFill([
+                        'payment_status' => 'succeed',
+                    ])->save();
+
+                    $paymentTransaction = $paymentTransaction->fresh();
                 }
 
                 DB::commit();
 
-                $manualPaymentRequest->loadMissing('manualBank', 'payable', 'paymentTransaction');
 
+                $paymentTransaction->loadMissing('manualPaymentRequest.manualBank', 'order');
 
-                $message = $result['message'] === 'Transaction already processed'
-                    ? 'Transaction already processed'
-                    : 'Manual payment completed successfully';
 
                 ResponseService::successResponse(
                     $message,
-                    ManualPaymentRequestResource::make($manualPaymentRequest)->resolve()
+                    PaymentTransactionResource::make($paymentTransaction)->resolve()
                 );
             } elseif ($paymentMethod === 'east_yemen_bank') {
                 $eastYemenData = $validated['east_yemen_bank'] ?? [];

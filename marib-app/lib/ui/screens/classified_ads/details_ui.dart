@@ -2,7 +2,6 @@
 // واجهة العرض فقط — بدون منطق. مطابق للشكل السابق 1:1.
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart' show ScrollDirection;
 
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
@@ -30,9 +29,10 @@ class ClassifiedDetailsUI extends StatelessWidget {
   final bool directiveHidden;
   final String buttonTitle;
 
-  final bool fabVisible;
+  final bool chatRedirectEnabled;
   final bool isReporting;
   final Widget? ownerPanel;
+  final VoidCallback? onChatTap;
 
   // ===== ردود الأفعال (callbacks) =====
   final VoidCallback? onBack;
@@ -42,9 +42,6 @@ class ClassifiedDetailsUI extends StatelessWidget {
 
   /// ✅ مطلوب وغير قابل لأن يكون null لإرضاء onPressed
   final VoidCallback onContinueTap;
-
-  /// يٌستدعى عند تغيّر رؤية زر المشاركة بحسب اتجاه التمرير
-  final void Function(bool visible)? onFabVisibilityChange;
 
   const ClassifiedDetailsUI({
     super.key,
@@ -58,7 +55,7 @@ class ClassifiedDetailsUI extends StatelessWidget {
     required this.ratingText,
     required this.directiveHidden,
     required this.buttonTitle,
-    required this.fabVisible,
+    this.chatRedirectEnabled = false,
     required this.isReporting,
     // أفعال
     this.onBack,
@@ -66,104 +63,112 @@ class ClassifiedDetailsUI extends StatelessWidget {
     this.onReportTap,
     this.onRateTap,
     required this.onContinueTap,
-    this.onFabVisibilityChange,
+    this.onChatTap,
     this.ownerPanel,
-
-
   });
 
   @override
   Widget build(BuildContext context) {
+    final bool extendBehindAppBar =
+        !loading && hasImage && (imageUrl ?? '').isNotEmpty;
+
     return Scaffold(
       backgroundColor: context.color.primaryColor,
 
-      // AppBar — زر رجوع بالشكل السابق (UiUtils + AppIcons) وسلوك سلس
-      appBar: AppBar(
-        backgroundColor: context.color.primaryColor,
-        elevation: 0,
-        leading: Material(
-          clipBehavior: Clip.antiAlias,
-          color: Colors.transparent,
-          type: MaterialType.circle,
-          child: InkWell(
-            onTap: onBack,
-            child: Padding(
-              padding: const EdgeInsetsDirectional.only(start: 15),
-              child: Directionality(
-                textDirection: Directionality.of(context),
-                child: RotatedBox(
-                  quarterTurns:
-                  Directionality.of(context) == TextDirection.rtl ? 2 : -4,
-                  child: UiUtils.getSvg(
-                    AppIcons.arrowLeft,
-                    fit: BoxFit.none,
-                    color: context.color.textDefaultColor,
+      extendBodyBehindAppBar: extendBehindAppBar,
+
+      // AppBar — يظهر فقط أثناء التحميل. في الحالة المحمّلة نستخدم SliverAppBar داخل الجسم.
+      appBar: loading
+          ? AppBar(
+              backgroundColor: context.color.primaryColor,
+              elevation: 0,
+              leading: Material(
+                clipBehavior: Clip.antiAlias,
+                color: Colors.transparent,
+                type: MaterialType.circle,
+                child: InkWell(
+                  onTap: onBack,
+                  child: Padding(
+                    padding: const EdgeInsetsDirectional.only(start: 15),
+                    child: Directionality(
+                      textDirection: Directionality.of(context),
+                      child: RotatedBox(
+                        quarterTurns:
+                            Directionality.of(context) == TextDirection.rtl
+                                ? 2
+                                : -4,
+                        child: UiUtils.getSvg(
+                          AppIcons.arrowLeft,
+                          fit: BoxFit.none,
+                          color: context.color.textDefaultColor,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
-          ),
-        ),
-        title: Text(
-          appBarTitle,
-          style: TextStyle(color: context.color.textDefaultColor),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ),
+              title: Text(
+                appBarTitle,
+                style: TextStyle(color: context.color.textDefaultColor),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            )
+          : null,
 
       // BottomNavigationBar — شيمر أثناء التحميل، أو زر "متابعة" حسب directive
       bottomNavigationBar: loading
           ? SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: const SizedBox(
-              height: 54,
-              child: CustomShimmer(
-                width: double.infinity,
-                height: double.infinity,
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: const SizedBox(
+                    height: 54,
+                    child: CustomShimmer(
+                      width: double.infinity,
+                      height: double.infinity,
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ),
-        ),
-      )
+            )
           : (directiveHidden
-          ? const SizedBox.shrink()
-          : SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-          child: UiUtils.buildButton(
-            context,
-            buttonTitle: buttonTitle,
-            radius: 12,
-            height: 54,
-            onPressed: onContinueTap, // غير قابلة لـ null الآن
-          ),
-        ),
-      )),
+              ? const SizedBox.shrink()
+              : SafeArea(
+                  top: false,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                    child: UiUtils.buildButton(
+                      context,
+                      buttonTitle: buttonTitle,
+                      radius: 12,
+                      height: 54,
+                      onPressed: onContinueTap, // غير قابلة لـ null الآن
+                    ),
+                  ),
+                )),
 
       // Body
       body: loading
           ? _LoadingBody()
           : _LoadedBody(
-        hasImage: hasImage,
-        imageUrl: imageUrl,
-        html: html,
-        dateLine: dateLine,
-        ratingText: ratingText,
-        isReporting: isReporting,
-        onReportTap: onReportTap,
-        onRateTap: onRateTap,
-        onShare: onShare,
-        fabVisible: fabVisible,
-        onFabVisibilityChange: onFabVisibilityChange,
-        ownerPanel: ownerPanel,
-
-      ),
+              appBarTitle: appBarTitle,
+              onBack: onBack,
+              hasImage: hasImage,
+              imageUrl: imageUrl,
+              html: html,
+              dateLine: dateLine,
+              ratingText: ratingText,
+              isReporting: isReporting,
+              onReportTap: onReportTap,
+              onRateTap: onRateTap,
+              onShare: onShare,
+              chatRedirectEnabled: chatRedirectEnabled,
+              onChatTap: onChatTap,
+              ownerPanel: ownerPanel,
+            ),
     );
   }
 }
@@ -175,7 +180,6 @@ class _LoadingBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 100), // مساحة للـ FAB
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -262,6 +266,8 @@ class _LoadingBody extends StatelessWidget {
 // الجسم بعد التحميل
 // ===============================
 class _LoadedBody extends StatelessWidget {
+  final String appBarTitle;
+  final VoidCallback? onBack;
   final bool hasImage;
   final String? imageUrl;
 
@@ -276,12 +282,13 @@ class _LoadedBody extends StatelessWidget {
   final VoidCallback? onRateTap;
 
   final VoidCallback? onShare;
-
-  final bool fabVisible;
-  final void Function(bool visible)? onFabVisibilityChange;
+  final VoidCallback? onChatTap;
+  final bool chatRedirectEnabled;
   final Widget? ownerPanel;
 
   const _LoadedBody({
+    required this.appBarTitle,
+    required this.onBack,
     required this.hasImage,
     required this.imageUrl,
     required this.html,
@@ -291,124 +298,210 @@ class _LoadedBody extends StatelessWidget {
     required this.onReportTap,
     required this.onRateTap,
     required this.onShare,
-    required this.fabVisible,
-    required this.onFabVisibilityChange,
+    required this.chatRedirectEnabled,
+    required this.onChatTap,
     required this.ownerPanel,
-
   });
 
   @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // إخفاء/إظهار زر المشاركة العائم عند التمرير
-        NotificationListener<UserScrollNotification>(
-          onNotification: (n) {
-            if (n.direction == ScrollDirection.reverse && fabVisible) {
-              onFabVisibilityChange?.call(false);
-            } else if (n.direction == ScrollDirection.forward && !fabVisible) {
-              onFabVisibilityChange?.call(true);
-            }
-            return false;
-          },
-          child: SingleChildScrollView(
-
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 100), // مساحة للـ FAB
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (hasImage && (imageUrl ?? '').isNotEmpty)
-                  SizedBox(
-                    width: double.infinity,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: AspectRatio(
-                        aspectRatio: 390 / 150,
-                        child: UiUtils.getImage(
-                          imageUrl!,
-                          fit: BoxFit.fill,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                const SizedBox(height: 10),
-
-                // أزرار تحت الصورة: إبلاغ + تقييم
-                Row(
+        CustomScrollView(
+          slivers: [
+            _HeaderSliver(
+              title: appBarTitle,
+              onBack: onBack,
+              hasImage: hasImage && (imageUrl ?? '').isNotEmpty,
+              imageUrl: imageUrl,
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(12, 16, 12, 120),
+              sliver: SliverToBoxAdapter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: _ReportButton(
-                        isReporting: isReporting,
-                        onTap: onReportTap,
-                      ),
+                    // أزرار تحت الصورة: إبلاغ + تقييم
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _ReportButton(
+                            isReporting: isReporting,
+                            onTap: onReportTap,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _PillButton(
+                            icon: Icons.star_rounded,
+                            label: ratingText,
+                            emphasize: true,
+                            onTap: onRateTap,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _PillButton(
-                        icon: Icons.star_rounded,
-                        label: ratingText,
-                        emphasize: true,
-                        onTap: onRateTap,
-                      ),
+                    if (ownerPanel != null) ...[
+                      const SizedBox(height: 12),
+                      ownerPanel!,
+                    ],
+
+                    const SizedBox(height: 12),
+
+                    // التاريخ فقط
+                    if (dateLine != null)
+                      Text(dateLine!)
+                          .size(context.font.smaller)
+                          .color(context.color.textColorDark.withOpacity(0.55)),
+
+                    const SizedBox(height: 12),
+
+                    // الوصف HTML
+                    AppHtml(
+                      data: html,
+                      baseUrl: null,
+                      centerContent: true,
+                      maxWidth: 720,
+                      preserveInlineStyles: true,
+                      selectable: true,
+                      outerPadding: EdgeInsets.zero,
                     ),
+                    const SizedBox(height: 1),
                   ],
                 ),
-
-
-                if (ownerPanel != null) ...[
-                  const SizedBox(height: 12),
-                  ownerPanel!,
-                ],
-
-                const SizedBox(height: 10),
-
-                // التاريخ فقط
-                if (dateLine != null)
-                  Text(dateLine!)
-                      .size(context.font.smaller)
-                      .color(context.color.textColorDark.withOpacity(0.55)),
-
-                const SizedBox(height: 12),
-
-                // الوصف HTML
-                AppHtml(
-                  data: html,
-                  baseUrl: null,
-                  centerContent: true,
-                  maxWidth: 720,
-                  preserveInlineStyles: true,
-                  selectable: true,
-                  outerPadding: EdgeInsets.zero,
-                ),
-
-                const SizedBox(height: 1),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
 
         // زر مشاركة عائم (يسار) يختفي بالتمرير
         Positioned(
           left: 20,
           bottom: 24,
-          child: AnimatedSlide(
-            duration: const Duration(milliseconds: 180),
-            offset: fabVisible ? Offset.zero : const Offset(0, 1.2),
-            child: AnimatedOpacity(
-              duration: const Duration(milliseconds: 180),
-              opacity: fabVisible ? 1 : 0,
-              child: FloatingActionButton(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            verticalDirection: VerticalDirection.up,
+            children: [
+              FloatingActionButton(
                 heroTag: 'share_fab',
                 onPressed: onShare,
                 backgroundColor: context.color.secondaryColor.withOpacity(0.9),
                 foregroundColor: context.color.textDefaultColor,
                 child: const Icon(Icons.share),
               ),
-            ),
+              if (chatRedirectEnabled && onChatTap != null) ...[
+                const SizedBox(height: 12),
+                FloatingActionButton(
+                  heroTag: 'chat_fab',
+                  onPressed: onChatTap,
+                  backgroundColor:
+                      context.color.secondaryColor.withOpacity(0.9),
+                  foregroundColor: context.color.textDefaultColor,
+                  child: const Icon(Icons.chat_rounded),
+                ),
+              ],
+            ],
           ),
         ),
       ],
+    );
+  }
+}
+
+class _HeaderSliver extends StatelessWidget {
+  final String title;
+  final VoidCallback? onBack;
+  final bool hasImage;
+  final String? imageUrl;
+
+  const _HeaderSliver({
+    required this.title,
+    required this.onBack,
+    required this.hasImage,
+    required this.imageUrl,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final textColor = context.color.textDefaultColor;
+    final expandedHeight = hasImage
+        ? MediaQuery.of(context).size.height * 0.40
+        : kToolbarHeight + MediaQuery.of(context).padding.top;
+
+    return SliverAppBar(
+      pinned: true,
+      stretch: true,
+      backgroundColor: context.color.primaryColor,
+      elevation: 0,
+      expandedHeight: expandedHeight,
+      automaticallyImplyLeading: false,
+      leadingWidth: 68,
+      leading: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsetsDirectional.only(start: 12),
+          child: Material(
+            color: Colors.transparent,
+            clipBehavior: Clip.antiAlias,
+            type: MaterialType.circle,
+            child: InkWell(
+              onTap: onBack,
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Directionality(
+                  textDirection: Directionality.of(context),
+                  child: RotatedBox(
+                    quarterTurns:
+                        Directionality.of(context) == TextDirection.rtl
+                            ? 2
+                            : -4,
+                    child: UiUtils.getSvg(
+                      AppIcons.arrowLeft,
+                      fit: BoxFit.none,
+                      color: textColor,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+      flexibleSpace: FlexibleSpaceBar(
+        collapseMode: hasImage ? CollapseMode.parallax : CollapseMode.pin,
+        titlePadding:
+            const EdgeInsetsDirectional.only(start: 72, end: 16, bottom: 16),
+        title: Text(
+          title,
+          style: TextStyle(color: textColor),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        background: hasImage
+            ? Stack(
+                fit: StackFit.expand,
+                children: [
+                  UiUtils.getImage(
+                    imageUrl!,
+                    fit: BoxFit.cover,
+                  ),
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withOpacity(0.35),
+                          Colors.black.withOpacity(0.05),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            : null,
+      ),
     );
   }
 }
@@ -473,9 +566,11 @@ class _PillButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final br = BorderRadius.circular(12);
-    final bg = context.color.secondaryColor.withOpacity(emphasize ? 0.20 : 0.14);
-    final borderColor =
-    emphasize ? context.color.textColorDark.withOpacity(0.20) : Colors.transparent;
+    final bg =
+        context.color.secondaryColor.withOpacity(emphasize ? 0.20 : 0.14);
+    final borderColor = emphasize
+        ? context.color.textColorDark.withOpacity(0.20)
+        : Colors.transparent;
 
     final child = Container(
       height: 42,

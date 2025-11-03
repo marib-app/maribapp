@@ -721,6 +721,8 @@
     "Wallet withdrawal request updated": "تم تحديث طلب سحب المحفظة",
     "Wallet credited successfully.": "تم إضافة المبلغ إلى المحفظة بنجاح.",
     "Wallet transfer processed successfully": "تم تنفيذ تحويل المحفظة بنجاح.",
-    "Wallet Top-up #:id": "شحن المحفظة رقم :id"
-
+    "Wallet Top-up #:id": "شحن المحفظة رقم :id",
+    "Search by Transaction Number": "البحث برقم المعاملة",
+    "Enter transaction number": "أدخل رقم المعاملة",
+    "Transaction Identifier": "معرّف المعاملة"
 }

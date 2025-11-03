@@ -8,9 +8,45 @@
 <style>
     .card-body { overflow-x: hidden; }
     .table-responsive { overflow-x: auto; margin-bottom: 1rem; }
-    #filters select { height: 45px; font-size: 1.1rem; padding: 8px 12px; }
-    #filters label { font-size: 1.1rem; font-weight: 600; margin-bottom: 8px; }
+    #filters select,
+    #filters input { height: 45px; font-size: 1.05rem; padding: 8px 12px; }
+    #filters label { font-size: 1.05rem; font-weight: 600; margin-bottom: 8px; }
+    #filters .input-group > .btn { height: 45px; }
+    #filters .input-group .btn + .btn { border-radius: 0 .5rem .5rem 0; }
     #table_list { width: 100%; }
+
+
+    .requests-stats-row { margin-bottom: 1.5rem; }
+    .requests-stat-card {
+        border: 1px solid #e9ecef;
+        border-radius: 1rem;
+        padding: 1.25rem 1.5rem;
+        background: linear-gradient(135deg, rgba(13, 110, 253, 0.08), rgba(13, 110, 253, 0.02));
+        box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        min-height: 100%;
+    }
+    .requests-stat-card__label {
+        color: #6c757d;
+        font-size: 0.8rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        font-weight: 600;
+    }
+    .requests-stat-card__value {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #0d6efd;
+        line-height: 1.1;
+    }
+    .requests-stat-card__indicator {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #212529;
+    }
+
 
     .btn-with-label {
         display: inline-flex;
@@ -53,8 +89,8 @@
                 {{-- فلاتر --}}
                 <div class="row">
                     <div class="col-12">
-                        <div id="filters" class="row mb-4">
-                            <div class="col-md-4 mb-3">
+                        <div id="filters" class="row g-3 align-items-end mb-4">
+                            <div class="col-sm-6 col-lg-3">
                                 <label for="filter" class="d-block">{{__("Status")}}</label>
                                 <select class="form-control bootstrap-table-filter-control-status" id="filter">
                                     <option value="">{{__("All")}}</option>
@@ -64,7 +100,7 @@
                                     <option value="sold out">{{__("Sold Out")}}</option>
                                 </select>
                             </div>
-                            <div class="col-md-8 mb-3">
+                            <div class="col-sm-6 col-lg-3">
                                 <label class="d-block">{{__("Category")}}</label>
                                 @if($selectedCategory)
                                     <div class="form-control-plaintext fw-semibold">{{ $selectedCategory->name }}</div>
@@ -72,6 +108,55 @@
                                     <div class="form-control-plaintext text-muted">{{__("All Categories")}}</div>
                                 @endif
                             </div>
+
+                            <div class="col-12 col-lg-6">
+                                <label for="request_number" class="d-block">{{ __('Search by Transaction Number') }}</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="request_number" placeholder="{{ __('Enter transaction number') }}" autocomplete="off">
+                                    <button class="btn btn-outline-primary" type="button" id="requestNumberApply">{{ __('Search') }}</button>
+                                    <button class="btn btn-outline-secondary" type="button" id="requestNumberReset">{{ __('Reset') }}</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- نظرة عامة سريعة --}}
+                <div class="row g-3 requests-stats-row">
+                    <div class="col-sm-6 col-xl-3">
+                        <div class="requests-stat-card">
+                            <span class="requests-stat-card__label">{{ __('Total Requests') }}</span>
+                            <span class="requests-stat-card__value">{{ number_format($stats['total'] ?? 0) }}</span>
+                            <span class="requests-stat-card__indicator text-muted">{{ __('Requests') }}</span>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-xl-3">
+                        <div class="requests-stat-card">
+                            <span class="requests-stat-card__label">{{ __('Under Review') }}</span>
+                            <span class="requests-stat-card__value text-warning">{{ number_format($stats['review'] ?? 0) }}</span>
+                            <span class="requests-stat-card__indicator">{{ __('Requests') }}</span>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-xl-3">
+                        <div class="requests-stat-card">
+                            <span class="requests-stat-card__label">{{ __('Approved') }}</span>
+                            <span class="requests-stat-card__value text-success">{{ number_format($stats['approved'] ?? 0) }}</span>
+                            <span class="requests-stat-card__indicator">{{ __('Requests') }}</span>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-xl-3">
+                        <div class="requests-stat-card">
+                            <span class="requests-stat-card__label">{{ __('Rejected') }}</span>
+                            <span class="requests-stat-card__value text-danger">{{ number_format($stats['rejected'] ?? 0) }}</span>
+                            <span class="requests-stat-card__indicator">{{ __('Requests') }}</span>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-xl-3">
+                        <div class="requests-stat-card">
+                            <span class="requests-stat-card__label">{{ __('Sold Out') }}</span>
+                            <span class="requests-stat-card__value text-info">{{ number_format($stats['sold_out'] ?? 0) }}</span>
+                            <span class="requests-stat-card__indicator">{{ __('Requests') }}</span>
+
                         </div>
                     </div>
                 </div>
@@ -110,22 +195,23 @@
                            data-query-params="queryParams">
                             <thead class="thead-dark">
                             <tr>
-                                <th data-field="id" data-sortable="true">{{ __('ID') }}</th>
+                                <th data-field="request_number" data-sortable="true" data-sort-name="request_number" data-formatter="requestNumberFormatter">{{ __('Transaction Identifier') }}</th>
+                                <th data-field="id" data-sortable="true" data-visible="false">{{ __('ID') }}</th>
+                                
                                 <th data-field="name" data-sortable="true">{{ __('Name') }}</th>
-                                <th data-field="category.name" data-sortable="true" data-formatter="serviceTypeFormatter">{{ __('نوع الخدمة') }}</th>
-                                <th data-field="description" data-align="center" data-sortable="true" data-formatter="descriptionFormatter">{{ __('Description') }}</th>
-                                <th data-field="user.name" data-sort-name="user_name" data-sortable="true">{{ __('User') }}</th>
 
-                                {{-- عمود جديد: الحقول المُعبأة كتقرير (زر يفتح المودال) --}}
                                 <th data-field="custom_fields" data-sortable="false" data-escape="false" data-formatter="customFieldsFormatter" data-events="fieldsEvents">{{ __('الحقول المُعبأة') }}</th>
 
-                                <th data-field="status" data-sortable="true" data-filter-control="select" data-escape="false" data-formatter="itemStatusFormatter">{{ __('Status') }}</th>
-
+                                <th data-field="submitted_at" data-sortable="true" data-sort-name="created_at" data-formatter="submissionDateFormatter">{{ __('Submitted At') }}</th>
+                                <th data-field="category.name" data-sortable="true" data-visible="false" data-formatter="serviceTypeFormatter">{{ __('نوع الخدمة') }}</th>
+                                <th data-field="description" data-align="center" data-sortable="true" data-visible="false" data-formatter="descriptionFormatter">{{ __('Description') }}</th>
+                                <th data-field="user.name" data-sort-name="user_name" data-sortable="true" data-visible="false">{{ __('User') }}</th>
+                                <th data-field="status" data-sortable="true" data-filter-control="select" data-escape="false" data-visible="false" data-formatter="itemStatusFormatter">{{ __('Status') }}</th>
                                 @can('service-requests-update')
                                     <th data-field="active_status" data-sortable="true" data-sort-name="deleted_at" data-escape="false" data-formatter="statusSwitchFormatter">{{ __('Active') }}</th>
                                 @endcan
 
-                                <th data-field="rejected_reason" data-sortable="true">{{ __('Rejected Reason') }}</th>
+                                <th data-field="rejected_reason" data-sortable="true" data-visible="false">{{ __('Rejected Reason') }}</th>
 
                                 {{-- أخفي تواريخ/معرّفات إضافية فقط للبحث --}}
                                 <th data-field="created_at" data-sortable="true" data-visible="false">{{ __('Created At') }}</th>
@@ -133,7 +219,7 @@
                                 <th data-field="user_id" data-sortable="true" data-visible="false">{{ __('User ID') }}</th>
                                 <th data-field="category_id" data-sortable="true" data-visible="false">{{ __('Category ID') }}</th>
 
-                                @canany(['service-requests-update','service-requests-delete'])
+                                @canany(['service-requests-list','service-requests-update'])
                                     <th data-field="operate" data-align="center" data-sortable="false" data-events="itemEvents" data-escape="false">{{ __('Action') }}</th>
                                 @endcanany
                             </tr>
@@ -206,6 +292,12 @@
         return '<span class="badge bg-light-secondary">-</span>';
     }
 
+
+    function requestNumberFormatter(value, row) {
+        var reference = value || (row && row.id ? ('#' + row.id) : '-');
+        return '<span class="badge bg-primary text-white fw-semibold px-3 py-2">' + escapeHtml(reference) + '</span>';
+    }
+
     // زر "عرض الحقول" + عدّاد
     function customFieldsFormatter(value, row) {
         var count = Array.isArray(row.custom_fields) ? row.custom_fields.length : 0;
@@ -213,6 +305,14 @@
                    '{{ __("View") }}'+
                '</button> ' +
                '<span class="badge bg-light text-dark ms-1">'+ count +'</span>';
+    }
+
+
+    function submissionDateFormatter(value) {
+        if (!value) {
+            return '<span class="text-muted">-</span>';
+        }
+        return '<span class="text-nowrap">' + escapeHtml(value) + '</span>';
     }
 
     // بناء جدول الحقول داخل المودال
@@ -262,6 +362,8 @@
             filter: params.filter
         };
 
+        const requestNumberValue = $('#request_number').val();
+        query.request_number = requestNumberValue ? requestNumberValue.trim() : '';
 
         if (CATEGORY_ID !== null && CATEGORY_ID !== undefined && CATEGORY_ID !== '') {
             query.category_id = CATEGORY_ID;
@@ -282,12 +384,35 @@
 
     $(document).ready(function() {
 
+        const $table = $('#table_list');
+        const $requestNumber = $('#request_number');
+
+        function refreshTableToFirstPage() {
+            const options = $table.bootstrapTable('getOptions');
+            options.pageNumber = 1;
+            $table.bootstrapTable('refresh');
+        }
+
 
         // تحديث الجدول عند تغيير الفلاتر
         $('#filter').on('change', function() {
-            let opts = $('#table_list').bootstrapTable('getOptions');
-            opts.pageNumber = 1;
-            $('#table_list').bootstrapTable('refresh');
+            refreshTableToFirstPage();
+        });
+
+        $('#requestNumberApply').on('click', function () {
+            refreshTableToFirstPage();
+        });
+
+        $('#requestNumberReset').on('click', function () {
+            $requestNumber.val('');
+            refreshTableToFirstPage();
+        });
+
+        $requestNumber.on('keypress', function (event) {
+            if (event.which === 13) {
+                event.preventDefault();
+                refreshTableToFirstPage();
+            }
         });
 
         // إظهار/إخفاء سبب الرفض

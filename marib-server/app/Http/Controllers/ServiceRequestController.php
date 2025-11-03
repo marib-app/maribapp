@@ -88,9 +88,31 @@ class ServiceRequestController extends Controller
             }
         }
 
+
+        $statsBaseQuery = ServiceRequest::query()->withTrashed();
+
+        if ($user = Auth::user()) {
+            $statsBaseQuery = $this->serviceAuthorizationService->restrictServiceRequestQuery($statsBaseQuery, $user);
+        }
+
+        if ($selectedCategory?->id) {
+            $statsBaseQuery->whereHas('service', function ($query) use ($selectedCategory) {
+                $query->where('category_id', $selectedCategory->id);
+            });
+        }
+
+        $stats = [
+            'total'    => (clone $statsBaseQuery)->count(),
+            'review'   => (clone $statsBaseQuery)->where('status', 'review')->count(),
+            'approved' => (clone $statsBaseQuery)->where('status', 'approved')->count(),
+            'rejected' => (clone $statsBaseQuery)->where('status', 'rejected')->count(),
+            'sold_out' => (clone $statsBaseQuery)->where('status', 'sold out')->count(),
+        ];
+
         return view('services.requests.index', [
             'selectedCategory' => $selectedCategory,
             'selectedCategoryId' => $selectedCategory?->id,
+            'stats' => $stats,
         ]);
     }
 
@@ -127,6 +149,7 @@ class ServiceRequestController extends Controller
             if ($categoryFilter === null || $categoryFilter === '') {
                 $categoryFilter = $request->input('category_id');
             }
+            $requestNumberFilter = trim((string) $request->input('request_number', ''));
 
             $q = ServiceRequest::with([
                     'service:id,title,category_id',
@@ -154,11 +177,22 @@ class ServiceRequestController extends Controller
                     $qq->where('status', $request->status_filter);
                 })
 
+
+                ->when($requestNumberFilter !== '', function ($qq) use ($requestNumberFilter) {
+                    $qq->where(function ($inner) use ($requestNumberFilter) {
+                        $inner->where('request_number', 'like', "%{$requestNumberFilter}%")
+                            ->orWhere('id', (int) $requestNumberFilter);
+                    });
+                })
+
+
+
                 // البحث العام
                 ->when(!empty($request->search), function ($qq) use ($request) {
                     $s = trim($request->search);
                     $qq->where(function ($w) use ($s) {
                         $w->where('id', (int) $s)
+                          ->orWhere('request_number', 'like', "%{$s}%")
                           ->orWhere('status', 'like', "%{$s}%")
                           ->orWhereHas('service', fn($t) => $t->where('title', 'like', "%{$s}%"))
                           ->orWhereHas('user', fn($u) => $u->where('name', 'like', "%{$s}%"));
@@ -169,7 +203,7 @@ class ServiceRequestController extends Controller
             $total = (clone $q)->count();
 
             // حماية أسماء الفرز
-            $sortable = ['id', 'status', 'created_at', 'updated_at'];
+            $sortable = ['id', 'request_number', 'status', 'created_at', 'updated_at'];
             if (!in_array($sort, $sortable, true)) {
                 $sort = 'id';
             }
@@ -199,11 +233,11 @@ class ServiceRequestController extends Controller
                 $operate = '';
 
                 // زر "عرض" → يفتح المودال ويملأ #custom_fields من data-json
-                if (Auth::user()->can('service-requests-list')) {
+                if (Auth::user()->can('service-requests-list') || Auth::user()->can('service-requests-update')) {
                     $operate .= BootstrapTableService::button(
                         'fa fa-eye',
                         route('service.requests.review', $r->id),
-                        ['btn-outline-primary'],
+                        ['btn-outline-primary', 'btn-sm'],
 
 
                         [
@@ -215,33 +249,20 @@ class ServiceRequestController extends Controller
                 }
 
                 // زر تغيير الحالة
-                if (Auth::user()->can('service-requests-update')) {
-                    $operate .= BootstrapTableService::editButton(
-                        route('service.requests.approval', $r->id),
-                        true,
-                        '#editStatusModal',
-                        'edit-status',
-                        $r->id
-                    );
-                }
 
-                // زر الحذف
-                if (Auth::user()->can('service-requests-delete')) {
-                    $operate .= BootstrapTableService::deleteButton(
-                        route('service.requests.destroy', $r->id)
-                    );
-                }
                 $customFields = $this->normalizePayloadEntriesForView($r->payload, false);
 
                 // تشكيل الصف
                 $dataRows[] = [
                     'id'              => $r->id,
+                    'request_number'  => $r->request_number ?: (string) $r->id,
                     'name'            => $serviceTitle,                // للعمود "Name"
                     'category'        => ['name' => $categoryName],    // يدعم data-field="category.name"
                     'user'            => ['name' => $userName],        // يدعم data-field="user.name"
                     'description'     => $payloadPreview,              // يظهر عبر descriptionFormatter
                     'status'          => $r->status,
                     'rejected_reason' => $r->rejected_reason,
+                    'submitted_at'    => optional($r->created_at)->format('Y-m-d H:i'),
                     'created_at'      => optional($r->created_at)->toDateTimeString(),
                     'updated_at'      => optional($r->updated_at)->toDateTimeString(),
                     'active_status'   => empty($r->deleted_at),         // IF deleted_at is empty => true

@@ -17,9 +17,29 @@
             <div class="col-12 col-md-6 order-md-2 order-first">
                 <div class="float-end d-flex gap-2">
                     @can('service-create')
-                        <a class="btn btn-primary" href="{{ route('services.create') }}">
-                            <i class="bi bi-plus-circle"></i> {{ __('Create Service') }}
-                        </a>
+                        @php $categoriesCount = $categories->count(); @endphp
+                        @if($categoriesCount === 1)
+                            @php $singleCategory = $categories->first(); @endphp
+                            <a class="btn btn-primary" href="{{ route('services.create', ['category_id' => $singleCategory['id']]) }}">
+                                <i class="bi bi-plus-circle"></i> {{ __('Create Service') }}
+                            </a>
+                        @elseif($categoriesCount > 1)
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="bi bi-plus-circle"></i> {{ __('Create Service') }}
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><h6 class="dropdown-header">{{ __('Select Category') }}</h6></li>
+                                    @foreach($categories as $categoryOption)
+                                        <li>
+                                            <a class="dropdown-item" href="{{ route('services.create', ['category_id' => $categoryOption['id']]) }}">
+                                                {{ $categoryOption['name'] }}
+                                            </a>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
                     @endcan
                 </div>
             </div>

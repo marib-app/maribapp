@@ -50,7 +50,7 @@
                         <i class="bi bi-arrow-left"></i> {{ __('Back to categories') }}
                     </a>
                     @can('service-create')
-                        <a class="btn btn-primary" href="{{ route('services.create') }}">
+                        <a class="btn btn-primary" href="{{ route('services.create', ['category_id' => $category->id]) }}">
                             <i class="bi bi-plus-circle"></i> {{ __('Create Service') }}
                         </a>
                     @endcan

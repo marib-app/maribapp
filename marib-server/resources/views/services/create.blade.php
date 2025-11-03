@@ -34,13 +34,9 @@
           {{-- Category --}}
           <div class="col-md-6 mb-3">
             <label for="category_id" class="form-label">{{ __('Category') }} <span class="text-danger">*</span></label>
-            <select name="category_id" id="category_id" class="form-select @error('category_id') is-invalid @enderror" required>
-              <option value="">{{ __('Select Category') }}</option>
-              @foreach($categories as $category)
-                <option value="{{ $category->id }}" {{ old('category_id')==$category->id?'selected':'' }}>{{ $category->name }}</option>
-              @endforeach
-            </select>
-            @error('category_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            <div class="form-control-plaintext fw-semibold">{{ $category->name }}</div>
+            <input type="hidden" name="category_id" id="category_id" value="{{ old('category_id', $category->id) }}">
+            @error('category_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
           </div>
 
 

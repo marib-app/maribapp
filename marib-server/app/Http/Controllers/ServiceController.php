@@ -603,13 +603,35 @@ class ServiceController extends Controller
     /* =========================================================================
      | شاشة الإنشاء
      |=========================================================================*/
-    public function create()
+    public function create(Request $request)
     {
         ResponseService::noPermissionThenRedirect('service-create');
 
-        $categories = Category::whereIn('id', self::SERVICE_CATEGORY_IDS)
-            ->orderBy('name')
-            ->get(['id', 'name']);
+        $accessibleCategories = $this->getAccessibleCategories(['id', 'name']);
+
+        if ($accessibleCategories->isEmpty()) {
+            abort(403, __('You are not authorized to manage any categories.'));
+        }
+
+        $requestedCategoryId = $request->input('category_id', $request->input('category'));
+
+        $category = null;
+
+        if ($requestedCategoryId !== null) {
+            $categoryId = (int) $requestedCategoryId;
+            $category = $accessibleCategories->firstWhere('id', $categoryId);
+
+            if (!$category) {
+                abort(403, __('You are not authorized to manage this category.'));
+            }
+        } elseif ($accessibleCategories->count() === 1) {
+            $category = $accessibleCategories->first();
+        } else {
+            return ResponseService::errorRedirectResponse(
+                __('Please select a category before creating a service.'),
+                route('services.index')
+            );
+        }
 
         $owners = User::customers()
             ->orderBy('name')
@@ -618,7 +640,7 @@ class ServiceController extends Controller
         // نستخدم نفس القائمة كخيارات للمستخدم الموجّه للدردشة
         $users = $owners;
 
-        return view('services.create', compact('categories', 'users', 'owners'));
+        return view('services.create', compact('category', 'users', 'owners'));
     }
 
 /* =========================================================================
@@ -663,6 +685,22 @@ public function store(Request $request)
     ];
 
     $data = $request->validate($rules);
+
+    $category = Category::whereIn('id', self::SERVICE_CATEGORY_IDS)
+        ->where('id', $data['category_id'])
+        ->first();
+
+    if (!$category) {
+        ResponseService::validationError(__('Invalid category selected.'));
+    }
+
+    if ($user = $request->user()) {
+        if (!$this->serviceAuthorizationService->userCanManageCategory($user, $category)) {
+            ResponseService::validationError(__('You are not authorized to create services in this category.'));
+        }
+    }
+
+    $data['category_id'] = $category->id;
 
     // فكّ السكيمة القادمة من النموذج ثم احسب has_custom_fields من الواقع
     $schemaPayload                 = $this->decodeSchemaOrNull($request->input('service_fields_schema'));

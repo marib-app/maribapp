@@ -21,6 +21,8 @@ class ChatMessageHandler {
       ]);
 
   static void add(ChatMessageModal chat) {
+    // If this is a remote/confirmed message (has server id), insert/update
+    // it into remote messages and remove any matching local pending copies.
     if (chat.id != null && chat.id! > 0 && chat.isSentNow == false) {
       final int existingIndex =
           _remoteMessages.indexWhere((element) => element.id == chat.id);
@@ -29,18 +31,77 @@ class ChatMessageHandler {
       } else {
         _remoteMessages.insert(0, chat);
       }
+
+      // Remove local pending copies that match this remote message (by id or signature)
+      final String sigSender = (chat.senderId ?? 0).toString();
+      final String sigReceiver = (chat.receiverId ?? 0).toString();
+      final String sigMessage = (chat.message ?? '').trim();
+      final String sigFile = (chat.file ?? '').trim();
+      final String sigAudio = (chat.audio ?? '').trim();
+      final String sigCreated = (chat.createdAt ?? '').trim();
+      final String signature =
+          '${sigSender}#${sigReceiver}#${sigMessage}#${sigFile}#${sigAudio}#${sigCreated}';
+
+      _localMessages.removeWhere((element) {
+        // Only remove pending local messages
+        if (element.isSentNow != true) return false;
+
+        // If local has now-matching id, remove
+        if (element.id != null && element.id == chat.id) return true;
+
+        final String ls = (element.senderId ?? 0).toString();
+        final String lr = (element.receiverId ?? 0).toString();
+        final String lm = (element.message ?? '').trim();
+        final String lf = (element.file ?? '').trim();
+        final String la = (element.audio ?? '').trim();
+        final String lc = (element.createdAt ?? '').trim();
+        final String localSignature =
+            '${ls}#${lr}#${lm}#${lf}#${la}#${lc}';
+        return localSignature == signature;
+      });
+
     } else {
+      // Local/pending message being added. Avoid inserting if a matching
+      // remote message already exists (prevents adding duplicate local copy
+      // when the server already provided the message).
       final String? identifier = chat.localId;
-      if (identifier != null) {
-        final int existingIndex = _localMessages
-            .indexWhere((element) => element.localId == identifier);
-        if (existingIndex != -1) {
-          _localMessages[existingIndex] = chat;
+
+      final String sigSender = (chat.senderId ?? 0).toString();
+      final String sigReceiver = (chat.receiverId ?? 0).toString();
+      final String sigMessage = (chat.message ?? '').trim();
+      final String sigFile = (chat.file ?? '').trim();
+      final String sigAudio = (chat.audio ?? '').trim();
+      final String sigCreated = (chat.createdAt ?? '').trim();
+      final String signature =
+          '${sigSender}#${sigReceiver}#${sigMessage}#${sigFile}#${sigAudio}#${sigCreated}';
+
+      // If a remote message with same signature exists, skip adding the local copy
+      final bool hasRemoteMatch = _remoteMessages.any((m) {
+        final String rs = (m.senderId ?? 0).toString();
+        final String rr = (m.receiverId ?? 0).toString();
+        final String rm = (m.message ?? '').trim();
+        final String rf = (m.file ?? '').trim();
+        final String ra = (m.audio ?? '').trim();
+        final String rc = (m.createdAt ?? '').trim();
+        final String rSignature =
+            '${rs}#${rr}#${rm}#${rf}#${ra}#${rc}';
+        return rSignature == signature;
+      });
+
+      if (hasRemoteMatch) {
+        // Nothing to do; server message already present
+      } else {
+        if (identifier != null) {
+          final int existingIndex = _localMessages
+              .indexWhere((element) => element.localId == identifier);
+          if (existingIndex != -1) {
+            _localMessages[existingIndex] = chat;
+          } else {
+            _localMessages.insert(0, chat);
+          }
         } else {
           _localMessages.insert(0, chat);
         }
-      } else {
-        _localMessages.insert(0, chat);
       }
     }
 
@@ -143,19 +204,50 @@ class ChatMessageHandler {
     if (_localMessages.isEmpty) {
       return;
     }
+    // Remove local messages that were already delivered (exist remotely).
     final Set<int> remoteIds = _remoteMessages
         .where((element) => (element.id ?? 0) > 0)
         .map((element) => element.id!)
         .toSet();
-    if (remoteIds.isEmpty) {
+
+    // Build a set of remote message signatures to match local pending messages
+    // in case the server doesn't return a local_id or the local message wasn't
+    // updated with the remote id. Signature includes sender/receiver/message/file/audio/createdAt
+    final Set<String> remoteSignatures = _remoteMessages.map((m) {
+      final String sigSender = (m.senderId ?? 0).toString();
+      final String sigReceiver = (m.receiverId ?? 0).toString();
+      final String sigMessage = (m.message ?? '').trim();
+      final String sigFile = (m.file ?? '').trim();
+      final String sigAudio = (m.audio ?? '').trim();
+      final String sigCreated = (m.createdAt ?? '').trim();
+      return '${sigSender}#${sigReceiver}#${sigMessage}#${sigFile}#${sigAudio}#${sigCreated}';
+    }).toSet();
+
+    if (remoteIds.isEmpty && remoteSignatures.isEmpty) {
       return;
     }
+
     _localMessages.removeWhere((element) {
+      // If local already has assigned id and it's present remotely, remove it
       final int? messageId = element.id;
-      if (messageId == null) {
+      if (messageId != null && remoteIds.contains(messageId)) {
+        return true;
+      }
+
+      // Otherwise, try to match by signature for pending local messages
+      // (isSentNow true) to avoid accidentally removing drafts.
+      if (element.isSentNow != true) {
         return false;
       }
-      return remoteIds.contains(messageId);
+      final String sigSender = (element.senderId ?? 0).toString();
+      final String sigReceiver = (element.receiverId ?? 0).toString();
+      final String sigMessage = (element.message ?? '').trim();
+      final String sigFile = (element.file ?? '').trim();
+      final String sigAudio = (element.audio ?? '').trim();
+      final String sigCreated = (element.createdAt ?? '').trim();
+      final String signature =
+          '${sigSender}#${sigReceiver}#${sigMessage}#${sigFile}#${sigAudio}#${sigCreated}';
+      return remoteSignatures.contains(signature);
     });
   }
 

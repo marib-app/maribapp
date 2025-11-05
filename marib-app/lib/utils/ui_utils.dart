@@ -970,123 +970,127 @@ class UiUtils {
         value: statusBarStyle,
         sized: true,
         child: SizedBox(
-        height: totalHeight,
-        child: Material(
-          color: Colors.transparent,
-          child: SafeArea(
-            top: true,
-            bottom: false,
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: borderRadiusShape,
-                boxShadow: [
-                  BoxShadow(
-                    color: shadowColor,
-                    blurRadius: 26,
-                    offset: const Offset(0, 14),
-                    spreadRadius: -2,
-                  ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: borderRadiusShape,
-                child: BackdropFilter(
-                  filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: backgroundGradient,
-                      border: border,
+          height: totalHeight,
+          child: Material(
+            color: Colors.transparent,
+            child: SafeArea(
+              top: true,
+              bottom: false,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: borderRadiusShape,
+                  boxShadow: [
+                    BoxShadow(
+                      color: shadowColor,
+                      blurRadius: 26,
+                      offset: const Offset(0, 14),
+                      spreadRadius: -2,
                     ),
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        Positioned.fill(
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [
-                                  Colors.white.withOpacity(
-                                      isDarkMode ? 0.02 : 0.14),
-                                  Colors.transparent,
-                                ],
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: borderRadiusShape,
+                  child: BackdropFilter(
+                    filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: backgroundGradient,
+                        border: border,
+                      ),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Positioned.fill(
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Colors.white.withOpacity(
+                                      isDarkMode ? 0.02 : 0.14,
+                                    ),
+                                    Colors.transparent,
+                                  ],
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        Positioned(
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          child: Container(
-                            height: 2,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.centerLeft,
-                                end: Alignment.centerRight,
-                                colors: [
-                                  accentColor.withOpacity(
-                                      isDarkMode ? 0.28 : 0.18),
-                                  Colors.transparent,
-                                ],
+                          Positioned(
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            child: Container(
+                              height: 2,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.centerLeft,
+                                  end: Alignment.centerRight,
+                                  colors: [
+                                    accentColor.withOpacity(
+                                      isDarkMode ? 0.28 : 0.18,
+                                    ),
+                                    Colors.transparent,
+                                  ],
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        IconTheme.merge(
-                          data: IconThemeData(
-                            color: resolvedForegroundColor,
-                            size: 22,
-                          ),
-                          child: DefaultTextStyle(
-                            style: defaultTitleStyle,
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                SizedBox(
-                                  height: toolbarHeight,
-                                  child: Padding(
-                                    padding: resolvedPadding,
-                                    child: NavigationToolbar(
-                                      leading: resolvedLeading != null
-                                          ? Padding(
-                                              padding:
-                                                  const EdgeInsetsDirectional
-                                                      .only(end: 12),
-                                              child: resolvedLeading,
-                                            )
-                                          : null,
-                                      middle: resolvedTitle,
-                                      trailing: trailingActions != null
-                                          ? Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: trailingActions,
-                                            )
-                                          : null,
-                                      centerMiddle: centerTitle,
+                          IconTheme.merge(
+                            data: IconThemeData(
+                              color: resolvedForegroundColor,
+                              size: 22,
+                            ),
+                            child: DefaultTextStyle(
+                              style: defaultTitleStyle,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  SizedBox(
+                                    height: toolbarHeight,
+                                    child: Padding(
+                                      padding: resolvedPadding,
+                                      child: NavigationToolbar(
+                                        leading: resolvedLeading != null
+                                            ? Padding(
+                                          padding:
+                                          const EdgeInsetsDirectional
+                                              .only(end: 12),
+                                          child: resolvedLeading,
+                                        )
+                                            : null,
+                                        middle: resolvedTitle,
+                                        trailing: trailingActions != null
+                                            ? Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: trailingActions,
+                                        )
+                                            : null,
+                                        centerMiddle: centerTitle,
+                                      ),
                                     ),
                                   ),
-                                ),
-                                if (hasBottom) ...[
-                                  Divider(
-                                    height: 1,
-                                    thickness: 1,
-                                    indent: 20,
-                                    endIndent: 20,
-                                    color: resolvedBorderColor
-                                        .withOpacity(isDarkMode ? 0.28 : 0.15),
-                                  ),
-                                  _AppBarBottomSection(
-                                    children: bottom!,
-                                    height: resolvedBottomHeight,
-                                  ),
+                                  if (hasBottom) ...[
+                                    Divider(
+                                      height: 0, // <-- هنا التغيير لمنع overflow 1px
+                                      thickness: 1,
+                                      indent: 20,
+                                      endIndent: 20,
+                                      color: resolvedBorderColor.withOpacity(
+                                        isDarkMode ? 0.28 : 0.15,
+                                      ),
+                                    ),
+                                    _AppBarBottomSection(
+                                      children: bottom!,
+                                      height: resolvedBottomHeight,
+                                    ),
+                                  ],
                                 ],
-                              ],
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -1094,7 +1098,6 @@ class UiUtils {
             ),
           ),
         ),
-      ),
       ),
     );
   }

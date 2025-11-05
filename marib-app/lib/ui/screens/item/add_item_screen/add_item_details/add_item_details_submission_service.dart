@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -57,6 +58,158 @@ class AddItemDetailsSubmissionService {
     {'name': 'السودان', 'code': '+249'},
     {'name': 'جيبوتي', 'code': '+253'},
   ];
+
+// add_item_details_submission_service.dart
+  bool supportsProductOptions({
+    String? interfaceType,
+    List<dynamic>? categoryIds,
+    bool isSheinCategory = false,
+    required String storeRootId,        // Constant.storeRootCategoryIdAsString
+  }) {
+    final it = (interfaceType ?? '').toLowerCase().trim();
+    // الأقسام المسموح بها بالاسم
+    const allowedTypes = {'shein_products', 'computer_section'};
+    if (allowedTypes.contains(it)) return true;
+    if (isSheinCategory) return true;
+
+    // فحص بالمعرّفات (من القيم التي أعطيتنيها)
+    final ids = {
+      ...?(categoryIds?.map((e) => e.toString())),
+    };
+    if (ids.contains(storeRootId)) return true; // متجر
+    if (ids.contains('4')) return true;         // شي إن root = 4
+    if (ids.contains('5')) return true;         // كمبيوتر root = 5
+    return false;
+  }
+
+
+
+  Future<void> openProductManagementOrCreateDraft(BuildContext context) async {
+    final ItemModel current = model.item ?? ItemModel();
+
+    // تحقّق القسم (متجر/كمبيوتر/شي إن)
+    if (!supportsProductOptionsForItem(current)) {
+      HelperUtils.showSnackBarMessage(
+        context, 'خيارات المنتج متاحة فقط لأقسام المتجر أو الكمبيوتر أو شي إن',
+      );
+      return;
+    }
+
+    // Debug: report current local image state before validation
+    final int id = current.id ?? 0;
+    try {
+      // Extract gallery files robustly (support File or Map{'file': File})
+      final List<File> galleryFilesExtracted = <File>[];
+      File? flaggedMainFromMap;
+      for (final dynamic entry in model.galleryItems) {
+        if (entry is File) {
+          galleryFilesExtracted.add(entry);
+        } else if (entry is Map) {
+          final dynamic rawFile = entry['file'];
+          if (rawFile is File) {
+            galleryFilesExtracted.add(rawFile);
+            if (entry['isMain'] == true) flaggedMainFromMap = rawFile;
+          }
+        }
+      }
+
+      final dynamic main = model.coverImageFile ?? flaggedMainFromMap;
+      if (kDebugMode) {
+        print('[debug] openProductManagementOrCreateDraft: item.id=$id main=${main != null} galleryFiles=${galleryFilesExtracted.length} flaggedMainFromMap=${flaggedMainFromMap != null}');
+      }
+    } catch (e) {
+      if (kDebugMode) print('[debug] openProductManagementOrCreateDraft error: $e');
+    }
+    // لو عنده id جاهز: افتح مباشرة
+    
+    if (id > 0) {
+      Navigator.pushNamed(
+        context,
+        Routes.productManagementScreen,
+        arguments: current, // يدعمه _resolveItem(arguments)
+      );
+      return;
+    }
+
+    // ما في id ⇒ أنشئ مسودة سريعة بدون موقع (تحتاج صورة على الأقل)
+    // Build mainImageFile and galleryFiles considering Map entries
+    final List<File> galleryFiles = <File>[];
+    File? flaggedMainFile;
+    for (final dynamic entry in model.galleryItems) {
+      if (entry is File) {
+        galleryFiles.add(entry);
+      } else if (entry is Map) {
+        final dynamic rawFile = entry['file'];
+        if (rawFile is File) {
+          galleryFiles.add(rawFile);
+          if (entry['isMain'] == true) flaggedMainFile = rawFile;
+        }
+      }
+    }
+
+    File? mainImageFile = model.coverImageFile ?? flaggedMainFile ?? (galleryFiles.isNotEmpty ? galleryFiles.first : null);
+
+    if (mainImageFile == null && galleryFiles.isEmpty) {
+      HelperUtils.showSnackBarMessage(context, 'أضف صورة الغلاف أولًا');
+      return;
+    }
+
+    // هذا يستدعي ManageItem(add)؛ وبعد النجاح handleManageItemState سيفتح شاشة الإدارة تلقائيًا
+    _submitWithoutLocation(context, mainImageFile, galleryFiles);
+  }
+
+  /// Debug helper: print the current image-related state and what would be
+  /// chosen as the main image and gallery files. This does not perform any
+  /// navigation or side-effects.
+  void debugDumpImageState(BuildContext context) {
+    try {
+      final ItemModel current = model.item ?? ItemModel();
+      final List<String> galleryTypes = <String>[];
+      final List<File> galleryFiles = <File>[];
+      File? flaggedMainFromMap;
+
+      for (final dynamic entry in model.galleryItems) {
+        if (entry is File) {
+          galleryFiles.add(entry);
+          galleryTypes.add('File(${entry.path.split(RegExp(r"[\\\\/]")).last})');
+        } else if (entry is Map) {
+          final dynamic rawFile = entry['file'];
+          if (rawFile is File) {
+            galleryFiles.add(rawFile);
+            galleryTypes.add('Map(file:${rawFile.path.split(RegExp(r"[\\\\/]")).last})');
+            if (entry['isMain'] == true) flaggedMainFromMap = rawFile;
+          } else {
+            galleryTypes.add('Map(url:${entry['url'] ?? ''})');
+          }
+        } else if (entry is String) {
+          galleryTypes.add('String(url:$entry)');
+        } else {
+          galleryTypes.add(entry.runtimeType.toString());
+        }
+      }
+
+      final File? coverFile = model.coverImageFile;
+      final String coverUrl = model.coverImageUrl;
+      final File? computedMain = coverFile ?? flaggedMainFromMap ?? (galleryFiles.isNotEmpty ? galleryFiles.first : null);
+
+      if (kDebugMode) {
+        // ignore: avoid_print
+        print('[debug] debugDumpImageState: coverFile=${coverFile?.path} coverUrl=$coverUrl galleryItems=[${galleryTypes.join(', ')}] galleryFilesCount=${galleryFiles.length} flaggedMainFromMap=${flaggedMainFromMap?.path} computedMain=${computedMain?.path}');
+      }
+
+      HelperUtils.showSnackBarMessage(context, 'DBG: see console for image-state');
+    } catch (e) {
+      if (kDebugMode) {
+        // ignore: avoid_print
+        print('[debug] debugDumpImageState error: $e');
+      }
+      HelperUtils.showSnackBarMessage(context, 'DBG failed');
+    }
+  }
+
+
+
+
 
   void handleSubmit(BuildContext context) {
     if (!(model.formKey.currentState?.validate() ?? false)) {

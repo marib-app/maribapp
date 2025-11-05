@@ -2,62 +2,95 @@
 part of 'chat_list_screen.dart';
 
 extension _ChatListScreenUi on _ChatListScreenState {
+
+
   Widget buildChatListScreen(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = context.color;
+
+    final isDark = theme.brightness == Brightness.dark;
+    final border = isDark ? Colors.white12 : Colors.black12;
+    final background = isDark ? Colors.black : Colors.white;
+    final onBackground = isDark ? Colors.white : Colors.black;
+    final Color brand = colors.territoryColor;
+
+    // نفس منطق CurrencyTabBar في الخط
+    final base = theme.textTheme.labelLarge ?? const TextStyle(fontSize: 14);
+    final selected = base.copyWith(fontWeight: FontWeight.w700, height: 1.1);
+    final unselected = base.copyWith(fontWeight: FontWeight.w500, height: 1.1);
+
     return AnnotatedRegion(
       value: UiUtils.getSystemUiOverlayStyle(
         context: context,
-        statusBarColor: context.color.secondaryColor,
+        statusBarColor: colors.secondaryColor,
       ),
       child: DefaultTabController(
         length: 2,
         child: Scaffold(
-          backgroundColor: context.color.backgroundColor,
+          backgroundColor: colors.backgroundColor,
           appBar: UiUtils.buildAppBar(
             context,
             title: "message".translate(context),
-            bottomHeight: 49,
+            // ارتفاع أكبر شوي لاستيعاب الحاوية + الـ Divider
+            bottomHeight: 78,
             actions: [
               InkWell(
-                child: UiUtils.getSvg(AppIcons.blockedUserIcon,
-                    color: context.color.textDefaultColor),
+                child: UiUtils.getSvg(
+                  AppIcons.blockedUserIcon,
+                  color: colors.textDefaultColor,
+                ),
                 onTap: () {
                   Navigator.pushNamed(context, Routes.blockedUserListScreen);
                 },
-              )
+              ),
             ],
             bottom: [
-              TabBar(
-                tabs: [
-                  Tab(text: 'buying'.translate(context)),
-                  Tab(text: 'selling'.translate(context)),
-                ],
-                indicatorColor: context.color.textDefaultColor,
-                indicatorWeight: 1.5,
-                labelColor: context.color.textDefaultColor,
-                unselectedLabelColor:
-                context.color.textDefaultColor.withOpacity(0.5),
-                labelStyle:
-                const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                labelPadding: const EdgeInsets.symmetric(horizontal: 16),
-                indicatorSize: TabBarIndicatorSize.tab,
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: background,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: border),
+                  ),
+                  child: TabBar(
+                    // نفس شكل وسلوك CurrencyTabBar
+                    tabs: [
+                      Tab(text: 'buying'.translate(context)),
+                      Tab(text: 'selling'.translate(context)),
+                    ],
+                    indicator: UnderlineTabIndicator(
+                      borderSide: BorderSide(color: brand, width: 3),
+                      insets: const EdgeInsets.symmetric(horizontal: 24),
+                    ),
+                    labelStyle: selected,
+                    unselectedLabelStyle: unselected,
+                    labelColor: onBackground,
+                    unselectedLabelColor: onBackground.withOpacity(0.5),
+                    overlayColor:
+                    MaterialStateProperty.all(Colors.transparent),
+                  ),
+                ),
               ),
               Divider(
                 height: 0,
                 thickness: 0.5,
-                color: context.color.textDefaultColor.withOpacity(0.2),
+                color: colors.textDefaultColor.withOpacity(0.2),
               ),
             ],
           ),
           body: TabBarView(
             children: [
-              buyingChatListData(),
-              sellingChatListData(),
+              buildBuyingChatListData(),
+              buildSellingChatListData(),
             ],
           ),
         ),
       ),
     );
   }
+
 
   Widget buildBuyingChatListData() {
     return RefreshIndicator(
@@ -188,6 +221,7 @@ extension _ChatListScreenUi on _ChatListScreenState {
       ),
     );
   }
+
 
   Widget buildSellingChatListData() {
     return RefreshIndicator(

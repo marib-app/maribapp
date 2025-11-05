@@ -69,33 +69,7 @@ class _AttachmentMessageState extends State<AttachmentMessage> {
   }
 
 
-/*  Future<void> downloadFile() async {
-    print("widget url***${widget.url}");
-    try {
-      String? downloadPath = await getDownloadPath();
-      await Dio().download(
-        widget.url,
-        "${downloadPath!}/${getFileName()}",
-        onReceiveProgress: (int count, int total) async {
-          persontage = (count) / total;
 
-          if (persontage == 1) {
-            HelperUtils.showSnackBarMessage(
-                context, "fileSavedIn".translate(context),
-                type: MessageType.success);
-
-            await OpenFilex.open("$downloadPath/${getFileName()}");
-          }
-          setState(() {});
-        },
-      );
-    } catch (e) {
-
-      HelperUtils.showSnackBarMessage(
-          context, "errorFileSave".translate(context),
-          type: MessageType.success);
-    }
-  }*/
 
   Future<String?> getDownloadPath() async {
     Directory? directory;

@@ -40,582 +40,102 @@ extension _ChatScreenUi on _ChatScreenState {
     }
 
     final presenceText = _presenceLabel(context);
-    final Color presenceColor = (_otherParticipantStatus?.isTyping ?? false)
-        ? context.color.territoryColor
-        : context.color.textLightColor;
+    final bool isOnline = _otherParticipantStatus?.isOnline == true;
+    // شارة خضراء عند الاتصال، رمادية عند عدمه
+    final Color presenceColor = isOnline ? Colors.green : Colors.grey;
     final resolvedCurrencySymbol = _resolveCurrencySymbol();
 
-    return PopScope(
-      canPop: true,
-      onPopInvoked: (didPop) {
-        currentlyChatingWith = "";
-        showDeletebutton.value = false;
+    return AnnotatedRegion(
+      value: UiUtils.getSystemUiOverlayStyle(
+        context: context,
+        statusBarColor: Colors.transparent,
+      ),
+      child: PopScope(
+        canPop: true,
+        onPopInvoked: (didPop) {
+          currentlyChatingWith = "";
+          showDeletebutton.value = false;
 
-        currentlyChatItemId = "";
-        notificationStreamSubsctription.cancel();
-        ChatMessageHandler.flushMessages();
-        //context.read<ChatMessageHandlerCubit>().flushMessages();
-        return;
-      },
-      /*  onWillPop: () async {
-      currentlyChatingWith = "";
-      showDelet ebutton.value = false;
-
-      currentlyChatItemId = "";
-      notificationStreamSubsctription.cancel();
-      ChatMessageHandler.flushMessages();
-      return true;
-    },*/
-      child: SafeArea(
-        child: Scaffold(
-          backgroundColor: context.color.backgroundColor,
-          bottomNavigationBar: Padding(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).viewInsets.bottom,
-            ),
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () {},
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (messageAttachment != null) ...[
-                    if (supportedImageTypes.contains(attachmentMIME)) ...[
-                      Container(
-                        decoration: BoxDecoration(
-                            color: context.color.secondaryColor,
-                            border: Border.all(
-                                color: context.color.borderColor, width: 1.5)),
-                        child: Row(
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.all(24.0),
-                              child: SizedBox(
-                                  height: 100,
-                                  width: 100,
-                                  child: GestureDetector(
-                                    onTap: () {
-                                      UiUtils.showFullScreenImage(context,
-                                          provider: FileImage(File(
-                                            messageAttachment?.path ?? "",
-                                          )));
-                                    },
-                                    child: Image.file(
-                                      File(
-                                        messageAttachment?.path ?? "",
-                                      ),
-                                      fit: BoxFit.cover,
-                                    ),
-                                  )),
-                            ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(messageAttachment?.name ?? ""),
-                                Text(HelperUtils.getFileSizeString(
-                                  bytes: messageAttachment!.size,
-                                ).toString()),
-                              ],
-                            )
-                          ],
-                        ),
-                      )
-                    ] else ...[
-                      Container(
-                        color: context.color.secondaryColor,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                          child:
-                              AttachmentMessage(url: messageAttachment!.path!),
-                        ),
-                      ),
-                    ],
-                    const SizedBox(
-                      height: 10,
-                    ),
-                  ],
-                  BottomAppBar(
-                    padding: const EdgeInsetsDirectional.all(10),
-                    elevation: 5,
-                    color: context.color.secondaryColor,
-                    child: Directionality(
-                      textDirection: Directionality.of(context),
-                      child: widget.status == "review" ||
-                              widget.status == "rejected" ||
-                              widget.status == "sold out" ||
-                              widget.status == "inactive"
-                          ? Container(
-                              height: 40,
-                              width: double.maxFinite,
-                              color: context.color.secondaryColor,
-                              alignment: Alignment.center,
-                              child: Text(
-                                      "${"thisItemIs".translate(context)} ${widget.status}")
-                                  .size(context.font.large))
-                          : Column(
-                              children: [
-                                BlocProvider(
-                                    create: (context) => UnblockUserCubit(),
-                                    child: Builder(builder: (context) {
-                                      bool isBlocked = context
-                                          .read<BlockedUsersListCubit>()
-                                          .isUserBlocked(
-                                              int.parse(widget.userId));
-                                      return BlocConsumer<BlockedUsersListCubit,
-                                              BlockedUsersListState>(
-                                          listener: (context, state) {
-                                        if (state is BlockedUsersListSuccess) {
-                                          isBlocked = context
-                                              .read<BlockedUsersListCubit>()
-                                              .isUserBlocked(
-                                                  int.parse(widget.userId));
-                                        }
-                                      }, builder:
-                                              (context, blockedUsersListState) {
-                                        return isBlocked
-                                            ? BlocListener<UnblockUserCubit,
-                                                    UnblockUserState>(
-                                                listener:
-                                                    (context, unblockState) {
-                                                  if (unblockState
-                                                      is UnblockUserSuccess) {
-                                                    // Remove the unblocked user from the list
-                                                    context
-                                                        .read<
-                                                            BlockedUsersListCubit>()
-                                                        .unblockUser(int.parse(
-                                                            widget.userId));
-                                                    HelperUtils
-                                                        .showSnackBarMessage(
-                                                            context,
-                                                            unblockState
-                                                                .message);
-                                                  } else if (unblockState
-                                                      is UnblockUserFail) {
-                                                    HelperUtils
-                                                        .showSnackBarMessage(
-                                                            context,
-                                                            unblockState.error
-                                                                .toString());
-                                                  }
-                                                },
-                                                child: InkWell(
-                                                  child: Text(
-                                                          "youBlockedThisContact"
-                                                              .translate(
-                                                                  context))
-                                                      .color(context
-                                                          .color.textColorDark
-                                                          .withOpacity(0.7)),
-                                                  onTap: () async {
-                                                    var unBlock = await UiUtils
-                                                        .showBlurredDialoge(
-                                                      context,
-                                                      dialoge: BlurredDialogBox(
-                                                        acceptButtonName:
-                                                            "unBlockLbl"
-                                                                .translate(
-                                                                    context),
-                                                        content: Text(
-                                                          "${"unBlockLbl".translate(context)}\t${widget.userName}\t${"toSendMessage".translate(context)}"
-                                                              .translate(
-                                                                  context),
-                                                        ),
-                                                      ),
-                                                    );
-                                                    if (unBlock == true) {
-                                                      Future.delayed(
-                                                          Duration.zero, () {
-                                                        context
-                                                            .read<
-                                                                UnblockUserCubit>()
-                                                            .unBlockUser(
-                                                              blockUserId: int
-                                                                  .parse(widget
-                                                                      .userId),
-                                                            );
-                                                      });
-                                                    }
-                                                  },
-                                                ))
-                                            : SizedBox();
-                                      });
-                                    })),
-                                SizedBox(
-                                  height: 8,
-                                ),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: TextField(
-                                        controller: controller,
-                                        cursorColor:
-                                            context.color.territoryColor,
-                                        onTap: () {
-                                          showDeletebutton.value = false;
-                                        },
-                                        textInputAction:
-                                            TextInputAction.newline,
-                                        minLines: 1,
-                                        maxLines: null,
-                                        decoration: InputDecoration(
-                                          suffixIconColor:
-                                              context.color.textLightColor,
-                                          suffixIcon: IconButton(
-                                            onPressed: () async {
-                                              if (messageAttachment == null) {
-                                                final FilePickerResult?
-                                                    pickedAttachment =
-                                                    await FilePicker.platform
-                                                        .pickFiles(
-                                                  allowMultiple: false,
-                                                  type: FileType.custom,
-                                                  allowedExtensions: [
-                                                    'jpg',
-                                                    'jpeg',
-                                                    'png'
-                                                  ],
-                                                );
-
-                                                _setMessageAttachment(
-                                                    pickedAttachment
-                                                        ?.files.first);
-                                              } else {
-                                                _setMessageAttachment(null);
-                                              }
-                                            },
-                                            icon: messageAttachment != null
-                                                ? const Icon(Icons.close)
-                                                : Transform.rotate(
-                                                    angle: -3.14 / 5.0,
-                                                    child: const Icon(
-                                                      Icons.attachment,
-                                                    ),
-                                                  ),
-                                          ),
-                                          contentPadding:
-                                              const EdgeInsets.symmetric(
-                                                  vertical: 6, horizontal: 8),
-                                          border: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(20),
-                                              borderSide: BorderSide(
-                                                  color: context
-                                                      .color.territoryColor)),
-                                          focusedBorder: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(20),
-                                              borderSide: BorderSide(
-                                                  color: context
-                                                      .color.territoryColor)),
-                                          hintText:
-                                              "writeHere".translate(context),
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(
-                                      width: 9.5,
-                                    ),
-                                    if (showRecordButton)
-                                      RecordButton(
-                                        controller: _recordButtonAnimation,
-                                        callback: (path) {
-                                          /*if (Constant.isDemoModeOn) {
-                                  HelperUtils.showSnackBarMessage(
-                                      context,
-                                      "thisActionNotValidDemo"
-                                          .translate(context));
-                                  return;
-                                }*/
-
-                                          final DateTime now = DateTime.now();
-
-                                          ChatMessageHandler.add(
-                                            ChatMessageModal(
-                                              localId:
-                                                  _generateLocalMessageId(),
-                                              senderId: int.tryParse(
-                                                      HiveUtils.getUserId() ??
-                                                          '') ??
-                                                  0,
-                                              receiverId:
-                                                  int.tryParse(widget.userId),
-                                              itemOfferId: widget.itemOfferId,
-                                              itemId:
-                                                  int.tryParse(widget.itemId),
-                                              message: controller.text,
-                                              audio: path,
-                                              file: '',
-                                              messageType: 'audio',
-                                              createdAt: now.toIso8601String(),
-                                              updatedAt: now.toIso8601String(),
-                                              isSentNow: true,
-                                            ),
-                                          );
-
-                                          totalMessageCount++;
-
-                                          setState(() {});
-                                        },
-                                        isSending: false,
-                                      ),
-                                    if (!showRecordButton)
-                                      GestureDetector(
-                                        onTap: () {
-                                          /* if (Constant.isDemoModeOn) {
-                                  HelperUtils.showSnackBarMessage(
-                                      context,
-                                      "thisActionNotValidDemo"
-                                          .translate(context));
-                                  return;
-                                }*/
-                                          showDeletebutton.value = false;
-
-                                          //if file is selected then user can send message without text
-                                          if (controller.text.trim().isEmpty &&
-                                              messageAttachment == null) return;
-                                          //This is adding Chat widget in stream with BlocProvider , because we will need to do api process to store chat message to server, when it will be added to list it's initState method will be called
-
-                                          String? messageType;
-                                          final attachmentPath =
-                                              messageAttachment?.path;
-                                          if (attachmentPath != null &&
-                                              attachmentPath.isNotEmpty) {
-                                            messageType =
-                                                _isImageAttachmentPath(
-                                                        attachmentPath)
-                                                    ? 'image'
-                                                    : 'file';
-                                          } else if (controller.text
-                                              .trim()
-                                              .isNotEmpty) {
-                                            messageType = 'text';
-                                          }
-                                          final DateTime now = DateTime.now();
-
-                                          ChatMessageHandler.add(
-                                            ChatMessageModal(
-                                              localId:
-                                                  _generateLocalMessageId(),
-                                              senderId: int.tryParse(
-                                                      HiveUtils.getUserId() ??
-                                                          '') ??
-                                                  0,
-                                              receiverId:
-                                                  int.tryParse(widget.userId),
-                                              itemOfferId: widget.itemOfferId,
-                                              itemId:
-                                                  int.tryParse(widget.itemId),
-                                              message: controller.text,
-                                              audio: '',
-                                              file:
-                                                  messageAttachment?.path ?? '',
-                                              messageType: messageType,
-                                              createdAt: now.toIso8601String(),
-                                              updatedAt: now.toIso8601String(),
-                                              isSentNow: true,
-                                            ),
-                                          );
-                                          totalMessageCount++;
-                                          controller.text = "";
-                                          _setMessageAttachment(null);
-                                        },
-                                        child: CircleAvatar(
-                                          radius: 20,
-                                          backgroundColor:
-                                              context.color.territoryColor,
-                                          child: Icon(
-                                            Icons.send,
-                                            color: context.color.buttonColor,
-                                          ),
-                                        ),
-                                      )
-                                  ],
-                                ),
-                              ],
-                            ),
-                    ),
-                  ),
-                ],
+          currentlyChatItemId = "";
+          notificationStreamSubsctription.cancel();
+          ChatMessageHandler.flushMessages();
+          return;
+        },
+        child: SafeArea(
+          top: false, // مهم عشان ما يضيف فراغ أسود فوق الـ AppBar
+          child: Scaffold(
+            backgroundColor: context.color.backgroundColor,
+            bottomNavigationBar: _ChatBottomBar(state: this),
+            appBar: AppBar(
+              centerTitle: false,
+              automaticallyImplyLeading: false,
+              toolbarHeight: 60, // زيادة بسيطة في ارتفاع الـ AppBar
+              systemOverlayStyle: UiUtils.getSystemUiOverlayStyle(
+                context: context,
+                statusBarColor: Colors.transparent,
               ),
-            ),
-          ),
-          appBar: AppBar(
-            centerTitle: false,
-            automaticallyImplyLeading: false,
-            leading: Material(
-              clipBehavior: Clip.antiAlias,
-              color: Colors.transparent,
-              type: MaterialType.circle,
-              child: InkWell(
+              leading: Material(
+                clipBehavior: Clip.antiAlias,
+                color: Colors.transparent,
+                type: MaterialType.circle,
+                child: InkWell(
                   onTap: () {
                     Navigator.pop(context);
                   },
                   child: Padding(
-                      padding: EdgeInsetsDirectional.only(start: 15),
-                      child: Directionality(
-                        textDirection: Directionality.of(context),
-                        child: RotatedBox(
-                          quarterTurns:
-                              Directionality.of(context) == TextDirection.rtl
-                                  ? 2
-                                  : -4,
-                          child: UiUtils.getSvg(AppIcons.arrowLeft,
-                              fit: BoxFit.none,
-                              color: context.color.textDefaultColor),
-                        ),
-                      ))),
-            ),
-            backgroundColor: context.color.secondaryColor,
-            elevation: 0,
-            iconTheme: IconThemeData(color: context.color.territoryColor),
-            bottom: PreferredSize(
-              preferredSize: Size.fromHeight(70),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  Divider(
-                    color: context.color.borderColor.darken(40),
-                    thickness: 1,
-                  ),
-                  Container(
-                    margin: EdgeInsets.symmetric(horizontal: 25, vertical: 0),
-                    color: context.color.secondaryColor,
-                    height: 63,
-                    child: Row(
-                      children: [
-                        FittedBox(
+                    padding: const EdgeInsetsDirectional.only(start: 15),
+                    child: Directionality(
+                      textDirection: Directionality.of(context),
+                      child: RotatedBox(
+                        quarterTurns:
+                        Directionality.of(context) == TextDirection.rtl
+                            ? 2
+                            : -4,
+                        child: UiUtils.getSvg(
+                          AppIcons.arrowLeft,
                           fit: BoxFit.none,
-                          child: GestureDetector(
-                            onTap: () async {
-                              try {
-                                Widgets.showLoader(context);
-
-                                DataOutput<ItemModel> dataOutput =
-                                    await ItemRepository().fetchItemFromItemId(
-                                        int.parse(widget.itemId));
-
-                                Future.delayed(
-                                  Duration.zero,
-                                  () {
-                                    Widgets.hideLoder(context);
-                                    Navigator.pushNamed(
-                                        context, Routes.adDetailsScreen,
-                                        arguments: {
-                                          "model": dataOutput.modelList[0],
-                                        });
-                                  },
-                                );
-                              } catch (e) {
-                                Widgets.hideLoder(context);
-                              }
-                            },
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(24),
-                              child: SizedBox(
-                                width: 47,
-                                height: 47,
-                                child: UiUtils.getImage(
-                                  widget.itemImage,
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                            ),
-                          ),
+                          color: context.color.textDefaultColor,
                         ),
-
-                        SizedBox(width: 10),
-                        // Adding horizontal space between items
-                        Expanded(
-                          child: Container(
-                            color: context.color.secondaryColor,
-                            padding: EdgeInsets.symmetric(horizontal: 10),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    widget.itemTitle,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    softWrap: true,
-                                  )
-                                      .color(context.color.textDefaultColor)
-                                      .size(context.font.large),
-                                ),
-                                Padding(
-                                  padding:
-                                      EdgeInsetsDirectional.only(start: 15.0),
-                                  child: Text(
-                                    _formatPriceWithCurrency(
-                                      widget.itemPrice,
-                                      resolvedCurrencySymbol,
-                                    ),
-                                  )
-                                      .color(context.color.textDefaultColor)
-                                      .size(context.font.large)
-                                      .bold(),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
-                  /*  isNotificationPermissionGranted
-                      ? SizedBox.shrink()
-                      : FittedBox(
-                          fit: BoxFit.cover,
-                          child: Container(
-                            width: context.screenWidth,
-                            color: const Color.fromARGB(255, 151, 151, 151),
-                            child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child:
-                                  Text("turnOnNotification".translate(context)),
-                            ),
-                          ),
-                        ),*/
-                ],
+                ),
               ),
-            ),
-            actions: [
-              MultiBlocProvider(
-                providers: [
-                  BlocProvider(create: (context) => UnblockUserCubit()),
-                  BlocProvider(create: (context) => BlockUserCubit()),
-                ],
-                child: Builder(builder: (context) {
-                  bool isBlocked = context
-                      .read<BlockedUsersListCubit>()
-                      .isUserBlocked(int.parse(widget.userId));
-                  return BlocConsumer<BlockedUsersListCubit,
-                      BlockedUsersListState>(
-                    listener: (context, state) {
-                      if (state is BlockedUsersListSuccess) {
-                        isBlocked = context
-                            .read<BlockedUsersListCubit>()
-                            .isUserBlocked(int.parse(widget.userId));
-                      }
-                    },
-                    builder: (context, blockedUsersListState) {
+              backgroundColor: context.color.secondaryColor,
+              elevation: 0,
+              iconTheme: IconThemeData(color: context.color.territoryColor),
+              bottom: PreferredSize(
+                preferredSize: const Size.fromHeight(70),
+                child: _ChatHeader(
+                  state: this,
+                  presenceText: presenceText,
+                  presenceColor: presenceColor,
+                  resolvedCurrencySymbol: resolvedCurrencySymbol,
+                ),
+              ),
+              actions: [
+                MultiBlocProvider(
+                  providers: [
+                    BlocProvider(create: (context) => UnblockUserCubit()),
+                    BlocProvider(create: (context) => BlockUserCubit()),
+                  ],
+                  child: Builder(
+                    builder: (context) {
+                      // ← هنا تتحكم يدويًا في مكان الزر أفقيًا
+                      // قيمة موجبة تحركه لليمين (في LTR) وسالبة لليسار
+                      const double blockButtonOffsetX = 4.0;
+
                       return BlocListener<BlockUserCubit, BlockUserState>(
                         listener: (context, blockState) {
                           if (blockState is BlockUserSuccess) {
-                            // Add the blocked user to the list
-                            context
-                                .read<BlockedUsersListCubit>()
-                                .addBlockedUser(
-                                  BlockedUserModel(
-                                      id: int.parse(widget.userId),
-                                      name: widget.userName,
-                                      profile: widget.profilePicture
-                                      // Add other necessary user data
-                                      ),
-                                );
-                            HelperUtils.showSnackBarMessage(
-                                context, blockState.message);
+                            context.read<BlockedUsersListCubit>().addBlockedUser(
+                              BlockedUserModel(
+                                id: int.parse(widget.userId),
+                                name: widget.userName,
+                                profile: widget.profilePicture,
+                              ),
+                            );
+                            HelperUtils.showSnackBarMessage(context, blockState.message);
                           } else if (blockState is BlockUserFail) {
                             HelperUtils.showSnackBarMessage(
                                 context, blockState.error.toString());
@@ -624,7 +144,6 @@ extension _ChatScreenUi on _ChatScreenState {
                         child: BlocListener<UnblockUserCubit, UnblockUserState>(
                           listener: (context, unblockState) {
                             if (unblockState is UnblockUserSuccess) {
-                              // Remove the unblocked user from the list
                               context
                                   .read<BlockedUsersListCubit>()
                                   .unblockUser(int.parse(widget.userId));
@@ -635,45 +154,42 @@ extension _ChatScreenUi on _ChatScreenState {
                                   context, unblockState.error.toString());
                             }
                           },
-                          child: Padding(
-                            padding: EdgeInsetsDirectional.only(end: 30.0),
-                            child: Container(
-                              height: 24,
-                              width: 24,
-                              alignment: AlignmentDirectional.center,
-                              child: PopupMenuButton(
-                                color: context.color.secondaryColor,
-                                offset: Offset(-12, 15),
-                                shape: const RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.only(
-                                    bottomLeft: Radius.circular(17),
-                                    bottomRight: Radius.circular(17),
-                                    topLeft: Radius.circular(17),
-                                    topRight: Radius.circular(0),
-                                  ),
-                                ),
-                                child: SvgPicture.asset(
-                                  AppIcons.more,
-                                  width: 20,
-                                  height: 20,
-                                  fit: BoxFit.contain,
-                                  colorFilter: ColorFilter.mode(
-                                    context.color.textDefaultColor,
-                                    BlendMode.srcIn,
-                                  ),
-                                ),
-                                itemBuilder: (context) => [
-                                  if (!isBlocked)
-                                    PopupMenuItem(
-                                      onTap: () async {
-                                        var block =
-                                            await UiUtils.showBlurredDialoge(
+                          child: BlocConsumer<BlockedUsersListCubit, BlockedUsersListState>(
+                            listener: (context, state) {},
+                            builder: (context, blockedUsersListState) {
+                              final bool isBlocked = context
+                                  .read<BlockedUsersListCubit>()
+                                  .isUserBlocked(int.parse(widget.userId));
+
+                              final String label = isBlocked
+                                  ? "unBlockLbl".translate(context)
+                                  : "blockLbl".translate(context);
+
+                              final Color iconColor = isBlocked
+                                  ? Colors.greenAccent.shade400
+                                  : Colors.redAccent.shade200;
+
+                              return Padding(
+                                // قلّل/كبّر end لو حاب تعدّل المارجن كمان
+                                padding: const EdgeInsetsDirectional.only(end: 14.0),
+                                child: Transform.translate(
+                                  offset: Offset(blockButtonOffsetX, 0),
+                                  child: TextButton.icon(
+                                    style: TextButton.styleFrom(
+                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                                      minimumSize: const Size(0, 0),
+                                      foregroundColor: context.color.textDefaultColor,
+                                    ),
+                                    onPressed: () async {
+                                      if (!isBlocked) {
+                                        final block = await UiUtils.showBlurredDialoge(
                                           context,
                                           dialoge: BlurredDialogBox(
                                             acceptButtonName:
-                                                "blockLbl".translate(context),
+                                            "blockLbl".translate(context),
                                             title:
-                                                "${"blockLbl".translate(context)}\t${widget.userName}?",
+                                            "${"blockLbl".translate(context)}\t${widget.userName}?",
                                             content: Text(
                                               "blockWarning".translate(context),
                                             ),
@@ -681,27 +197,17 @@ extension _ChatScreenUi on _ChatScreenState {
                                         );
                                         if (block == true) {
                                           Future.delayed(Duration.zero, () {
-                                            context
-                                                .read<BlockUserCubit>()
-                                                .blockUser(
-                                                  blockUserId:
-                                                      int.parse(widget.userId),
-                                                );
+                                            context.read<BlockUserCubit>().blockUser(
+                                              blockUserId: int.parse(widget.userId),
+                                            );
                                           });
                                         }
-                                      },
-                                      child: Text("blockLbl".translate(context))
-                                          .color(context.color.textColorDark),
-                                    )
-                                  else
-                                    PopupMenuItem(
-                                      onTap: () async {
-                                        var unBlock =
-                                            await UiUtils.showBlurredDialoge(
+                                      } else {
+                                        final unBlock = await UiUtils.showBlurredDialoge(
                                           context,
                                           dialoge: BlurredDialogBox(
                                             acceptButtonName:
-                                                "unBlockLbl".translate(context),
+                                            "unBlockLbl".translate(context),
                                             content: Text(
                                               "${"unBlockLbl".translate(context)}\t${widget.userName}\t${"toSendMessage".translate(context)}"
                                                   .translate(context),
@@ -713,212 +219,238 @@ extension _ChatScreenUi on _ChatScreenState {
                                             context
                                                 .read<UnblockUserCubit>()
                                                 .unBlockUser(
-                                                  blockUserId:
-                                                      int.parse(widget.userId),
-                                                );
+                                              blockUserId: int.parse(widget.userId),
+                                            );
                                           });
                                         }
-                                      },
-                                      child: Text(
-                                              "unBlockLbl".translate(context))
-                                          .color(context.color.textColorDark),
+                                      }
+                                    },
+                                    icon: Icon(
+                                      isBlocked
+                                          ? Icons.lock_open_rounded
+                                          : Icons.block_rounded,
+                                      size: 18,
+                                      color: iconColor,
                                     ),
-                                ],
-                              ),
-                            ),
+                                    label: Text(
+                                      label,
+                                      style: TextStyle(
+                                        fontSize: context.font.smaller,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         ),
                       );
                     },
-                  );
-                }),
-              )
-            ],
-            title: FittedBox(
-              fit: BoxFit.none,
-              child: Row(
-                children: [
-                  widget.profilePicture == ""
-                      ? CircleAvatar(
-                          backgroundColor: context.color.territoryColor,
-                          child: SvgPicture.asset(
-                            AppIcons.profile,
-                            colorFilter: ColorFilter.mode(
-                                context.color.buttonColor, BlendMode.srcIn),
-                          ),
-                        )
-                      : GestureDetector(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              TransparantRoute(
-                                barrierDismiss: true,
-                                builder: (context) {
-                                  return GestureDetector(
-                                    onTap: () {
-                                      Navigator.pop(context);
-                                    },
-                                    child: Container(
-                                      color: const Color.fromARGB(69, 0, 0, 0),
-                                    ),
-                                  );
+                  ),
+                ),
+              ],
+              title: FittedBox(
+                fit: BoxFit.none,
+                child: Row(
+                  children: [
+                    widget.profilePicture == ""
+                        ? CircleAvatar(
+                      backgroundColor: context.color.territoryColor,
+                      child: SvgPicture.asset(
+                        AppIcons.profile,
+                        colorFilter: ColorFilter.mode(
+                          context.color.buttonColor,
+                          BlendMode.srcIn,
+                        ),
+                      ),
+                    )
+                        : GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          TransparantRoute(
+                            barrierDismiss: true,
+                            builder: (context) {
+                              return GestureDetector(
+                                onTap: () {
+                                  Navigator.pop(context);
                                 },
-                              ),
-                            );
-                          },
-                          child: CustomImageHeroAnimation(
-                            type: CImageType.Network,
-                            image: widget.profilePicture,
-                            child: CircleAvatar(
-                              backgroundImage: CachedNetworkImageProvider(
-                                widget.profilePicture,
-                              ),
-                            ),
+                                child: Container(
+                                  color:
+                                  const Color.fromARGB(69, 0, 0, 0),
+                                ),
+                              );
+                            },
+                          ),
+                        );
+                      },
+                      child: CustomImageHeroAnimation(
+                        type: CImageType.Network,
+                        image: widget.profilePicture,
+                        child: CircleAvatar(
+                          backgroundImage: CachedNetworkImageProvider(
+                            widget.profilePicture,
                           ),
                         ),
-                  const SizedBox(
-                    width: 10,
-                  ),
-                  GestureDetector(
-                    onTap: () {},
-                    child: SizedBox(
-                      width: context.screenWidth * 0.45,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(widget.userName)
-                              .color(context.color.textColorDark)
-                              .size(context.font.normal),
-                          if (presenceText != null && presenceText.isNotEmpty)
-                            Text(presenceText)
-                                .size(context.font.smaller)
-                                .color(presenceColor),
-                        ],
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 10),
+                    GestureDetector(
+                      onTap: () {},
+                      child: SizedBox(
+                        width: context.screenWidth * 0.45,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(widget.userName)
+                                .color(context.color.textColorDark)
+                                .size(context.font.normal),
+                            if (presenceText != null &&
+                                presenceText.isNotEmpty)
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 10,
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      color: presenceColor,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Flexible(
+                                    child: Text(presenceText)
+                                        .size(context.font.smaller)
+                                        .color(presenceColor),
+                                  ),
+                                ],
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-          body: BlocProvider(
-            create: (context) => AddItemReviewCubit(),
-            child: Stack(
-              children: [
-                SvgPicture.asset(
-                  chatBackground,
-                  height: MediaQuery.of(context).size.height,
-                  fit: BoxFit.cover,
-                  width: MediaQuery.of(context).size.width,
-                ),
-                BlocListener<DeleteMessageCubit, DeleteMessageState>(
-                  listener: (context, state) {
-                    if (state is DeleteMessageSuccess) {
-                      ChatMessageHandler.removeMessage(state.id);
-                      showDeletebutton.value = false;
-                    }
-                  },
-                  child: GestureDetector(
-                    onTap: () {
-                      showDeletebutton.value = false;
+            body: BlocProvider(
+              create: (context) => AddItemReviewCubit(),
+              child: Stack(
+                children: [
+                  SvgPicture.asset(
+                    chatBackground,
+                    height: MediaQuery.of(context).size.height,
+                    fit: BoxFit.cover,
+                    width: MediaQuery.of(context).size.width,
+                  ),
+                  BlocListener<DeleteMessageCubit, DeleteMessageState>(
+                    listener: (context, state) {
+                      if (state is DeleteMessageSuccess) {
+                        ChatMessageHandler.removeMessage(state.id);
+                        showDeletebutton.value = false;
+                      }
                     },
-                    child: BlocConsumer<LoadChatMessagesCubit,
-                        LoadChatMessagesState>(
-                      listener: (context, state) {
-                        if (state is LoadChatMessagesSuccess) {
-                          ChatMessageHandler.loadMessages(state.messages);
-
-                          totalMessageCount = state.messages.length;
-                          isFetchedFirstTime = true;
-                          setState(() {});
-                        }
+                    child: GestureDetector(
+                      onTap: () {
+                        showDeletebutton.value = false;
                       },
-                      builder: (context, state) {
-                        return Stack(
-                          children: [
-/*                          BlocBuilder<ChatMessageHandlerCubit, List<Widget>>(
-                            builder: (context, messages) {
-                              Widget? loadingMoreWidget;
+                      child: BlocConsumer<LoadChatMessagesCubit,
+                          LoadChatMessagesState>(
+                        listener: (context, state) {
+                          if (state is LoadChatMessagesSuccess) {
+                            ChatMessageHandler.loadMessages(state.messages);
 
-                              if (state is LoadChatMessagesSuccess &&
-                                  state.isLoadingMore) {
-                                loadingMoreWidget =
-                                    Text("loading".translate(context));
-                              }
-                              if (messages.isEmpty) {
-                                return offerWidget();
-                              } else {
-                                return Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    loadingMoreWidget ??
-                                        const SizedBox.shrink(),
-                                    Expanded(
-                                      child: ListView.builder(
-                                        key: ValueKey(
-                                            'chat_list_${messages.length}'),
-                                        reverse: true,
-                                        shrinkWrap: true,
-                                        physics:
-                                            const AlwaysScrollableScrollPhysics(),
-                                        controller: _pageScrollController,
-                                        addAutomaticKeepAlives: true,
-                                        itemCount: messages.length,
-                                        padding:
-                                            const EdgeInsets.only(bottom: 10),
-                                        itemBuilder: (context, index) {
-                                          dynamic chat = messages[index];
-
-                                          return Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              if (index ==
-                                                  messages.length - 1)
-                                                offerWidget(),
-                                              chat
-                                            ],
-                                          );
-                                        },
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              }
-                            },
-                            bloc: context.read<ChatMessageHandlerCubit>(),
-                          ),*/
-                            StreamBuilder<List<ChatMessageModal>>(
+                            totalMessageCount = state.messages.length;
+                            isFetchedFirstTime = true;
+                            setState(() {});
+                          }
+                        },
+                        builder: (context, state) {
+                          return Stack(
+                            children: [
+                              StreamBuilder<List<ChatMessageModal>>(
                                 stream: ChatMessageHandler.getChatStream(),
                                 builder: (context,
                                     AsyncSnapshot<List<ChatMessageModal>>
-                                        snapshot) {
+                                    snapshot) {
                                   final bool isLoadingMore =
                                       state is LoadChatMessagesSuccess &&
                                           state.isLoadingMore;
                                   final Widget? loadingMoreWidget =
-                                      isLoadingMore
-                                          ? Text("loading".translate(context))
-                                          : null;
+                                  isLoadingMore
+                                      ? Text("loading".translate(context))
+                                      : null;
 
                                   if (snapshot.connectionState ==
-                                          ConnectionState.waiting &&
+                                      ConnectionState.waiting &&
                                       !snapshot.hasData) {
                                     return loadingMoreWidget ?? offerWidget();
                                   }
 
-                                  final List<ChatMessageModal> messages =
+                                  // Filter the global chat stream to only messages
+                                  // that belong to this conversation (by participants
+                                  // and item/itemOffer identifiers). The ChatMessageHandler
+                                  // is global and may contain messages for other chats,
+                                  // so filter here to avoid cross-chat duplicates.
+                                  final List<ChatMessageModal> allMessages =
                                       snapshot.data ?? <ChatMessageModal>[];
+                                  final int currentUserId =
+                                      int.tryParse(HiveUtils.getUserId() ??
+                                              '') ??
+                                          0;
+                                  final int otherUserId =
+                                      int.tryParse(widget.userId) ?? 0;
+                                  final int widgetItemOfferId =
+                                      widget.itemOfferId;
+                                  final int widgetItemId =
+                                      int.tryParse(widget.itemId) ?? 0;
+
+                                  final List<ChatMessageModal> messages =
+                                      allMessages.where((m) {
+                                    final int mOffer = m.itemOfferId ?? 0;
+                                    final int mItem = m.itemId ?? 0;
+                                    final int s = m.senderId ?? 0;
+                                    final int r = m.receiverId ?? 0;
+
+                                    // If this chat is tied to an itemOfferId, require it to match.
+                                    if (widgetItemOfferId > 0) {
+                                      if (mOffer != widgetItemOfferId) return false;
+                                    } else if (widgetItemId > 0) {
+                                      // Otherwise, require itemId match when available.
+                                      if (mItem != widgetItemId) return false;
+                                    }
+
+                                    // Looser participant matching: accept messages where either
+                                    // sender or receiver matches current user or the other user.
+                                    // Remote messages sometimes omit receiver/sender fields or
+                                    // use different conventions; strict pair-matching filtered
+                                    // out valid server messages. This looser rule preserves
+                                    // server (checked) messages while still filtering unrelated chats.
+                                    final bool participantsMatch =
+                                        s == currentUserId ||
+                                            r == currentUserId ||
+                                            s == otherUserId ||
+                                            r == otherUserId;
+
+                                    if (!participantsMatch) return false;
+
+                                    return true;
+                                  }).toList();
+
                                   if (messages.isEmpty) {
                                     return offerWidget();
                                   }
 
                                   final List<_ChatListEntry> renderItems =
-                                      _buildRenderableMessages(
-                                          messages, context);
+                                  _buildRenderableMessages(
+                                      messages, context);
 
+                                  // إصلاح الـ Column: يجب أن يكون max وليس min مع Expanded
                                   return Column(
-                                    mainAxisSize: MainAxisSize.min,
+                                    mainAxisSize: MainAxisSize.max,
                                     children: [
                                       loadingMoreWidget ??
                                           const SizedBox.shrink(),
@@ -928,41 +460,46 @@ extension _ChatScreenUi on _ChatScreenState {
                                               'chat_list_${messages.length}_${renderItems.length}'),
                                           reverse: true,
                                           physics:
-                                              const AlwaysScrollableScrollPhysics(),
+                                          const AlwaysScrollableScrollPhysics(),
                                           controller: _pageScrollController,
                                           addAutomaticKeepAlives: true,
                                           itemCount: renderItems.length + 1,
-                                          padding:
-                                              const EdgeInsets.only(bottom: 10),
+                                          padding: const EdgeInsets.only(
+                                              bottom: 10),
                                           itemBuilder: (context, index) {
                                             if (index == renderItems.length) {
                                               return offerWidget();
                                             }
                                             final _ChatListEntry entry =
-                                                renderItems[index];
+                                            renderItems[index];
                                             if (entry.isDateSeparator) {
                                               return _buildMessageDateChip(
-                                                  context, entry.dateLabel!);
+                                                context,
+                                                entry.dateLabel!,
+                                              );
                                             }
                                             return _buildChatMessageWidget(
-                                                entry.message!);
+                                              entry.message!,
+                                            );
                                           },
                                         ),
                                       ),
                                     ],
                                   );
-                                }),
-                            if ((state is LoadChatMessagesInProgress))
-                              Center(
-                                child: UiUtils.progress(),
-                              )
-                          ],
-                        );
-                      },
+                                },
+                              ),
+                              if (state is LoadChatMessagesInProgress)
+                                Center(
+                                  child: UiUtils.progress(),
+                                ),
+                            ],
+                          );
+                        },
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -970,77 +507,92 @@ extension _ChatScreenUi on _ChatScreenState {
     );
   }
 
+
   Widget buildOfferWidget() {
     final offerCurrencySymbol = _resolveCurrencySymbol();
     final double? offerPrice = widget.itemOfferPrice;
 
-    if (offerPrice != null) {
-      final String offerLabel =
-          _formatPriceWithCurrency(offerPrice, offerCurrencySymbol);
+    if (offerPrice == null) {
+      return const SizedBox.shrink();
+    }
 
-      if (int.parse(HiveUtils.getUserId()!) == int.parse(widget.buyerId!)) {
-        return Align(
-          alignment: AlignmentDirectional.topEnd,
-          child: Container(
-              height: 71,
-              margin: EdgeInsetsDirectional.only(top: 15, bottom: 15, end: 15),
-              padding: EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                  border: Border.all(
-                      color: context.color.territoryColor.withOpacity(0.3)),
-                  color: context.color.territoryColor.withOpacity(0.17),
-                  borderRadius: BorderRadius.only(
-                      topRight: Radius.circular(0),
-                      topLeft: Radius.circular(8),
-                      bottomRight: Radius.circular(8),
-                      bottomLeft: Radius.circular(8))),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text("yourOffer".translate(context))
-                      .color(context.color.textDefaultColor.withOpacity(0.5)),
+    final String offerLabel =
+    _formatPriceWithCurrency(offerPrice, offerCurrencySymbol);
 
-                  /*  Text("yourOffer".translate(context))
-                  .color(context.color.textDefaultColor.withOpacity(0.5)),*/
-                  Text(offerLabel)
-                      .bold()
-                      .size(context.font.larger)
-                      .color(context.color.textDefaultColor)
-                ],
-              )),
-        );
-      } else {
-        return Align(
-          alignment: AlignmentDirectional.topStart,
-          child: Container(
-              height: 71,
-              margin:
-                  EdgeInsetsDirectional.only(top: 15, bottom: 15, start: 15),
-              padding: EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                  border: Border.all(
-                      color: context.color.territoryColor.withOpacity(0.3)),
-                  color: context.color.territoryColor.withOpacity(0.17),
-                  borderRadius: BorderRadius.only(
-                      topRight: Radius.circular(8),
-                      topLeft: Radius.circular(0),
-                      bottomRight: Radius.circular(8),
-                      bottomLeft: Radius.circular(8))),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text("offerLbl".translate(context))
-                      .color(context.color.textDefaultColor.withOpacity(0.5)),
-                  Text(offerLabel)
-                      .bold()
-                      .size(context.font.larger)
-                      .color(context.color.textDefaultColor)
-                ],
-              )),
-        );
-      }
+    final bool isCurrentUserBuyer =
+        int.parse(HiveUtils.getUserId()!) == int.parse(widget.buyerId!);
+
+    if (isCurrentUserBuyer) {
+      // عرض المستخدم الحالي (المشتري) – يمين
+      return Align(
+        alignment: AlignmentDirectional.topEnd,
+        child: Container(
+          margin: const EdgeInsetsDirectional.only(top: 15, bottom: 15, end: 15),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: context.color.territoryColor.withOpacity(0.3),
+            ),
+            color: context.color.territoryColor.withOpacity(0.17),
+            borderRadius: const BorderRadius.only(
+              topRight: Radius.circular(0),
+              topLeft: Radius.circular(8),
+              bottomRight: Radius.circular(8),
+              bottomLeft: Radius.circular(8),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("yourOffer".translate(context))
+                  .color(context.color.textDefaultColor.withOpacity(0.5)),
+              const SizedBox(height: 6), // مسافة بين “عرضك” والقيمة
+              Text(offerLabel)
+                  .bold()
+                  .size(context.font.larger)
+                  .color(context.color.textDefaultColor),
+            ],
+          ),
+        ),
+      );
     } else {
-      return SizedBox.shrink();
+      // عرض الطرف الآخر – يسار
+      return Align(
+        alignment: AlignmentDirectional.topStart,
+        child: Container(
+          margin:
+          const EdgeInsetsDirectional.only(top: 15, bottom: 15, start: 15),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: context.color.territoryColor.withOpacity(0.3),
+            ),
+            color: context.color.territoryColor.withOpacity(0.17),
+            borderRadius: const BorderRadius.only(
+              topRight: Radius.circular(8),
+              topLeft: Radius.circular(0),
+              bottomRight: Radius.circular(8),
+              bottomLeft: Radius.circular(8),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("offerLbl".translate(context))
+                  .color(context.color.textDefaultColor.withOpacity(0.5)),
+              const SizedBox(height: 8), // مسافة بين “العرض” والقيمة
+              Text(offerLabel)
+                  .bold()
+                  .size(context.font.larger)
+                  .color(context.color.textDefaultColor),
+            ],
+          ),
+        ),
+      );
     }
   }
 
@@ -1146,6 +698,423 @@ extension _ChatScreenUi on _ChatScreenState {
     return 'local_${userId}_$timestamp';
   }
 }
+
+class _ChatHeader extends StatelessWidget {
+  final _ChatScreenState state;
+  final String? presenceText; // غير مستخدمة هنا
+  final Color presenceColor;  // غير مستخدم
+  final String resolvedCurrencySymbol;
+
+  const _ChatHeader({
+    Key? key,
+    required this.state,
+    this.presenceText,
+    required this.presenceColor,
+    required this.resolvedCurrencySymbol,
+  }) : super(key: key);
+
+  Future<void> _openAd(BuildContext ctx) async {
+    try {
+      Widgets.showLoader(ctx);
+
+      final DataOutput<ItemModel> dataOutput =
+      await ItemRepository().fetchItemFromItemId(
+        int.parse(state.widget.itemId),
+      );
+
+      Future.delayed(
+        Duration.zero,
+            () {
+          Widgets.hideLoder(ctx);
+          Navigator.pushNamed(
+            ctx,
+            Routes.adDetailsScreen,
+            arguments: {
+              "model": dataOutput.modelList[0],
+            },
+          );
+        },
+      );
+    } catch (_) {
+      Widgets.hideLoder(ctx);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ctx = context;
+
+    return Padding(
+      // تفصل البطاقة عن الـ AppBar ومن الجانبين
+      padding: const EdgeInsetsDirectional.fromSTEB(12, 8, 12, 4),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        elevation: 6,
+        shadowColor: ctx.color.borderColor.withOpacity(0.25),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => _openAd(ctx),
+          splashColor: ctx.color.territoryColor.withOpacity(0.15),
+          highlightColor: ctx.color.territoryColor.withOpacity(0.08),
+          child: Container(
+            height: 72,
+            decoration: BoxDecoration(
+              color: ctx.color.backgroundColor, // كرت بلون الخلفية، غير عن فقاعات الشات
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: ctx.color.borderColor.withOpacity(0.4),
+              ),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              textDirection: TextDirection.rtl, // الصورة + العنوان على اليمين
+              children: [
+                // صورة الإعلان (يمين)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: SizedBox(
+                    width: 48,
+                    height: 48,
+                    child: UiUtils.getImage(
+                      state.widget.itemImage,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(width: 10),
+
+                // العنوان + سطر مساعد (محاذاة يمين)
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start, // في RTL = يمين
+                    children: [
+                      Text(
+                        state.widget.itemTitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.right,
+                      )
+                          .color(ctx.color.textDefaultColor)
+                          .size(ctx.font.large)
+                          .bold(),
+                      const SizedBox(height: 4),
+                      Text(
+                        'اضغط لمشاهدة تفاصيل الإعلان',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.right,
+                      )
+                          .color(
+                        ctx.color.textDefaultColor.withOpacity(0.6),
+                      )
+                          .size(ctx.font.small),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(width: 8),
+
+                // كبسولة السعر (على اليسار)
+                Container(
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: ctx.color.territoryColor.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    state._formatPriceWithCurrency(
+                      state.widget.itemPrice,
+                      resolvedCurrencySymbol,
+                    ),
+                  )
+                      .color(ctx.color.territoryColor)
+                      .size(ctx.font.small)
+                      .bold(),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+class _ChatBottomBar extends StatefulWidget {
+  final _ChatScreenState state;
+
+  const _ChatBottomBar({Key? key, required this.state}) : super(key: key);
+
+  @override
+  _ChatBottomBarState createState() => _ChatBottomBarState();
+}
+
+class _ChatBottomBarState extends State<_ChatBottomBar> {
+  late bool isBlocked;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // التأكد من حالة الحظر
+    isBlocked = context.read<BlockedUsersListCubit>().isUserBlocked(int.parse(widget.state.widget.userId));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final messageAttachment = widget.state.messageAttachment;
+    final supportedImageTypes = widget.state.supportedImageTypes;
+    var attachmentMIME = "";
+    if (messageAttachment != null) {
+      attachmentMIME = (messageAttachment?.path?.split(".").last.toLowerCase()) ?? "";
+    }
+
+    return SafeArea(
+      bottom: true,
+      child: Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () {},
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // فقط الحقل في الأسفل
+              const SizedBox(height: 10),
+
+              // زر الحظر أو إلغاء الحظر
+              _buildBlockButton(context),
+
+              // المرفقات
+              _buildAttachmentWidget(context, messageAttachment, supportedImageTypes, attachmentMIME),
+
+              // شريط التطبيق BottomAppBar
+              _buildBottomAppBar(context),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+
+
+
+  // 1. Widget لإدخال الرسائل
+  Widget _buildMessageInputField(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+      child: TextField(
+        controller: widget.state.controller,
+        cursorColor: context.color.territoryColor,
+        onTap: () {
+          showDeletebutton.value = false;
+        },
+        textInputAction: TextInputAction.newline,
+        minLines: 1,
+        maxLines: null,
+        decoration: InputDecoration(
+          suffixIconColor: context.color.textLightColor,
+          suffixIcon: IconButton(
+            onPressed: () async {
+              if (widget.state.messageAttachment == null) {
+                final FilePickerResult? pickedAttachment = await FilePicker.platform.pickFiles(
+                  allowMultiple: false,
+                  type: FileType.custom,
+                  allowedExtensions: ['jpg', 'jpeg', 'png'],
+                );
+                widget.state._setMessageAttachment(pickedAttachment?.files.first);
+              } else {
+                widget.state._setMessageAttachment(null);
+              }
+            },
+            icon: widget.state.messageAttachment != null
+                ? const Icon(Icons.close)
+                : const Icon(Icons.attachment),
+          ),
+          contentPadding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide(color: context.color.territoryColor)),
+          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide(color: context.color.territoryColor)),
+          hintText: "writeHere".translate(context),
+        ),
+      ),
+    );
+  }
+
+
+
+  // 2. Widget لزر الحظر أو إلغاء الحظر
+  Widget _buildBlockButton(BuildContext context) {
+    return isBlocked
+        ? TextButton(
+      onPressed: () async {
+        final unBlock = await UiUtils.showBlurredDialoge(
+          context,
+          dialoge: BlurredDialogBox(
+            acceptButtonName: "unBlockLbl".translate(context),
+            content: Text(
+              "${"unBlockLbl".translate(context)}\t${widget.state.widget.userName}\t${"toSendMessage".translate(context)}"
+                  .translate(context),
+            ),
+          ),
+        );
+        if (unBlock == true) {
+          context.read<UnblockUserCubit>().unBlockUser(blockUserId: int.parse(widget.state.widget.userId));
+        }
+      },
+      child: Text(
+        "unBlockLbl".translate(context),
+        style: TextStyle(
+          color: context.color.territoryColor,
+          fontSize: context.font.smaller,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    )
+        : SizedBox();
+  }
+
+
+
+  // 3. Widget لعرض المرفقات
+  Widget _buildAttachmentWidget(BuildContext context, dynamic messageAttachment, List<String> supportedImageTypes, String attachmentMIME) {
+    if (messageAttachment != null) {
+      if (supportedImageTypes.contains(attachmentMIME)) {
+        return Container(
+          decoration: BoxDecoration(
+              color: context.color.secondaryColor,
+              border: Border.all(color: context.color.borderColor, width: 1.5)),
+          child: Row(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: SizedBox(
+                    height: 100,
+                    width: 100,
+                    child: GestureDetector(
+                      onTap: () {
+                        UiUtils.showFullScreenImage(context,
+                            provider: FileImage(File(
+                              messageAttachment?.path ?? "",
+                            )));
+                      },
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.file(
+                          File(
+                            messageAttachment?.path ?? "",
+                          ),
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    )),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(messageAttachment?.name ?? ""),
+                  Text(HelperUtils.getFileSizeString(
+                    bytes: messageAttachment!.size,
+                  ).toString()),
+                ],
+              )
+            ],
+          ),
+        );
+      } else {
+        return Container(
+          color: context.color.secondaryColor,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: AttachmentMessage(url: messageAttachment!.path!),
+          ),
+        );
+      }
+    } else {
+      return SizedBox.shrink();
+    }
+  }
+
+
+
+
+  // 4. Widget لعرض شريط BottomAppBar
+  Widget _buildBottomAppBar(BuildContext context) {
+    return BottomAppBar(
+      padding: const EdgeInsetsDirectional.all(10),
+      elevation: 5,
+      color: context.color.secondaryColor,
+      child: Directionality(
+        textDirection: Directionality.of(context),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: _buildMessageInputField(context), // حقل الإدخال
+                ),
+                const SizedBox(
+                  width: 9.5,
+                ),
+                GestureDetector(
+                  onTap: () {
+                    if (widget.state.controller.text.trim().isEmpty && widget.state.messageAttachment == null) return;
+
+                    String? messageType;
+                    final attachmentPath = widget.state.messageAttachment?.path;
+                    if (attachmentPath != null && attachmentPath.isNotEmpty) {
+                      messageType = widget.state._isImageAttachmentPath(attachmentPath) ? 'image' : 'file';
+                    } else if (widget.state.controller.text.trim().isNotEmpty) {
+                      messageType = 'text';
+                    }
+                    final DateTime now = DateTime.now();
+
+                    ChatMessageHandler.add(
+                      ChatMessageModal(
+                        localId: widget.state._generateLocalMessageId(),
+                        senderId: int.tryParse(HiveUtils.getUserId() ?? '') ?? 0,
+                        receiverId: int.tryParse(widget.state.widget.userId),
+                        itemOfferId: widget.state.widget.itemOfferId,
+                        itemId: int.tryParse(widget.state.widget.itemId),
+                        message: widget.state.controller.text,
+                        audio: '',
+                        file: widget.state.messageAttachment?.path ?? '',
+                        messageType: messageType,
+                        createdAt: now.toIso8601String(),
+                        updatedAt: now.toIso8601String(),
+                        isSentNow: true,
+                      ),
+                    );
+                    totalMessageCount++;
+                    widget.state.controller.text = "";
+                    widget.state._setMessageAttachment(null);
+                  },
+                  child: CircleAvatar(
+                    radius: 20,
+                    backgroundColor: context.color.territoryColor,
+                    child: Icon(
+                      Icons.send,
+                      color: context.color.buttonColor,
+                    ),
+                  ),
+                )
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
+
 
 class _ChatListEntry {
   final ChatMessageModal? message;

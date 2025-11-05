@@ -92,94 +92,124 @@ extension _ChatTileUi on ChatTile {
   }
 
   Widget _buildProfileAvatar(
-      BuildContext context, ParticipantStatus? presenceStatus) {
-
+      BuildContext context,
+      ParticipantStatus? presenceStatus,
+      ) {
     final borderColor = context.color.textDefaultColor.withOpacity(0.08);
     final bool hasProfileImage = profilePicture.trim().isNotEmpty;
+
     final bool isOnline = presenceStatus?.isOnline == true;
     final bool isTyping = presenceStatus?.isTyping == true;
-    Widget avatar;
+
+    const double size = 56;
+    const double radius = size / 2;
+
+    // محتوى الصورة
+    Widget avatarChild;
     if (!hasProfileImage) {
-      avatar = Container(
+      avatarChild = Container(
         color: context.color.territoryColor.withOpacity(0.12),
         child: Center(
           child: SvgPicture.asset(
             AppIcons.profile,
             height: 20,
             width: 20,
-            colorFilter:
-                ColorFilter.mode(context.color.territoryColor, BlendMode.srcIn),
+            colorFilter: ColorFilter.mode(
+              context.color.territoryColor,
+              BlendMode.srcIn,
+            ),
           ),
         ),
       );
     } else {
-      avatar = UiUtils.getImage(
+      avatarChild = UiUtils.getImage(
         profilePicture,
-        width: 56,
-        height: 56,
         fit: BoxFit.cover,
       );
     }
 
-    final widget = Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Container(
-          width: 56,
-          height: 56,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: borderColor, width: 1.5),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(28),
-            child: avatar,
-          ),
-        ),
-        PositionedDirectional(
-    bottom: -2,
-    end: -2,
-    child: Container(
-      padding: const EdgeInsets.all(2),
+    final Widget baseAvatar = Container(
+      width: size,
+      height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: context.color.secondaryColor,
-        boxShadow: [
-          BoxShadow(
-            color: context.color.textDefaultColor.withOpacity(0.06),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(color: borderColor, width: 1.5),
       ),
-            child: Container(
-              width: 18,
-              height: 18,
-              decoration: BoxDecoration(
-                color: isTyping || isOnline
-                    ? context.color.territoryColor
-                    : context.color.textLightColor.withOpacity(0.4),
-                shape: BoxShape.circle,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(radius),
+        child: avatarChild,
+      ),
+    );
+
+    // شارة الحالة
+    Widget? presenceBadge;
+    if (presenceStatus != null) {
+      Color dotColor;
+      IconData? icon;
+      double iconSize;
+
+      if (isTyping) {
+        // يكتب الآن: شارة بلون البراند + أيقونة قلم
+        dotColor = context.color.territoryColor;
+        icon = Icons.edit_note_rounded;
+        iconSize = 13;
+      } else if (isOnline) {
+        // أونلاين: نقطة خضراء صغيرة فقط
+        dotColor = Colors.greenAccent.shade400;
+        icon = null;
+        iconSize = 0;
+      } else {
+        // أوفلاين: نقطة رمادية خفيفة
+        dotColor = context.color.textLightColor.withOpacity(0.45);
+        icon = null;
+        iconSize = 0;
+      }
+
+      presenceBadge = PositionedDirectional(
+        bottom: -2,
+        end: -2,
+        child: Container(
+          padding: const EdgeInsets.all(2),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: context.color.secondaryColor,
+            boxShadow: [
+              BoxShadow(
+                color: context.color.textDefaultColor.withOpacity(0.08),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
               ),
-              child: Icon(
-                isTyping
-                    ? Icons.edit_note_rounded
-                    : (isOnline
-                    ? Icons.check_rounded
-                    : Icons.lock_outline_rounded),
-                size: isTyping ? 14 : 12,
-                color: isTyping || isOnline
-                    ? context.color.buttonColor
-                    : context.color.textColorDark.withOpacity(0.7),
-              ),
+            ],
+          ),
+          child: Container(
+            width: 18,
+            height: 18,
+            decoration: BoxDecoration(
+              color: dotColor,
+              shape: BoxShape.circle,
+            ),
+            child: icon == null
+                ? const SizedBox.shrink()
+                : Icon(
+              icon,
+              size: iconSize,
+              color: context.color.buttonColor,
             ),
           ),
         ),
+      );
+    }
+
+    final avatarWithPresence = Stack(
+      clipBehavior: Clip.none,
+      children: [
+        baseAvatar,
+        if (presenceBadge != null) presenceBadge,
       ],
     );
 
     if (!hasProfileImage) {
-      return widget;
+      return avatarWithPresence;
     }
 
     return GestureDetector(
@@ -189,9 +219,17 @@ extension _ChatTileUi on ChatTile {
           provider: CachedNetworkImageProvider(profilePicture),
         );
       },
-      child: widget,
+      child: avatarWithPresence,
     );
   }
+
+
+
+
+
+
+
+
 
   Widget _buildAdImage(BuildContext context) {
     if (itemPicture.trim().isEmpty) {
@@ -217,13 +255,18 @@ extension _ChatTileUi on ChatTile {
   }
 
   Widget? _buildAdCard(BuildContext context) {
+    // إذا ما فيه اسم ولا صورة، ما نعرض شيء
     if (itemName.trim().isEmpty && itemPicture.trim().isEmpty) {
       return null;
     }
 
     final String? price = _priceLabel();
     final bool hasImage = itemPicture.trim().isNotEmpty;
+
+    // صورة الإعلان (أو شيمر بديل)
     Widget preview = _buildAdImage(context);
+
+    // نسمح بتكبير الصورة عند الضغط إذا كانت موجودة فعليًا
     if (hasImage) {
       preview = GestureDetector(
         onTap: () {
@@ -237,45 +280,38 @@ extension _ChatTileUi on ChatTile {
     }
 
     return Container(
-      padding: const EdgeInsetsDirectional.fromSTEB(8, 8, 12, 8),
+      width: 60,
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
       decoration: BoxDecoration(
-        color: context.color.territoryColor.withOpacity(0.08),
+        color: context.color.secondaryColor,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: context.color.territoryColor.withOpacity(0.15),
+          color: context.color.territoryColor.withOpacity(0.18),
           width: 1,
         ),
-      ),
-      child: Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-          preview,
-          const SizedBox(width: 10),
-          ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 140),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                Text(
-                itemName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              )
-                  .bold()
-                  .size(context.font.small)
-                  .color(context.color.textColorDark),
-              if (price != null) ...[
-          const SizedBox(height: 4),
-      Text(price)
-          .size(context.font.smaller)
-          .color(context.color.textLightColor),
-                ],
-                ],
-              ),
+        boxShadow: [
+          BoxShadow(
+            color: context.color.textDefaultColor.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
           ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          preview,
+          if (price != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              price,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            )
+                .size(context.font.smaller)
+                .color(context.color.textLightColor),
           ],
+        ],
       ),
     );
   }
@@ -309,47 +345,53 @@ extension _ChatTileUi on ChatTile {
     final Widget? unreadBadge = _buildUnreadBadge(context);
     final Widget? adCard = _buildAdCard(context);
     final String timeLabel = _timeLabel();
+
     return GestureDetector(
       onTap: () {
-        Navigator.push(context, BlurredRouter(
-          builder: (context) {
-            currentlyChatingWith = conversationId;
-            currentlyChatItemId = itemOfferId.toString();
-            return MultiBlocProvider(
-              providers: [
-                BlocProvider(
-                  create: (context) => LoadChatMessagesCubit(),
+        Navigator.push(
+          context,
+          BlurredRouter(
+            builder: (context) {
+              currentlyChatingWith = conversationId;
+              currentlyChatItemId = itemOfferId.toString();
+              return MultiBlocProvider(
+                providers: [
+                  BlocProvider(
+                    create: (context) => LoadChatMessagesCubit(),
+                  ),
+                  BlocProvider(
+                    create: (context) => DeleteMessageCubit(),
+                  ),
+                ],
+                child: Builder(
+                  builder: (context) {
+                    return ChatScreen(
+                      profilePicture: profilePicture,
+                      itemTitle: itemName,
+                      userId: id,
+                      itemImage: itemPicture,
+                      userName: userName,
+                      itemId: itemId,
+                      date: date,
+                      itemOfferId: itemOfferId,
+                      conversationId: conversationId,
+                      itemPrice: itemPrice,
+                      itemOfferPrice: itemAmount ?? null,
+                      status: status,
+                      buyerId: buyerId,
+                      alreadyReview: alreadyReview,
+                      isPurchased: isPurchased,
+                      participants: participants,
+                      lastMessage: lastMessage,
+                      currency: itemCurrency,
+                      currencySymbol: itemCurrencySymbol,
+                    );
+                  },
                 ),
-                BlocProvider(
-                  create: (context) => DeleteMessageCubit(),
-                ),
-              ],
-              child: Builder(builder: (context) {
-                return ChatScreen(
-                  profilePicture: profilePicture,
-                  itemTitle: itemName,
-                  userId: id,
-                  itemImage: itemPicture,
-                  userName: userName,
-                  itemId: itemId,
-                  date: date,
-                  itemOfferId: itemOfferId,
-                  conversationId: conversationId,
-                  itemPrice: itemPrice,
-                  itemOfferPrice: itemAmount ?? null,
-                  status: status,
-                  buyerId: buyerId,
-                  alreadyReview: alreadyReview,
-                  isPurchased: isPurchased,
-                  participants: participants,
-                  lastMessage: lastMessage,
-                  currency: itemCurrency,
-                  currencySymbol: itemCurrencySymbol,
-                );
-              }),
-            );
-          },
-        ));
+              );
+            },
+          ),
+        );
       },
       child: AbsorbPointer(
         absorbing: true,
@@ -373,65 +415,51 @@ extension _ChatTileUi on ChatTile {
           width: MediaQuery.of(context).size.width,
           child: Padding(
             padding: const EdgeInsets.all(16.0),
-            child: Column(
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildProfileAvatar(context, presenceStatus),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            userName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          )
-                              .bold()
-                              .size(context.font.large)
-                              .color(context.color.textColorDark),
-                          const SizedBox(height: 6),
-                          Text(
-                            _previewText(context),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          )
-                              .size(context.font.normal)
-                              .color(context.color.textLightColor),
-                          if (timeLabel.isNotEmpty || unreadBadge != null) ...[
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                if (timeLabel.isNotEmpty)
-                                  Text(timeLabel)
-                                      .size(context.font.smaller)
-                                      .color(context.color.textLightColor),
-                                if (timeLabel.isNotEmpty && unreadBadge != null)
-                                  const SizedBox(width: 8),
-                                if (unreadBadge != null) unreadBadge,
-                              ],
-                            ),
+                _buildProfileAvatar(context, presenceStatus),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        userName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      )
+                          .bold()
+                          .size(context.font.large)
+                          .color(context.color.textColorDark),
+                      const SizedBox(height: 6),
+                      Text(
+                        _previewText(context),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      )
+                          .size(context.font.normal)
+                          .color(context.color.textLightColor),
+                      if (timeLabel.isNotEmpty || unreadBadge != null) ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            if (timeLabel.isNotEmpty)
+                              Text(timeLabel)
+                                  .size(context.font.smaller)
+                                  .color(context.color.textLightColor),
+                            if (timeLabel.isNotEmpty && unreadBadge != null)
+                              const SizedBox(width: 8),
+                            if (unreadBadge != null) unreadBadge,
                           ],
-                        ],
-                      ),
-                    ),
-                  ],
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
                 if (adCard != null) ...[
-                  const SizedBox(height: 16),
-                  Divider(
-                    height: 1,
-                    thickness: 0.6,
-                    color: context.color.textDefaultColor.withOpacity(0.08),
-                  ),
-                  const SizedBox(height: 12),
-                  Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    child: adCard,
-                  ),
+                  const SizedBox(width: 8),
+                  adCard,
                 ],
               ],
             ),
@@ -440,4 +468,5 @@ extension _ChatTileUi on ChatTile {
       ),
     );
   }
+
 }

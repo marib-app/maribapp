@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -155,6 +156,16 @@ class AddItemDetailsState extends CloudState<AddItemDetails>
       pickMultiple: false,
       source: ImageSource.gallery,
     );
+
+    // Debug: log what the picker emitted and refresh UI immediately.
+    if (kDebugMode) {
+      try {
+        // ignore: avoid_print
+        print('[debug] _pickCoverImage after pick -> pickedFile=${model.coverImagePicker.pickedFile} lastPayload=${model.coverImagePicker.lastPayload}');
+      } catch (_) {}
+    }
+
+    if (mounted) setState(() {});
   }
 
   Future<void> _pickGalleryImage(ImageSource source) async {
@@ -167,6 +178,12 @@ class AddItemDetailsState extends CloudState<AddItemDetails>
         imageLimit: 25,
         maxLength: model.galleryItems.length,
       );
+      if (kDebugMode) {
+        try {
+          // ignore: avoid_print
+          print('[debug] _pickGalleryImage after pick -> galleryPicker.pickedFile=${model.galleryPicker.pickedFile} lastPayload=${model.galleryPicker.lastPayload}');
+        } catch (_) {}
+      }
     } finally {
       if (!mounted) {
         model.isUploadingGallery = false;

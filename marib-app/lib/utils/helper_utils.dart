@@ -661,7 +661,7 @@ ${locationText.isNotEmpty ? "📍 الموقع: $locationText" : ""}
 
   static void showSnackBarMessage(
       BuildContext? context,
-      String message, {
+      String? message, {
         int messageDuration = 3,
         MessageType? type,
         bool? isFloating,
@@ -669,9 +669,15 @@ ${locationText.isNotEmpty ? "📍 الموقع: $locationText" : ""}
       }) {
     if (context == null) return;
 
+    String display = (message ?? '').toString();
+    if (display.trim().isEmpty) {
+      // Provide a friendly fallback message when callers pass null/empty
+      display = 'somethingWentWrong'.translate(context);
+    }
+
     UiUtils.showSoftSnackBar(
       context,
-      message: message,
+      message: display,
       duration: Duration(seconds: messageDuration),
       backgroundColor: type?.value,
       onClosed: onClose,

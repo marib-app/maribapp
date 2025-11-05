@@ -51,6 +51,9 @@ class CustomTextFormField extends StatelessWidget {
   final Color? customStyleFillColor;
   final Color? customStyleTextColor;
   final Color? customStyleDividerColor;
+  final ValueChanged<String>? onChanged;
+  final Widget? suffixIcon;
+
   const CustomTextFormField({
     super.key,
     this.hintText,
@@ -84,7 +87,8 @@ class CustomTextFormField extends StatelessWidget {
     this.customStyleFillColor,
     this.customStyleTextColor,
     this.customStyleDividerColor,
-
+    this.onChanged,
+    this.suffixIcon,
   });
 
   @override
@@ -111,6 +115,7 @@ class CustomTextFormField extends StatelessWidget {
       minLines: minLine ?? 1,
       maxLines: maxLine ?? 1,
       onChanged: onChange,
+
       validator: (String? value) {
         if (validator == CustomTextFieldValidator.nullCheck) {
           return Validator.nullCheckValidator(value, context: context);

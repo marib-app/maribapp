@@ -105,12 +105,7 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _recordButtonAnimation = AnimationController(
-    vsync: this,
-    duration: const Duration(
-      milliseconds: 500,
-    ),
-  );
+  AnimationController? _recordButtonAnimation;
   TextEditingController controller = TextEditingController();
   PlatformFile? messageAttachment;
   bool isFetchedFirstTime = false;
@@ -153,6 +148,13 @@ class _ChatScreenState extends State<ChatScreen>
   @override
   void initState() {
     super.initState();
+
+    _recordButtonAnimation = AnimationController(
+      vsync: this,
+      duration: const Duration(
+        milliseconds: 500,
+      ),
+    );
 
     final String effectiveConversationId = _effectiveConversationId;
     _chatSyncController = ChatSyncController(
@@ -706,7 +708,7 @@ class _ChatScreenState extends State<ChatScreen>
     _notificationStatusController.close();
     controller.dispose();
     _feedbackController.dispose();
-    _recordButtonAnimation.dispose();
+  _recordButtonAnimation?.dispose();
     _pageScrollController.removeListener(_handleScroll);
     _pageScrollController.dispose();
     _presenceEventSubscription?.cancel();

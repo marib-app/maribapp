@@ -5,6 +5,7 @@ import 'dart:io';
 
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/constant.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -13,6 +14,10 @@ import 'package:marib/utils/helper_utils.dart';
 class PickImage {
   final ImagePicker _picker = ImagePicker();
   final StreamController _imageStreamController = StreamController.broadcast();
+
+  /// Last payload emitted by the picker (for debugging). It holds the same
+  /// map that is added to the stream, e.g. {"error": "", "file": [...]}
+  dynamic lastPayload;
 
   Stream get imageStream => _imageStreamController.stream;
 
@@ -45,10 +50,19 @@ class PickImage {
             file = await HelperUtils.compressImageFile(file);
           }
 
-          _sink.add({
-            "error": "",
-            "file": [file], // Wrapped in a list for consistency
-          });
+          // Ensure internal pickedFile is set (so getters like
+          // coverImageFile that rely on pickedFile return a value).
+          this.pickedFile = file;
+
+          // store the exact payload for debugging and UI inspection
+          lastPayload = {"error": "", "file": [file]};
+
+          if (kDebugMode) {
+            // ignore: avoid_print
+            print('[debug] PickImage.pick single -> file: ${file.path}');
+          }
+
+          _sink.add(lastPayload);
         }
       }).catchError((error) {
         _sink.add({
@@ -81,10 +95,21 @@ class PickImage {
           templistFile.add(file);
         }
 
-        _sink.add({
-          "error": "",
-          "file": templistFile,
-        });
+        // Set the pickedFile to the first file so callers that rely on
+        // PickImage.pickedFile see a value immediately.
+        if (templistFile.isNotEmpty) {
+          this.pickedFile = templistFile.first;
+        }
+
+        // store payload for debugging/UI
+        lastPayload = {"error": "", "file": templistFile};
+
+        if (kDebugMode) {
+          // ignore: avoid_print
+          print('[debug] PickImage.pick multiple -> files: ${templistFile.map((f) => f.path).toList()}');
+        }
+
+        _sink.add(lastPayload);
       }
     }
   }

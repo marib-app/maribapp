@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:marib/data/model/category_model.dart';
@@ -43,7 +45,29 @@ class AddItemDetailsInitializationService {
   }
 
   void _handleCoverImageUpdate(dynamic _) {
+    // The PickImage.listener passes the raw payload (data['file']) which is
+    // usually a List<File> or a single File. Ensure we store the picked file
+    // into the PickImage.pickedFile so `model.coverImageFile` becomes valid.
+    try {
+      final dynamic data = _; // may be List<File> or File
+      if (data is Iterable && data.isNotEmpty) {
+        final dynamic first = data.first;
+        if (first is File) {
+          model.coverImagePicker.pickedFile = first;
+        }
+      } else if (data is File) {
+        model.coverImagePicker.pickedFile = data;
+      }
+      if (kDebugMode) {
+        print('[debug] _handleCoverImageUpdate: pickedFile=${model.coverImagePicker.pickedFile}');
+      }
+    } catch (e) {
+      if (kDebugMode) print('[debug] _handleCoverImageUpdate error: $e');
+    }
+
+    // clear any existing cover URL (we now have a local file)
     model.coverImageUrl = '';
+
     if (model.isCoverUpdateScheduled) {
       return;
     }
@@ -57,6 +81,11 @@ class AddItemDetailsInitializationService {
   void _handleGalleryUpdate(dynamic images) {
     try {
       model.galleryItems.addAll(List<dynamic>.from(images as Iterable));
+      if (kDebugMode) {
+        final int fileCount = model.galleryItems.where((e) => e is File).length;
+        final int mapCount = model.galleryItems.where((e) => e is Map).length;
+        print('[debug] _handleGalleryUpdate: galleryItems=${model.galleryItems.length} (files=$fileCount maps=$mapCount)');
+      }
     } catch (_) {
       // ignore malformed payloads
     }

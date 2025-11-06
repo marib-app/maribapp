@@ -371,32 +371,47 @@ extension _ChatScreenUi on _ChatScreenState {
                                 final position = _pageScrollController.position;
                                 final double newMaxExtent =
                                     position.maxScrollExtent;
+                                final double previousMax =
+                                    _maxScrollExtentBeforeLoadMore;
+                                final double deltaExtent =
+                                    newMaxExtent - previousMax;
                                 final double minExtent =
                                     position.minScrollExtent;
-                                final double distanceFromTop =
-                                    scrollPositionWhenLoadMore;
+
                                 double targetOffset =
-                                    newMaxExtent - distanceFromTop;
+                                    scrollPositionWhenLoadMore + deltaExtent;
+
                                 if (!targetOffset.isFinite) {
-                                  targetOffset = newMaxExtent;
+                                  targetOffset = scrollPositionWhenLoadMore;
                                 }
-                                targetOffset = targetOffset.clamp(
-                                  minExtent,
-                                  newMaxExtent,
-                                );
+
+                                if (targetOffset >= newMaxExtent) {
+                                  targetOffset = (newMaxExtent - 0.5)
+                                      .clamp(minExtent, newMaxExtent)
+                                      .toDouble();
+                                }
+
+                                targetOffset = targetOffset
+                                    .clamp(minExtent, newMaxExtent)
+                                    .toDouble();
+
                                 _pageScrollController.jumpTo(targetOffset);
                               });
                               _shouldRestoreScrollAfterLoadMore = false;
                               scrollPositionWhenLoadMore = 0;
+                              _maxScrollExtentBeforeLoadMore = 0;
                             }
 
                             totalMessageCount = state.messages.length;
                             isFetchedFirstTime = true;
                             setState(() {});
+                            _loadMoreRequestInFlight = false;
                           }
                           if (state is LoadChatMessagesFailed) {
                             _shouldRestoreScrollAfterLoadMore = false;
                             scrollPositionWhenLoadMore = 0;
+                            _maxScrollExtentBeforeLoadMore = 0;
+                            _loadMoreRequestInFlight = false;
                           }
                         },
                         builder: (context, state) {

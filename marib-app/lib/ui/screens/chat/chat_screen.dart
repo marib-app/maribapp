@@ -110,6 +110,8 @@ class _ChatScreenState extends State<ChatScreen>
   PlatformFile? messageAttachment;
   bool isFetchedFirstTime = false;
   double scrollPositionWhenLoadMore = 0;
+  double _maxScrollExtentBeforeLoadMore = 0;
+  bool _loadMoreRequestInFlight = false;
   bool _shouldRestoreScrollAfterLoadMore = false;
   final StreamController<PermissionStatus> _notificationStatusController =
       StreamController<PermissionStatus>.broadcast();
@@ -405,16 +407,20 @@ class _ChatScreenState extends State<ChatScreen>
       return;
     }
     final position = _pageScrollController.position;
+    if (_loadMoreRequestInFlight) {
+      return;
+    }
     if (position.pixels >= position.maxScrollExtent) {
       final loadChatCubit = context.read<LoadChatMessagesCubit>();
       final currentState = loadChatCubit.state;
       if (currentState is LoadChatMessagesSuccess &&
           !currentState.isLoadingMore &&
           loadChatCubit.hasMoreChat()) {
-        final double distanceFromTop =
-            position.maxScrollExtent - position.pixels;
+        final double currentOffset = position.pixels;
         scrollPositionWhenLoadMore =
-            distanceFromTop.isFinite ? distanceFromTop : 0;
+            currentOffset.isFinite ? currentOffset : position.maxScrollExtent;
+        _maxScrollExtentBeforeLoadMore = position.maxScrollExtent;
+        _loadMoreRequestInFlight = true;
         _shouldRestoreScrollAfterLoadMore = true;
         loadChatCubit.loadMore();
       }

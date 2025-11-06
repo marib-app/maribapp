@@ -863,6 +863,7 @@ class CheckoutRepository {
     final List<CheckoutBank> banks = candidates
         .map(_bankFromMap)
         .where((bank) => bank.name.isNotEmpty)
+        .where((bank) => bank.isActive ?? true)
         .toList();
 
     final Map<String, dynamic>? payloadMap = _mapify(payload);
@@ -965,13 +966,21 @@ class CheckoutRepository {
       return trimmed;
     })();
 
+    final Map<String, dynamic>? storeGateway =
+        _mapify(map['store_gateway']) ?? _mapify(map['storeGateway']);
+
+
     final String? accountName = _asString(_firstValue(map, const [
       ['account_name'],
       ['beneficiary_name'],
       ['recipient_name'],
       ['account_holder'],
       ['holder'],
-    ]));
+    ])) ??
+        _asString(_firstValue(storeGateway ?? const <String, dynamic>{}, const [
+          ['account_name'],
+          ['beneficiary_name'],
+        ]));
 
     final String? accountNumber = _asString(_firstValue(map, const [
       ['account_number'],
@@ -979,7 +988,8 @@ class CheckoutRepository {
       ['beneficiary_account'],
       ['number'],
       ['iban'],
-    ]));
+    ])) ??
+        _asString(storeGateway?['account_number']);
 
     final String? iban = _asString(_firstValue(map, const [
       ['iban'],

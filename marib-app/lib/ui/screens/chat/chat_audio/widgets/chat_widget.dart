@@ -5,6 +5,7 @@ import 'dart:io';
 
 import 'package:any_link_preview/any_link_preview.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dio/dio.dart';
 import 'package:marib/app/app_theme.dart';
 import 'package:marib/data/cubits/chat/send_message.dart';
@@ -448,7 +449,10 @@ class ChatMessageState extends State<ChatMessage>
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   if (widget.file.isNotEmpty)
-                                    AttachmentMessage(url: widget.file),
+                                    AttachmentMessage(
+                                      url: widget.file,
+                                      messageType: widget.messageType,
+                                    ),
 
                                   //This is preview builder for image
                                   ValueListenableBuilder(

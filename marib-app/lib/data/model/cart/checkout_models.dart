@@ -43,6 +43,9 @@ class CheckoutBank {
     this.branch,
     this.logoUrl,
     this.notes,
+    this.storeGatewayId,
+    this.storeGatewayAccountId,
+    this.isActive,
     this.raw,
   });
 
@@ -56,6 +59,9 @@ class CheckoutBank {
   final String? branch;
   final String? logoUrl;
   final String? notes;
+  final int? storeGatewayId;
+  final int? storeGatewayAccountId;
+  final bool? isActive;
   final Map<String, dynamic>? raw;
 }
 

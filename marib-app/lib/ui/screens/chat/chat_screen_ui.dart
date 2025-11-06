@@ -362,10 +362,41 @@ extension _ChatScreenUi on _ChatScreenState {
                         listener: (context, state) {
                           if (state is LoadChatMessagesSuccess) {
                             ChatMessageHandler.loadMessages(state.messages);
+                            if (_shouldRestoreScrollAfterLoadMore &&
+                                !state.isLoadingMore) {
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                if (!_pageScrollController.hasClients) {
+                                  return;
+                                }
+                                final position = _pageScrollController.position;
+                                final double newMaxExtent =
+                                    position.maxScrollExtent;
+                                final double minExtent =
+                                    position.minScrollExtent;
+                                final double distanceFromTop =
+                                    scrollPositionWhenLoadMore;
+                                double targetOffset =
+                                    newMaxExtent - distanceFromTop;
+                                if (!targetOffset.isFinite) {
+                                  targetOffset = newMaxExtent;
+                                }
+                                targetOffset = targetOffset.clamp(
+                                  minExtent,
+                                  newMaxExtent,
+                                );
+                                _pageScrollController.jumpTo(targetOffset);
+                              });
+                              _shouldRestoreScrollAfterLoadMore = false;
+                              scrollPositionWhenLoadMore = 0;
+                            }
 
                             totalMessageCount = state.messages.length;
                             isFetchedFirstTime = true;
                             setState(() {});
+                          }
+                          if (state is LoadChatMessagesFailed) {
+                            _shouldRestoreScrollAfterLoadMore = false;
+                            scrollPositionWhenLoadMore = 0;
                           }
                         },
                         builder: (context, state) {
@@ -456,8 +487,8 @@ extension _ChatScreenUi on _ChatScreenState {
                                           const SizedBox.shrink(),
                                       Expanded(
                                         child: ListView.builder(
-                                          key: ValueKey(
-                                              'chat_list_${messages.length}_${renderItems.length}'),
+                                          key: const PageStorageKey<String>(
+                                              'chat_messages_list'),
                                           reverse: true,
                                           physics:
                                           const AlwaysScrollableScrollPhysics(),

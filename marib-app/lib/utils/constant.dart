@@ -196,8 +196,11 @@ class Constant {
     SystemSetting.geoDisabledCategories: "geo_disabled_categories",
   };
 
-  ///This is limit of minimum chat messages load count , make sure you set it grater than 25;
+  ///Number of chat messages fetched on the first request. Keep this above 25
+  ///so the initial screen is sufficiently populated.
   static int minChatMessages = 35;
+  ///Number of chat messages to fetch per subsequent "load more" request.
+  static const int chatLoadMorePageSize = 10;
 
   static bool showExperimentals = true;
 

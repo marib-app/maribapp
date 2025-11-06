@@ -467,5 +467,4 @@ extension _ChatTileUi on ChatTile {
       ),
     );
   }
-
 }

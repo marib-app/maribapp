@@ -5,6 +5,7 @@ import 'package:marib/data/model/data_output.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:marib/data/model/chat/chat_message_modal.dart';
 import 'package:marib/utils/chat/conversation_id_utils.dart';
+import 'package:marib/utils/constant.dart';
 
 class LoadChatMessagesState {}
 
@@ -80,6 +81,7 @@ class LoadChatMessagesCubit extends Cubit<LoadChatMessagesState> {
         itemOfferId: normalizedItemOfferId,
         conversationId: normalizedConversationId,
         page: 1,
+        perPage: Constant.minChatMessages,
       );
 
       emit(LoadChatMessagesSuccess(
@@ -108,7 +110,8 @@ class LoadChatMessagesCubit extends Cubit<LoadChatMessagesState> {
                 page: (state as LoadChatMessagesSuccess).currentPage + 1,
                 itemOfferId: (state as LoadChatMessagesSuccess).itemOfferId,
                 conversationId:
-                    (state as LoadChatMessagesSuccess).conversationId);
+                    (state as LoadChatMessagesSuccess).conversationId,
+                perPage: Constant.chatLoadMorePageSize);
 
         LoadChatMessagesSuccess messagesSuccessState =
             (state as LoadChatMessagesSuccess);

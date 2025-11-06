@@ -61,15 +61,18 @@ class ChatRepostiory {
     );
   }
 
-  Future<DataOutput<ChatMessageModal>> getMessagesApi(
-      {required int page,
-      required int itemOfferId,
-      required String conversationId}) async {
+  Future<DataOutput<ChatMessageModal>> getMessagesApi({
+    required int page,
+    required int itemOfferId,
+    required String conversationId,
+    int? perPage,
+  }) async {
     final String normalizedConversationId =
         normalizeConversationId(conversationId);
 
     final Map<String, dynamic> queryParameters = <String, dynamic>{
       'page': page,
+      if (perPage != null && perPage > 0) Api.perPageQuery: perPage,
       if (itemOfferId > 0) 'item_offer_id': itemOfferId,
       if (normalizedConversationId.isNotEmpty)
         'conversation_id': normalizedConversationId,

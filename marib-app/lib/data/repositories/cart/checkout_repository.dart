@@ -20,6 +20,7 @@ import 'package:marib/data/model/cart/cart_discount.dart';
 import 'package:marib/data/model/orders/user_order.dart';
 import 'package:marib/data/repositories/orders/orders_repository.dart';
 import 'package:marib/utils/currency_utils.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 
 /// Repository responsible for collecting all checkout metadata required by the
 /// delivery & payment flow. It orchestrates calls to:

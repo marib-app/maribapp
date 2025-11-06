@@ -1,9 +1,13 @@
 <?php
 
 namespace App\Models;
+
+use App\Models\CartCouponSelection;
+use App\Models\CartItem;
+use App\Models\ReferralAttempt;
+use App\Models\StoreGatewayAccount;
 use App\Models\WalletAccount;
 use App\Models\WalletTransaction;
-use App\Models\ReferralAttempt;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -18,8 +22,7 @@ use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasPermissions;
 use Spatie\Permission\Traits\HasRoles;
-use App\Models\CartCouponSelection;
-use App\Models\CartItem;
+
 
 class User extends Authenticatable {
     use HasApiTokens, HasFactory, Notifiable, HasRoles, SoftDeletes, HasPermissions;
@@ -209,7 +212,10 @@ class User extends Authenticatable {
         return $this->hasOne(CartCouponSelection::class);
     }
 
-
+    public function storeGatewayAccounts(): HasMany
+    {
+        return $this->hasMany(StoreGatewayAccount::class);
+    }
 
     public function referralAttemptsAsReferrer(): HasMany
     {

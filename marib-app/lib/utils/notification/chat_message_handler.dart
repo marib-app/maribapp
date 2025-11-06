@@ -1,9 +1,8 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:marib/data/model/chat/chated_user_model.dart';
 import 'package:marib/data/model/chat/chat_message_modal.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/foundation.dart';
 
 class ChatMessageHandler {
   static final List<ChatMessageModal> _remoteMessages = <ChatMessageModal>[];
@@ -118,6 +117,7 @@ class ChatMessageHandler {
 
   static void flushMessages() {
     _remoteMessages.clear();
+    _localMessages.clear();
 
     _emit();
   }

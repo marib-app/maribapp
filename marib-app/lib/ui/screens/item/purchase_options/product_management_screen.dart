@@ -361,12 +361,7 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
       return;
     }
 
-    final String message = outcome.message.isNotEmpty
-        ? outcome.message
-        : outcome.success
-            ? 'تم حفظ جميع الإعدادات بنجاح.'
-            : 'تعذر حفظ الإعدادات. حاول مرة أخرى.';
-
+    final String message = _resolveOutcomeMessage(outcome);
     HelperUtils.showSnackBarMessage(context, message);
 
     if (!outcome.success) {
@@ -384,6 +379,26 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
         if (reviewDraft != null) 'pendingDraft': reviewDraft,
       },
     );
+  }
+
+  String _resolveOutcomeMessage(SubmissionOutcome outcome) {
+    final String trimmed = outcome.message.trim();
+    if (trimmed.isEmpty) {
+      return outcome.success
+          ? ProductManagementCubit.genericSuccessMessage
+          : ProductManagementCubit.genericFailureMessage;
+    }
+
+    final String normalized = trimmed.toLowerCase();
+    if (normalized == 'null' ||
+        normalized == 'none' ||
+        normalized == 'undefined') {
+      return outcome.success
+          ? ProductManagementCubit.genericSuccessMessage
+          : ProductManagementCubit.genericFailureMessage;
+    }
+
+    return trimmed;
   }
 }
 
@@ -2414,4 +2429,5 @@ class _ErrorView extends StatelessWidget {
     );
   }
 }
+
 

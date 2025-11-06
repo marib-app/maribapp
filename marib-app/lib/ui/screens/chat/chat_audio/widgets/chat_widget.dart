@@ -14,6 +14,7 @@ import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/hive_utils.dart';
+import 'package:marib/utils/notification/chat_message_handler.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:flutter/foundation.dart';
 import 'package:marib/utils/notification/notification_service.dart';
@@ -119,6 +120,7 @@ class ChatMessageState extends State<ChatMessage>
   bool isChatSent = false;
   bool selectedMessage = false;
   static bool isMounted = false;
+  bool _sendFailed = false;
   String? link;
   final ValueNotifier _linkAddNotifier = ValueNotifier("");
   String? _currentStatus;
@@ -237,7 +239,26 @@ class ChatMessageState extends State<ChatMessage>
     }
 
     if (widget.isSentNow == true) {
-      return null;
+      if (_sendFailed) {
+        return Icon(
+          Icons.error,
+          size: context.font.smaller,
+          color: context.color.primaryColor,
+        );
+      }
+      return Icon(
+        Icons.check,
+        size: context.font.smaller,
+        color: context.color.textLightColor,
+      );
+    }
+
+    if (_sendFailed) {
+      return Icon(
+        Icons.error,
+        size: context.font.smaller,
+        color: context.color.primaryColor,
+      );
     }
 
     if (_isRead) {
@@ -543,62 +564,55 @@ class ChatMessageState extends State<ChatMessage>
                               ),
                       ),
                     ),
-                    if (widget.senderId.toString() != HiveUtils.getUserId() &&
-                        (widget.isSentNow ??
-                            (widget.createdAt ==
-                                DateTime.now().toString()))) ...[
+                    if (_isSentByMe && (widget.isSentNow == true)) ...[
 
                       BlocConsumer<SendMessageCubit, SendMessageState>(
                         listener: (context, state) {
-
-
                           if (state is SendMessageSuccess) {
                             isChatSent = true;
+                            _sendFailed = false;
 
                             ///Value which we added locally
-                            ValueKey? uniqueIdentifier = widget.key as ValueKey;
+                            final ValueKey? uniqueIdentifier =
+                                widget.key as ValueKey?;
 
                             ////We were added local id so whenit completed we will replace it with server message id
-
-                            /*ChatMessageHandler.updateMessageId(
-                                uniqueIdentifier.value, state.messageId);*/
+                            final Object? identifierValue =
+                                uniqueIdentifier?.value;
+                            if (identifierValue != null) {
+                              ChatMessageHandler.updateMessageId(
+                                identifierValue.toString(),
+                                state.messageId,
+                              );
+                            }
 
                             WidgetsBinding.instance
                                 .addPostFrameCallback((timeStamp) {
-                              if (mounted) setState(() {});
+                              if (!mounted) {
+                                return;
+                              }
+                              setState(() {});
                             });
                           }
                           if (state is SendMessageFailed) {
+                            _sendFailed = true;
+                            if (mounted) {
+                              setState(() {});
+                            }
                             HelperUtils.showSnackBarMessage(
                                 context, state.error.toString());
+                            return;
                           }
-                        },
-                        builder: (context, state) {
                           if (state is SendMessageInProgress) {
-                            return Padding(
-                              padding: EdgeInsetsDirectional.only(
-                                  end: 5.0, bottom: 2),
-                              child: Icon(
-                                Icons.watch_later_outlined,
-                                size: context.font.smaller,
-                                color: context.color.textLightColor,
-                              ),
-                            );
+                            if (_sendFailed) {
+                              _sendFailed = false;
+                              if (mounted) {
+                                setState(() {});
+                              }
+                            }
                           }
-
-                          if (state is SendMessageFailed) {
-                            return Padding(
-                              padding: EdgeInsetsDirectional.only(
-                                  end: 5.0, bottom: 2),
-                              child: Icon(
-                                Icons.error,
-                                size: context.font.smaller,
-                                color: context.color.primaryColor,
-                              ),
-                            );
-                          }
-                          return const SizedBox.shrink();
                         },
+                        builder: (context, state) => const SizedBox.shrink(),
                       )
                     ]
                   ],

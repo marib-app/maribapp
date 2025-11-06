@@ -658,6 +658,10 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
   ItemModel item;
   int _attributeSeed = 0;
 
+  static const String genericSuccessMessage = 'تم حفظ جميع الإعدادات بنجاح.';
+  static const String genericFailureMessage =
+      'تعذر حفظ الإعدادات. حاول مرة أخرى.';
+
   Future<void> initialize() async {
     final int? itemId = item.id;
     if (itemId == null) {
@@ -1360,11 +1364,15 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
 
       _applyOptions(response.options, finalPrice: response.finalPrice);
 
-      return SubmissionOutcome(success: true, message: response.message);
+      return _successOutcome(response.message);
     } catch (error) {
-      final String message =
+      final String rawMessage =
           ErrorFilter.check(error).error?.toString() ?? error.toString();
-      return SubmissionOutcome(success: false, message: message);
+      const String fallbackMessage =
+          'تعذر حفظ سمات المنتج. حاول مرة أخرى.';
+      final String message =
+          rawMessage.trim().isEmpty ? fallbackMessage : rawMessage;
+      return _failureOutcome(message, fallback: fallbackMessage);
     }
   }
 
@@ -1407,11 +1415,15 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
 
       _applyOptions(result.options, finalPrice: result.finalPrice);
 
-      return SubmissionOutcome(success: true, message: result.message);
+      return _successOutcome(result.message);
     } catch (error) {
-      final String message =
+      final String rawMessage =
           ErrorFilter.check(error).error?.toString() ?? error.toString();
-      return SubmissionOutcome(success: false, message: message);
+      const String fallbackMessage =
+          'تعذر حفظ تغييرات المخزون. حاول مرة أخرى.';
+      final String message =
+          rawMessage.trim().isEmpty ? fallbackMessage : rawMessage;
+      return _failureOutcome(message, fallback: fallbackMessage);
     }
   }
 
@@ -1459,11 +1471,15 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
 
       _applyOptions(result.options, finalPrice: result.finalPrice);
 
-      return SubmissionOutcome(success: true, message: result.message);
+      return _successOutcome(result.message);
     } catch (error) {
-      final String message =
+      final String rawMessage =
           ErrorFilter.check(error).error?.toString() ?? error.toString();
-      return SubmissionOutcome(success: false, message: message);
+      const String fallbackMessage =
+          'تعذر حفظ إعدادات الخصم. حاول مرة أخرى.';
+      final String message =
+          rawMessage.trim().isEmpty ? fallbackMessage : rawMessage;
+      return _failureOutcome(message, fallback: fallbackMessage);
     }
   }
 
@@ -1682,29 +1698,38 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     }
 
     if (lastOutcome == null) {
-      return const SubmissionOutcome(
-        success: true,
-        message: 'Cannot publish before reviewing all data.',
-      );
+      return _successOutcome('');
     }
 
-    return const SubmissionOutcome(
-      success: true,
-      message: 'Cannot publish before reviewing all data.',
-    );
+    return _successOutcome(lastOutcome.message);
   }
 
   Future<SubmissionOutcome> submitAllAndReview() async {
     final SubmissionOutcome outcome = await submitAll();
 
-    if (!outcome.success && outcome.message.isEmpty) {
-      return const SubmissionOutcome(
-        success: false,
-        message: 'Cannot publish before reviewing all data.',
+    if (outcome.success) {
+      final String normalized =
+          _normalizeOutcomeMessage(
+        outcome.message,
+        success: true,
+        fallback: genericSuccessMessage,
       );
+      if (normalized == outcome.message) {
+        return outcome;
+      }
+      return SubmissionOutcome(success: true, message: normalized);
     }
 
-    return outcome;
+    final String normalized =
+        _normalizeOutcomeMessage(
+      outcome.message,
+      success: false,
+      fallback: genericFailureMessage,
+    );
+    if (normalized == outcome.message) {
+      return outcome;
+    }
+    return SubmissionOutcome(success: false, message: normalized);
   }
 
   Future<SubmissionOutcome?> _ensureItemExists() async {
@@ -1734,14 +1759,13 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       ));
       return null;
     } catch (error) {
-      final String message =
+      final String rawMessage =
           ErrorFilter.check(error).error?.toString() ?? error.toString();
-      return SubmissionOutcome(
-        success: false,
-        message: message.isNotEmpty
-            ? message
-            : 'Unable to create item before publish. Please try again.',
-      );
+      const String fallbackMessage =
+          'تعذر إنشاء الإعلان قبل النشر. حاول مرة أخرى.';
+      final String message =
+          rawMessage.trim().isEmpty ? fallbackMessage : rawMessage;
+      return _failureOutcome(message, fallback: fallbackMessage);
     }
   }
 
@@ -2024,6 +2048,59 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
 
     emit(state.copyWith(
         previewFinalPrice: double.parse(finalPrice.toStringAsFixed(2))));
+  }
+
+  SubmissionOutcome _successOutcome(String message, {String? fallback}) {
+    return SubmissionOutcome(
+      success: true,
+      message: _normalizeOutcomeMessage(
+        message,
+        success: true,
+        fallback: fallback ?? genericSuccessMessage,
+      ),
+    );
+  }
+
+  SubmissionOutcome _failureOutcome(String message, {String? fallback}) {
+    return SubmissionOutcome(
+      success: false,
+      message: _normalizeOutcomeMessage(
+        message,
+        success: false,
+        fallback: fallback ?? genericFailureMessage,
+      ),
+    );
+  }
+
+  String _normalizeOutcomeMessage(
+    String message, {
+    required bool success,
+    required String fallback,
+  }) {
+    String sanitized = message.trim();
+
+    if (sanitized.isEmpty) {
+      return fallback;
+    }
+
+    final String lowerSanitized = sanitized.toLowerCase();
+    if (lowerSanitized.startsWith('exception:') ||
+        lowerSanitized.startsWith('error:')) {
+      final int separatorIndex = sanitized.indexOf(':');
+      if (separatorIndex != -1 && separatorIndex + 1 < sanitized.length) {
+        sanitized = sanitized.substring(separatorIndex + 1).trim();
+      }
+    }
+
+    final String normalizedLower = sanitized.toLowerCase();
+    if (sanitized.isEmpty ||
+        normalizedLower == 'null' ||
+        normalizedLower == 'none' ||
+        normalizedLower == 'undefined') {
+      return fallback;
+    }
+
+    return sanitized;
   }
 }
 

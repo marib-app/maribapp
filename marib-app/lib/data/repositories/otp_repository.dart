@@ -47,8 +47,7 @@ class OtpRepository {
           e.toString().contains('NetworkException')) {
         throw Exception('تحقق من اتصالك بالإنترنت وحاول مرة أخرى');
       } else {
-        // throw Exception('حدث خطأ في إرسال رمز التحقق');
-        print("Send OTP Error: $e");
+        throw Exception('حدث خطأ في إرسال رمز التحقق: ${e.toString()}');
       }
     }
   }
@@ -140,7 +139,7 @@ class OtpRepository {
           e.toString().contains('NetworkException')) {
         throw Exception('تحقق من اتصالك بالإنترنت وحاول مرة أخرى');
       } else {
-        throw Exception('حدث خطأ في إرسال رمز التحقق');
+        throw Exception('حدث خطأ في إرسال رمز التحقق: ${e.toString()}');
       }
     }
   }

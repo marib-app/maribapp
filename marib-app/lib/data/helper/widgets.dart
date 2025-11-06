@@ -6,6 +6,8 @@ import 'package:flutter/services.dart';
 
 class Widgets {
   static bool isLoadingShowing = false;
+  static BuildContext? _loaderDialogContext;
+
   static void showLoader(BuildContext context) async {
     if (isLoadingShowing) {
       return;
@@ -13,18 +15,25 @@ class Widgets {
     isLoadingShowing = true;
     showDialog(
         context: context,
-        barrierDismissible: false,
+        barrierDismissible: true,
         useSafeArea: true,
         builder: (BuildContext context) {
+          _loaderDialogContext = context;
           return AnnotatedRegion(
             value: SystemUiOverlayStyle(
               statusBarColor: Colors.black.withOpacity(0),
             ),
             child: SafeArea(
               child: PopScope(
-                canPop: false,
+                canPop: true,
                 onPopInvoked: (didPop) {
-                  return;
+                  if (isLoadingShowing) {
+                    isLoadingShowing = false;
+                  }
+                  _loaderDialogContext = null;
+                  if (!didPop) {
+                    Navigator.of(context, rootNavigator: true).pop();
+                  }
                 },
                 child: Center(
                   child: UiUtils.progress(
@@ -45,7 +54,14 @@ class Widgets {
   static void hideLoder(BuildContext context) {
     if (isLoadingShowing) {
       isLoadingShowing = false;
-      Navigator.of(context).pop();
+      if (_loaderDialogContext != null) {
+        Navigator.of(_loaderDialogContext!, rootNavigator: true).pop();
+        _loaderDialogContext = null;
+      } else {
+        if (Navigator.of(context, rootNavigator: true).canPop()) {
+          Navigator.of(context, rootNavigator: true).pop();
+        }
+      }
     }
   }
 

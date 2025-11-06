@@ -62,6 +62,8 @@ class SignUpMainScreen extends StatefulWidget {
   }
 }
 
+const bool _kSkipPhoneVerification = true;
+
 class LoginScreenState extends State<SignUpMainScreen> {
   // ===== Controllers =====
   final TextEditingController mobileCtrl = TextEditingController();
@@ -304,7 +306,18 @@ class LoginScreenState extends State<SignUpMainScreen> {
         "platform_type": Platform.isAndroid ? "android" : "ios",
       };
 
+      debugPrint(
+        '[SignUpMainScreen] Sending user-signup payload (sanitised) -> '
+        'account_type: ${payload['account_type']} | '
+        'mobile: ${payload['mobile']} | '
+        'email: ${payload['email']} | '
+        'code_present: ${payload.containsKey('code')}',
+      );
+
       final response = await Api.post(url: "user-signup", parameter: payload);
+      debugPrint(
+        '[SignUpMainScreen] user-signup response => error: ${response['error']}',
+      );
 
       if (response['error'] == false) {
         HiveUtils.setJWT(response['token']);
@@ -508,16 +521,6 @@ class LoginScreenState extends State<SignUpMainScreen> {
     if (!form.validate()) return;
 
 
-    if (codeCtrl.text.trim().isEmpty) {
-      HelperUtils.showSnackBarMessage(
-        context,
-        'Please enter your referral code.',
-        messageDuration: 3,
-        type: MessageType.warning,
-      );
-      return;
-    }
-
     if (!agreed) {
       HelperUtils.showSnackBarMessage(
         context,
@@ -540,10 +543,15 @@ class LoginScreenState extends State<SignUpMainScreen> {
 
     Widgets.showLoader(context);
 
-    final locationPayload = await _prepareLocationPayload();
-    if (locationPayload == null) {
-      Widgets.hideLoder(context);
-      return;
+    Map<String, dynamic>? locationPayload;
+    final String referralCode = codeCtrl.text.trim();
+
+    if (referralCode.isNotEmpty) {
+      locationPayload = await _prepareLocationPayload();
+      if (locationPayload == null) {
+        Widgets.hideLoder(context);
+        return;
+      }
     }
 
     try {
@@ -553,15 +561,17 @@ class LoginScreenState extends State<SignUpMainScreen> {
         "mobile": mobileCtrl.text,
         "password": passwordCtrl.text,
         "account_type": selectedAccountType ?? "1",
-        "code": codeCtrl.text.trim(),
         "email": emailCtrl.text,
         "country_code": countryCode?.toString() ?? "",
         "country_name": countryName ?? "Unknown",
         "flag_emoji": flagEmoji ?? "ye",
         "platform_type": Platform.isAndroid ? "android" : "ios",
-        ...locationPayload,
+        ...?locationPayload,
       };
 
+      if (referralCode.isNotEmpty) {
+        basePayload["code"] = referralCode;
+      }
 
       Map<String, dynamic> payload;
 
@@ -601,26 +611,39 @@ class LoginScreenState extends State<SignUpMainScreen> {
         HiveUtils.setJWT(response['token']);
         HiveUtils.setUserData(response['data']);
         HiveUtils.setUserIsAuthenticated(true);
-        await NotificationService.resendPendingTokenIfNeeded();
+        unawaited(NotificationService.resendPendingTokenIfNeeded());
 
         context.read<UserDetailsCubit>().fill(HiveUtils.getUserDetails());
         FetchSystemSettingsCubit.refreshPermissionsForCurrentUser(
           context,
           clearCacheBeforeFetch: true,
         );
-        Navigator.pushNamed(
-          context,
-          Routes.otp,
-          arguments: {
-            'selectedAccountType': selectedAccountType,
-            'phoneNumber': mobileCtrl.text,
-            'countryCode': countryCode,
-            'username': usernameCtrl.text,
-            'password': passwordCtrl.text,
-            'isFromGoogleLogin': isFromGoogleLogin,
-            'googleData': googleData,
-          },
-        );
+        Widgets.hideLoder(context);
+        if (!mounted) return;
+
+        if (_kSkipPhoneVerification) {
+          HelperUtils.showSnackBarMessage(
+            context,
+            'تم إنشاء الحساب وسيتم تفعيل التحقق لاحقاً.',
+            messageDuration: 3,
+            type: MessageType.success,
+          );
+          await _completeSignupFlowWithoutOtp();
+        } else {
+          Navigator.pushNamed(
+            context,
+            Routes.otp,
+            arguments: {
+              'selectedAccountType': selectedAccountType,
+              'phoneNumber': mobileCtrl.text,
+              'countryCode': countryCode,
+              'username': usernameCtrl.text,
+              'password': passwordCtrl.text,
+              'isFromGoogleLogin': isFromGoogleLogin,
+              'googleData': googleData,
+            },
+          );
+        }
       } else {
         HelperUtils.showSnackBarMessage(
           context,
@@ -629,11 +652,85 @@ class LoginScreenState extends State<SignUpMainScreen> {
         );
       }
     } catch (e) {
+      String message = "registrationError".translate(context);
+      if (e is ApiHttpException) {
+        final dynamic payload = e.payload;
+        if (payload is Map<String, dynamic>) {
+          final dynamic serverMessage = payload['message'];
+          if (serverMessage is String && serverMessage.trim().isNotEmpty) {
+            message = serverMessage.trim();
+          }
+        } else if (payload is String && payload.trim().isNotEmpty) {
+          message = payload.trim();
+        }
+      } else if (e is ApiException) {
+        message = e.toString();
+      } else {
+        message = e.toString();
+      }
+
       HelperUtils.showSnackBarMessage(
-          context, e.toString(), messageDuration: 3);
+        context,
+        message,
+        messageDuration: 3,
+      );
 
     } finally {
       Widgets.hideLoder(context);
+    }
+  }
+
+  Future<void> _completeSignupFlowWithoutOtp() async {
+    if (!mounted) return;
+
+    try {
+      final userDetails = HiveUtils.getUserDetails();
+      if (userDetails != null) {
+        userDetails.isVerified = 1;
+        HiveUtils.setUserData(userDetails.toJson());
+      }
+
+      if (selectedAccountType == "2" || selectedAccountType == "3") {
+        Navigator.pushNamed(
+          context,
+          Routes.signup,
+          arguments: {
+            'selectedAccountType': selectedAccountType,
+            'phoneNumber': mobileCtrl.text,
+            'countryCode': countryCode,
+          },
+        );
+        return;
+      }
+
+      HiveUtils.setUserIsAuthenticated(true);
+      await NotificationService.resendPendingTokenIfNeeded();
+      FetchSystemSettingsCubit.refreshPermissionsForCurrentUser(
+        context,
+        clearCacheBeforeFetch: true,
+      );
+
+      final String? cityName = HiveUtils.getCityName();
+      if (cityName != null &&
+          cityName.isNotEmpty &&
+          cityName.toLowerCase() != 'null') {
+        HelperUtils.killPreviousPages(
+          context,
+          Routes.main,
+          {"from": "signup"},
+        );
+      } else {
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          Routes.locationPermissionScreen,
+          (route) => false,
+        );
+      }
+    } catch (_) {
+      HelperUtils.killPreviousPages(
+        context,
+        Routes.main,
+        {"from": "signup"},
+      );
     }
   }
 

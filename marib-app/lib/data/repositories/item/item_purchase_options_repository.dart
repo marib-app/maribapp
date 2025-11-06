@@ -90,7 +90,10 @@ class ItemPurchaseOptionsRepository {
         ? Map<String, dynamic>.from(response['data'])
         : null;
 
-    final String message = response['message']?.toString() ?? 'تم الحفظ بنجاح';
+    String message = response['message']?.toString().trim() ?? '';
+    if (message.isEmpty || message.toLowerCase() == 'null') {
+      message = 'تم الحفظ بنجاح';
+    }
 
     if (data == null) {
       throw Exception('unexpected-response');

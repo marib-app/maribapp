@@ -786,6 +786,42 @@ class Api {
     'banks',
   ];
 
+
+  /// مسار بوابات المتجر الجديدة (يجب تمرير هوية التاجر أو السلَج/المعرف).
+  static String storeGatewaysApi(dynamic seller) {
+    final String normalized = _normalizeStoreIdentifier(seller);
+    return 'stores/$normalized/gateways';
+  }
+
+  /// مسار CRUD العام لحسابات بوابات المتجر.
+  static const String storeGatewayAccountsApi = 'store-gateway-accounts';
+
+  /// مسار حساب محدد ضمن [storeGatewayAccountsApi].
+  static String storeGatewayAccountApi(dynamic accountId) {
+    final String normalized = Uri.encodeComponent('$accountId');
+    return '$storeGatewayAccountsApi/$normalized';
+  }
+
+  /// بعض المتحكمات توفر تفعيل/تعطيل عبر PATCH/POST فرعي، نوفر مُساعدًا موحدًا.
+  static String storeGatewayAccountActivationApi(
+      dynamic accountId,
+      String action,
+      ) {
+    final String normalized = Uri.encodeComponent('$accountId');
+    final String normalizedAction = Uri.encodeComponent(action.trim());
+    return '$storeGatewayAccountsApi/$normalized/$normalizedAction';
+  }
+
+  static String _normalizeStoreIdentifier(dynamic value) {
+    final String stringified = value is String ? value : '$value';
+    if (stringified.trim().isEmpty) {
+      throw ArgumentError('Invalid seller identifier: "$value"');
+    }
+    return Uri.encodeComponent(stringified.trim());
+  }
+
+
+
   static const int _manualBankDefaultPerPage = 50;
   static const int _manualBankMaxLoops = 20;
 

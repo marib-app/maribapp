@@ -178,8 +178,23 @@ class CheckoutRepository {
         ) ??
         fallbackAddress;
 
-    final List<CheckoutBank> banks =
-        _parseBanks(paymentData ?? paymentSettings);
+    final List<CheckoutBank> storeBanks =
+    await _fetchStoreGatewayBanks(cartItems);
+
+    List<CheckoutBank> banks = storeBanks;
+
+    if (storeBanks.isEmpty) {
+      banks = _parseBanks(paymentData ?? paymentSettings);
+    } else {
+      final Map<String, dynamic>? paymentSource =
+      _mapify(paymentData ?? paymentSettings);
+      final CheckoutBank? eastYemenBank = _parseEastYemenBank(paymentSource);
+      if (eastYemenBank != null &&
+          !banks
+              .any((CheckoutBank bank) => bank.paymentMethod == eastYemenBank.paymentMethod)) {
+        banks = List<CheckoutBank>.from(banks)..add(eastYemenBank);
+      }
+    }
 
     return CheckoutResult(
       cartItems: cartItems,
@@ -856,6 +871,469 @@ class CheckoutRepository {
       },
     );
   }
+
+
+  Future<List<CheckoutBank>> _fetchStoreGatewayBanks(List<Cart> cartItems) async {
+    if (cartItems.isEmpty) {
+      return const <CheckoutBank>[];
+    }
+
+    final Set<String> sellerIdentifiers = <String>{};
+    for (final Cart item in cartItems) {
+      final String? identifier = _sellerIdentifierFromCart(item);
+      if (identifier != null && identifier.isNotEmpty) {
+        sellerIdentifiers.add(identifier);
+      }
+    }
+
+    if (sellerIdentifiers.isEmpty) {
+      return const <CheckoutBank>[];
+    }
+
+    final List<CheckoutBank> aggregated = <CheckoutBank>[];
+
+    for (final String seller in sellerIdentifiers) {
+      try {
+        final Map<String, dynamic> response = await Api.get(
+          url: Api.storeGatewaysApi(seller),
+        );
+        final List<CheckoutBank> parsed = _parseStoreGateways(
+          response,
+          sellerIdentifier: seller,
+        );
+        aggregated.addAll(parsed);
+      } on ApiHttpException catch (error) {
+        if ({401, 403, 404}.contains(error.statusCode)) {
+          continue;
+        }
+        rethrow;
+      } catch (_) {
+        // تجاهل فشل التاجر الفردي ومتابعة بقية التجار.
+      }
+    }
+
+    if (aggregated.isEmpty) {
+      return const <CheckoutBank>[];
+    }
+
+    return _dedupeCheckoutBanks(aggregated);
+  }
+
+  String? _sellerIdentifierFromCart(Cart cart) {
+    final int? userId = cart.user?.id;
+    if (userId != null && userId > 0) {
+      return '$userId';
+    }
+
+    final Map<String, dynamic>? info = cart.user?.additionalInfo;
+    if (info != null && info.isNotEmpty) {
+      for (final String key in const <String>[
+        'store_id',
+        'storeId',
+        'store_slug',
+        'storeSlug',
+        'seller_id',
+        'sellerId',
+        'slug',
+        'identifier',
+      ]) {
+        final String? candidate = _asString(info[key]);
+        if (candidate != null && candidate.trim().isNotEmpty) {
+          return candidate.trim();
+        }
+      }
+    }
+
+    return null;
+  }
+
+  List<CheckoutBank> _parseStoreGateways(
+      dynamic payload, {
+        required String sellerIdentifier,
+      }) {
+    final List<CheckoutBank> banks = <CheckoutBank>[];
+    final Set<int> visited = <int>{};
+
+    void inspect(
+        dynamic node,
+        _StoreGatewayContext context,
+        ) {
+      if (node == null) {
+        return;
+      }
+
+      if (node is Iterable) {
+        for (final dynamic element in node) {
+          inspect(element, context);
+        }
+        return;
+      }
+
+      final Map<String, dynamic>? map = _mapify(node);
+      if (map == null || map.isEmpty) {
+        return;
+      }
+
+      final int identity = identityHashCode(map);
+      if (!visited.add(identity)) {
+        return;
+      }
+
+      _StoreGatewayContext currentContext = context;
+
+      final Map<String, dynamic>? nestedGateway =
+          _mapify(map['store_gateway']) ?? _mapify(map['storeGateway']);
+      if (nestedGateway != null && nestedGateway.isNotEmpty) {
+        inspect(nestedGateway, currentContext);
+      }
+
+      if (_looksLikeStoreGateway(map)) {
+        final Map<String, dynamic> gateway = Map<String, dynamic>.from(map);
+        final int? gatewayId = _asInt(_firstValue(gateway, const <List<String>>[
+          <String>['store_gateway_id'],
+          <String>['gateway_id'],
+          <String>['id'],
+          <String>['pivot', 'store_gateway_id'],
+        ])) ??
+            currentContext.gatewayId;
+
+        final String? gatewayKey = _asString(_firstValue(gateway, const <List<String>>[
+          <String>['gateway'],
+          <String>['payment_gateway'],
+          <String>['payment_method'],
+          <String>['method'],
+          <String>['key'],
+          <String>['slug'],
+        ])) ??
+            currentContext.gatewayKey;
+
+        final String? gatewayLabel = _asString(_firstValue(gateway, const <List<String>>[
+          <String>['display_name'],
+          <String>['displayName'],
+          <String>['name'],
+          <String>['label'],
+          <String>['title'],
+        ])) ??
+            currentContext.gatewayLabel;
+
+        final bool? gatewayActive = _asBool(_firstValue(gateway, const <List<String>>[
+          <String>['is_active'],
+          <String>['active'],
+          <String>['enabled'],
+          <String>['status'],
+        ])) ??
+            currentContext.isGatewayActive;
+
+        final Map<String, dynamic>? gatewayRaw = currentContext.gatewayRaw == null
+            ? Map<String, dynamic>.from(gateway)
+            : <String, dynamic>{
+          ...currentContext.gatewayRaw!,
+          ...gateway,
+        };
+
+        currentContext = currentContext.copyWith(
+          gatewayId: gatewayId,
+          gatewayKey: gatewayKey?.trim().isNotEmpty == true
+              ? gatewayKey!.trim()
+              : currentContext.gatewayKey,
+          gatewayLabel: gatewayLabel ?? currentContext.gatewayLabel,
+          isGatewayActive: gatewayActive ?? currentContext.isGatewayActive,
+          gatewayRaw: gatewayRaw,
+        );
+      }
+
+      final Map<String, dynamic>? accountEnvelope =
+          _mapify(map['account']) ?? _mapify(map['bank_account']);
+      if (accountEnvelope != null && accountEnvelope.isNotEmpty) {
+        inspect(accountEnvelope, currentContext);
+      }
+
+      if (_looksLikeStoreGatewayAccount(map)) {
+        final CheckoutBank? bank =
+        _checkoutBankFromStoreAccount(map, currentContext);
+        if (bank != null) {
+          banks.add(bank);
+        }
+      }
+
+      const List<String> containerKeys = <String>[
+        'accounts',
+        'accounts_data',
+        'accountsData',
+        'store_gateway_accounts',
+        'storeGatewayAccounts',
+        'manual_payment_accounts',
+        'manualPaymentAccounts',
+        'store_gateways',
+        'storeGateways',
+        'gateways',
+        'items',
+        'data',
+        'records',
+        'result',
+        'payload',
+      ];
+
+      for (final String key in containerKeys) {
+        if (!map.containsKey(key)) {
+          continue;
+        }
+        inspect(map[key], currentContext);
+      }
+
+      for (final dynamic value in map.values) {
+        if (value is Map || value is Iterable) {
+          inspect(value, currentContext);
+        }
+      }
+    }
+
+    final _StoreGatewayContext initialContext =
+    _StoreGatewayContext(sellerId: sellerIdentifier);
+    inspect(payload, initialContext);
+
+    return banks;
+  }
+
+  CheckoutBank? _checkoutBankFromStoreAccount(
+      Map<String, dynamic> source,
+      _StoreGatewayContext context,
+      ) {
+    final Map<String, dynamic> map = Map<String, dynamic>.from(source);
+
+    for (final String key in const <String>['account', 'details', 'meta']) {
+      final Map<String, dynamic>? nested = _mapify(source[key]);
+      if (nested != null) {
+        map.addAll(nested);
+      }
+    }
+
+    final Map<String, dynamic>? pivot = _mapify(source['pivot']);
+
+    final int? storeGatewayAccountId = _asInt(_firstValue(map, const <List<String>>[
+      <String>['store_gateway_account_id'],
+      <String>['account_id'],
+      <String>['id'],
+      <String>['pivot', 'account_id'],
+    ])) ??
+        _asInt(pivot?['account_id']);
+
+    final int? storeGatewayId = _asInt(_firstValue(map, const <List<String>>[
+      <String>['store_gateway_id'],
+      <String>['gateway_id'],
+      <String>['pivot', 'store_gateway_id'],
+    ])) ??
+        _asInt(pivot?['store_gateway_id']) ??
+        context.gatewayId;
+
+    String? paymentMethod = context.gatewayKey ??
+        _asString(_firstValue(map, const <List<String>>[
+          <String>['payment_method'],
+          <String>['paymentMethod'],
+          <String>['gateway'],
+          <String>['gateway_key'],
+          <String>['method'],
+        ]));
+
+    final String? name = _asString(_firstValue(map, const <List<String>>[
+      <String>['bank_name'],
+      <String>['bankName'],
+      <String>['name'],
+      <String>['title'],
+      <String>['label'],
+      <String>['display_name'],
+      <String>['displayName'],
+    ])) ??
+        context.gatewayLabel;
+
+    final String? accountName = _asString(_firstValue(map, const <List<String>>[
+      <String>['account_name'],
+      <String>['beneficiary_name'],
+      <String>['recipient_name'],
+      <String>['account_holder'],
+      <String>['holder'],
+    ]));
+
+    final String? accountNumber = _asString(_firstValue(map, const <List<String>>[
+      <String>['account_number'],
+      <String>['accountNumber'],
+      <String>['number'],
+      <String>['iban'],
+    ]));
+
+    final String? iban = _asString(_firstValue(map, const <List<String>>[
+      <String>['iban'],
+      <String>['iban_number'],
+      <String>['ibanNumber'],
+    ]));
+
+    final String? branch = _asString(_firstValue(map, const <List<String>>[
+      <String>['branch'],
+      <String>['branch_name'],
+      <String>['branchName'],
+    ]));
+
+    final String? notes = _asString(_firstValue(map, const <List<String>>[
+      <String>['notes'],
+      <String>['note'],
+      <String>['description'],
+      <String>['instructions'],
+    ]));
+
+    final String? logoUrl = _asString(_firstValue(map, const <List<String>>[
+      <String>['logo_url'],
+      <String>['logoUrl'],
+      <String>['logo'],
+      <String>['image'],
+      <String>['icon'],
+    ]));
+
+    final bool? isActive = _asBool(_firstValue(map, const <List<String>>[
+      <String>['is_active'],
+      <String>['active'],
+      <String>['enabled'],
+      <String>['status'],
+    ])) ??
+        _asBool(pivot?['is_active']) ??
+        context.isGatewayActive;
+
+    final int? bankId = _asInt(_firstValue(map, const <List<String>>[
+      <String>['bank_id'],
+      <String>['bankId'],
+    ]));
+
+    final String resolvedName = name?.trim() ?? '';
+    if (resolvedName.isEmpty) {
+      return null;
+    }
+
+    paymentMethod = () {
+      final String? trimmed = paymentMethod?.trim();
+      if (trimmed == null || trimmed.isEmpty || trimmed.toLowerCase() == 'null') {
+        return 'manual_bank';
+      }
+      return trimmed;
+    }();
+
+    final Map<String, dynamic> raw = <String, dynamic>{
+      'seller_id': context.sellerId,
+      'store_gateway': context.gatewayRaw,
+      'store_gateway_account': Map<String, dynamic>.from(source),
+    };
+
+    return CheckoutBank(
+      id: bankId,
+      name: resolvedName,
+      paymentMethod: paymentMethod!,
+      accountName: accountName,
+      accountNumber: accountNumber,
+      iban: iban,
+      branch: branch,
+      logoUrl: logoUrl,
+      notes: notes,
+      storeGatewayId: storeGatewayId,
+      storeGatewayAccountId: storeGatewayAccountId,
+      isActive: isActive,
+      raw: raw,
+    );
+  }
+
+  bool _looksLikeStoreGateway(Map<String, dynamic> map) {
+    if (map.containsKey('accounts') ||
+        map.containsKey('store_gateway_accounts') ||
+        map.containsKey('storeGateways') ||
+        map.containsKey('store_gateway')) {
+      return true;
+    }
+
+    final dynamic keyCandidate = _firstValue(map, const <List<String>>[
+      <String>['gateway'],
+      <String>['payment_gateway'],
+      <String>['payment_method'],
+      <String>['method'],
+      <String>['key'],
+      <String>['slug'],
+    ]);
+
+    if (keyCandidate is String && keyCandidate.trim().isNotEmpty) {
+      return true;
+    }
+
+    return false;
+  }
+
+  bool _looksLikeStoreGatewayAccount(Map<String, dynamic> map) {
+    return map.containsKey('bank_name') ||
+        map.containsKey('account_name') ||
+        map.containsKey('accountNumber') ||
+        map.containsKey('account_number') ||
+        map.containsKey('iban') ||
+        map.containsKey('account');
+  }
+
+  List<CheckoutBank> _dedupeCheckoutBanks(List<CheckoutBank> banks) {
+    final Map<String, CheckoutBank> deduped = <String, CheckoutBank>{};
+
+    for (final CheckoutBank bank in banks) {
+      if (bank.isActive == false) {
+        continue;
+      }
+
+      final String key = <String?>[
+        bank.storeGatewayAccountId?.toString(),
+        bank.storeGatewayId?.toString(),
+        bank.paymentMethod.toLowerCase(),
+        bank.accountNumber?.trim().toLowerCase(),
+        bank.name.trim().toLowerCase(),
+      ].where((String? part) => part != null && part!.isNotEmpty).join('|');
+
+      deduped[key] = bank;
+    }
+
+    final List<CheckoutBank> result = deduped.values.toList();
+    result.sort(_compareStoreGatewayBanks);
+    return result;
+  }
+
+  int _compareStoreGatewayBanks(CheckoutBank a, CheckoutBank b) {
+    final int orderA = _storeGatewayDisplayOrder(a) ?? 0;
+    final int orderB = _storeGatewayDisplayOrder(b) ?? 0;
+    if (orderA != orderB) {
+      return orderA.compareTo(orderB);
+    }
+    return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+  }
+
+  int? _storeGatewayDisplayOrder(CheckoutBank bank) {
+    final Map<String, dynamic>? accountRaw =
+    _mapify(bank.raw?['store_gateway_account']);
+    final int? accountOrder = _asInt(accountRaw?['display_order']);
+    if (accountOrder != null) {
+      return accountOrder;
+    }
+
+    final Map<String, dynamic>? gatewayRaw = _mapify(bank.raw?['store_gateway']);
+    final int? gatewayOrder = _asInt(gatewayRaw?['display_order']);
+    if (gatewayOrder != null) {
+      return gatewayOrder;
+    }
+
+    return _asInt(bank.raw?['display_order']);
+  }
+
+  @visibleForTesting
+  List<CheckoutBank> parseStoreGatewaysForTesting(
+      dynamic payload, {
+        required String sellerIdentifier,
+      }) {
+    return _dedupeCheckoutBanks(
+      _parseStoreGateways(
+        payload,
+        sellerIdentifier: sellerIdentifier,
+      ),
+    );
+  }
+
 
   List<CheckoutBank> _parseBanks(dynamic payload) {
     final Iterable<Map<String, dynamic>> candidates = _extractBankMaps(payload);
@@ -1566,5 +2044,41 @@ class CheckoutRepository {
       }
     }
     return null;
+  }
+}
+
+
+class _StoreGatewayContext {
+  const _StoreGatewayContext({
+    required this.sellerId,
+    this.gatewayId,
+    this.gatewayKey,
+    this.gatewayLabel,
+    this.isGatewayActive,
+    this.gatewayRaw,
+  });
+
+  final String sellerId;
+  final int? gatewayId;
+  final String? gatewayKey;
+  final String? gatewayLabel;
+  final bool? isGatewayActive;
+  final Map<String, dynamic>? gatewayRaw;
+
+  _StoreGatewayContext copyWith({
+    int? gatewayId,
+    String? gatewayKey,
+    String? gatewayLabel,
+    bool? isGatewayActive,
+    Map<String, dynamic>? gatewayRaw,
+  }) {
+    return _StoreGatewayContext(
+      sellerId: sellerId,
+      gatewayId: gatewayId ?? this.gatewayId,
+      gatewayKey: gatewayKey ?? this.gatewayKey,
+      gatewayLabel: gatewayLabel ?? this.gatewayLabel,
+      isGatewayActive: isGatewayActive ?? this.isGatewayActive,
+      gatewayRaw: gatewayRaw ?? this.gatewayRaw,
+    );
   }
 }

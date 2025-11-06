@@ -16,7 +16,7 @@ import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/login/lib/payloads.dart';
 import 'package:marib/utils/ui_utils.dart';
 
-import 'package:marib/ui/screens/widgets/auth_status_bar.dart';
+import 'package:marib/ui/screens/auth/widgets/auth_status_bar.dart';
 
 // =================== ط·آ·ط¢آ«ط·آ¸ط«â€ ط·آ·ط¢آ§ط·آ·ط¢آ¨ط·آ·ط¹آ¾ ===================
 const double kSidePadding = 20.0;
@@ -42,76 +42,63 @@ class LoginScreenFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget content;
-    if (isOtpSent && phoneLoginPayload != null) {
-      content = KeyedSubtree(
-        key: const ValueKey('otp-view'),
-        child: _VerifyOtpView(
-          phoneLoginPayload: phoneLoginPayload!,
-          currentOtp: currentOtp,
-          onOtpChanged: onOtpChanged,
-          onResendOtp: onResendOtp,
-          onVerifyOtp: onVerifyOtp,
-          onSkip: onSkip,
-          onChangeLoginMode: onChangeLoginMode,
-        ),
-      );
-    } else if (sendMailClicked) {
-      content = KeyedSubtree(
-        key: const ValueKey('email-password-view'),
-        child: _EnterPasswordEmailView(
-          emailValue: emailController.text,
-          passwordController: passwordController,
-          isObscure: isObscure,
-          onToggleObscure: onToggleObscure,
-          onSubmitEmailPassword: () => onSubmitCredentials(
-            emailController.text,
-            passwordController.text,
-          ),
-          onSkip: onSkip,
-          onChangeLoginMode: onChangeLoginMode,
-        ),
-      );
-    } else {
-      content = KeyedSubtree(
-        key: const ValueKey('login-options-view'),
-        child: _LoginOptionsView(
-          isMobileNumberField: isMobileNumberField,
-          isLoading: isLoading,
-          isObscure: isObscure,
-          phoneEmailError: phoneEmailError,
-          passwordError: passwordError,
-          emailController: emailController,
-          passwordController: passwordController,
-          countryCode: countryCode,
-          flagEmoji: flagEmoji,
-          onChangedNumberOrEmail: onChangedNumberOrEmail,
-          onShowCountryPicker: onShowCountryPicker,
-          onToggleObscure: onToggleObscure,
-          onForgotPassword: onForgotPassword,
-          onSubmit: () => onSubmitCredentials(
-            emailController.text,
-            passwordController.text,
-          ),
-          showMobileAuth: showMobileAuth,
-          showEmailAuth: showEmailAuth,
-          showGoogle: showGoogle,
-          showApple: showApple,
-          onGoogleLogin: onGoogleLogin,
-          onAppleLogin: onAppleLogin,
-          onTapContinue: onTapContinue,
-          onGoToSignup: onGoToSignup,
-          onSkip: onSkip,
-        ),
-      );
-    }
+    final bool hasAncestorScroll = Scrollable.maybeOf(context) != null;
+    final Widget scrollableChild =
+        hasAncestorScroll ? child : SingleChildScrollView(child: child);
 
-    return Form(
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 220),
-        switchInCurve: Curves.easeOut,
-        switchOutCurve: Curves.easeIn,
-        child: content,
+    final Size size = MediaQuery.of(context).size;
+    final bool isWide = size.width >= 640;
+    final theme = Theme.of(context);
+    final Color surface = theme.colorScheme.surface;
+
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 320),
+          curve: Curves.easeInOutCubic,
+          decoration: BoxDecoration(
+            color: surface.withOpacity(
+              theme.brightness == Brightness.dark ? 0.95 : 0.98,
+            ),
+            borderRadius: BorderRadius.circular(isWide ? 40 : 28),
+            border: Border.all(
+              color: context.color.territoryColor.withOpacity(
+                theme.brightness == Brightness.dark ? 0.18 : 0.12,
+              ),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.12),
+                blurRadius: 38,
+                offset: const Offset(0, 24),
+              ),
+            ],
+          ),
+          padding: EdgeInsets.symmetric(
+            horizontal: isWide ? 44 : 22,
+            vertical: isWide ? 36 : 22,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _LoginHeroHeader(
+                logoAsset: logoAsset,
+                titleKey: titleKey,
+                logoSize: logoSize,
+              ),
+              const SizedBox(height: 24),
+              Divider(
+                height: 1,
+                thickness: 0.8,
+                color: context.color.textLightColor.withOpacity(0.2),
+              ),
+              const SizedBox(height: 24),
+              scrollableChild,
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -165,7 +152,8 @@ class _LoginHeroHeader extends StatelessWidget {
       ],
     );
   }
-}// =====================================================
+}
+// =====================================================
 // LoginScreenUI ط£آ¢أ¢â€ڑآ¬أ¢â‚¬â€Œ ط·آ¸أ¢â‚¬آ ط·آ¸ط¸آ¾ط·آ·ط¢آ³ ط·آ·ط¢آ§ط·آ¸أ¢â‚¬â€چط·آ·ط¢آ§ط·آ·ط¢آ³ط·آ¸أ¢â‚¬آ¦ ط·آ¸ط«â€ ط·آ·ط¢آ§ط·آ¸أ¢â‚¬â€چط·آ¸أ¢â€ڑآ¬ API
 // ط·آ·ط¹آ¾ط·آ¸أ¢â‚¬آ¦ ط·آ·ط¹آ¾ط·آ·ط¢آ­ط·آ¸ط«â€ ط·آ¸ط¸آ¹ط·آ¸أ¢â‚¬â€چط·آ¸أ¢â‚¬طŒط·آ·ط¢آ§ ط·آ¸أ¢â‚¬â€چط·آ·ط¢آ¨ط·آ·ط¢آ·ط·آ·ط¢آ§ط·آ¸أ¢â‚¬ع‘ط·آ·ط¢آ© ط·آ·ط¢آ£ط·آ¸أ¢â‚¬آ ط·آ¸ط¸آ¹ط·آ¸أ¢â‚¬ع‘ط·آ·ط¢آ© (ط·آ·ط¢آ¨ط·آ·ط¢آ¯ط·آ¸ط«â€ ط·آ¸أ¢â‚¬آ  ط·آ·ط¢آ±ط·آ·ط¢آ£ط·آ·ط¢آ³) ط£آ¢أ¢â€ڑآ¬أ¢â‚¬â€Œ ط·آ·ط¢آ§ط·آ¸أ¢â‚¬â€چط·آ·ط¢آ±ط·آ·ط¢آ£ط·آ·ط¢آ³ ط·آ¸ط¸آ¹ط·آ·ط¢آ£ط·آ·ط¹آ¾ط·آ¸ط¸آ¹ ط·آ¸أ¢â‚¬آ¦ط·آ¸أ¢â‚¬آ  LoginHeaderSection
 // =====================================================
@@ -326,6 +314,8 @@ class LoginScreenUI extends StatelessWidget {
       ),
     );
   }
+}
+
 // ==================== Sub-Views ====================
 class _LoginOptionsView extends StatefulWidget {
   final bool isMobileNumberField;
@@ -382,7 +372,6 @@ class _LoginOptionsView extends StatefulWidget {
     required this.onTapContinue,
     required this.onGoToSignup,
     required this.onSkip,
-    super.key,
   });
 
   @override

@@ -125,8 +125,8 @@ Route::get('metal-rates', [PublicMetalRateController::class, 'index']);
     Route::delete('store-gateway-accounts/{storeGatewayAccount}', [StoreGatewayAccountController::class, 'destroy'])
         ->whereNumber('storeGatewayAccount');
 
-    Route::get('manual-banks', [StoreGatewayController::class, 'index']);
-    Route::get('manual-payments/banks', [StoreGatewayController::class, 'index']);
+    Route::get('manual-banks', [ApiController::class, 'getManualBanks']);
+    Route::get('manual-payments/banks', [ApiController::class, 'getManualBanks']);
 
     Route::post('manual-payment-requests', [ApiController::class, 'storeManualPaymentRequest']);
     Route::get('manual-payment-requests', [ApiController::class, 'getManualPaymentRequests']);

@@ -1,29 +1,8 @@
 // ================================
-// File: lib/ui/screens/auth/login/sign_in_main_ui.dart
+// File: lib/ui/screens/auth/login/login_screen_ui.dart
 // Purpose: Pure presentation for Login. Matches the same look & feel as sign_up_main_ui.dart
-//          Uses SliverAppBar header + elegant form card. No business logic here.
 // ================================
 
-import 'dart:io';
-
-import 'package:flutter/material.dart';
-import 'package:flutter_svg/svg.dart';
-
-import 'package:marib/ui/theme/theme.dart';
-import 'package:marib/utils/constant.dart';
-import 'package:marib/utils/extensions/extensions.dart';
-import 'package:marib/utils/ui_utils.dart';
-import 'package:marib/utils/app_icon.dart';
-import 'package:sms_autofill/sms_autofill.dart';
-import 'package:marib/ui/screens/widgets/custom_text_form_field.dart';
-import 'package:marib/utils/login/lib/payloads.dart';
-
-// ============= ViewModel & Callbacks =============
-
-// lib/ui/screens/auth/login/login_screen_ui.dart
-
-import 'dart:ui' as ui;
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/svg.dart';
@@ -31,460 +10,178 @@ import 'package:sms_autofill/sms_autofill.dart';
 
 import 'package:marib/ui/screens/widgets/custom_text_form_field.dart';
 import 'package:marib/ui/theme/theme.dart';
-import 'package:marib/utils/extensions/extensions.dart';
-import 'package:marib/utils/ui_utils.dart';
-import 'package:marib/utils/login/lib/payloads.dart';
 import 'package:marib/utils/app_icon.dart';
-import 'package:marib/utils/constant.dart';
-import '../widgets/auth_status_bar.dart';
+import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/helper_utils.dart';
+import 'package:marib/utils/login/lib/payloads.dart';
+import 'package:marib/utils/ui_utils.dart';
 
-// =================== ثوابت ===================
+import 'package:marib/ui/screens/widgets/auth_status_bar.dart';
+
+// =================== ط·آ·ط¢آ«ط·آ¸ط«â€ ط·آ·ط¢آ§ط·آ·ط¢آ¨ط·آ·ط¹آ¾ ===================
 const double kSidePadding = 20.0;
 
 // =====================================================
-// LoginScreenFrame (محفوظ للتوافق - غير مستخدم هنا افتراضياً)
-// يبقى كما هو لو كنت تستخدمه في أماكن ثانية.
+// LoginScreenFrame أ¢â‚¬â€‌ unified hero + form container
 // =====================================================
 class LoginScreenFrame extends StatelessWidget {
   final Widget child;
   final String logoAsset;
   final String titleKey;
-
-  final String? backgroundSvgAsset;
-  final double backgroundSvgOpacity;
-  final BoxFit backgroundSvgFit;
-  final Alignment backgroundSvgAlignment;
-  final EdgeInsets backgroundSvgPadding;
-
-  final double? headerHeight;
-  final double backgroundSvgFactor;
-
-  final double? backgroundSvgWidth;
-  final double? backgroundSvgHeight;
-  final Offset backgroundSvgOffset;
-
   final double maxWidth;
   final double logoSize;
-  final EdgeInsetsGeometry contentPadding;
-  final double edgeFadeSoftness;
-  final bool showPattern;
-
-  final bool randomizeBackground;
-  final int? randomSeed;
-  final double randomOpacityMin;
-  final double randomOpacityMax;
-  final double randomSizeMinFactor;
-  final double randomSizeMaxFactor;
-  final double randomOffsetMax;
-  final double randomPaddingMax;
-  final List<Alignment> randomAlignments;
-  final List<BoxFit> randomFits;
 
   const LoginScreenFrame({
     super.key,
     required this.child,
     this.logoAsset = 'assets/svg/Logo.svg',
     this.titleKey = 'readytoserve',
-    this.backgroundSvgAsset,
-    this.backgroundSvgOpacity = 0.20,
-    this.backgroundSvgFit = BoxFit.contain,
-    this.backgroundSvgAlignment = Alignment.center,
-    this.backgroundSvgPadding = EdgeInsets.zero,
-    this.headerHeight,
-    this.backgroundSvgFactor = 10.0,
-    this.backgroundSvgWidth = 900,
-    this.backgroundSvgHeight,
-    this.backgroundSvgOffset = Offset.zero,
-    this.maxWidth = 560,
-    this.logoSize = 90,
-    this.contentPadding = const EdgeInsets.all(1),
-    this.edgeFadeSoftness = 0.07,
-    this.showPattern = false,
-    this.randomizeBackground = false,
-    this.randomSeed,
-    this.randomOpacityMin = 0.20,
-    this.randomOpacityMax = 0.22,
-    this.randomSizeMinFactor = 0.9,
-    this.randomSizeMaxFactor = 1.6,
-    this.randomOffsetMax = 18,
-    this.randomPaddingMax = 12,
-    this.randomAlignments = const [
-      Alignment.center,
-      Alignment.topLeft,
-      Alignment.topRight,
-      Alignment.bottomLeft,
-      Alignment.bottomRight,
-      Alignment.centerLeft,
-      Alignment.centerRight,
-      Alignment.topCenter,
-      Alignment.bottomCenter,
-    ],
-    this.randomFits = const [BoxFit.contain, BoxFit.cover, BoxFit.scaleDown],
+    this.maxWidth = 640,
+    this.logoSize = 92,
   });
 
   @override
   Widget build(BuildContext context) {
-    // لو فيه Scroll فوقنا → لا نضيف Scroll هنا
-    final hasAncestorScroll = Scrollable.of(context) != null;
-    final Widget scrollableChild = hasAncestorScroll
-        ? child
-        : SingleChildScrollView(
-            child: child,
-          );
-
-    // ملاحظة: لن نعرض الهيدر إلا إذا كان له ارتفاع صريح > 0
-    final double h = (headerHeight ?? 0) > 0 ? headerHeight! : 0;
-
-    return Align(
-      alignment: Alignment.topCenter,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: maxWidth),
-        child: Column(
-          children: [
-            // ===== الهيدر (اختياري) =====
-            if (h > 0)
-              SizedBox(
-                height: h,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        SvgPicture.asset(
-                          logoAsset,
-                          height: logoSize,
-                          color: Colors.white,
-                        ),
-                        const SizedBox(height: 10),
-                        Text(titleKey.translate(context))
-                            .size(context.font.large)
-                            .color(Colors.white),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-            if (h > 0) const SizedBox(height: 10),
-
-            // ===== لوحة المحتوى (فقط) =====
-            _EdgeFade(
-              vSoft: edgeFadeSoftness,
-              child: SizedBox(
-                width: double.infinity,
-                child: _FrostPanel(
-                  padding: contentPadding,
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 1),
-                    switchInCurve: Curves.easeOut,
-                    switchOutCurve: Curves.easeIn,
-                    child: scrollableChild,
-                  ),
-                ),
-              ),
-            ),
-          ],
+    Widget content;
+    if (isOtpSent && phoneLoginPayload != null) {
+      content = KeyedSubtree(
+        key: const ValueKey('otp-view'),
+        child: _VerifyOtpView(
+          phoneLoginPayload: phoneLoginPayload!,
+          currentOtp: currentOtp,
+          onOtpChanged: onOtpChanged,
+          onResendOtp: onResendOtp,
+          onVerifyOtp: onVerifyOtp,
+          onSkip: onSkip,
+          onChangeLoginMode: onChangeLoginMode,
         ),
+      );
+    } else if (sendMailClicked) {
+      content = KeyedSubtree(
+        key: const ValueKey('email-password-view'),
+        child: _EnterPasswordEmailView(
+          emailValue: emailController.text,
+          passwordController: passwordController,
+          isObscure: isObscure,
+          onToggleObscure: onToggleObscure,
+          onSubmitEmailPassword: () => onSubmitCredentials(
+            emailController.text,
+            passwordController.text,
+          ),
+          onSkip: onSkip,
+          onChangeLoginMode: onChangeLoginMode,
+        ),
+      );
+    } else {
+      content = KeyedSubtree(
+        key: const ValueKey('login-options-view'),
+        child: _LoginOptionsView(
+          isMobileNumberField: isMobileNumberField,
+          isLoading: isLoading,
+          isObscure: isObscure,
+          phoneEmailError: phoneEmailError,
+          passwordError: passwordError,
+          emailController: emailController,
+          passwordController: passwordController,
+          countryCode: countryCode,
+          flagEmoji: flagEmoji,
+          onChangedNumberOrEmail: onChangedNumberOrEmail,
+          onShowCountryPicker: onShowCountryPicker,
+          onToggleObscure: onToggleObscure,
+          onForgotPassword: onForgotPassword,
+          onSubmit: () => onSubmitCredentials(
+            emailController.text,
+            passwordController.text,
+          ),
+          showMobileAuth: showMobileAuth,
+          showEmailAuth: showEmailAuth,
+          showGoogle: showGoogle,
+          showApple: showApple,
+          onGoogleLogin: onGoogleLogin,
+          onAppleLogin: onAppleLogin,
+          onTapContinue: onTapContinue,
+          onGoToSignup: onGoToSignup,
+          onSkip: onSkip,
+        ),
+      );
+    }
+
+    return Form(
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 220),
+        switchInCurve: Curves.easeOut,
+        switchOutCurve: Curves.easeIn,
+        child: content,
       ),
     );
   }
 }
 
-// =====================================================
-// Frost & EdgeFade (باقية للتوافق واستخدامات إضافية)
-// =====================================================
-class _FrostPanel extends StatelessWidget {
-  final Widget child;
-  final EdgeInsetsGeometry padding;
-  final double blurSigma;
-  final double tintOpacity;
-  final double depthOpacity;
+class _LoginHeroHeader extends StatelessWidget {
+  final String logoAsset;
+  final String titleKey;
+  final double logoSize;
 
-  const _FrostPanel({
-    required this.child,
-    this.padding = const EdgeInsets.all(300),
-    this.blurSigma = 0,
-    this.tintOpacity = 0.0,
-    this.depthOpacity = 0,
-    super.key,
+  const _LoginHeroHeader({
+    required this.logoAsset,
+    required this.titleKey,
+    required this.logoSize,
   });
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final c1 =
-        scheme.primary.withOpacity(isDark ? tintOpacity : tintOpacity * 0.0);
-    final c2 = scheme.secondary
-        .withOpacity(isDark ? tintOpacity * 0.8 : tintOpacity * 0.0);
-    final c3 =
-        scheme.surface.withOpacity(isDark ? depthOpacity : depthOpacity * 0.0);
+    final textTheme = Theme.of(context).textTheme;
 
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ui.ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              stops: const [0.0, 0.0, 0.0],
-              colors: [c1, c2, c3],
-            ),
-          ),
-          child: Padding(
-            padding: padding,
-            child: child,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Semantics(
+          label: 'App Logo',
+          image: true,
+          child: SvgPicture.asset(
+            logoAsset,
+            height: logoSize,
+            color: context.color.territoryColor,
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _EdgeFade extends StatelessWidget {
-  final Widget child;
-  final double vSoft;
-  final double hSoft;
-
-  const _EdgeFade({
-    required this.child,
-    this.vSoft = 0.0,
-    this.hSoft = 0.0,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    if (vSoft <= 0 && hSoft <= 0) return child;
-
-    final v = vSoft.clamp(0.0, 0.0);
-    final h = hSoft.clamp(0.0, 0.0);
-
-    return ShaderMask(
-      blendMode: BlendMode.dstIn,
-      shaderCallback: (rect) => LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: const [
-          Colors.transparent,
-          Colors.white,
-          Colors.white,
-          Colors.transparent
-        ],
-        stops: [0.0, v, 1 - v, 0.0],
-      ).createShader(rect),
-      child: ShaderMask(
-        blendMode: BlendMode.dstIn,
-        shaderCallback: (rect) => LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: const [
-            Colors.transparent,
-            Colors.white,
-            Colors.white,
-            Colors.transparent
-          ],
-          stops: [0.0, h, 1 - h, 0.0],
-        ).createShader(rect),
-        child: child,
-      ),
-    );
-  }
-}
-
-// =====================================================
-// LoginHeaderSection — نفس الاسم والـ API
-// تم تحويله لاستخدام SliverAppBar ويحتوي child داخل SliverToBoxAdapter
-// =====================================================
-
-class LoginHeaderSection extends StatelessWidget {
-  final bool isBack;
-  final bool isOtpSent;
-  final bool sendMailClicked;
-  final bool isDeleteAccount;
-  final VoidCallback onResetOTP;
-  final VoidCallback onBack;
-  final void Function(bool) updateBackState;
-  final Widget child;
-
-  const LoginHeaderSection({
-    super.key,
-    required this.isBack,
-    required this.isOtpSent,
-    required this.sendMailClicked,
-    required this.isDeleteAccount,
-    required this.onResetOTP,
-    required this.onBack,
-    required this.updateBackState,
-    required this.child,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final mediaQuery = MediaQuery.of(context);
-    // ارتفاع الكيبورد السفلي للحشو أسفل المحتوى
-    final double bottomInset = mediaQuery.viewInsets.bottom;
-    final double statusBarHeight = mediaQuery.viewPadding.top;
-
-    // [محايد لشريط الحالة] نختار لون ثابت من الثيم (لا يتبع لون الصفحة/الهيدر)
-    final Color statusBarBase =
-        LoginStatusBar.resolveBaseColor(context); // لون محايد ومتسق
-
-    // [ستايل شريط الحالة] لون محايد + أيقونات داكنة/فاتحة تلقائيًا
-    final SystemUiOverlayStyle overlay =
-        LoginStatusBar.overlayFor(context, baseColor: statusBarBase);
-
-    return SafeArea(
-      top: false,
-      // [مهم] نرسم نحن منطقة شريط الحالة، ثم نلوّنها يدويًا بالسليفِر الأول
-      child: GestureDetector(
-        onTap: () => FocusScope.of(context).unfocus(),
-        child: PopScope(
-          canPop: isBack,
-          onPopInvoked: (didPop) {
-            if (didPop) {
-              updateBackState(false);
-              return;
-            }
-            // منطق الرجوع الأصلي — بدون تغيير
-            if (isDeleteAccount) {
-              Navigator.pop(context);
-              updateBackState(false);
-              return;
-            }
-            if (isOtpSent) {
-              onResetOTP();
-              updateBackState(false);
-              return;
-            }
-            if (sendMailClicked) {
-              onBack();
-              updateBackState(false);
-              return;
-            }
-
-            HelperUtils.showSnackBarMessage(
-              context,
-              'اضغط مرة أخرى للتأكيد',
-            );
-            updateBackState(true);
-          },
-          child: AnnotatedRegion<SystemUiOverlayStyle>(
-            value: overlay, // [تثبيت] نمرّر ستايل شريط الحالة المحايد
-            child: Scaffold(
-              backgroundColor: context.color.backgroundColor,
-              body: DecoratedBox(
-                // الخلفية العامة كما هي (البرتقالي للهيدر لاحقًا داخل الـ AppBar)
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    colors: [
-                      context.color.territoryColor,
-                      context.color.territoryColor,
-                    ],
-                  ),
-                ),
-                child: CustomScrollView(
-                  keyboardDismissBehavior:
-                      ScrollViewKeyboardDismissBehavior.onDrag,
-                  slivers: [
-                    // [جديد] نلوّن مساحة شريط الحالة فقط بلون محايد مستقل عن الهيدر
-                    SliverPersistentHeader(
-                      pinned: true,
-                      delegate: _LoginStatusBarHeader(
-                        height: statusBarHeight,
-                        baseColor: statusBarBase,
-                      ),
-                    ),
-
-                    // الهيدر (يبقى بتدرّجه البرتقالي وبحوافه الدائرية)
-                    SliverAppBar(
-                      pinned: true,
-                      floating: false,
-                      expandedHeight: 160,
-                      backgroundColor: Colors.transparent,
-                      elevation: 0,
-                      automaticallyImplyLeading: false,
-                      systemOverlayStyle: null,
-                      // [مهم] نتركه null لأننا ضبطنا الـ overlay أعلاه
-                      flexibleSpace: FlexibleSpaceBar(
-                        background: Container(
-                          alignment: Alignment.center,
-                          padding: const EdgeInsets.only(top: 20),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                context.color.territoryColor,
-                                context.color.territoryColor.withOpacity(0.92),
-                              ],
-                            ),
-                            borderRadius: const BorderRadius.only(
-                              bottomLeft: Radius.circular(28),
-                              bottomRight: Radius.circular(28),
-                            ),
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Semantics(
-                                label: 'App Logo',
-                                child: SvgPicture.asset(
-                                  'assets/svg/Logo.svg',
-                                  height: 84,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text("readytoserve".translate(context))
-                                  .size(context.font.large)
-                                  .color(Colors.white.withOpacity(0.95)),
-                            ],
-                          ),
-                        ),
-                      ),
-                      shadowColor: Colors.black26,
-                      surfaceTintColor: Colors.transparent,
-                    ),
-                    // محتوى الصفحة
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding:
-                            EdgeInsets.fromLTRB(2, 12, 2, 16 + bottomInset),
-                        child: child,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+        const SizedBox(height: 12),
+        Text(
+          "welcomeback".translate(context),
+          textAlign: TextAlign.center,
+          style: textTheme.headlineSmall?.copyWith(
+            color: context.color.textColorDark,
+            fontWeight: FontWeight.w600,
           ),
         ),
-      ),
+        const SizedBox(height: 6),
+        Text(
+          titleKey.translate(context),
+          textAlign: TextAlign.center,
+          style: textTheme.bodyLarge?.copyWith(
+            letterSpacing: 0.3,
+            color: context.color.textLightColor.withOpacity(0.8),
+          ),
+        ),
+      ],
     );
   }
-}
-
-// =====================================================
-// LoginScreenUI — نفس الاسم والـ API
-// تم تحويلها لبطاقة أنيقة (بدون رأس) — الرأس يأتي من LoginHeaderSection
+}// =====================================================
+// LoginScreenUI ط£آ¢أ¢â€ڑآ¬أ¢â‚¬â€Œ ط·آ¸أ¢â‚¬آ ط·آ¸ط¸آ¾ط·آ·ط¢آ³ ط·آ·ط¢آ§ط·آ¸أ¢â‚¬â€چط·آ·ط¢آ§ط·آ·ط¢آ³ط·آ¸أ¢â‚¬آ¦ ط·آ¸ط«â€ ط·آ·ط¢آ§ط·آ¸أ¢â‚¬â€چط·آ¸أ¢â€ڑآ¬ API
+// ط·آ·ط¹آ¾ط·آ¸أ¢â‚¬آ¦ ط·آ·ط¹آ¾ط·آ·ط¢آ­ط·آ¸ط«â€ ط·آ¸ط¸آ¹ط·آ¸أ¢â‚¬â€چط·آ¸أ¢â‚¬طŒط·آ·ط¢آ§ ط·آ¸أ¢â‚¬â€چط·آ·ط¢آ¨ط·آ·ط¢آ·ط·آ·ط¢آ§ط·آ¸أ¢â‚¬ع‘ط·آ·ط¢آ© ط·آ·ط¢آ£ط·آ¸أ¢â‚¬آ ط·آ¸ط¸آ¹ط·آ¸أ¢â‚¬ع‘ط·آ·ط¢آ© (ط·آ·ط¢آ¨ط·آ·ط¢آ¯ط·آ¸ط«â€ ط·آ¸أ¢â‚¬آ  ط·آ·ط¢آ±ط·آ·ط¢آ£ط·آ·ط¢آ³) ط£آ¢أ¢â€ڑآ¬أ¢â‚¬â€Œ ط·آ·ط¢آ§ط·آ¸أ¢â‚¬â€چط·آ·ط¢آ±ط·آ·ط¢آ£ط·آ·ط¢آ³ ط·آ¸ط¸آ¹ط·آ·ط¢آ£ط·آ·ط¹آ¾ط·آ¸ط¸آ¹ ط·آ¸أ¢â‚¬آ¦ط·آ¸أ¢â‚¬آ  LoginHeaderSection
 // =====================================================
 class LoginScreenUI extends StatelessWidget {
-  // حالة العرض
+  // ط·آ·ط¢آ­ط·آ·ط¢آ§ط·آ¸أ¢â‚¬â€چط·آ·ط¢آ© ط·آ·ط¢آ§ط·آ¸أ¢â‚¬â€چط·آ·ط¢آ¹ط·آ·ط¢آ±ط·آ·ط¢آ¶
   final bool isOtpSent;
   final bool sendMailClicked;
   final bool isMobileNumberField;
   final bool isLoading;
   final bool isObscure;
 
-  // أخطاء
+  // ط·آ·ط¢آ£ط·آ·ط¢آ®ط·آ·ط¢آ·ط·آ·ط¢آ§ط·آ·ط·إ’
   final String? phoneEmailError;
   final String? passwordError;
 
-  // مدخلات
+  // ط·آ¸أ¢â‚¬آ¦ط·آ·ط¢آ¯ط·آ·ط¢آ®ط·آ¸أ¢â‚¬â€چط·آ·ط¢آ§ط·آ·ط¹آ¾
   final TextEditingController emailController;
   final TextEditingController passwordController;
   final String? countryCode;
@@ -495,7 +192,7 @@ class LoginScreenUI extends StatelessWidget {
   final String? currentOtp;
   final ValueChanged<String?> onOtpChanged;
 
-  // أفعال وأزرار
+  // ط·آ·ط¢آ£ط·آ¸ط¸آ¾ط·آ·ط¢آ¹ط·آ·ط¢آ§ط·آ¸أ¢â‚¬â€چ ط·آ¸ط«â€ ط·آ·ط¢آ£ط·آ·ط¢آ²ط·آ·ط¢آ±ط·آ·ط¢آ§ط·آ·ط¢آ±
   final VoidCallback onSkip;
   final VoidCallback onShowCountryPicker;
   final VoidCallback onToggleObscure;
@@ -510,13 +207,13 @@ class LoginScreenUI extends StatelessWidget {
   final VoidCallback onTapContinue;
   final VoidCallback onGoToSignup;
 
-  // إظهار/إخفاء خيارات
+  // ط·آ·ط¢آ¥ط·آ·ط¢آ¸ط·آ¸أ¢â‚¬طŒط·آ·ط¢آ§ط·آ·ط¢آ±/ط·آ·ط¢آ¥ط·آ·ط¢آ®ط·آ¸ط¸آ¾ط·آ·ط¢آ§ط·آ·ط·إ’ ط·آ·ط¢آ®ط·آ¸ط¸آ¹ط·آ·ط¢آ§ط·آ·ط¢آ±ط·آ·ط¢آ§ط·آ·ط¹آ¾
   final bool showMobileAuth;
   final bool showEmailAuth;
   final bool showGoogle;
   final bool showApple;
 
-  // إدخال التغيير
+  // ط·آ·ط¢آ¥ط·آ·ط¢آ¯ط·آ·ط¢آ®ط·آ·ط¢آ§ط·آ¸أ¢â‚¬â€چ ط·آ·ط¢آ§ط·آ¸أ¢â‚¬â€چط·آ·ط¹آ¾ط·آ·ط·â€؛ط·آ¸ط¸آ¹ط·آ¸ط¸آ¹ط·آ·ط¢آ±
   final ValueChanged<String> onChangedNumberOrEmail;
 
   const LoginScreenUI({
@@ -556,79 +253,79 @@ class LoginScreenUI extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // بطاقة أنيقة بنفس أسلوب التسجيل
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 220),
-      curve: Curves.easeOut,
-      decoration: BoxDecoration(
-        color: context.color.primaryColor,
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 22,
-            offset: const Offset(0, 10),
+    Widget content;
+    if (isOtpSent && phoneLoginPayload != null) {
+      content = KeyedSubtree(
+        key: const ValueKey('otp-view'),
+        child: _VerifyOtpView(
+          phoneLoginPayload: phoneLoginPayload!,
+          currentOtp: currentOtp,
+          onOtpChanged: onOtpChanged,
+          onResendOtp: onResendOtp,
+          onVerifyOtp: onVerifyOtp,
+          onSkip: onSkip,
+          onChangeLoginMode: onChangeLoginMode,
+        ),
+      );
+    } else if (sendMailClicked) {
+      content = KeyedSubtree(
+        key: const ValueKey('email-password-view'),
+        child: _EnterPasswordEmailView(
+          emailValue: emailController.text,
+          passwordController: passwordController,
+          isObscure: isObscure,
+          onToggleObscure: onToggleObscure,
+          onSubmitEmailPassword: () => onSubmitCredentials(
+            emailController.text,
+            passwordController.text,
           ),
-        ],
-      ),
-      padding: const EdgeInsets.fromLTRB(14, 20, 14, 18),
-      child: Form(
-        child: isOtpSent && phoneLoginPayload != null
-            ? _VerifyOtpView(
-                phoneLoginPayload: phoneLoginPayload!,
-                currentOtp: currentOtp,
-                onOtpChanged: onOtpChanged,
-                onResendOtp: onResendOtp,
-                onVerifyOtp: onVerifyOtp,
-                onSkip: onSkip,
-                onChangeLoginMode: onChangeLoginMode,
-              )
-            : sendMailClicked
-                ? _EnterPasswordEmailView(
-                    emailValue: emailController.text,
-                    passwordController: passwordController,
-                    isObscure: isObscure,
-                    onToggleObscure: onToggleObscure,
-                    onSubmitEmailPassword: () => onSubmitCredentials(
-                      emailController.text,
-                      passwordController.text,
-                    ),
-                    onSkip: onSkip,
-                    onChangeLoginMode: onChangeLoginMode,
-                  )
-                : _LoginOptionsView(
-                    isMobileNumberField: isMobileNumberField,
-                    isLoading: isLoading,
-                    isObscure: isObscure,
-                    phoneEmailError: phoneEmailError,
-                    passwordError: passwordError,
-                    emailController: emailController,
-                    passwordController: passwordController,
-                    countryCode: countryCode,
-                    flagEmoji: flagEmoji,
-                    onChangedNumberOrEmail: onChangedNumberOrEmail,
-                    onShowCountryPicker: onShowCountryPicker,
-                    onToggleObscure: onToggleObscure,
-                    onForgotPassword: onForgotPassword,
-                    onSubmit: () => onSubmitCredentials(
-                      emailController.text,
-                      passwordController.text,
-                    ),
-                    showMobileAuth: showMobileAuth,
-                    showEmailAuth: showEmailAuth,
-                    showGoogle: showGoogle,
-                    showApple: showApple,
-                    onGoogleLogin: onGoogleLogin,
-                    onAppleLogin: onAppleLogin,
-                    onTapContinue: onTapContinue,
-                    onGoToSignup: onGoToSignup,
-                    onSkip: onSkip,
-                  ),
+          onSkip: onSkip,
+          onChangeLoginMode: onChangeLoginMode,
+        ),
+      );
+    } else {
+      content = KeyedSubtree(
+        key: const ValueKey('login-options-view'),
+        child: _LoginOptionsView(
+          isMobileNumberField: isMobileNumberField,
+          isLoading: isLoading,
+          isObscure: isObscure,
+          phoneEmailError: phoneEmailError,
+          passwordError: passwordError,
+          emailController: emailController,
+          passwordController: passwordController,
+          countryCode: countryCode,
+          flagEmoji: flagEmoji,
+          onChangedNumberOrEmail: onChangedNumberOrEmail,
+          onShowCountryPicker: onShowCountryPicker,
+          onToggleObscure: onToggleObscure,
+          onForgotPassword: onForgotPassword,
+          onSubmit: () => onSubmitCredentials(
+            emailController.text,
+            passwordController.text,
+          ),
+          showMobileAuth: showMobileAuth,
+          showEmailAuth: showEmailAuth,
+          showGoogle: showGoogle,
+          showApple: showApple,
+          onGoogleLogin: onGoogleLogin,
+          onAppleLogin: onAppleLogin,
+          onTapContinue: onTapContinue,
+          onGoToSignup: onGoToSignup,
+          onSkip: onSkip,
+        ),
+      );
+    }
+
+    return Form(
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 220),
+        switchInCurve: Curves.easeOut,
+        switchOutCurve: Curves.easeIn,
+        child: content,
       ),
     );
   }
-}
-
 // ==================== Sub-Views ====================
 class _LoginOptionsView extends StatefulWidget {
   final bool isMobileNumberField;
@@ -744,11 +441,7 @@ class _LoginOptionsViewState extends State<_LoginOptionsView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 6),
-          Text("welcomeback".translate(context))
-              .size(context.font.extraLarge)
-              .color(context.color.textDefaultColor),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           _MobileOrEmailForm(
             isMobileNumberField: widget.isMobileNumberField,
             isLoading: widget.isLoading,
@@ -823,9 +516,9 @@ class _LoginOptionsViewState extends State<_LoginOptionsView> {
                   .color(context.color.textColorDark.brighten(50)),
               const SizedBox(width: 30),
 
-              // تأثير ضغط + رِبل (Ripple)
+              // ط·آ·ط¹آ¾ط·آ·ط¢آ£ط·آ·ط¢آ«ط·آ¸ط¸آ¹ط·آ·ط¢آ± ط·آ·ط¢آ¶ط·آ·ط·â€؛ط·آ·ط¢آ· + ط·آ·ط¢آ±ط·آ¸ط¹آ¯ط·آ·ط¢آ¨ط·آ¸أ¢â‚¬â€چ (Ripple)
               Material(
-                // مهم لو ما عندك Material مباشر في الأب
+                // ط·آ¸أ¢â‚¬آ¦ط·آ¸أ¢â‚¬طŒط·آ¸أ¢â‚¬آ¦ ط·آ¸أ¢â‚¬â€چط·آ¸ط«â€  ط·آ¸أ¢â‚¬آ¦ط·آ·ط¢آ§ ط·آ·ط¢آ¹ط·آ¸أ¢â‚¬آ ط·آ·ط¢آ¯ط·آ¸ط¦â€™ Material ط·آ¸أ¢â‚¬آ¦ط·آ·ط¢آ¨ط·آ·ط¢آ§ط·آ·ط¢آ´ط·آ·ط¢آ± ط·آ¸ط¸آ¾ط·آ¸ط¸آ¹ ط·آ·ط¢آ§ط·آ¸أ¢â‚¬â€چط·آ·ط¢آ£ط·آ·ط¢آ¨
                 color: Colors.transparent,
                 child: InkWell(
                   onTap: widget.onGoToSignup,
@@ -1006,6 +699,113 @@ class _MobileOrEmailForm extends StatelessWidget {
         ),
         const SizedBox(height: 2),
       ],
+    );
+  }
+}
+
+// =====================================================
+// LoginHeaderSection أ¢â‚¬â€‌ background + safe insets + gestures
+// =====================================================
+class LoginHeaderSection extends StatelessWidget {
+  final bool isBack;
+  final bool isOtpSent;
+  final bool sendMailClicked;
+  final bool isDeleteAccount;
+  final VoidCallback onResetOTP;
+  final VoidCallback onBack;
+  final void Function(bool) updateBackState;
+  final Widget child;
+
+  const LoginHeaderSection({
+    super.key,
+    required this.isBack,
+    required this.isOtpSent,
+    required this.sendMailClicked,
+    required this.isDeleteAccount,
+    required this.onResetOTP,
+    required this.onBack,
+    required this.updateBackState,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final double bottomInset = mediaQuery.viewInsets.bottom;
+
+    final Color statusBarBase = LoginStatusBar.resolveBaseColor(context);
+    final SystemUiOverlayStyle overlay =
+        LoginStatusBar.overlayFor(context, baseColor: statusBarBase);
+
+    return SafeArea(
+      top: false,
+      child: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: PopScope(
+          canPop: isBack,
+          onPopInvoked: (didPop) {
+            if (didPop) {
+              updateBackState(false);
+              return;
+            }
+
+            if (isDeleteAccount) {
+              Navigator.pop(context);
+              updateBackState(false);
+              return;
+            }
+            if (isOtpSent) {
+              onResetOTP();
+              updateBackState(false);
+              return;
+            }
+            if (sendMailClicked) {
+              onBack();
+              updateBackState(false);
+              return;
+            }
+
+            HelperUtils.showSnackBarMessage(
+              context,
+              'ط·آ§ط·آ¶ط·ط›ط·آ· ط¸â€¦ط·آ±ط·آ© ط·آ£ط·آ®ط·آ±ط¸â€° ط¸â€‍ط¸â€‍ط·ع¾ط·آ£ط¸ئ’ط¸ظ¹ط·آ¯',
+            );
+            updateBackState(true);
+          },
+          child: AnnotatedRegion<SystemUiOverlayStyle>(
+            value: overlay,
+            child: Scaffold(
+              backgroundColor: Colors.transparent,
+              body: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      context.color.territoryColor,
+                      context.color.territoryColor.withOpacity(0.92),
+                      context.color.backgroundColor,
+                    ],
+                  ),
+                ),
+                child: SafeArea(
+                  bottom: false,
+                  child: SingleChildScrollView(
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
+                    padding: EdgeInsets.fromLTRB(
+                      20,
+                      24,
+                      20,
+                      16 + bottomInset,
+                    ),
+                    child: child,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -1196,40 +996,5 @@ class _EnterPasswordEmailView extends StatelessWidget {
   }
 }
 
-class _LoginStatusBarHeader extends SliverPersistentHeaderDelegate {
-  final double height;
-  final Color baseColor;
 
-  const _LoginStatusBarHeader({
-    required this.height,
-    required this.baseColor,
-  });
 
-  @override
-  double get minExtent => height;
-
-  @override
-  double get maxExtent => height;
-
-  @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
-    if (height <= 0) {
-      return const SizedBox.shrink();
-    }
-
-    return LoginStatusBar.topSpacer(
-      context,
-      baseColor: baseColor,
-      height: height,
-    );
-  }
-
-  @override
-  bool shouldRebuild(covariant _LoginStatusBarHeader oldDelegate) {
-    return oldDelegate.height != height || oldDelegate.baseColor != baseColor;
-  }
-}

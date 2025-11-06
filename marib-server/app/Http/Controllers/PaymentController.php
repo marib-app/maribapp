@@ -9,9 +9,11 @@ use App\Models\Order;
 use App\Models\PaymentTransaction;
 use App\Models\Service;
 use App\Models\ServiceRequest;
+use App\Models\Wifi\WifiPlan;
 use App\Services\Payments\OrderPaymentService;
 use App\Services\Payments\PackagePaymentService;
 use App\Services\Payments\ServicePaymentService;
+use App\Services\Payments\WifiPlanPaymentService;
 use Illuminate\Validation\Rule;
 use App\Models\ManualBank;
 use App\Models\ManualPaymentRequest;
@@ -43,6 +45,7 @@ class PaymentController extends Controller
     public function __construct(
         private readonly OrderPaymentService $orderPaymentService,
         private readonly PackagePaymentService $packagePaymentService,
+        private readonly WifiPlanPaymentService $wifiPlanPaymentService,
         private readonly ServicePaymentService $servicePaymentService,
         private readonly ManualPaymentRequestService $manualPaymentRequestService,
         private readonly CreateOrLinkManualPaymentRequest $manualPaymentLinker,
@@ -78,7 +81,7 @@ class PaymentController extends Controller
 
 
         $rules = [
-            'purpose' => ['required', 'string', Rule::in(['order', 'package', 'service', ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP])],
+            'purpose' => ['required', 'string', Rule::in(['order', 'package', 'service', 'wifi_plan', ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP])],
             'payment_method' => ['nullable', 'string', 'max:191', Rule::in($allowedMethods)],
             'notes' => ['nullable', 'string'],
             'metadata' => ['nullable', 'array'],
@@ -118,6 +121,8 @@ class PaymentController extends Controller
             $messages['currency.in'] = __('gateway_currency_unsupported');
         } elseif ($purpose === 'package') {
             $rules['package_id'] = ['required', 'integer', 'exists:packages,id'];
+        } elseif ($purpose === 'wifi_plan') {
+            $rules['wifi_plan_id'] = ['required', 'integer', 'exists:wifi_plans,id'];
         } elseif ($purpose === ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP) {
             $rules['amount'] = ['required', 'numeric', 'min:0.01'];
             $rules['currency'] = ['required', 'string', 'size:3'];
@@ -369,6 +374,35 @@ class PaymentController extends Controller
             ));
         }
 
+
+        if ($purpose === 'wifi_plan') {
+            $plan = WifiPlan::with('network')->findOrFail($validated['wifi_plan_id']);
+
+            $transaction = $this->wifiPlanPaymentService->initiate(
+                $request->user(),
+                $plan,
+                $validated['payment_method'],
+                $idempotencyKey,
+                $validated
+            );
+
+            $freshTransaction = $transaction->fresh();
+
+            return response()->json(array_merge(
+                $methodResponsePayload,
+                [
+                    'message' => __('تم إنشاء عملية الدفع بنجاح.'),
+                    'status' => $freshTransaction?->payment_status,
+                    'payment_transaction_id' => $freshTransaction?->getKey(),
+                    'payment_intent_id' => $freshTransaction?->idempotency_key,
+                    'receipt_no' => $freshTransaction?->receipt_no,
+                    'transaction' => $freshTransaction,
+                    'payment_transaction' => $freshTransaction,
+                ]
+            ));
+        }
+
+
         $order = Order::query()
             ->where('user_id', $request->user()->getKey())
             ->findOrFail($validated['order_id']);
@@ -439,6 +473,7 @@ class PaymentController extends Controller
         $transaction = PaymentTransaction::query()
             ->with('payable')
             ->findOrFail($validated['transaction_id']);
+        $wifiDelivery = null;
 
         if (in_array($transaction->payable_type, [ServiceRequest::class, Service::class], true)) {
             $updated = $this->servicePaymentService->confirm(
@@ -454,6 +489,18 @@ class PaymentController extends Controller
                 $idempotencyKey,
                 $validated
             );
+
+        } elseif ($transaction->payable_type === WifiPlan::class) {
+            $result = $this->wifiPlanPaymentService->confirm(
+                $request->user(),
+                $transaction,
+                $idempotencyKey,
+                $validated
+            );
+
+            $updated = $result['transaction'];
+            $wifiDelivery = $result['delivery'] ?? null;
+
         } else {
             $updated = $this->orderPaymentService->confirm(
                 $request->user(),
@@ -465,11 +512,17 @@ class PaymentController extends Controller
 
         $freshUpdated = $updated->fresh();
 
-        return response()->json([
+        $response = [
             'message' => __('تم تأكيد عملية الدفع.'),
             'receipt_no' => $freshUpdated?->receipt_no,
             'transaction' => $freshUpdated,
-        ]);
+        ];
+
+        if ($wifiDelivery !== null) {
+            $response['wifi_delivery'] = $wifiDelivery;
+        }
+
+        return response()->json($response);
     }
 
     /**
@@ -683,6 +736,44 @@ class PaymentController extends Controller
                 'manual_payment_request' => $manualRequestResource,
             ], $transaction->payment_status === 'succeed' ? 200 : 202);
         }
+
+
+        if ($purpose === 'wifi_plan') {
+            $plan = WifiPlan::with('network')->findOrFail($validated['wifi_plan_id']);
+
+            $transaction = $this->wifiPlanPaymentService->createManual(
+                $request->user(),
+                $plan,
+                $idempotencyKey,
+                $validated
+            );
+
+            $transaction->loadMissing('manualPaymentRequest.manualBank');
+
+            $manualRequest = $transaction->manualPaymentRequest;
+
+            if ($manualRequest instanceof ManualPaymentRequest) {
+                $manualRequest->loadMissing(
+                    $this->manualPaymentRequestRelations($manualRequest)
+                );
+            } else {
+                $manualRequest = null;
+            }
+
+            $transactionResource = PaymentTransactionResource::make($transaction)->resolve();
+            $manualRequestResource = $manualRequest
+                ? ManualPaymentRequestResource::make($manualRequest)->resolve()
+                : null;
+
+            return response()->json([
+                'message' => __('تم تسجيل الدفع اليدوي.'),
+                'transaction' => $transactionResource,
+                'payment_transaction' => $transactionResource,
+                'manual_payment_request' => $manualRequestResource,
+            ], $transaction->payment_status === 'succeed' ? 200 : 202);
+        }
+
+
 
         $order = Order::query()
             ->where('user_id', $request->user()->getKey())
@@ -1616,6 +1707,11 @@ class PaymentController extends Controller
             return $this->extractSupportedMethodsFrom(PackagePaymentService::class);
         }
 
+
+        if ($purpose === 'wifi_plan') {
+            return $this->extractSupportedMethodsFrom(WifiPlanPaymentService::class);
+        }
+
         if ($purpose === ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP) {
             return ['manual_bank'];
         }
@@ -1699,6 +1795,11 @@ class PaymentController extends Controller
 
         if ($normalized === 'order') {
             return 'order';
+        }
+
+
+        if ($normalized === 'wifi' || $normalized === 'wifi_plan' || str_contains($normalized, 'wifi-plan')) {
+            return 'wifi_plan';
         }
 
         return $normalized;

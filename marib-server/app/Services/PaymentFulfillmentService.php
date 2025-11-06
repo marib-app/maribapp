@@ -10,12 +10,17 @@ use App\Models\OrderHistory;
 use App\Models\Package;
 use App\Models\Service;
 use App\Models\ServiceRequest;
+use App\Models\Wifi\WifiCode;
+use App\Models\Wifi\WifiCodeBatch;
+use App\Models\Wifi\WifiNetwork;
+use App\Models\Wifi\WifiPlan;
 use App\Services\DepartmentPolicyService;
 use Illuminate\Support\Facades\Storage;
 
 use App\Models\WalletTransaction;
 use App\Services\Logging\PaymentTrace;
 use App\Services\NotificationService;
+use App\Services\WalletService;
 use App\Services\Payments\TransactionAmountResolver;
 use App\Models\User;
 
@@ -28,9 +33,11 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use App\Support\DepositCalculator;
+use App\Enums\Wifi\WifiCodeStatus;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
+use RuntimeException;
 use Throwable;
 
 class PaymentFulfillmentService
@@ -119,6 +126,7 @@ class PaymentFulfillmentService
                 $transaction->save();
 
                 $serviceRequestModel = null;
+                $wifiDelivery = null;
 
                 switch ($normalizedType) {
                     case Package::class:
@@ -132,6 +140,10 @@ class PaymentFulfillmentService
                         break;
                     case ServiceRequest::class:
                         $serviceRequestModel = $this->handleServicePayment($transaction, $payableId, $userId, $options);
+                        break;
+                        break;
+              case WifiPlan::class:
+                        $wifiDelivery = $this->handleWifiPlanPurchase($transaction, $payableId, $userId, $options);
                         break;
 
 
@@ -157,6 +169,7 @@ class PaymentFulfillmentService
                     'message' => 'Transaction processed successfully',
                     'transaction' => $freshTransaction,
                     'service_request_id' => $serviceRequestModel?->getKey(),
+                    'wifi_delivery' => $wifiDelivery,
                 ];
             });
         } catch (Throwable $throwable) {
@@ -1224,6 +1237,19 @@ class PaymentFulfillmentService
             if ($purchasedId !== null && $purchasedId !== '') {
                 $data['user_purchased_package_id'] = $purchasedId;
             }
+
+
+        } elseif ($alias === 'wifi_plan') {
+            $planId = $transaction->payable_id ?? data_get($transaction->meta, 'wifi.plan_id');
+            if ($planId !== null && $planId !== '') {
+                $data['wifi_plan_id'] = (int) $planId;
+            }
+
+            $networkId = data_get($transaction->meta, 'wifi.network_id');
+            if ($networkId !== null && $networkId !== '') {
+                $data['wifi_network_id'] = (int) $networkId;
+            }
+
         } elseif ($alias === 'wallet_top_up') {
             $walletAccountId = data_get($transaction->meta, 'wallet.wallet_account_id')
                 ?? data_get($transaction->meta, 'wallet.account_id');
@@ -1282,6 +1308,9 @@ class PaymentFulfillmentService
             }
 
 
+            if (str_contains($alias, 'wifi')) {
+                return 'wifi_plan';
+            }
 
             if (str_contains($alias, 'wallet') || str_contains($alias, 'topup') || str_contains($alias, 'top-up')) {
                 return 'wallet_top_up';
@@ -1366,7 +1395,7 @@ class PaymentFulfillmentService
             'order', 'orders' => Order::class,
             'service', 'services', 'app\\models\\service' => Service::class,
             'service_request', 'service_requests', 'app\\models\\servicerequest' => ServiceRequest::class,
-
+            'wifi_plan', 'wifi_plans', 'wifi-plan', 'wifi-plans' => WifiPlan::class,
 
             default => $payableType,
         };
@@ -1419,6 +1448,253 @@ class PaymentFulfillmentService
 
         $transaction->meta = array_replace_recursive($transaction->meta ?? [], $meta);
     }
+
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function handleWifiPlanPurchase(PaymentTransaction $transaction, ?int $planId, int $userId, array $options = []): array
+    {
+        if ($planId === null) {
+            throw new InvalidArgumentException('Wifi plan id is required to deliver wifi codes.');
+        }
+
+        $plan = WifiPlan::query()
+            ->with('network.owner')
+            ->lockForUpdate()
+            ->findOrFail($planId);
+
+        $network = $plan->network;
+
+        if (! $network instanceof WifiNetwork) {
+            throw new InvalidArgumentException('Wifi network is not associated with the requested plan.');
+        }
+
+        $network = WifiNetwork::query()
+            ->with('owner')
+            ->lockForUpdate()
+            ->findOrFail($network->getKey());
+
+        $plan->setRelation('network', $network);
+
+        $code = WifiCode::query()
+            ->where('wifi_plan_id', $plan->getKey())
+            ->where('status', WifiCodeStatus::AVAILABLE->value)
+            ->orderBy('id')
+            ->lockForUpdate()
+            ->first();
+
+        if (! $code instanceof WifiCode) {
+            throw new RuntimeException('No available wifi codes found for the selected plan.');
+        }
+
+        $now = Carbon::now();
+
+        $deliveryPayload = [
+            'code' => $code->code,
+            'username' => $code->username,
+            'password' => $code->password,
+            'serial_no' => $code->serialNo,
+            'expiry_date' => $code->expiry_date?->toDateString(),
+        ];
+
+        $code->status = WifiCodeStatus::SOLD;
+        $code->sold_at = $now;
+        $code->delivered_at = $now;
+        $code->meta = array_replace_recursive($code->meta ?? [], [
+            'payment_transaction_id' => $transaction->getKey(),
+            'sold_to_user_id' => $userId,
+        ]);
+        $code->save();
+
+        if ($code->wifi_code_batch_id !== null) {
+            $batch = WifiCodeBatch::query()
+                ->whereKey($code->wifi_code_batch_id)
+                ->lockForUpdate()
+                ->first();
+
+            if ($batch instanceof WifiCodeBatch) {
+                $batch->available_codes = max(0, (int) $batch->available_codes - 1);
+                $batch->save();
+            }
+        }
+
+        $planMeta = $plan->meta;
+        if (! is_array($planMeta)) {
+            $planMeta = [];
+        }
+
+        $planMeta['sales'] = array_replace_recursive($planMeta['sales'] ?? [], [
+            'last_transaction_id' => $transaction->getKey(),
+            'last_sold_at' => $now->toIso8601String(),
+        ]);
+
+        $plan->meta = $planMeta;
+        $plan->save();
+
+        $transactionMeta = $transaction->meta;
+        if (! is_array($transactionMeta)) {
+            $transactionMeta = [];
+        }
+
+        $transactionMeta = array_replace_recursive($transactionMeta, [
+            'wifi' => [
+                'plan_id' => $plan->getKey(),
+                'network_id' => $network->getKey(),
+                'code_id' => $code->getKey(),
+                'code_suffix' => $code->code_suffix,
+                'delivered_at' => $now->toIso8601String(),
+            ],
+        ]);
+
+        $transaction->meta = $transactionMeta;
+        $transaction->save();
+
+        $currency = strtoupper((string) ($transaction->currency ?? $plan->currency ?? config('app.currency', 'SAR')));
+        $grossAmount = round((float) ($transaction->amount ?? $plan->price), 2);
+        $commissionRate = $this->resolveWifiCommissionRate($plan);
+        $commissionAmount = round($grossAmount * $commissionRate, 2);
+        $netAmount = round($grossAmount - $commissionAmount, 2);
+
+        $owner = $network->owner;
+
+        if ($owner && $netAmount > 0) {
+            /** @var WalletService $walletService */
+            $walletService = app(WalletService::class);
+
+            $walletService->credit($owner, 'wifi_plan:' . $transaction->getKey(), $netAmount, [
+                'currency' => $currency,
+                'meta' => [
+                    'context' => 'wifi_plan_sale',
+                    'wifi_network_id' => $network->getKey(),
+                    'wifi_plan_id' => $plan->getKey(),
+                    'wifi_code_id' => $code->getKey(),
+                    'payment_transaction_id' => $transaction->getKey(),
+                    'commission_rate' => $commissionRate,
+                    'commission_amount' => $commissionAmount,
+                    'gross_amount' => $grossAmount,
+                ],
+            ]);
+        }
+
+        $statistics = $network->statistics;
+        if (! is_array($statistics)) {
+            $statistics = [];
+        }
+
+        $salesStats = $statistics['wifi_sales'] ?? [];
+        if (! is_array($salesStats)) {
+            $salesStats = [];
+        }
+
+        $salesStats['codes_sold'] = (int) ($salesStats['codes_sold'] ?? 0) + 1;
+        $salesStats['gross_amount'] = round(((float) ($salesStats['gross_amount'] ?? 0)) + $grossAmount, 2);
+        $salesStats['net_amount'] = round(((float) ($salesStats['net_amount'] ?? 0)) + $netAmount, 2);
+        $salesStats['last_sold_at'] = $now->toIso8601String();
+
+        $statistics['wifi_sales'] = $salesStats;
+        $network->statistics = $statistics;
+        $network->save();
+
+        $deliveryPayload['plan'] = [
+            'id' => $plan->getKey(),
+            'name' => $plan->name,
+            'price' => (float) $plan->price,
+            'currency' => $plan->currency ?? $currency,
+        ];
+
+        $deliveryPayload['network'] = [
+            'id' => $network->getKey(),
+            'name' => $network->name,
+        ];
+
+        DB::afterCommit(function () use ($userId, $owner, $plan, $network, $deliveryPayload, $currency, $grossAmount, $netAmount): void {
+            $userTokens = UserFcmToken::query()
+                ->where('user_id', $userId)
+                ->pluck('fcm_token')
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+
+            if ($userTokens !== []) {
+                NotificationService::sendFcmNotification(
+                    $userTokens,
+                    __('تم استلام كرت الواي فاي'),
+                    __('تم تسليم كود شبكة :network.', ['network' => $network->name]),
+                    'wifi_purchase',
+                    array_filter([
+                        'deeplink' => config('services.mobile.wifi_orders_deeplink', 'eclassify://wifi/orders'),
+                        'wifi_plan_id' => $plan->getKey(),
+                        'wifi_network_id' => $network->getKey(),
+                        'code' => $deliveryPayload['code'],
+                        'username' => $deliveryPayload['username'],
+                        'password' => $deliveryPayload['password'],
+                        'serial_no' => $deliveryPayload['serial_no'],
+                        'expiry_date' => $deliveryPayload['expiry_date'],
+                    ], static fn ($value) => $value !== null && $value !== '')
+                );
+            }
+
+            if ($owner) {
+                $ownerTokens = UserFcmToken::query()
+                    ->where('user_id', $owner->getKey())
+                    ->pluck('fcm_token')
+                    ->filter()
+                    ->unique()
+                    ->values()
+                    ->all();
+
+                if ($ownerTokens !== []) {
+                    NotificationService::sendFcmNotification(
+                        $ownerTokens,
+                        __('تم بيع كرت واي فاي'),
+                        __('تم بيع :plan بمبلغ :amount :currency.', [
+                            'plan' => $plan->name,
+                            'amount' => number_format($grossAmount, 2),
+                            'currency' => $currency,
+                        ]),
+                        'wifi_sale',
+                        [
+                            'deeplink' => config('services.mobile.wifi_owner_sales_deeplink', 'eclassify://wifi/owner/sales'),
+                            'wifi_plan_id' => $plan->getKey(),
+                            'wifi_network_id' => $network->getKey(),
+                            'net_amount' => $netAmount,
+                            'currency' => $currency,
+                        ]
+                    );
+                }
+            }
+        });
+
+        return $deliveryPayload;
+    }
+
+    protected function resolveWifiCommissionRate(WifiPlan $plan): float
+    {
+        $meta = $plan->meta;
+        $rate = null;
+
+        if (is_array($meta)) {
+            $rate = $meta['commission_rate'] ?? data_get($meta, 'commission.rate');
+        }
+
+        if (! is_numeric($rate)) {
+            $network = $plan->relationLoaded('network') ? $plan->network : $plan->network()->first();
+            if ($network instanceof WifiNetwork) {
+                $settings = $network->settings;
+                if (is_array($settings) && isset($settings['commission_rate'])) {
+                    $rate = $settings['commission_rate'];
+                }
+            }
+        }
+
+        $normalized = is_numeric($rate) ? (float) $rate : 0.0;
+
+        return max(0.0, min(0.5, round($normalized, 4)));
+    }
+
+
 
     protected function synchronizeWalletMeta(PaymentTransaction $transaction, array $options): void
     {

@@ -10,6 +10,7 @@ use App\Http\Resources\Wifi\WifiCodeBatchResource;
 use App\Models\Wifi\WifiCodeBatch;
 use App\Models\Wifi\WifiPlan;
 use App\Services\Audit\AuditLogger;
+use App\Services\Wifi\WifiCodeBatchProcessor;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -17,7 +18,10 @@ use Illuminate\Support\Facades\Storage;
 
 class OwnerBatchController extends Controller
 {
-    public function __construct(private AuditLogger $auditLogger)
+    public function __construct(
+        private AuditLogger $auditLogger,
+        private WifiCodeBatchProcessor $batchProcessor
+    )
     {
     }
 
@@ -59,11 +63,28 @@ class OwnerBatchController extends Controller
         $batch->save();
         $batch->refresh();
 
+
+
+        try {
+            $summary = $this->batchProcessor->process($plan, $batch, $path);
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return response()->json([
+                'message' => __('تعذر معالجة ملف الأكواد. يرجى التحقق من التنسيق وإعادة المحاولة.'),
+            ], 422);
+        }
+
+
         $this->auditLogger->logChanges($batch, 'wifi.batch.created', ['label', 'status'], $request->user(), [
             'description' => 'Wifi code batch uploaded by owner',
         ]);
 
-        return WifiCodeBatchResource::make($batch)->response()->setStatusCode(201);
+        $response = WifiCodeBatchResource::make($batch->refresh())->resolve();
+
+        $response['summary'] = $summary;
+
+        return response()->json($response, 201);
     }
 
     public function show(WifiCodeBatch $batch): WifiCodeBatchResource

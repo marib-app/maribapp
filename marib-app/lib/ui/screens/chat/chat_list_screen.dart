@@ -2,7 +2,7 @@ import 'package:marib/app/routes.dart';
 import 'package:marib/data/cubits/chat/get_buyer_chat_users_cubit.dart';
 import 'package:marib/data/model/chat/chated_user_model.dart';
 import 'package:marib/ui/screens/chat/chatTile.dart';
-import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
+import 'package:marib/app/navigation/app_page_route.dart';
 import 'package:marib/ui/screens/widgets/errors/no_internet.dart';
 import 'package:marib/ui/screens/widgets/errors/something_went_wrong.dart';
 import 'package:marib/data/cubits/chat/blocked_users_list_cubit.dart';
@@ -28,7 +28,8 @@ class ChatListScreen extends StatefulWidget {
   const ChatListScreen({super.key});
 
   static Route route(RouteSettings settings) {
-    return BlurredRouter(
+    return AppPageRoute.build(
+      settings: settings,
       builder: (context) {
         return const ChatListScreen();
       },

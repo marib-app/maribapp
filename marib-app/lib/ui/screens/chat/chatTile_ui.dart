@@ -348,9 +348,8 @@ extension _ChatTileUi on ChatTile {
 
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
-          BlurredRouter(
+        Navigator.of(context).push(
+          AppPageRoute.build(
             builder: (context) {
               currentlyChatingWith = conversationId;
               currentlyChatItemId = itemOfferId.toString();

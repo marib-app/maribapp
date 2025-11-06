@@ -2,7 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:marib/data/cubits/chat/delete_message_cubit.dart';
 import 'package:marib/data/cubits/chat/load_chat_messages.dart';
 import 'package:marib/ui/screens/chat/chat_screen.dart';
-import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
+import 'package:marib/app/navigation/app_page_route.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/app_icon.dart';
 import 'package:marib/utils/extensions/extensions.dart';

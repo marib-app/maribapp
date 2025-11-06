@@ -23,7 +23,7 @@ import 'product_management/tabs/delivery_size_tab.dart';
 import 'product_management/tabs/discount_tab.dart';
 import 'product_management/tabs/stock_tab.dart';
 import 'product_management/widgets/common_widgets.dart';
-
+import 'pending_item_draft.dart';
 
 class ProductManagementScreen extends StatefulWidget {
   const ProductManagementScreen({
@@ -37,7 +37,7 @@ class ProductManagementScreen extends StatefulWidget {
 
   static Route<dynamic> route(RouteSettings settings) {
     final ProductManagementArguments args =
-    ProductManagementArguments.from(settings.arguments);
+        ProductManagementArguments.from(settings.arguments);
 
     return AppPageRoute.build(
       settings: settings,
@@ -83,14 +83,14 @@ class ProductManagementScreen extends StatefulWidget {
       _ProductManagementScreenState();
 }
 
-
 class _ProductManagementScreenState extends State<ProductManagementScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController =
-  TabController(length: 4, vsync: this);
+      TabController(length: 4, vsync: this);
 
   final Map<String, TextEditingController> _stockControllers =
       <String, TextEditingController>{};
+
   PendingItemDraft? get _pendingDraft => widget.pendingDraft;
 
   @override
@@ -102,8 +102,6 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
     }
     super.dispose();
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -306,6 +304,3 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
     return trimmed;
   }
 }
-
-
-

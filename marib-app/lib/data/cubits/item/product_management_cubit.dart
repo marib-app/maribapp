@@ -190,6 +190,7 @@ List<CustomFieldColorEntry> _normalizeColorEntries(
 }
 
 
+final RegExp _hexColorPattern = RegExp(r'^[0-9A-F]{6}$');
 
 
 double? _normalizeDeliverySize(dynamic value) {
@@ -312,6 +313,67 @@ class ManagedPurchaseAttribute extends Equatable {
   final Map<String, dynamic> metadata;
   final int? position;
 
+
+  Set<String> get suggestedColorCodes {
+    final Set<String> codes = <String>{};
+
+    void addCode(String value) {
+      final String normalized = value.replaceAll('#', '').trim().toUpperCase();
+      if (normalized.isEmpty) {
+        return;
+      }
+      if (_hexColorPattern.hasMatch(normalized)) {
+        codes.add(normalized);
+      }
+    }
+
+    void collect(dynamic source) {
+      if (source == null) {
+        return;
+      }
+      if (source is Iterable) {
+        for (final dynamic entry in source) {
+          collect(entry);
+        }
+        return;
+      }
+      if (source is Map) {
+        for (final dynamic entry in source.values) {
+          collect(entry);
+        }
+        return;
+      }
+      if (source is CustomFieldColorEntry) {
+        collect(source.code);
+        return;
+      }
+      final String raw = source.toString();
+      if (raw.contains(',') || raw.contains(' ') || raw.contains(';') ||
+          raw.contains('|') || raw.contains('/')) {
+        final Iterable<String> parts = raw
+            .split(RegExp(r"[\s,;|/]+"))
+            .where((String element) => element.isNotEmpty);
+        for (final String part in parts) {
+          addCode(part);
+        }
+        return;
+      }
+      addCode(raw);
+    }
+
+    collect(metadata['suggested_color_codes']);
+    collect(metadata['suggested_colors']);
+    collect(metadata['suggestedCodes']);
+    collect(metadata['suggested']);
+    collect(metadata['color_suggestions']);
+    collect(metadata['palette']);
+    collect(metadata['palette_codes']);
+    collect(colorEntries);
+    collect(options);
+
+    return codes;
+  }
+
   ManagedPurchaseAttribute copyWith({
     int? id,
     String? key,
@@ -409,6 +471,43 @@ class VariantStockFormState extends Equatable {
       ];
 }
 
+
+class ProductVariant extends Equatable {
+  const ProductVariant({
+    required this.id,
+    required this.attributes,
+    required this.stock,
+    required this.hidden,
+    this.lastVisibleStock,
+    this.reservedStock,
+    this.availableStock,
+  });
+
+  final String id;
+  final Map<String, String> attributes;
+  final int stock;
+  final bool hidden;
+  final int? lastVisibleStock;
+  final int? reservedStock;
+  final int? availableStock;
+
+  @override
+  List<Object?> get props => <Object?>[
+    id,
+    attributes.entries
+        .map((MapEntry<String, String> entry) =>
+    '${entry.key}:${entry.value}')
+        .join('|'),
+    stock,
+    hidden,
+    lastVisibleStock,
+    reservedStock,
+    availableStock,
+  ];
+}
+
+
+
 class ProductManagementState extends Equatable {
   const ProductManagementState({
     required this.item,
@@ -493,6 +592,62 @@ class ProductManagementState extends Equatable {
   final double? deliverySize;
   final String deliverySizeInput;
   final String? deliverySizeError;
+
+
+  bool get loadingAttributes => loading && options == null;
+
+  List<ItemPurchaseAttributeOption> get availableAttributes {
+    final ItemPurchaseOptions? currentOptions = options;
+    if (currentOptions == null) {
+      return const <ItemPurchaseAttributeOption>[];
+    }
+    final Set<String> managedKeys = managedAttributes
+        .map((ManagedPurchaseAttribute attribute) => attribute.key)
+        .toSet();
+    return currentOptions.attributes
+        .where((ItemPurchaseAttributeOption attribute) =>
+    !managedKeys.contains(attribute.key))
+        .toList(growable: false);
+  }
+
+  List<ProductVariant> get variants {
+    if (!hasStockVariants || variantForms.isEmpty) {
+      return const <ProductVariant>[];
+    }
+
+    final ItemPurchaseOptions? currentOptions = options;
+    final Map<String, ItemVariantStockOption> stockMap =
+    <String, ItemVariantStockOption>{};
+
+    if (currentOptions != null) {
+      for (final ItemVariantStockOption entry
+      in currentOptions.variantStocks) {
+        stockMap[entry.variantKey] = entry;
+      }
+    }
+
+    final List<MapEntry<String, VariantStockFormState>> entries =
+    variantForms.entries.toList()
+      ..sort((MapEntry<String, VariantStockFormState> a,
+          MapEntry<String, VariantStockFormState> b) =>
+          a.key.compareTo(b.key));
+
+    return entries
+        .map((MapEntry<String, VariantStockFormState> entry) {
+      final VariantStockFormState form = entry.value;
+      final ItemVariantStockOption? stockOption = stockMap[entry.key];
+      return ProductVariant(
+        id: entry.key,
+        attributes: form.attributes,
+        stock: form.stock,
+        hidden: form.hidden,
+        lastVisibleStock: form.lastVisibleStock,
+        reservedStock: stockOption?.reservedStock,
+        availableStock: stockOption?.availableStock,
+      );
+    })
+        .toList(growable: false);
+  }
 
   bool get hasLoaded => options != null;
 
@@ -727,6 +882,11 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     _updateAttributeOptions(key, current);
   }
 
+
+  void toggleAttributeOption(String key, String value) {
+    toggleAttributeValue(key, value);
+  }
+
   void _updateAttributeOptions(String key, List<String> options,
       {bool triggerRecompute = true}) {
     final ManagedPurchaseAttribute? attribute = state.attributeByKey(key);
@@ -816,6 +976,57 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     _recomputeVariantState();
   }
 
+
+  void addAttributeFromOption(ItemPurchaseAttributeOption option) {
+    if (state.attributeByKey(option.key) != null) {
+      return;
+    }
+
+    final ManagedPurchaseAttribute attribute = _createManagedAttribute(option);
+
+    final List<ManagedPurchaseAttribute> nextManaged = _withReindexedPositions(
+      <ManagedPurchaseAttribute>[...state.managedAttributes, attribute],
+    );
+
+    final Map<String, List<String>> nextSelections =
+    Map<String, List<String>>.from(state.attributeSelections);
+    final Map<String, List<CustomFieldColorEntry>> nextColorSelections =
+    Map<String, List<CustomFieldColorEntry>>.from(state.colorSelections);
+    final Map<String, String> nextTextInputs =
+    Map<String, String>.from(state.textInputs);
+
+    if (attribute.type == ManagedAttributeType.color) {
+      if (attribute.colorEntries.isNotEmpty) {
+        final List<CustomFieldColorEntry> entries =
+        attribute.colorEntries.toList(growable: false);
+        nextColorSelections[attribute.key] = entries;
+        final List<String> codes = entries
+            .map((CustomFieldColorEntry entry) => entry.code)
+            .toList(growable: false)
+          ..sort();
+        nextSelections[attribute.key] = codes;
+      }
+    } else if (attribute.options.isNotEmpty) {
+      nextSelections[attribute.key] =
+          _sortedSelectionsFromOptions(attribute.options);
+    } else {
+      final String fallback = option.defaultValue?.trim() ?? '';
+      if (fallback.isNotEmpty) {
+        nextTextInputs[attribute.key] = fallback;
+      }
+    }
+
+    emit(state.copyWith(
+      managedAttributes: nextManaged,
+      attributeSelections: nextSelections,
+      colorSelections: nextColorSelections,
+      textInputs: nextTextInputs,
+      error: null,
+    ));
+
+    _recomputeVariantState();
+  }
+
   void addCustomAttribute({String? name}) {
     final String key = _generateTemporaryAttributeKey('custom');
     final String resolvedName = (name ?? '').trim().isEmpty
@@ -886,6 +1097,11 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       error: null,
     ));
   }
+
+  void renameAttribute(String key, String name) {
+    setAttributeName(key, name);
+  }
+
 
   void setAttributeRequired(String key, bool required) {
     final ManagedPurchaseAttribute? attribute = state.attributeByKey(key);
@@ -1163,6 +1379,11 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     emit(state.copyWith(variantForms: next));
   }
 
+
+  void updateVariantStock(ProductVariant variant, int? stock) {
+    setVariantStock(variant.id, stock ?? 0);
+  }
+
   void toggleVariantVisibility(String variantKey) {
     final Map<String, VariantStockFormState> next =
         Map<String, VariantStockFormState>.from(state.variantForms);
@@ -1206,10 +1427,80 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     emit(state.copyWith(variantForms: next));
   }
 
+
+  void resetVariantStocks() {
+    final ItemPurchaseOptions? currentOptions = state.options;
+    if (currentOptions == null) {
+      return;
+    }
+
+    if (!state.hasStockVariants) {
+      final ItemVariantStockOption generalStockOption =
+      currentOptions.variantStocks.firstWhere(
+            (ItemVariantStockOption element) => element.variantKey.trim().isEmpty,
+        orElse: () => const ItemVariantStockOption(
+          variantKey: '',
+          stock: 0,
+          reservedStock: 0,
+          availableStock: 0,
+        ),
+      );
+      emit(state.copyWith(generalStock: generalStockOption.stock));
+      return;
+    }
+
+    if (state.variantForms.isEmpty) {
+      return;
+    }
+
+    final Map<String, ItemVariantStockOption> stockMap =
+    <String, ItemVariantStockOption>{};
+    for (final ItemVariantStockOption entry in currentOptions.variantStocks) {
+      if (entry.variantKey.trim().isEmpty) {
+        continue;
+      }
+      stockMap[entry.variantKey] = entry;
+    }
+
+    final Map<String, VariantStockFormState> nextForms =
+    <String, VariantStockFormState>{};
+    bool changed = false;
+
+    state.variantForms.forEach((String key, VariantStockFormState form) {
+      final ItemVariantStockOption? stockOption = stockMap[key];
+      final int resolvedStock = stockOption?.stock ?? 0;
+      VariantStockFormState updated;
+      if (form.hidden) {
+        updated = form.copyWith(
+          stock: 0,
+          lastVisibleStock: resolvedStock,
+        );
+      } else {
+        updated =
+            form.copyWith(stock: resolvedStock, resetLastVisibleStock: true);
+      }
+      nextForms[key] = updated;
+      if (updated != form) {
+        changed = true;
+      }
+    });
+
+    if (changed) {
+      emit(state.copyWith(variantForms: nextForms));
+    }
+  }
+
+
   void setGeneralStock(int stock) {
     final int normalized = stock < 0 ? 0 : stock;
     emit(state.copyWith(generalStock: normalized));
   }
+
+
+  void updateGeneralStock(int? stock) {
+    setGeneralStock(stock ?? 0);
+  }
+
 
   Future<SubmissionOutcome> saveStock() async {
     final SubmissionOutcome? ensureOutcome = await _ensureItemExists();

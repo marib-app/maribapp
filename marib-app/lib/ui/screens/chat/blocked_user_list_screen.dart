@@ -1,7 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:marib/data/cubits/chat/unblock_user_cubit.dart';
 import 'package:marib/ui/screens/home_screen/home_screen.dart';
-import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
+import 'package:marib/app/navigation/app_page_route.dart';
 import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart';
 import 'package:marib/ui/screens/widgets/errors/no_data_found.dart';
 import 'package:marib/ui/screens/widgets/errors/something_went_wrong.dart';
@@ -23,7 +23,8 @@ class BlockedUserListScreen extends StatefulWidget {
   const BlockedUserListScreen({super.key});
 
   static Route route(RouteSettings settings) {
-    return BlurredRouter(
+    return AppPageRoute.build(
+      settings: settings,
       builder: (context) {
         return const BlockedUserListScreen();
       },

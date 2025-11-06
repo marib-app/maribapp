@@ -661,8 +661,8 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
   ItemModel item;
   int _attributeSeed = 0;
 
-  static const String genericSuccessMessage = 'تم حفظ جميع الإعدادات بنجاح.';
-  static const String genericFailureMessage = 'تعذر حفظ الإعدادات. حاول مرة أخرى.';
+  static const String genericSuccessMessage = 'تم حفظ التعديلات بنجاح.';
+  static const String genericFailureMessage = 'تعذر حفظ التعديلات، حاول مرة أخرى.';
 
   Future<void> initialize() async {
     final int? itemId = item.id;
@@ -1302,7 +1302,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
               entries.isEmpty) {
             return _AttributesPayloadResult.failure(SubmissionOutcome(
               success: false,
-              message: 'Cannot publish before reviewing all data.',
+              message: 'لا يمكن النشر قبل مراجعة جميع البيانات.',
             ));
           }
 
@@ -1327,7 +1327,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
               options.isEmpty) {
             return _AttributesPayloadResult.failure(SubmissionOutcome(
               success: false,
-              message: 'Cannot publish before reviewing all data.',
+              message: 'لا يمكن النشر قبل مراجعة جميع البيانات.',
             ));
           }
 
@@ -1367,13 +1367,18 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       _applyOptions(response.options, finalPrice: response.finalPrice);
 
       return _successOutcome(response.message);
-    } catch (error) {
-      final String rawMessage =
-          ErrorFilter.check(error).error?.toString() ?? error.toString();
-      const String fallbackMessage =
-          'تعذر حفظ سمات المنتج. حاول مرة أخرى.';
+    } catch (error, stackTrace) {
+      Logger.debug(
+        "Failed to save attributes: $error",
+        name: "ProductManagementCubit",
+      );
+      Logger.debug(
+        stackTrace,
+        name: "ProductManagementCubit",
+      );
+      final String fallbackMessage = 'تعذر حفظ السمات، حاول مرة أخرى.';
       final String message =
-          rawMessage.trim().isEmpty ? fallbackMessage : rawMessage;
+          _extractFailureMessage(error, fallback: fallbackMessage);
       return _failureOutcome(message, fallback: fallbackMessage);
     }
   }
@@ -1382,7 +1387,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     if (state.hasStockVariants && state.variantForms.isEmpty) {
       return const _StockRowsResult.failure(SubmissionOutcome(
         success: false,
-        message: 'Cannot publish before reviewing all data.',
+        message: 'لا يمكن النشر قبل مراجعة جميع البيانات.',
       ));
     }
 
@@ -1418,13 +1423,18 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       _applyOptions(result.options, finalPrice: result.finalPrice);
 
       return _successOutcome(result.message);
-    } catch (error) {
-      final String rawMessage =
-          ErrorFilter.check(error).error?.toString() ?? error.toString();
-      const String fallbackMessage =
-          'تعذر حفظ تغييرات المخزون. حاول مرة أخرى.';
+    } catch (error, stackTrace) {
+      Logger.debug(
+        "Failed to save stock: $error",
+        name: "ProductManagementCubit",
+      );
+      Logger.debug(
+        stackTrace,
+        name: "ProductManagementCubit",
+      );
+      final String fallbackMessage = 'تعذر حفظ المخزون، حاول لاحقاً.';
       final String message =
-          rawMessage.trim().isEmpty ? fallbackMessage : rawMessage;
+          _extractFailureMessage(error, fallback: fallbackMessage);
       return _failureOutcome(message, fallback: fallbackMessage);
     }
   }
@@ -1438,14 +1448,14 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       if (state.discountValue == null) {
         return const _DiscountPayloadResult.failure(SubmissionOutcome(
           success: false,
-          message: 'Cannot publish before reviewing all data.',
+          message: 'لا يمكن النشر قبل مراجعة جميع البيانات.',
         ));
       }
 
       if (state.discountStart == null || state.discountEnd == null) {
         return const _DiscountPayloadResult.failure(SubmissionOutcome(
           success: false,
-          message: 'Cannot publish before reviewing all data.',
+          message: 'لا يمكن النشر قبل مراجعة جميع البيانات.',
         ));
       }
 
@@ -1474,13 +1484,18 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       _applyOptions(result.options, finalPrice: result.finalPrice);
 
       return _successOutcome(result.message);
-    } catch (error) {
-      final String rawMessage =
-          ErrorFilter.check(error).error?.toString() ?? error.toString();
-      const String fallbackMessage =
-          'تعذر حفظ إعدادات الخصم. حاول مرة أخرى.';
+    } catch (error, stackTrace) {
+      Logger.debug(
+        "Failed to save discount: $error",
+        name: "ProductManagementCubit",
+      );
+      Logger.debug(
+        stackTrace,
+        name: "ProductManagementCubit",
+      );
+      final String fallbackMessage = 'تعذر حفظ بيانات الخصم، حاول لاحقاً.';
       final String message =
-          rawMessage.trim().isEmpty ? fallbackMessage : rawMessage;
+          _extractFailureMessage(error, fallback: fallbackMessage);
       return _failureOutcome(message, fallback: fallbackMessage);
     }
   }
@@ -1625,7 +1640,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     if (!state.hasLoaded) {
       return const SubmissionOutcome(
         success: false,
-        message: 'Cannot publish before reviewing all data.',
+        message: 'لا يمكن النشر قبل مراجعة جميع البيانات.',
       );
     }
 
@@ -1643,7 +1658,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     if (state.hasStockVariants && state.variantForms.isEmpty) {
       return const SubmissionOutcome(
         success: false,
-        message: 'Cannot publish before reviewing all data.',
+        message: 'لا يمكن النشر قبل مراجعة جميع البيانات.',
       );
     }
 
@@ -1741,7 +1756,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     if (_createItem == null) {
       return const SubmissionOutcome(
         success: false,
-        message: 'Cannot publish before reviewing all data.',
+        message: 'لا يمكن النشر قبل مراجعة جميع البيانات.',
       );
     }
 
@@ -1760,13 +1775,19 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
             (created.price ?? state.lastKnownFinalPrice).toDouble(),
       ));
       return null;
-    } catch (error) {
-      final String rawMessage =
-          ErrorFilter.check(error).error?.toString() ?? error.toString();
-      const String fallbackMessage =
-          'تعذر إنشاء الإعلان قبل النشر. حاول مرة أخرى.';
+    } catch (error, stackTrace) {
+      Logger.debug(
+        "Failed to create item draft: $error",
+        name: "ProductManagementCubit",
+      );
+      Logger.debug(
+        stackTrace,
+        name: "ProductManagementCubit",
+      );
+      final String fallbackMessage =
+          'تعذر إنشاء الإعلان قبل المتابعة، حاول مرة أخرى.';
       final String message =
-          rawMessage.trim().isEmpty ? fallbackMessage : rawMessage;
+          _extractFailureMessage(error, fallback: fallbackMessage);
       return _failureOutcome(message, fallback: fallbackMessage);
     }
   }
@@ -2052,6 +2073,124 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
         previewFinalPrice: double.parse(finalPrice.toStringAsFixed(2))));
   }
 
+  String _extractFailureMessage(
+    Object error, {
+    String? fallback,
+  }) {
+    String? message;
+
+    if (error is ApiHttpException) {
+      message = _firstReadableMessage(error.errorMessage) ??
+          _messageFromPayload(error.payload) ??
+          _messageFromDio(error.cause);
+    } else if (error is DioException) {
+      message = _messageFromDio(error);
+    }
+
+    message ??= _firstReadableMessage(ErrorFilter.check(error).error);
+    message ??= _firstReadableMessage(error);
+
+    final String effectiveFallback = fallback ?? genericFailureMessage;
+    final String trimmed = (message ?? effectiveFallback).trim();
+    return trimmed.isEmpty ? effectiveFallback : trimmed;
+  }
+
+  String? _messageFromDio(DioException? exception) {
+    if (exception == null) {
+      return null;
+    }
+
+    final Response<dynamic>? response = exception.response;
+    if (response != null) {
+      final String? fromData = _messageFromPayload(response.data);
+      if (fromData != null) {
+        return fromData;
+      }
+      final String? statusMessage =
+          _firstReadableMessage(response.statusMessage);
+      if (statusMessage != null) {
+        return statusMessage;
+      }
+    }
+
+    return _firstReadableMessage(exception.message);
+  }
+
+  String? _messageFromPayload(dynamic payload) {
+    if (payload == null) {
+      return null;
+    }
+
+    if (payload is String) {
+      return _firstReadableMessage(payload);
+    }
+
+    if (payload is Map) {
+      final dynamic topLevelMessage =
+          payload['message'] ?? payload['error'] ?? payload['detail'];
+      final String? direct = _firstReadableMessage(topLevelMessage);
+      if (direct != null) {
+        return direct;
+      }
+      if (payload.containsKey('errors')) {
+        final String? fromErrors = _messageFromPayload(payload['errors']);
+        if (fromErrors != null) {
+          return fromErrors;
+        }
+      }
+      if (payload.containsKey('data')) {
+        final String? fromData = _messageFromPayload(payload['data']);
+        if (fromData != null) {
+          return fromData;
+        }
+      }
+    }
+
+    if (payload is Iterable) {
+      for (final dynamic entry in payload) {
+        final String? candidate = _messageFromPayload(entry);
+        if (candidate != null) {
+          return candidate;
+        }
+      }
+    }
+
+    return _firstReadableMessage(payload);
+  }
+
+  String? _firstReadableMessage(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+
+    if (value is String) {
+      final String trimmed = value.trim();
+      return trimmed.isEmpty ? null : trimmed;
+    }
+
+    if (value is Iterable) {
+      for (final dynamic element in value) {
+        final String? candidate = _firstReadableMessage(element);
+        if (candidate != null) {
+          return candidate;
+        }
+      }
+      return null;
+    }
+
+    if (value is Map) {
+      for (final dynamic entry in value.values) {
+        final String? candidate = _firstReadableMessage(entry);
+        if (candidate != null) {
+          return candidate;
+        }
+      }
+      return null;
+    }
+
+    final String text = value.toString().trim();
+    return text.isEmpty ? null : text;
+  }
   SubmissionOutcome _successOutcome(String message, {String? fallback}) {
     return SubmissionOutcome(
       success: true,
@@ -2104,111 +2243,8 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
 
     return sanitized;
   }
-
-  String _extractFailureMessage(
-    Object error,
-    String fallback,
-  ) {
-    final String? payloadMessage = _firstPayloadMessage(
-      error is ApiHttpException
-          ? error.payload
-          : error is DioException
-              ? error.response?.data
-              : null,
-    );
-    if (payloadMessage != null && payloadMessage.trim().isNotEmpty) {
-      final String trimmed = payloadMessage.trim();
-      final String normalized = _normalizeOutcomeMessage(
-        trimmed,
-        success: false,
-        fallback: fallback,
-      );
-      if (normalized.isNotEmpty && normalized != fallback) {
-        return normalized;
-      }
-      return trimmed;
-    }
-
-    if (error is ApiHttpException) {
-      final String normalized = _normalizeOutcomeMessage(
-        error.errorMessage?.toString() ?? '',
-        success: false,
-        fallback: fallback,
-      );
-      if (normalized != fallback) {
-        return normalized;
-      }
-    } else if (error is DioException) {
-      final String normalized = _normalizeOutcomeMessage(
-        error.message ?? '',
-        success: false,
-        fallback: fallback,
-      );
-      if (normalized != fallback) {
-        return normalized;
-      }
-    }
-
-    final String raw = error.toString();
-    final String trimmed = raw.trim();
-    final String normalizedError = trimmed.toLowerCase();
-    if (normalizedError == 'manage-item-fail' ||
-        normalizedError == 'exception: manage-item-fail') {
-      return 'تعذر إنشاء الإعلان قبل النشر. تأكد من اختيار الموقع، تحديد الصورة الرئيسية، واستكمال البيانات الأساسية ثم حاول مجدداً.';
-    }
-
-    return _normalizeOutcomeMessage(
-      trimmed,
-      success: false,
-      fallback: fallback,
-    );
-  }
-
-  String? _firstPayloadMessage(dynamic payload) {
-    if (payload == null) {
-      return null;
-    }
-
-    if (payload is String) {
-      final String trimmed = payload.trim();
-      if (trimmed.isEmpty ||
-          trimmed.toLowerCase() == 'the given data was invalid.') {
-        return null;
-      }
-      return trimmed;
-    }
-
-    if (payload is Map) {
-      final Map<String, dynamic> map = payload is Map<String, dynamic>
-          ? payload
-          : Map<String, dynamic>.from(payload);
-
-      final dynamic errors = map['errors'];
-      final String? fromErrors = _firstPayloadMessage(errors);
-      if (fromErrors != null && fromErrors.trim().isNotEmpty) {
-        return fromErrors.trim();
-      }
-
-      for (final String key in const <String>['message', 'error']) {
-        final dynamic candidate = map[key];
-        if (candidate is String && candidate.trim().isNotEmpty) {
-          return candidate.trim();
-        }
-      }
-      return null;
-    }
-
-    if (payload is Iterable) {
-      for (final dynamic entry in payload) {
-        final String? candidate = _firstPayloadMessage(entry);
-        if (candidate != null && candidate.trim().isNotEmpty) {
-          return candidate.trim();
-        }
-      }
-    }
-    return null;
-  }
 }
+
 
 
 

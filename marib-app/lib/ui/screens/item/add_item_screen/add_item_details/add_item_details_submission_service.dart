@@ -212,6 +212,7 @@ class AddItemDetailsSubmissionService {
 
     model.pendingDraft = draft;
     model.item = draft.item;
+    model.isSubmittingWithoutLocation = true;
 
     Navigator.pushNamed(
       context,
@@ -402,6 +403,7 @@ class AddItemDetailsSubmissionService {
 
       model.pendingDraft = draft;
       model.item = draft.item;
+      model.isSubmittingWithoutLocation = true;
 
       Navigator.pushNamed(
         context,
@@ -614,7 +616,7 @@ class AddItemDetailsSubmissionService {
     final Map<String, dynamic> payload = Map<String, dynamic>.from(baseData);
 
     payload.removeWhere((String key, dynamic value) =>
-    value == null || (value is String && value.trim().isEmpty));
+        value == null || (value is String && value.trim().isEmpty));
 
     final double? effectiveLat = _coerceCoordinate(
       payload['latitude'] ??
@@ -634,6 +636,7 @@ class AddItemDetailsSubmissionService {
       payload.remove('latitude');
       payload.remove('location_latitude');
     }
+    model.latitude = effectiveLat;
 
     if (effectiveLng != null) {
       payload['longitude'] = effectiveLng;
@@ -642,36 +645,68 @@ class AddItemDetailsSubmissionService {
       payload.remove('longitude');
       payload.remove('location_longitude');
     }
+    model.longitude = effectiveLng;
 
-    payload['address'] =
-        _normalizeString(payload['address']) ?? 'Unknown address';
-
-    final String? fallbackCity = _normalizeString(HiveUtils.getCityName());
-    if (fallbackCity != null) {
-      payload['city'] = fallbackCity;
+    final String? normalizedAddress = _normalizeString(
+      payload['address'] ?? model.locationAddress,
+    );
+    if (normalizedAddress != null) {
+      payload['address'] = normalizedAddress;
+      model.locationAddress = normalizedAddress;
     } else {
-      payload.remove('city');
+      payload.remove('address');
     }
 
-    final int? fallbackAreaId = _normalizeInt(HiveUtils.getAreaId());
-    if (fallbackAreaId != null) {
-      payload['area_id'] = fallbackAreaId;
+    final String? normalizedCity = _normalizeString(payload['city']);
+    if (normalizedCity != null) {
+      payload['city'] = normalizedCity;
     } else {
-      payload.remove('area_id');
+      final String? fallbackCity = _normalizeString(HiveUtils.getCityName());
+      if (fallbackCity != null) {
+        payload['city'] = fallbackCity;
+      } else {
+        payload.remove('city');
+      }
     }
 
-    final String? fallbackState = _normalizeString(HiveUtils.getStateName());
-    if (fallbackState != null) {
-      payload['state'] = fallbackState;
+    final int? normalizedAreaId = _normalizeInt(payload['area_id']);
+    if (normalizedAreaId != null) {
+      payload['area_id'] = normalizedAreaId;
     } else {
-      payload.remove('state');
+      final int? fallbackAreaId = _normalizeInt(HiveUtils.getAreaId());
+      if (fallbackAreaId != null) {
+        payload['area_id'] = fallbackAreaId;
+      } else {
+        payload.remove('area_id');
+      }
     }
 
-    payload['country'] =
-        _normalizeString(HiveUtils.getCountryName()) ?? 'Yemen';
+    final String? normalizedState = _normalizeString(payload['state']);
+    if (normalizedState != null) {
+      payload['state'] = normalizedState;
+    } else {
+      final String? fallbackState = _normalizeString(HiveUtils.getStateName());
+      if (fallbackState != null) {
+        payload['state'] = fallbackState;
+      } else {
+        payload.remove('state');
+      }
+    }
+
+    final String? normalizedCountry = _normalizeString(payload['country']);
+    if (normalizedCountry != null) {
+      payload['country'] = normalizedCountry;
+    } else {
+      final String? fallbackCountry =
+          _normalizeString(HiveUtils.getCountryName()) ?? 'Yemen';
+      payload['country'] = fallbackCountry;
+    }
 
     if (!model.isEdit && mainImageFile == null) {
-      HelperUtils.showSnackBarMessage(context, '???????????? ????????????');
+      HelperUtils.showSnackBarMessage(
+        context,
+        'يرجى إضافة صورة رئيسية قبل المتابعة.',
+      );
       return null;
     }
 
@@ -790,8 +825,3 @@ class AddItemDetailsSubmissionService {
         id == Constant.realEstateRootCategoryId;
   }
 }
-
-
-
-
-

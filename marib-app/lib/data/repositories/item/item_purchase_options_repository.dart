@@ -92,7 +92,7 @@ class ItemPurchaseOptionsRepository {
 
     String message = response['message']?.toString().trim() ?? '';
     if (message.isEmpty || message.toLowerCase() == 'null') {
-      message = 'تم الحفظ بنجاح';
+      message = 'تم حفظ التعديلات بنجاح.';
     }
 
     if (data == null) {

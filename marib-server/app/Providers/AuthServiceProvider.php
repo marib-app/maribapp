@@ -7,6 +7,16 @@ use Illuminate\Support\Facades\Gate;
 use App\Models\StoreGatewayAccount;
 use App\Policies\SectionDelegatePolicy;
 use App\Policies\StoreGatewayAccountPolicy;
+use App\Models\Wifi\WifiNetwork;
+use App\Models\Wifi\WifiPlan;
+use App\Models\Wifi\WifiCodeBatch;
+use App\Models\Wifi\WifiCode;
+use App\Policies\Wifi\WifiNetworkPolicy;
+use App\Policies\Wifi\WifiPlanPolicy;
+use App\Policies\Wifi\WifiCodeBatchPolicy;
+use App\Policies\Wifi\WifiCodePolicy;
+
+
 
 class AuthServiceProvider extends ServiceProvider
 {

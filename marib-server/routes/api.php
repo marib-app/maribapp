@@ -23,7 +23,11 @@ use App\Http\Controllers\Payments\PaymentWebhookController;
 use App\Http\Controllers\ProductPurchaseOptionsController;
 use App\Http\Controllers\ItemPurchaseManagementController;
 use App\Http\Controllers\Api\UserPreferenceController;
-
+use App\Http\Controllers\Wifi\AdminModerationController;
+use App\Http\Controllers\Wifi\OwnerBatchController;
+use App\Http\Controllers\Wifi\OwnerNetworkController;
+use App\Http\Controllers\Wifi\OwnerPlanController;
+use App\Http\Controllers\Wifi\PublicDiscoveryController;
 
 
 Route::get('diag', fn() => response('ok', 200));
@@ -45,6 +49,12 @@ Route::middleware(InitializeApiMetrics::class)
     ->get('ping', fn () => response()->json(['ok' => true]))
     ->name('ping');
     
+
+Route::prefix('wifi')->group(function (): void {
+    Route::get('networks', [PublicDiscoveryController::class, 'networks']);
+    Route::get('plans', [PublicDiscoveryController::class, 'plans']);
+});
+
 Route::get('products/{item}/purchase-options', [ProductPurchaseOptionsController::class, 'show'])
     ->whereNumber('item');
 Route::get('metal-rates', [PublicMetalRateController::class, 'index']);
@@ -55,6 +65,44 @@ Route::get('metal-rates', [PublicMetalRateController::class, 'index']);
 
 /* Authenticated Routes */
     Route::group(['middleware' => ['auth:sanctum']], static function () {
+
+    Route::prefix('wifi/owner')->group(function (): void {
+        Route::get('networks', [OwnerNetworkController::class, 'index']);
+        Route::post('networks', [OwnerNetworkController::class, 'store']);
+        Route::get('networks/{network}', [OwnerNetworkController::class, 'show'])->whereNumber('network');
+        Route::match(['put', 'patch'], 'networks/{network}', [OwnerNetworkController::class, 'update'])->whereNumber('network');
+        Route::patch('networks/{network}/commission', [OwnerNetworkController::class, 'setCommission'])->whereNumber('network');
+        Route::patch('networks/{network}/availability', [OwnerNetworkController::class, 'toggleAvailability'])->whereNumber('network');
+        Route::get('networks/{network}/stats', [OwnerNetworkController::class, 'stats'])->whereNumber('network');
+
+        Route::get('networks/{network}/plans', [OwnerPlanController::class, 'index'])->whereNumber('network');
+        Route::post('networks/{network}/plans', [OwnerPlanController::class, 'store'])->whereNumber('network');
+
+        Route::get('plans/{plan}', [OwnerPlanController::class, 'show'])->whereNumber('plan');
+        Route::match(['put', 'patch'], 'plans/{plan}', [OwnerPlanController::class, 'update'])->whereNumber('plan');
+        Route::delete('plans/{plan}', [OwnerPlanController::class, 'destroy'])->whereNumber('plan');
+
+        Route::get('plans/{plan}/batches', [OwnerBatchController::class, 'index'])->whereNumber('plan');
+        Route::post('plans/{plan}/batches', [OwnerBatchController::class, 'store'])->whereNumber('plan');
+        Route::get('batches/{batch}', [OwnerBatchController::class, 'show'])->whereNumber('batch');
+        Route::patch('batches/{batch}/status', [OwnerBatchController::class, 'updateStatus'])->whereNumber('batch');
+        Route::delete('batches/{batch}', [OwnerBatchController::class, 'destroy'])->whereNumber('batch');
+    });
+
+    Route::middleware('permission:wifi.admin')
+        ->prefix('wifi/admin')
+        ->group(function (): void {
+            Route::get('networks', [AdminModerationController::class, 'networks']);
+            Route::patch('networks/{network}/status', [AdminModerationController::class, 'updateNetworkStatus'])->whereNumber('network');
+
+            Route::get('reports', [AdminModerationController::class, 'reports']);
+            Route::patch('reports/{report}', [AdminModerationController::class, 'updateReport'])->whereNumber('report');
+
+            Route::get('reputation-counters', [AdminModerationController::class, 'reputationCounters']);
+            Route::post('networks/{network}/reputation-counters', [AdminModerationController::class, 'storeReputationCounter'])->whereNumber('network');
+            Route::patch('reputation-counters/{counter}', [AdminModerationController::class, 'updateReputationCounter'])->whereNumber('counter');
+        });
+
     Route::get('user/preferences', [UserPreferenceController::class, 'show']);
     Route::put('user/preferences', [UserPreferenceController::class, 'update']);
 

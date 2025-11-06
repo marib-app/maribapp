@@ -1220,7 +1220,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     emit(state.copyWith(stockSaving: true, error: null));
 
     try {
-      return await _persistStock(rowsResult.rows);
+      return await _persistStock(itemId, rowsResult.rows);
     } finally {
       emit(state.copyWith(stockSaving: false));
     }
@@ -1264,7 +1264,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     emit(state.copyWith(discountSaving: true, error: null));
 
     try {
-      return await _persistDiscount(payloadResult.payload);
+      return await _persistDiscount(itemId, payloadResult.payload);
     } finally {
       emit(state.copyWith(discountSaving: false));
     }
@@ -1296,8 +1296,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
               entries.isEmpty) {
             return _AttributesPayloadResult.failure(SubmissionOutcome(
               success: false,
-              message:
-                  'يرجى إضافة لون واحد على الأقل للسمة $trimmedName قبل الحفظ.',
+              message: 'Cannot publish before reviewing all data.',
             ));
           }
 
@@ -1322,8 +1321,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
               options.isEmpty) {
             return _AttributesPayloadResult.failure(SubmissionOutcome(
               success: false,
-              message:
-                  'يرجى إضافة خيار واحد على الأقل للسمة $trimmedName قبل الحفظ.',
+              message: 'Cannot publish before reviewing all data.',
             ));
           }
 
@@ -1374,8 +1372,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     if (state.hasStockVariants && state.variantForms.isEmpty) {
       return const _StockRowsResult.failure(SubmissionOutcome(
         success: false,
-        message:
-            'يرجى تحديد قيم السمات المؤثرة على المخزون ثم توليد التوليفات قبل الحفظ.',
+        message: 'Cannot publish before reviewing all data.',
       ));
     }
 
@@ -1401,7 +1398,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
   }
 
   Future<SubmissionOutcome> _persistStock(
-      List<Map<String, dynamic>> rows) async {
+      int itemId, List<Map<String, dynamic>> rows) async {
     try {
       final PurchaseOptionsUpdateResult result = await _repository.saveStock(
         itemId: itemId,
@@ -1427,14 +1424,14 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       if (state.discountValue == null) {
         return const _DiscountPayloadResult.failure(SubmissionOutcome(
           success: false,
-          message: 'أدخل قيمة الخصم قبل الحفظ.',
+          message: 'Cannot publish before reviewing all data.',
         ));
       }
 
       if (state.discountStart == null || state.discountEnd == null) {
         return const _DiscountPayloadResult.failure(SubmissionOutcome(
           success: false,
-          message: 'حدد فترة الخصم قبل الحفظ.',
+          message: 'Cannot publish before reviewing all data.',
         ));
       }
 
@@ -1452,9 +1449,10 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
   }
 
   Future<SubmissionOutcome> _persistDiscount(
-      Map<String, dynamic> payload) async {
+      int itemId, Map<String, dynamic> payload) async {
     try {
-      final PurchaseOptionsUpdateResult result = await _repository.saveDiscount(
+      final PurchaseOptionsUpdateResult result =
+          await _repository.saveDiscount(
         itemId: itemId,
         payload: payload,
       );
@@ -1609,8 +1607,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     if (!state.hasLoaded) {
       return const SubmissionOutcome(
         success: false,
-        message:
-            'يرجى الانتظار حتى يتم تحميل بيانات المنتج بالكامل ثم إعادة المحاولة.',
+        message: 'Cannot publish before reviewing all data.',
       );
     }
 
@@ -1628,8 +1625,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     if (state.hasStockVariants && state.variantForms.isEmpty) {
       return const SubmissionOutcome(
         success: false,
-        message:
-            'يرجى تحديد قيم السمات المؤثرة على المخزون ثم توليد التوليفات قبل الحفظ.',
+        message: 'Cannot publish before reviewing all data.',
       );
     }
 
@@ -1664,7 +1660,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     emit(state.copyWith(stockSaving: true, error: null));
     try {
       final SubmissionOutcome stockOutcome =
-          await _persistStock(stockResult.rows);
+          await _persistStock(itemId, stockResult.rows);
       if (!stockOutcome.success) {
         return stockOutcome;
       }
@@ -1676,7 +1672,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     emit(state.copyWith(discountSaving: true, error: null));
     try {
       final SubmissionOutcome discountOutcome =
-          await _persistDiscount(discountResult.payload);
+          await _persistDiscount(itemId, discountResult.payload);
       if (!discountOutcome.success) {
         return discountOutcome;
       }
@@ -1688,13 +1684,13 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     if (lastOutcome == null) {
       return const SubmissionOutcome(
         success: true,
-        message: 'لا توجد تغييرات لحفظها.',
+        message: 'Cannot publish before reviewing all data.',
       );
     }
 
     return const SubmissionOutcome(
       success: true,
-      message: 'تم حفظ جميع الإعدادات بنجاح.',
+      message: 'Cannot publish before reviewing all data.',
     );
   }
 
@@ -1704,7 +1700,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     if (!outcome.success && outcome.message.isEmpty) {
       return const SubmissionOutcome(
         success: false,
-        message: 'تعذر حفظ الإعدادات. حاول مرة أخرى.',
+        message: 'Cannot publish before reviewing all data.',
       );
     }
 
@@ -1718,8 +1714,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     if (_createItem == null) {
       return const SubmissionOutcome(
         success: false,
-        message:
-            'لا يمكن إنشاء الإعلان قبل مراجعة البيانات.',
+        message: 'Cannot publish before reviewing all data.',
       );
     }
 
@@ -1727,7 +1722,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       final ItemModel created = await _createItem!.call();
       item = created;
       emit(state.copyWith(
-        item: created,
+        itemOverride: created,
         clearError: true,
         options:
             state.options ?? ItemPurchaseOptions.empty(itemId: created.id ?? 0),
@@ -1745,7 +1740,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
         success: false,
         message: message.isNotEmpty
             ? message
-            : '�?�?���? �?�?�? �?�?�?�?�?�?�? �?�?�?�?�?�?. �?�?�?�? �?�?�? ��?�?�?.',
+            : 'Unable to create item before publish. Please try again.',
       );
     }
   }
@@ -2031,4 +2026,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
         previewFinalPrice: double.parse(finalPrice.toStringAsFixed(2))));
   }
 }
+
+
+
 

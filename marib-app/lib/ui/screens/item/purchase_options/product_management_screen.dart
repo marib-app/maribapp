@@ -108,8 +108,8 @@ class ProductManagementScreen extends StatefulWidget {
             args.item,
             createItem: args.pendingDraft != null
                 ? () => submitPendingItemDraft(
-                      context.read<ManageItemCubit>(),
-                      args.pendingDraft!,
+                      cubit: context.read<ManageItemCubit>(),
+                      draft: args.pendingDraft!,
                     )
                 : null,
           )..initialize(),

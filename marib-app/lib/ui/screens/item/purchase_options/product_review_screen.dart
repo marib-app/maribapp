@@ -217,8 +217,10 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
           throw Exception('missing-pending-draft');
         }
         final ManageItemCubit cubit = context.read<ManageItemCubit>();
-        final ItemModel created =
-            await submitPendingItemDraft(cubit, draft);
+        final ItemModel created = await submitPendingItemDraft(
+          cubit: cubit,
+          draft: draft,
+        );
         _item = created;
         _pendingDraft = null;
       }

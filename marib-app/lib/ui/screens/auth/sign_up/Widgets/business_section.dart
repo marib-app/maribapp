@@ -23,6 +23,7 @@ import 'package:marib/ui/screens/widgets/custom_text_form_field.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/data/model/category_model.dart';
+import 'package:marib/data/model/store_gateway_option.dart';
 import 'dart:ui' as ui;    // Path, PathMetric
 import 'dart:math' as math; // min
 import 'dart:async';
@@ -73,12 +74,15 @@ class BusinessSection extends StatelessWidget {
   final Map<String, dynamic>? workingHours;
   final ValueChanged<Map<String, dynamic>> onChangedWorkingHours;
 
-  // === وسائل الدفع ===
-  final Map<String, String> paymentMethods; // مفتاح => النص المترجم (i18n key داخل القيمة)
-  final List<String> selectedPaymentMethods;
-  final Map<String, TextEditingController> paymentControllers;
-  final void Function(String key, bool isSelected) onTogglePayment;
-  final String Function(String key) getAccountHint;
+  // === بوابات الدفع ===
+  final List<StoreGatewayOption> storeGateways;
+  final Set<int> selectedGatewayIds;
+  final Map<int, TextEditingController> beneficiaryControllers;
+  final Map<int, TextEditingController> accountControllers;
+  final void Function(int id, bool isSelected) onToggleGateway;
+  final bool isGatewaysLoading;
+  final String? gatewaysError;
+  final VoidCallback onRetryGateways;
 
   // === أنيميشن الشعار (اختياري) ===
   final bool isLogoUploading;       // يُظهر لودر أثناء الرفع
@@ -133,12 +137,15 @@ class BusinessSection extends StatelessWidget {
     // أوقات العمل (جديد)
     required this.workingHours,
     required this.onChangedWorkingHours,
-    // وسائل الدفع
-    required this.paymentMethods,
-    required this.selectedPaymentMethods,
-    required this.paymentControllers,
-    required this.onTogglePayment,
-    required this.getAccountHint,
+    // بوابات الدفع
+    required this.storeGateways,
+    required this.selectedGatewayIds,
+    required this.beneficiaryControllers,
+    required this.accountControllers,
+    required this.onToggleGateway,
+    required this.isGatewaysLoading,
+    required this.gatewaysError,
+    required this.onRetryGateways,
     // أنيميشن الشعار
     this.isLogoUploading = false,
     this.logoUploadProgress,
@@ -248,12 +255,15 @@ class BusinessSection extends StatelessWidget {
 
 
             // 8) بطاقة وسائل الدفع + حقول الحسابات
-            _PaymentMethodsCard(
-              paymentMethods: paymentMethods,
-              selectedMethods: selectedPaymentMethods,
-              controllers: paymentControllers,
-              onToggleMethod: onTogglePayment,
-              getAccountHint: getAccountHint,
+            _StoreGatewaysCard(
+              gateways: storeGateways,
+              selectedIds: selectedGatewayIds,
+              beneficiaryControllers: beneficiaryControllers,
+              accountControllers: accountControllers,
+              onToggleGateway: onToggleGateway,
+              isLoading: isGatewaysLoading,
+              error: gatewaysError,
+              onRetry: onRetryGateways,
             ),
 
             // 9) شريط إرسال (اختياري)
@@ -1788,24 +1798,178 @@ class _SelectedSummaryLine extends StatelessWidget {
    بطاقة وسائل الدفع + حقول الحسابات
    ========================================= */
 
-class _PaymentMethodsCard extends StatelessWidget {
-  final Map<String, String> paymentMethods;                  // key -> i18n key
-  final List<String> selectedMethods;
-  final Map<String, TextEditingController> controllers;
-  final void Function(String key, bool isSelected) onToggleMethod;
-  final String Function(String key) getAccountHint;
-
-  const _PaymentMethodsCard({
-    required this.paymentMethods,
-    required this.selectedMethods,
-    required this.controllers,
-    required this.onToggleMethod,
-    required this.getAccountHint,
+class _StoreGatewaysCard extends StatelessWidget {
+  const _StoreGatewaysCard({
+    required this.gateways,
+    required this.selectedIds,
+    required this.beneficiaryControllers,
+    required this.accountControllers,
+    required this.onToggleGateway,
+    required this.isLoading,
+    required this.error,
+    required this.onRetry,
   });
+
+  final List<StoreGatewayOption> gateways;
+  final Set<int> selectedIds;
+  final Map<int, TextEditingController> beneficiaryControllers;
+  final Map<int, TextEditingController> accountControllers;
+  final void Function(int id, bool isSelected) onToggleGateway;
+  final bool isLoading;
+  final String? error;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
     final c = context.color;
+
+    Widget buildContent() {
+      if (isLoading) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Center(
+            child: CircularProgressIndicator(
+              strokeWidth: 2.4,
+              color: c.territoryColor,
+            ),
+          ),
+        );
+      }
+
+      if (error != null && error!.trim().isNotEmpty) {
+        return Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "storeGatewaySelectionError".translate(context),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: context.font.normal,
+                  color: c.textDefaultColor,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton(
+                onPressed: onRetry,
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: c.territoryColor),
+                  foregroundColor: c.territoryColor,
+                ),
+                child: Text("retryAction".translate(context)),
+              ),
+            ],
+          ),
+        );
+      }
+
+      if (gateways.isEmpty) {
+        return Padding(
+          padding: const EdgeInsets.all(16),
+          child: Center(
+            child: Text(
+              "storeGatewaySelectionEmpty".translate(context),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: context.font.normal,
+                color: c.textColorDark.withOpacity(0.7),
+              ),
+            ),
+          ),
+        );
+      }
+
+      return Column(
+        children: gateways.map((gateway) {
+          final bool isSelected = selectedIds.contains(gateway.id);
+          final TextEditingController? beneficiaryController =
+              beneficiaryControllers[gateway.id];
+          final TextEditingController? accountController =
+              accountControllers[gateway.id];
+
+          return Card(
+            elevation: 2,
+            margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CheckboxListTile(
+                  value: isSelected,
+                  activeColor: c.territoryColor,
+                  onChanged: (checked) =>
+                      onToggleGateway(gateway.id, checked ?? false),
+                  controlAffinity: ListTileControlAffinity.leading,
+                  title: Row(
+                    children: [
+                      if (gateway.logoUrl != null)
+                        Padding(
+                          padding: const EdgeInsetsDirectional.only(end: 12),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              gateway.logoUrl!,
+                              width: 44,
+                              height: 44,
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) => const SizedBox(
+                                width: 44,
+                                height: 44,
+                              ),
+                            ),
+                          ),
+                        ),
+                      Expanded(
+                        child: Text(
+                          gateway.name,
+                          style: TextStyle(
+                            fontSize: context.font.normal,
+                            fontWeight: FontWeight.w600,
+                            color: c.textDefaultColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (isSelected)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                    child: Column(
+                      children: [
+                        CustomTextFormField(
+                          controller: beneficiaryController,
+                          fillColor: c.backgroundColor,
+                          borderColor: c.borderColor.darken(30),
+                          hintText: "storeGatewayBeneficiaryName"
+                              .translate(context),
+                          validator: CustomTextFieldValidator.nullCheck,
+                        ),
+                        const SizedBox(height: 12),
+                        CustomTextFormField(
+                          controller: accountController,
+                          fillColor: c.backgroundColor,
+                          borderColor: c.borderColor.darken(30),
+                          hintText: "storeGatewayAccountNumber"
+                              .translate(context),
+                          validator: CustomTextFieldValidator.nullCheck,
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          );
+        }).toList(),
+      );
+    }
 
     return _CardShell(
       child: Column(
@@ -1817,56 +1981,12 @@ class _PaymentMethodsCard extends StatelessWidget {
             showAsterisk: false,
           ),
           const SizedBox(height: 10),
-
           Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: c.borderColor.darken(20)),
             ),
-            child: Column(
-              children: paymentMethods.entries.map((entry) {
-                final key = entry.key;
-                final title = entry.value.translate(context);
-                final isSelected = selectedMethods.contains(key);
-                final controller = controllers[key];
-
-                return Card(
-                  elevation: 2,
-                  margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  child: Column(
-                    children: [
-                      CheckboxListTile(
-                        value: isSelected,
-                        title: Text(
-                          title,
-                          style: TextStyle(
-                            fontSize: context.font.normal,
-                            fontWeight: FontWeight.w500,
-                            color: c.textDefaultColor,
-                          ),
-                        ),
-                        activeColor: const Color(0xFFF35A00),
-                        onChanged: (checked) => onToggleMethod(key, checked ?? false),
-                        controlAffinity: ListTileControlAffinity.leading,
-                      ),
-
-                      if (isSelected)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                          child: CustomTextFormField(
-                            controller: controller,
-                            fillColor: c.backgroundColor,
-                            borderColor: c.borderColor.darken(30),
-                            hintText: getAccountHint(key),
-                            // ملاحظة: إن كان الحقل مطلوب لاحقًا، أضف validator هنا
-                          ),
-                        ),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ),
+            child: buildContent(),
           ),
         ],
       ),

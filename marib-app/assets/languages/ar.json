@@ -50,5 +50,11 @@
   "emptyStateAdvertisementsTitle": "لا توجد إعلانات بعد",
   "emptyStateAdvertisementsDescription": "أنشئ حملة ترويجية لتظهر هنا.",
   "emptyStateReviewsTitle": "لا توجد مراجعات بعد",
-  "emptyStateReviewsDescription": "ستظهر المراجعات التي تستلمها في هذا القسم."
+  "emptyStateReviewsDescription": "ستظهر المراجعات التي تستلمها في هذا القسم.",
+  "storeGatewaySelectionError": "تعذّر تحميل بوابات الدفع. يرجى المحاولة مرة أخرى.",
+  "storeGatewaySelectionEmpty": "لا توجد بوابات دفع متاحة حالياً.",
+  "storeGatewayBeneficiaryName": "اسم المستفيد",
+  "storeGatewayAccountNumber": "رقم الحساب أو المحفظة",
+  "pleaseCompleteGatewayAccountDetails": "يرجى إدخال اسم المستفيد ورقم الحساب لكل بوابة دفع محددة.",
+  "retryAction": "أعد المحاولة"
 }

@@ -1,7 +1,5 @@
-// FILE: lib/ui/screens/auth/sign_up/signup_screen.dart
-// Refactored: المنطق هنا فقط + استدعاء واجهات من signup_sections.dart و account_type_selector.dart
-import 'package:flutter/foundation.dart';
-
+﻿// FILE: lib/ui/screens/auth/sign_up/signup_screen.dart
+// Refactored: ط§ظ„ظ…ظ†ط·ظ‚ ظ‡ظ†ط§ ظپظ‚ط· + ط§ط³طھط¯ط¹ط§ط، ظˆط§ط¬ظ‡ط§طھ ظ…ظ† signup_sections.dart ظˆ account_type_selector.dart
 import 'dart:io';
 import 'dart:convert';
 import 'package:flutter_svg/svg.dart';
@@ -32,17 +30,18 @@ import 'package:flutter/foundation.dart';
 
 import 'package:marib/ui/screens/auth/sign_up/email_verification_screen.dart';
 
-// الواجهات المفصولة
+// ط§ظ„ظˆط§ط¬ظ‡ط§طھ ط§ظ„ظ…ظپطµظˆظ„ط©
 import 'widgets/account_type_selector.dart';
 import 'widgets/signup_shared_widgets.dart';
 import 'widgets/real_estate_section.dart';
 import 'widgets/business_section.dart';
-import 'dart:async'; // للـ Timer
+import 'dart:async'; // ظ„ظ„ظ€ Timer
 import 'package:marib/data/cubits/system/fetch_system_settings_cubit.dart';
 import 'package:marib/utils/notification/notification_service.dart';
 import '../widgets/auth_status_bar.dart';
 import 'package:marib/app/navigation/app_page_route.dart';
 import 'package:marib/app/navigation/motion/route_motion.dart';
+import 'package:marib/data/model/store_gateway_option.dart';
 
 class SignupScreen extends StatefulWidget {
   final String? selectedAccountType;
@@ -83,7 +82,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
   final GlobalKey<FormState> _formKey = GlobalKey();
   final TextEditingController _emailController = TextEditingController();
 
-  // حقول العقاري (نوع 2)
+  // ط­ظ‚ظˆظ„ ط§ظ„ط¹ظ‚ط§ط±ظٹ (ظ†ظˆط¹ 2)
   final TextEditingController _officeNameController = TextEditingController();
   final TextEditingController _officePhoneController = TextEditingController();
   final TextEditingController _officeWhatsappController =
@@ -91,7 +90,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
   final TextEditingController _officeLocationController =
       TextEditingController();
 
-  // حقول التجاري (نوع 3)
+  // ط­ظ‚ظˆظ„ ط§ظ„طھط¬ط§ط±ظٹ (ظ†ظˆط¹ 3)
   final TextEditingController _businessNameController = TextEditingController();
   final TextEditingController _businessPhoneController =
       TextEditingController();
@@ -102,29 +101,35 @@ class _SignupScreenState extends CloudState<SignupScreen> {
   final TextEditingController _commercialRegisterController =
       TextEditingController();
 
-  // قوائم للحساب التجاري
+  // ظ‚ظˆط§ط¦ظ… ظ„ظ„ط­ط³ط§ط¨ ط§ظ„طھط¬ط§ط±ظٹ
   List<int> selectedBusinessCategories = [];
-  List<String> selectedPaymentMethods = [];
-  final Map<String, TextEditingController> paymentAccountControllers = {};
+  List<StoreGatewayOption> _storeGateways = const <StoreGatewayOption>[];
+  final Set<int> _selectedStoreGatewayIds = <int>{};
+  final Map<int, TextEditingController> _storeGatewayBeneficiaryControllers =
+      <int, TextEditingController>{};
+  final Map<int, TextEditingController> _storeGatewayAccountControllers =
+      <int, TextEditingController>{};
+  bool _isLoadingStoreGateways = false;
+  String? _storeGatewaysError;
 
-  // صور/ملفات
+  // طµظˆط±/ظ…ظ„ظپط§طھ
   File? _officeLogoImage;
   File? _businessLogoImage;
   File? _commercialRegisterFile;
   final ImagePicker _picker = ImagePicker();
 
-  // الموقع
+  // ط§ظ„ظ…ظˆظ‚ط¹
   double? _latitude, _longitude;
   String? _selectedAddress;
   bool _isLocationLoading = false;
 
-  // الموقع لكل نوع
+  // ط§ظ„ظ…ظˆظ‚ط¹ ظ„ظƒظ„ ظ†ظˆط¹
   double? _officeLatitude, _officeLongitude;
   String? _officeSelectedAddress;
   double? _businessLatitude, _businessLongitude;
   String? _businessSelectedAddress;
 
-  // أوقات العمل (تجاري)
+  // ط£ظˆظ‚ط§طھ ط§ظ„ط¹ظ…ظ„ (طھط¬ط§ط±ظٹ)
   TimeOfDay? _openingTime;
   TimeOfDay? _closingTime;
 
@@ -142,7 +147,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
 
   bool isUploading = false;
 
-  // أوقات العمل (افتراضي: جميع الأيام غير متاحة)
+  // ط£ظˆظ‚ط§طھ ط§ظ„ط¹ظ…ظ„ (ط§ظپطھط±ط§ط¶ظٹ: ط¬ظ…ظٹط¹ ط§ظ„ط£ظٹط§ظ… ط؛ظٹط± ظ…طھط§ط­ط©)
   Map<String, dynamic> _workingHours = {
     "sat": {"enabled": false, "from": null, "to": null},
     "sun": {"enabled": false, "from": null, "to": null},
@@ -153,18 +158,8 @@ class _SignupScreenState extends CloudState<SignupScreen> {
     "fri": {"enabled": false, "from": null, "to": null},
   };
 
-  // وسائل الدفع
-  final Map<String, String> paymentMethods = const {
-    "bank_sharq": "bankSharqYemeni",
-    "easy_cash": "easyCashPoint",
-    "bank_tadamon": "bankTadamonIslamic",
-    "mahfazti_tadamon": "mahfaztiTadamon",
-    "bank_karimi": "bankKarimi",
-    "al_shabaka": "alShabakaInternalTransfers",
-  };
-
   String? countryCode;
-  String? flagEmoji = "🇾🇪";
+  String? flagEmoji = "ًں‡¾ًں‡ھ";
 
   // Social login
   String? currentSelectedAccountType;
@@ -177,18 +172,19 @@ class _SignupScreenState extends CloudState<SignupScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         context.read<FetchCategoryCubit>().fetchCategories();
+        _loadStoreGateways();
       });
     }
   }
 
-  // اختيار صورة
+  // ط§ط®طھظٹط§ط± طµظˆط±ط©
   Future<void> _pickImage(String type) async {
     try {
-      // ابدأ "رفع" واجهةً
+      // ط§ط¨ط¯ط£ "ط±ظپط¹" ظˆط§ط¬ظ‡ط©ظ‹
       if (type == 'office_logo') {
         setState(() {
           _officeLogoUploading = true;
-          _officeLogoProgress = null; // أو قيمة 0..1 إذا عندك تقدم حقيقي
+          _officeLogoProgress = null; // ط£ظˆ ظ‚ظٹظ…ط© 0..1 ط¥ط°ط§ ط¹ظ†ط¯ظƒ طھظ‚ط¯ظ… ط­ظ‚ظٹظ‚ظٹ
         });
       } else if (type == 'business_logo') {
         setState(() {
@@ -214,10 +210,10 @@ class _SignupScreenState extends CloudState<SignupScreen> {
         });
       }
 
-      // محاكاة رفع سريع لإظهار اللودر (احذف التأخير لو عندك رفع حقيقي)
+      // ظ…ط­ط§ظƒط§ط© ط±ظپط¹ ط³ط±ظٹط¹ ظ„ط¥ط¸ظ‡ط§ط± ط§ظ„ظ„ظˆط¯ط± (ط§ط­ط°ظپ ط§ظ„طھط£ط®ظٹط± ظ„ظˆ ط¹ظ†ط¯ظƒ ط±ظپط¹ ط­ظ‚ظٹظ‚ظٹ)
       await Future.delayed(const Duration(milliseconds: 400));
 
-      // أنهِ الرفع + فعّل تلميح النجاح 3 ثواني
+      // ط£ظ†ظ‡ظگ ط§ظ„ط±ظپط¹ + ظپط¹ظ‘ظ„ طھظ„ظ…ظٹط­ ط§ظ„ظ†ط¬ط§ط­ 3 ط«ظˆط§ظ†ظٹ
       if (type == 'office_logo') {
         if (mounted) {
           setState(() {
@@ -242,7 +238,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
         }
       }
     } catch (e) {
-      // أنهِ الرفع في حال الخطأ
+      // ط£ظ†ظ‡ظگ ط§ظ„ط±ظپط¹ ظپظٹ ط­ط§ظ„ ط§ظ„ط®ط·ط£
       if (mounted) {
         setState(() {
           _officeLogoUploading = false;
@@ -257,9 +253,9 @@ class _SignupScreenState extends CloudState<SignupScreen> {
     }
   }
 
-  // اختيار ملف السجل التجاري
+  // ط§ط®طھظٹط§ط± ظ…ظ„ظپ ط§ظ„ط³ط¬ظ„ ط§ظ„طھط¬ط§ط±ظٹ
 
-// لو بتستخدم kIsWeb:
+// ظ„ظˆ ط¨طھط³طھط®ط¯ظ… kIsWeb:
 
   static const _maxFileSizeBytes = 10 * 1024 * 1024; // 10MB
   static const _allowedExt = [
@@ -274,19 +270,19 @@ class _SignupScreenState extends CloudState<SignupScreen> {
 
   Future<void> _pickFile() async {
     try {
-      // 1) فتح منتقي الملفات (ما نفعّل اللودر هنا لأن نافذة النظام تغطي الواجهة)
+      // 1) ظپطھط­ ظ…ظ†طھظ‚ظٹ ط§ظ„ظ…ظ„ظپط§طھ (ظ…ط§ ظ†ظپط¹ظ‘ظ„ ط§ظ„ظ„ظˆط¯ط± ظ‡ظ†ط§ ظ„ط£ظ† ظ†ط§ظپط°ط© ط§ظ„ظ†ط¸ط§ظ… طھط؛ط·ظٹ ط§ظ„ظˆط§ط¬ظ‡ط©)
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: _allowedExt,
-        withData: true, // مهم للويب
+        withData: true, // ظ…ظ‡ظ… ظ„ظ„ظˆظٹط¨
       );
 
-      if (result == null) return; // المستخدم ألغى
+      if (result == null) return; // ط§ظ„ظ…ط³طھط®ط¯ظ… ط£ظ„ط؛ظ‰
 
       final picked = result.files.single;
       final ext = (picked.extension ?? '').toLowerCase();
 
-      // تحقق الامتداد
+      // طھط­ظ‚ظ‚ ط§ظ„ط§ظ…طھط¯ط§ط¯
       if (!_allowedExt.contains(ext)) {
         HelperUtils.showSnackBarMessage(
           context,
@@ -296,18 +292,18 @@ class _SignupScreenState extends CloudState<SignupScreen> {
         return;
       }
 
-      // تحقق الحجم
+      // طھط­ظ‚ظ‚ ط§ظ„ط­ط¬ظ…
       final size = picked.size;
       if (size > _maxFileSizeBytes) {
         HelperUtils.showSnackBarMessage(
           context,
-          "fileTooLarge".translate(context), // "الحجم يتجاوز 10MB"
+          "fileTooLarge".translate(context), // "ط§ظ„ط­ط¬ظ… ظٹطھط¬ط§ظˆط² 10MB"
           messageDuration: 3,
         );
         return;
       }
 
-      // 2) احفظ الملف المختار
+      // 2) ط§ط­ظپط¸ ط§ظ„ظ…ظ„ظپ ط§ظ„ظ…ط®طھط§ط±
       if (kIsWeb) {
         if (picked.bytes == null) {
           HelperUtils.showSnackBarMessage(
@@ -317,12 +313,12 @@ class _SignupScreenState extends CloudState<SignupScreen> {
           );
           return;
         }
-        // حفظ/رفع مباشرة بالـ bytes عندك إن احتجت:
+        // ط­ظپط¸/ط±ظپط¹ ظ…ط¨ط§ط´ط±ط© ط¨ط§ظ„ظ€ bytes ط¹ظ†ط¯ظƒ ط¥ظ† ط§ط­طھط¬طھ:
         // _webFileBytes = picked.bytes!;
         // _webFileName  = picked.name;
         setState(() {
           _commercialRegisterFile =
-              null; // لا نملك File على الويب، احتفظ بالاسم فقط إن شئت
+              null; // ظ„ط§ ظ†ظ…ظ„ظƒ File ط¹ظ„ظ‰ ط§ظ„ظˆظٹط¨طŒ ط§ط­طھظپط¸ ط¨ط§ظ„ط§ط³ظ… ظپظ‚ط· ط¥ظ† ط´ط¦طھ
         });
       } else {
         final path = picked.path;
@@ -339,12 +335,12 @@ class _SignupScreenState extends CloudState<SignupScreen> {
         });
       }
 
-      // 3) فعّل اللودر أثناء "الرفع الفعلي"
+      // 3) ظپط¹ظ‘ظ„ ط§ظ„ظ„ظˆط¯ط± ط£ط«ظ†ط§ط، "ط§ظ„ط±ظپط¹ ط§ظ„ظپط¹ظ„ظٹ"
       setState(() => isUploading = true);
       try {
-        // TODO: ارفع الملف للسيرفر هنا
+        // TODO: ط§ط±ظپط¹ ط§ظ„ظ…ظ„ظپ ظ„ظ„ط³ظٹط±ظپط± ظ‡ظ†ط§
         // await api.uploadCommercialRegister(_commercialRegisterFile or picked.bytes);
-        await Future.delayed(const Duration(seconds: 1)); // محاكاة رفع
+        await Future.delayed(const Duration(seconds: 1)); // ظ…ط­ط§ظƒط§ط© ط±ظپط¹
       } finally {
         if (mounted) setState(() => isUploading = false);
       }
@@ -361,11 +357,11 @@ class _SignupScreenState extends CloudState<SignupScreen> {
   void _removePickedFile() {
     setState(() {
       _commercialRegisterFile = null;
-      // _webFileBytes = null; _webFileName = null; // للويب إن وجِد
+      // _webFileBytes = null; _webFileName = null; // ظ„ظ„ظˆظٹط¨ ط¥ظ† ظˆط¬ظگط¯
     });
   }
 
-  // اختيار الوقت
+  // ط§ط®طھظٹط§ط± ط§ظ„ظˆظ‚طھ
   Future<void> _selectTime(BuildContext context, bool isOpeningTime) async {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
@@ -404,7 +400,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
     }
   }
 
-  // الموقع الحالي
+  // ط§ظ„ظ…ظˆظ‚ط¹ ط§ظ„ط­ط§ظ„ظٹ
   Future<void> _getCurrentLocation() async {
     setState(() {
       _isLocationLoading = true;
@@ -451,7 +447,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
 
       setState(() {
         if (widget.selectedAccountType == "2") {
-          // عقاري
+          // ط¹ظ‚ط§ط±ظٹ
           _officeLatitude = position.latitude;
           _officeLongitude = position.longitude;
           if (placemarks.isNotEmpty) {
@@ -461,7 +457,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
             _officeLocationController.text = _officeSelectedAddress ?? "";
           }
         } else if (widget.selectedAccountType == "3") {
-          // تجاري
+          // طھط¬ط§ط±ظٹ
           _businessLatitude = position.latitude;
           _businessLongitude = position.longitude;
           if (placemarks.isNotEmpty) {
@@ -471,7 +467,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
             _businessLocationController.text = _businessSelectedAddress ?? "";
           }
         } else {
-          // فردي
+          // ظپط±ط¯ظٹ
           _latitude = position.latitude;
           _longitude = position.longitude;
           if (placemarks.isNotEmpty) {
@@ -500,12 +496,12 @@ class _SignupScreenState extends CloudState<SignupScreen> {
     }
   }
 
-  // زر الموقع
+  // ط²ط± ط§ظ„ظ…ظˆظ‚ط¹
   VoidCallback _getLocationCallback() {
     return _isLocationLoading ? () {} : _getCurrentLocation;
   }
 
-  // منتقي الدولة
+  // ظ…ظ†طھظ‚ظٹ ط§ظ„ط¯ظˆظ„ط©
   void _showCountryPicker() {
     showCountryPicker(
       context: context,
@@ -523,6 +519,131 @@ class _SignupScreenState extends CloudState<SignupScreen> {
     );
   }
 
+  void _ensureGatewayControllers(int gatewayId) {
+    _storeGatewayBeneficiaryControllers.putIfAbsent(
+      gatewayId,
+      () => TextEditingController(),
+    );
+    _storeGatewayAccountControllers.putIfAbsent(
+      gatewayId,
+      () => TextEditingController(),
+    );
+  }
+
+  void _disposeGatewayControllers(Iterable<int> gatewayIds) {
+    for (final int id in gatewayIds) {
+      _storeGatewayBeneficiaryControllers.remove(id)?.dispose();
+      _storeGatewayAccountControllers.remove(id)?.dispose();
+    }
+  }
+
+  void _toggleStoreGateway(int gatewayId, bool isSelected) {
+    setState(() {
+      if (isSelected) {
+        if (_selectedStoreGatewayIds.add(gatewayId)) {
+          _ensureGatewayControllers(gatewayId);
+        }
+      } else {
+        if (_selectedStoreGatewayIds.remove(gatewayId)) {
+          _disposeGatewayControllers(<int>[gatewayId]);
+        }
+      }
+    });
+  }
+
+  Future<void> _loadStoreGateways() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoadingStoreGateways = true;
+      _storeGatewaysError = null;
+    });
+
+    try {
+      final Map<String, dynamic> response =
+          await Api.get(url: 'store-gateways');
+
+      final List<StoreGatewayOption> parsed = _parseStoreGateways(response);
+      if (!mounted) return;
+
+      final Set<int> availableIds =
+          parsed.where((g) => g.isActive && g.id > 0).map((g) => g.id).toSet();
+      final List<int> removedSelection = _selectedStoreGatewayIds
+          .where((int id) => !availableIds.contains(id))
+          .toList();
+
+      _disposeGatewayControllers(removedSelection);
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _selectedStoreGatewayIds
+            .removeWhere((int id) => !availableIds.contains(id));
+        _storeGateways = parsed;
+      });
+      for (final int id in _selectedStoreGatewayIds) {
+        _ensureGatewayControllers(id);
+      }
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _storeGateways = const <StoreGatewayOption>[];
+        _storeGatewaysError = error.toString();
+      });
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingStoreGateways = false;
+      });
+    }
+  }
+
+  List<StoreGatewayOption> _parseStoreGateways(
+    Map<String, dynamic> payload,
+  ) {
+    final dynamic rawData = payload['data'] ?? payload['gateways'] ?? payload;
+
+    Iterable<dynamic> candidates;
+    if (rawData is List) {
+      candidates = rawData;
+    } else if (rawData is Map<String, dynamic>) {
+      if (rawData['data'] is List) {
+        candidates = rawData['data'] as List<dynamic>;
+      } else if (rawData['items'] is List) {
+        candidates = rawData['items'] as List<dynamic>;
+      } else {
+        candidates = rawData.values
+            .where((value) => value is List)
+            .cast<List<dynamic>>()
+            .expand((element) => element);
+      }
+    } else {
+      candidates = const <dynamic>[];
+    }
+
+    final List<StoreGatewayOption> parsed = <StoreGatewayOption>[];
+    for (final dynamic element in candidates) {
+      if (element is Map<String, dynamic>) {
+        parsed.add(StoreGatewayOption.fromJson(element));
+      } else if (element is Map) {
+        parsed.add(
+          StoreGatewayOption.fromJson(
+            Map<String, dynamic>.from(
+              element as Map<dynamic, dynamic>,
+            ),
+          ),
+        );
+      }
+    }
+
+    parsed.sort(
+      (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+    );
+
+    return parsed;
+  }
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -531,10 +652,16 @@ class _SignupScreenState extends CloudState<SignupScreen> {
     _officeWhatsappController.dispose();
     _officeLocationController.dispose();
     _businessNameController.dispose();
+    _businessPhoneController.dispose();
     _businessWhatsappController.dispose();
     _businessLocationController.dispose();
     _commercialRegisterController.dispose();
-    paymentAccountControllers.values.forEach((c) => c.dispose());
+    for (final controller in _storeGatewayBeneficiaryControllers.values) {
+      controller.dispose();
+    }
+    for (final controller in _storeGatewayAccountControllers.values) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
@@ -553,10 +680,10 @@ class _SignupScreenState extends CloudState<SignupScreen> {
         baseColor: statusBarBase,
       ),
       child: Scaffold(
-        // الخلفية العامة
+        // ط§ظ„ط®ظ„ظپظٹط© ط§ظ„ط¹ط§ظ…ط©
         backgroundColor: context.color.backgroundColor,
 
-        // الجسم: خلفية متدرجة + محتوى داخل SafeArea (top: false) مع حجز المساحة يدويًا
+        // ط§ظ„ط¬ط³ظ…: ط®ظ„ظپظٹط© ظ…طھط¯ط±ط¬ط© + ظ…ط­طھظˆظ‰ ط¯ط§ط®ظ„ SafeArea (top: false) ظ…ط¹ ط­ط¬ط² ط§ظ„ظ…ط³ط§ط­ط© ظٹط¯ظˆظٹظ‹ط§
         body: DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -570,7 +697,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
           child: SafeArea(
             top: false,
             bottom: false,
-            // خليه يرسم حتى آخر الشاشة (نضبط الـ inset بالسفل عند الكيبورد يدويًا)
+            // ط®ظ„ظٹظ‡ ظٹط±ط³ظ… ط­طھظ‰ ط¢ط®ط± ط§ظ„ط´ط§ط´ط© (ظ†ط¶ط¨ط· ط§ظ„ظ€ inset ط¨ط§ظ„ط³ظپظ„ ط¹ظ†ط¯ ط§ظ„ظƒظٹط¨ظˆط±ط¯ ظٹط¯ظˆظٹظ‹ط§)
             child: CustomScrollView(
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               slivers: [
@@ -580,7 +707,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
                     baseColor: statusBarBase,
                   ),
                 ),
-                // ===== الهيدر: شعار + عبارة ترحيبية =====
+                // ===== ط§ظ„ظ‡ظٹط¯ط±: ط´ط¹ط§ط± + ط¹ط¨ط§ط±ط© طھط±ط­ظٹط¨ظٹط© =====
                 SliverAppBar(
                   pinned: true,
                   floating: false,
@@ -624,7 +751,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
                   ),
                 ),
 
-                // ===== المحتوى (جسم النموذج) =====
+                // ===== ط§ظ„ظ…ط­طھظˆظ‰ (ط¬ط³ظ… ط§ظ„ظ†ظ…ظˆط°ط¬) =====
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: EdgeInsets.fromLTRB(6, 8, 6, 16 + bottomInset),
@@ -669,7 +796,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
                               const SizedBox(height: 24),
                             ],
 
-                            // العقاري
+                            // ط§ظ„ط¹ظ‚ط§ط±ظٹ
                             if (widget.selectedAccountType == "2") ...[
                               RealEstateSection(
                                 logo: _officeLogoImage,
@@ -679,19 +806,19 @@ class _SignupScreenState extends CloudState<SignupScreen> {
                                 officeWhatsapp: _officeWhatsappController,
                                 officeLocation: _officeLocationController,
                                 prefixText:
-                                    "${flagEmoji ?? "🇾🇪"} ${countryCode ?? "+967"}",
+                                    "${flagEmoji ?? "ًں‡¾ًں‡ھ"} ${countryCode ?? "+967"}",
                                 onPickCountry: _showCountryPicker,
                                 isLocationLoading: _isLocationLoading,
                                 onGetLocation: _getLocationCallback(),
 
-                                // ⬇️ مهم لعرض اللودر/التلميح
+                                // â¬‡ï¸ڈ ظ…ظ‡ظ… ظ„ط¹ط±ط¶ ط§ظ„ظ„ظˆط¯ط±/ط§ظ„طھظ„ظ…ظٹط­
                                 isLogoUploading: _officeLogoUploading,
                                 logoUploadProgress: _officeLogoProgress,
                                 showLogoPreviewHint: _officeLogoPreviewHint,
                               )
                             ],
 
-                            // التجاري
+                            // ط§ظ„طھط¬ط§ط±ظٹ
                             if (widget.selectedAccountType == "3") ...[
                               BlocBuilder<FetchCategoryCubit,
                                   FetchCategoryState>(
@@ -717,7 +844,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
                                     whatsapp: _businessWhatsappController,
                                     location: _businessLocationController,
                                     prefixText:
-                                        "${flagEmoji ?? "🇾🇪"} ${countryCode ?? "+967"}",
+                                        "${flagEmoji ?? "ًں‡¾ًں‡ھ"} ${countryCode ?? "+967"}",
                                     onPickCountry: _showCountryPicker,
                                     isLocationLoading: _isLocationLoading,
                                     onGetLocation: _getLocationCallback(),
@@ -740,40 +867,28 @@ class _SignupScreenState extends CloudState<SignupScreen> {
                                         _selectTime(context, true),
                                     onPickClosing: () =>
                                         _selectTime(context, false),
-                                    paymentMethods: paymentMethods,
-                                    selectedPaymentMethods:
-                                        selectedPaymentMethods,
-                                    paymentControllers:
-                                        paymentAccountControllers,
-                                    onTogglePayment: (key, isSelected) {
-                                      setState(() {
-                                        if (isSelected) {
-                                          if (!selectedPaymentMethods
-                                              .contains(key)) {
-                                            selectedPaymentMethods.add(key);
-                                            paymentAccountControllers[key] =
-                                                TextEditingController();
-                                          }
-                                        } else {
-                                          selectedPaymentMethods.remove(key);
-                                          paymentAccountControllers[key]
-                                              ?.dispose();
-                                          paymentAccountControllers.remove(key);
-                                        }
-                                      });
-                                    },
-                                    getAccountHint: _getAccountHint,
+                                    storeGateways: _storeGateways,
+                                    selectedGatewayIds:
+                                        _selectedStoreGatewayIds,
+                                    beneficiaryControllers:
+                                        _storeGatewayBeneficiaryControllers,
+                                    accountControllers:
+                                        _storeGatewayAccountControllers,
+                                    onToggleGateway: _toggleStoreGateway,
+                                    isGatewaysLoading: _isLoadingStoreGateways,
+                                    gatewaysError: _storeGatewaysError,
+                                    onRetryGateways: _loadStoreGateways,
 
-                                    // ⬇️ مهم: أوقات الدوام (الجديد)
+                                    // â¬‡ï¸ڈ ظ…ظ‡ظ…: ط£ظˆظ‚ط§طھ ط§ظ„ط¯ظˆط§ظ… (ط§ظ„ط¬ط¯ظٹط¯)
                                     workingHours: _workingHours,
                                     onChangedWorkingHours: (updated) {
                                       setState(() {
                                         _workingHours =
-                                            updated; // خزّنها أو أرسلها للكيوبيت/الباك-إند
+                                            updated; // ط®ط²ظ‘ظ†ظ‡ط§ ط£ظˆ ط£ط±ط³ظ„ظ‡ط§ ظ„ظ„ظƒظٹظˆط¨ظٹطھ/ط§ظ„ط¨ط§ظƒ-ط¥ظ†ط¯
                                       });
                                     },
 
-                                    // اختياري: عرض/تحميل الشعار
+                                    // ط§ط®طھظٹط§ط±ظٹ: ط¹ط±ط¶/طھط­ظ…ظٹظ„ ط§ظ„ط´ط¹ط§ط±
                                     isLogoUploading: _businessLogoUploading,
                                     logoUploadProgress: _businessLogoProgress,
                                     showLogoPreviewHint:
@@ -783,7 +898,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
                               ),
                             ],
 
-                            // الأفراد
+                            // ط§ظ„ط£ظپط±ط§ط¯
                             if (widget.selectedAccountType == "1" ||
                                 widget.selectedAccountType == "individual") ...[
                               EmailOnlySection(
@@ -829,25 +944,6 @@ class _SignupScreenState extends CloudState<SignupScreen> {
     }
   }
 
-  String _getAccountHint(String paymentKey) {
-    switch (paymentKey) {
-      case "bank_sharq":
-        return "bankSharqAccountNumber".translate(context);
-      case "easy_cash":
-        return "easyCashAccountNumber".translate(context);
-      case "bank_tadamon":
-        return "bankTadamonAccountNumber".translate(context);
-      case "mahfazti_tadamon":
-        return "mahfaztiTadamonNumber".translate(context);
-      case "bank_karimi":
-        return "bankKarimiAccountNumber".translate(context);
-      case "al_shabaka":
-        return "alShabakaAccountName".translate(context);
-      default:
-        return "accountNumberOrName".translate(context);
-    }
-  }
-
   bool _validateAdditionalFields() {
     if (widget.selectedAccountType == "3") {
       if (_businessNameController.text.trim().isEmpty) {
@@ -890,6 +986,22 @@ class _SignupScreenState extends CloudState<SignupScreen> {
         );
         return false;
       }
+
+      for (final int gatewayId in _selectedStoreGatewayIds) {
+        final String beneficiary =
+            _storeGatewayBeneficiaryControllers[gatewayId]?.text.trim() ?? '';
+        final String accountNumber =
+            _storeGatewayAccountControllers[gatewayId]?.text.trim() ?? '';
+
+        if (beneficiary.isEmpty || accountNumber.isEmpty) {
+          HelperUtils.showSnackBarMessage(
+            context,
+            "pleaseCompleteGatewayAccountDetails".translate(context),
+            messageDuration: 3,
+          );
+          return false;
+        }
+      }
     }
 
     if (widget.selectedAccountType == "2") {
@@ -915,7 +1027,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
   }
 
   bool _validateWithoutPhone() {
-    // نوع 3 (تجاري): نتحقق من الاسم/الموقع/الأقسام فقط — بدون هاتف/واتساب
+    // ظ†ظˆط¹ 3 (طھط¬ط§ط±ظٹ): ظ†طھط­ظ‚ظ‚ ظ…ظ† ط§ظ„ط§ط³ظ…/ط§ظ„ظ…ظˆظ‚ط¹/ط§ظ„ط£ظ‚ط³ط§ظ… ظپظ‚ط· â€” ط¨ط¯ظˆظ† ظ‡ط§طھظپ/ظˆط§طھط³ط§ط¨
     if (widget.selectedAccountType == "3") {
       if (_businessNameController.text.trim().isEmpty) {
         HelperUtils.showSnackBarMessage(
@@ -943,7 +1055,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
       }
     }
 
-    // نوع 2 (عقاري): لا نجعل أي حقل إجباري الآن
+    // ظ†ظˆط¹ 2 (ط¹ظ‚ط§ط±ظٹ): ظ„ط§ ظ†ط¬ط¹ظ„ ط£ظٹ ط­ظ‚ظ„ ط¥ط¬ط¨ط§ط±ظٹ ط§ظ„ط¢ظ†
     return true;
   }
 
@@ -957,18 +1069,116 @@ class _SignupScreenState extends CloudState<SignupScreen> {
     return <String, dynamic>{};
   }
 
-  Map<String, dynamic> _collectSelectedPaymentAccounts() {
-    final Map<String, dynamic> result = {};
-    for (final entry in paymentAccountControllers.entries) {
-      final text = entry.value.text.trim();
-      if (text.isNotEmpty) {
-        result[entry.key] = text;
+  List<_StoreGatewayAccountDraft> _collectStoreGatewayAccountDrafts() {
+    final List<_StoreGatewayAccountDraft> result =
+        <_StoreGatewayAccountDraft>[];
+
+    for (final int gatewayId in _selectedStoreGatewayIds) {
+      final String beneficiary =
+          _storeGatewayBeneficiaryControllers[gatewayId]?.text.trim() ?? '';
+      final String accountNumber =
+          _storeGatewayAccountControllers[gatewayId]?.text.trim() ?? '';
+
+      if (beneficiary.isEmpty || accountNumber.isEmpty) {
+        continue;
       }
+
+      result.add(
+        _StoreGatewayAccountDraft(
+          gatewayId: gatewayId,
+          beneficiaryName: beneficiary,
+          accountNumber: accountNumber,
+        ),
+      );
     }
+
     return result;
   }
 
-  // إرسال الطلب
+  Future<void> _syncStoreGatewayAccounts() async {
+    final List<_StoreGatewayAccountDraft> desiredAccounts =
+        _collectStoreGatewayAccountDrafts();
+
+    try {
+      final Map<String, dynamic> response =
+          await Api.get(url: Api.storeGatewayAccountsApi);
+
+      final Set<int> existingAccountIds = <int>{};
+
+      void collect(dynamic source) {
+        if (source == null) return;
+        if (source is List) {
+          for (final dynamic element in source) {
+            collect(element);
+          }
+          return;
+        }
+        if (source is Map<String, dynamic>) {
+          final dynamic idValue = source['id'];
+          final dynamic gatewayIdValue = source['store_gateway_id'];
+          if (idValue != null && gatewayIdValue != null) {
+            final int? parsedId = switch (idValue) {
+              int value => value,
+              num value => value.toInt(),
+              String value => int.tryParse(value.trim()),
+              Object value => int.tryParse(value.toString()),
+              _ => null,
+            };
+            if (parsedId != null) {
+              existingAccountIds.add(parsedId);
+            }
+          }
+          for (final dynamic value in source.values) {
+            collect(value);
+          }
+          return;
+        }
+        if (source is Map) {
+          collect(Map<String, dynamic>.from(source as Map<dynamic, dynamic>));
+        }
+      }
+
+      collect(response);
+
+      for (final int accountId in existingAccountIds) {
+        try {
+          await Api.delete(
+            url: Api.storeGatewayAccountApi(accountId),
+          );
+        } catch (_) {
+          // Ignore deletion failures for now.
+        }
+      }
+    } catch (error) {
+      if (kDebugMode) {
+        print('Failed to fetch existing store gateway accounts: $error');
+      }
+    }
+
+    if (desiredAccounts.isEmpty) {
+      return;
+    }
+
+    for (final _StoreGatewayAccountDraft account in desiredAccounts) {
+      try {
+        await Api.post(
+          url: Api.storeGatewayAccountsApi,
+          parameter: <String, dynamic>{
+            'store_gateway_id': account.gatewayId,
+            'beneficiary_name': account.beneficiaryName,
+            'account_number': account.accountNumber,
+            'is_active': true,
+          },
+        );
+      } catch (error) {
+        if (kDebugMode) {
+          print('Failed to create store gateway account: $error');
+        }
+      }
+    }
+  }
+
+  // ط¥ط±ط³ط§ظ„ ط§ظ„ط·ظ„ط¨
 
   Future<void> _submitForm() async {
     final form = _formKey.currentState;
@@ -977,7 +1187,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
     form.save();
     final acctType = widget.selectedAccountType;
     final bool passValidation = (acctType == "2" || acctType == "3")
-        ? _validateWithoutPhone() // نتجاوز تحققات الـ Form ونستخدم تحقق مخصص
+        ? _validateWithoutPhone() // ظ†طھط¬ط§ظˆط² طھط­ظ‚ظ‚ط§طھ ط§ظ„ظ€ Form ظˆظ†ط³طھط®ط¯ظ… طھط­ظ‚ظ‚ ظ…ط®طµطµ
         : (form.validate() && _validateAdditionalFields());
 
     if (passValidation) {
@@ -985,7 +1195,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
         final Map<String, dynamic> payload = {};
 
         if (widget.selectedAccountType == "2") {
-          // عقاري
+          // ط¹ظ‚ط§ط±ظٹ
           payload.addAll({
             "office_name": _officeNameController.text.trim(),
             "office_phone": _officePhoneController.text.trim(),
@@ -1010,17 +1220,18 @@ class _SignupScreenState extends CloudState<SignupScreen> {
             payload["office_logo"] = base64Image;
           }
         } else if (widget.selectedAccountType == "3") {
-          // تجاري
-          final Map<String, String> accountDetails = {};
-          for (final paymentMethod in selectedPaymentMethods) {
-            final value = paymentAccountControllers[paymentMethod]?.text;
-            if (value != null && value.isNotEmpty) {
-              accountDetails[paymentMethod] = value;
-            }
-          }
+          // طھط¬ط§ط±ظٹ
+          final List<_StoreGatewayAccountDraft> gatewayAccounts =
+              _collectStoreGatewayAccountDrafts();
 
-          final businessCategoriesString =
+          final String businessCategoriesString =
               selectedBusinessCategories.map((e) => e.toString()).join(',');
+
+          final List<Map<String, dynamic>> gatewayDetails =
+              gatewayAccounts.map((e) => e.toJson()).toList();
+
+          final String normalizedPaymentMethods =
+              gatewayAccounts.isEmpty ? '' : 'store_gateway';
 
           payload.addAll({
             "business_name": _businessNameController.text.trim(),
@@ -1028,8 +1239,8 @@ class _SignupScreenState extends CloudState<SignupScreen> {
             "business_whatsapp": _businessWhatsappController.text.trim(),
             "business_location": _businessLocationController.text.trim(),
             "business_categories": businessCategoriesString,
-            "payment_methods": selectedPaymentMethods.join(','),
-            "payment_account_details": accountDetails,
+            "payment_methods": normalizedPaymentMethods,
+            "payment_account_details": gatewayDetails,
             "phone_number": widget.phoneNumber,
             "country_code": widget.countryCode,
             "account_type": widget.selectedAccountType,
@@ -1039,8 +1250,8 @@ class _SignupScreenState extends CloudState<SignupScreen> {
               "business_whatsapp": _businessWhatsappController.text.trim(),
               "business_location": _businessLocationController.text.trim(),
               "business_categories": businessCategoriesString,
-              "payment_methods": selectedPaymentMethods.join(','),
-              "payment_account_details": accountDetails,
+              "payment_methods": normalizedPaymentMethods,
+              "payment_account_details": gatewayDetails,
             },
           });
 
@@ -1074,7 +1285,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
             payload["commercial_register_filename"] = fileName;
           }
         } else {
-          // فردي
+          // ظپط±ط¯ظٹ
           payload.addAll({
             "email": _emailController.text,
             "phone_number": widget.phoneNumber,
@@ -1195,14 +1406,15 @@ class _SignupScreenState extends CloudState<SignupScreen> {
                   _businessLocationController.text.trim();
               contactInfo['business_categories'] =
                   selectedBusinessCategories.map((e) => e.toString()).toList();
-              contactInfo['payment_methods'] =
-                  List<String>.from(selectedPaymentMethods);
 
-              final Map<String, dynamic> accountDetails =
-                  _collectSelectedPaymentAccounts();
-              if (accountDetails.isNotEmpty) {
-                contactInfo['payment_account_details'] = accountDetails;
+              final List<_StoreGatewayAccountDraft> gatewayAccounts =
+                  _collectStoreGatewayAccountDrafts();
+              if (gatewayAccounts.isNotEmpty) {
+                contactInfo['payment_methods'] = 'store_gateway';
+                contactInfo['payment_account_details'] =
+                    gatewayAccounts.map((e) => e.toJson()).toList();
               } else {
+                contactInfo.remove('payment_methods');
                 contactInfo.remove('payment_account_details');
               }
 
@@ -1239,16 +1451,20 @@ class _SignupScreenState extends CloudState<SignupScreen> {
             if (mounted) {
               context.read<UserDetailsCubit>().fill(HiveUtils.getUserDetails());
 
-              FetchSystemSettingsCubit.refreshPermissionsForCurrentUser(
-                context,
-                clearCacheBeforeFetch: true,
-              );
-            }
-          } catch (e) {
-            if (kDebugMode) {
-              print('Failed to persist registration data: ${e.toString()}');
-            }
+            FetchSystemSettingsCubit.refreshPermissionsForCurrentUser(
+              context,
+              clearCacheBeforeFetch: true,
+            );
           }
+
+          if (widget.selectedAccountType == "3") {
+            await _syncStoreGatewayAccounts();
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            print('Failed to persist registration data: ${e.toString()}');
+          }
+        }
 
           HelperUtils.showSnackBarMessage(
             context,
@@ -1257,7 +1473,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
           );
 
           if (widget.selectedAccountType == "1") {
-            // فردي: تحقق الموقع
+            // ظپط±ط¯ظٹ: طھط­ظ‚ظ‚ ط§ظ„ظ…ظˆظ‚ط¹
             if (HiveUtils.getCityName() != null &&
                 HiveUtils.getCityName() != "" &&
                 HiveUtils.getCityName() != "null") {
@@ -1268,7 +1484,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
                   Routes.locationPermissionScreen, (route) => false);
             }
           } else {
-            // تجاري/عقاري
+            // طھط¬ط§ط±ظٹ/ط¹ظ‚ط§ط±ظٹ
             HelperUtils.killPreviousPages(
                 context, Routes.main, {"from": "signup"});
           }
@@ -1290,170 +1506,25 @@ class _SignupScreenState extends CloudState<SignupScreen> {
       }
     }
   }
-
-/*
-
-  // إرسال الطلب
-  Future<void> _submitForm() async {
-    final form = _formKey.currentState;
-    if (form == null) return;
-
-    form.save();
-    if (form.validate() && _validateAdditionalFields()) {
-      try {
-        final Map<String, dynamic> payload = {};
-
-        if (widget.selectedAccountType == "2") {
-          // عقاري
-          payload.addAll({
-            "office_name": _officeNameController.text.trim(),
-            "office_phone": _officePhoneController.text.trim(),
-            "office_whatsapp": _officeWhatsappController.text.trim(),
-            "office_location": _officeLocationController.text.trim(),
-            "phone_number": widget.phoneNumber,
-            "country_code": widget.countryCode,
-            "account_type": widget.selectedAccountType,
-            "contact_info": {
-              "office_name": _officeNameController.text.trim(),
-              "office_phone": _officePhoneController.text.trim(),
-              "office_whatsapp": _officeWhatsappController.text.trim(),
-              "office_location": _officeLocationController.text.trim(),
-            },
-            "latitude": _officeLatitude?.toString(),
-            "longitude": _officeLongitude?.toString(),
-          });
-
-          if (_officeLogoImage != null) {
-            final base64Image =
-            base64Encode(_officeLogoImage!.readAsBytesSync());
-            payload["office_logo"] = base64Image;
-          }
-        } else if (widget.selectedAccountType == "3") {
-          // تجاري
-          final Map<String, String> accountDetails = {};
-          for (final paymentMethod in selectedPaymentMethods) {
-            final value = paymentAccountControllers[paymentMethod]?.text;
-            if (value != null && value.isNotEmpty) {
-              accountDetails[paymentMethod] = value;
-            }
-          }
-
-          final businessCategoriesString =
-          selectedBusinessCategories.map((e) => e.toString()).join(',');
-
-          payload.addAll({
-            "business_name": _businessNameController.text.trim(),
-            "business_phone": _businessPhoneController.text.trim(),
-            "business_whatsapp": _businessWhatsappController.text.trim(),
-            "business_location": _businessLocationController.text.trim(),
-            "business_categories": businessCategoriesString,
-            "payment_methods": selectedPaymentMethods.join(','),
-            "payment_account_details": accountDetails,
-            "phone_number": widget.phoneNumber,
-            "country_code": widget.countryCode,
-            "account_type": widget.selectedAccountType,
-            "contact_info": {
-              "business_name": _businessNameController.text.trim(),
-              "business_phone": _businessPhoneController.text.trim(),
-              "business_whatsapp":
-              _businessWhatsappController.text.trim(),
-              "business_location":
-              _businessLocationController.text.trim(),
-              "business_categories": businessCategoriesString,
-              "payment_methods": selectedPaymentMethods.join(','),
-              "payment_account_details": accountDetails,
-            },
-          });
-
-          if (_businessLatitude != null && _businessLongitude != null) {
-            payload.addAll({
-              "latitude": _businessLatitude.toString(),
-              "longitude": _businessLongitude.toString(),
-            });
-          }
-
-          if (_openingTime != null) {
-            payload["opening_time"] =
-            "${_openingTime!.hour}:${_openingTime!.minute.toString().padLeft(2, '0')}";
-          }
-          if (_closingTime != null) {
-            payload["closing_time"] =
-            "${_closingTime!.hour}:${_closingTime!.minute.toString().padLeft(2, '0')}";
-          }
-
-          if (_businessLogoImage != null) {
-            final base64Image =
-            base64Encode(_businessLogoImage!.readAsBytesSync());
-            payload["business_logo"] = base64Image;
-          }
-
-          if (_commercialRegisterFile != null) {
-            final base64File =
-            base64Encode(_commercialRegisterFile!.readAsBytesSync());
-            final fileName =
-                _commercialRegisterFile!.path.split('/').last;
-            payload["commercial_register_file"] = base64File;
-            payload["commercial_register_filename"] = fileName;
-          }
-        } else {
-          // فردي
-          payload.addAll({
-            "email": _emailController.text,
-            "phone_number": widget.phoneNumber,
-            "country_code": widget.countryCode,
-            "account_type": widget.selectedAccountType,
-          });
-        }
-
-        final response = await Api.post(
-          url: "complete-registration",
-          parameter: payload,
-        );
-
-        if (response['error'] == false) {
-          HelperUtils.showSnackBarMessage(
-            context,
-            "registrationCompletedSuccessfully".translate(context),
-            messageDuration: 3,
-          );
-
-          if (widget.selectedAccountType == "1") {
-            // فردي: تحقق الموقع
-            if (HiveUtils.getCityName() != null &&
-                HiveUtils.getCityName() != "" &&
-                HiveUtils.getCityName() != "null") {
-              HelperUtils.killPreviousPages(
-                  context, Routes.main, {"from": "signup"});
-            } else {
-              Navigator.of(context).pushNamedAndRemoveUntil(
-                  Routes.locationPermissionScreen, (route) => false);
-            }
-          } else {
-            // تجاري/عقاري
-            HelperUtils.killPreviousPages(
-                context, Routes.main, {"from": "signup"});
-          }
-        } else {
-          HelperUtils.showSnackBarMessage(
-            context,
-            response['message'] ??
-                'registrationError'.translate(context),
-            messageDuration: 3,
-          );
-        }
-      } catch (e, stack) {
-        // debug
-        // print(stack);
-        HelperUtils.showSnackBarMessage(
-          context,
-          "${"unexpectedError".translate(context)}: ${e.toString()}",
-          messageDuration: 3,
-        );
-      }
-    }
-  }
-
-  */
 }
 
+class _StoreGatewayAccountDraft {
+  const _StoreGatewayAccountDraft({
+    required this.gatewayId,
+    required this.beneficiaryName,
+    required this.accountNumber,
+  });
+
+  final int gatewayId;
+  final String beneficiaryName;
+  final String accountNumber;
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'store_gateway_id': gatewayId,
+      'beneficiary_name': beneficiaryName,
+      'account_number': accountNumber,
+    };
+  }
+}
 

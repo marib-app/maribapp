@@ -8,6 +8,7 @@ use App\Enums\Wifi\WifiCodeBatchStatus;
 use App\Enums\Wifi\WifiCodeStatus;
 use App\Enums\Wifi\WifiNetworkStatus;
 use App\Enums\Wifi\WifiPlanStatus;
+use App\Enums\Wifi\WifiReportStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Wifi\OwnerNetworkStatsRequest;
 use App\Http\Requests\Wifi\SetWifiCommissionRequest;
@@ -147,8 +148,8 @@ class OwnerNetworkController extends Controller
         }
 
         $plansTotal = (clone $planQuery)->count();
-        $plansActive = (clone $planQuery)->where('status', WifiPlanStatus::ACTIVE)->count();
-        $plansArchived = (clone $planQuery)->where('status', WifiPlanStatus::ARCHIVED)->count();
+        $plansActive = (clone $planQuery)->where('status', WifiPlanStatus::ACTIVE->value)->count();
+        $plansArchived = (clone $planQuery)->where('status', WifiPlanStatus::ARCHIVED->value)->count();
 
         $batchQuery = WifiCodeBatch::query()->whereHas('plan', static function ($query) use ($network, $from, $to): void {
             $query->where('wifi_network_id', $network->id);
@@ -161,7 +162,7 @@ class OwnerNetworkController extends Controller
         });
 
         $batchesTotal = (clone $batchQuery)->count();
-        $batchesActive = (clone $batchQuery)->where('status', WifiCodeBatchStatus::ACTIVE)->count();
+        $batchesActive = (clone $batchQuery)->where('status', WifiCodeBatchStatus::ACTIVE->value)->count();
 
         $codeQuery = WifiCode::query()->whereHas('plan', static function ($query) use ($network): void {
             $query->where('wifi_network_id', $network->id);
@@ -175,8 +176,8 @@ class OwnerNetworkController extends Controller
         }
 
         $codesTotal = (clone $codeQuery)->count();
-        $codesAvailable = (clone $codeQuery)->where('status', WifiCodeStatus::AVAILABLE)->count();
-        $codesSold = (clone $codeQuery)->where('status', WifiCodeStatus::SOLD)->count();
+        $codesAvailable = (clone $codeQuery)->where('status', WifiCodeStatus::AVAILABLE->value)->count();
+        $codesSold = (clone $codeQuery)->where('status', WifiCodeStatus::SOLD->value)->count();
 
         $reportQuery = WifiReport::query()->where('wifi_network_id', $network->id);
         if ($from) {
@@ -186,9 +187,9 @@ class OwnerNetworkController extends Controller
             $reportQuery->whereDate('created_at', '<=', $to);
         }
 
-        $reportsOpen = (clone $reportQuery)->where('status', 'open')->count();
-        $reportsInvestigating = (clone $reportQuery)->where('status', 'investigating')->count();
-        $reportsResolved = (clone $reportQuery)->where('status', 'resolved')->count();
+        $reportsOpen = (clone $reportQuery)->where('status', WifiReportStatus::OPEN->value)->count();
+        $reportsInvestigating = (clone $reportQuery)->where('status', WifiReportStatus::INVESTIGATING->value)->count();
+        $reportsResolved = (clone $reportQuery)->where('status', WifiReportStatus::RESOLVED->value)->count();
 
         $counters = ReputationCounter::query()
             ->where('wifi_network_id', $network->id)

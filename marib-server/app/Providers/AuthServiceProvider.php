@@ -27,6 +27,10 @@ class AuthServiceProvider extends ServiceProvider
      */
     protected $policies = [
         StoreGatewayAccount::class => StoreGatewayAccountPolicy::class,
+        WifiNetwork::class => WifiNetworkPolicy::class,
+        WifiPlan::class => WifiPlanPolicy::class,
+        WifiCodeBatch::class => WifiCodeBatchPolicy::class,
+        WifiCode::class => WifiCodePolicy::class,
     ];
 
     /**

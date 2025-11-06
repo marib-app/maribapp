@@ -682,5 +682,11 @@
   "emptyStateAdvertisementsTitle": "No advertisements yet",
   "emptyStateAdvertisementsDescription": "Create a campaign to promote your items and it will appear here.",
   "emptyStateReviewsTitle": "No reviews yet",
-  "emptyStateReviewsDescription": "Reviews you receive will appear in this section."
+  "emptyStateReviewsDescription": "Reviews you receive will appear in this section.",
+  "storeGatewaySelectionError": "Couldn't load payment gateways. Please try again.",
+  "storeGatewaySelectionEmpty": "No payment gateways are available right now.",
+  "storeGatewayBeneficiaryName": "Beneficiary name",
+  "storeGatewayAccountNumber": "Account or wallet number",
+  "pleaseCompleteGatewayAccountDetails": "Please fill in the beneficiary name and account number for every selected payment gateway.",
+  "retryAction": "Try again"
 }

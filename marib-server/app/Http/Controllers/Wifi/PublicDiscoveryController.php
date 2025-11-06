@@ -21,7 +21,7 @@ class PublicDiscoveryController extends Controller
         $perPage = $validated['per_page'] ?? 15;
 
         $query = WifiNetwork::query()
-            ->where('status', WifiNetworkStatus::ACTIVE)
+            ->where('status', WifiNetworkStatus::ACTIVE->value)
             ->withCount('plans');
 
         if (! empty($validated['q'])) {
@@ -53,7 +53,7 @@ class PublicDiscoveryController extends Controller
 
         if (! empty($validated['with_plans'])) {
             $query->with(['plans' => function (Builder $planQuery): void {
-                $planQuery->where('status', WifiPlanStatus::ACTIVE)->orderBy('sort_order');
+                $planQuery->where('status', WifiPlanStatus::ACTIVE->value)->orderBy('sort_order');
             }]);
         }
 
@@ -68,7 +68,7 @@ class PublicDiscoveryController extends Controller
         $perPage = $validated['per_page'] ?? 15;
 
         $query = WifiPlan::query()
-            ->whereIn('status', [WifiPlanStatus::ACTIVE, WifiPlanStatus::VALIDATED])
+            ->whereIn('status', [WifiPlanStatus::ACTIVE->value, WifiPlanStatus::VALIDATED->value])
             ->with('network:id,name,slug,status,user_id');
 
         if (! empty($validated['q'])) {

@@ -42,10 +42,6 @@ class WifiCodeBatch extends Model
         'meta' => 'array',
     ];
 
-    protected static function newFactory()
-    {
-        return \Database\Factories\Wifi\WifiCodeBatchFactory::new();
-    }
 
     public function plan(): BelongsTo
     {

@@ -392,7 +392,10 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
     final String normalized = trimmed.toLowerCase();
     if (normalized == 'null' ||
         normalized == 'none' ||
-        normalized == 'undefined') {
+        normalized == 'undefined' ||
+        normalized == 'request-failed' ||
+        normalized == 'manage-item-fail' ||
+        normalized.contains('something went wrong')) {
       return outcome.success
           ? ProductManagementCubit.genericSuccessMessage
           : ProductManagementCubit.genericFailureMessage;

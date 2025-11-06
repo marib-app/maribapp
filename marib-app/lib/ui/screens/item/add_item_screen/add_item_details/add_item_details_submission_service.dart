@@ -616,13 +616,31 @@ class AddItemDetailsSubmissionService {
     payload.removeWhere((String key, dynamic value) =>
     value == null || (value is String && value.trim().isEmpty));
 
-    for (final String key in const <String>[
-      'latitude',
-      'longitude',
-      'location_latitude',
-      'location_longitude',
-    ]) {
-      payload.remove(key);
+    final double? effectiveLat = _coerceCoordinate(
+      payload['latitude'] ??
+          payload['location_latitude'] ??
+          model.latitude,
+    );
+    final double? effectiveLng = _coerceCoordinate(
+      payload['longitude'] ??
+          payload['location_longitude'] ??
+          model.longitude,
+    );
+
+    if (effectiveLat != null) {
+      payload['latitude'] = effectiveLat;
+      payload['location_latitude'] = effectiveLat;
+    } else {
+      payload.remove('latitude');
+      payload.remove('location_latitude');
+    }
+
+    if (effectiveLng != null) {
+      payload['longitude'] = effectiveLng;
+      payload['location_longitude'] = effectiveLng;
+    } else {
+      payload.remove('longitude');
+      payload.remove('location_longitude');
     }
 
     payload['address'] =
@@ -728,6 +746,20 @@ class AddItemDetailsSubmissionService {
     }
     final String normalized =
         value.toString().replaceAll(',', '').trim();
+    if (normalized.isEmpty) {
+      return null;
+    }
+    return double.tryParse(normalized);
+  }
+
+  double? _coerceCoordinate(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+    if (value is num) {
+      return value.toDouble();
+    }
+    final String normalized = value.toString().trim();
     if (normalized.isEmpty) {
       return null;
     }

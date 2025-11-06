@@ -1,14 +1,17 @@
-import 'dart:collection';
+﻿import 'dart:collection';
 import 'dart:math' as math;
 import 'package:marib/data/model/custom_field/custom_field_model.dart';
 
+import 'package:dio/dio.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:marib/data/model/item/item_model.dart';
 import 'package:marib/data/model/item/purchase_options.dart';
 import 'package:marib/data/repositories/item/item_purchase_options_repository.dart';
+import 'package:marib/utils/api.dart' show ApiHttpException;
 import 'package:marib/utils/errorFilter.dart';
+import 'package:marib/utils/logger.dart';
 import 'package:marib/utils/variant_key.dart';
 
 const List<String> _defaultSizeCatalog = <String>[
@@ -659,8 +662,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
   int _attributeSeed = 0;
 
   static const String genericSuccessMessage = 'تم حفظ جميع الإعدادات بنجاح.';
-  static const String genericFailureMessage =
-      'تعذر حفظ الإعدادات. حاول مرة أخرى.';
+  static const String genericFailureMessage = 'تعذر حفظ الإعدادات. حاول مرة أخرى.';
 
   Future<void> initialize() async {
     final int? itemId = item.id;
@@ -2101,6 +2103,110 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     }
 
     return sanitized;
+  }
+
+  String _extractFailureMessage(
+    Object error,
+    String fallback,
+  ) {
+    final String? payloadMessage = _firstPayloadMessage(
+      error is ApiHttpException
+          ? error.payload
+          : error is DioException
+              ? error.response?.data
+              : null,
+    );
+    if (payloadMessage != null && payloadMessage.trim().isNotEmpty) {
+      final String trimmed = payloadMessage.trim();
+      final String normalized = _normalizeOutcomeMessage(
+        trimmed,
+        success: false,
+        fallback: fallback,
+      );
+      if (normalized.isNotEmpty && normalized != fallback) {
+        return normalized;
+      }
+      return trimmed;
+    }
+
+    if (error is ApiHttpException) {
+      final String normalized = _normalizeOutcomeMessage(
+        error.errorMessage?.toString() ?? '',
+        success: false,
+        fallback: fallback,
+      );
+      if (normalized != fallback) {
+        return normalized;
+      }
+    } else if (error is DioException) {
+      final String normalized = _normalizeOutcomeMessage(
+        error.message ?? '',
+        success: false,
+        fallback: fallback,
+      );
+      if (normalized != fallback) {
+        return normalized;
+      }
+    }
+
+    final String raw = error.toString();
+    final String trimmed = raw.trim();
+    final String normalizedError = trimmed.toLowerCase();
+    if (normalizedError == 'manage-item-fail' ||
+        normalizedError == 'exception: manage-item-fail') {
+      return 'تعذر إنشاء الإعلان قبل النشر. تأكد من اختيار الموقع، تحديد الصورة الرئيسية، واستكمال البيانات الأساسية ثم حاول مجدداً.';
+    }
+
+    return _normalizeOutcomeMessage(
+      trimmed,
+      success: false,
+      fallback: fallback,
+    );
+  }
+
+  String? _firstPayloadMessage(dynamic payload) {
+    if (payload == null) {
+      return null;
+    }
+
+    if (payload is String) {
+      final String trimmed = payload.trim();
+      if (trimmed.isEmpty ||
+          trimmed.toLowerCase() == 'the given data was invalid.') {
+        return null;
+      }
+      return trimmed;
+    }
+
+    if (payload is Map) {
+      final Map<String, dynamic> map = payload is Map<String, dynamic>
+          ? payload
+          : Map<String, dynamic>.from(payload);
+
+      final dynamic errors = map['errors'];
+      final String? fromErrors = _firstPayloadMessage(errors);
+      if (fromErrors != null && fromErrors.trim().isNotEmpty) {
+        return fromErrors.trim();
+      }
+
+      for (final String key in const <String>['message', 'error']) {
+        final dynamic candidate = map[key];
+        if (candidate is String && candidate.trim().isNotEmpty) {
+          return candidate.trim();
+        }
+      }
+      return null;
+    }
+
+    if (payload is Iterable) {
+      for (final dynamic entry in payload) {
+        final String? candidate = _firstPayloadMessage(entry);
+        if (candidate != null && candidate.trim().isNotEmpty) {
+          return candidate.trim();
+        }
+      }
+    }
+    return null;
   }
 }
 

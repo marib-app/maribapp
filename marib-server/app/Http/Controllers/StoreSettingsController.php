@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\PaymentConfiguration;
 use App\Models\Setting;
 use App\Models\StoreGateway;
 use App\Models\StoreGatewayAccount;
@@ -23,14 +22,14 @@ class StoreSettingsController extends Controller
             ->where('name', 'store_terms_conditions')
             ->value('value');
 
-        $storePaymentGateways = PaymentConfiguration::query()
-            ->orderBy('display_name')
-            ->orderBy('payment_method')
+        $storeGateways = StoreGateway::query()
+            ->withCount('accounts')
+            ->orderBy('name')
             ->get();
 
         return view('seller-store-settings.index', [
             'storeTerms'            => $storeTerms,
-            'storePaymentGateways' => $storePaymentGateways,
+            'storeGateways'        => $storeGateways,
         ]);
     }
 

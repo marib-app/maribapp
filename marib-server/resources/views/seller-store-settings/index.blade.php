@@ -93,7 +93,7 @@
                         <div class="row g-3">
                             <div class="col-12">
                                 <div class="alert alert-info" role="alert">
-                                    {{ __('Overview of the store payment gateways configured for sellers.') }}
+                                    {{ __('Overview of the store gateways configured for sellers.') }}
                                 </div>
                             </div>
 
@@ -114,17 +114,19 @@
                                             <tr>
                                                 <th>{{ __('Gateway') }}</th>
                                                 <th>{{ __('Status') }}</th>
+                                                <th>{{ __('Merchant Accounts') }}</th>
                                                 <th>{{ __('Updated At') }}</th>
                                                 <th>{{ __('Notes') }}</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            @forelse ($storePaymentGateways as $gateway)
+                                            @forelse ($storeGateways as $gateway)
                                                 @php
                                                     $updatedAt = $gateway->updated_at;
                                                     $lastUpdated = $updatedAt
                                                         ? $updatedAt->timezone(config('app.timezone', 'UTC'))->format('M j, Y H:i')
                                                         : __('Never');
+                                                    $notes = data_get($gateway, 'notes', data_get($gateway, 'note'));
                                                 @endphp
                                                 <tr>
                                                     <td>
@@ -132,32 +134,33 @@
                                                             @if($gateway->logo_url)
                                                                 <img
                                                                     src="{{ $gateway->logo_url }}"
-                                                                    alt="{{ $gateway->display_name ?? $gateway->payment_method }}"
+                                                                    alt="{{ $gateway->name }}"
                                                                     class="rounded border"
                                                                     style="width: 40px; height: 40px; object-fit: contain;"
                                                                 >
                                                             @else
                                                                 <span class="badge bg-light text-body-secondary border">
-                                                                    {{ strtoupper(\Illuminate\Support\Str::limit($gateway->payment_method, 3, '')) }}
+                                                                    {{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::limit($gateway->name, 3, '')) }}
                                                                 </span>
                                                             @endif
                                                             <div>
-                                                                <div class="fw-semibold">{{ $gateway->display_name ?: __('Unnamed Gateway') }}</div>
-                                                                <div class="small text-muted text-break">{{ $gateway->payment_method }}</div>
+                                                                <div class="fw-semibold">{{ $gateway->name }}</div>
+                                                                <div class="small text-muted text-break">{{ __('ID') }}: {{ $gateway->id }}</div>
                                                             </div>
                                                         </div>
                                                     </td>
                                                     <td>
-                                                        @if($gateway->status)
+                                                        @if($gateway->is_active)
                                                             <span class="badge bg-success">{{ __('Enabled') }}</span>
                                                         @else
                                                             <span class="badge bg-secondary">{{ __('Disabled') }}</span>
                                                         @endif
                                                     </td>
+                                                    <td class="text-nowrap">{{ $gateway->accounts_count }}</td>
                                                     <td class="text-nowrap">{{ $lastUpdated }}</td>
                                                     <td class="text-break">
-                                                        @if($gateway->note)
-                                                            {!! nl2br(e($gateway->note)) !!}
+                                                        @if(!empty($notes))
+                                                            {!! nl2br(e($notes)) !!}
                                                         @else
                                                             <span class="text-muted">{{ __('No notes added') }}</span>
                                                         @endif
@@ -165,8 +168,8 @@
                                                 </tr>
                                             @empty
                                                 <tr>
-                                                    <td colspan="4" class="text-center text-muted py-4">
-                                                        {{ __('No payment gateways configured yet.') }}
+                                                    <td colspan="5" class="text-center text-muted py-4">
+                                                        {{ __('No store gateways configured yet.') }}
                                                     </td>
                                                 </tr>
                                             @endforelse

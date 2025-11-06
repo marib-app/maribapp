@@ -709,6 +709,15 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
     ], static function () {
         Route::get('/', [StoreSettingsController::class, 'index'])->name('index');
         Route::post('/terms', [StoreSettingsController::class, 'storeTerms'])->name('terms.store');
+
+        Route::get('/gateways', [StoreSettingsController::class, 'gateways'])->name('gateways.index');
+        Route::get('/gateways/create', [StoreSettingsController::class, 'createGateway'])->name('gateways.create');
+        Route::post('/gateways', [StoreSettingsController::class, 'storeGateway'])->name('gateways.store');
+        Route::get('/gateways/{storeGateway}/edit', [StoreSettingsController::class, 'editGateway'])->name('gateways.edit');
+        Route::put('/gateways/{storeGateway}', [StoreSettingsController::class, 'updateGateway'])->name('gateways.update');
+        Route::delete('/gateways/{storeGateway}', [StoreSettingsController::class, 'destroyGateway'])->name('gateways.destroy');
+        Route::patch('/gateways/{storeGateway}/toggle', [StoreSettingsController::class, 'toggleGateway'])->name('gateways.toggle');
+        Route::patch('/gateway-accounts/{storeGatewayAccount}/toggle', [StoreSettingsController::class, 'toggleGatewayAccount'])->name('gateway-accounts.toggle');
     });
 
     /* --------------------------------- الإعدادات Settings --------------------------------- */

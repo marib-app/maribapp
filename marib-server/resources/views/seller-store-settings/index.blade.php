@@ -97,6 +97,16 @@
                                 </div>
                             </div>
 
+                            <div class="col-12 d-flex justify-content-end">
+                                <a
+                                    href="{{ route('seller-store-settings.gateways.index') }}"
+                                    class="btn btn-primary"
+                                >
+                                    {{ __('Manage Store Gateways') }}
+                                </a>
+                            </div>
+
+
                             <div class="col-12">
                                 <div class="table-responsive">
                                     <table class="table table-striped align-middle mb-0">

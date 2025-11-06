@@ -5,7 +5,9 @@ namespace App\Providers;
 
 
 use App\Models\OrderItem;
+use App\Models\Wifi\WifiReport;
 use App\Observers\OrderItemObserver;
+use App\Observers\Wifi\WifiReportObserver;
 use App\Services\CacheMetricsRecorder;
 use App\Services\Payments\GatewayLabelService;
 use Illuminate\Filesystem\Filesystem;
@@ -43,6 +45,8 @@ class AppServiceProvider extends ServiceProvider
 
 
         OrderItem::observe(OrderItemObserver::class);
+        WifiReport::observe(WifiReportObserver::class);
+        
         
         $this->app->terminating(static function () {
             app(CacheMetricsRecorder::class)->flush();

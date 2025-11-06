@@ -35,6 +35,18 @@ return [
         'token' => env('ENJAZATIK_API_TOKEN'),
     ],
 
+
+    'sms' => [
+        'driver' => env('SMS_DRIVER', 'log'),
+        'http' => [
+            'endpoint' => env('SMS_HTTP_ENDPOINT'),
+            'method' => env('SMS_HTTP_METHOD', 'POST'),
+            'token' => env('SMS_HTTP_TOKEN'),
+            'timeout' => env('SMS_HTTP_TIMEOUT', 10),
+        ],
+    ],
+
+
     'pusher' => [
         'app_id' => env('PUSHER_APP_ID'),
         'key' => env('PUSHER_APP_KEY'),

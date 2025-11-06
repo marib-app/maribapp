@@ -20,6 +20,8 @@ use Illuminate\Support\Facades\Storage;
 use App\Models\WalletTransaction;
 use App\Services\Logging\PaymentTrace;
 use App\Services\NotificationService;
+use App\Services\SmsService;
+use App\Services\Wifi\WifiOperationalService;
 use App\Services\WalletService;
 use App\Services\Payments\TransactionAmountResolver;
 use App\Models\User;
@@ -1529,6 +1531,12 @@ class PaymentFulfillmentService
             'last_sold_at' => $now->toIso8601String(),
         ]);
 
+
+        /** @var WifiOperationalService $wifiOperationalService */
+        $wifiOperationalService = app(WifiOperationalService::class);
+        $planMeta = $wifiOperationalService->handlePostSaleInventory($plan, $network, $planMeta);
+
+
         $plan->meta = $planMeta;
         $plan->save();
 
@@ -1557,6 +1565,13 @@ class PaymentFulfillmentService
         $netAmount = round($grossAmount - $commissionAmount, 2);
 
         $owner = $network->owner;
+
+        $buyer = User::query()
+            ->select(['id', 'name', 'mobile', 'country_code'])
+            ->find($userId);
+        $buyerPhone = $this->normalizeUserPhoneNumber($buyer);
+        $ownerPhone = $this->normalizeUserPhoneNumber($owner);
+
 
         if ($owner && $netAmount > 0) {
             /** @var WalletService $walletService */
@@ -1608,7 +1623,19 @@ class PaymentFulfillmentService
             'name' => $network->name,
         ];
 
-        DB::afterCommit(function () use ($userId, $owner, $plan, $network, $deliveryPayload, $currency, $grossAmount, $netAmount): void {
+        DB::afterCommit(function () use (
+            $userId,
+            $owner,
+            $plan,
+            $network,
+            $deliveryPayload,
+            $currency,
+            $grossAmount,
+            $netAmount,
+            $buyerPhone,
+            $ownerPhone
+        ): void {
+            
             $userTokens = UserFcmToken::query()
                 ->where('user_id', $userId)
                 ->pluck('fcm_token')
@@ -1665,6 +1692,49 @@ class PaymentFulfillmentService
                     );
                 }
             }
+
+
+
+            /** @var SmsService $smsService */
+            $smsService = app(SmsService::class);
+
+            if ($buyerPhone) {
+                $lines = [
+                    __('تم تسليم كرت الواي فاي لشبكة :network.', ['network' => $network->name]),
+                    __('الكود: :code', ['code' => $deliveryPayload['code']]),
+                ];
+
+                if (! empty($deliveryPayload['username'])) {
+                    $lines[] = __('اسم المستخدم: :username', ['username' => $deliveryPayload['username']]);
+                }
+
+                if (! empty($deliveryPayload['password'])) {
+                    $lines[] = __('كلمة المرور: :password', ['password' => $deliveryPayload['password']]);
+                }
+
+                if (! empty($deliveryPayload['serial_no'])) {
+                    $lines[] = __('الرقم التسلسلي: :serial', ['serial' => $deliveryPayload['serial_no']]);
+                }
+
+                if (! empty($deliveryPayload['expiry_date'])) {
+                    $lines[] = __('الصلاحية حتى: :date', ['date' => $deliveryPayload['expiry_date']]);
+                }
+
+                $lines[] = __('شكراً لاستخدامك كبينة واي فاي.');
+
+                $smsService->send($buyerPhone, implode("\n", $lines));
+            }
+
+            if ($ownerPhone) {
+                $ownerMessage = __('تم بيع كرت :plan بمبلغ :amount :currency.', [
+                    'plan' => $plan->name,
+                    'amount' => number_format($grossAmount, 2),
+                    'currency' => $currency,
+                ]);
+
+                $smsService->send($ownerPhone, $ownerMessage);
+            }
+
         });
 
         return $deliveryPayload;
@@ -1721,4 +1791,28 @@ class PaymentFulfillmentService
 
         $transaction->payment_gateway = 'wallet';
     }
+
+
+
+    private function normalizeUserPhoneNumber(?User $user): ?string
+    {
+        if (! $user instanceof User) {
+            return null;
+        }
+
+        $mobile = trim((string) $user->mobile);
+
+        if ($mobile === '') {
+            return null;
+        }
+
+        $countryCode = trim((string) $user->country_code);
+
+        if ($countryCode !== '' && ! Str::startsWith($mobile, $countryCode)) {
+            return $countryCode . $mobile;
+        }
+
+        return $mobile;
+    }
+
 }

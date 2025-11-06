@@ -144,12 +144,26 @@ class WifiCodeBatchProcessor
 
             $batch->total_codes = ($batch->total_codes ?? 0) + $summary['accepted'];
             $batch->available_codes = ($batch->available_codes ?? 0) + $summary['accepted'];
-            $batch->status = WifiCodeBatchStatus::VALIDATED;
-            $batch->validated_at = $batch->validated_at ?? $now;
+
+            if ($summary['accepted'] > 0) {
+                $batch->status = WifiCodeBatchStatus::ACTIVE;
+                $batch->validated_at = $batch->validated_at ?? $now;
+                $batch->activated_at = $batch->activated_at ?? $now;
+            } else {
+                $batch->status = WifiCodeBatchStatus::VALIDATED;
+                $batch->validated_at = $batch->validated_at ?? $now;
+            }
+
+
             $batch->save();
 
-            if ($plan->status === WifiPlanStatus::UPLOADED && $summary['accepted'] > 0) {
-                $plan->status = WifiPlanStatus::VALIDATED;
+            if (
+                $summary['accepted'] > 0
+                && in_array($plan->status, [WifiPlanStatus::UPLOADED, WifiPlanStatus::VALIDATED], true)
+            ) {
+                $plan->status = WifiPlanStatus::ACTIVE;
+
+                
                 $plan->save();
             }
         });

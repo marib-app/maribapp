@@ -524,6 +524,7 @@ class ProductManagementState extends Equatable {
   }
 
   ProductManagementState copyWith({
+    ItemModel? itemOverride,
     bool? loading,
     String? error,
     bool clearError = false,
@@ -557,7 +558,7 @@ class ProductManagementState extends Equatable {
     bool clearDeliverySize = false,
   }) {
     return ProductManagementState(
-      item: item,
+      item: itemOverride ?? item,
       loading: loading ?? this.loading,
       error: clearError ? null : (error ?? this.error),
       options: options ?? this.options,
@@ -644,11 +645,17 @@ class ProductManagementState extends Equatable {
 }
 
 class ProductManagementCubit extends Cubit<ProductManagementState> {
-  ProductManagementCubit(this._repository, this.item)
-      : super(ProductManagementState.initial(item));
+  ProductManagementCubit(
+    this._repository,
+    ItemModel item, {
+    Future<ItemModel> Function()? createItem,
+  })  : _createItem = createItem,
+        item = item,
+        super(ProductManagementState.initial(item));
 
   final ItemPurchaseOptionsRepository _repository;
-  final ItemModel item;
+  final Future<ItemModel> Function()? _createItem;
+  ItemModel item;
   int _attributeSeed = 0;
 
   Future<void> initialize() async {
@@ -656,7 +663,8 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     if (itemId == null) {
       emit(state.copyWith(
         loading: false,
-        error: 'لا يمكن تحميل بيانات المنتج دون معرّف صالح.',
+        clearError: true,
+        options: ItemPurchaseOptions.empty(itemId: itemId ?? 0),
       ));
       return;
     }
@@ -1114,13 +1122,12 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
   }
 
   Future<SubmissionOutcome> saveAttributes() async {
-    if (item.id == null) {
-      return const SubmissionOutcome(
-        success: false,
-        message: 'لا يمكن حفظ السمات قبل تحميل البيانات.',
-      );
+    final SubmissionOutcome? ensureOutcome = await _ensureItemExists();
+    if (ensureOutcome != null) {
+      return ensureOutcome;
     }
 
+    final int itemId = item.id!;
     final _AttributesPayloadResult buildResult = _buildAttributesPayload();
     if (!buildResult.isSuccess) {
       return buildResult.outcome!;
@@ -1129,7 +1136,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     emit(state.copyWith(attributesSaving: true, error: null));
 
     try {
-      return await _persistAttributes(buildResult);
+      return await _persistAttributes(itemId, buildResult);
     } finally {
       emit(state.copyWith(attributesSaving: false));
     }
@@ -1199,11 +1206,12 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
   }
 
   Future<SubmissionOutcome> saveStock() async {
-    if (item.id == null) {
-      return const SubmissionOutcome(
-          success: false, message: 'معرّف المنتج غير معروف.');
+    final SubmissionOutcome? ensureOutcome = await _ensureItemExists();
+    if (ensureOutcome != null) {
+      return ensureOutcome;
     }
 
+    final int itemId = item.id!;
     final _StockRowsResult rowsResult = _buildStockRows();
     if (!rowsResult.isSuccess) {
       return rowsResult.outcome!;
@@ -1242,11 +1250,12 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
   }
 
   Future<SubmissionOutcome> saveDiscount() async {
-    if (item.id == null) {
-      return const SubmissionOutcome(
-          success: false, message: 'معرّف المنتج غير معروف.');
+    final SubmissionOutcome? ensureOutcome = await _ensureItemExists();
+    if (ensureOutcome != null) {
+      return ensureOutcome;
     }
 
+    final int itemId = item.id!;
     final _DiscountPayloadResult payloadResult = _buildDiscountPayload();
     if (!payloadResult.isSuccess) {
       return payloadResult.outcome!;
@@ -1340,11 +1349,13 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
   }
 
   Future<SubmissionOutcome> _persistAttributes(
-      _AttributesPayloadResult result) async {
+    int itemId,
+    _AttributesPayloadResult result,
+  ) async {
     try {
       final PurchaseOptionsUpdateResult response =
           await _repository.saveAttributes(
-        itemId: item.id!,
+        itemId: itemId,
         attributes: result.payload,
         deliverySize: result.deliverySize,
       );
@@ -1393,7 +1404,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       List<Map<String, dynamic>> rows) async {
     try {
       final PurchaseOptionsUpdateResult result = await _repository.saveStock(
-        itemId: item.id!,
+        itemId: itemId,
         rows: rows,
       );
 
@@ -1444,7 +1455,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       Map<String, dynamic> payload) async {
     try {
       final PurchaseOptionsUpdateResult result = await _repository.saveDiscount(
-        itemId: item.id!,
+        itemId: itemId,
         payload: payload,
       );
 
@@ -1603,13 +1614,12 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       );
     }
 
-    if (item.id == null) {
-      return const SubmissionOutcome(
-        success: false,
-        message: 'معرّف المنتج غير معروف.',
-      );
+    final SubmissionOutcome? ensureOutcome = await _ensureItemExists();
+    if (ensureOutcome != null) {
+      return ensureOutcome;
     }
 
+    final int itemId = item.id!;
     final _AttributesPayloadResult attributesResult = _buildAttributesPayload();
     if (!attributesResult.isSuccess) {
       return attributesResult.outcome!;
@@ -1635,7 +1645,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     emit(state.copyWith(attributesSaving: true, error: null));
     try {
       final SubmissionOutcome attributesOutcome =
-          await _persistAttributes(attributesResult);
+          await _persistAttributes(itemId, attributesResult);
       if (!attributesOutcome.success) {
         return attributesOutcome;
       }
@@ -1699,6 +1709,45 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     }
 
     return outcome;
+  }
+
+  Future<SubmissionOutcome?> _ensureItemExists() async {
+    if (item.id != null) {
+      return null;
+    }
+    if (_createItem == null) {
+      return const SubmissionOutcome(
+        success: false,
+        message:
+            'لا يمكن إنشاء الإعلان قبل مراجعة البيانات.',
+      );
+    }
+
+    try {
+      final ItemModel created = await _createItem!.call();
+      item = created;
+      emit(state.copyWith(
+        item: created,
+        clearError: true,
+        options:
+            state.options ?? ItemPurchaseOptions.empty(itemId: created.id ?? 0),
+        basePrice: (created.price ?? state.basePrice).toDouble(),
+        previewFinalPrice:
+            (created.price ?? state.previewFinalPrice).toDouble(),
+        lastKnownFinalPrice:
+            (created.price ?? state.lastKnownFinalPrice).toDouble(),
+      ));
+      return null;
+    } catch (error) {
+      final String message =
+          ErrorFilter.check(error).error?.toString() ?? error.toString();
+      return SubmissionOutcome(
+        success: false,
+        message: message.isNotEmpty
+            ? message
+            : '�?�?���? �?�?�? �?�?�?�?�?�?�? �?�?�?�?�?�?. �?�?�?�? �?�?�? ��?�?�?.',
+      );
+    }
   }
 
   void _applyOptions(ItemPurchaseOptions options, {double? finalPrice}) {
@@ -1982,3 +2031,4 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
         previewFinalPrice: double.parse(finalPrice.toStringAsFixed(2))));
   }
 }
+

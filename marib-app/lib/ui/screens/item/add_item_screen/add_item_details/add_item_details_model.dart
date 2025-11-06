@@ -6,6 +6,7 @@ import 'package:marib/data/model/category_model.dart';
 import 'package:marib/data/model/custom_field/custom_field_model.dart';
 import 'package:marib/data/model/item/item_model.dart';
 import 'package:marib/utils/imagePicker.dart';
+import 'package:marib/ui/screens/item/purchase_options/pending_item_draft.dart';
 
 class AddItemDetailsModel {
   AddItemDetailsModel({
@@ -42,6 +43,7 @@ class AddItemDetailsModel {
   final List<CustomFieldModel> legacyCustomFields = <CustomFieldModel>[];
 
   ItemModel? item;
+  PendingItemDraft? pendingDraft;
   String selectedCurrency = 'YER';
   String selectedCountryCode = '+967';
   String coverImageUrl = '';

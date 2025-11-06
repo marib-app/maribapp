@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:marib/app/routes.dart';
 import 'package:marib/data/helper/widgets.dart';
+import 'package:marib/data/cubits/item/manage_item_cubit.dart';
 import 'package:marib/data/model/custom_field/custom_field_model.dart'
     show CustomFieldColorEntry;
 import 'package:marib/data/model/data_output.dart';
@@ -17,6 +18,8 @@ import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/variant_key.dart';
 import 'package:marib/app/navigation/app_page_route.dart';
 import 'package:marib/app/navigation/motion/route_motion.dart';
+import 'package:marib/ui/screens/item/purchase_options/pending_item_draft.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class ProductReviewScreen extends StatefulWidget {
   const ProductReviewScreen({
@@ -24,26 +27,41 @@ class ProductReviewScreen extends StatefulWidget {
     required this.item,
     this.initialOptions,
     this.initialMessage,
+    this.pendingDraft,
   });
 
   final ItemModel item;
   final ItemPurchaseOptions? initialOptions;
   final String? initialMessage;
+  final PendingItemDraft? pendingDraft;
 
   static Route<dynamic> route(RouteSettings settings) {
     ItemModel? item;
     ItemPurchaseOptions? options;
     String? message;
+    PendingItemDraft? draft;
 
     final dynamic arguments = settings.arguments;
     if (arguments is ItemModel) {
       item = arguments;
+    } else if (arguments is PendingItemDraft) {
+      draft = arguments;
+      item = draft.item;
     } else if (arguments is Map) {
+      final dynamic draftCandidate =
+          arguments['pendingDraft'] ?? arguments['draft'];
+      if (draftCandidate is PendingItemDraft) {
+        draft = draftCandidate;
+      }
+
       final dynamic itemCandidate =
           arguments['item'] ?? arguments['model'] ?? arguments['ad'];
       if (itemCandidate is ItemModel) {
         item = itemCandidate;
+      } else if (draft != null) {
+        item = draft.item;
       }
+
       final dynamic optionsCandidate = arguments['options'];
       if (optionsCandidate is ItemPurchaseOptions) {
         options = optionsCandidate;
@@ -54,19 +72,31 @@ class ProductReviewScreen extends StatefulWidget {
       }
     }
 
+    if (draft != null && item == null) {
+      item = draft.item;
+    }
+
     if (item == null) {
-      throw ArgumentError(
-        'ProductReviewScreen expects an ItemModel in the arguments.',
+      throw ArgumentError('ProductReviewScreen expects an ItemModel.');
+    }
+
+    Widget content = ProductReviewScreen(
+      item: item!,
+      initialOptions: options,
+      initialMessage: message,
+      pendingDraft: draft,
+    );
+
+    if (draft != null) {
+      content = BlocProvider<ManageItemCubit>(
+        create: (_) => ManageItemCubit(),
+        child: content,
       );
     }
 
     return AppPageRoute.build(
       settings: settings,
-      builder: (_) => ProductReviewScreen(
-        item: item!,
-        initialOptions: options,
-        initialMessage: message,
-      ),
+      builder: (_) => content,
       motionPattern: AppMotionPattern.glide,
     );
   }
@@ -81,6 +111,7 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
   bool _isFetching = false;
   String? _error;
   bool _publishing = false;
+  PendingItemDraft? _pendingDraft;
 
   final ItemPurchaseOptionsRepository _optionsRepository =
       ItemPurchaseOptionsRepository();
@@ -91,6 +122,7 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
     super.initState();
     _item = widget.item;
     _options = widget.initialOptions;
+    _pendingDraft = widget.pendingDraft;
 
     if (_options == null && _item.id != null) {
       _fetchOptions();
@@ -164,42 +196,10 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
       return;
     }
 
-    final int? itemId = _item.id;
-    if (itemId == null) {
+    if (_item.id == null && _pendingDraft == null) {
       HelperUtils.showSnackBarMessage(
         context,
-        'لا يمكن نشر الإعلان قبل الحصول على معرّف صالح.',
-      );
-      return;
-    }
-
-    final String status = (_item.status ?? '').toLowerCase();
-    if (status == 'review') {
-      HelperUtils.showSnackBarMessage(
-        context,
-        'الإعلان قيد المراجعة بالفعل.',
-      );
-      return;
-    }
-
-    const Set<String> publishedStates = <String>{
-      'approved',
-      'active',
-      'published',
-      'enabled',
-    };
-    if (publishedStates.contains(status)) {
-      HelperUtils.showSnackBarMessage(
-        context,
-        'الإعلان منشور بالفعل.',
-      );
-      return;
-    }
-
-    if (status == 'rejected') {
-      HelperUtils.showSnackBarMessage(
-        context,
-        'لا يمكن نشر الإعلان وهو مرفوض. يرجى تعديل البيانات وإعادة المحاولة.',
+        'Cannot publish before creating the listing.',
       );
       return;
     }
@@ -211,6 +211,57 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
     bool loaderDismissed = false;
     Widgets.showLoader(context);
     try {
+      if (_item.id == null) {
+        final PendingItemDraft? draft = _pendingDraft;
+        if (draft == null) {
+          throw Exception('missing-pending-draft');
+        }
+        final ManageItemCubit cubit = context.read<ManageItemCubit>();
+        final ItemModel created =
+            await submitPendingItemDraft(cubit, draft);
+        _item = created;
+        _pendingDraft = null;
+      }
+
+      final int itemId = _item.id!;
+      final String status = (_item.status ?? '').toLowerCase();
+
+      if (status == 'review') {
+        HelperUtils.showSnackBarMessage(
+          context,
+          'Listing is already under review.',
+        );
+        Widgets.hideLoder(context);
+        loaderDismissed = true;
+        return;
+      }
+
+      const Set<String> alreadyPublished = <String>{
+        'approved',
+        'active',
+        'published',
+        'enabled',
+      };
+      if (alreadyPublished.contains(status)) {
+        HelperUtils.showSnackBarMessage(
+          context,
+          'Listing is already published.',
+        );
+        Widgets.hideLoder(context);
+        loaderDismissed = true;
+        return;
+      }
+
+      if (status == 'rejected') {
+        HelperUtils.showSnackBarMessage(
+          context,
+          'Cannot publish a rejected listing. Update the details and try again.',
+        );
+        Widgets.hideLoder(context);
+        loaderDismissed = true;
+        return;
+      }
+
       await _itemRepository.changeMyItemStatus(
         itemId: itemId,
         status: 'active',
@@ -226,13 +277,11 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
 
       if (refreshed != null) {
         _item = refreshed;
-      } else {
-        _item.status = 'review';
       }
 
       HelperUtils.showSnackBarMessage(
         context,
-        'تم إرسال الإعلان للمراجعة بنجاح.',
+        'Listing published successfully.',
       );
 
       Navigator.pushNamedAndRemoveUntil(
@@ -253,7 +302,7 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
           context,
           message.isNotEmpty
               ? message
-              : 'تعذر نشر الإعلان حالياً. حاول مرة أخرى.',
+              : 'Something went wrong. Please try again.',
         );
       }
     } finally {

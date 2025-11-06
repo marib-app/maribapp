@@ -29,6 +29,7 @@ use App\Http\Controllers\SellerController;
 use App\Http\Controllers\SeoSettingController;
 use App\Http\Controllers\OrderPaymentGroupController;
 use App\Http\Controllers\MetalRateController;
+use App\Http\Controllers\StoreSettingsController;
 
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SliderController;
@@ -701,6 +702,14 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
     Route::get('review-report', [SellerController::class, 'showReports'])->name('seller-review.report');
 
 
+    Route::group([
+        'prefix' => 'seller-store-settings',
+        'as' => 'seller-store-settings.',
+        'middleware' => ['permission:seller-store-settings-manage'],
+    ], static function () {
+        Route::get('/', [StoreSettingsController::class, 'index'])->name('index');
+        Route::post('/terms', [StoreSettingsController::class, 'storeTerms'])->name('terms.store');
+    });
 
     /* --------------------------------- الإعدادات Settings --------------------------------- */
     Route::group(['prefix' => 'settings'], static function () {

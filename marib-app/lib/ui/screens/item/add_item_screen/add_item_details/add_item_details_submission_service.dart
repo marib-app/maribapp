@@ -20,6 +20,7 @@ import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/ecommerce_department.dart';
+import 'package:marib/ui/screens/item/purchase_options/pending_item_draft.dart';
 
 class AddItemDetailsSubmissionService {
   AddItemDetailsSubmissionService({
@@ -150,12 +151,78 @@ class AddItemDetailsSubmissionService {
     File? mainImageFile = model.coverImageFile ?? flaggedMainFile ?? (galleryFiles.isNotEmpty ? galleryFiles.first : null);
 
     if (mainImageFile == null && galleryFiles.isEmpty) {
-      HelperUtils.showSnackBarMessage(context, 'أضف صورة الغلاف أولًا');
+      HelperUtils.showSnackBarMessage(context, 'Cannot continue without images');
       return;
     }
 
-    // هذا يستدعي ManageItem(add)؛ وبعد النجاح handleManageItemState سيفتح شاشة الإدارة تلقائيًا
-    _submitWithoutLocation(context, mainImageFile, galleryFiles);
+    final Map<String, dynamic> stored =
+        (_state.getCloudData('with_more_details') as Map<String, dynamic>?) ??
+            <String, dynamic>{};
+
+    if (!stored.containsKey('title')) {
+      stored['title'] = model.adTitleController.text.trim();
+    }
+    if (!stored.containsKey('description')) {
+      stored['description'] = model.adDescriptionController.text.trim();
+    }
+    if (!stored.containsKey('price')) {
+      stored['price'] = model.adPriceController.text.trim();
+    }
+    if (!stored.containsKey('currency')) {
+      stored['currency'] = model.selectedCurrency;
+    }
+    if (!stored.containsKey('contact')) {
+      stored['contact'] = model.adPhoneNumberController.text.trim();
+    }
+    if (!stored.containsKey('contact_country_code')) {
+      stored['contact_country_code'] = model.selectedCountryCode;
+    }
+    if (!stored.containsKey('video_link')) {
+      stored['video_link'] = model.adAdditionalDetailsController.text.trim();
+    }
+    if (!stored.containsKey('review_link')) {
+      stored['review_link'] = model.reviewLinkController.text.trim();
+    }
+    if (!stored.containsKey('product_link')) {
+      stored['product_link'] = model.adProductLinkController.text.trim();
+    }
+
+    if (!stored.containsKey('all_category_ids') ||
+        (stored['all_category_ids']?.toString().trim().isEmpty ?? true)) {
+      final Iterable<int> categories = currentCategoryIds();
+      if (categories.isNotEmpty) {
+        stored['all_category_ids'] =
+            categories.map((int id) => id.toString()).join(',');
+        stored['category_id'] = categories.last;
+      }
+    }
+
+    final PendingItemDraft? draft = _preparePendingDraftWithoutLocation(
+      context: context,
+      baseData: stored,
+      mainImageFile: mainImageFile,
+      galleryFiles: galleryFiles,
+    );
+
+    if (draft == null) {
+      return;
+    }
+
+    final bool openProductManagement = _shouldOpenProductManagement(draft);
+
+    model.pendingDraft = draft;
+    model.item = draft.item;
+
+    Navigator.pushNamed(
+      context,
+      openProductManagement
+          ? Routes.productManagementScreen
+          : Routes.productReviewScreen,
+      arguments: <String, dynamic>{
+        'item': draft.item,
+        'pendingDraft': draft,
+      },
+    );
   }
 
   /// Debug helper: print the current image-related state and what would be
@@ -320,10 +387,31 @@ class AddItemDetailsSubmissionService {
     _state.addCloudData('with_more_details', data);
 
     if (disableLocation) {
-      _submitWithoutLocation(
+      final PendingItemDraft? draft = _preparePendingDraftWithoutLocation(
+        context: context,
+        baseData: data,
+        mainImageFile: mainImageFile,
+        galleryFiles: galleryFiles,
+      );
+
+      if (draft == null) {
+        return;
+      }
+
+      final bool openProductManagement = _shouldOpenProductManagement(draft);
+
+      model.pendingDraft = draft;
+      model.item = draft.item;
+
+      Navigator.pushNamed(
         context,
-        mainImageFile,
-        galleryFiles,
+        openProductManagement
+            ? Routes.productManagementScreen
+            : Routes.productReviewScreen,
+        arguments: <String, dynamic>{
+          'item': draft.item,
+          'pendingDraft': draft,
+        },
       );
       return;
     }
@@ -451,6 +539,29 @@ class AddItemDetailsSubmissionService {
     return false;
   }
 
+  bool _shouldOpenProductManagement(PendingItemDraft draft) {
+    if (supportsProductOptionsForItem(draft.item)) {
+      return true;
+    }
+
+    final Iterable<int> categories = draft.categoryPath;
+    if (categories.isEmpty || _hasMapSectionCategory(categories)) {
+      return false;
+    }
+
+    if (supportsEcommerceByCategories(
+        _ecommerceEligibleCategoryIds(categories))) {
+      return true;
+    }
+
+    return supportsProductOptions(
+      interfaceType: draft.item.departmentSlug,
+      categoryIds: categories.toList(),
+      isSheinCategory: model.isSheinCategory,
+      storeRootId: Constant.storeRootCategoryIdAsString,
+    );
+  }
+
   Map<String, dynamic> _sanitizeMoreDetailsPayload(
       Map<String, dynamic>? rawData) {
     if (rawData == null || rawData.isEmpty) {
@@ -494,15 +605,13 @@ class AddItemDetailsSubmissionService {
     return sanitized;
   }
 
-  void _submitWithoutLocation(
-      BuildContext context,
-      File? mainImageFile,
-      List<File> galleryFiles,
-      ) {
-    final Map<String, dynamic> stored =
-        (_state.getCloudData('with_more_details') as Map<String, dynamic>?) ??
-            <String, dynamic>{};
-    final Map<String, dynamic> payload = Map<String, dynamic>.from(stored);
+  PendingItemDraft? _preparePendingDraftWithoutLocation({
+    required BuildContext context,
+    required Map<String, dynamic> baseData,
+    required File? mainImageFile,
+    required List<File> galleryFiles,
+  }) {
+    final Map<String, dynamic> payload = Map<String, dynamic>.from(baseData);
 
     payload.removeWhere((String key, dynamic value) =>
     value == null || (value is String && value.trim().isEmpty));
@@ -517,7 +626,7 @@ class AddItemDetailsSubmissionService {
     }
 
     payload['address'] =
-        _normalizeString(payload['address']) ?? 'المتجر الإلكتروني';
+        _normalizeString(payload['address']) ?? 'Unknown address';
 
     final String? fallbackCity = _normalizeString(HiveUtils.getCityName());
     if (fallbackCity != null) {
@@ -541,22 +650,47 @@ class AddItemDetailsSubmissionService {
     }
 
     payload['country'] =
-        _normalizeString(HiveUtils.getCountryName()) ?? 'اليمن';
+        _normalizeString(HiveUtils.getCountryName()) ?? 'Yemen';
 
-    model.isSubmittingWithoutLocation = true;
-
-    final ManageItemCubit manage = context.read<ManageItemCubit>();
-
-    if (model.isEdit) {
-      manage.manage(ManageItemType.edit, payload, mainImageFile, galleryFiles);
-    } else {
-      if (mainImageFile == null) {
-        model.isSubmittingWithoutLocation = false;
-        HelperUtils.showSnackBarMessage(context, 'الصورة مطلوبة');
-        return;
-      }
-      manage.manage(ManageItemType.add, payload, mainImageFile, galleryFiles);
+    if (!model.isEdit && mainImageFile == null) {
+      HelperUtils.showSnackBarMessage(context, '???????????? ????????????');
+      return null;
     }
+
+    final ItemModel source = model.item ?? ItemModel();
+    final ItemModel draftItem = source.copyWith(
+      name: payload['title']?.toString(),
+      description: payload['description']?.toString(),
+      price: _parsePrice(payload['price']),
+      currency: payload['currency']?.toString(),
+      contact: payload['contact']?.toString(),
+      videoLink: payload['video_link']?.toString(),
+      reviewLink: payload['review_link']?.toString(),
+      productLink: payload['product_link']?.toString(),
+      allCategoryIds: payload['all_category_ids']?.toString(),
+      categoryId: _normalizeInt(payload['category_id']),
+      address: payload['address']?.toString(),
+      city: payload['city']?.toString(),
+      state: payload['state']?.toString(),
+      country: payload['country']?.toString(),
+      status: source.status ?? 'draft',
+    );
+
+    final List<int> categoryPath =
+        currentCategoryIds().toList(growable: false);
+
+    final String? editSourceKey =
+        _state.getCloudData('edit_from') as String?;
+
+    return PendingItemDraft(
+      payload: payload,
+      item: draftItem,
+      mainImage: mainImageFile,
+      galleryImages: galleryFiles,
+      isEdit: model.isEdit,
+      editSourceKey: editSourceKey,
+      categoryPath: categoryPath,
+    );
   }
 
   String? _normalizeString(dynamic value) {
@@ -585,6 +719,21 @@ class AddItemDetailsSubmissionService {
     return int.tryParse(value.toString());
   }
 
+  double? _parsePrice(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+    if (value is num) {
+      return value.toDouble();
+    }
+    final String normalized =
+        value.toString().replaceAll(',', '').trim();
+    if (normalized.isEmpty) {
+      return null;
+    }
+    return double.tryParse(normalized);
+  }
+
   List<int> _ecommerceEligibleCategoryIds(Iterable<int> categoryIds) {
     if (categoryIds.isEmpty) {
       return const <int>[];
@@ -609,3 +758,8 @@ class AddItemDetailsSubmissionService {
         id == Constant.realEstateRootCategoryId;
   }
 }
+
+
+
+
+

@@ -8,6 +8,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:marib/app/routes.dart';
 import 'package:marib/data/cubits/item/product_management_cubit.dart';
+import 'package:marib/data/cubits/item/manage_item_cubit.dart';
 import 'package:marib/data/model/item/item_model.dart';
 import 'package:marib/data/model/item/purchase_options.dart';
 import 'package:marib/data/repositories/item/item_purchase_options_repository.dart';
@@ -21,46 +22,111 @@ import 'package:marib/data/model/custom_field/custom_field_model.dart'
     show CustomFieldColorEntry;
 import 'package:marib/app/navigation/app_page_route.dart';
 import 'package:marib/app/navigation/motion/route_motion.dart';
+import 'package:marib/ui/screens/item/purchase_options/pending_item_draft.dart';
 
-class ProductManagementScreen extends StatefulWidget {
-  const ProductManagementScreen({super.key, required this.item});
+class _ProductManagementArgs {
+  _ProductManagementArgs({
+    required this.item,
+    this.pendingDraft,
+  });
 
   final ItemModel item;
+  final PendingItemDraft? pendingDraft;
+
+  factory _ProductManagementArgs.from(dynamic arguments) {
+    PendingItemDraft? draft;
+    ItemModel? item;
+
+    if (arguments is PendingItemDraft) {
+      draft = arguments;
+      item = draft.item;
+    } else if (arguments is ItemModel) {
+      item = arguments;
+    } else if (arguments is Map) {
+      final dynamic draftCandidate =
+          arguments['pendingDraft'] ?? arguments['draft'];
+      if (draftCandidate is PendingItemDraft) {
+        draft = draftCandidate;
+      }
+
+      final dynamic itemCandidate = arguments['item'] ?? arguments['model'];
+      if (itemCandidate is ItemModel) {
+        item = itemCandidate;
+      }
+
+      if (item == null && draft != null) {
+        item = draft.item;
+      }
+    }
+
+    if (draft != null && item == null) {
+      item = draft.item;
+    }
+
+    if (item == null) {
+      throw ArgumentError(
+        'ProductManagementScreen expects an ItemModel or PendingItemDraft.',
+      );
+    }
+
+    return _ProductManagementArgs(
+      item: item!,
+      pendingDraft: draft,
+    );
+  }
+}
+
+class ProductManagementScreen extends StatefulWidget {
+  const ProductManagementScreen({
+    super.key,
+    required this.item,
+    this.pendingDraft,
+  });
+
+  final ItemModel item;
+  final PendingItemDraft? pendingDraft;
 
   static Route<dynamic> route(RouteSettings settings) {
-    final ItemModel item = _resolveItem(settings.arguments);
+    final _ProductManagementArgs args =
+        _ProductManagementArgs.from(settings.arguments);
 
     return AppPageRoute.build(
       settings: settings,
       builder: (_) {
-        if (!isEcommerceItem(item)) {
+        if (args.pendingDraft == null && !isEcommerceItem(args.item)) {
           return const _UnsupportedProductManagement();
         }
 
-        return BlocProvider(
-          create: (_) =>
-              ProductManagementCubit(ItemPurchaseOptionsRepository(), item)
-                ..initialize(),
-          child: ProductManagementScreen(item: item),
+        Widget content = ProductManagementScreen(
+          item: args.item,
+          pendingDraft: args.pendingDraft,
         );
+
+        content = BlocProvider<ProductManagementCubit>(
+          create: (context) => ProductManagementCubit(
+            ItemPurchaseOptionsRepository(),
+            args.item,
+            createItem: args.pendingDraft != null
+                ? () => submitPendingItemDraft(
+                      context.read<ManageItemCubit>(),
+                      args.pendingDraft!,
+                    )
+                : null,
+          )..initialize(),
+          child: content,
+        );
+
+        if (args.pendingDraft != null) {
+          content = BlocProvider<ManageItemCubit>(
+            create: (_) => ManageItemCubit(),
+            child: content,
+          );
+        }
+
+        return content;
       },
       motionPattern: AppMotionPattern.glide,
     );
-  }
-
-  static ItemModel _resolveItem(dynamic arguments) {
-    if (arguments is ItemModel) {
-      return arguments;
-    }
-
-    if (arguments is Map) {
-      final dynamic candidate = arguments['model'] ?? arguments['item'];
-      if (candidate is ItemModel) {
-        return candidate;
-      }
-    }
-
-    throw ArgumentError('ProductManagementScreen expects an ItemModel.');
   }
 
   @override
@@ -117,6 +183,7 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
   final Map<String, TextEditingController> _stockControllers =
       <String, TextEditingController>{};
   int _currentTabIndex = 0;
+  PendingItemDraft? get _pendingDraft => widget.pendingDraft;
 
   @override
   void dispose() {
@@ -305,7 +372,8 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
     if (!outcome.success) {
       return;
     }
-
+    final PendingItemDraft? reviewDraft =
+        _pendingDraft?.copyWith(item: cubit.state.item);
     Navigator.pushNamed(
       context,
       Routes.productReviewScreen,
@@ -313,6 +381,7 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
         'item': cubit.state.item,
         'options': cubit.state.options,
         'message': message,
+        if (reviewDraft != null) 'pendingDraft': reviewDraft,
       },
     );
   }
@@ -2345,5 +2414,4 @@ class _ErrorView extends StatelessWidget {
     );
   }
 }
-
 

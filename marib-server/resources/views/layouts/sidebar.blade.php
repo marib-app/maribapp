@@ -208,8 +208,10 @@
         ========================== --}}
         @canany(['seller-verification-field-list','seller-verification-field-create','seller-verification-field-update','seller-verification-field-delete',
                  'seller-verification-request-list','seller-verification-request-create','seller-verification-request-update','seller-verification-request-delete',
-                 'seller-review-list','seller-review-update','seller-review-delete'])
-          <div class="sidebar-new-title">{{ __('Seller Management') }}</div>
+                 'seller-review-list','seller-review-update','seller-review-delete',
+                 'seller-store-settings-manage'])
+                 
+                 <div class="sidebar-new-title">{{ __('Seller Management') }}</div>
 
           @canany(['seller-verification-field-list','seller-verification-field-create','seller-verification-field-update','seller-verification-field-delete',
                    'seller-verification-request-list','seller-verification-request-create','seller-verification-request-update','seller-verification-request-delete'])
@@ -248,6 +250,17 @@
               </a>
             </li>
           @endcanany
+
+
+          @can('seller-store-settings-manage')
+            <li class="sidebar-item">
+              <a href="{{ route('seller-store-settings.index') }}" class="sidebar-link">
+                <i class="bi bi-gear"></i>
+                <span class="menu-item">{{ __('Store Settings') }}</span>
+              </a>
+            </li>
+          @endcan
+
         @endcanany
 
 

@@ -7,6 +7,9 @@ use App\Http\Controllers\Api\DeliveryPriceCalculatorController;
 use App\Http\Controllers\Api\MetalRateController as PublicMetalRateController;
 use App\Http\Controllers\Api\MetalRateManagementController;
 use App\Http\Controllers\Api\AdDraftController;
+use App\Http\Controllers\Api\StoreGatewayAccountController;
+use App\Http\Controllers\Api\StoreGatewayController;
+use App\Http\Controllers\Api\StoreGatewayPublicController;
 use App\Http\Controllers\ApiController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\ServiceRequestController as ApiServiceRequestController;
@@ -20,6 +23,8 @@ use App\Http\Controllers\Payments\PaymentWebhookController;
 use App\Http\Controllers\ProductPurchaseOptionsController;
 use App\Http\Controllers\ItemPurchaseManagementController;
 use App\Http\Controllers\Api\UserPreferenceController;
+
+
 
 Route::get('diag', fn() => response('ok', 200));
 
@@ -112,9 +117,16 @@ Route::get('metal-rates', [PublicMetalRateController::class, 'index']);
     Route::post('wallet/transfers', [ApiController::class, 'transferRequest']);
     Route::get('wallet/recipients/{recipient}', [ApiController::class, 'walletRecipient'])
         ->whereNumber('recipient');
+    Route::get('store-gateways', [StoreGatewayController::class, 'index']);
+    Route::get('store-gateway-accounts', [StoreGatewayAccountController::class, 'index']);
+    Route::post('store-gateway-accounts', [StoreGatewayAccountController::class, 'store']);
+    Route::match(['put', 'patch'], 'store-gateway-accounts/{storeGatewayAccount}', [StoreGatewayAccountController::class, 'update'])
+        ->whereNumber('storeGatewayAccount');
+    Route::delete('store-gateway-accounts/{storeGatewayAccount}', [StoreGatewayAccountController::class, 'destroy'])
+        ->whereNumber('storeGatewayAccount');
 
-    Route::get('manual-banks', [ApiController::class, 'getManualBanks']);
-    Route::get('manual-payments/banks', [ApiController::class, 'getManualBanks']);
+    Route::get('manual-banks', [StoreGatewayController::class, 'index']);
+    Route::get('manual-payments/banks', [StoreGatewayController::class, 'index']);
 
     Route::post('manual-payment-requests', [ApiController::class, 'storeManualPaymentRequest']);
     Route::get('manual-payment-requests', [ApiController::class, 'getManualPaymentRequests']);
@@ -199,11 +211,14 @@ Route::get('metal-rates', [PublicMetalRateController::class, 'index']);
 
     Route::get('verification-fields', [ApiController::class, 'getVerificationFields']);
     Route::post('send-verification-request',[ApiController::class,'sendVerificationRequest']);
-    Route::get('verification-request',[ApiController::class,'getVerificationRequest']);
+Route::get('verification-request',[ApiController::class,'getVerificationRequest']);
 
 });
 
+Route::get('stores/{seller}/gateways', [StoreGatewayPublicController::class, 'index'])
+    ->whereNumber('seller');
 
+    
 /* Non Authenticated Routes */
 Route::get('get-package', [ApiController::class, 'getPackage']);
 Route::get('get-languages', [ApiController::class, 'getLanguages']);

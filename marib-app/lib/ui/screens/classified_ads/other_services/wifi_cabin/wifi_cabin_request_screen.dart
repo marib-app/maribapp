@@ -1,6 +1,4 @@
 ﻿import 'dart:async';
-import 'dart:io';
-
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -191,7 +189,7 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
     if (file.bytes != null) {
       return MultipartFile.fromBytes(file.bytes!, filename: file.name);
     }
-    throw StateError('ظ…ظ„ظپ ط؛ظٹط± طµط§ظ„ط­طŒ ظٹط±ط¬ظ‰ ط¥ط¹ط§ط¯ط© ط±ظپط¹ظ‡.');
+    throw StateError('ملف غير صالح، يرجى إعادة رفعه.');
   }
 
   Future<void> _submitRequest() async {
@@ -205,14 +203,14 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
         .toList();
 
     if (contacts.isEmpty) {
-      _showMessage('ط£ط¶ظپ ط±ظ‚ظ… طھظˆط§طµظ„ ظˆط§ط­ط¯ظ‹ط§ ط¹ظ„ظ‰ ط§ظ„ط£ظ‚ظ„.');
+      _showMessage('أضف رقم تواصل واحدًا على الأقل.');
       _switchStep(0);
       return;
     }
 
     if (_plans.any((plan) => plan.voucherFile == null)) {
       _showMessage(
-        'ظٹط¬ط¨ ط±ظپط¹ ظ…ظ„ظپ ط§ظ„ط£ظƒظˆط§ط¯ ظ„ظƒظ„ ظپط¦ط© ظ‚ط¨ظ„ ط¥ط±ط³ط§ظ„ ط§ظ„ط·ظ„ط¨.',
+        'يجب رفع ملف الأكواد لكل فئة قبل إرسال الطلب.',
       );
       _switchStep(1);
       return;
@@ -296,14 +294,14 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
       await showDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('طھظ… ط§ط³طھظ„ط§ظ… ط§ظ„ط·ظ„ط¨'),
+          title: const Text('تم استلام الطلب'),
           content: const Text(
-            'ط³ظٹطھظ… ظ…ط±ط§ط¬ط¹ط© ط§ظ„ط´ط¨ظƒط© ظˆط³ظٹطµظ„ظƒ ط¥ط´ط¹ط§ط± ط¹ظ†ط¯ ط§ظ„طھظپط¹ظٹظ„. ط´ظƒط±ظ‹ط§ ظ„ط§ظ†ط¶ظ…ط§ظ…ظƒ ط¥ظ„ظ‰ Marib Wi-Fi.',
+            'سيتم مراجعة الشبكة وسيصلك إشعار عند التفعيل. شكرًا لانضمامك إلى Marib Wi-Fi.',
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('ط­ط³ظ†ظ‹ط§'),
+              child: const Text('حسنًا'),
             ),
           ],
         ),
@@ -352,9 +350,6 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.color;
-    final textTheme = Theme.of(context).textTheme;
-
     return Scaffold(
       appBar: UiUtils.buildAppBar(
         context,
@@ -406,9 +401,7 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
                             }
                           },
                           child: Text(
-                            _currentStep == 0
-                                ? 'التالي'
-                                : 'إرسال الطلب',
+                            _currentStep == 0 ? 'التالي' : 'إرسال الطلب',
                           ),
                         ),
                       ),
@@ -443,20 +436,20 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'ط·آ¨ط¸ظ¹ط·آ§ط¸â€ ط·آ§ط·ع¾ ط·آ§ط¸â€‍ط·آ´ط·آ¨ط¸ئ’ط·آ©',
+            'بيانات الشبكة',
             style: textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 12),
           _LabeledField(
-            label: 'ط·آ§ط·آ³ط¸â€¦ ط·آ§ط¸â€‍ط·آ´ط·آ¨ط¸ئ’ط·آ©',
+            label: 'اسم الشبكة',
             child: TextFormField(
               controller: _nameController,
               textInputAction: TextInputAction.next,
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
-                  return 'ط¸ظ¹ط·آ±ط·آ¬ط¸â€° ط·آ¥ط·آ¯ط·آ®ط·آ§ط¸â€‍ ط·آ§ط·آ³ط¸â€¦ ط·آ§ط¸â€‍ط·آ´ط·آ¨ط¸ئ’ط·آ©';
+                  return 'يرجى إدخال اسم الشبكة';
                 }
                 return null;
               },
@@ -464,19 +457,19 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
           ),
           const SizedBox(height: 12),
           _LabeledField(
-            label: 'ط·آ§ط¸â€‍ط·آ§ط·آ³ط¸â€¦ ط·آ§ط¸â€‍ط¸â€¦ط·آ®ط·ع¾ط·آµط·آ± (Slug)',
+            label: 'الاسم المختصر (Slug)',
             helper:
-                'ط¸ظ¹ط¸عˆط·آ³ط·ع¾ط·آ®ط·آ¯ط¸â€¦ ط¸ظ¾ط¸ظ¹ ط·آ±ط¸ث†ط·آ§ط·آ¨ط·آ· ط¸â€‍ط¸ث†ط·آ­ط·آ© ط·آ§ط¸â€‍ط·ع¾ط·آ­ط¸ئ’ط¸â€¦ ط¸ث†ط·آ§ط¸â€‍ط·ع¾ط¸ئ’ط·آ§ط¸â€¦ط¸â€‍. ط¸ظ¹ط·ع¾ط¸â€¦ ط·ع¾ط¸ث†ط¸â€‍ط¸ظ¹ط·آ¯ط¸â€، ط·ع¾ط¸â€‍ط¸â€ڑط·آ§ط·آ¦ط¸ظ¹ط¸â€¹ط·آ§ ط¸ث†ط¸ظ¹ط¸â€¦ط¸ئ’ط¸â€ ط¸ئ’ ط·ع¾ط·آ¹ط·آ¯ط¸ظ¹ط¸â€‍ط¸â€،.',
+                'يُستخدم في روابط لوحة التحكم والتكامل. يتم توليده تلقائيًا ويمكنك تعديله.',
             child: TextFormField(
               controller: _slugController,
               textInputAction: TextInputAction.next,
               validator: (value) {
                 final text = value?.trim() ?? '';
                 if (text.isEmpty) {
-                  return 'ط¸ظ¹ط·آ±ط·آ¬ط¸â€° ط·آ¥ط·آ¯ط·آ®ط·آ§ط¸â€‍ ط·آ§ط¸â€‍ط·آ§ط·آ³ط¸â€¦ ط·آ§ط¸â€‍ط¸â€¦ط·آ®ط·ع¾ط·آµط·آ±';
+                  return 'يرجى إدخال الاسم المختصر';
                 }
                 if (!RegExp(r'^[a-z0-9-]+$').hasMatch(text)) {
-                  return 'ط¸â€¦ط·آ³ط¸â€¦ط¸ث†ط·آ­ ط·آ¨ط·آ§ط¸â€‍ط·آ£ط·آ­ط·آ±ط¸ظ¾ ط·آ§ط¸â€‍ط·آ¥ط¸â€ ط·آ¬ط¸â€‍ط¸ظ¹ط·آ²ط¸ظ¹ط·آ©ط·إ’ ط·آ§ط¸â€‍ط·آ£ط·آ±ط¸â€ڑط·آ§ط¸â€¦ط·إ’ ط¸ث†ط·آ§ط¸â€‍ط·آ´ط·آ±ط·آ·ط·آ§ط·ع¾ ط¸ظ¾ط¸â€ڑط·آ·';
+                  return 'مسموح بالأحرف الإنجليزية، الأرقام، والشرطات فقط';
                 }
                 return null;
               },
@@ -484,16 +477,15 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
           ),
           const SizedBox(height: 12),
           _FilePickerTile(
-            title: 'ط·آ´ط·آ¹ط·آ§ط·آ± ط·آ§ط¸â€‍ط·آ´ط·آ¨ط¸ئ’ط·آ©',
-            description: 'ط¸ظ¹ط·آ¸ط¸â€،ط·آ± ط·آ¯ط·آ§ط·آ®ط¸â€‍ ط·آ§ط¸â€‍ط·ع¾ط·آ·ط·آ¨ط¸ظ¹ط¸â€ڑ ط¸ث†ط·آ§ط¸â€‍ط¸â€‍ط¸ث†ط·آ­ط·آ©.',
+            title: 'شعار الشبكة',
+            description: 'يظهر داخل التطبيق واللوحة.',
             fileName: _logoFile != null ? p.basename(_logoFile!.path) : null,
             onPick: _pickLogo,
           ),
           const SizedBox(height: 12),
           _FilePickerTile(
-            title: 'ط·آµط¸ث†ط·آ±ط·آ© ط·آ´ط·آ§ط·آ´ط·آ© ط·ع¾ط·آ³ط·آ¬ط¸ظ¹ط¸â€‍ ط·آ§ط¸â€‍ط·آ¯ط·آ®ط¸ث†ط¸â€‍',
-            description:
-                'ط¸â€‍ط¸â€¦ط·آ³ط·آ§ط·آ¹ط·آ¯ط·آ© ط¸ظ¾ط·آ±ط¸ظ¹ط¸â€ڑ ط·آ§ط¸â€‍ط¸â€¦ط·آ±ط·آ§ط·آ¬ط·آ¹ط·آ© ط·آ¹ط¸â€‍ط¸â€° ط·آ¶ط·آ¨ط·آ· ط¸â€¦ط·آ¹ط¸â€‍ط¸ث†ط¸â€¦ط·آ§ط·ع¾ ط·آ§ط¸â€‍ط·آ´ط·آ¨ط¸ئ’ط·آ©.',
+            title: 'صورة شاشة تسجيل الدخول',
+            description: 'لمساعدة فريق المراجعة على ضبط معلومات الشبكة.',
             fileName: _loginScreenshotFile != null
                 ? p.basename(_loginScreenshotFile!.path)
                 : null,
@@ -501,7 +493,7 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            'ط·آ§ط¸â€‍ط¸â€¦ط¸ث†ط¸â€ڑط·آ¹ ط¸ث†ط·آ§ط¸â€‍ط·ع¾ط·ط›ط·آ·ط¸ظ¹ط·آ©',
+            'الموقع والتغطية',
             style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 12),
@@ -510,8 +502,7 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
               Expanded(
                 child: TextFormField(
                   controller: _latitudeController,
-                  decoration:
-                      const InputDecoration(labelText: 'ط·آ®ط·آ· ط·آ§ط¸â€‍ط·آ¹ط·آ±ط·آ¶'),
+                  decoration: const InputDecoration(labelText: 'خط العرض'),
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                 ),
@@ -520,8 +511,7 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
               Expanded(
                 child: TextFormField(
                   controller: _longitudeController,
-                  decoration:
-                      const InputDecoration(labelText: 'ط·آ®ط·آ· ط·آ§ط¸â€‍ط·آ·ط¸ث†ط¸â€‍'),
+                  decoration: const InputDecoration(labelText: 'خط الطول'),
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                 ),
@@ -530,8 +520,8 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
               Expanded(
                 child: TextFormField(
                   controller: _radiusController,
-                  decoration: const InputDecoration(
-                      labelText: 'ط¸â€ ط·آµط¸ظ¾ ط·آ§ط¸â€‍ط¸â€ڑط·آ·ط·آ± (ط¸ئ’ط¸â€¦)'),
+                  decoration:
+                      const InputDecoration(labelText: 'نصف القطر (كم)'),
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                 ),
@@ -542,14 +532,14 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
           TextFormField(
             controller: _addressController,
             decoration: const InputDecoration(
-              labelText: 'ط·آ§ط¸â€‍ط·آ¹ط¸â€ ط¸ث†ط·آ§ط¸â€  ط·آ§ط¸â€‍ط·ع¾ط¸ظ¾ط·آµط¸ظ¹ط¸â€‍ط¸ظ¹',
+              labelText: 'العنوان التفصيلي',
             ),
           ),
           const SizedBox(height: 12),
           TextFormField(
             controller: _descriptionController,
             decoration: const InputDecoration(
-              labelText: 'ط¸ث†ط·آµط¸ظ¾ ط·آ§ط¸â€‍ط·آ´ط·آ¨ط¸ئ’ط·آ© (ط·آ§ط·آ®ط·ع¾ط¸ظ¹ط·آ§ط·آ±ط¸ظ¹)',
+              labelText: 'وصف الشبكة (اختياري)',
             ),
             maxLines: 3,
           ),
@@ -557,13 +547,13 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
           TextFormField(
             controller: _notesController,
             decoration: const InputDecoration(
-              labelText: 'ط¸â€¦ط¸â€‍ط·آ§ط·آ­ط·آ¸ط·آ§ط·ع¾ ط·آ¥ط·آ¶ط·آ§ط¸ظ¾ط¸ظ¹ط·آ© (ط·آ§ط·آ®ط·ع¾ط¸ظ¹ط·آ§ط·آ±ط¸ظ¹)',
+              labelText: 'ملاحظات إضافية (اختياري)',
             ),
             maxLines: 3,
           ),
           const SizedBox(height: 16),
           Text(
-            'ط·آ£ط·آ±ط¸â€ڑط·آ§ط¸â€¦ ط·آ§ط¸â€‍ط·ع¾ط¸ث†ط·آ§ط·آµط¸â€‍',
+            'أرقام التواصل',
             style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
@@ -579,8 +569,7 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
                       flex: 2,
                       child: DropdownButtonFormField<ContactType>(
                         value: contact.type,
-                        decoration:
-                            const InputDecoration(labelText: 'ط·آ§ط¸â€‍ط¸â€ ط¸ث†ط·آ¹'),
+                        decoration: const InputDecoration(labelText: 'النوع'),
                         items: ContactType.values
                             .map(
                               (type) => DropdownMenuItem<ContactType>(
@@ -602,13 +591,13 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
                       child: TextFormField(
                         controller: contact.controller,
                         decoration: const InputDecoration(
-                          labelText: 'ط·آ±ط¸â€ڑط¸â€¦ ط·آ§ط¸â€‍ط¸â€،ط·آ§ط·ع¾ط¸ظ¾ / ط¸ث†ط·آ§ط·ع¾ط·آ³ط·آ§ط·آ¨',
+                          labelText: 'رقم الهاتف / واتساب',
                         ),
                         keyboardType: TextInputType.phone,
                         validator: (value) {
                           final text = value?.trim() ?? '';
                           if (text.isEmpty) {
-                            return 'ط·آ£ط·آ¯ط·آ®ط¸â€‍ ط·آ§ط¸â€‍ط·آ±ط¸â€ڑط¸â€¦ ط·آ£ط¸ث† ط¸â€ڑط¸â€¦ ط·آ¨ط·آ­ط·آ°ط¸ظ¾ط¸â€،';
+                            return 'أدخل الرقم أو قم بحذفه';
                           }
                           return null;
                         },
@@ -629,7 +618,7 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
             child: TextButton.icon(
               onPressed: _addContactField,
               icon: const Icon(Icons.add),
-              label: const Text('ط·آ¥ط·آ¶ط·آ§ط¸ظ¾ط·آ© ط·آ±ط¸â€ڑط¸â€¦ ط·آ¢ط·آ®ط·آ±'),
+              label: const Text('إضافة رقم آخر'),
             ),
           ),
         ],
@@ -646,7 +635,7 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'ط¸ظ¾ط·آ¦ط·آ§ط·ع¾ ط·آ§ط¸â€‍ط¸ئ’ط·آ±ط¸ث†ط·ع¾',
+            'فئات الكروت',
             style: textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.bold,
             ),
@@ -667,7 +656,7 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
             child: TextButton.icon(
               onPressed: _addPlan,
               icon: const Icon(Icons.add_circle_outline),
-              label: const Text('ط·آ¥ط·آ¶ط·آ§ط¸ظ¾ط·آ© ط¸ظ¾ط·آ¦ط·آ© ط·آ£ط·آ®ط·آ±ط¸â€°'),
+              label: const Text('إضافة فئة أخرى'),
             ),
           ),
         ],
@@ -686,7 +675,7 @@ class _StepHeader extends StatelessWidget {
     final colors = context.color;
     final textTheme = Theme.of(context).textTheme;
 
-    const steps = ['ط·آ¨ط¸ظ¹ط·آ§ط¸â€ ط·آ§ط·ع¾ ط·آ§ط¸â€‍ط·آ´ط·آ¨ط¸ئ’ط·آ©', 'ط¸ظ¾ط·آ¦ط·آ§ط·ع¾ ط·آ§ط¸â€‍ط¸ئ’ط·آ±ط¸ث†ط·ع¾'];
+    const steps = ['بيانات الشبكة', 'فئات الكروت'];
 
     return Row(
       children: List.generate(steps.length, (index) {
@@ -787,7 +776,7 @@ class _PlanCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  'ط¸ظ¾ط·آ¦ط·آ© ${index + 1}',
+                  'فئة ${index + 1}',
                   style: textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -803,10 +792,10 @@ class _PlanCard extends StatelessWidget {
           const SizedBox(height: 12),
           TextFormField(
             controller: plan.nameController,
-            decoration: const InputDecoration(labelText: 'ط·آ§ط·آ³ط¸â€¦ ط·آ§ط¸â€‍ط¸ظ¾ط·آ¦ط·آ©'),
+            decoration: const InputDecoration(labelText: 'اسم الفئة'),
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
-                return 'ط·آ£ط·آ¯ط·آ®ط¸â€‍ ط·آ§ط·آ³ط¸â€¦ ط·آ§ط¸â€‍ط¸ظ¾ط·آ¦ط·آ©';
+                return 'أدخل اسم الفئة';
               }
               return null;
             },
@@ -815,13 +804,13 @@ class _PlanCard extends StatelessWidget {
           TextFormField(
             controller: plan.priceController,
             decoration: const InputDecoration(
-              labelText: 'ط·آ§ط¸â€‍ط·آ³ط·آ¹ط·آ± (ط·آ±ط¸ظ¹ط·آ§ط¸â€‍ ط¸ظ¹ط¸â€¦ط¸â€ ط¸ظ¹)',
+              labelText: 'السعر (ريال يمني)',
             ),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             validator: (value) {
               final num? parsed = num.tryParse(value ?? '');
               if (parsed == null || parsed <= 0) {
-                return 'ط·آ£ط·آ¯ط·آ®ط¸â€‍ ط·آ³ط·آ¹ط·آ±ط¸â€¹ط·آ§ ط·آµط·آ§ط¸â€‍ط·آ­ط¸â€¹ط·آ§';
+                return 'أدخل سعرًا صالحًا';
               }
               return null;
             },
@@ -832,13 +821,13 @@ class _PlanCard extends StatelessWidget {
               Expanded(
                 child: TextFormField(
                   controller: plan.durationController,
-                  decoration: const InputDecoration(
-                      labelText: 'ط¸â€¦ط·آ¯ط·آ© ط·آ§ط¸â€‍ط·آµط¸â€‍ط·آ§ط·آ­ط¸ظ¹ط·آ© (ط·آ£ط¸ظ¹ط·آ§ط¸â€¦)'),
+                  decoration:
+                      const InputDecoration(labelText: 'مدة الصلاحية (أيام)'),
                   keyboardType: TextInputType.number,
                   validator: (value) {
                     final int? parsed = int.tryParse(value ?? '');
                     if (parsed == null || parsed <= 0) {
-                      return 'ط·آ£ط·آ¯ط·آ®ط¸â€‍ ط·آ¹ط·آ¯ط·آ¯ ط·آ§ط¸â€‍ط·آ£ط¸ظ¹ط·آ§ط¸â€¦';
+                      return 'أدخل عدد الأيام';
                     }
                     return null;
                   },
@@ -849,7 +838,7 @@ class _PlanCard extends StatelessWidget {
                 child: TextFormField(
                   controller: plan.speedController,
                   decoration: const InputDecoration(
-                    labelText: 'ط·آ§ط¸â€‍ط·آ³ط·آ±ط·آ¹ط·آ© (Mbps) - ط·آ§ط·آ®ط·ع¾ط¸ظ¹ط·آ§ط·آ±ط¸ظ¹',
+                    labelText: 'السرعة (Mbps) - اختياري',
                   ),
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
@@ -864,7 +853,7 @@ class _PlanCard extends StatelessWidget {
                 child: TextFormField(
                   controller: plan.dataController,
                   decoration: const InputDecoration(
-                    labelText: 'ط·آ³ط·آ¹ط·آ© ط·آ§ط¸â€‍ط·آ¨ط¸ظ¹ط·آ§ط¸â€ ط·آ§ط·ع¾',
+                    labelText: 'سعة البيانات',
                   ),
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
@@ -874,7 +863,7 @@ class _PlanCard extends StatelessWidget {
               Expanded(
                 child: DropdownButtonFormField<_DataUnit>(
                   value: plan.dataUnit,
-                  decoration: const InputDecoration(labelText: 'ط·آ§ط¸â€‍ط¸ث†ط·آ­ط·آ¯ط·آ©'),
+                  decoration: const InputDecoration(labelText: 'الوحدة'),
                   onChanged: (value) {
                     if (value != null) {
                       plan.dataUnit = value;
@@ -896,7 +885,7 @@ class _PlanCard extends StatelessWidget {
           TextFormField(
             controller: plan.descriptionController,
             decoration: const InputDecoration(
-              labelText: 'ط¸ث†ط·آµط¸ظ¾ ط·آ§ط¸â€‍ط¸ظ¾ط·آ¦ط·آ© (ط·آ§ط·آ®ط·ع¾ط¸ظ¹ط·آ§ط·آ±ط¸ظ¹)',
+              labelText: 'وصف الفئة (اختياري)',
             ),
             maxLines: 2,
           ),
@@ -904,7 +893,7 @@ class _PlanCard extends StatelessWidget {
           FormField<PlatformFile?>(
             validator: (_) {
               if (plan.voucherFile == null) {
-                return 'ط¸ظ¹ط·آ±ط·آ¬ط¸â€° ط·آ±ط¸ظ¾ط·آ¹ ط¸â€¦ط¸â€‍ط¸ظ¾ ط·آ§ط¸â€‍ط·آ£ط¸ئ’ط¸ث†ط·آ§ط·آ¯';
+                return 'يرجى رفع ملف الأكواد';
               }
               return null;
             },
@@ -919,8 +908,7 @@ class _PlanCard extends StatelessWidget {
                     },
                     icon: const Icon(Icons.upload_file_rounded),
                     label: Text(
-                      plan.voucherFile?.name ??
-                          'ط·آ±ط¸ظ¾ط·آ¹ ط¸â€¦ط¸â€‍ط¸ظ¾ ط·آ§ط¸â€‍ط·آ£ط¸ئ’ط¸ث†ط·آ§ط·آ¯ (CSV / XLSX)',
+                      plan.voucherFile?.name ?? 'رفع ملف الأكواد (CSV / XLSX)',
                     ),
                   ),
                   if (state.hasError)
@@ -969,11 +957,11 @@ extension on ContactType {
   String get label {
     switch (this) {
       case ContactType.phone:
-        return 'ط¸â€،ط·آ§ط·ع¾ط¸ظ¾';
+        return 'هاتف';
       case ContactType.whatsapp:
-        return 'ط¸ث†ط·آ§ط·ع¾ط·آ³ط·آ§ط·آ¨';
+        return 'واتساب';
       case ContactType.other:
-        return 'ط·آ£ط·آ®ط·آ±ط¸â€°';
+        return 'أخرى';
     }
   }
 
@@ -1026,8 +1014,7 @@ class _PlanFormData {
 enum _DataUnit { mb, gb }
 
 extension on _DataUnit {
-  String get label =>
-      this == _DataUnit.gb ? 'ط·آ¬ط¸ظ¹ط·آ¬ط·آ§ط·آ¨ط·آ§ط¸ظ¹ط·ع¾' : 'ط¸â€¦ط¸ظ¹ط·آ¬ط·آ§ط·آ¨ط·آ§ط¸ظ¹ط·ع¾';
+  String get label => this == _DataUnit.gb ? 'جيجابايت' : 'ميجابايت';
 }
 
 class _FilePickerTile extends StatelessWidget {
@@ -1081,12 +1068,10 @@ class _FilePickerTile extends StatelessWidget {
           TextButton.icon(
             onPressed: onPick,
             icon: const Icon(Icons.attach_file),
-            label: Text(fileName == null ? 'ط§ط®طھظٹط§ط±' : 'طھط؛ظٹظٹط±'),
+            label: Text(fileName == null ? 'اختيار' : 'تغيير'),
           ),
         ],
       ),
     );
   }
 }
-
-

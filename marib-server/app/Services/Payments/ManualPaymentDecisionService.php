@@ -85,9 +85,25 @@ class ManualPaymentDecisionService
 
             DB::commit();
 
-            if ($shouldNotify) {
-                $this->sendDecisionNotification($manualPaymentRequest, $transaction, $decision, $note);
+        if ($shouldNotify) {
+            $attachmentUrl = null;
+
+            if ($attachmentPath) {
+                try {
+                    $attachmentUrl = Storage::disk('public')->url($attachmentPath);
+                } catch (Throwable) {
+                    $attachmentUrl = null;
+                }
             }
+
+            $this->sendDecisionNotification(
+                $manualPaymentRequest,
+                $transaction,
+                $decision,
+                $note,
+                $attachmentUrl
+            );
+        }
 
             return $history;
         } catch (Throwable $throwable) {
@@ -242,7 +258,8 @@ class ManualPaymentDecisionService
         ManualPaymentRequest $manualPaymentRequest,
         PaymentTransaction $transaction,
         string $status,
-        ?string $note = null
+        ?string $note = null,
+        ?string $attachmentUrl = null
     ): void {
         $tokens = UserFcmToken::where('user_id', $manualPaymentRequest->user_id)
             ->pluck('fcm_token')
@@ -265,17 +282,27 @@ class ManualPaymentDecisionService
 
         $deepLink = route('payment-requests.deep-link', $transaction);
 
+        $data = [
+            'transaction_id' => $transaction->id,
+            'manual_payment_request_id' => $manualPaymentRequest->id,
+            'status' => $status,
+            'deep_link' => $deepLink,
+        ];
+
+        if ($note) {
+            $data['note'] = $note;
+        }
+
+        if ($attachmentUrl) {
+            $data['attachment'] = $attachmentUrl;
+        }
+
         NotificationService::sendFcmNotification(
             $tokens,
             $title,
-            $note ? $note . ' - ' . $body : $body,
-            'manual_payment_request',
-            [
-                'transaction_id' => $transaction->id,
-                'manual_payment_request_id' => $manualPaymentRequest->id,
-                'status' => $status,
-                'deep_link' => $deepLink,
-            ]
+            $body,
+            'payment-transaction',
+            $data
         );
     }
 }

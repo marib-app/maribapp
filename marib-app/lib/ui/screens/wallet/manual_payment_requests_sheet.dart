@@ -87,71 +87,63 @@ class _ManualPaymentRequestsSheetState
                     }
                     if (state is ManualPaymentRequestsSuccess) {
                       final summary = state.summary;
-                      final hasSummary = summary != null;
-                      final requests = state.requests;
-                      final hasRequests = requests.isNotEmpty;
-                      final headerCount = hasSummary ? 1 : 0;
-                      final emptyCount = hasRequests ? 0 : 1;
-                      final loadingCount = state.isLoadingMore ? 1 : 0;
-                      final totalItems = headerCount +
-                          (hasRequests ? requests.length : 0) +
-                          emptyCount +
-                          loadingCount;
+                      final hasRequests = state.requests.isNotEmpty;
 
                       return RefreshIndicator(
                         color: context.color.territoryColor,
                         onRefresh: _refresh,
                         child: NotificationListener<ScrollNotification>(
                           onNotification: _handleScrollNotification,
-                          child: ListView.builder(
+                          child: CustomScrollView(
                             controller: scrollController,
-                            physics: const AlwaysScrollableScrollPhysics(
-                                parent: AppScrollBehavior.defaultPhysics),
-                            padding: const EdgeInsets.only(bottom: 12),
-                            itemCount: totalItems,
-                            itemBuilder: (context, index) {
-                              var currentIndex = index;
-
-                              if (hasSummary) {
-                                if (currentIndex == 0) {
-                                  return Padding(
-                                    padding:
-                                        const EdgeInsets.fromLTRB(4, 0, 4, 16),
+                            physics: AppScrollBehavior.defaultPhysics,
+                            slivers: [
+                              if (summary != null)
+                                SliverPadding(
+                                  padding:
+                                      const EdgeInsets.fromLTRB(4, 0, 4, 16),
+                                  sliver: SliverToBoxAdapter(
                                     child: _ManualPaymentSummarySection(
-                                        summary: summary!),
-                                  );
-                                }
-                                currentIndex -= 1;
-                              }
-
-                              if (!hasRequests) {
-                                if (currentIndex == 0) {
-                                  return Padding(
+                                      summary: summary,
+                                    ),
+                                  ),
+                                ),
+                              if (hasRequests)
+                                SliverPadding(
+                                  padding:
+                                      const EdgeInsets.symmetric(horizontal: 8),
+                                  sliver: SliverList(
+                                    delegate: SliverChildBuilderDelegate(
+                                      (context, index) {
+                                        final request = state.requests[index];
+                                        return _ManualPaymentTile(
+                                          payment: request,
+                                          dateFormat: _dateFormat,
+                                        );
+                                      },
+                                      childCount: state.requests.length,
+                                    ),
+                                  ),
+                                )
+                              else
+                                SliverFillRemaining(
+                                  hasScrollBody: false,
+                                  child: Padding(
                                     padding: const EdgeInsets.symmetric(
                                         vertical: 24),
                                     child: _EmptyView(onRefresh: _refresh),
-                                  );
-                                }
-                                return const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 16),
-                                  child: Center(
-                                      child: CircularProgressIndicator()),
-                                );
-                              }
-
-                              if (currentIndex >= requests.length) {
-                                return const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 16),
-                                  child: Center(
-                                      child: CircularProgressIndicator()),
-                                );
-                              }
-                              final request = requests[currentIndex];
-                              return _ManualPaymentTile(
-                                payment: request,
-                                dateFormat: _dateFormat,
-                              );
-                            },
+                                  ),
+                                ),
+                              if (state.isLoadingMore)
+                                const SliverToBoxAdapter(
+                                  child: Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 16),
+                                    child: Center(
+                                      child: CircularProgressIndicator(),
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
                       );
@@ -570,7 +562,6 @@ class _ManualPaymentDestination {
         );
 
       case _ManualPaymentDestinationType.unknown:
-      default:
         return _ManualPaymentDestination._(
           type: _ManualPaymentDestinationType.unknown,
           manualPaymentRequestId: manualPaymentRequestId,
@@ -689,32 +680,34 @@ class _EmptyView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return RefreshIndicator(
-      color: context.color.territoryColor,
-      onRefresh: onRefresh,
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(
-            parent: AppScrollBehavior.defaultPhysics),
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-            child: Column(
-              children: [
-                Text(
-                  'لا توجد طلبات دفع يدوية بعد',
-                  style: Theme.of(context).textTheme.titleMedium,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'عند إرسال طلب دفع يدوي سيظهر هنا لمتابعة حالته.',
-                  style: Theme.of(context).textTheme.bodySmall,
-                  textAlign: TextAlign.center,
-                ),
-              ],
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 220),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(
+              'لا توجد طلبات دفع يدوية بعد',
+              style: Theme.of(context).textTheme.titleMedium,
+              textAlign: TextAlign.center,
             ),
-          ),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              'عند إرسال طلب دفع يدوي سيظهر هنا لمتابعة حالته.',
+              style: Theme.of(context).textTheme.bodySmall,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            OutlinedButton(
+              onPressed: () {
+                onRefresh();
+              },
+              child: const Text('تحديث القائمة'),
+            ),
+          ],
+        ),
       ),
     );
   }

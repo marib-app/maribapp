@@ -7,6 +7,7 @@ import 'package:marib/ui/screens/wallet/components/wallet_transactions_sliver.da
 import 'package:marib/ui/screens/wallet/sections/wallet_filters_section.dart';
 import 'package:marib/ui/screens/wallet/sections/wallet_summary_section.dart';
 import 'package:marib/ui/screens/wallet/sections/wallet_withdrawals_section.dart';
+import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 
 class WalletTransactionsPage extends StatefulWidget {
@@ -22,8 +23,7 @@ class WalletTransactionsPage extends StatefulWidget {
   final DateFormat dateFormat;
 
   @override
-  State<WalletTransactionsPage> createState() =>
-      _WalletTransactionsPageState();
+  State<WalletTransactionsPage> createState() => _WalletTransactionsPageState();
 }
 
 class _WalletTransactionsPageState extends State<WalletTransactionsPage> {

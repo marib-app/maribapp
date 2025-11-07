@@ -28,7 +28,6 @@ import 'package:marib/data/cubits/wallet/manual_payment_requests_cubit.dart';
 import 'package:marib/utils/notification/notification_service.dart';
 import 'package:marib/app/app_scroll_behavior.dart';
 
-
 class WalletScreenUI extends StatefulWidget {
   const WalletScreenUI({super.key});
 
@@ -59,8 +58,6 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
         transfersCubit: context.read<WalletTransfersCubit>(),
       );
     });
-
-
   }
 
   @override
@@ -84,7 +81,8 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
     if (rawArgs is Map) {
       final Map<String, dynamic> args =
           rawArgs.map((key, value) => MapEntry(key.toString(), value));
-      final String? requestedTab = args['initial_tab']?.toString().toLowerCase();
+      final String? requestedTab =
+          args['initial_tab']?.toString().toLowerCase();
 
       if (requestedTab == 'actions') {
         _pageController.jumpToPage(1);
@@ -143,7 +141,6 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
       code: summary.currencyCode,
     );
   }
-
 
   WalletSummary? _activeSummary() {
     final state = context.read<WalletSummaryCubit>().state;
@@ -313,12 +310,10 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
 
     final transferOptions = _extractTransferOptions(baseOptions);
     if (transferOptions == null) {
-
       HelperUtils.showSnackBarMessage(
           context, 'لا تتوفر إعدادات صالحة لعملية التحويل حالياً.');
       return;
     }
-
 
     final WalletOperationOptions resolvedOptions;
     final String? existingClientTag = transferOptions.clientTag?.trim();
@@ -329,8 +324,6 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
     } else {
       resolvedOptions = transferOptions;
     }
-
-
 
     final response = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
@@ -362,7 +355,7 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
     if (amount == null) return;
 
     final token = HiveUtils.getJWT();
-    if (token == null || token.isEmpty) {
+    if (token.isEmpty) {
       HelperUtils.showSnackBarMessage(context, 'loginFirst'.translate(context));
       return;
     }

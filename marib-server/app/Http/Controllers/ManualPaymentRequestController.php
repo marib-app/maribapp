@@ -22,9 +22,7 @@ use App\Models\UserFcmToken;
 use App\Services\BootstrapTableService;
 use App\Services\CachingService;
 use App\Services\NotificationService;
-use App\Services\PaymentFulfillmentService;
 use App\Services\Payments\EastYemenBankGateway;
-use App\Services\WalletService;
 
 use App\Services\DepartmentReportService;
 use App\Models\User;
@@ -54,9 +52,7 @@ class ManualPaymentRequestController extends Controller
 
 
     public function __construct(
-        private readonly PaymentFulfillmentService $paymentFulfillmentService,
         private readonly DepartmentReportService $departmentReportService,
-        private readonly WalletService $walletService,
         private readonly ManualPaymentRequestService $manualPaymentRequestService,
         private readonly \App\Services\Payments\ManualPaymentDecisionService $manualPaymentDecisionService,
     ) {
@@ -2322,71 +2318,6 @@ class ManualPaymentRequestController extends Controller
 
         return $transaction;
     }
-
-    private function walletIdempotencyKey(ManualPaymentRequest $manualPaymentRequest): string
-    {
-        return sprintf('manual-payment-request:%d:wallet-credit', $manualPaymentRequest->getKey());
-    }
-
-    protected function sendDecisionNotification(ManualPaymentRequest $manualPaymentRequest, PaymentTransaction $transaction, string $status, ?string $note = null, ?string $attachmentUrl = null): void
-
-    {
-        $tokens = UserFcmToken::where('user_id', $manualPaymentRequest->user_id)->pluck('fcm_token')->filter()->values()->all();
-
-        if (empty($tokens)) {
-            return;
-        }
-
-        $title = $status === ManualPaymentRequest::STATUS_APPROVED
-            ? trans('Manual payment approved')
-            : trans('Manual payment rejected');
-
-        $body = trans('Reference #:ref - Amount: :amount', [
-            'ref' => $manualPaymentRequest->reference ?? $manualPaymentRequest->id,
-            'amount' => number_format($manualPaymentRequest->amount, 2) . ($manualPaymentRequest->currency ? ' ' . $manualPaymentRequest->currency : ''),
-        ]);
-
-        $deepLink = route('payment-requests.deep-link', $transaction);
-
-
-        $data = [
-            'transaction_id' => $transaction->id,
-            'manual_payment_request_id' => $manualPaymentRequest->id,
-            'status' => $status,
-            'deep_link' => $deepLink,
-        ];
-
-        if ($note) {
-            $data['note'] = $note;
-        }
-
-        if ($attachmentUrl) {
-            $data['attachment'] = $attachmentUrl;
-        }
-
-
-
-        $response = NotificationService::sendFcmNotification(
-            $tokens,
-            $title,
-            $body,
-            'payment-transaction',
-            
-            $data
-
-        );
-
-        if (is_array($response) && ($response['error'] ?? false)) {
-            Log::warning('ManualPaymentRequestController: Failed to send decision notification', [
-                'manual_payment_request_id' => $manualPaymentRequest->id,
-                'message' => $response['message'] ?? null,
-                'code' => $response['code'] ?? null,
-            ]);
-        }
-
-    }
-
-
 
     public function buildUnifiedManualPaymentsBaseQuery(Request $request): QueryBuilder
     {

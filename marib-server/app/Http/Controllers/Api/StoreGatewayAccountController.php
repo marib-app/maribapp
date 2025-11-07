@@ -16,9 +16,12 @@ class StoreGatewayAccountController extends Controller
     {
         $this->authorize('viewAny', StoreGatewayAccount::class);
 
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+
         $accounts = $request->user()
             ->storeGatewayAccounts()
-            ->with('storeGateway')
+            ->with(['storeGateway', 'store'])
             ->latest()
             ->get();
 
@@ -43,14 +46,23 @@ class StoreGatewayAccountController extends Controller
         /** @var \App\Models\User $user */
         $user = $request->user();
 
+        $store = $user->stores()->first();
+
+        if (! $store) {
+            return response()->json([
+                'message' => __('لا يمكن إضافة حسابات دفع قبل إنشاء المتجر.'),
+            ], 422);
+        }
+
         $account = $user->storeGatewayAccounts()->create([
             'store_gateway_id' => $validated['store_gateway_id'],
+            'store_id' => $store->id,
             'beneficiary_name' => $validated['beneficiary_name'],
             'account_number' => $validated['account_number'],
             'is_active' => array_key_exists('is_active', $validated)
                 ? (bool) $validated['is_active']
                 : true,
-        ])->load('storeGateway');
+        ])->load(['storeGateway', 'store']);
 
         return (new StoreGatewayAccountResource($account))
             ->response()
@@ -78,7 +90,7 @@ class StoreGatewayAccountController extends Controller
 
         $storeGatewayAccount->update($validated);
 
-        return new StoreGatewayAccountResource($storeGatewayAccount->fresh('storeGateway'));
+        return new StoreGatewayAccountResource($storeGatewayAccount->fresh(['storeGateway', 'store']));
     }
 
     public function destroy(StoreGatewayAccount $storeGatewayAccount): JsonResponse

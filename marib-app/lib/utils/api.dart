@@ -793,6 +793,9 @@ class Api {
     return 'stores/$normalized/gateways';
   }
 
+  /// مسار حفظ بيانات المتجر أثناء التسجيل.
+  static const String storeOnboardingApi = 'store/onboarding';
+
   /// مسار CRUD العام لحسابات بوابات المتجر.
   static const String storeGatewayAccountsApi = 'store-gateway-accounts';
 

@@ -1399,6 +1399,13 @@ class _SignupScreenState extends CloudState<SignupScreen> {
           parameter: payload,
         );
 
+        Map<String, dynamic>? storeData;
+        if (response['store'] is Map<String, dynamic>) {
+          storeData = Map<String, dynamic>.from(
+            response['store'] as Map<String, dynamic>,
+          );
+        }
+
         if (response['error'] == false) {
           try {
             Map<String, dynamic> latestUserData = {};
@@ -1460,6 +1467,10 @@ class _SignupScreenState extends CloudState<SignupScreen> {
 
             if (latestUserData.isNotEmpty) {
               persistedUser.addAll(latestUserData);
+            }
+
+            if (storeData != null) {
+              persistedUser['store'] = storeData;
             }
 
             final String? selectedTypeString = widget.selectedAccountType;

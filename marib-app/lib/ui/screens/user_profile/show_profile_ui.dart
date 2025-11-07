@@ -65,6 +65,7 @@ class ProfileScreenUI extends StatelessWidget {
         ),
         SliverPersistentHeader(
           pinned: true,
+          floating: true,
           delegate: _StatsTabsHeaderDelegate(
             backgroundColor: backgroundColor,
             statsBuilder: (ctx) => _StatsRow(),
@@ -404,6 +405,7 @@ class _ProfileTabBar extends StatelessWidget {
         controller: controller,
         isScrollable: true,
         physics: AppScrollBehavior.defaultPhysics,
+
         labelPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         indicator: UnderlineTabIndicator(
             borderSide: BorderSide(color: brand, width: 3),

@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\AdDraftController;
 use App\Http\Controllers\Api\StoreGatewayAccountController;
 use App\Http\Controllers\Api\StoreGatewayController;
 use App\Http\Controllers\Api\StoreGatewayPublicController;
+use App\Http\Controllers\Api\StoreOnboardingController;
 use App\Http\Controllers\ApiController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\ServiceRequestController as ApiServiceRequestController;
@@ -172,6 +173,11 @@ Route::get('metal-rates', [PublicMetalRateController::class, 'index']);
         ->whereNumber('storeGatewayAccount');
     Route::delete('store-gateway-accounts/{storeGatewayAccount}', [StoreGatewayAccountController::class, 'destroy'])
         ->whereNumber('storeGatewayAccount');
+
+    Route::prefix('store')->group(function (): void {
+        Route::get('onboarding', [StoreOnboardingController::class, 'show']);
+        Route::post('onboarding', [StoreOnboardingController::class, 'store']);
+    });
 
     Route::get('manual-banks', [ApiController::class, 'getManualBanks']);
     Route::get('manual-payments/banks', [ApiController::class, 'getManualBanks']);

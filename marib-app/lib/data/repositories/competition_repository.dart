@@ -123,10 +123,16 @@ class CompetitionRepository {
 
       if (response['error'] == false) {
         final data = response['data'];
-        return data is Map<String, dynamic>
+        final Map<String, dynamic> normalized = data is Map<String, dynamic>
             ? Map<String, dynamic>.from(data)
             : <String, dynamic>{};
 
+        if (response['store'] is Map<String, dynamic>) {
+          normalized['store'] =
+              Map<String, dynamic>.from(response['store'] as Map<String, dynamic>);
+        }
+
+        return normalized;
       } else {
         throw Exception(response['message'] ?? 'Failed to save payment info');
       }

@@ -11,11 +11,13 @@ use App\Events\UserTyping;
 use App\Http\Resources\ItemCollection;
 use App\Http\Resources\ManualPaymentRequestResource;
 use App\Http\Resources\PaymentTransactionResource;
+use App\Http\Resources\StoreResource;
 use App\Http\Resources\WalletTransactionResource;
 use App\Http\Resources\SliderResource;
 use App\Services\SliderMetricService;
 use App\Models\ManualPaymentRequestHistory;
 use App\Services\DepartmentAdvertiserService;
+use App\Services\Store\StoreRegistrationService;
 use App\Services\TelemetryService;
 use App\Models\Area;
 use App\Models\BlockUser;
@@ -390,7 +392,8 @@ class ApiController extends Controller {
         private WalletService $walletService,
         private MaribBoundaryService $maribBoundaryService,
         private ReferralAuditLogger $referralAuditLogger,
-        private DelegateNotificationService $delegateNotificationService
+        private DelegateNotificationService $delegateNotificationService,
+        private StoreRegistrationService $storeRegistrationService
 
 
     ) {
@@ -8687,6 +8690,9 @@ public function storeRequestDevice(Request $request)
             if (!isset($additionalInfo['categories'])) {
                 $additionalInfo['categories'] = [];
             }
+
+            $storeResource = null;
+            $registeredStore = null;
             
             if ((int) $request->account_type === User::ACCOUNT_TYPE_REAL_ESTATE) {
                 // حساب عقاري - معالجة البيانات الخاصة بالعقارات
@@ -8738,99 +8744,32 @@ public function storeRequestDevice(Request $request)
                 $additionalInfo['contact_info'] = $contactInfo;
                 
             } elseif ((int) $request->account_type === User::ACCOUNT_TYPE_SELLER) {
-                // حساب تجاري - معالجة البيانات الخاصة بالتجارة
-                // الحفاظ على البيانات الموجودة وتحديث المرسلة فقط
+                $storePayload = $this->buildStorePayloadFromRequest($request);
+                $registeredStore = $this->storeRegistrationService->register($user, $storePayload);
+                $storeResource = new StoreResource($registeredStore);
+
                 $contactInfo = $additionalInfo['contact_info'];
-                
-                // بيانات الحساب التجاري
-                if ($request->has('business_name')) {
-                    $contactInfo['business_name'] = $request->business_name;
-                }
-                
-                if ($request->has('business_phone')) {
-                    $contactInfo['business_phone'] = $request->business_phone;
-                }
-                
-                if ($request->has('business_whatsapp')) {
-                    $contactInfo['business_whatsapp'] = $request->business_whatsapp;
-                }
-                
-                if ($request->has('business_location')) {
-                    $contactInfo['business_location'] = $request->business_location;
-                }
-                
-                if ($request->has('commercial_register')) {
-                    $contactInfo['commercial_register'] = $request->commercial_register;
-                }
-                
-                if ($request->has('payment_methods')) {
-                    $contactInfo['payment_methods'] = $request->payment_methods;
-                }
-                
-                if ($request->has('payment_account_details')) {
-                    $contactInfo['payment_account_details'] = $request->payment_account_details;
-                }
-                
-                // معالجة أوقات العمل للحسابات التجارية
-                if ($request->has('opening_time')) {
-                    $contactInfo['opening_time'] = $request->opening_time;
-                }
-                
-                if ($request->has('closing_time')) {
-                    $contactInfo['closing_time'] = $request->closing_time;
-                }
-                
-                // معالجة الموقع الجغرافي
-                if ($request->has('latitude') && $request->has('longitude')) {
-                    $contactInfo['latitude'] = $request->latitude;
-                    $contactInfo['longitude'] = $request->longitude;
-                }
-                
-                // معالجة صورة المحل
-                if ($request->has('business_logo')) {
-                    try {
-                        $imageData = base64_decode($request->business_logo);
-                        $imageName = 'business_logo_' . $user->id . '_' . time() . '.jpg';
-                        $imagePath = 'uploads/business_logos/' . $imageName;
-                        
-                        // إنشاء المجلد إذا لم يكن موجود
-                        if (!file_exists(public_path('uploads/business_logos'))) {
-                            mkdir(public_path('uploads/business_logos'), 0777, true);
-                        }
-                        
-                        file_put_contents(public_path($imagePath), $imageData);
-                        $contactInfo['business_logo'] = $imagePath;
-                    } catch (Exception $e) {
-                        \Log::error('Error saving business logo: ' . $e->getMessage());
-                    }
-                }
-                
-                // معالجة ملف السجل التجاري
-                if ($request->has('commercial_register_file') && $request->has('commercial_register_filename')) {
-                    try {
-                        $fileData = base64_decode($request->commercial_register_file);
-                        $fileName = 'commercial_register_' . $user->id . '_' . time() . '_' . $request->commercial_register_filename;
-                        $filePath = 'uploads/commercial_registers/' . $fileName;
-                        
-                        // إنشاء المجلد إذا لم يكن موجود
-                        if (!file_exists(public_path('uploads/commercial_registers'))) {
-                            mkdir(public_path('uploads/commercial_registers'), 0777, true);
-                        }
-                        
-                        file_put_contents(public_path($filePath), $fileData);
-                        $contactInfo['commercial_register_file'] = $filePath;
-                        $contactInfo['commercial_register_filename'] = $request->commercial_register_filename;
-                    } catch (Exception $e) {
-                        \Log::error('Error saving commercial register file: ' . $e->getMessage());
-                    }
-                }
-                
+                $contactInfo['store_id'] = $registeredStore->id;
+                $contactInfo['store_slug'] = $registeredStore->slug;
+                $contactInfo['store_status'] = $registeredStore->status;
+                $contactInfo['business_name'] = $registeredStore->name;
+                $contactInfo['business_phone'] = $registeredStore->contact_phone;
+                $contactInfo['business_whatsapp'] = $registeredStore->contact_whatsapp;
+                $contactInfo['business_location'] = $registeredStore->location_address;
+                $contactInfo['latitude'] = $registeredStore->location_latitude;
+                $contactInfo['longitude'] = $registeredStore->location_longitude;
+                $contactInfo['city'] = $registeredStore->location_city;
+                $contactInfo['state'] = $registeredStore->location_state;
+                $contactInfo['country'] = $registeredStore->location_country;
+                $contactInfo['business_logo'] = $registeredStore->logo_path;
+                $contactInfo['working_hours'] = $storePayload['working_hours'] ?? [];
+                $contactInfo['payment_methods'] = $storePayload['meta']['payment_methods'] ?? [];
+                $contactInfo['payment_account_details'] = $storePayload['payment_account_details'] ?? [];
+                $contactInfo['policies'] = $storePayload['policies'] ?? [];
                 $additionalInfo['contact_info'] = $contactInfo;
-                
-                // معالجة الفئات للحسابات التجارية
-                if ($request->has('business_categories')) {
-                    $categories = explode(',', $request->business_categories);
-                    $additionalInfo['categories'] = array_map('trim', $categories);
+
+                if (! empty($storePayload['meta']['categories'] ?? [])) {
+                    $additionalInfo['categories'] = $storePayload['meta']['categories'];
                 }
             }
             
@@ -8840,16 +8779,199 @@ public function storeRequestDevice(Request $request)
             DB::commit();
             
             // تسجيل نجاح العملية
-            \Log::info('Complete Registration Success for User ID: ' . $user->id);
+            \Log::info('Complete Registration Success for User ID: ' . $user->id, [
+                'store_id' => $registeredStore?->id,
+            ]);
             \Log::info('Updated Additional Info:', ['additional_info' => $additionalInfo]);
+
+            $extraResponseData = [];
+            if ($storeResource !== null) {
+                $extraResponseData['store'] = $storeResource;
+            }
             
-            return ResponseService::successResponse('تم إكمال التسجيل بنجاح', $user);
+            return ResponseService::successResponse('تم إكمال التسجيل بنجاح', $user, $extraResponseData);
             
         } catch (Throwable $th) {
             DB::rollBack();
             ResponseService::logErrorResponse($th, "API Controller -> completeRegistration");
             ResponseService::errorResponse();
         }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildStorePayloadFromRequest(Request $request): array
+    {
+        $workingHours = $this->parseWorkingHoursInput($request->input('working_hours'));
+
+        $policies = $this->parsePoliciesFromRequest($request);
+
+        $settings = [
+            'min_order_amount' => $request->input('min_order_amount'),
+            'allow_delivery' => $request->boolean('allow_delivery', true),
+            'allow_pickup' => $request->boolean('allow_pickup', true),
+            'allow_manual_payments' => $request->boolean('allow_manual_payments', true),
+            'allow_wallet' => $request->boolean('allow_wallet', false),
+            'allow_cod' => $request->boolean('allow_cod', false),
+            'auto_accept_orders' => $request->boolean('auto_accept_orders', true),
+            'order_acceptance_buffer_minutes' => $request->input('order_acceptance_buffer_minutes', 15),
+            'closure_mode' => $request->input('closure_mode'),
+            'checkout_notice' => $request->input('checkout_notice'),
+        ];
+
+        return [
+            'name' => $request->input('business_name') ?? $request->input('store_name') ?? $request->user()?->name,
+            'description' => $request->input('business_description'),
+            'contact_email' => $request->input('business_email') ?? $request->input('contact_email'),
+            'contact_phone' => $request->input('business_phone') ?? $request->input('contact_phone'),
+            'contact_whatsapp' => $request->input('business_whatsapp'),
+            'address' => $request->input('business_location') ?? $request->input('address'),
+            'latitude' => $request->input('latitude'),
+            'longitude' => $request->input('longitude'),
+            'city' => $request->input('city'),
+            'state' => $request->input('state'),
+            'country' => $request->input('country_code') ?? $request->input('country'),
+            'location_notes' => $request->input('location_notes'),
+            'logo' => $request->input('business_logo'),
+            'banner' => $request->input('business_banner'),
+            'settings' => array_filter($settings, static fn ($value) => $value !== null),
+            'working_hours' => $workingHours,
+            'policies' => $policies,
+            'staff' => [
+                'invited_email' => $request->input('store_manager_email')
+                    ?? $request->input('store_staff_email')
+                    ?? $request->input('business_contact_email'),
+            ],
+            'financial' => [
+                'policy_type' => $request->input('financial_policy_type'),
+                'policy_payload' => $this->decodeJsonArray($request->input('financial_policy_payload')) ?? $request->input('financial_policy_payload', []),
+            ],
+            'meta' => [
+                'categories' => $this->parseCategoryInput($request->input('business_categories')),
+                'payment_methods' => $this->parseArrayInput($request->input('payment_methods')),
+            ],
+            'payment_account_details' => $request->input('payment_account_details', []),
+        ];
+    }
+
+    /**
+     * @param  mixed  $value
+     * @return array<int, mixed>
+     */
+    private function parseWorkingHoursInput(mixed $value): array
+    {
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+
+            if (is_array($decoded)) {
+                return $decoded;
+            }
+        }
+
+        if (is_array($value)) {
+            return $value;
+        }
+
+        return [];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function parsePoliciesFromRequest(Request $request): array
+    {
+        $policies = $request->input('policies');
+
+        if (is_string($policies)) {
+            $decoded = json_decode($policies, true);
+
+            if (is_array($decoded)) {
+                $policies = $decoded;
+            }
+        }
+
+        if (! is_array($policies)) {
+            $policies = [];
+        }
+
+        if ($request->filled('return_policy')) {
+            $policies[] = [
+                'policy_type' => 'return_policy',
+                'title' => 'سياسة الاسترجاع',
+                'content' => $request->input('return_policy'),
+            ];
+        }
+
+        if ($request->filled('exchange_policy')) {
+            $policies[] = [
+                'policy_type' => 'exchange_policy',
+                'title' => 'سياسة الاستبدال',
+                'content' => $request->input('exchange_policy'),
+            ];
+        }
+
+        return $policies;
+    }
+
+    /**
+     * @param  mixed  $value
+     * @return array<int, int>
+     */
+    private function parseCategoryInput(mixed $value): array
+    {
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            if (is_array($decoded)) {
+                $value = $decoded;
+            } else {
+                $value = explode(',', $value);
+            }
+        }
+
+        if (! is_array($value)) {
+            return [];
+        }
+
+        return array_values(array_filter(array_map(static fn ($category) => (int) $category, $value)));
+    }
+
+    /**
+     * @param  mixed  $value
+     * @return array<int, string>
+     */
+    private function parseArrayInput(mixed $value): array
+    {
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+
+            if (is_array($decoded)) {
+                $value = $decoded;
+            } else {
+                $value = explode(',', $value);
+            }
+        }
+
+        if (! is_array($value)) {
+            return [];
+        }
+
+        return array_values(array_filter(array_map(static fn ($item) => (string) $item, $value)));
+    }
+
+    /**
+     * @param  mixed  $value
+     * @return array<mixed>|null
+     */
+    private function decodeJsonArray(mixed $value): ?array
+    {
+        if (! is_string($value)) {
+            return is_array($value) ? $value : null;
+        }
+
+        $decoded = json_decode($value, true);
+
+        return is_array($decoded) ? $decoded : null;
     }
 
     /**

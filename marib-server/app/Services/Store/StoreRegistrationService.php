@@ -105,16 +105,18 @@ class StoreRegistrationService
     {
         $meta = [];
 
-        if (! empty($payload['meta'])) {
+        if (! empty($payload['meta']) && is_array($payload['meta'])) {
             $meta = $payload['meta'];
         }
 
-        if (! empty($payload['business_categories'])) {
-            $meta['categories'] = array_values(array_unique(array_map('intval', (array) $payload['business_categories'])));
+        $categoriesSource = $meta['categories'] ?? $payload['business_categories'] ?? null;
+        if (! empty($categoriesSource)) {
+            $meta['categories'] = array_values(array_unique(array_map('intval', (array) $categoriesSource)));
         }
 
-        if (! empty($payload['payment_methods'])) {
-            $meta['payment_methods'] = array_values(array_unique(array_map('strval', (array) $payload['payment_methods'])));
+        $paymentMethodsSource = $meta['payment_methods'] ?? $payload['payment_methods'] ?? null;
+        if (! empty($paymentMethodsSource)) {
+            $meta['payment_methods'] = array_values(array_unique(array_map('strval', (array) $paymentMethodsSource)));
         }
 
         if (! empty($payload['payment_account_details'])) {

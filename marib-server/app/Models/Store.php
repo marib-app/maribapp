@@ -108,4 +108,14 @@ class Store extends Model
     {
         return $this->hasMany(Item::class);
     }
+
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
+    }
+
+    public function manualPaymentRequests(): HasMany
+    {
+        return $this->hasMany(ManualPaymentRequest::class);
+    }
 }

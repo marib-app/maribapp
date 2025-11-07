@@ -18,6 +18,7 @@ use Illuminate\Support\Str;
 use Throwable;
 use App\Models\Concerns\HasPaymentLabels;
 use App\Models\ServiceRequest;
+use App\Models\Store;
 
 
 class ManualPaymentRequest extends Model
@@ -497,6 +498,7 @@ class ManualPaymentRequest extends Model
         'manual_bank_id',
         'payable_type',
         'payable_id',
+        'store_id',
         'service_request_id',
         'amount',
         'currency',
@@ -594,6 +596,11 @@ class ManualPaymentRequest extends Model
     {
         return $this->belongsTo(ManualBank::class, 'manual_bank_id');
 
+    }
+
+    public function store(): BelongsTo
+    {
+        return $this->belongsTo(Store::class);
     }
 
     public function serviceRequest(): BelongsTo

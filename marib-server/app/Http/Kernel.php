@@ -83,6 +83,7 @@ class Kernel extends HttpKernel {
         'service.manager'  => \App\Http\Middleware\EnsureServiceManager::class,
         
         'category.manager' => \App\Http\Middleware\EnsureCategoryManager::class,
+        'store.access'    => \App\Http\Middleware\EnsureStoreAccess::class,
 
 
 

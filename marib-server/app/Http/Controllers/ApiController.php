@@ -9879,7 +9879,7 @@ public function storeRequestDevice(Request $request)
                     }
                 }
             }
-
+            $storeId = $this->resolveManualPaymentStoreId($resolvedPayableType, $payableId);
 
         $manualPaymentAttributes = [
             'user_id'        => $user->id,
@@ -9900,6 +9900,9 @@ public function storeRequestDevice(Request $request)
             'department'     => $department,
             'meta'           => empty($metaPayload) ? null : $metaPayload,
         ];
+        if ($storeId !== null) {
+            $manualPaymentAttributes['store_id'] = $storeId;
+        }
 
         $manualPaymentRequest = null;
 
@@ -11214,6 +11217,17 @@ public function storeRequestDevice(Request $request)
         }
 
         return null;
+    }
+
+    private function resolveManualPaymentStoreId(?string $payableType, ?int $payableId): ?int
+    {
+        if ($payableId === null || $payableType !== Order::class) {
+            return null;
+        }
+
+        return Order::query()
+            ->whereKey($payableId)
+            ->value('store_id');
     }
 
 

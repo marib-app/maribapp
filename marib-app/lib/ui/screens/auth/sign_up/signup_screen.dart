@@ -32,10 +32,10 @@ import 'package:flutter/foundation.dart';
 import 'package:marib/ui/screens/auth/sign_up/email_verification_screen.dart';
 
 // ط§ظ„ظˆط§ط¬ظ‡ط§طھ ط§ظ„ظ…ظپطµظˆظ„ط©
-import 'widgets/account_type_selector.dart';
-import 'widgets/signup_shared_widgets.dart';
-import 'widgets/real_estate_section.dart';
-import 'widgets/business_section.dart';
+import 'Widgets/account_type_selector.dart';
+import 'Widgets/signup_shared_widgets.dart';
+import 'Widgets/real_estate_section.dart';
+import 'Widgets/business_section.dart';
 import 'dart:async'; // ظ„ظ„ظ€ Timer
 import 'package:marib/data/cubits/system/fetch_system_settings_cubit.dart';
 import 'package:marib/utils/notification/notification_service.dart';

@@ -154,9 +154,11 @@ class WifiRepository {
     };
 
     for (int i = 0; i < currencies.length; i++) {
-      final String? currency = currencies[i];
-      if (currency.isEmpty) continue;
-      formPayload['currencies[$i]'] = currency.toUpperCase();
+      final String normalized = currencies[i].trim();
+      if (normalized.isEmpty) {
+        continue;
+      }
+      formPayload['currencies[$i]'] = normalized.toUpperCase();
     }
 
     for (int i = 0; i < contacts.length; i++) {

@@ -29,6 +29,8 @@ use App\Http\Controllers\SellerController;
 use App\Http\Controllers\SeoSettingController;
 use App\Http\Controllers\OrderPaymentGroupController;
 use App\Http\Controllers\MetalRateController;
+use App\Http\Controllers\StoreDashboardController;
+use App\Http\Controllers\Store\StoreOrderController;
 use App\Http\Controllers\StoreSettingsController;
 
 use App\Http\Controllers\SettingController;
@@ -720,6 +722,15 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
         Route::patch('/gateway-accounts/{storeGatewayAccount}/toggle', [StoreSettingsController::class, 'toggleGatewayAccount'])->name('gateway-accounts.toggle');
     });
 
+    Route::group([
+        'prefix' => 'merchant',
+        'as' => 'merchant.',
+        'middleware' => ['store.access'],
+    ], static function () {
+        Route::get('dashboard', [StoreDashboardController::class, 'index'])->name('dashboard');
+        Route::get('orders', [StoreOrderController::class, 'index'])->name('orders.index');
+    });
+
     /* --------------------------------- الإعدادات Settings --------------------------------- */
     Route::group(['prefix' => 'settings'], static function () {
         Route::get('/', [SettingController::class, 'index'])->name('settings.index');
@@ -1232,4 +1243,3 @@ Route::prefix('chat-monitor')->name('chat-monitor.')->middleware(['auth'])->grou
 
 
 /* ------------------------------ روابط إضافية متفرقة ------------------------------ */
-

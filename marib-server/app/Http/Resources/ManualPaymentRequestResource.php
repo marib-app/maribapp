@@ -41,7 +41,7 @@ class ManualPaymentRequestResource extends JsonResource
             : null;
 
         if ($manualPaymentRequestModel instanceof ManualPaymentRequest) {
-            $manualPaymentRequestModel->loadMissing('manualBank');
+            $manualPaymentRequestModel->loadMissing('manualBank', 'store');
         }
 
         $manualBank = $manualPaymentRequestModel?->manualBank;
@@ -196,6 +196,12 @@ class ManualPaymentRequestResource extends JsonResource
             'payment_transaction_id' => $paymentTransaction?->id,
             'receipt_no' => $paymentTransaction?->receipt_no,
             'transfer_details' => $transferDetails,
+            'store_id' => $this->store_id,
+            'store' => $manualPaymentRequestModel?->store ? [
+                'id' => $manualPaymentRequestModel->store->id,
+                'name' => $manualPaymentRequestModel->store->name,
+                'status' => $manualPaymentRequestModel->store->status,
+            ] : null,
 
 
         ], static fn ($value) => $value !== null && $value !== '');

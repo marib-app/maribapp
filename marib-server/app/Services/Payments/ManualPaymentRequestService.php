@@ -159,6 +159,7 @@ class ManualPaymentRequestService
 
 
         $department = $this->determineDepartmentForOrderPayable($payableType, $payableId, $existingRequest);
+        $storeId = $this->resolveStoreIdForPayable($payableType, $payableId);
 
 
         $duplicateRequest = null;
@@ -219,6 +220,10 @@ class ManualPaymentRequestService
 
             $mergedMeta = array_replace_recursive($mergedMeta, $metaUpdates);
 
+            if ($storeId !== null && $existingRequest->store_id !== $storeId) {
+                $existingRequest->store_id = $storeId;
+            }
+
             $existingRequest->fill([
                 'manual_bank_id' => $manualBank?->getKey(),
                 'payable_type' => $payableType,
@@ -258,6 +263,7 @@ class ManualPaymentRequestService
             'manual_bank_id' => $manualBank?->getKey(),
             'payable_type' => $payableType,
             'payable_id' => $payableId,
+            'store_id' => $storeId,
             'service_request_id' => $serviceRequestId,
             'amount' => $transaction->amount,
             'currency' => $transaction->currency,
@@ -415,12 +421,14 @@ class ManualPaymentRequestService
 
         $department = $this->determineDepartmentForOrderPayable($payableType, $payableId, null);
         $serviceRequestId = $this->resolveServiceRequestId($payableType, $payableId);
+        $storeId = $this->resolveStoreIdForPayable($payableType, $payableId);
 
         $attributes = [
             'user_id' => $user->getKey(),
             'manual_bank_id' => $manualBank?->getKey(),
             'payable_type' => $payableType,
             'payable_id' => $payableId,
+            'store_id' => $storeId,
             'service_request_id' => $serviceRequestId,
             'amount' => $transaction->amount,
             'currency' => $currency ?? $transaction->currency,
@@ -463,6 +471,9 @@ class ManualPaymentRequestService
                 $existingOpen->fill($filteredAttributes);
                 $existingOpen->payment_transaction_id = $transaction->getKey();
                 $existingOpen->status = ManualPaymentRequest::STATUS_PENDING;
+                if ($storeId !== null && $existingOpen->store_id !== $storeId) {
+                    $existingOpen->store_id = $storeId;
+                }
                 $existingOpen->save();
 
                 return $existingOpen;
@@ -1509,6 +1520,21 @@ class ManualPaymentRequestService
         }
     }
 
+
+    private function resolveStoreIdForPayable(mixed $payableType, ?int $payableId): ?int
+    {
+        if ($payableId === null) {
+            return null;
+        }
+
+        if (! ManualPaymentRequest::isOrderPayableType($payableType) && $payableType !== Order::class) {
+            return null;
+        }
+
+        return Order::query()
+            ->whereKey($payableId)
+            ->value('store_id');
+    }
 
     private function determineDepartmentForOrderPayable(
         mixed $payableType,

@@ -261,6 +261,21 @@
             </li>
           @endcan
 
+          @if(auth()->check() && auth()->user()->account_type === \App\Models\User::ACCOUNT_TYPE_SELLER)
+            <li class="sidebar-item">
+              <a href="{{ route('merchant.dashboard') }}" class="sidebar-link">
+                <i class="bi bi-shop"></i>
+                <span class="menu-item">{{ __('لوحة المتجر') }}</span>
+              </a>
+            </li>
+            <li class="sidebar-item">
+              <a href="{{ route('merchant.orders.index') }}" class="sidebar-link">
+                <i class="bi bi-receipt-cutoff"></i>
+                <span class="menu-item">{{ __('طلبات المتجر') }}</span>
+              </a>
+            </li>
+          @endif
+
         @endcanany
 
 

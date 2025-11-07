@@ -118,6 +118,13 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
     setState(() => _currentStep = target);
   }
 
+  void _showMessage(String message) {
+    UiUtils.showSoftSnackBar(
+      context,
+      message: message,
+    );
+  }
+
   Future<void> _pickLogo() async {
     final XFile? file = await _imagePicker.pickImage(
       source: ImageSource.gallery,
@@ -173,11 +180,11 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
     return true;
   }
 
-  Future<MultipartFile> _multipartFromXFile(XFile file) {
+  Future<MultipartFile> _multipartFromXFile(XFile file) async {
     return MultipartFile.fromFile(file.path, filename: p.basename(file.path));
   }
 
-  Future<MultipartFile> _multipartFromPlatformFile(PlatformFile file) {
+  Future<MultipartFile> _multipartFromPlatformFile(PlatformFile file) async {
     if (file.path != null) {
       return MultipartFile.fromFile(file.path!, filename: file.name);
     }
@@ -198,17 +205,14 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
         .toList();
 
     if (contacts.isEmpty) {
-      UiUtils.showSnackBar(
-          context, 'ط£ط¶ظپ ط±ظ‚ظ… طھظˆط§طµظ„ ظˆط§ط­ط¯ ط¹ظ„ظ‰ ط§ظ„ط£ظ‚ظ„.');
+      _showMessage('ط£ط¶ظپ ط±ظ‚ظ… طھظˆط§طµظ„ ظˆط§ط­ط¯ ط¹ظ„ظ‰ ط§ظ„ط£ظ‚ظ„.');
       _switchStep(0);
       return;
     }
 
     if (_plans.any((plan) => plan.voucherFile == null)) {
-      UiUtils.showSnackBar(
-        context,
-        'ظٹط±ط¬ظ‰ ط±ظپط¹ ظ…ظ„ظپ ط§ظ„ط£ظƒظˆط§ط¯ ظ„ظƒظ„ ظپط¦ط© ظ‚ط¨ظ„ ط§ظ„ط¥ط±ط³ط§ظ„.',
-      );
+      _showMessage(
+          'ظٹط±ط¬ظ‰ ط±ظپط¹ ظ…ظ„ظپ ط§ظ„ط£ظƒظˆط§ط¯ ظ„ظƒظ„ ظپط¦ط© ظ‚ط¨ظ„ ط§ظ„ط¥ط±ط³ط§ظ„.');
       _switchStep(1);
       return;
     }
@@ -307,7 +311,7 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
       Navigator.pop(context, true);
     } catch (error) {
       if (!mounted) return;
-      UiUtils.showSnackBar(context, ErrorFilter.check(error).error);
+      _showMessage(ErrorFilter.check(error).error);
     } finally {
       if (mounted) {
         setState(() => _isSubmitting = false);
@@ -760,7 +764,7 @@ class _PlanCard extends StatelessWidget {
 
   final _PlanFormData plan;
   final int index;
-  final VoidCallback onPickFile;
+  final Future<void> Function() onPickFile;
   final VoidCallback? onRemove;
 
   @override
@@ -909,7 +913,7 @@ class _PlanCard extends StatelessWidget {
                 children: [
                   OutlinedButton.icon(
                     onPressed: () async {
-                      await onPickFile();
+                      await Future<void>.sync(onPickFile);
                       state.didChange(plan.voucherFile);
                     },
                     icon: const Icon(Icons.upload_file_rounded),

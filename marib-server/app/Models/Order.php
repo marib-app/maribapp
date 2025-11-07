@@ -47,6 +47,7 @@ class Order extends Model
     protected $fillable = [
         'user_id',
         'seller_id',
+        'store_id',
         'department',
         'invoice_no',
         'order_number',
@@ -357,6 +358,11 @@ class Order extends Model
     public function seller(): BelongsTo
     {
         return $this->belongsTo(User::class, 'seller_id');
+    }
+
+    public function store(): BelongsTo
+    {
+        return $this->belongsTo(Store::class);
     }
 
     public function sheinBatch(): BelongsTo

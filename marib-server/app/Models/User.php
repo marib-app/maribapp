@@ -5,7 +5,9 @@ namespace App\Models;
 use App\Models\CartCouponSelection;
 use App\Models\CartItem;
 use App\Models\ReferralAttempt;
+use App\Models\Store;
 use App\Models\StoreGatewayAccount;
+use App\Models\StoreStaff;
 use App\Models\WalletAccount;
 use App\Models\WalletTransaction;
 
@@ -215,6 +217,16 @@ class User extends Authenticatable {
     public function storeGatewayAccounts(): HasMany
     {
         return $this->hasMany(StoreGatewayAccount::class);
+    }
+
+    public function stores(): HasMany
+    {
+        return $this->hasMany(Store::class);
+    }
+
+    public function storeStaffAssignments(): HasMany
+    {
+        return $this->hasMany(StoreStaff::class);
     }
 
     public function referralAttemptsAsReferrer(): HasMany

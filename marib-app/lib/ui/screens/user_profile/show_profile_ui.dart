@@ -45,7 +45,6 @@ class ProfileScreenUI extends StatelessWidget {
 
     return NestedScrollView(
       physics: AppScrollBehavior.defaultPhysics,
-      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       headerSliverBuilder: (context, innerBoxIsScrolled) => [
         SliverToBoxAdapter(
           child: Column(
@@ -388,13 +387,12 @@ class _ProfileTabBar extends StatelessWidget {
     final Color brand = context.color.territoryColor;
 
     final selectedStyle =
-    textTheme.copyWith(fontWeight: FontWeight.w700, height: 1.1);
+        textTheme.copyWith(fontWeight: FontWeight.w700, height: 1.1);
     final unselectedStyle =
-    textTheme.copyWith(fontWeight: FontWeight.w500, height: 1.1);
+        textTheme.copyWith(fontWeight: FontWeight.w500, height: 1.1);
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
-
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(12),
@@ -404,22 +402,16 @@ class _ProfileTabBar extends StatelessWidget {
         controller: controller,
         isScrollable: true,
         physics: AppScrollBehavior.defaultPhysics,
-
-        labelPadding:
-        const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-
+        labelPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         indicator: UnderlineTabIndicator(
             borderSide: BorderSide(color: brand, width: 3),
-            insets: const EdgeInsets.symmetric(horizontal: 24)
-        ),
-
+            insets: const EdgeInsets.symmetric(horizontal: 24)),
         overlayColor: MaterialStateProperty.all(Colors.transparent),
         labelColor: onBackground,
         unselectedLabelColor: onBackground.withOpacity(0.55),
         labelStyle: selectedStyle,
         unselectedLabelStyle: unselectedStyle,
         onTap: onTap,
-
         tabs: List.generate(adTabs.length, (i) {
           final title = adTabs[i]['title']!.translate(context);
           final count =
@@ -456,8 +448,6 @@ class _ProfileTabBar extends StatelessWidget {
   }
 }
 
-
-
 class _StatsTabsHeaderDelegate extends SliverPersistentHeaderDelegate {
   _StatsTabsHeaderDelegate({
     required this.backgroundColor,
@@ -482,9 +472,8 @@ class _StatsTabsHeaderDelegate extends SliverPersistentHeaderDelegate {
   Widget build(
       BuildContext context, double shrinkOffset, bool overlapsContent) {
     final double deltaExtent = maxExtent - minExtent;
-    final double t = deltaExtent <= 0
-        ? 1.0
-        : (shrinkOffset / deltaExtent).clamp(0.0, 1.0);
+    final double t =
+        deltaExtent <= 0 ? 1.0 : (shrinkOffset / deltaExtent).clamp(0.0, 1.0);
     final double statsOpacity = 1 - t;
     final double heightFactor = math.max(0.0001, statsOpacity);
     final double translateY = -12 * t;
@@ -497,12 +486,12 @@ class _StatsTabsHeaderDelegate extends SliverPersistentHeaderDelegate {
         color: backgroundColor,
         boxShadow: showShadow
             ? [
-          BoxShadow(
-            color: Colors.black.withOpacity(shadowStrength),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ]
+                BoxShadow(
+                  color: Colors.black.withOpacity(shadowStrength),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ]
             : const [],
       ),
       child: Column(
@@ -535,8 +524,6 @@ class _StatsTabsHeaderDelegate extends SliverPersistentHeaderDelegate {
     return true;
   }
 }
-
-
 
 /// شارة عدّاد صغيرة
 class _Badge extends StatelessWidget {

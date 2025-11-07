@@ -3,6 +3,7 @@ import 'package:marib/app/app_scroll_behavior.dart';
 import 'package:marib/app/navigation/app_page_route.dart';
 import 'package:marib/app/navigation/motion/route_motion.dart';
 import 'package:marib/app/routes.dart';
+import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/ui_utils.dart';
 
@@ -153,7 +154,7 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
           BoxShadow(
             color: colors.territoryColor.withOpacity(.2),
             blurRadius: 18,
-            offset: const Offset(0, 10), 
+            offset: const Offset(0, 10),
           ),
         ],
       ),

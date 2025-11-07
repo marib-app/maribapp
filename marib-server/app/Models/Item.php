@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use function __;
 use function url;
@@ -34,6 +35,7 @@ class Item extends Model {
         'status',
         'rejected_reason',
         'user_id',
+        'store_id',
         'image',
         'thumbnail_url',
         'detail_image_url',
@@ -70,6 +72,11 @@ class Item extends Model {
     // Relationships
     public function user() {
         return $this->belongsTo(User::class);
+    }
+
+    public function store(): BelongsTo
+    {
+        return $this->belongsTo(Store::class);
     }
 
     public function category()

@@ -13,6 +13,7 @@ class StoreGatewayAccount extends Model
     protected $fillable = [
         'user_id',
         'store_gateway_id',
+        'store_id',
         'beneficiary_name',
         'account_number',
         'is_active',
@@ -25,6 +26,11 @@ class StoreGatewayAccount extends Model
     public function storeGateway(): BelongsTo
     {
         return $this->belongsTo(StoreGateway::class);
+    }
+
+    public function store(): BelongsTo
+    {
+        return $this->belongsTo(Store::class);
     }
 
     public function user(): BelongsTo

@@ -63,6 +63,10 @@ class BusinessSection extends StatelessWidget {
   final List<int> selectedCategoryIds;     // المعرفات المحددة
   final void Function(int id) onToggleCategory;
 
+  // === بريد التحكم بالمتجر ===
+  final TextEditingController staffEmailController;
+  final String staffEmailDomain;
+
   // === أوقات العمل (قديم) ===
   final TimeOfDay? openingTime;
   final TimeOfDay? closingTime;
@@ -126,6 +130,9 @@ class BusinessSection extends StatelessWidget {
     required this.categories,
     required this.selectedCategoryIds,
     required this.onToggleCategory,
+    // بريد التحكم
+    required this.staffEmailController,
+    required this.staffEmailDomain,
     // أوقات العمل (قديم)
     required this.openingTime,
     required this.closingTime,
@@ -236,7 +243,15 @@ class BusinessSection extends StatelessWidget {
             ),
             const SizedBox(height: 14),
 
-            // 6) بطاقة الأقسام
+            // 6) بطاقة بريد التحكم باللوحة
+            _StaffAccountCard(
+              controller: staffEmailController,
+              domain: staffEmailDomain,
+              highlightRequired: highlightRequired,
+            ),
+            const SizedBox(height: 14),
+
+            // 7) بطاقة الأقسام
             _CategoriesCard(
               categories: categories,
               selectedIds: selectedCategoryIds,
@@ -245,13 +260,13 @@ class BusinessSection extends StatelessWidget {
             const SizedBox(height: 14),
 
 
-            // 7) بطاقة أوقات العمل
+            // 8) بطاقة أوقات العمل
             const WorkingHoursCard(),
             const SizedBox(height: 14),
 
 
 
-            // 8) بطاقة وسائل الدفع + حقول الحسابات
+            // 9) بطاقة وسائل الدفع + حقول الحسابات
             _StoreGatewaysCard(
               gateways: storeGateways,
               selectedIds: selectedGatewayIds,
@@ -263,7 +278,7 @@ class BusinessSection extends StatelessWidget {
               onRetry: onRetryGateways,
             ),
 
-            // 9) شريط إرسال (اختياري)
+            // 10) شريط إرسال (اختياري)
             if (onSubmit != null) ...[
               const SizedBox(height: 18),
               _SubmitBar(
@@ -1069,6 +1084,78 @@ class _LocationCard extends StatelessWidget {
 /* =========================================
    بطاقة أرقام التواصل
    ========================================= */
+
+class _ContactCard extends StatelessWidget {
+
+class _StaffAccountCard extends StatelessWidget {
+  final TextEditingController controller;
+  final String domain;
+  final bool highlightRequired;
+
+  const _StaffAccountCard({
+    required this.controller,
+    required this.domain,
+    required this.highlightRequired,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final helperColor = theme.colorScheme.onSurface.withOpacity(0.7);
+
+    return _CardShell(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _LabelWithAsterisk(
+            text: "معرّف لوحة المتجر",
+            icon: Icons.admin_panel_settings_outlined,
+            showAsterisk: highlightRequired,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "اكتب اسم المستخدم فقط ليتم إنشاء البريد بالصيغة @$domain.",
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: helperColor,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 12),
+          CustomTextFormField(
+            controller: controller,
+            hintText: "مثال: store.admin",
+            keyboard: TextInputType.emailAddress,
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9._-]')),
+            ],
+            validator: CustomTextFieldValidator.minAndMixLen,
+            minLength: Constant.storeStaffEmailMinLength,
+            maxLength: Constant.storeStaffEmailMaxLength,
+            isRequired: true,
+            suffix: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              child: Text(
+                '@$domain',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            "سيتلقى هذا البريد دعوة للدخول إلى لوحة التحكم الخاصة بمتجرك.",
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: helperColor.withOpacity(0.9),
+              height: 1.3,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _ContactCard extends StatelessWidget {
   final TextEditingController phone;

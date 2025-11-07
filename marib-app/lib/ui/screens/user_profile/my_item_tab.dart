@@ -66,12 +66,56 @@ class _MyItemTabBodyState extends State<_MyItemTabBody>
   @override
   bool get wantKeepAlive => true;
 
-  late final ScrollController _pageScrollController = ScrollController();
+  ScrollController? _pageScrollController;
+  ScrollController? _ownedScrollController;
+  bool _usingPrimaryController = false;
+
+  ScrollController get _effectiveScrollController {
+    final controller = _pageScrollController;
+    if (controller != null) {
+      return controller;
+    }
+
+    final owned = _ensureOwnedController();
+    _attachScrollController(owned, isPrimary: false);
+    return owned;
+  }
+
+  ScrollController _ensureOwnedController() {
+    return _ownedScrollController ??= ScrollController();
+  }
+
+  void _attachScrollController(ScrollController controller,
+      {required bool isPrimary}) {
+    if (_pageScrollController == controller) {
+      _usingPrimaryController = isPrimary;
+      return;
+    }
+
+    _pageScrollController?.removeListener(_onPageScroll);
+
+    _pageScrollController = controller;
+    _usingPrimaryController = isPrimary;
+    _pageScrollController!.addListener(_onPageScroll);
+  }
+
 
   @override
   void initState() {
     super.initState();
-    _pageScrollController.addListener(_onPageScroll);
+    final owned = _ensureOwnedController();
+    _attachScrollController(owned, isPrimary: false);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final primary = PrimaryScrollController.of(context);
+    if (primary != null) {
+      _attachScrollController(primary, isPrimary: true);
+    } else {
+      _attachScrollController(_ensureOwnedController(), isPrimary: false);
+    }
   }
 
   void _onPageScroll() {
@@ -81,8 +125,10 @@ class _MyItemTabBodyState extends State<_MyItemTabBody>
     st is FetchMyItemsSuccess ? st.isLoadingMore : false;
 
     // حمّل المزيد بحذر
-    if (_pageScrollController.hasClients &&
-        _pageScrollController.position.extentAfter < 200 &&
+    final controller = _effectiveScrollController;
+
+    if (controller.hasClients &&
+        controller.position.extentAfter < 200 &&
         cubit.hasMoreData() &&
         !isLoadingMore) {
       cubit.fetchMyMoreItems(getItemsWithStatus: widget.statusKey);
@@ -112,8 +158,15 @@ class _MyItemTabBodyState extends State<_MyItemTabBody>
 
   @override
   void dispose() {
-    _pageScrollController.removeListener(_onPageScroll);
-    _pageScrollController.dispose();
+    _pageScrollController?.removeListener(_onPageScroll);
+
+    if (_usingPrimaryController) {
+      _ownedScrollController?.dispose();
+      _ownedScrollController = null;
+    } else {
+      _pageScrollController?.dispose();
+    }
+    _pageScrollController = null;
     super.dispose();
   }
 
@@ -134,7 +187,7 @@ class _MyItemTabBodyState extends State<_MyItemTabBody>
       builder: (context, state) {
         return MyItemTabUI(
           state: state,
-          controller: _pageScrollController,
+          controller: _effectiveScrollController,
           onRefresh: _onRefresh,
           onRetry: () => context
               .read<FetchMyItemsCubit>()

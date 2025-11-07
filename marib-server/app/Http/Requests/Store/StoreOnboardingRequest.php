@@ -71,7 +71,7 @@ class StoreOnboardingRequest extends FormRequest
             'policies.*.display_order' => ['nullable', 'integer'],
 
             'staff' => ['nullable', 'array'],
-            'staff.invited_email' => ['nullable', 'email'],
+            'staff.invited_email' => ['nullable', 'string', 'max:' . (int) config('store.staff_email_max_length', 48), 'regex:/^[A-Za-z0-9._-]+$/'],
 
             'financial' => ['nullable', 'array'],
             'financial.policy_type' => ['nullable', 'string', 'max:32'],

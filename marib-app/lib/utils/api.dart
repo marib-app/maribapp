@@ -681,6 +681,14 @@ class Api {
 
   static String wifiNetworkPlansApi(int id) => "wifi/networks/$id/plans";
 
+  static String ownerWifiNetworksApi = "wifi/owner/networks";
+
+  static String ownerWifiNetworkPlansApi(int id) =>
+      "wifi/owner/networks/$id/plans";
+
+  static String ownerWifiPlanBatchesApi(int planId) =>
+      "wifi/owner/plans/$planId/batches";
+
   static String wifiPlansApi = "wifi/plans";
 
   static String wifiPlanBatchesApi(int planId) => "wifi/plans/$planId/batches";
@@ -786,7 +794,6 @@ class Api {
     'banks',
   ];
 
-
   /// مسار بوابات المتجر الجديدة (يجب تمرير هوية التاجر أو السلَج/المعرف).
   static String storeGatewaysApi(dynamic seller) {
     final String normalized = _normalizeStoreIdentifier(seller);
@@ -807,9 +814,9 @@ class Api {
 
   /// بعض المتحكمات توفر تفعيل/تعطيل عبر PATCH/POST فرعي، نوفر مُساعدًا موحدًا.
   static String storeGatewayAccountActivationApi(
-      dynamic accountId,
-      String action,
-      ) {
+    dynamic accountId,
+    String action,
+  ) {
     final String normalized = Uri.encodeComponent('$accountId');
     final String normalizedAction = Uri.encodeComponent(action.trim());
     return '$storeGatewayAccountsApi/$normalized/$normalizedAction';
@@ -822,8 +829,6 @@ class Api {
     }
     return Uri.encodeComponent(stringified.trim());
   }
-
-
 
   static const int _manualBankDefaultPerPage = 50;
   static const int _manualBankMaxLoops = 20;

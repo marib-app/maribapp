@@ -10,6 +10,7 @@ import 'package:marib/data/model/category_model.dart';
 import 'package:marib/ui/screens/widgets/custom_text_form_field.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/cloudState/cloud_state.dart';
+import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/ui_utils.dart';
@@ -79,6 +80,7 @@ class SignupScreen extends StatefulWidget {
 }
 
 class _SignupScreenState extends CloudState<SignupScreen> {
+  static final RegExp _staffUsernamePattern = RegExp(r'^[a-zA-Z0-9._-]+$');
   final GlobalKey<FormState> _formKey = GlobalKey();
   final TextEditingController _emailController = TextEditingController();
 
@@ -99,6 +101,8 @@ class _SignupScreenState extends CloudState<SignupScreen> {
   final TextEditingController _businessLocationController =
       TextEditingController();
   final TextEditingController _commercialRegisterController =
+      TextEditingController();
+  final TextEditingController _storeStaffEmailController =
       TextEditingController();
 
   // ظ‚ظˆط§ط¦ظ… ظ„ظ„ط­ط³ط§ط¨ ط§ظ„طھط¬ط§ط±ظٹ
@@ -656,6 +660,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
     _businessWhatsappController.dispose();
     _businessLocationController.dispose();
     _commercialRegisterController.dispose();
+    _storeStaffEmailController.dispose();
     for (final controller in _storeGatewayBeneficiaryControllers.values) {
       controller.dispose();
     }
@@ -956,6 +961,8 @@ class _SignupScreenState extends CloudState<SignupScreen> {
                               _workingHours = updated;
                             });
                           },
+                          staffEmailController: _storeStaffEmailController,
+                          staffEmailDomain: Constant.storeStaffEmailDomain,
                           isLogoUploading: _businessLogoUploading,
                           logoUploadProgress: _businessLogoProgress,
                           showLogoPreviewHint: _businessLogoPreviewHint,
@@ -1150,6 +1157,26 @@ class _SignupScreenState extends CloudState<SignupScreen> {
           context,
           "pleaseSelectAtLeastOneBusinessCategory".translate(context),
           messageDuration: 3,
+        );
+        return false;
+      }
+
+      final String staffUsername = _storeStaffEmailController.text.trim();
+      if (staffUsername.isEmpty) {
+        HelperUtils.showSnackBarMessage(
+          context,
+          "يرجى إدخال اسم المستخدم الخاص ببريد لوحة المتجر.",
+          messageDuration: 3,
+        );
+        return false;
+      }
+      if (staffUsername.length < Constant.storeStaffEmailMinLength ||
+          staffUsername.length > Constant.storeStaffEmailMaxLength ||
+          !_staffUsernamePattern.hasMatch(staffUsername)) {
+        HelperUtils.showSnackBarMessage(
+          context,
+          "المعرّف يجب أن يكون من ${Constant.storeStaffEmailMinLength} إلى ${Constant.storeStaffEmailMaxLength} رمزًا ويحتوي على أحرف إنجليزية أو أرقام أو (. - _).",
+          messageDuration: 4,
         );
         return false;
       }
@@ -1355,6 +1382,13 @@ class _SignupScreenState extends CloudState<SignupScreen> {
             },
           });
 
+          final String staffUsername = _storeStaffEmailController.text.trim();
+          if (staffUsername.isNotEmpty) {
+            payload['staff'] = {
+              'invited_email': staffUsername.toLowerCase(),
+            };
+          }
+
           if (_businessLatitude != null && _businessLongitude != null) {
             payload.addAll({
               "latitude": _businessLatitude.toString(),
@@ -1527,6 +1561,13 @@ class _SignupScreenState extends CloudState<SignupScreen> {
               } else {
                 contactInfo.remove('payment_methods');
                 contactInfo.remove('payment_account_details');
+              }
+
+              final String staffUsername =
+                  _storeStaffEmailController.text.trim().toLowerCase();
+              if (staffUsername.isNotEmpty) {
+                contactInfo['store_staff_email'] =
+                    '$staffUsername@${Constant.storeStaffEmailDomain}';
               }
 
               if (_businessLatitude != null) {

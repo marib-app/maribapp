@@ -16,6 +16,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use RuntimeException;
 
 class StoreRegistrationService
@@ -93,7 +94,6 @@ class StoreRegistrationService
             'location_notes' => $payload['location_notes'] ?? null,
             'logo_path' => $this->maybeStoreMedia($payload['logo'] ?? $payload['business_logo'] ?? null, 'stores/logos'),
             'banner_path' => $this->maybeStoreMedia($payload['banner'] ?? null, 'stores/banners'),
-            'contact_whatsapp' => $payload['contact_whatsapp'] ?? $payload['business_whatsapp'] ?? null,
         ], static fn ($value) => $value !== null);
     }
 
@@ -252,24 +252,88 @@ class StoreRegistrationService
      */
     private function syncStaffInvites(Store $store, User $owner, array $staffPayload): void
     {
-        $email = trim((string) ($staffPayload['invited_email'] ?? $staffPayload['email'] ?? ''));
-        if ($email === '' || strcasecmp($email, (string) $owner->email) === 0) {
+        $email = $this->normalizeStaffEmail($staffPayload['invited_email'] ?? $staffPayload['email'] ?? null);
+
+        if ($email === null || strcasecmp($email, (string) $owner->email) === 0) {
             return;
         }
 
-        $store->staff()
+        $existingForStore = $store->staff()
             ->where('email', $email)
             ->whereNull('revoked_at')
-            ->firstOr(function () use ($store, $owner, $email) {
-                StoreStaff::create([
-                    'store_id' => $store->id,
-                    'email' => $email,
-                    'role' => 'admin',
-                    'status' => 'pending',
-                    'invitation_token' => Str::uuid()->toString(),
-                    'invited_by' => $owner->id,
+            ->exists();
+
+        if ($existingForStore) {
+            return;
+        }
+
+        $this->assertStaffEmailAvailable($email, $store);
+
+        StoreStaff::create([
+            'store_id' => $store->id,
+            'email' => $email,
+            'role' => 'admin',
+            'status' => 'pending',
+            'invitation_token' => Str::uuid()->toString(),
+            'invited_by' => $owner->id,
+        ]);
+    }
+
+    private function normalizeStaffEmail(mixed $raw): ?string
+    {
+        if (! is_string($raw)) {
+            return null;
+        }
+
+        $candidate = trim($raw);
+        if ($candidate === '') {
+            return null;
+        }
+
+        $domain = strtolower(config('store.staff_email_domain', 'maribsrv.com'));
+        $localPart = $candidate;
+
+        if (str_contains($candidate, '@')) {
+            [$localPart, $incomingDomain] = explode('@', strtolower($candidate), 2);
+            if ($incomingDomain !== $domain) {
+                throw ValidationException::withMessages([
+                    'staff.invited_email' => 'يجب أن ينتهي البريد بـ @' . $domain,
                 ]);
-            });
+            }
+        }
+
+        $normalizedLocal = strtolower(preg_replace('/[^a-z0-9._-]/i', '', $localPart) ?? '');
+        $min = (int) config('store.staff_email_min_length', 3);
+        $max = (int) config('store.staff_email_max_length', 48);
+
+        if ($normalizedLocal === '' || strlen($normalizedLocal) < $min || strlen($normalizedLocal) > $max) {
+            throw ValidationException::withMessages([
+                'staff.invited_email' => "اسم المستخدم يجب أن يتكون من {$min} إلى {$max} أحرف/أرقام.",
+            ]);
+        }
+
+        if (! preg_match('/^[a-z0-9._-]+$/', $normalizedLocal)) {
+            throw ValidationException::withMessages([
+                'staff.invited_email' => 'اسم المستخدم يسمح بحروف إنجليزية، أرقام، ونقاط/شرطات فقط.',
+            ]);
+        }
+
+        return $normalizedLocal . '@' . $domain;
+    }
+
+    private function assertStaffEmailAvailable(string $email, Store $store): void
+    {
+        $existsElsewhere = StoreStaff::query()
+            ->where('email', $email)
+            ->whereNull('revoked_at')
+            ->where('store_id', '!=', $store->id)
+            ->exists();
+
+        if ($existsElsewhere) {
+            throw ValidationException::withMessages([
+                'staff.invited_email' => 'هذا البريد مستخدم بالفعل، يرجى اختيار اسم مختلف.',
+            ]);
+        }
     }
 
     private function generateUniqueSlug(string $name): string

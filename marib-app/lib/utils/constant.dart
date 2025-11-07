@@ -132,6 +132,9 @@ class Constant {
   // Electronic store root category must stay aligned with `_goElectronicStore`
   // navigation to avoid mismatched listings.
   static const int storeRootCategoryId = 3;
+  static const String storeStaffEmailDomain = 'maribsrv.com';
+  static const int storeStaffEmailMinLength = 3;
+  static const int storeStaffEmailMaxLength = 32;
 
   /// Convenience accessor for routing arguments that expect string IDs.
   static String get storeRootCategoryIdAsString =>

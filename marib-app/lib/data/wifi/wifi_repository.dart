@@ -7,13 +7,15 @@ import 'package:marib/data/model/wifi/wifi_purchase_result.dart';
 import 'dart:collection';
 import 'package:dio/dio.dart';
 
-
 class WifiRepository {
   const WifiRepository();
 
   static const int _maxBatchUploadSizeBytes = 5 * 1024 * 1024;
-  static const List<String> _allowedBatchExtensions = <String>['csv', 'xls', 'xlsx'];
-
+  static const List<String> _allowedBatchExtensions = <String>[
+    'csv',
+    'xls',
+    'xlsx'
+  ];
 
   Map<String, dynamic> _mapify(dynamic value) {
     if (value is Map<String, dynamic>) {
@@ -60,45 +62,45 @@ class WifiRepository {
     return int.tryParse(value.toString());
   }
 
-
-
-
-
-
-
-
-
-
-  Future<List<WifiNetwork>> searchNetworks({
+  Future<List<WifiNetwork>> fetchOwnerNetworks({
     String? query,
-    int? limit,
+    int perPage = 100,
   }) async {
-    final Map<String, dynamic> queryParameters = <String, dynamic>{
-      'owner_only': false,
-      'public': true,
-      if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
-      if (limit != null) 'limit': limit,
-    };
-
     final response = await Api.get(
-      url: Api.wifiNetworksApi,
-      queryParameters: queryParameters,
+      url: Api.ownerWifiNetworksApi,
+      queryParameters: <String, dynamic>{'per_page': perPage},
     );
 
     final List<dynamic> rawList = _extractNetworksList(response);
 
-    return rawList
+    final List<WifiNetwork> networks = rawList
         .map((dynamic element) {
-      if (element is Map<String, dynamic>) {
-        return WifiNetwork.fromJson(element);
-      }
-      if (element is Map) {
-        return WifiNetwork.fromJson(Map<String, dynamic>.from(element as Map));
-      }
-      return null;
-    })
+          if (element is Map<String, dynamic>) {
+            return WifiNetwork.fromJson(element);
+          }
+          if (element is Map) {
+            return WifiNetwork.fromJson(
+              Map<String, dynamic>.from(element as Map),
+            );
+          }
+          return null;
+        })
         .whereType<WifiNetwork>()
         .toList();
+
+    final String normalizedQuery = query?.trim().toLowerCase() ?? '';
+    if (normalizedQuery.isEmpty) {
+      return networks;
+    }
+
+    return networks.where((network) {
+      final String haystack = <String?>[
+        network.name,
+        network.slug,
+        network.address,
+      ].whereType<String>().map((value) => value.toLowerCase()).join(' ');
+      return haystack.contains(normalizedQuery);
+    }).toList();
   }
 
   List<dynamic> _extractNetworksList(dynamic payload) {
@@ -123,14 +125,75 @@ class WifiRepository {
     return const [];
   }
 
+  Future<WifiNetwork> submitOwnerNetworkRequest({
+    required String name,
+    String? slug,
+    double? latitude,
+    double? longitude,
+    double? coverageRadiusKm,
+    String? address,
+    String? description,
+    String? notes,
+    List<Map<String, String>> contacts = const <Map<String, String>>[],
+    List<String> currencies = const <String>['YER'],
+    MultipartFile? logo,
+    MultipartFile? loginScreenshot,
+  }) async {
+    final Map<String, dynamic> formPayload = <String, dynamic>{
+      'name': name,
+      if (slug != null && slug.isNotEmpty) 'slug': slug,
+      if (latitude != null) 'latitude': latitude,
+      if (longitude != null) 'longitude': longitude,
+      if (coverageRadiusKm != null) 'coverage_radius_km': coverageRadiusKm,
+      if (address != null && address.isNotEmpty) 'address': address,
+      if (description != null && description.isNotEmpty)
+        'description': description,
+      if (notes != null && notes.isNotEmpty) 'notes': notes,
+      'meta[source]': 'mobile_app',
+      'meta[request_type]': 'owner_network',
+    };
 
+    for (int i = 0; i < currencies.length; i++) {
+      final String? currency = currencies[i];
+      if (currency.isEmpty) continue;
+      formPayload['currencies[$i]'] = currency.toUpperCase();
+    }
 
+    for (int i = 0; i < contacts.length; i++) {
+      final Map<String, String> contact = contacts[i];
+      final String? type = contact['type'];
+      final String? value = contact['value'];
+      if (type == null || type.isEmpty || value == null || value.isEmpty) {
+        continue;
+      }
+      formPayload['contacts[$i][type]'] = type;
+      formPayload['contacts[$i][value]'] = value;
+    }
 
+    if (logo != null) {
+      formPayload['logo'] = logo;
+    }
+    if (loginScreenshot != null) {
+      formPayload['login_screenshot'] = loginScreenshot;
+    }
 
+    final Map<String, dynamic> response = await Api.post(
+      url: Api.ownerWifiNetworksApi,
+      parameter: FormData.fromMap(
+        formPayload,
+        ListFormat.multiCompatible,
+      ),
+    );
+
+    final Map<String, dynamic> data =
+        _mapify(response['data'] ?? response['network'] ?? response);
+
+    return WifiNetwork.fromJson(data);
+  }
 
   Future<List<WifiPlan>> fetchNetworkPlans(int networkId) async {
     final response = await Api.get(
-      url: Api.wifiNetworkPlansApi(networkId),
+      url: Api.ownerWifiNetworkPlansApi(networkId),
     );
 
     final dynamic container = response['data'] ??
@@ -153,7 +216,6 @@ class WifiRepository {
     return plans;
   }
 
-
   Future<List<WifiPlan>> fetchManagedPlans({
     int? networkId,
     int perPage = 50,
@@ -165,7 +227,6 @@ class WifiRepository {
       'per_page': normalizedPerPage,
       if (networkId != null) 'network': networkId,
     };
-
 
     final Map<String, dynamic> response;
 
@@ -192,7 +253,6 @@ class WifiRepository {
     }
 
     final List<dynamic> includedRaw = _extractIncludedPlans(response);
-
 
     final List<Map<String, dynamic>> planMaps = <Map<String, dynamic>>[];
     final Map<int, int> indexById = <int, int>{};
@@ -265,9 +325,7 @@ class WifiRepository {
     }
 
     return const [];
-
   }
-
 
   Future<List<WifiPaymentGateway>> fetchPaymentGateways() async {
     final response = await Api.get(url: Api.wifiPaymentGatewaysApi);
@@ -276,8 +334,7 @@ class WifiRepository {
         response['payment_gateways'] ??
         response['items'];
 
-    final List<dynamic> gatewaysRaw =
-    List<dynamic>.from(_listify(container));
+    final List<dynamic> gatewaysRaw = List<dynamic>.from(_listify(container));
     if (gatewaysRaw.isEmpty && container is List) {
       gatewaysRaw.addAll(container);
     }
@@ -297,7 +354,6 @@ class WifiRepository {
     return gateways;
   }
 
-
   Future<Map<String, dynamic>> uploadBatch({
     required String name,
     required String contact,
@@ -309,20 +365,18 @@ class WifiRepository {
       'name': name,
       'contacts': <String>[contact],
       'notes': notes,
-
-
       'logo': logo,
       'login_screenshot': loginScreenshot,
     }..removeWhere((key, value) {
-      if (value == null) return true;
-      if (value is String && value.trim().isEmpty) {
-        return true;
-      }
-      if (value is Iterable && value.isEmpty) {
-        return true;
-      }
-      return false;
-    });
+        if (value == null) return true;
+        if (value is String && value.trim().isEmpty) {
+          return true;
+        }
+        if (value is Iterable && value.isEmpty) {
+          return true;
+        }
+        return false;
+      });
 
     return Api.post(
       url: Api.wifiNetworksApi,
@@ -349,31 +403,26 @@ class WifiRepository {
         'source': 'mobile_app',
         'request_type': 'owner_network',
       },
-
       'logo': logo,
       'login_screenshot': loginScreenshot,
     }..removeWhere((key, value) {
-      if (value == null) return true;
-      if (value is String && value.trim().isEmpty) {
-        return true;
-      }
-      if (value is Iterable && value.isEmpty) {
-        return true;
-      }
-      return false;
-    });
-
+        if (value == null) return true;
+        if (value is String && value.trim().isEmpty) {
+          return true;
+        }
+        if (value is Iterable && value.isEmpty) {
+          return true;
+        }
+        return false;
+      });
 
     return Api.post(
-
       url: Api.wifiNetworksApi,
       parameter: payload,
-
     );
   }
 
-
-  Future<Map<String, dynamic>> createNetworkPlan({
+  Future<WifiPlan> createNetworkPlan({
     required int networkId,
     required String name,
     String? description,
@@ -413,28 +462,31 @@ class WifiRepository {
       'is_active': isActive,
       'meta': meta,
     }..removeWhere((key, value) {
-      if (value == null) return true;
-      if (value is String && value.trim().isEmpty) {
-        return true;
-      }
-      if (value is Iterable && value.isEmpty) {
-        return true;
-      }
-      if (value is num && value.isNaN) {
-        return true;
-      }
-      return false;
-    });
+        if (value == null) return true;
+        if (value is String && value.trim().isEmpty) {
+          return true;
+        }
+        if (value is Iterable && value.isEmpty) {
+          return true;
+        }
+        if (value is num && value.isNaN) {
+          return true;
+        }
+        return false;
+      });
 
-    return Api.post(
-      url: Api.wifiNetworkPlansApi(networkId),
+    final Map<String, dynamic> response = await Api.post(
+      url: Api.ownerWifiNetworkPlansApi(networkId),
       parameter: payload,
     );
+
+    final Map<String, dynamic> data =
+        _mapify(response['data'] ?? response['plan'] ?? response);
+
+    return WifiPlan.fromJson(data);
   }
 
-
-  Future<Map<String, dynamic>> createPlanBatch({
-
+  Future<void> createPlanBatch({
     required int planId,
     required MultipartFile file,
   }) async {
@@ -444,11 +496,11 @@ class WifiRepository {
 
     final String fileName = file.filename ?? '';
     final String extension =
-    fileName.contains('.') ? fileName.split('.').last.toLowerCase() : '';
+        fileName.contains('.') ? fileName.split('.').last.toLowerCase() : '';
     if (!_allowedBatchExtensions.contains(extension)) {
       throw ArgumentError(
         'Unsupported voucher file type "$extension". Allowed extensions: '
-            '${_allowedBatchExtensions.join(', ')}.',
+        '${_allowedBatchExtensions.join(', ')}.',
       );
     }
 
@@ -459,17 +511,11 @@ class WifiRepository {
       );
     }
 
-    final payload = <String, dynamic>{
-      'file': file,
-    };
-
-    return Api.post(
-      url: Api.wifiPlanBatchesApi(planId),
-      parameter: payload,
+    await Api.post(
+      url: Api.ownerWifiPlanBatchesApi(planId),
+      parameter: <String, dynamic>{'file': file},
     );
   }
-
-
 
   Future<List<WifiPurchase>> fetchPurchases({int? page}) async {
     final query = page != null ? <String, dynamic>{'page': page} : null;
@@ -497,7 +543,7 @@ class WifiRepository {
 
     if (purchases.isNotEmpty) {
       purchases.sort(
-            (a, b) {
+        (a, b) {
           final aDate = a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
           final bDate = b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
           return bDate.compareTo(aDate);
@@ -523,14 +569,12 @@ class WifiRepository {
     );
 
     WifiPurchase? purchase =
-    payload.isEmpty ? null : WifiPurchase.fromJson(payload);
-
+        payload.isEmpty ? null : WifiPurchase.fromJson(payload);
 
     if (purchase != null) {
       final Map<String, dynamic> wifiCode = _mapify(payload['wifi_code']);
-      final List<Map<String, dynamic>> wifiCodes = _listify(payload['wifi_codes'])
-          .map(_mapify)
-          .toList();
+      final List<Map<String, dynamic>> wifiCodes =
+          _listify(payload['wifi_codes']).map(_mapify).toList();
 
       final List<String> extractedCodes = <String>[...purchase.codes];
       final Set<int> extractedIds = <int>{
@@ -562,9 +606,8 @@ class WifiRepository {
           .toSet()
           .toList();
 
-      final int resolvedId = extractedIds.isNotEmpty
-          ? extractedIds.first
-          : purchase.id;
+      final int resolvedId =
+          extractedIds.isNotEmpty ? extractedIds.first : purchase.id;
 
       purchase = purchase.copyWith(
         id: resolvedId,
@@ -627,10 +670,10 @@ class WifiRepository {
         return true;
       }
       final int? code = _intify(
-        normalized['status_code'] ??
-            normalized['code'] ??
-            normalized['http_status'],
-      ) ??
+            normalized['status_code'] ??
+                normalized['code'] ??
+                normalized['http_status'],
+          ) ??
           _intify(payload['status_code'] ?? payload['code']);
       if (code == 202) {
         return true;
@@ -766,8 +809,6 @@ class WifiRepository {
     return _buildPurchaseResult(response);
   }
 
-
-
   Future<WifiPurchase?> revealTransactionCode(int transactionId) async {
     if (transactionId <= 0) {
       return null;
@@ -829,9 +870,6 @@ class WifiRepository {
     return WifiPurchase.fromJson(payload);
   }
 
-
-
-
   Future<void> logCodeEvent({
     required int codeId,
     required String action,
@@ -851,6 +889,4 @@ class WifiRepository {
       data: payload,
     );
   }
-
-
 }

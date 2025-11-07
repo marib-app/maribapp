@@ -4,12 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:marib/app/app_scroll_behavior.dart';
 import 'package:marib/app/navigation/app_page_route.dart';
 import 'package:marib/app/navigation/motion/route_motion.dart';
-import 'package:marib/app/routes.dart';
 import 'package:marib/data/model/wifi/wifi_network.dart';
 import 'package:marib/data/model/wifi/wifi_plan.dart';
 import 'package:marib/data/wifi/wifi_repository.dart';
 import 'package:marib/settings.dart';
 import 'package:marib/ui/theme/theme.dart';
+import 'package:marib/ui/screens/classified_ads/other_services/wifi_cabin/wifi_cabin_intro_screen.dart';
 import 'package:marib/utils/errorFilter.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/helper_utils.dart';
@@ -69,9 +69,8 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
     }
 
     try {
-      final List<WifiNetwork> result = await _repository.searchNetworks(
+      final List<WifiNetwork> result = await _repository.fetchOwnerNetworks(
         query: _searchQuery.trim().isEmpty ? null : _searchQuery.trim(),
-        limit: 50,
       );
       if (!mounted) return;
       setState(() {
@@ -121,8 +120,14 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
     );
   }
 
-  void _openSupport() {
-    Navigator.pushNamed(context, Routes.contactUs);
+  Future<void> _openAddNetworkFlow() async {
+    final bool? created = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => const WifiCabinIntroScreen()),
+    );
+    if (created == true) {
+      _loadNetworks();
+    }
   }
 
   @override
@@ -173,14 +178,32 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
               else
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  sliver: SliverList.separated(
-                    itemCount: _networks.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      final WifiNetwork network = _networks[index];
-                      return _WifiNetworkCard(
-                        network: network,
-                        onTap: () => _openNetworkDetails(network),
+                  sliver: SliverLayoutBuilder(
+                    builder: (context, constraints) {
+                      final double width = constraints.crossAxisExtent;
+                      int crossAxisCount = 1;
+                      if (width >= 1100) {
+                        crossAxisCount = 3;
+                      } else if (width >= 700) {
+                        crossAxisCount = 2;
+                      }
+                      return SliverGrid(
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: crossAxisCount,
+                          mainAxisSpacing: 16,
+                          crossAxisSpacing: 16,
+                          childAspectRatio: 0.92,
+                        ),
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            final WifiNetwork network = _networks[index];
+                            return _WifiNetworkCard(
+                              network: network,
+                              onTap: () => _openNetworkDetails(network),
+                            );
+                          },
+                          childCount: _networks.length,
+                        ),
                       );
                     },
                   ),
@@ -192,46 +215,27 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
       ),
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  backgroundColor: colors.territoryColor,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                ),
-                onPressed: _openDashboard,
-                icon: const Icon(Icons.dashboard_customize_rounded),
-                label: Text(
-                  'فتح لوحة الواي فاي',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
+        child: SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              backgroundColor: colors.territoryColor,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
               ),
             ),
-            const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
+            onPressed: _openAddNetworkFlow,
+            icon: const Icon(Icons.add_circle_outline_rounded),
+            label: Text(
+              'إضافة شبكة جديدة',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
                   ),
-                ),
-                onPressed: _openSupport,
-                child: const Text('طلب دعم أو إضافة شبكة جديدة'),
-              ),
             ),
-          ],
+          ),
         ),
       ),
     );

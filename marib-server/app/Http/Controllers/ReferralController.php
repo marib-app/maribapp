@@ -6,7 +6,6 @@ use App\Models\Referral;
 use App\Models\User;
 use App\Models\Challenge;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use App\Models\ReferralAttempt;
 
 class ReferralController extends Controller
@@ -18,32 +17,66 @@ class ReferralController extends Controller
 
     public function list(Request $request)
     {
-        $offset = $request->offset ?? 0;
+        $offset = max(0, (int) ($request->offset ?? 0));
         $limit = $request->limit ?? 10;
-        $sort = $request->sort ?? 'id';
-        $order = $request->order ?? 'desc';
-        $search = $request->search;
+        $sort = $request->sort ?? 'created_at';
+        $order = strtolower($request->order ?? 'desc');
+        $search = trim((string) $request->search);
         $challengeId = $request->challenge_id;
+        $status = $request->status;
 
-        $query = Referral::with(['referrer:id,name', 'referred_user:id,name', 'challenge:id,title']);
+        if (!in_array($order, ['asc', 'desc'], true)) {
+            $order = 'desc';
+        }
 
-        if ($search) {
-            $query->whereHas('referrer', function ($q) use ($search) {
-                $q->where('name', 'like', "%$search%");
-            })->orWhereHas('referred_user', function ($q) use ($search) {
-                $q->where('name', 'like', "%$search%");
+
+        $sortColumns = [
+            'id' => 'referrals.id',
+            'referrer.name' => 'referrers.name',
+            'referred_user.name' => 'referred_users.name',
+            'challenge.title' => 'challenges.title',
+            'points' => 'referrals.points',
+            'created_at' => 'referrals.created_at',
+        ];
+
+        $sortColumn = $sortColumns[$sort] ?? 'referrals.created_at';
+
+        $query = Referral::query()
+            ->select('referrals.*')
+            ->with(['referrer:id,name', 'referred_user:id,name', 'challenge:id,title'])
+            ->leftJoin('users as referrers', 'referrers.id', '=', 'referrals.referrer_id')
+            ->leftJoin('users as referred_users', 'referred_users.id', '=', 'referrals.referred_user_id')
+            ->leftJoin('challenges', 'challenges.id', '=', 'referrals.challenge_id');
+
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $like = "%{$search}%";
+                $q->where('referrers.name', 'like', $like)
+                    ->orWhere('referred_users.name', 'like', $like)
+                    ->orWhere('referrals.id', 'like', $like);
             });
         }
 
-        if ($challengeId) {
-            $query->where('challenge_id', $challengeId);
+        if (!empty($challengeId)) {
+            $query->where('referrals.challenge_id', $challengeId);
         }
 
-        $total = $query->count();
-        $rows = $query->orderBy($sort, $order)
-            ->skip($offset)
-            ->take($limit)
-            ->get();
+        if ($request->filled('status')) {
+            $query->whereHas('attempts', function ($attemptQuery) use ($status) {
+                $attemptQuery->where('status', $status);
+            });
+        }
+
+        $total = (clone $query)->distinct('referrals.id')->count('referrals.id');
+
+        $query->orderBy($sortColumn, $order);
+
+        if ($limit !== 'all') {
+            $limitValue = is_numeric($limit) ? (int) $limit : 10;
+            $query->skip($offset)->take($limitValue);
+        }
+
+        $rows = $query->get();
 
         return response()->json([
             'total' => $total,

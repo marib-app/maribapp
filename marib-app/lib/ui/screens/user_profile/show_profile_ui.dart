@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/widgets.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
 
 // التبويب الداخلي لقائمة الإعلانات
 import 'my_item_tab.dart';
@@ -642,6 +643,10 @@ class _ProfileScreenShimmer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final int tabCount = adTabs.isEmpty ? 4 : adTabs.length;
+    final EdgeInsets contentPadding =
+        const EdgeInsets.symmetric(horizontal: 16, vertical: 12);
+
     return AbsorbPointer(
       absorbing: true,
       child: Container(
@@ -651,102 +656,21 @@ class _ProfileScreenShimmer extends StatelessWidget {
           slivers: [
             SliverToBoxAdapter(
               child: Padding(
-                padding:
-                const EdgeInsetsDirectional.only(top: 12, start: 16, end: 16),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+                padding: contentPadding,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    CustomShimmer(
-                      height: 84,
-                      width: 84,
-                      borderRadius: 50,
-                    ),
-                    const SizedBox(width: 18),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          CustomShimmer(height: 18, width: 160, borderRadius: 8),
-                          SizedBox(height: 10),
-                          CustomShimmer(height: 14, width: 120, borderRadius: 6),
-                        ],
-                      ),
-                    ),
+                    _HeaderShimmer(),
+                    const SizedBox(height: 16),
+                    _BioLinesShimmer(),
+                    const SizedBox(height: 16),
+                    _ActionButtonsShimmer(),
+                    const SizedBox(height: 20),
+                    _StatsStripShimmer(),
+                    const SizedBox(height: 20),
+                    _TabFiltersShimmer(count: tabCount),
+                    const SizedBox(height: 16),
                   ],
-                ),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding:
-                const EdgeInsetsDirectional.only(top: 16, start: 12, end: 12),
-                child: Row(
-                  children: const [
-                    Expanded(
-                      child: CustomShimmer(height: 48, borderRadius: 12),
-                    ),
-                    SizedBox(width: 10),
-                    Expanded(
-                      child: CustomShimmer(height: 48, borderRadius: 12),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: List.generate(4, (index) {
-                    return Expanded(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: const [
-                          CustomShimmer(height: 22, borderRadius: 8),
-                          SizedBox(height: 6),
-                          CustomShimmer(height: 16, borderRadius: 8),
-                        ],
-                      ),
-                    );
-                  }),
-                ),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding:
-                const EdgeInsets.symmetric(horizontal: 12).copyWith(bottom: 8),
-                child: Container(
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .outline
-                          .withOpacity(0.08),
-                    ),
-                  ),
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: adTabs
-                          .map(
-                            (_) => const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 6),
-                          child: CustomShimmer(
-                            height: 32,
-                            width: 88,
-                            borderRadius: 20,
-                          ),
-                        ),
-                      )
-                          .toList(),
-                    ),
-                  ),
                 ),
               ),
             ),
@@ -754,7 +678,7 @@ class _ProfileScreenShimmer extends StatelessWidget {
               delegate: SliverChildBuilderDelegate(
                     (context, index) => Padding(
                   padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: _ProfileItemSkeletonCard(),
                 ),
                 childCount: 4,
@@ -767,51 +691,119 @@ class _ProfileScreenShimmer extends StatelessWidget {
   }
 }
 
+class _HeaderShimmer extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final double width = MediaQuery.of(context).size.width;
+    return Row(
+      children: [
+        CustomShimmer(
+          height: 72,
+          width: 72,
+          borderRadius: 36,
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CustomShimmer(height: 18, width: width * 0.55, borderRadius: 10),
+              const SizedBox(height: 10),
+              CustomShimmer(height: 14, width: width * 0.35, borderRadius: 8),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _BioLinesShimmer extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final double width = MediaQuery.of(context).size.width;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: List.generate(3, (index) {
+        final double factor = index == 2 ? 0.5 : 0.85;
+        return Padding(
+          padding: EdgeInsets.only(bottom: index == 2 ? 0 : 8),
+          child: CustomShimmer(
+            height: 12,
+            width: width * factor,
+            borderRadius: 8,
+          ),
+        );
+      }),
+    );
+  }
+}
+
+class _ActionButtonsShimmer extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: CustomShimmer(height: 48, borderRadius: 14),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: CustomShimmer(height: 48, borderRadius: 14),
+        ),
+      ],
+    );
+  }
+}
+
+class _StatsStripShimmer extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final double width = MediaQuery.of(context).size.width;
+    final double itemWidth = (width - 16 * 2 - 12) / 2;
+
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: List.generate(4, (_) {
+        return CustomShimmer(
+          height: 44,
+          width: itemWidth,
+          borderRadius: 16,
+        );
+      }),
+    );
+  }
+}
+
+class _TabFiltersShimmer extends StatelessWidget {
+  final int count;
+  const _TabFiltersShimmer({required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: List.generate(count, (_) {
+        return CustomShimmer(
+          height: 34,
+          width: 110,
+          borderRadius: 18,
+        );
+      }),
+    );
+  }
+}
+
 class _ProfileItemSkeletonCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final Color surface = Theme.of(context).colorScheme.surface;
-    return Container(
-      decoration: BoxDecoration(
-        color: surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withOpacity(0.06),
-        ),
-      ),
-      padding: const EdgeInsets.all(12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          CustomShimmer(
-            height: 84,
-            width: 110,
-            borderRadius: 12,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                CustomShimmer(height: 18, borderRadius: 8, width: double.infinity),
-                SizedBox(height: 8),
-                CustomShimmer(height: 14, borderRadius: 8, width: 140),
-                SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child:
-                      CustomShimmer(height: 12, borderRadius: 6, width: 120),
-                    ),
-                    SizedBox(width: 12),
-                    CustomShimmer(height: 32, width: 68, borderRadius: 20),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+    return CustomShimmer(
+      height: 140,
+      width: double.infinity,
+      borderRadius: 18,
+      margin: EdgeInsets.zero,
     );
   }
 }

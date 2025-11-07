@@ -176,6 +176,7 @@ class CartSummary {
     String? deliveryPaymentTiming,
     String? currency,
     String? currencyCode,
+    Map<String, dynamic>? store,
   })  : items = List<Cart>.unmodifiable(List<Cart>.from(items)),
         discounts =
         List<CartDiscount>.unmodifiable(List<CartDiscount>.from(discounts)),
@@ -195,7 +196,8 @@ class CartSummary {
         currency = _sanitize(currency),
         currencyCode = CurrencyUtils.normalizeCurrencyCode(
           currencyCode ?? currency,
-        );
+        ),
+        store = _normalizeMap(store);
 
   final List<Cart> items;
   final List<CartDiscount> discounts;
@@ -208,6 +210,7 @@ class CartSummary {
   final String? deliveryPaymentTiming;
   final String? currency;
   final String? currencyCode;
+  final Map<String, dynamic>? store;
   double get subtotal =>
       items.fold(0, (double sum, Cart item) => sum + item.subtotalAmount);
 
@@ -223,6 +226,7 @@ class CartSummary {
     Object? deliveryPaymentTiming = _sentinel,
     Object? currency = _sentinel,
     Object? currencyCode = _sentinel,
+    Object? store = _sentinel,
   }) {
     return CartSummary(
       items: items ?? this.items,
@@ -254,6 +258,9 @@ class CartSummary {
       currencyCode: identical(currencyCode, _sentinel)
           ? this.currencyCode
           : currencyCode as String?,
+      store: identical(store, _sentinel)
+          ? this.store
+          : store as Map<String, dynamic>?,
     );
   }
   static const Object _sentinel = Object();

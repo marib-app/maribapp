@@ -179,8 +179,14 @@ class CheckoutRepository {
         ) ??
         fallbackAddress;
 
-    final List<CheckoutBank> storeBanks =
-    await _fetchStoreGatewayBanks(cartItems);
+    final Map<String, dynamic>? storeMeta = cartSummary.store;
+
+    List<CheckoutBank> storeBanks =
+        _parseStoreManualBanks(storeMeta);
+
+    if (storeBanks.isEmpty) {
+      storeBanks = await _fetchStoreGatewayBanks(cartItems);
+    }
 
     List<CheckoutBank> banks = storeBanks;
 
@@ -207,6 +213,7 @@ class CheckoutRepository {
       shippingQuote: shippingQuote,
       walletSummary: walletSummary,
       isWalletAvailable: walletSummary != null,
+      store: storeMeta,
     );
   }
 
@@ -918,6 +925,74 @@ class CheckoutRepository {
     }
 
     return _dedupeCheckoutBanks(aggregated);
+  }
+
+  List<CheckoutBank> _parseStoreManualBanks(
+      Map<String, dynamic>? store) {
+    if (store == null || store.isEmpty) {
+      return const <CheckoutBank>[];
+    }
+
+    final dynamic rawBanks =
+        store['manual_banks'] ?? store['manualBanks'] ?? store['banks'];
+
+    if (rawBanks is! Iterable) {
+      return const <CheckoutBank>[];
+    }
+
+    final List<CheckoutBank> banks = <CheckoutBank>[];
+
+    for (final dynamic entry in rawBanks) {
+      final Map<String, dynamic>? map = _mapify(entry);
+      if (map == null) {
+        continue;
+      }
+
+      final CheckoutBank? bank = _checkoutBankFromStoreManualMap(map);
+      if (bank != null) {
+        banks.add(bank);
+      }
+    }
+
+    return banks;
+  }
+
+  CheckoutBank? _checkoutBankFromStoreManualMap(Map<String, dynamic> map) {
+    String? _asNonEmptyString(dynamic value) {
+      final String? text = _asString(value);
+      return (text == null || text.isEmpty) ? null : text;
+    }
+
+    final String? beneficiaryName =
+        _asNonEmptyString(map['beneficiary_name'] ?? map['account_name']);
+
+    final Map<String, dynamic>? gateway = _mapify(map['gateway']);
+    final String? gatewayName = _asNonEmptyString(gateway?['name']);
+    final String? displayName =
+        _asNonEmptyString(map['name']) ?? gatewayName ?? beneficiaryName;
+
+    if (displayName == null || displayName.isEmpty) {
+      return null;
+    }
+
+    final int? accountId =
+        _asInt(map['store_gateway_account_id'] ?? map['id']);
+    final int? gatewayId = _asInt(map['store_gateway_id']);
+    final String? accountNumber = _asNonEmptyString(map['account_number']);
+    final String? logoUrl =
+        _asNonEmptyString(gateway?['logo_url'] ?? gateway?['logoUrl']);
+
+    return CheckoutBank(
+      id: accountId,
+      name: displayName,
+      accountName: beneficiaryName ?? displayName,
+      accountNumber: accountNumber,
+      paymentMethod: 'manual_bank',
+      storeGatewayId: gatewayId,
+      storeGatewayAccountId: accountId,
+      logoUrl: logoUrl,
+      raw: Map<String, dynamic>.unmodifiable(Map<String, dynamic>.from(map)),
+    );
   }
 
   String? _sellerIdentifierFromCart(Cart cart) {

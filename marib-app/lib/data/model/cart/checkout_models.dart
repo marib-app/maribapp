@@ -17,6 +17,7 @@ class CheckoutResult {
     this.shippingQuote,
     this.walletSummary,
     this.isWalletAvailable,
+    this.store,
   });
 
   final List<Cart> cartItems;
@@ -28,6 +29,7 @@ class CheckoutResult {
   final CheckoutShippingQuote? shippingQuote;
   final WalletSummary? walletSummary;
   final bool? isWalletAvailable;
+  final Map<String, dynamic>? store;
 }
 
 @immutable

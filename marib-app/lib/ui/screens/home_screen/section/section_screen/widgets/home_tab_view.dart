@@ -1,3 +1,4 @@
+import 'package:marib/data/cubits/home/fetch_home_screen_cubit.dart';
 import 'package:marib/data/cubits/item/fetch_item_summary_cubit.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/constant.dart';
@@ -9,6 +10,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:marib/app/routes.dart';
+import 'package:marib/data/model/home/home_screen_section.dart';
 import 'package:marib/data/model/item/item_model.dart';
 import 'package:marib/utils/responsiveSize.dart';
 import 'package:marib/utils/sliver_grid_delegate_with_fixed_cross_axis_count_and_fixed_height.dart';
@@ -65,6 +67,7 @@ class HomeTabView extends StatefulWidget {
   final List<int>? sellerCategoryIds;
   final String? interfaceType;
   final String? rootCategoryName;
+  final bool showFeaturedAds;
 
   const HomeTabView({
     required this.selectedCategoryId,
@@ -89,6 +92,7 @@ class HomeTabView extends StatefulWidget {
     this.onLoadMore,
     this.interfaceType,
     this.rootCategoryName,
+    this.showFeaturedAds = false,
     super.key,
   });
 
@@ -635,6 +639,7 @@ class _HomeTabViewState extends State<HomeTabView> {
             widget.enableAdSlider && !widget.showShimmer;
         final bool shouldShowSliderShimmer =
             widget.enableAdSlider && widget.showShimmer;
+        final bool showFeaturedAdsPanel = widget.showFeaturedAds;
 
         // ✅ البطاقة الخاصة لا تظهر إلا في تبويب "الكل"
         final bool isAllCategory =
@@ -692,6 +697,14 @@ class _HomeTabViewState extends State<HomeTabView> {
 
               // فاصل صغير
               SliverToBoxAdapter(child: SizedBox(height: gapSmall)),
+              if (showFeaturedAdsPanel) ...[
+                SliverToBoxAdapter(
+                  child: _FeaturedAdsPanel(
+                    interfaceType: sliderInterfaceType,
+                  ),
+                ),
+                SliverToBoxAdapter(child: SizedBox(height: gapSmall)),
+              ],
 
               // ============= التصنيفات الفرعية (دائمًا ظاهرة) =============
 
@@ -1837,6 +1850,164 @@ class _HomeTabEntry {
 
   final _HomeTabEntryType type;
   final int? itemIndex;
+}
+
+class _FeaturedAdsPanel extends StatelessWidget {
+  const _FeaturedAdsPanel({
+    required this.interfaceType,
+  });
+
+  final String interfaceType;
+
+  static const int _maxSectionBlocks = 3;
+  static const double _horizontalPadding = 18.0;
+
+  bool _hasRenderableItems(HomeScreenSection section) {
+    final List<ItemModel>? items = section.sectionData;
+    if (items == null || items.isEmpty) {
+      return false;
+    }
+    for (final ItemModel item in items) {
+      final String? name = item.name;
+      if (name != null && name.trim().isNotEmpty) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<FetchHomeScreenCubit, FetchHomeScreenState>(
+      builder: (context, state) {
+        if (state is FetchHomeScreenInitial ||
+            state is FetchHomeScreenInProgress) {
+          return const _FeaturedAdsShimmer();
+        }
+
+        if (state is FetchHomeScreenSuccess) {
+          if (!SliderInterfaceMapper.isEquivalent(
+            state.interfaceType,
+            interfaceType,
+          )) {
+            return const _FeaturedAdsShimmer();
+          }
+
+          final List<HomeScreenSection> filteredSections = state.sections
+              .where(_hasRenderableItems)
+              .toList(growable: false);
+
+          if (filteredSections.isEmpty) {
+            return const SizedBox.shrink();
+          }
+
+          final List<HomeScreenSection> limitedSections =
+              filteredSections.length > _maxSectionBlocks
+                  ? filteredSections.sublist(0, _maxSectionBlocks)
+                  : filteredSections;
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: _horizontalPadding,
+                ),
+                child: Text(
+                  'featuredAdsLbl'.translate(context),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: context.color.textDefaultColor,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              for (int i = 0; i < limitedSections.length; i++) ...[
+                SectionsAdapter(section: limitedSections[i]),
+                if (i != limitedSections.length - 1)
+                  const SizedBox(height: 12),
+              ],
+            ],
+          );
+        }
+
+        if (state is FetchHomeScreenFail) {
+          return const SizedBox.shrink();
+        }
+
+        return const _FeaturedAdsShimmer();
+      },
+    );
+  }
+}
+
+class _FeaturedAdsShimmer extends StatelessWidget {
+  const _FeaturedAdsShimmer();
+
+  static const double _horizontalPadding = 18.0;
+  static const double _cardHeight = 210.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final base = colorScheme.shimmerBaseColor;
+    final highlight = colorScheme.shimmerHighlightColor;
+    final content = colorScheme.shimmerContentColor;
+
+    Widget shimmerBox(double width, double height) {
+      return Shimmer.fromColors(
+        baseColor: base,
+        highlightColor: highlight,
+        child: Container(
+          width: width,
+          height: height,
+          decoration: BoxDecoration(
+            color: content,
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+    }
+
+    Widget shimmerCard() {
+      return Shimmer.fromColors(
+        baseColor: base,
+        highlightColor: highlight,
+        child: Container(
+          width: 160,
+          height: _cardHeight,
+          decoration: BoxDecoration(
+            color: content,
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: _horizontalPadding,
+        vertical: 4,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          shimmerBox(140, 20),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: _cardHeight,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              physics: const NeverScrollableScrollPhysics(),
+              itemBuilder: (_, __) => shimmerCard(),
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              itemCount: 3,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 Widget buildGridShimmer(BuildContext context) {

@@ -42,6 +42,7 @@ class ItemsBodyBox extends StatefulWidget {
   final bool enableAdSlider; // ← جديد
   final String? adInterfaceType; // ← جديد
 
+  final bool enableFeaturedAds;
   final bool enableSubcats;
   final String? sortBy;
   final ItemFilterModel? filter;
@@ -60,6 +61,7 @@ class ItemsBodyBox extends StatefulWidget {
     this.enableTopBar = false, // ← افتراضي: مخفي
     this.enableAdSlider = false,
     this.adInterfaceType,
+    this.enableFeaturedAds = false,
     this.sortBy, // ← جديد
     this.filter, // ← جديد
     this.enableSubcats = true, // ← جديد (بحالته الافتراضية)
@@ -303,6 +305,7 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
                   enableAdSlider: widget.enableAdSlider,
                   // ← أضِف هذا
                   adInterfaceType: widget.adInterfaceType,
+                  showFeaturedAds: widget.enableFeaturedAds,
                   // ← وأيضًا هذا
                   onLoadMore: widget.onLoadMore,
                 ),

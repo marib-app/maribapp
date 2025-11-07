@@ -340,9 +340,10 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
           blocking: _latestCartState.blocking,
           deliveryPaymentOptions: _latestCartState.deliveryPaymentOptions,
           deliveryPaymentTiming: _latestCartState.deliveryPaymentTiming,
+          store: result.store ?? _latestCartState.store,
         ),
       );
-      Future.microtask(() {
+      Future.microtask(() { 
         _suppressCartListener = false;
       });
 

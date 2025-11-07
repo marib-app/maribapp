@@ -871,6 +871,7 @@ class CartRepository {
     Map<String, dynamic>? blocking;
     List<dynamic>? deliveryPaymentOptions;
     String? deliveryPaymentTiming;
+    Map<String, dynamic>? storeSummary;
 
     Map<String, dynamic>? _normalizeMap(Map<String, dynamic>? map) {
       if (map == null || map.isEmpty) {
@@ -955,6 +956,32 @@ class CartRepository {
       return Map<String, dynamic>.unmodifiable(normalized);
     }
 
+    Map<String, dynamic>? _normalizeStoreSummary(Map<String, dynamic>? map) {
+      if (map == null || map.isEmpty) {
+        return null;
+      }
+
+      final Map<String, dynamic> normalized = Map<String, dynamic>.from(map);
+      final dynamic manualBanksRaw =
+          normalized['manual_banks'] ?? normalized['manualBanks'];
+
+      if (manualBanksRaw is Iterable) {
+        final List<dynamic> banks = manualBanksRaw.map((dynamic bank) {
+          final Map<String, dynamic>? bankMap = _castToStringKeyedMap(bank);
+          if (bankMap != null) {
+            return Map<String, dynamic>.unmodifiable(
+                Map<String, dynamic>.from(bankMap));
+          }
+
+          return bank;
+        }).toList();
+
+        normalized['manual_banks'] = List<dynamic>.unmodifiable(banks);
+      }
+
+      return Map<String, dynamic>.unmodifiable(normalized);
+    }
+
     void _considerCandidate(Map<String, dynamic> map) {
       departmentPolicy ??= _normalizeMap(_findFirstMapValue(map, const <String>[
         'department_policy',
@@ -978,6 +1005,22 @@ class CartRepository {
         'cart_blocking',
         'blocks',
       ]));
+
+      if (storeSummary == null) {
+        storeSummary = _normalizeStoreSummary(
+          _findFirstMapValue(
+            map,
+            const <String>[
+              'store',
+              'store_info',
+              'storeInfo',
+              'store_summary',
+              'storeSummary',
+              'cart_store',
+            ],
+          ),
+        );
+      }
 
       final Map<String, dynamic>? quoteCandidate =
           _findFirstMapValue(map, const <String>[
@@ -1169,6 +1212,7 @@ class CartRepository {
       deliveryPaymentTiming: deliveryPaymentTiming,
       currency: currencyLabel,
       currencyCode: currencyInfo.code,
+      store: storeSummary,
     );
   }
 

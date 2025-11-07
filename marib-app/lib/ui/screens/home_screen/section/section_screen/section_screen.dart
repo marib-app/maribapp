@@ -199,6 +199,13 @@ class Section_screenState extends State<Section_screen> {
   bool _sawLoading = false;
   DateTime? _loadingStart;
   static const Duration _minShimmer = Duration(milliseconds: 350);
+  static const Set<int> _featuredAdRootIds = <int>{
+    Constant.realEstateRootCategoryId,
+    Constant.sheinRootCategoryId,
+    Constant.computerRootCategoryId,
+    Constant.publicRootCategoryId,
+  };
+
   late final String _sliderInterfaceType;
 
   late final bool _hasAdSlider;
@@ -207,6 +214,7 @@ class Section_screenState extends State<Section_screen> {
   bool _requestedSlider = false;
 
   late final String? _requestSectionSlug;
+  late final bool _enableFeaturedAds;
 
   bool _isValidCategoryId(String? raw) {
     if (raw == null) return false;
@@ -343,6 +351,10 @@ class Section_screenState extends State<Section_screen> {
   }
 
   void _requestFeaturedSections({int? rootId, String? slug}) {
+    if (!_enableFeaturedAds) {
+      return;
+    }
+
     final String? normalizedInterface =
         SliderInterfaceMapper.normalize(widget.interfaceType) ??
             widget.interfaceType?.trim();
@@ -412,6 +424,7 @@ class Section_screenState extends State<Section_screen> {
     // إعداد معرف الفئة الأساسي
     // =========================
     _catId = _parseInitialCategoryId(widget.categoryId);
+    _enableFeaturedAds = _featuredAdRootIds.contains(_catId);
     _sellerCategoryIds = _normalizeSellerCategoryIds(widget.sellerCategoryIds);
 
     // (اختياري) لو هذه المتغيرات عندك أصلاً — وإلا احذف السطور الثلاثة:
@@ -462,10 +475,12 @@ class Section_screenState extends State<Section_screen> {
     );
 
     // لضمان توفر البيانات قبل بناء HomeTabView.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _requestFeaturedSections(rootId: _catId);
-    });
+    if (_enableFeaturedAds) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _requestFeaturedSections(rootId: _catId);
+      });
+    }
 
     final String? normalizedInterfaceType =
         SliderInterfaceMapper.normalize(widget.interfaceType) ??
@@ -587,9 +602,11 @@ class Section_screenState extends State<Section_screen> {
           );
 
       // إعادة تحميل أقسام الإعلانات المميزة عند السحب للتحديث
-      _requestFeaturedSections(
-        rootId: resolvedCategoryId,
-      );
+      if (_enableFeaturedAds) {
+        _requestFeaturedSections(
+          rootId: resolvedCategoryId,
+        );
+      }
 
       // (اختياري)
       // Constant.itemFilter = null;
@@ -876,6 +893,7 @@ class Section_screenState extends State<Section_screen> {
                                         _showBottomBar.value = isScrollingUp;
                                       }
                                     },
+                                    enableFeaturedAds: _enableFeaturedAds,
                                   ),
                                 ),
                               ),

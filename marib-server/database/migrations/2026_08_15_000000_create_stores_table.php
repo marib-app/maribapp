@@ -15,6 +15,7 @@ return new class extends Migration
             $table->bigIncrements('id');
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->string('name');
+            $table->text('description')->nullable();
             $table->string('slug')->unique();
             $table->string('status', 32)->default('pending')->index();
             $table->timestamp('status_changed_at')->nullable();

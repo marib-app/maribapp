@@ -1,10 +1,18 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:marib/app/app_scroll_behavior.dart';
 import 'package:marib/app/navigation/app_page_route.dart';
 import 'package:marib/app/navigation/motion/route_motion.dart';
 import 'package:marib/app/routes.dart';
+import 'package:marib/data/model/wifi/wifi_network.dart';
+import 'package:marib/data/model/wifi/wifi_plan.dart';
+import 'package:marib/data/wifi/wifi_repository.dart';
+import 'package:marib/settings.dart';
 import 'package:marib/ui/theme/theme.dart';
+import 'package:marib/utils/errorFilter.dart';
 import 'package:marib/utils/extensions/extensions.dart';
+import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/ui_utils.dart';
 
 class WifiCabinScreen extends StatefulWidget {
@@ -24,61 +32,102 @@ class WifiCabinScreen extends StatefulWidget {
 }
 
 class _WifiCabinScreenState extends State<WifiCabinScreen> {
-  final List<_WifiStat> _stats = const [
-    _WifiStat(
-      title: 'الشبكات المفعّلة',
-      value: '48+',
-      description: 'تعمل حالياً في 9 محافظات',
-      icon: Icons.router_rounded,
-    ),
-    _WifiStat(
-      title: 'عدد المستخدمين',
-      value: '12K',
-      description: 'مستخدم نشط خلال آخر 30 يوم',
-      icon: Icons.people_alt_rounded,
-    ),
-    _WifiStat(
-      title: 'متوسط العمولة',
-      value: '18%',
-      description: 'تُخصم فقط بعد تحصيل المبيعات',
-      icon: Icons.paid_rounded,
-    ),
-  ];
+  final WifiRepository _repository = const WifiRepository();
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
 
-  final List<_WifiBenefit> _benefits = const [
-    _WifiBenefit(
-      title: 'تقارير فورية',
-      description: 'لوحة تحكم مركزية توضح الأداء، السعة والبلاغات لحظة بلحظة.',
-      icon: Icons.insights_rounded,
-    ),
-    _WifiBenefit(
-      title: 'إدارة الأكواد',
-      description:
-          'رفع الدفعات، تتبع الأرصدة، والربط بين الأكواد والخطط بسهولة.',
-      icon: Icons.qr_code_rounded,
-    ),
-    _WifiBenefit(
-      title: 'تسوية ذكية',
-      description:
-          'تسويات مالية تلقائية بين المالك والمزود مع إشعارات بالعمولة المستحقة.',
-      icon: Icons.swap_horiz_rounded,
-    ),
-    _WifiBenefit(
-      title: 'دعم تشغيلي',
-      description: 'فريق مخصّص لمساعدتك في ضبط الشبكة وحل أي بلاغ ميداني.',
-      icon: Icons.support_agent_rounded,
-    ),
-  ];
+  Timer? _searchDebounce;
+  bool _isLoading = false;
+  String? _errorMessage;
+  String _searchQuery = '';
+  List<WifiNetwork> _networks = const <WifiNetwork>[];
 
-  final List<String> _steps = const [
-    'املأ نموذج طلب الشبكة مع تفاصيل التغطية والطاقة الاستيعابية.',
-    'يعمل فريق التشغيل على تفعيل الحساب والتحقق من الأجهزة.',
-    'احصل على لوحة التحكم وروابط البيع وابدأ إدارة الأكواد.',
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadNetworks();
+  }
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadNetworks({bool showLoader = true}) async {
+    if (showLoader) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    } else {
+      setState(() {
+        _errorMessage = null;
+      });
+    }
+
+    try {
+      final List<WifiNetwork> result = await _repository.searchNetworks(
+        query: _searchQuery.trim().isEmpty ? null : _searchQuery.trim(),
+        limit: 50,
+      );
+      if (!mounted) return;
+      setState(() {
+        _networks = result;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = ErrorFilter.check(error).error;
+      });
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _onSearchChanged(String value) {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 350), () {
+      _searchQuery = value;
+      _loadNetworks();
+    });
+  }
+
+  Future<void> _openDashboard() async {
+    final String dashboardUrl =
+        '${HelperUtils.checkHost(AppSettings.hostUrl)}wifi-cabin';
+    await UiUtils.launchURL(dashboardUrl);
+  }
+
+  Future<void> _openNetworkDetails(WifiNetwork network) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return _WifiNetworkDetailsSheet(
+          network: network,
+          repository: _repository,
+        );
+      },
+    );
+  }
+
+  void _openSupport() {
+    Navigator.pushNamed(context, Routes.contactUs);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final background = context.color.backgroundColor;
+    final colors = context.color;
 
     return Scaffold(
       appBar: UiUtils.buildAppBar(
@@ -86,350 +135,217 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
         showBackButton: true,
         title: 'wifiCabin'.translate(context),
       ),
-      backgroundColor: background,
-      body: DecoratedBox(
-        decoration: BoxDecoration(color: background),
-        child: SafeArea(
-          bottom: false,
+      backgroundColor: colors.backgroundColor,
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: () => _loadNetworks(showLoader: false),
+          displacement: 32,
           child: CustomScrollView(
             physics: AppScrollBehavior.defaultPhysics,
             slivers: [
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 140),
-                sliver: SliverList(
-                  delegate: SliverChildListDelegate(
-                    [
-                      _buildHero(context),
-                      const SizedBox(height: 24),
-                      _buildSectionTitle(
-                        context,
-                        'لماذا شبكة Marib Wi‑Fi؟',
-                      ),
-                      const SizedBox(height: 12),
-                      _buildStats(context),
-                      const SizedBox(height: 24),
-                      _buildSectionTitle(context, 'ماذا ستحصل عليه؟'),
-                      const SizedBox(height: 12),
-                      _buildBenefits(context),
-                      const SizedBox(height: 24),
-                      _buildSectionTitle(context, 'طريقة الربط'),
-                      const SizedBox(height: 12),
-                      _buildSteps(context),
-                      const SizedBox(height: 24),
-                      _buildSupportCard(context),
-                    ],
+              SliverToBoxAdapter(child: _buildHeader(context)),
+              if (_isLoading && _networks.isEmpty)
+                const SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: _WifiPageLoader(),
+                )
+              else if (_errorMessage != null && _networks.isEmpty)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: _WifiPlaceholder(
+                    icon: Icons.wifi_tethering_error_rounded,
+                    title: 'تعذر تحميل الشبكات',
+                    subtitle: _errorMessage!,
+                    actionLabel: 'إعادة المحاولة',
+                    onActionPressed: _loadNetworks,
+                  ),
+                )
+              else if (_networks.isEmpty)
+                const SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: _WifiPlaceholder(
+                    icon: Icons.travel_explore_rounded,
+                    title: 'لا توجد شبكات متاحة حاليًا',
+                    subtitle:
+                        'بمجرد ربط شبكتك في اللوحة ستظهر هنا مع تفاصيل الخطط والتحويلات.',
+                  ),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  sliver: SliverList.separated(
+                    itemCount: _networks.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      final WifiNetwork network = _networks[index];
+                      return _WifiNetworkCard(
+                        network: network,
+                        onTap: () => _openNetworkDetails(network),
+                      );
+                    },
                   ),
                 ),
-              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 120)),
             ],
           ),
         ),
       ),
-      bottomNavigationBar: _WifiBottomCta(
-        onAddNetwork: () => Navigator.pushNamed(context, Routes.contactUs),
-        onViewGuidelines: () => UiUtils.launchURL(
-          'https://maribservices.com/network-guidelines',
+      bottomNavigationBar: SafeArea(
+        minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  backgroundColor: colors.territoryColor,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                ),
+                onPressed: _openDashboard,
+                icon: const Icon(Icons.dashboard_customize_rounded),
+                label: Text(
+                  'فتح لوحة الواي فاي',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                ),
+                onPressed: _openSupport,
+                child: const Text('طلب دعم أو إضافة شبكة جديدة'),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildHero(BuildContext context) {
+  Widget _buildHeader(BuildContext context) {
     final colors = context.color;
     final textTheme = Theme.of(context).textTheme;
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: LinearGradient(
-          colors: [
-            colors.headingAccentColor,
-            colors.territoryColor.withOpacity(.85),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: colors.territoryColor.withOpacity(.2),
-            blurRadius: 18,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'أطلق شبكتك اللاسلكية مع Marib',
-                      style: textTheme.headlineSmall?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        height: 1.3,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'حل متكامل لإدارة الأكواد، مراقبة المبيعات، والتواصل مع عملائك من مكان واحد.',
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: Colors.white.withOpacity(.9),
-                        height: 1.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 16),
-              Icon(
-                Icons.wifi_tethering_rounded,
-                color: Colors.white,
-                size: 52,
-              ),
-            ],
+          Text(
+            'شبكاتك المرتبطة بلوحة Marib',
+            style: textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: colors.textDefaultColor,
+            ),
           ),
-          const SizedBox(height: 18),
-          Wrap(
-            alignment: WrapAlignment.start,
-            spacing: 12,
-            runSpacing: 12,
-            children: const [
-              _WifiBadge(label: 'سيرفرات مستقرة'),
-              _WifiBadge(label: 'تقارير تلقائية'),
-              _WifiBadge(label: 'دعم على مدار الساعة'),
-            ],
+          const SizedBox(height: 6),
+          Text(
+            'يمكنك مراقبة الشبكات، الاطلاع على الخطط، والانتقال مباشرة إلى اللوحة لإدارة الأكواد والدفعات.',
+            style: textTheme.bodyMedium?.copyWith(
+              color: colors.textLightColor,
+              height: 1.5,
+            ),
           ),
+          const SizedBox(height: 16),
+          _SearchField(
+            controller: _searchController,
+            focusNode: _searchFocusNode,
+            onChanged: _onSearchChanged,
+            onClear: () {
+              _searchController.clear();
+              _searchQuery = '';
+              _loadNetworks();
+            },
+          ),
+          const SizedBox(height: 16),
+          _DashboardHintCard(onOpenDashboard: _openDashboard),
         ],
       ),
     );
   }
+}
 
-  Widget _buildSectionTitle(BuildContext context, String title) {
-    final textTheme = Theme.of(context).textTheme;
-    return Text(
-      title,
-      style: textTheme.titleMedium?.copyWith(
-        fontWeight: FontWeight.w700,
-        color: context.color.textDefaultColor,
-      ),
-    );
-  }
+class _SearchField extends StatelessWidget {
+  const _SearchField({
+    required this.controller,
+    required this.focusNode,
+    required this.onChanged,
+    required this.onClear,
+  });
 
-  Widget _buildStats(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isWide = constraints.maxWidth >= 720;
-        final crossAxisCount = isWide
-            ? 3
-            : constraints.maxWidth >= 480
-                ? 2
-                : 1;
-        final itemWidth = (constraints.maxWidth - ((crossAxisCount - 1) * 12)) /
-            crossAxisCount;
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClear;
 
-        return Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: _stats
-              .map(
-                (stat) => SizedBox(
-                  width: itemWidth,
-                  child: _WifiStatCard(stat: stat),
-                ),
-              )
-              .toList(),
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.color;
+
+    return ValueListenableBuilder<TextEditingValue>(
+      valueListenable: controller,
+      builder: (context, value, _) {
+        return TextField(
+          controller: controller,
+          focusNode: focusNode,
+          textInputAction: TextInputAction.search,
+          onChanged: onChanged,
+          decoration: InputDecoration(
+            hintText: 'ابحث باسم الشبكة أو الموقع',
+            prefixIcon: const Icon(Icons.search),
+            suffixIcon: value.text.isEmpty
+                ? null
+                : IconButton(
+                    icon: const Icon(Icons.close_rounded),
+                    onPressed: onClear,
+                  ),
+            filled: true,
+            fillColor: colors.secondaryColor,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: colors.borderColor.withOpacity(.4)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: colors.territoryColor),
+            ),
+          ),
         );
       },
     );
   }
+}
 
-  Widget _buildBenefits(BuildContext context) {
-    return Column(
-      children: _benefits
-          .map((benefit) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _WifiBenefitCard(benefit: benefit),
-              ))
-          .toList(),
-    );
-  }
+class _DashboardHintCard extends StatelessWidget {
+  const _DashboardHintCard({required this.onOpenDashboard});
 
-  Widget _buildSteps(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
+  final VoidCallback onOpenDashboard;
+
+  @override
+  Widget build(BuildContext context) {
     final colors = context.color;
-
-    return Column(
-      children: _steps.asMap().entries.map((entry) {
-        final index = entry.key + 1;
-        final text = entry.value;
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: colors.borderColor.withOpacity(.5)),
-            color: colors.secondaryColor,
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: colors.territoryColor.withOpacity(.15),
-                child: Text(
-                  '$index',
-                  style: textTheme.titleMedium?.copyWith(
-                    color: colors.territoryColor,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  text,
-                  style: textTheme.bodyMedium?.copyWith(
-                    height: 1.5,
-                    color: colors.textDefaultColor,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildSupportCard(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final colors = context.color;
 
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: colors.borderColor.withOpacity(.4)),
-        color: colors.secondaryColor,
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            height: 52,
-            width: 52,
-            decoration: BoxDecoration(
-              color: colors.territoryColor.withOpacity(.12),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Icon(
-              Icons.headset_mic_rounded,
-              color: colors.territoryColor,
-              size: 28,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'نرافقك في كل خطوة',
-                  style: textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: colors.textDefaultColor,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'يمكنك التواصل مع فريق الدعم الفني لتخصيص العروض، مراجعة التغطية، أو متابعة التفعيل الميداني.',
-                  style: textTheme.bodyMedium?.copyWith(
-                    height: 1.5,
-                    color: colors.textLightColor,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _WifiStatCard extends StatelessWidget {
-  const _WifiStatCard({required this.stat});
-
-  final _WifiStat stat;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.color;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: colors.borderColor.withOpacity(.6)),
-        color: colors.secondaryColor,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(stat.icon, color: colors.territoryColor),
-          const SizedBox(height: 10),
-          Text(
-            stat.value,
-            style: textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: colors.textDefaultColor,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            stat.title,
-            style: textTheme.titleSmall?.copyWith(
-              color: colors.textDefaultColor,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            stat.description,
-            style: textTheme.bodySmall?.copyWith(
-              color: colors.textLightColor,
-              height: 1.4,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _WifiBenefitCard extends StatelessWidget {
-  const _WifiBenefitCard({required this.benefit});
-
-  final _WifiBenefit benefit;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.color;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: colors.borderColor.withOpacity(.35)),
         color: colors.secondaryColor,
       ),
       child: Row(
@@ -442,7 +358,10 @@ class _WifiBenefitCard extends StatelessWidget {
               color: colors.territoryColor.withOpacity(.12),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: Icon(benefit.icon, color: colors.territoryColor),
+            child: Icon(
+              Icons.wifi_tethering,
+              color: colors.territoryColor,
+            ),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -450,22 +369,190 @@ class _WifiBenefitCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  benefit.title,
-                  style: textTheme.titleSmall?.copyWith(
+                  'إدارة متقدمة من خلال اللوحة',
+                  style: textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                     color: colors.textDefaultColor,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  benefit.description,
+                  'لرفع دفعات الأكواد أو تحديث الخطط، استخدم لوحة wifi-cabin وستظهر التغييرات هنا تلقائيًا.',
                   style: textTheme.bodyMedium?.copyWith(
                     color: colors.textLightColor,
-                    height: 1.5,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextButton.icon(
+                  onPressed: onOpenDashboard,
+                  icon: Icon(Icons.open_in_new_rounded,
+                      color: colors.territoryColor, size: 18),
+                  label: Text(
+                    'فتح اللوحة',
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: colors.territoryColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  style: TextButton.styleFrom(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   ),
                 ),
               ],
             ),
+          )
+        ],
+      ),
+    );
+  }
+}
+
+class _WifiNetworkCard extends StatelessWidget {
+  const _WifiNetworkCard({required this.network, required this.onTap});
+
+  final WifiNetwork network;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.color;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(24),
+        child: Ink(
+          decoration: BoxDecoration(
+            color: colors.secondaryColor,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: colors.borderColor.withOpacity(.35)),
+          ),
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CircleAvatar(
+                    radius: 30,
+                    backgroundColor: colors.territoryColor.withOpacity(.12),
+                    backgroundImage:
+                        network.iconUrl != null && network.iconUrl!.isNotEmpty
+                            ? NetworkImage(network.iconUrl!)
+                            : null,
+                    child: (network.iconUrl == null || network.iconUrl!.isEmpty)
+                        ? Icon(Icons.wifi, color: colors.territoryColor)
+                        : null,
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          network.name,
+                          style: textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: colors.textDefaultColor,
+                          ),
+                        ),
+                        if (network.address?.isNotEmpty == true)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(
+                              network.address!,
+                              style: textTheme.bodyMedium?.copyWith(
+                                color: colors.textLightColor,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  _InfoPill(
+                    label: '${network.planCount} خطة',
+                    icon: Icons.layers_rounded,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  if (network.coverageKm != null)
+                    _InfoChip(
+                      icon: Icons.radar_rounded,
+                      label: '${network.coverageKm!.toStringAsFixed(1)} كم مدى',
+                    ),
+                  if (network.currencies.isNotEmpty)
+                    _InfoChip(
+                      icon: Icons.payments_outlined,
+                      label: network.currencies.join(' • '),
+                    ),
+                  if (network.contacts.isNotEmpty)
+                    _InfoChip(
+                      icon: Icons.phone_in_talk_rounded,
+                      label: network.contacts.first,
+                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colors.territoryColor.withOpacity(.12),
+                    foregroundColor: colors.territoryColor,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 18, vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  onPressed: onTap,
+                  child: const Text('عرض التفاصيل والخطط'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoPill extends StatelessWidget {
+  const _InfoPill({required this.label, required this.icon});
+
+  final String label;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(40),
+        color: context.color.territoryColor.withOpacity(.12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: context.color.territoryColor),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: context.color.territoryColor,
+                  fontWeight: FontWeight.w600,
+                ),
           ),
         ],
       ),
@@ -473,66 +560,329 @@ class _WifiBenefitCard extends StatelessWidget {
   }
 }
 
-class _WifiBottomCta extends StatelessWidget {
-  const _WifiBottomCta({
-    required this.onAddNetwork,
-    required this.onViewGuidelines,
+class _InfoChip extends StatelessWidget {
+  const _InfoChip({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.color;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colors.borderColor.withOpacity(.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: colors.textLightColor),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colors.textLightColor,
+                  fontWeight: FontWeight.w500,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WifiPageLoader extends StatelessWidget {
+  const _WifiPageLoader();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: CircularProgressIndicator(),
+    );
+  }
+}
+
+class _WifiPlaceholder extends StatelessWidget {
+  const _WifiPlaceholder({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    this.actionLabel,
+    this.onActionPressed,
   });
 
-  final VoidCallback onAddNetwork;
-  final VoidCallback onViewGuidelines;
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final String? actionLabel;
+  final VoidCallback? onActionPressed;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.color;
     final textTheme = Theme.of(context).textTheme;
 
-    return SafeArea(
-      minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+    return Padding(
+      padding: const EdgeInsets.all(32),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 15),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18),
-              ),
-              backgroundColor: colors.territoryColor,
-              foregroundColor: Colors.white,
-            ),
-            icon: const Icon(Icons.add_circle_outline_rounded),
-            label: Text(
-              'إضافة شبكة الآن',
-              style: textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            onPressed: onAddNetwork,
+          CircleAvatar(
+            radius: 44,
+            backgroundColor: colors.territoryColor.withOpacity(.12),
+            child: Icon(icon, size: 36, color: colors.territoryColor),
           ),
-          const SizedBox(height: 10),
-          OutlinedButton(
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              foregroundColor: colors.textDefaultColor,
-              side: BorderSide(color: colors.borderColor.withOpacity(.6)),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18),
+          const SizedBox(height: 16),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: colors.textDefaultColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: textTheme.bodyMedium?.copyWith(
+              color: colors.textLightColor,
+            ),
+          ),
+          if (actionLabel != null && onActionPressed != null) ...[
+            const SizedBox(height: 16),
+            OutlinedButton(
+              onPressed: onActionPressed,
+              child: Text(actionLabel!),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _WifiNetworkDetailsSheet extends StatefulWidget {
+  const _WifiNetworkDetailsSheet({
+    required this.network,
+    required this.repository,
+  });
+
+  final WifiNetwork network;
+  final WifiRepository repository;
+
+  @override
+  State<_WifiNetworkDetailsSheet> createState() =>
+      _WifiNetworkDetailsSheetState();
+}
+
+class _WifiNetworkDetailsSheetState extends State<_WifiNetworkDetailsSheet> {
+  late Future<List<WifiPlan>> _plansFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _plansFuture = widget.repository.fetchNetworkPlans(widget.network.id);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.color;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+        top: 8,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    widget.network.name,
+                    style: textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: colors.textDefaultColor,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ],
+            ),
+            if (widget.network.description?.isNotEmpty == true)
+              Padding(
+                padding: const EdgeInsets.only(top: 4, bottom: 8),
+                child: Text(
+                  widget.network.description!,
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: colors.textLightColor,
+                  ),
+                ),
+              ),
+            _NetworkInfoBlock(network: widget.network),
+            const SizedBox(height: 16),
+            Text(
+              'الخطط المتاحة',
+              style: textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: colors.textDefaultColor,
               ),
             ),
-            onPressed: onViewGuidelines,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            const SizedBox(height: 8),
+            FutureBuilder<List<WifiPlan>>(
+              future: _plansFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+                if (snapshot.hasError) {
+                  return _WifiPlaceholder(
+                    icon: Icons.error_outline,
+                    title: 'تعذر تحميل الخطط',
+                    subtitle: ErrorFilter.check(snapshot.error).error,
+                    actionLabel: 'إعادة المحاولة',
+                    onActionPressed: () {
+                      setState(() {
+                        _plansFuture = widget.repository
+                            .fetchNetworkPlans(widget.network.id);
+                      });
+                    },
+                  );
+                }
+                final plans = snapshot.data ?? const <WifiPlan>[];
+                if (plans.isEmpty) {
+                  return const _WifiPlaceholder(
+                    icon: Icons.inventory_2_outlined,
+                    title: 'لا توجد خطط مسجلة',
+                    subtitle:
+                        'قم بإنشاء خطة جديدة من لوحة wifi-cabin لتظهر هنا للعملاء.',
+                  );
+                }
+                return Column(
+                  children: plans
+                      .map((plan) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: _WifiPlanTile(plan: plan),
+                          ))
+                      .toList(),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NetworkInfoBlock extends StatelessWidget {
+  const _NetworkInfoBlock({required this.network});
+
+  final WifiNetwork network;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.color;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: colors.borderColor.withOpacity(.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (network.address?.isNotEmpty == true)
+            _InfoRow(
+              icon: Icons.location_on_outlined,
+              label: 'العنوان',
+              value: network.address!,
+            ),
+          if (network.coverageKm != null)
+            _InfoRow(
+              icon: Icons.radar_rounded,
+              label: 'نطاق التغطية',
+              value: '${network.coverageKm!.toStringAsFixed(1)} كم',
+            ),
+          if (network.currencies.isNotEmpty)
+            _InfoRow(
+              icon: Icons.currency_exchange_rounded,
+              label: 'العملات المدعومة',
+              value: network.currencies.join('، '),
+            ),
+          if (network.contacts.isNotEmpty)
+            _InfoRow(
+              icon: Icons.call_rounded,
+              label: 'جهات التواصل',
+              value: network.contacts.join('\n'),
+            ),
+          if (network.notes?.isNotEmpty == true)
+            _InfoRow(
+              icon: Icons.sticky_note_2_outlined,
+              label: 'ملاحظات داخلية',
+              value: network.notes!,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  const _InfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.color;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: colors.textLightColor, size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.menu_book_rounded,
-                    size: 20, color: colors.textDefaultColor),
-                const SizedBox(width: 6),
                 Text(
-                  'عرض دليل ومتطلبات الخدمة',
-                  style: textTheme.bodyMedium?.copyWith(
+                  label,
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colors.textLightColor,
                     fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: textTheme.bodyMedium?.copyWith(
                     color: colors.textDefaultColor,
                   ),
                 ),
@@ -545,52 +895,83 @@ class _WifiBottomCta extends StatelessWidget {
   }
 }
 
-class _WifiBadge extends StatelessWidget {
-  const _WifiBadge({required this.label});
+class _WifiPlanTile extends StatelessWidget {
+  const _WifiPlanTile({required this.plan});
 
-  final String label;
+  final WifiPlan plan;
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.color;
+    final textTheme = Theme.of(context).textTheme;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(.15),
-        borderRadius: BorderRadius.circular(40),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.borderColor.withOpacity(.3)),
       ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      plan.name,
+                      style: textTheme.titleMedium?.copyWith(
+                        color: colors.textDefaultColor,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${plan.price.toStringAsFixed(2)} ${plan.currency ?? ''}',
+                      style: textTheme.titleMedium?.copyWith(
+                        color: colors.territoryColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (plan.isUnlimited)
+                _InfoPill(
+                    label: 'غير محدود', icon: Icons.all_inclusive_rounded),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if (plan.durationDays != null)
+                _InfoChip(
+                  icon: Icons.access_time_rounded,
+                  label: '${plan.durationDays} يوم',
+                ),
+              if (!plan.isUnlimited && plan.dataCapGb != null)
+                _InfoChip(
+                  icon: Icons.data_usage_rounded,
+                  label: '${plan.dataCapGb!.toStringAsFixed(1)} جيجا',
+                ),
+            ],
+          ),
+          if (plan.description?.isNotEmpty == true) ...[
+            const SizedBox(height: 8),
+            Text(
+              plan.description!,
+              style: textTheme.bodyMedium?.copyWith(
+                color: colors.textLightColor,
+              ),
             ),
+          ],
+        ],
       ),
     );
   }
-}
-
-class _WifiStat {
-  final String title;
-  final String value;
-  final String description;
-  final IconData icon;
-
-  const _WifiStat({
-    required this.title,
-    required this.value,
-    required this.description,
-    required this.icon,
-  });
-}
-
-class _WifiBenefit {
-  final String title;
-  final String description;
-  final IconData icon;
-
-  const _WifiBenefit({
-    required this.title,
-    required this.description,
-    required this.icon,
-  });
 }

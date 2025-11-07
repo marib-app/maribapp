@@ -45,6 +45,8 @@ class ProfileScreenUI extends StatelessWidget {
 
     return NestedScrollView(
       physics: AppScrollBehavior.defaultPhysics,
+      floatHeaderSlivers: true,
+
       headerSliverBuilder: (context, innerBoxIsScrolled) => [
         SliverToBoxAdapter(
           child: Column(

@@ -667,6 +667,13 @@ class _SignupScreenState extends CloudState<SignupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final String? accountType = widget.selectedAccountType;
+    final bool isCommercialFlow =
+        accountType == "3" || accountType?.toLowerCase() == "commercial";
+    if (isCommercialFlow) {
+      return _buildCommercialLayout(context);
+    }
+
     final statusBarBase = LoginStatusBar.resolveBaseColor(
       context,
       override: context.color.territoryColor,

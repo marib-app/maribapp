@@ -13,6 +13,7 @@ class CartItem extends Model
     protected $fillable = [
         'user_id',
         'item_id',
+        'store_id',
         'variant_id',
         'variant_key',
         'department',
@@ -26,6 +27,7 @@ class CartItem extends Model
     ];
 
     protected $casts = [
+        'store_id' => 'integer',
         'variant_id' => 'integer',
         'variant_key' => 'string',
         'quantity' => 'integer',

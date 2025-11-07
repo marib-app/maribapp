@@ -16,6 +16,7 @@ class CartItemFactory extends Factory
         return [
             'user_id' => User::factory(),
             'item_id' => Item::factory(),
+            'store_id' => null,
             'variant_id' => null,
             'department' => 'general',
             'variant_key' => '',

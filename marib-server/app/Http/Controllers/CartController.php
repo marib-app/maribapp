@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\CartItem;
 use App\Models\Category;
 use App\Models\Item;
+use App\Models\Store;
 use App\Models\User;
 use App\Services\DepartmentReportService;
 use Illuminate\Http\JsonResponse;
@@ -16,6 +17,7 @@ use App\Services\DepartmentSupportService;
 use App\Services\ItemPurchaseOptionsService;
 use Illuminate\Support\Arr;
 use App\Services\DepartmentPolicyService;
+use App\Services\Store\StoreStatusService;
 use App\Support\VariantKeyNormalizer;
 
 use App\Models\Coupon;
@@ -23,6 +25,7 @@ use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Cache;
 
 use Illuminate\Validation\Rule;
@@ -42,6 +45,7 @@ class CartController extends Controller
 
         private readonly DepartmentSupportService $departmentSupportService,        
         private readonly ItemPurchaseOptionsService $itemPurchaseOptionsService,
+        private readonly StoreStatusService $storeStatusService,
     ) {
 
 
@@ -67,7 +71,7 @@ class CartController extends Controller
             return $this->validationError(__('يجب أن يتطابق القسم المحدد مع حقل section.'), 422);
         }
 
-        $item = Item::select(['id', 'price', 'category_id', 'interface_type', 'all_category_ids', 'currency'])
+        $item = Item::select(['id', 'price', 'category_id', 'interface_type', 'all_category_ids', 'currency', 'store_id'])
             ->find($validated['item_id']);
 
         if (! $item) {
@@ -76,6 +80,34 @@ class CartController extends Controller
 
 
         $user = $request->user();
+        $storeId = $item->store_id ? (int) $item->store_id : null;
+        $isStoreItem = $storeId !== null;
+
+        if ($isStoreItem) {
+            $existingStoreId = $this->existingCartStoreId($user);
+
+            if ($existingStoreId !== null && $existingStoreId !== $storeId) {
+                return $this->validationError(
+                    __('لا يمكن إضافة منتجات من متجر مختلف قبل إكمال الطلب الحالي أو تفريغ السلة.'),
+                    409,
+                    'different_store'
+                );
+            }
+
+            if ($this->cartHasGeneralItems($user)) {
+                return $this->validationError(
+                    __('لا يمكن دمج منتجات المتاجر مع أقسام التطبيق الأخرى في سلة واحدة. يرجى إكمال الطلب أو تفريغ السلة الحالية.'),
+                    409,
+                    'mixed_store_cart'
+                );
+            }
+        } elseif ($this->cartHasStoreItems($user)) {
+            return $this->validationError(
+                __('لا يمكن إضافة منتجات الأقسام العامة أثناء وجود منتجات متجر في السلة. يرجى تفريغ السلة أو إكمال الطلب.'),
+                409,
+                'store_cart_only'
+            );
+        }
 
 
         $department = $this->resolveDepartment($item, $validated);
@@ -84,6 +116,10 @@ class CartController extends Controller
 
         if (! $department && $itemDepartment) {
             $department = $itemDepartment;
+        }
+
+        if ($isStoreItem && ! $department) {
+            $department = $this->normalizeDepartment(Config::get('cart.default_department', 'store'));
         }
 
         if (! $department) {
@@ -159,7 +195,8 @@ class CartController extends Controller
         $cartItem = CartItem::firstOrNew([
             'user_id' => $user->id,
             'item_id' => $item->id,
-            
+            'store_id' => $storeId,
+
 
             'variant_id' => $validated['variant_id'] ?? null,
             'variant_key' => $variantKey,
@@ -703,7 +740,9 @@ class CartController extends Controller
             $selection = null;
         }
 
+        $cartStore = $this->extractCartStore($cartItems);
         $items = $this->mapCartItems($cartItems);
+        $storeMeta = $this->formatCartStoreSummary($cartItems, $cartStore);
 
 
         $subtotal = $cartItems->sum(static fn (CartItem $cartItem) => $cartItem->subtotal);
@@ -721,6 +760,7 @@ class CartController extends Controller
 
         $data = [
             'department' => $this->formatDepartmentMetadata($departmentKey),
+            'store' => $storeMeta,
             'items' => $items,
             'subtotal' => (float) $subtotal,
             'discounts' => $discounts,
@@ -785,6 +825,10 @@ class CartController extends Controller
             ];
         }
 
+        $cartStore = $this->extractCartStore($cartItems);
+        $storeSummary = $this->formatCartStoreSummary($cartItems, $cartStore);
+        $storeStatus = $storeSummary['status'] ?? null;
+
 
 
 
@@ -839,7 +883,10 @@ class CartController extends Controller
             $blocking['message'] = __('cart.currency_conflict_summary', [
                 'currencies' => $cartCurrencies->implode(', ') ?: __('cart.currency_not_specified'),
             ]);
-        
+        }
+
+        if ($cartStore && is_array($storeStatus)) {
+            $blocking = $this->applyStoreCheckoutConstraints($cartStore, $storeStatus, $subtotal, $blocking);
         }
 
 
@@ -859,6 +906,7 @@ class CartController extends Controller
                 'department_notice' => $departmentNotice,
                 'department_policy' => $departmentPolicy,
                 'support' => $support,
+                'store' => $storeSummary,
             ],
             'currency' => $currency,
             'currency_conflict' => $currencyConflict,
@@ -879,6 +927,7 @@ class CartController extends Controller
             return [
                 'cart_item_id' => $cartItem->id,
                 'item_id' => $cartItem->item_id,
+                'store_id' => $cartItem->store_id,
                 'name' => $item?->name,
                 'image' => $item?->image,
                 'product_link' => $item?->product_link,
@@ -893,9 +942,166 @@ class CartController extends Controller
                 'final_unit_price' => (float) $cartItem->getLockedUnitPrice(),
                 'currency' => $currency,
                 'subtotal' => (float) $cartItem->subtotal,
+                'store' => $this->formatStoreMetadata($item?->store),
             ];
         })->values()->all();
     }
+
+    protected function formatStoreMetadata(?Store $store): ?array
+    {
+        if (! $store) {
+            return null;
+        }
+
+        return [
+            'id' => $store->id,
+            'name' => $store->name,
+            'slug' => $store->slug,
+            'status' => $store->status,
+        ];
+    }
+
+    protected function extractCartStore(Collection $cartItems): ?Store
+    {
+        $storeId = $cartItems->pluck('store_id')->filter()->unique()->values()->first();
+
+        if (! $storeId) {
+            return null;
+        }
+
+        $store = $cartItems
+            ->map(static fn (CartItem $cartItem) => $cartItem->item?->store)
+            ->filter()
+            ->firstWhere('id', $storeId);
+
+        if ($store instanceof Store) {
+            $store->loadMissing(['settings', 'workingHours']);
+
+            return $store;
+        }
+
+        return Store::with(['settings', 'workingHours'])->find($storeId);
+    }
+
+    protected function resolveStoreLogoUrl(?string $path): ?string
+    {
+        if (! $path) {
+            return null;
+        }
+
+        try {
+            return url(Storage::url($path));
+        } catch (\Throwable) {
+            return url($path);
+        }
+    }
+
+    protected function applyStoreCheckoutConstraints(
+        Store $store,
+        array $status,
+        float $subtotal,
+        ?array $blocking
+    ): ?array {
+        $isOpen = (bool) ($status['is_open_now'] ?? false);
+        $closureMode = $status['closure_mode'] ?? 'full';
+
+        if (! $isOpen) {
+            $nextOpenHuman = $this->formatNextOpenTime($status['next_open_at'] ?? null);
+            $message = $nextOpenHuman
+                ? __('لا يمكن إكمال الطلب لأن المتجر مغلق حالياً وسيتم فتحه في :time.', ['time' => $nextOpenHuman])
+                : __('لا يمكن إكمال الطلب لأن المتجر مغلق حالياً.');
+
+            $blocking = $this->addBlockingReasonToPayload($blocking, 'store_closed', $message, [
+                'store_id' => $store->id,
+                'next_open_at' => $status['next_open_at'] ?? null,
+            ]);
+        } elseif ($closureMode === 'browse_only') {
+            $message = __('قام التاجر بتفعيل وضع التصفح فقط حالياً، ولا يمكن تنفيذ الطلب.');
+            $blocking = $this->addBlockingReasonToPayload($blocking, 'store_browse_only', $message, [
+                'store_id' => $store->id,
+            ]);
+        }
+
+        $minOrderAmount = (float) ($status['min_order_amount'] ?? 0);
+        if ($minOrderAmount > 0 && $subtotal + 0.0001 < $minOrderAmount) {
+            $message = __('قيمة الطلب الحالية أقل من الحد الأدنى (:amount).', [
+                'amount' => number_format($minOrderAmount, 2),
+            ]);
+
+            $blocking = $this->addBlockingReasonToPayload($blocking, 'store_min_order', $message, [
+                'store_id' => $store->id,
+                'required_amount' => $minOrderAmount,
+                'current_amount' => $subtotal,
+            ]);
+        }
+
+        return $blocking;
+    }
+
+    protected function formatNextOpenTime(?string $isoString): ?string
+    {
+        if (! $isoString) {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($isoString)
+                ->locale(app()->getLocale())
+                ->translatedFormat('d MMM yyyy h:mm a');
+        } catch (\Throwable) {
+            return $isoString;
+        }
+    }
+
+    protected function addBlockingReasonToPayload(?array $blocking, string $code, string $message, array $context = []): array
+    {
+        if (! is_array($blocking)) {
+            $blocking = [
+                'address_required' => false,
+                'currency_conflict' => false,
+                'reasons' => [],
+            ];
+        }
+
+        $blocking['reasons'] ??= [];
+
+        if (! in_array($code, $blocking['reasons'], true)) {
+            $blocking['reasons'][] = $code;
+        }
+
+        if (! isset($blocking['message'])) {
+            $blocking['message'] = $message;
+        }
+
+        if ($context !== []) {
+            $blocking['context'] ??= [];
+            $blocking['context'][$code] = $context;
+        }
+
+        return $blocking;
+    }
+
+    protected function formatCartStoreSummary(Collection $cartItems, ?Store $store = null): ?array
+    {
+        $store ??= $this->extractCartStore($cartItems);
+
+        if (! $store) {
+            $storeId = $cartItems->pluck('store_id')->filter()->unique()->values()->first();
+
+            return $storeId ? ['id' => $storeId] : null;
+        }
+
+        $status = $this->storeStatusService->resolve($store);
+
+        return [
+            'id' => $store->id,
+            'name' => $store->name,
+            'slug' => $store->slug,
+            'logo_url' => $this->resolveStoreLogoUrl($store->logo_path),
+            'status' => $status,
+        ];
+    }
+
     protected function latestCartTimestamp(Collection $cartItems): ?Carbon
     {
         $timestamps = $cartItems
@@ -1404,6 +1610,27 @@ class CartController extends Controller
         return $itemDepartment ? $this->normalizeDepartment($itemDepartment) : null;
     }
 
+    protected function existingCartStoreId(User $user): ?int
+    {
+        return $user->cartItems()
+            ->whereNotNull('store_id')
+            ->pluck('store_id')
+            ->filter()
+            ->unique()
+            ->values()
+            ->first();
+    }
+
+    protected function cartHasStoreItems(User $user): bool
+    {
+        return $user->cartItems()->whereNotNull('store_id')->exists();
+    }
+
+    protected function cartHasGeneralItems(User $user): bool
+    {
+        return $user->cartItems()->whereNull('store_id')->exists();
+    }
+
     protected function existingCartDepartment(User $user): ?string
     {
         return $user->cartItems()
@@ -1414,8 +1641,7 @@ class CartController extends Controller
             ->unique()
             ->values()
             ->first();
-        
-        }
+    }
 
     protected function defaultCurrency(): string
     {
@@ -1427,12 +1653,18 @@ class CartController extends Controller
     {
         return $user->cartItems()
             ->with(['item' => static function ($query) {
-                $query->select(['id', 'name', 'image', 'product_link']);
+                $query->select(['id', 'name', 'image', 'product_link', 'store_id', 'slug'])
+                    ->with([
+                        'store' => static function ($storeQuery) {
+                            $storeQuery
+                                ->select(['id', 'name', 'slug', 'status', 'logo_path', 'timezone'])
+                                ->with(['settings', 'workingHours']);
+                        },
+                    ]);
             }])
             ->orderByDesc('created_at')
             ->get();
-        
-        }
+    }
 
 
     protected function recordCartTelemetry(string $event, User $user, Collection $cartItems, array $extra = []): void
@@ -1447,6 +1679,7 @@ class CartController extends Controller
         $subtotal = round($cartItems->sum(static fn (CartItem $cartItem) => $cartItem->subtotal), 2);
         $departments = $cartItems->pluck('department')->filter()->unique()->values()->all();
         $currency = $cartItems->pluck('currency')->filter()->unique()->values()->first();
+        $storeId = $cartItems->pluck('store_id')->filter()->unique()->values()->first();
 
         return [
             'user_id' => $user->getKey(),
@@ -1454,6 +1687,7 @@ class CartController extends Controller
             'cart_total_quantity' => (int) $cartItems->sum('quantity'),
             'cart_subtotal' => $subtotal,
             'departments' => $departments,
+            'store_id' => $storeId,
             'cart_currency' => $currency,
         ];
     }

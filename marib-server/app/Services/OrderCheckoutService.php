@@ -7,9 +7,12 @@ use App\Models\Address;
 use App\Models\CartItem;
 use App\Models\Coupon;
 use App\Models\Item;
+use App\Models\ManualPaymentRequest;
 use App\Models\Order;
 use App\Models\OrderHistory;
 use App\Models\OrderItem;
+use App\Models\Store;
+use App\Models\StoreGatewayAccount;
 use App\Models\User;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Arr;
@@ -23,6 +26,7 @@ use App\Services\LegalNumberingService;
 use App\Services\ItemPurchaseOptionsService;
 
 use App\Services\DelegateNotificationService;
+use App\Services\Store\StoreStatusService;
 
 use Throwable;
 
@@ -143,6 +147,7 @@ class OrderCheckoutService
         private readonly LegalNumberingService $legalNumbering,
         private readonly ItemPurchaseOptionsService $itemPurchaseOptionsService,
         private readonly DelegateNotificationService $delegateNotificationService,
+        private readonly StoreStatusService $storeStatusService,
 
     ) {
     }
@@ -1029,6 +1034,65 @@ class OrderCheckoutService
         }
 
         return null;
+    }
+
+    private function resolveStoreId(Collection $cartItems): ?int
+    {
+        $storeIds = $cartItems->pluck('store_id')->filter()->unique()->values();
+
+        if ($storeIds->count() > 1) {
+            throw new CheckoutValidationException(
+                __('لا يمكن دمج منتجات متاجر متعددة في طلب واحد.'),
+                'mixed_store_cart'
+            );
+        }
+
+        $hasStoreItems = $storeIds->isNotEmpty();
+        $hasGeneralItems = $cartItems->contains(static fn (CartItem $cartItem) => $cartItem->store_id === null);
+
+        if ($hasStoreItems && $hasGeneralItems) {
+            throw new CheckoutValidationException(
+                __('يرجى إكمال أو تفريغ السلة قبل الانتقال إلى متاجر أخرى.'),
+                'store_cart_conflict'
+            );
+        }
+
+        return $storeIds->first() ?: null;
+    }
+
+    private function loadCheckoutStore(int $storeId): Store
+    {
+        $store = Store::with(['settings', 'workingHours'])->find($storeId);
+
+        if (! $store) {
+            throw new CheckoutValidationException(
+                __('المتجر غير متاح حالياً.'),
+                'store_unavailable'
+            );
+        }
+
+        return $store;
+    }
+
+    private function guardStoreCheckout(array $status, float $subTotal): void
+    {
+        $isOpen = (bool) ($status['is_open_now'] ?? false);
+        $closureMode = $status['closure_mode'] ?? 'full';
+
+        if (! $isOpen || $closureMode === 'browse_only') {
+            throw new CheckoutValidationException(
+                __('لا يمكن إكمال الطلب لأن المتجر مغلق حالياً.'),
+                'store_closed'
+            );
+        }
+
+        $minOrderAmount = (float) ($status['min_order_amount'] ?? 0);
+        if ($minOrderAmount > 0 && $subTotal + 0.0001 < $minOrderAmount) {
+            throw new CheckoutValidationException(
+                __('قيمة الطلب أقل من الحد الأدنى المسموح به للمتجر.'),
+                'store_min_order'
+            );
+        }
     }
 
 

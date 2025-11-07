@@ -44,7 +44,7 @@ class ProfileScreenUI extends StatelessWidget {
     final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
 
     return NestedScrollView(
-      physics: AppScrollBehavior.defaultPhysics,
+  //    physics: AppScrollBehavior.defaultPhysics,
       floatHeaderSlivers: true,
 
       headerSliverBuilder: (context, innerBoxIsScrolled) => [

@@ -17,8 +17,8 @@ class OrderResource extends JsonResource
         return array_filter([
             'id'              => $this->integerValue(['id', 'order_id']),
             'order_number'    => $this->stringValue('order_number'),
-            'status'          => $this->stringValue('status'),
-            'payment_status'  => $this->stringValue('payment_status'),
+            'status'          => $this->stringValue(['status', 'order_status']),
+            'payment_status'  => $this->stringValue(['payment_status', 'order_payment_status']),
             'currency'        => $this->stringValue('currency'),
             'total'           => $total,
             'department'      => $this->stringValue('department'),

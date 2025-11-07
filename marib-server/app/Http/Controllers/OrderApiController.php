@@ -27,6 +27,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Arr;
 use Throwable;
 
@@ -138,12 +139,10 @@ class OrderApiController extends Controller
             unset($validated['payment']);
         }
 
-        $manualTransferPayload = $this->normalizeManualTransferPayload(
-            $this->coerceJsonObject($request->input('manual_transfer'))
-        );
-
+        $manualTransferPayload = $this->sanitizeManualTransferPayload($request);
         if ($manualTransferPayload !== null) {
             $validated['manual_transfer'] = $manualTransferPayload;
+            $validated['payment_method'] = $validated['payment_method'] ?? 'manual_bank';
         } else {
             unset($validated['manual_transfer']);
         }

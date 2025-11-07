@@ -90,6 +90,7 @@ class SubscriptionPackageCard extends StatelessWidget {
           ],
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
@@ -196,7 +197,7 @@ class SubscriptionPackageCard extends StatelessWidget {
                   ),
               ],
             ),
-            const Spacer(),
+            const SizedBox(height: 16),
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [

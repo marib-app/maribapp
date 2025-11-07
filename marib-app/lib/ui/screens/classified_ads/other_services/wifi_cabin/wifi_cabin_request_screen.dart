@@ -251,6 +251,25 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
     return true;
   }
 
+  bool _validateNetworkStep() {
+    final List<String> missing = [];
+    if (_nameController.text.trim().isEmpty) {
+      missing.add('اسم الشبكة');
+    }
+    if (_logoFile == null) {
+      missing.add('شعار الشبكة');
+    }
+    if (_loginScreenshotFile == null) {
+      missing.add('صورة شاشة تسجيل الدخول');
+    }
+    if (missing.isNotEmpty) {
+      final String message = 'أكمل الحقول: ${missing.join('، ')}';
+      _showMessage(message);
+      return false;
+    }
+    return true;
+  }
+
   Future<MultipartFile> _multipartFromXFile(XFile file) async {
     return MultipartFile.fromFile(file.path, filename: p.basename(file.path));
   }
@@ -475,9 +494,7 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
                         child: ElevatedButton(
                           onPressed: () {
                             if (_currentStep == 0) {
-                              final valid =
-                                  _networkFormKey.currentState?.validate() ??
-                                      false;
+                              final valid = _validateNetworkStep();
                               if (valid) {
                                 _switchStep(1);
                               }
@@ -1093,21 +1110,3 @@ class _FilePickerTile extends StatelessWidget {
     );
   }
 }
-  bool _validateNetworkStep() {
-    final List<String> missing = [];
-    if (_nameController.text.trim().isEmpty) {
-      missing.add('اسم الشبكة');
-    }
-    if (_logoFile == null) {
-      missing.add('شعار الشبكة');
-    }
-    if (_loginScreenshotFile == null) {
-      missing.add('صورة شاشة تسجيل الدخول');
-    }
-    if (missing.isNotEmpty) {
-      final String message = 'أكمل الحقول: ${missing.join('، ')}';
-      _showMessage(message);
-      return false;
-    }
-    return true;
-  }

@@ -8,10 +8,13 @@ use App\Http\Controllers\Api\MetalRateController as PublicMetalRateController;
 use App\Http\Controllers\Api\MetalRateManagementController;
 use App\Http\Controllers\Api\AdDraftController;
 use App\Http\Controllers\Api\StoreDashboardController as ApiStoreDashboardController;
+use App\Http\Controllers\Api\StoreManualPaymentController as ApiStoreManualPaymentController;
+use App\Http\Controllers\Api\StoreOrderController as ApiStoreOrderController;
 use App\Http\Controllers\Api\StoreGatewayAccountController;
 use App\Http\Controllers\Api\StoreGatewayController;
 use App\Http\Controllers\Api\StoreGatewayPublicController;
 use App\Http\Controllers\Api\StoreOnboardingController;
+use App\Http\Controllers\Api\StorefrontController;
 use App\Http\Controllers\ApiController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\ServiceRequestController as ApiServiceRequestController;
@@ -68,7 +71,16 @@ Route::get('metal-rates', [PublicMetalRateController::class, 'index']);
 /* Authenticated Routes */
 Route::group(['middleware' => ['auth:sanctum']], static function () {
 
-    Route::get('store/dashboard/summary', [ApiStoreDashboardController::class, 'summary']);
+    Route::prefix('store')->group(function (): void {
+        Route::get('dashboard/summary', [ApiStoreDashboardController::class, 'summary']);
+        Route::get('orders', [ApiStoreOrderController::class, 'index']);
+        Route::post('orders/{order}/status', [ApiStoreOrderController::class, 'updateStatus'])->whereNumber('order');
+        Route::get('manual-payments', [ApiStoreManualPaymentController::class, 'index']);
+        Route::get('manual-payments/{manualPaymentRequest}', [ApiStoreManualPaymentController::class, 'show'])
+            ->whereNumber('manualPaymentRequest');
+        Route::post('manual-payments/{manualPaymentRequest}/decision', [ApiStoreManualPaymentController::class, 'decide'])
+            ->whereNumber('manualPaymentRequest');
+    });
 
     Route::prefix('wifi/owner')->group(function (): void {
         Route::get('networks', [OwnerNetworkController::class, 'index']);
@@ -274,6 +286,13 @@ Route::get('verification-request',[ApiController::class,'getVerificationRequest'
 
 Route::get('stores/{seller}/gateways', [StoreGatewayPublicController::class, 'index'])
     ->whereNumber('seller');
+
+Route::prefix('storefront')->group(function (): void {
+    Route::get('stores', [StorefrontController::class, 'index']);
+    Route::get('stores/{store}', [StorefrontController::class, 'show']);
+    Route::get('stores/{store}/products', [StorefrontController::class, 'products']);
+    Route::get('stores/{store}/manual-banks', [StorefrontController::class, 'manualBankAccounts']);
+});
 
     
 /* Non Authenticated Routes */

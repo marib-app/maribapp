@@ -25,6 +25,7 @@ import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/data/model/category_model.dart';
 import 'package:marib/data/model/store_gateway_option.dart';
+import 'package:marib/utils/constant.dart';
 import 'dart:ui' as ui; // Path, PathMetric
 import 'dart:math' as math; // min
 import 'dart:async';

@@ -140,9 +140,7 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
   bool _isReporting = false;
   final MyServicesRepository _ownerRepository = MyServicesRepository();
   bool _statusUpdating = false;
-  bool _expiryUpdating = false;
   bool? _ownerStatusOverride;
-  DateTime? _ownerExpiryOverride;
   String? get _initialTitle => widget.initialTitle ?? widget.classified?.title;
 
 
@@ -243,9 +241,7 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
         _error = false;
         _errorMsg = null;
         _ownerStatusOverride = null;
-        _ownerExpiryOverride = null;
         _statusUpdating = false;
-        _expiryUpdating = false;
       });
     } catch (e) {
       if (!mounted) return;
@@ -827,7 +823,6 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
   }
 
   DateTime? _resolveOwnerExpiry() {
-    if (_ownerExpiryOverride != null) return _ownerExpiryOverride;
     return _parseExpiryDate(_data?.expiryDate);
   }
 
@@ -864,63 +859,6 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
     }
   }
 
-  Future<void> _pickOwnerExpiry(BuildContext context) async {
-    if (_data?.id == null || _expiryUpdating) return;
-
-    final DateTime now = DateTime.now();
-    final DateTime initial = _resolveOwnerExpiry() ?? now;
-    final DateTime firstDate = DateTime(now.year, now.month, now.day);
-    final DateTime adjustedInitial =
-    initial.isBefore(firstDate) ? firstDate : initial;
-    final DateTime lastDate = DateTime(now.year + 5, now.month, now.day);
-    final DateTime cappedInitial =
-    adjustedInitial.isAfter(lastDate) ? lastDate : adjustedInitial;
-
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: cappedInitial,
-      firstDate: firstDate,
-      lastDate: lastDate,
-    );
-
-    if (picked != null) {
-      await _updateOwnerExpiry(picked);
-    }
-  }
-
-  Future<void> _updateOwnerExpiry(DateTime picked) async {
-    final ClassifiedModel? service = _data;
-    if (service?.id == null) return;
-
-    final DateTime normalized = DateTime(picked.year, picked.month, picked.day);
-    setState(() {
-      _expiryUpdating = true;
-      _ownerExpiryOverride = normalized;
-    });
-
-    try {
-      final ClassifiedModel updated = await _ownerRepository.updateService(
-        service!.id!,
-        <String, dynamic>{'expiry_date': normalized.toIso8601String()},
-      );
-
-      if (!mounted) return;
-      setState(() {
-        _data = updated;
-        _ownerExpiryOverride = null;
-        _expiryUpdating = false;
-      });
-    } catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _ownerExpiryOverride = null;
-        _expiryUpdating = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('تعذّر تحديث تاريخ الانتهاء: $error')),
-      );
-    }
-  }
 
   Widget? _buildOwnerPanel(BuildContext context) {
     if (!_isServiceOwner) return null;
@@ -1001,7 +939,7 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
                     Text('إدارة الخدمة', style: titleStyle),
                     const SizedBox(height: 4),
                     Text(
-                      'يمكنك إيقاف الخدمة مؤقتًا أو ضبط تاريخ الانتهاء.',
+                      'يمكنك إيقاف الخدمة مؤقتًا أو إعادة تنشيطها عند الحاجة.',
                       style: subtitleStyle,
                     ),
                   ],
@@ -1025,24 +963,7 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
                   ],
                 ),
               ),
-              const SizedBox(width: 12),
-              if (_expiryUpdating)
-                const SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(strokeWidth: 2.2),
-                )
-              else
-                TextButton.icon(
-                  onPressed: () => _pickOwnerExpiry(context),
-                  icon: const Icon(Icons.edit_calendar_rounded, size: 20),
-                  label: const Text('تعديل'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: scheme.primary,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    textStyle: theme.textTheme.labelLarge,
-                  ),
-                ),
+
             ],
           ),
           const SizedBox(height: 12),

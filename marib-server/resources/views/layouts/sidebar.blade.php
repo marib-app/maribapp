@@ -274,6 +274,12 @@
                 <span class="menu-item">{{ __('طلبات المتجر') }}</span>
               </a>
             </li>
+            <li class="sidebar-item">
+              <a href="{{ route('merchant.manual-payments.index') }}" class="sidebar-link">
+                <i class="bi bi-bank"></i>
+                <span class="menu-item">{{ __('الحوالات اليدوية') }}</span>
+              </a>
+            </li>
           @endif
 
         @endcanany

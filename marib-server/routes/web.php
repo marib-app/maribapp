@@ -30,6 +30,7 @@ use App\Http\Controllers\SeoSettingController;
 use App\Http\Controllers\OrderPaymentGroupController;
 use App\Http\Controllers\MetalRateController;
 use App\Http\Controllers\StoreDashboardController;
+use App\Http\Controllers\Store\StoreManualPaymentController;
 use App\Http\Controllers\Store\StoreOrderController;
 use App\Http\Controllers\StoreSettingsController;
 
@@ -729,6 +730,7 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
     ], static function () {
         Route::get('dashboard', [StoreDashboardController::class, 'index'])->name('dashboard');
         Route::get('orders', [StoreOrderController::class, 'index'])->name('orders.index');
+        Route::get('manual-payments', [StoreManualPaymentController::class, 'index'])->name('manual-payments.index');
     });
 
     /* --------------------------------- الإعدادات Settings --------------------------------- */

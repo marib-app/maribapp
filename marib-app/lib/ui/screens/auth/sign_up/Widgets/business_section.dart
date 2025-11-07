@@ -95,11 +95,8 @@ class BusinessSection extends StatelessWidget {
   // === شريط الإرسال (اختياري) ===
   final VoidCallback? onSubmit;
   final bool isSubmitting;
-
-
-
-
   final bool isUploading;
+  final bool showLogoPicker;
 
 
 
@@ -155,9 +152,8 @@ class BusinessSection extends StatelessWidget {
     // إرسال
     this.onSubmit,
     this.isSubmitting = false,
-
-
     required this.isUploading,
+    this.showLogoPicker = true,
 
   });
 
@@ -184,18 +180,19 @@ class BusinessSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 1) بطاقة الشعار
-            _LogoCard(
-              image: logo,
-              onPick: onPickLogo,
-              isUploading: isLogoUploading,
-              progress: logoUploadProgress,
-              showPreviewHint: showLogoPreviewHint,
-              highlightRequired: highlightRequired,
-              title: "businessLogo".translate(context),
-              hint: "chooseLogoCarefully".translate(context),
-            ),
-            const SizedBox(height: 14),
+            if (showLogoPicker) ...[
+              _LogoCard(
+                image: logo,
+                onPick: onPickLogo,
+                isUploading: isLogoUploading,
+                progress: logoUploadProgress,
+                showPreviewHint: showLogoPreviewHint,
+                highlightRequired: highlightRequired,
+                title: "businessLogo".translate(context),
+                hint: "chooseLogoCarefully".translate(context),
+              ),
+              const SizedBox(height: 14),
+            ],
 
             // 2) بطاقة السجل التجاري
             _CommercialRegisterCard(

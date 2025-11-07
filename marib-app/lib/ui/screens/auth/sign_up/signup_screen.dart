@@ -810,6 +810,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
                                 onPickCountry: _showCountryPicker,
                                 isLocationLoading: _isLocationLoading,
                                 onGetLocation: _getLocationCallback(),
+                                showLogoPicker: false,
 
                                 // â¬‡ï¸ڈ ظ…ظ‡ظ… ظ„ط¹ط±ط¶ ط§ظ„ظ„ظˆط¯ط±/ط§ظ„طھظ„ظ…ظٹط­
                                 isLogoUploading: _officeLogoUploading,
@@ -848,6 +849,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
                                     onPickCountry: _showCountryPicker,
                                     isLocationLoading: _isLocationLoading,
                                     onGetLocation: _getLocationCallback(),
+                                    showLogoPicker: false,
                                     categories: cats,
                                     selectedCategoryIds:
                                         selectedBusinessCategories,

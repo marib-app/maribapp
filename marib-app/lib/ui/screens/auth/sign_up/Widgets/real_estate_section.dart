@@ -85,6 +85,8 @@ class RealEstateSection extends StatelessWidget {
   final double horizontalGutter;
   /// إزالة أي padding يضيفه ScrollView/MediaQuery يمين/يسار.
   final bool removeViewportPadding;
+  /// تحكم في إظهار بطاقة الشعار.
+  final bool showLogoPicker;
 
   const RealEstateSection({
     super.key,
@@ -115,6 +117,7 @@ class RealEstateSection extends StatelessWidget {
     this.sectionMaxWidth,         // null => Full-bleed
     this.horizontalGutter = - 12,    // فراغ بسيط عن الأطراف
     this.removeViewportPadding = true,
+    this.showLogoPicker = true,
 
 
 
@@ -154,16 +157,17 @@ class RealEstateSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 1) بطاقة الشعار
-            _LogoCard(
-              image: logo,
-              onPick: onPickLogo,
-              isUploading: isLogoUploading,
-              progress: logoUploadProgress,
-              showPreviewHint: showLogoPreviewHint,
-              highlightRequired: highlightRequired,
-            ),
-            const SizedBox(height: 14),
+            if (showLogoPicker) ...[
+              _LogoCard(
+                image: logo,
+                onPick: onPickLogo,
+                isUploading: isLogoUploading,
+                progress: logoUploadProgress,
+                showPreviewHint: showLogoPreviewHint,
+                highlightRequired: highlightRequired,
+              ),
+              const SizedBox(height: 14),
+            ],
 
             // 2) بطاقة اسم المكتب
             _OfficeNameCard(

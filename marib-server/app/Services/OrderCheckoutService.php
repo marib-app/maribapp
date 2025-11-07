@@ -8,6 +8,7 @@ use App\Models\CartItem;
 use App\Models\Coupon;
 use App\Models\Item;
 use App\Models\ManualPaymentRequest;
+use App\Models\ManualBank;
 use App\Models\Order;
 use App\Models\OrderHistory;
 use App\Models\OrderItem;
@@ -128,6 +129,10 @@ class OrderCheckoutService
         self::DELIVERY_TIMING_PAY_ON_DELIVERY,
     ];
 
+    private bool $defaultManualBankResolved = false;
+
+    private ?int $defaultManualBankId = null;
+
     /**
      * @return array<int, string>
      */
@@ -171,6 +176,15 @@ class OrderCheckoutService
 
             $this->ensureItemsAreAvailable($cartItems);
             $this->ensureCartItemsMatchLockedPricing($cartItems);
+
+            $storeId = $this->resolveStoreId($cartItems);
+            $storeModel = null;
+            $storeStatus = null;
+
+            if ($storeId !== null) {
+                $storeModel = $this->loadCheckoutStore($storeId);
+                $storeStatus = $this->storeStatusService->resolve($storeModel);
+            }
 
 
             $cartCurrencies = $cartItems->pluck('currency')
@@ -217,6 +231,10 @@ class OrderCheckoutService
 
             $cartMetrics = $this->shippingQuoteService->computeCartMetrics($cartItems);
             $subTotal = round($cartMetrics['cart_value'], 2);
+
+            if ($storeModel !== null && $storeStatus !== null) {
+                $this->guardStoreCheckout($storeStatus, $subTotal);
+            }
 
             $taxRate = (float) ($data['tax_rate'] ?? 0);
             $taxAmount = round($subTotal * $taxRate, 2);
@@ -283,6 +301,21 @@ class OrderCheckoutService
             $paymentDetails = $this->normalizePaymentPayload($data['payment'] ?? null);
             $manualTransferDetails = $this->normalizeManualTransferPayload($data['manual_transfer'] ?? null);
 
+            $normalizedPaymentMethod = self::normalizePaymentMethod($data['payment_method'] ?? null);
+
+            if ($storeModel !== null && $storeStatus !== null) {
+                $storeTransferContext = $this->prepareStoreManualTransfer(
+                    $storeModel,
+                    $storeStatus,
+                    $paymentDetails,
+                    $manualTransferDetails,
+                    $normalizedPaymentMethod
+                );
+
+                $paymentDetails = $storeTransferContext['payment'];
+                $manualTransferDetails = $storeTransferContext['manual_transfer'];
+            }
+
 
             $addressSnapshot = $this->addressToArray($address);
             $deliveryPaymentTiming = $deliveryPaymentSnapshot['timing'] ?? null;
@@ -326,11 +359,10 @@ class OrderCheckoutService
                 }
             }
 
-            $normalizedPaymentMethod = self::normalizePaymentMethod($data['payment_method'] ?? null);
-
             $order = Order::create([
                 'user_id' => $user->getKey(),
                 'seller_id' => $this->resolveSellerId($cartItems),
+                'store_id' => $storeModel?->getKey() ?? $storeId,
                 'department' => $department,
                 'order_number' => $this->generateProvisionalOrderNumber(),
                 'invoice_no' => $this->generateInvoiceNumber($department),
@@ -1126,6 +1158,192 @@ class OrderCheckoutService
 
         return $orderNumber;
     
+    }
+
+    /**
+     * @param array<string, mixed>|null $paymentDetails
+     * @param array<string, mixed>|null $manualTransferDetails
+     * @return array{
+     *     payment: ?array<string, mixed>,
+     *     manual_transfer: ?array<string, mixed>,
+     *     store_gateway_account?: StoreGatewayAccount
+     * }
+     */
+    private function prepareStoreManualTransfer(
+        Store $store,
+        array $storeStatus,
+        ?array $paymentDetails,
+        ?array $manualTransferDetails,
+        ?string $paymentMethod
+    ): array {
+        if ($paymentMethod !== 'manual_bank') {
+            return [
+                'payment' => $paymentDetails,
+                'manual_transfer' => $manualTransferDetails,
+            ];
+        }
+
+        $allowsManual = (bool) ($storeStatus['allow_manual_payments'] ?? true);
+
+        if (! $allowsManual) {
+            throw new CheckoutValidationException(
+                __('لا يمكن قبول الحوالات اليدوية لهذا المتجر حالياً.'),
+                'store_manual_payments_disabled'
+            );
+        }
+
+        $paymentDetails = $paymentDetails ?? [];
+
+        $accountId = $this->normalizeNullableInt(
+            $paymentDetails['store_gateway_account_id']
+                ?? $paymentDetails['store_bank_id']
+                ?? $paymentDetails['bank_id']
+                ?? null
+        );
+
+        if ($accountId === null) {
+            throw new CheckoutValidationException(
+                __('يرجى اختيار الحساب البنكي الخاص بالمتجر قبل الإرسال.'),
+                'store_gateway_account_required'
+            );
+        }
+
+        $gatewayAccount = $this->resolveStoreGatewayAccount($store, $accountId);
+
+        if ($manualTransferDetails === null) {
+            throw new CheckoutValidationException(
+                __('أدخل بيانات الحوالة اليدوية قبل المتابعة.'),
+                'store_manual_transfer_required'
+            );
+        }
+
+        $senderName = $this->normalizeNullableString($manualTransferDetails['sender_name'] ?? null);
+        $transferReference = $this->normalizeNullableString(
+            $manualTransferDetails['transfer_reference']
+                ?? $manualTransferDetails['transfer_code']
+                ?? null
+        );
+
+        if ($senderName === null) {
+            throw new CheckoutValidationException(
+                __('اكتب اسم صاحب الحوالة كما يظهر في الإيصال.'),
+                'store_manual_transfer_sender_required'
+            );
+        }
+
+        if ($transferReference === null) {
+            throw new CheckoutValidationException(
+                __('الرجاء إدخال رقم أو مرجع الحوالة البنكية.'),
+                'store_manual_transfer_reference_required'
+            );
+        }
+
+        $attachments = $manualTransferDetails['attachments'] ?? [];
+        if (! is_array($attachments) || $attachments === []) {
+            throw new CheckoutValidationException(
+                __('صورة الإيصال مطلوبة لتأكيد الحوالة.'),
+                'store_manual_transfer_receipt_required'
+            );
+        }
+
+        $gateway = $gatewayAccount->storeGateway;
+        $accountSnapshot = [
+            'id' => $gatewayAccount->getKey(),
+            'store_id' => $store->getKey(),
+            'gateway' => $gateway ? [
+                'id' => $gateway->getKey(),
+                'name' => $gateway->name,
+                'logo_url' => $gateway->logo_url,
+            ] : null,
+            'beneficiary_name' => $gatewayAccount->beneficiary_name,
+            'account_number' => $gatewayAccount->account_number,
+        ];
+
+        if ($gatewayAccount->account_number === null) {
+            unset($accountSnapshot['account_number']);
+        }
+
+        $paymentDetails['bank_id'] = $gatewayAccount->getKey();
+        $paymentDetails['store_gateway_account_id'] = $gatewayAccount->getKey();
+        $paymentDetails['bank_name'] = $gateway?->name ?? $gatewayAccount->beneficiary_name;
+        $paymentDetails['account_number'] = $gatewayAccount->account_number;
+        $paymentDetails['store_gateway_account'] = array_filter(
+            $accountSnapshot,
+            static fn ($value) => $value !== null && $value !== ''
+        );
+
+        $fallbackManualBankId = $this->resolveFallbackManualBankId();
+        if ($fallbackManualBankId !== null) {
+            $paymentDetails['manual_bank_id'] = $fallbackManualBankId;
+        } else {
+            unset($paymentDetails['manual_bank_id']);
+        }
+
+        $manualTransferDetails['sender_name'] = $senderName;
+        $manualTransferDetails['transfer_reference'] = $transferReference;
+        $manualTransferDetails['store_gateway_account_id'] = $gatewayAccount->getKey();
+        $manualTransferDetails['store_gateway_account'] = $paymentDetails['store_gateway_account'];
+        $manualTransferDetails['store'] = [
+            'id' => $store->getKey(),
+            'name' => $store->name,
+            'slug' => $store->slug,
+        ];
+
+        return [
+            'payment' => $paymentDetails,
+            'manual_transfer' => $manualTransferDetails,
+            'store_gateway_account' => $gatewayAccount,
+        ];
+    }
+
+    private function resolveStoreGatewayAccount(Store $store, int $accountId): StoreGatewayAccount
+    {
+        $account = StoreGatewayAccount::query()
+            ->where('store_id', $store->getKey())
+            ->where('is_active', true)
+            ->where('id', $accountId)
+            ->whereHas('storeGateway', static fn ($query) => $query->where('is_active', true))
+            ->with('storeGateway')
+            ->first();
+
+        if (! $account) {
+            throw new CheckoutValidationException(
+                __('الحساب البنكي المحدد غير متاح لهذا المتجر.'),
+                'store_gateway_account_unavailable'
+            );
+        }
+
+        return $account;
+    }
+
+    private function resolveFallbackManualBankId(): ?int
+    {
+        if ($this->defaultManualBankResolved) {
+            return $this->defaultManualBankId;
+        }
+
+        $this->defaultManualBankResolved = true;
+
+        $configuredId = config('payments.default_manual_bank_id');
+        if (is_numeric($configuredId)) {
+            $candidate = (int) $configuredId;
+            if ($candidate > 0) {
+                return $this->defaultManualBankId = $candidate;
+            }
+        }
+
+        try {
+            $manualBank = ManualBank::query()
+                ->orderBy('display_order')
+                ->orderBy('id')
+                ->first();
+        } catch (\Throwable) {
+            $manualBank = null;
+        }
+
+        $this->defaultManualBankId = $manualBank?->getKey();
+
+        return $this->defaultManualBankId;
     }
 
 

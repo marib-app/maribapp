@@ -56,6 +56,14 @@ class SignUpMainScreen extends StatefulWidget {
 const bool _kSkipPhoneVerification = true;
 
 class LoginScreenState extends State<SignUpMainScreen> {
+  static const Map<String, String> _accountTypeDetailKeys = {
+    '1': 'chooseaccountAlertcontent1',
+    '2': 'chooseaccountAlertcontent2',
+    '3': 'chooseaccountAlertcontent3',
+  };
+  static const String _accountTypeDetailFallbackKey =
+      'chooseaccountAlertcontentDefault';
+
   // ===== Controllers =====
   final TextEditingController mobileCtrl = TextEditingController();
   final TextEditingController emailCtrl = TextEditingController();
@@ -149,6 +157,9 @@ class LoginScreenState extends State<SignUpMainScreen> {
   Future<void> _showAccountTypeDetailsSheet(String? type) async {
     if (!mounted || type == null || type.isEmpty) return;
 
+    final contentKey =
+        _accountTypeDetailKeys[type] ?? _accountTypeDetailFallbackKey;
+
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -189,7 +200,7 @@ class LoginScreenState extends State<SignUpMainScreen> {
                 ),
                 child: SingleChildScrollView(
                   child: Text(
-                    "chooseaccountAlertcontent $type".translate(context),
+                    contentKey.translate(ctx),
                     style: TextStyle(
                       fontSize: context.font.small,
                       color: context.color.textDefaultColor,

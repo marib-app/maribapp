@@ -17,12 +17,25 @@ Map<String, FetchMyItemsCubit> myAdsCubitReference = {};
 
 class MyItemTab extends StatelessWidget {
   final String? getItemsWithStatus;
-  const MyItemTab({super.key, this.getItemsWithStatus});
+  final void Function(String statusKey, bool isLoading)? onLoadingChanged;
+  final VoidCallback? onFullRefreshRequested;
+
+  const MyItemTab({
+    super.key,
+    this.getItemsWithStatus,
+    this.onLoadingChanged,
+    this.onFullRefreshRequested,
+  });
+
+
 
   @override
   Widget build(BuildContext context) {
     // لو مو مسجل دخول
     if (!HiveUtils.isUserAuthenticated()) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        onLoadingChanged?.call(_resolveStatusKey(), false);
+      });
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -48,14 +61,35 @@ class MyItemTab extends StatelessWidget {
         myAdsCubitReference[getItemsWithStatus ?? 'all'] = c;
         return c;
       },
-      child: _MyItemTabBody(statusKey: getItemsWithStatus ?? 'all'),
+      child: _MyItemTabBody(
+        statusKey: _resolveStatusKey(),
+        onLoadingChanged: onLoadingChanged,
+        onFullRefreshRequested: onFullRefreshRequested,
+      ),
     );
+  }
+
+  String _resolveStatusKey() {
+    final status = getItemsWithStatus;
+    if (status == null || status.isEmpty) {
+      return 'all';
+    }
+    return status;
   }
 }
 
 class _MyItemTabBody extends StatefulWidget {
   final String statusKey; // ex: 'active' / 'review' / 'all'
-  const _MyItemTabBody({super.key, required this.statusKey});
+  final void Function(String statusKey, bool isLoading)? onLoadingChanged;
+  final VoidCallback? onFullRefreshRequested;
+
+  const _MyItemTabBody({
+    super.key,
+    required this.statusKey,
+    this.onLoadingChanged,
+    this.onFullRefreshRequested,
+  });
+
 
   @override
   State<_MyItemTabBody> createState() => _MyItemTabBodyState();
@@ -136,6 +170,8 @@ class _MyItemTabBodyState extends State<_MyItemTabBody>
   }
 
   Future<void> _onRefresh() async {
+    widget.onFullRefreshRequested?.call();
+
     final cubit = context.read<FetchMyItemsCubit>();
     cubit.fetchMyItems(getItemsWithStatus: widget.statusKey); // ← بدون await
   }
@@ -149,6 +185,7 @@ class _MyItemTabBodyState extends State<_MyItemTabBody>
     }).then((value) {
       if (!mounted) return;
       if (value == "refresh") {
+        widget.onFullRefreshRequested?.call();
         context
             .read<FetchMyItemsCubit>()
             .fetchMyItems(getItemsWithStatus: widget.statusKey);
@@ -167,6 +204,7 @@ class _MyItemTabBodyState extends State<_MyItemTabBody>
       _pageScrollController?.dispose();
     }
     _pageScrollController = null;
+    myAdsCubitReference.remove(widget.statusKey);
     super.dispose();
   }
 
@@ -174,30 +212,53 @@ class _MyItemTabBodyState extends State<_MyItemTabBody>
   Widget build(BuildContext context) {
     super.build(context);
 
-    return BlocBuilder<FetchMyItemsCubit, FetchMyItemsState>(
-      // ابني فقط عند تغير العناصر أو حالة التحميل
-      buildWhen: (prev, curr) {
-        if (prev.runtimeType != curr.runtimeType) return true;
-        if (curr is FetchMyItemsSuccess && prev is FetchMyItemsSuccess) {
-          return curr.items != prev.items ||
-              curr.isLoadingMore != prev.isLoadingMore;
-        }
-        return true;
-      },
-      builder: (context, state) {
-        return MyItemTabUI(
-          state: state,
-          controller: _effectiveScrollController,
-          onRefresh: _onRefresh,
-          onRetry: () => context
-              .read<FetchMyItemsCubit>()
-              .fetchMyItems(getItemsWithStatus: widget.statusKey),
-          onTapItem: _onTapItem,
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<FetchMyItemsCubit, FetchMyItemsState>(
+          listenWhen: (previous, current) {
+            final bool wasLoading = previous is FetchMyItemsInProgress;
+            final bool isLoading = current is FetchMyItemsInProgress;
+            return wasLoading != isLoading;
+          },
+          listener: (context, state) {
+            widget.onLoadingChanged?.call(
+              widget.statusKey,
+              state is FetchMyItemsInProgress,
+            );
+          },
+        ),
+        BlocListener<FetchMyItemsCubit, FetchMyItemsState>(
+          listenWhen: (previous, current) => current is FetchMyItemsFailed,
+          listener: (context, state) {
+            widget.onLoadingChanged?.call(widget.statusKey, false);
+          },
+        ),
+      ],
+      child: BlocBuilder<FetchMyItemsCubit, FetchMyItemsState>(
+        // ابني فقط عند تغير العناصر أو حالة التحميل
+        buildWhen: (prev, curr) {
+          if (prev.runtimeType != curr.runtimeType) return true;
+          if (curr is FetchMyItemsSuccess && prev is FetchMyItemsSuccess) {
+            return curr.items != prev.items ||
+                curr.isLoadingMore != prev.isLoadingMore;
+          }
+          return true;
+        },
+        builder: (context, state) {
+          return MyItemTabUI(
+            state: state,
+            controller: _effectiveScrollController,
+            onRefresh: _onRefresh,
+            onRetry: () => context
+                .read<FetchMyItemsCubit>()
+                .fetchMyItems(getItemsWithStatus: widget.statusKey),
+            onTapItem: _onTapItem,
 
-          // ✅ مفتاح تمرير ديناميكي لكل تبويب (تعديل صغير بالملف الآخر)
-          storageKey: 'my_item_tab_list_${widget.statusKey}',
-        );
-      },
+            // ✅ مفتاح تمرير ديناميكي لكل تبويب (تعديل صغير بالملف الآخر)
+            storageKey: 'my_item_tab_list_${widget.statusKey}',
+          );
+        },
+      ),
     );
   }
 }

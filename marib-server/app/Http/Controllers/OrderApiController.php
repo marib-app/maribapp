@@ -107,6 +107,7 @@ class OrderApiController extends Controller
                 'deposit_enabled' => ['sometimes', 'boolean'],
                 'payment' => ['nullable'],
                 'manual_transfer' => ['nullable'],
+                'manual_transfer_receipt' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
 
             ], [
                 'address_id.required' => __('يجب اختيار عنوان صالح لإتمام الطلب.'),
@@ -140,7 +141,14 @@ class OrderApiController extends Controller
         }
 
         $manualTransferPayload = $this->sanitizeManualTransferPayload($request);
+        $manualTransferUploads = [];
+
         if ($manualTransferPayload !== null) {
+            if (array_key_exists('_uploaded_files', $manualTransferPayload)) {
+                $manualTransferUploads = $manualTransferPayload['_uploaded_files'] ?? [];
+                unset($manualTransferPayload['_uploaded_files']);
+            }
+
             $validated['manual_transfer'] = $manualTransferPayload;
             $validated['payment_method'] = $validated['payment_method'] ?? 'manual_bank';
         } else {
@@ -156,7 +164,8 @@ class OrderApiController extends Controller
             $validated,
             $idempotencyKey,
             $paymentPayload,
-            $manualTransferPayload
+            $manualTransferPayload,
+            $manualTransferUploads
         ) {
 
             $existingKey = OrderIdempotencyKey::query()
@@ -217,14 +226,17 @@ class OrderApiController extends Controller
 
             } catch (ValidationException $exception) {
                 if ($this->isAddressRequiredException($exception)) {
+                    $this->cleanupManualTransferUploads($manualTransferUploads);
                     return $this->addressValidationErrorResponse($exception);
                 }
 
+                $this->cleanupManualTransferUploads($manualTransferUploads);
                 throw $exception;
 
 
 
             } catch (CheckoutValidationException $exception) {
+                $this->cleanupManualTransferUploads($manualTransferUploads);
                 return response()->json([
                     'status' => false,
                     'message' => $exception->getMessage(),
@@ -655,6 +667,165 @@ class OrderApiController extends Controller
     /**
      * @param mixed $value
      */
+    private function sanitizeManualTransferPayload(Request $request): ?array
+    {
+        $raw = $request->input('manual_transfer');
+
+        if (is_string($raw)) {
+            $decoded = json_decode($raw, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                $raw = $decoded;
+            }
+        }
+
+        if (! is_array($raw)) {
+            $raw = [];
+        }
+
+        $payload = [];
+
+        $senderName = $this->normalizeNullableString(
+            $raw['sender_name'] ?? $request->input('manual_transfer_sender_name')
+        );
+        if ($senderName !== null) {
+            $payload['sender_name'] = $senderName;
+        }
+
+        $transferReference = $this->normalizeNullableString(
+            $raw['transfer_reference']
+                ?? $raw['transfer_code']
+                ?? $request->input('manual_transfer_transfer_reference')
+                ?? $request->input('manual_transfer_transfer_code')
+        );
+        if ($transferReference !== null) {
+            $payload['transfer_reference'] = $transferReference;
+        }
+
+        $note = $this->normalizeNullableMultiline(
+            $raw['note'] ?? $request->input('manual_transfer_note')
+        );
+        if ($note !== null) {
+            $payload['note'] = $note;
+        }
+
+        $storeAccountId = $this->normalizeNullableInt(
+            $raw['store_gateway_account_id']
+                ?? $raw['store_bank_id']
+                ?? $request->input('manual_transfer_store_gateway_account_id')
+        );
+        if ($storeAccountId !== null) {
+            $payload['store_gateway_account_id'] = $storeAccountId;
+        }
+
+        $receiptUrl = $this->normalizeNullableString(
+            $raw['receipt_url']
+                ?? Arr::get($raw, 'receipt.url')
+                ?? $request->input('manual_transfer_receipt_url')
+        );
+        $receiptPath = $this->normalizeNullableString(
+            $raw['receipt_path']
+                ?? Arr::get($raw, 'receipt.path')
+        );
+        $receiptDisk = $this->normalizeNullableString(
+            $raw['receipt_disk']
+                ?? Arr::get($raw, 'receipt.disk')
+        );
+
+        $attachments = $this->normalizeManualTransferAttachments($raw['attachments'] ?? null);
+        $storedFiles = [];
+
+        foreach (['manual_transfer_receipt', 'manual_transfer_receipt_file'] as $field) {
+            if (! $request->hasFile($field)) {
+                continue;
+            }
+
+            $file = $request->file($field);
+
+            if (! $file || ! $file->isValid()) {
+                continue;
+            }
+
+            $path = $file->store('manual-transfer-receipts', 'public');
+            $url = null;
+
+            try {
+                $url = Storage::disk('public')->url($path);
+            } catch (\Throwable) {
+                $url = null;
+            }
+
+            $attachments[] = array_filter([
+                'name' => $file->getClientOriginalName(),
+                'mime_type' => $file->getClientMimeType(),
+                'size' => $file->getSize(),
+                'path' => $path,
+                'disk' => 'public',
+                'url' => $url,
+                'uploaded_at' => now()->toIso8601String(),
+            ], static fn ($value) => $value !== null && $value !== '');
+
+            $storedFiles[] = [
+                'disk' => 'public',
+                'path' => $path,
+            ];
+
+            $receiptPath ??= $path;
+            $receiptDisk ??= 'public';
+            $receiptUrl ??= $url;
+        }
+
+        if ($attachments !== []) {
+            $payload['attachments'] = $attachments;
+        }
+
+        if ($receiptUrl !== null) {
+            $payload['receipt_url'] = $receiptUrl;
+        }
+
+        if ($receiptPath !== null) {
+            $payload['receipt_path'] = $receiptPath;
+        }
+
+        if ($receiptDisk !== null) {
+            $payload['receipt_disk'] = $receiptDisk;
+        }
+
+        if ($receiptPath !== null || $receiptUrl !== null) {
+            $payload['receipt'] = array_filter([
+                'path' => $receiptPath,
+                'disk' => $receiptDisk ?? 'public',
+                'url' => $receiptUrl,
+            ], static fn ($value) => $value !== null && $value !== '');
+        }
+
+        if ($storedFiles !== []) {
+            $payload['_uploaded_files'] = $storedFiles;
+        }
+
+        return $payload === [] ? null : $payload;
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $uploads
+     */
+    private function cleanupManualTransferUploads(array $uploads): void
+    {
+        foreach ($uploads as $upload) {
+            $path = $this->normalizeNullableString($upload['path'] ?? null);
+            $disk = $this->normalizeNullableString($upload['disk'] ?? null) ?? 'public';
+
+            if ($path === null) {
+                continue;
+            }
+
+            try {
+                Storage::disk($disk)->delete($path);
+            } catch (\Throwable) {
+                // ignore cleanup failures
+            }
+        }
+    }
+
     private function normalizeManualTransferPayload($value): ?array
     {
         if ($value === null) {

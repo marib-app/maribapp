@@ -30,6 +30,7 @@ import 'show_profile_ui.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/hive_utils.dart';
+import 'my_item_tab.dart';
 
 // شاشة عرض الملف الشخصي + الوصول لأزرار:
 // - مشاركة الملف الشخصي
@@ -114,18 +115,24 @@ class UserProfileScreenState extends State<ShowUserProfileScreen>
   ];
 
   late final TabController _tabController;
+  late final ValueNotifier<bool> _fullPageLoadingNotifier;
 
   // Getters لتسهيل تمريرها للـ UI
   TabController get tabController => _tabController;
 
   List<Map<String, String>> get tabs => adTabs;
+  late final bool _isUserAuthenticated;
 
   @override
   void initState() {
     super.initState();
 
+    _isUserAuthenticated = HiveUtils.isUserAuthenticated();
+    _fullPageLoadingNotifier = ValueNotifier<bool>(_isUserAuthenticated);
+
     // تحكم التبويبات (يجب التخلص منه في dispose)
     _tabController = TabController(length: adTabs.length, vsync: this);
+    _tabController.addListener(_handleTabChange);
 
     // تحميل تبويب البداية (الكل)
     final status = adTabs[0]["status"] ?? "";
@@ -138,7 +145,7 @@ class UserProfileScreenState extends State<ShowUserProfileScreen>
     longitude = HiveUtils.getLongitude();
 
     // جلب إحصائيات عند توفر جلسة مستخدم
-    if (HiveUtils.isUserAuthenticated()) {
+    if (_isUserAuthenticated) {
       context.read<ProfileStatsCubit>().fetchProfileStats();
     }
 
@@ -169,12 +176,18 @@ class UserProfileScreenState extends State<ShowUserProfileScreen>
 
     // (اختياري) تهيئة أداة القص مرة واحدة لو كانت التهيئة ثقيلة:
     // CropImage.init(context);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _syncLoadingWithActiveTab();
+    });
   }
 
   @override
   void dispose() {
     // مهم: التخلص من الموارد لتفادي تسريب الذاكرة
+    _tabController.removeListener(_handleTabChange);
     _tabController.dispose();
+    _fullPageLoadingNotifier.dispose();
     phoneController.dispose();
     nameController.dispose();
     emailController.dispose();
@@ -233,6 +246,9 @@ class UserProfileScreenState extends State<ShowUserProfileScreen>
                 onAvatarEditPressed: showPicker,
 
               // باني صورة الحساب
+              isUserAuthenticated: _isUserAuthenticated,
+              fullPageLoadingNotifier: _fullPageLoadingNotifier,
+              onRequestFullRefresh: _refreshAllProfileData,
               buildProfileImage: getProfileImage,
             ),
           ),
@@ -240,6 +256,52 @@ class UserProfileScreenState extends State<ShowUserProfileScreen>
       ),
     );
   }
+
+
+
+
+
+  void _refreshAllProfileData() {
+    if (!HiveUtils.isUserAuthenticated()) {
+      _fullPageLoadingNotifier.value = false;
+      return;
+    }
+
+    context.read<ProfileStatsCubit>().fetchProfileStats();
+    context.read<UserDetailsCubit>().fill(HiveUtils.getUserDetails());
+  }
+
+  void _handleTabChange() {
+    if (_tabController.indexIsChanging) {
+      return;
+    }
+    _syncLoadingWithActiveTab();
+  }
+
+  void _syncLoadingWithActiveTab() {
+    if (!_isUserAuthenticated) {
+      _fullPageLoadingNotifier.value = false;
+      return;
+    }
+
+    final int index = _tabController.index;
+    if (index < 0 || index >= adTabs.length) {
+      return;
+    }
+
+    final String? status = adTabs[index]["status"];
+    final String statusKey = (status == null || status.isEmpty) ? 'all' : status;
+    final fetchCubit = myAdsCubitReference[statusKey];
+    final bool isLoading =
+        fetchCubit != null && fetchCubit.state is FetchMyItemsInProgress;
+
+    if (_fullPageLoadingNotifier.value != isLoading) {
+      _fullPageLoadingNotifier.value = isLoading;
+    }
+  }
+
+
+
 
   /// تطبيق SafeArea فقط لو أتت الشاشة من مسار "login" (حسب منطقك الحالي)
   Widget safeAreaCondition({required Widget child}) {

@@ -2,6 +2,8 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter/widgets.dart';
+import 'package:shimmer/shimmer.dart';
 
 // التبويب الداخلي لقائمة الإعلانات
 import 'my_item_tab.dart';
@@ -9,6 +11,7 @@ import 'my_item_tab.dart';
 // حالات المستخدم والإحصائيات
 import 'package:marib/data/cubits/system/user_details.dart';
 import 'package:marib/data/cubits/profile/profile_stats_cubit.dart';
+import 'package:marib/data/cubits/item/fetch_my_item_cubit.dart';
 
 // ثيم + أدوات مساعدة
 import 'package:marib/ui/theme/theme.dart';
@@ -18,6 +21,8 @@ import 'package:marib/app/app_scroll_behavior.dart';
 
 /// واجهة شاشة الملف الشخصي (عرض فقط) — تستقبل كل شيء عبر Params.
 /// لا يوجد منطق بيانات هنا؛ أي منطق يجب أن يبقى خارج هذا الملف.
+
+
 class ProfileScreenUI extends StatelessWidget {
   final TabController tabController;
   final List<Map<String, String>> adTabs;
@@ -25,6 +30,9 @@ class ProfileScreenUI extends StatelessWidget {
   final VoidCallback onEditProfilePressed;
   final VoidCallback onShareProfilePressed;
   final VoidCallback onAvatarEditPressed;
+  final bool isUserAuthenticated;
+  final ValueNotifier<bool> fullPageLoadingNotifier;
+  final VoidCallback onRequestFullRefresh;
 
   /// مزوّد صورة البروفايل (File/Network/SVG) من الـ State الخارجي
   final Widget Function() buildProfileImage;
@@ -36,54 +44,117 @@ class ProfileScreenUI extends StatelessWidget {
     required this.onEditProfilePressed,
     required this.onShareProfilePressed,
     required this.onAvatarEditPressed,
+    required this.isUserAuthenticated,
+    required this.fullPageLoadingNotifier,
+    required this.onRequestFullRefresh,
     required this.buildProfileImage,
   });
 
   @override
   Widget build(BuildContext context) {
     final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
+    String normalizeStatus(String? value) {
+      if (value == null || value.isEmpty) return 'all';
+      return value;
+    }
+    void updateLoading(String statusKey, bool isLoading) {
+      final String activeStatus =
+      normalizeStatus(adTabs[tabController.index]["status"]);
 
-    return NestedScrollView(
-  //    physics: AppScrollBehavior.defaultPhysics,
-      floatHeaderSlivers: true,
+      if (activeStatus == statusKey) {
+        if (fullPageLoadingNotifier.value != isLoading) {
+          fullPageLoadingNotifier.value = isLoading;
+        }
+        return;
+      }
 
-      headerSliverBuilder: (context, innerBoxIsScrolled) => [
+      if (!isLoading && fullPageLoadingNotifier.value) {
+        final cubit = myAdsCubitReference[activeStatus];
+        final bool activeLoading =
+            cubit != null && cubit.state is FetchMyItemsInProgress;
+        if (!activeLoading) {
+          fullPageLoadingNotifier.value = false;
+        }
+      }
+    }
+
+    Widget buildContent() {
+      return NestedScrollView(
+        floatHeaderSlivers: true,
+        headerSliverBuilder: (context, innerBoxIsScrolled) => [
         SliverToBoxAdapter(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 0),
-              _HeaderSection(buildProfileImage: buildProfileImage),
-              const SizedBox(height: 8),
-              _ProfileButtons(
-                onEditProfilePressed: onEditProfilePressed,
-                onShareProfilePressed: onShareProfilePressed,
-              ),
-              const SizedBox(height: 12),
-            ],
+      child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 0),
+          _HeaderSection(buildProfileImage: buildProfileImage),
+          const SizedBox(height: 8),
+          _ProfileButtons(
+            onEditProfilePressed: onEditProfilePressed,
+            onShareProfilePressed: onShareProfilePressed,
           ),
-        ),
-        SliverPersistentHeader(
+          const SizedBox(height: 12),
+        ],
+      ),
+          ),
+          SliverPersistentHeader(
           pinned: true,
           floating: true,
           delegate: _StatsTabsHeaderDelegate(
-            backgroundColor: backgroundColor,
-            statsBuilder: (ctx) => _StatsRow(),
-            tabBarBuilder: (ctx) => _ProfileTabBar(
-              controller: tabController,
-              adTabs: adTabs,
+          backgroundColor: backgroundColor,
+          statsBuilder: (ctx) => _StatsRow(),
+          tabBarBuilder: (ctx) => _ProfileTabBar(
+          controller: tabController,
+          adTabs: adTabs,
+          ),
             ),
           ),
+        ],
+          body: TabBarView(
+            controller: tabController,
+            physics: AppScrollBehavior.defaultPhysics,
+            children: adTabs.map((tab) {
+              final status = tab["status"];
+              final statusKey = normalizeStatus(status);
+              return MyItemTab(
+                getItemsWithStatus: status,
+                onLoadingChanged: updateLoading,
+                onFullRefreshRequested: () {
+                  updateLoading(statusKey, true);
+                  onRequestFullRefresh();
+                },
+              );
+            }).toList(),
         ),
-      ],
-      body: TabBarView(
-        controller: tabController,
-        physics: AppScrollBehavior.defaultPhysics,
-        children: adTabs.map((tab) {
-          final status = tab["status"];
-          return MyItemTab(getItemsWithStatus: status);
-        }).toList(),
-      ),
+      );
+    }
+
+    return BlocBuilder<ProfileStatsCubit, ProfileStatsState>(
+      builder: (context, statsState) {
+        final bool statsLoading = isUserAuthenticated &&
+            (statsState is ProfileStatsLoading ||
+                statsState is ProfileStatsInitial);
+
+        return ValueListenableBuilder<bool>(
+          valueListenable: fullPageLoadingNotifier,
+          builder: (context, adsLoading, _) {
+            final bool showShimmer = statsLoading || adsLoading;
+
+            return Stack(
+              children: [
+                buildContent(),
+                if (showShimmer)
+                  Positioned.fill(
+                    child: _ProfileScreenShimmer(
+                      backgroundColor: backgroundColor,
+                      adTabs: adTabs,
+                    ),
+                  ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 }
@@ -553,6 +624,193 @@ class _Badge extends StatelessWidget {
       child: Text(
         '$count',
         style: TextStyle(fontSize: 12, color: cs.primary),
+      ),
+    );
+  }
+}
+
+
+
+class _ProfileScreenShimmer extends StatelessWidget {
+  final Color backgroundColor;
+  final List<Map<String, String>> adTabs;
+
+  const _ProfileScreenShimmer({
+    required this.backgroundColor,
+    required this.adTabs,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AbsorbPointer(
+      absorbing: true,
+      child: Container(
+        color: backgroundColor,
+        child: CustomScrollView(
+          physics: const NeverScrollableScrollPhysics(),
+          slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding:
+                const EdgeInsetsDirectional.only(top: 12, start: 16, end: 16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const CustomShimmer(
+                      height: 84,
+                      width: 84,
+                      borderRadius: 50,
+                    ),
+                    const SizedBox(width: 18),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          CustomShimmer(height: 18, width: 160, borderRadius: 8),
+                          SizedBox(height: 10),
+                          CustomShimmer(height: 14, width: 120, borderRadius: 6),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding:
+                const EdgeInsetsDirectional.only(top: 16, start: 12, end: 12),
+                child: Row(
+                  children: const [
+                    Expanded(
+                      child: CustomShimmer(height: 48, borderRadius: 12),
+                    ),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: CustomShimmer(height: 48, borderRadius: 12),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: List.generate(4, (index) {
+                    return Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: const [
+                          CustomShimmer(height: 22, borderRadius: 8),
+                          SizedBox(height: 6),
+                          CustomShimmer(height: 16, borderRadius: 8),
+                        ],
+                      ),
+                    );
+                  }),
+                ),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding:
+                const EdgeInsets.symmetric(horizontal: 12).copyWith(bottom: 8),
+                child: Container(
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .outline
+                          .withOpacity(0.08),
+                    ),
+                  ),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: adTabs
+                          .map(
+                            (_) => const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 6),
+                          child: CustomShimmer(
+                            height: 32,
+                            width: 88,
+                            borderRadius: 20,
+                          ),
+                        ),
+                      )
+                          .toList(),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                    (context, index) => Padding(
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  child: _ProfileItemSkeletonCard(),
+                ),
+                childCount: 4,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfileItemSkeletonCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final Color surface = Theme.of(context).colorScheme.surface;
+    return Container(
+      decoration: BoxDecoration(
+        color: surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withOpacity(0.06),
+        ),
+      ),
+      padding: const EdgeInsets.all(12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const CustomShimmer(
+            height: 84,
+            width: 110,
+            borderRadius: 12,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                CustomShimmer(height: 18, borderRadius: 8, width: double.infinity),
+                SizedBox(height: 8),
+                CustomShimmer(height: 14, borderRadius: 8, width: 140),
+                SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child:
+                      CustomShimmer(height: 12, borderRadius: 6, width: 120),
+                    ),
+                    SizedBox(width: 12),
+                    CustomShimmer(height: 32, width: 68, borderRadius: 20),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

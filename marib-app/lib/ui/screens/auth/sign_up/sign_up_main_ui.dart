@@ -1,37 +1,21 @@
 // ================================
-// File: lib/ui/screens/auth/signup/sign_up_main_ui.dart
-// Purpose: Pure presentation. Receives ViewModel and Callbacks from the Screen.
+// File: lib/ui/screens/auth/sign_up/sign_up_main_ui.dart
+// Purpose: Shared presentation for the mobile sign-up flow.
 // ================================
 
-import 'dart:io';
-import 'package:marib/ui/screens/auth/sign_up/sign_up_main_ui.dart'; // ✅
-import 'package:marib/utils/ui_utils.dart';
-import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart';
-import 'dart:ui' show ImageFilter;
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/material.dart';
-import 'package:marib/ui/theme/theme.dart';
-import 'package:marib/utils/extensions/extensions.dart';
-import 'package:marib/utils/ui_utils.dart'; // لو تحتاج ألوان/مساعدات
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_svg/svg.dart';
-import 'package:marib/app/routes.dart';
-import 'package:marib/utils/api.dart';
-import 'package:marib/app/app_theme.dart';
-import 'package:marib/data/cubits/system/app_theme_cubit.dart';
+
+import 'package:marib/ui/screens/auth/widgets/auth_status_bar.dart';
 import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart';
 import 'package:marib/ui/screens/widgets/custom_text_form_field.dart';
 import 'package:marib/ui/theme/theme.dart';
-import 'package:marib/utils/app_icon.dart';
-import 'package:marib/utils/constant.dart';
+import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
+import 'package:marib/utils/api.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/ui_utils.dart';
-import 'package:flutter/services.dart';
-import '../widgets/auth_status_bar.dart';
 
 class SignUpVM {
-  // Inputs/controllers
   final GlobalKey<FormState> formKey;
   final TextEditingController mobileCtrl;
   final TextEditingController emailCtrl;
@@ -39,7 +23,6 @@ class SignUpVM {
   final TextEditingController codeCtrl;
   final TextEditingController passwordCtrl;
 
-  // Values/state
   final String? countryCode;
   final String? countryName;
   final String? flagEmoji;
@@ -83,7 +66,7 @@ class SignUpCallbacks {
   final Future<void> Function({required String title, required String param})
       onOpenStaticContent;
 
-  const SignUpCallbacks({
+  const SignUpCallbacks({ 
     required this.onToggleObscure,
     required this.onAgreeChanged,
     required this.onAccountTypeChanged,
@@ -110,232 +93,245 @@ class SignUpMainUI extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final mediaQuery = MediaQuery.of(context);
-    final double bottomInset = mediaQuery.viewInsets.bottom;
-    final double statusBarHeight = mediaQuery.viewPadding.top;
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          colors: [
-            context.color.territoryColor,
-            context.color.territoryColor,
-          ],
-        ),
-      ),
-      child: Form(
-        key: vm.formKey, // ✅ صار عندنا vm في النطاق
-        child: CustomScrollView(
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          slivers: [
-            SliverPersistentHeader(
-              pinned: true,
-              delegate: _SignUpStatusBarHeader(
-                height: statusBarHeight,
-                baseColor: statusBarBase,
-              ),
-            ),
-            _HeaderAppBar(vm: vm), // ✅
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(2, 12, 2, 16 + bottomInset),
-                child: _FormCard(vm: vm, callbacks: callbacks), // ✅
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SignUpStatusBarHeader extends SliverPersistentHeaderDelegate {
-  const _SignUpStatusBarHeader({
-    required this.height,
-    required this.baseColor,
-  });
-
-  final double height;
-  final Color baseColor;
-
-  @override
-  double get minExtent => height;
-
-  @override
-  double get maxExtent => height;
-
-  @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
-    if (height <= 0) {
-      return const SizedBox.shrink();
-    }
-
-    return LoginStatusBar.topSpacer(
+    final overlay = LoginStatusBar.overlayFor(
       context,
-      baseColor: baseColor,
-      height: height,
+      baseColor: statusBarBase,
     );
-  }
+    final bool showSkeleton =
+        vm.isSystemSettingsLoading && !vm.isSystemSettingsReady;
 
-  @override
-  bool shouldRebuild(covariant _SignUpStatusBarHeader oldDelegate) {
-    return oldDelegate.height != height || oldDelegate.baseColor != baseColor;
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: overlay,
+      child: Column(
+        children: [
+          LoginStatusBar.topSpacer(
+            context,
+            baseColor: statusBarBase,
+          ),
+          _SignUpAppBar(onNavigateToLogin: callbacks.onNavigateToLogin),
+          Expanded(
+            child: Form(
+              key: vm.formKey,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                switchInCurve: Curves.easeOut,
+                switchOutCurve: Curves.easeIn,
+                child: showSkeleton
+                    ? const _SignUpShimmer(key: ValueKey('signup_shimmer'))
+                    : _SignUpScrollContent(
+                        key: const ValueKey('signup_content'),
+                        vm: vm,
+                        callbacks: callbacks,
+                      ),
+              ),
+            ),
+          ),
+          _StickyLegalActionBar(
+            agreed: vm.agreed,
+            isBusy: showSkeleton,
+            onSubmit: callbacks.onSubmit,
+          ),
+        ],
+      ),
+    );
   }
 }
 
-class _HeaderAppBar extends StatelessWidget {
-  const _HeaderAppBar({required this.vm});
+class _SignUpAppBar extends StatelessWidget {
+  final VoidCallback onNavigateToLogin;
 
-  final SignUpVM vm;
+  const _SignUpAppBar({required this.onNavigateToLogin});
 
   @override
   Widget build(BuildContext context) {
-    return SliverAppBar(
-      pinned: true,
-      floating: false,
-      expandedHeight: 160,
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      automaticallyImplyLeading: false,
-      systemOverlayStyle: null,
-      flexibleSpace: FlexibleSpaceBar(
-        background: Container(
-          alignment: Alignment.center,
-          padding: const EdgeInsets.only(top: 20),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                context.color.territoryColor,
-                context.color.territoryColor.withOpacity(0.92),
-              ],
+    return SafeArea(
+      bottom: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 4, 12, 12),
+        child: Row(
+          children: [
+            IconButton(
+              tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+              icon: Icon(Icons.arrow_back,
+                  color: context.color.textDefaultColor),
+              onPressed: () => Navigator.of(context).maybePop(),
             ),
-            // تقويس سفلي أنيق يندمج مع بطاقة الفورم
-            borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(28),
-              bottomRight: Radius.circular(28),
-            ),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // شعار
-              Semantics(
-                label: 'App Logo',
-                child: SvgPicture.asset(
-                  'assets/svg/Logo.svg',
-                  height: 84,
-                  color: Colors.white,
-                ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Text(
+                "signUp".translate(context),
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: context.color.textDefaultColor,
+                      fontWeight: FontWeight.w600,
+                    ),
               ),
-              const SizedBox(height: 10),
-              Text("readytoserve".translate(context))
-                  .size(context.font.large)
-                  .color(Colors.white.withOpacity(0.95)),
-            ],
-          ),
+            ),
+            TextButton(
+              onPressed: onNavigateToLogin,
+              child: Text("login".translate(context))
+                  .underline()
+                  .color(context.color.territoryColor),
+            ),
+          ],
         ),
       ),
-      // ظل خفيف تحت الشريط
-      shadowColor: Colors.black26,
-      surfaceTintColor: Colors.transparent,
     );
   }
 }
 
-class _FormCard extends StatelessWidget {
-  const _FormCard({required this.vm, required this.callbacks});
-
+class _SignUpScrollContent extends StatelessWidget {
   final SignUpVM vm;
   final SignUpCallbacks callbacks;
 
+  const _SignUpScrollContent({
+    super.key,
+    required this.vm,
+    required this.callbacks,
+  });
+
   @override
   Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 220),
-      curve: Curves.easeOut,
-      decoration: BoxDecoration(
-        color: context.color.primaryColor,
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 22,
-            offset: const Offset(0, 10),
+    return ListView(
+      physics: const ClampingScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+      children: [
+        _HeroSection(vm: vm),
+        const SizedBox(height: 24),
+        _MobileAndEmailSection(vm: vm, callbacks: callbacks),
+        const SizedBox(height: 20),
+        _AccountFooter(onNavigateToLogin: callbacks.onNavigateToLogin),
+      ],
+    );
+  }
+}
+
+class _HeroSection extends StatelessWidget {
+  final SignUpVM vm;
+
+  const _HeroSection({required this.vm});
+
+  @override
+  Widget build(BuildContext context) {
+    final TextTheme textTheme = Theme.of(context).textTheme;
+    final bool fromGoogle = vm.isFromGoogleLogin;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          fromGoogle
+              ? "welcome".translate(context)
+              : "signUpTomarib".translate(context),
+          style: textTheme.headlineSmall?.copyWith(
+            color: context.color.textDefaultColor,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          "readytoserve".translate(context),
+          style: textTheme.bodyLarge?.copyWith(
+            color: context.color.textLightColor,
+            height: 1.4,
+          ),
+        ),
+        if (fromGoogle) ...[
+          const SizedBox(height: 8),
+          Text(
+            'يرجى إكمال معلومات الحساب لإنهاء التسجيل',
+            style: textTheme.bodyMedium?.copyWith(
+              color: context.color.textLightColor.withOpacity(0.8),
+            ),
           ),
         ],
-      ),
-      padding: const EdgeInsets.fromLTRB(18, 20, 18, 18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // عنوان رئيسي
-          Text(vm.isFromGoogleLogin
-                  ? "إكمال حساب Google"
-                  : "welcome".translate(context))
-              .size(context.font.extraLarge)
-              .color(context.color.textDefaultColor),
+      ],
+    );
+  }
+}
 
-          if (vm.isSystemSettingsLoading && !vm.isSystemSettingsReady)
-            Padding(
-              padding: const EdgeInsets.only(top: 12.0),
-              child: SizedBox(
-                height: 3,
-                child: LinearProgressIndicator(
-                  minHeight: 3,
-                  backgroundColor:
-                      context.color.secondaryColor.withOpacity(0.5),
-                ),
-              ),
+class _AccountFooter extends StatelessWidget {
+  final VoidCallback onNavigateToLogin;
+
+  const _AccountFooter({required this.onNavigateToLogin});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text("alreadyHaveAcc".translate(context))
+            .color(context.color.textColorDark.brighten(50)),
+        const SizedBox(width: 12),
+        GestureDetector(
+          onTap: onNavigateToLogin,
+          child: Text("login".translate(context))
+              .underline()
+              .color(context.color.territoryColor),
+        ),
+      ],
+    );
+  }
+}
+
+class _StickyLegalActionBar extends StatelessWidget {
+  final bool agreed;
+  final bool isBusy;
+  final Future<void> Function() onSubmit;
+
+  const _StickyLegalActionBar({
+    required this.agreed,
+    required this.isBusy,
+    required this.onSubmit,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            UiUtils.buildButton(
+              context,
+              onPressed: onSubmit,
+              buttonTitle: "continue".translate(context),
+              radius: 14,
+              isInProgress: isBusy,
+              disabled: !agreed || isBusy,
             ),
-
-          // سطر توضيحي متبدّل بسلاسة
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 180),
-            child: vm.isFromGoogleLogin
-                ? Padding(
-                    key: const ValueKey('google_note'),
-                    padding: const EdgeInsets.only(top: 6.0),
-                    child: Text("يرجى إكمال معلومات الحساب لإنهاء التسجيل")
-                        .size(context.font.normal)
-                        .color(context.color.textLightColor),
-                  )
-                : const SizedBox.shrink(key: ValueKey('empty_note')),
-          ),
-
-          const SizedBox(height: 14),
-
-          if (Constant.isMobileAuthEnabled || Constant.isEmailAuthEnabled)
-
-            _MobileAndEmailSection(vm: vm, callbacks: callbacks),
-
-          const SizedBox(height: 16),
-
-          if (!vm.isFromGoogleLogin)
-            Center(
-              child: Wrap(
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  Text("alreadyHaveAcc".translate(context))
-                      .color(context.color.textColorDark.brighten(50)),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: callbacks.onNavigateToLogin,
-                    child: Text("login".translate(context))
-                        .underline()
-                        .color(context.color.territoryColor),
-                  ),
-                ],
-              ),
-            ),
-        ],
+          ],
+        ),
       ),
+    );
+  }
+}
+
+class _SignUpShimmer extends StatelessWidget {
+  const _SignUpShimmer({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      physics: const ClampingScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 150),
+      children: const [
+        SizedBox(height: 12),
+        ShimmerBox(height: 20, width: 160),
+        SizedBox(height: 12),
+        ShimmerBox(height: 18, width: 220),
+        SizedBox(height: 24),
+        ShimmerBox(height: 56),
+        SizedBox(height: 16),
+        ShimmerBox(height: 56),
+        SizedBox(height: 16),
+        ShimmerBox(height: 56),
+        SizedBox(height: 16),
+        ShimmerBox(height: 56),
+        SizedBox(height: 16),
+        ShimmerBox(height: 56),
+      ],
     );
   }
 }
@@ -344,16 +340,13 @@ class _MobileAndEmailSection extends StatelessWidget {
   final SignUpVM vm;
   final SignUpCallbacks callbacks;
 
-  const _MobileAndEmailSection({required this.vm, required this.callbacks});
+  const _MobileAndEmailSection({
+    required this.vm,
+    required this.callbacks,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final accountTypes = {
-      "1": "individual".translate(context),
-      "2": "realEstate".translate(context),
-      "3": "commercial".translate(context),
-    };
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -361,8 +354,6 @@ class _MobileAndEmailSection extends StatelessWidget {
             .size(context.font.large)
             .color(context.color.textColorDark),
         const SizedBox(height: 10),
-
-        // Username
         CustomTextFormField(
           controller: vm.usernameCtrl,
           isReadOnly: vm.isFromGoogleLogin,
@@ -372,8 +363,6 @@ class _MobileAndEmailSection extends StatelessWidget {
           borderColor: context.color.borderColor.darken(10),
         ),
         const SizedBox(height: 10),
-
-        // Mobile with country code
         CustomTextFormField(
           controller: vm.mobileCtrl,
           validator: CustomTextFieldValidator.phoneNumber,
@@ -386,14 +375,12 @@ class _MobileAndEmailSection extends StatelessWidget {
               alignment: AlignmentDirectional.centerStart,
               child: GestureDetector(
                 onTap: callbacks.onShowCountryPicker,
-                child: Container(
+                child: Padding(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8),
-                  child: Center(
-                    child: Text("+${vm.countryCode ?? ''}")
-                        .size(context.font.large)
-                        .centerAlign(),
-                  ),
+                  child: Text("+${vm.countryCode ?? ''}")
+                      .size(context.font.large)
+                      .centerAlign(),
                 ),
               ),
             ),
@@ -401,8 +388,6 @@ class _MobileAndEmailSection extends StatelessWidget {
           hintText: "mobileNumberLbl".translate(context),
         ),
         const SizedBox(height: 10),
-
-        // Email
         CustomTextFormField(
           controller: vm.emailCtrl,
           isRequired: false,
@@ -412,12 +397,8 @@ class _MobileAndEmailSection extends StatelessWidget {
           borderColor: context.color.borderColor.darken(10),
         ),
         const SizedBox(height: 10),
-
-        // Code
         ReferralCodeField(controller: vm.codeCtrl),
         const SizedBox(height: 10),
-
-        // Password
         CustomTextFormField(
           controller: vm.passwordCtrl,
           fillColor: context.color.secondaryColor,
@@ -434,123 +415,26 @@ class _MobileAndEmailSection extends StatelessWidget {
           borderColor: context.color.borderColor.darken(10),
         ),
         const SizedBox(height: 14),
-
-        // Account type dropdown (مختصر كويدجت مستقل)
         AccountTypeDropdown(
           value: vm.selectedAccountType,
           onChanged: callbacks.onAccountTypeChanged,
         ),
-
         const SizedBox(height: 10),
-
-        // Agree with terms
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Checkbox(
-              activeColor: context.color.territoryColor,
-              value: vm.agreed,
-              onChanged: (value) => callbacks.onAgreeChanged(value ?? false),
-            ),
-            Expanded(
-              child: Wrap(
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: 1,
-                runSpacing: 2,
-                children: [
-                  Text("bySigningUpLoggingIn".translate(context))
-                      .size(context.font.small),
-                  InkWell(
-                    onTap: () => callbacks.onOpenStaticContent(
-                      title: "termsConditions".translate(context),
-                      param: Api.termsAndConditions,
-                    ),
-                    child: Text(" ${"termsOfService".translate(context)} ")
-                        .underline()
-                        .color(context.color.territoryColor)
-                        .size(context.font.smaller),
-                  ),
-                  Text(" ${"and".translate(context)} ")
-                      .size(context.font.smaller),
-                  InkWell(
-                    onTap: () => callbacks.onOpenStaticContent(
-                      title: "privacyPolicy".translate(context),
-                      param: Api.privacyPolicy,
-                    ),
-                    child: Text("privacyPolicy".translate(context))
-                        .underline()
-                        .color(context.color.territoryColor)
-                        .size(context.font.smaller),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-
-        const SizedBox(height: 14),
-
-        // ===== زر الإرسال مع انميشن تحميل + منع التكرار (إضافة فقط) =====
-        Builder(
-          builder: (context) {
-            bool _busy = false;
-            return StatefulBuilder(
-              builder: (context, setSBState) {
-                return Column(
-                  children: [
-                    UiUtils.buildButton(
-                      context,
-                      onPressed: () {
-                        if (_busy) return; // منع التكرار داخل الدالة
-                        setSBState(() => _busy = true);
-
-                        // تشغيل العملية بشكل async بدون تغيير توقيع onPressed
-                        Future<void>(() async {
-                          try {
-                            final result = callbacks.onSubmit();
-                            if (result is Future) {
-                              await result;
-                            }
-                          } finally {
-                            if (context.mounted) {
-                              setSBState(() => _busy = false);
-                            }
-                          }
-                        });
-                      },
-                      // مؤشر تحميل داخل الزر أثناء الانشغال
-                      prefixWidget: _busy
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : null,
-                      buttonTitle: "continue".translate(context),
-                      radius: 10,
-                      disabledColor: const Color.fromARGB(255, 104, 102, 106),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                );
-              },
-            );
-          },
+        _TermsAgreement(
+          agreed: vm.agreed,
+          onChanged: callbacks.onAgreeChanged,
+          onOpenStaticContent: callbacks.onOpenStaticContent,
         ),
       ],
     );
   }
 }
 
-// ================== Extracted Widgets ==================
-
-// لازم طلب صلاحيات الموقع هنا
-
 class ReferralCodeField extends StatelessWidget {
   const ReferralCodeField({
     super.key,
     required this.controller,
-    this.maxLength = 10, // عدّل الطول المناسب لكود الإحالة
+    this.maxLength = 10,
   });
 
   final TextEditingController controller;
@@ -563,11 +447,8 @@ class ReferralCodeField extends StatelessWidget {
       controller: controller,
       fillColor: context.color.secondaryColor,
       hintText: "referralCode".translate(context),
-      // أو "code"
       borderColor: context.color.borderColor.darken(10),
       keyboard: TextInputType.text,
-
-      // تنظيف الإدخال: أحرف كبيرة + أرقام + شرطة فقط + حد طول
       onChange: (v) {
         final raw = (v ?? '').toString();
         String t = raw.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9-]'), '');
@@ -579,8 +460,6 @@ class ReferralCodeField extends StatelessWidget {
           );
         }
       },
-
-      // زر معلومات عن الحقل
       suffix: IconButton(
         tooltip: "info".translate(context),
         icon: Icon(
@@ -617,39 +496,17 @@ class ReferralCodeField extends StatelessWidget {
   }
 }
 
-///////
-
-// Dropdown احترافي لاختيار "نوع الحساب"
-// - يتحقق تلقائياً أن المستخدم اختار قيمة.
-// - تنسيق متناسق مع الثيم.
-// - دعم تعطيل الحقل.
-//
-// - يمكن تمرير عناصر مخصّصة (id -> label).
-// - زر معلومات اختياري يستدعي كولباك خارجي (بدون أي bottom sheet داخل الكلاس).
-
 class AccountTypeDropdown extends StatelessWidget {
   const AccountTypeDropdown({
     super.key,
     required this.value,
     required this.onChanged,
-    this.enabled = true,
-    this.items,
-    this.labelKey,
-    this.helperKey,
-    this.onInfoTap,
   });
 
   final String? value;
   final ValueChanged<String?> onChanged;
 
-  final bool enabled;
-  final Map<String, String>? items;
-  final String? labelKey;
-  final String? helperKey;
-  final VoidCallback? onInfoTap;
-
-  /// العناصر الافتراضية مع الأيقونات
-  Map<String, (String label, IconData icon)> _defaultItems(
+  Map<String, (String label, IconData icon)> _defaultTypes(
           BuildContext context) =>
       {
         "1": ("individual".translate(context), Icons.person),
@@ -659,23 +516,13 @@ class AccountTypeDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accountTypes = items != null
-        ? items!.map((k, v) =>
-            MapEntry(k, (v, Icons.circle))) // لو جاب من برا وما عطينا أيقونات
-        : _defaultItems(context);
+    final options = _defaultTypes(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (labelKey != null)
-          Padding(
-            padding: const EdgeInsetsDirectional.only(bottom: 6),
-            child: Text(labelKey!.translate(context))
-                .size(context.font.large)
-                .color(context.color.textDefaultColor),
-          ),
         DropdownButtonFormField<String>(
-          value: value,
+          initialValue: value,
           isExpanded: true,
           autovalidateMode: AutovalidateMode.onUserInteraction,
           icon: Icon(
@@ -689,90 +536,142 @@ class AccountTypeDropdown extends StatelessWidget {
             return null;
           },
           decoration: InputDecoration(
+            labelText: "accountType".translate(context),
             hintText: "chooseaccount".translate(context),
             filled: true,
-            enabled: enabled,
             fillColor: context.color.secondaryColor,
-            isDense: true,
             contentPadding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-            suffixIcon: onInfoTap != null
-                ? IconButton(
-                    tooltip: "info".translate(context),
-                    icon: Icon(
-                      Icons.info_outline,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withOpacity(0.6),
-                    ),
-                    onPressed: onInfoTap,
-                  )
-                : null,
-            focusedBorder: OutlineInputBorder(
-              borderSide:
-                  BorderSide(width: 1.5, color: context.color.territoryColor),
-              borderRadius: BorderRadius.circular(10),
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
             ),
             enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(
-                  width: 1.5, color: context.color.borderColor.darken(50)),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            disabledBorder: OutlineInputBorder(
-              borderSide: BorderSide(
-                  width: 1.5, color: context.color.borderColor.darken(70)),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            border: OutlineInputBorder(
-              borderSide:
-                  BorderSide(width: 1.5, color: context.color.borderColor),
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-          dropdownColor: context.color.secondaryColor,
-
-          // العناصر مع أيقونات
-          items: accountTypes.entries.map<DropdownMenuItem<String>>((entry) {
-            final (label, icon) = entry.value;
-            return DropdownMenuItem<String>(
-              value: entry.key,
-              child: Row(
-                children: [
-                  Icon(icon,
-                      color: enabled
-                          ? context.color.textDefaultColor
-                          : context.color.textDefaultColor.withOpacity(0.5)),
-                  const SizedBox(width: 8),
-                  Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: context.font.large,
-                      color: enabled
-                          ? context.color.textDefaultColor
-                          : context.color.textDefaultColor.withOpacity(0.5),
-                    ),
-                  ),
-                ],
+                color: context.color.borderColor.darken(30),
               ),
-            );
-          }).toList(),
-          onChanged: enabled
-              ? (newVal) {
-                  if (newVal == null) return;
-                  HapticFeedback.selectionClick();
-                  onChanged(newVal);
-                }
-              : null,
-        ),
-        if (helperKey != null)
-          Padding(
-            padding: const EdgeInsetsDirectional.only(top: 6, start: 4),
-            child: Text(helperKey!.translate(context))
-                .size(context.font.small)
-                .color(context.color.textLightColor),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: context.color.territoryColor,
+                width: 1.5,
+              ),
+            ),
           ),
+          items: options.entries
+              .map(
+                (entry) => DropdownMenuItem<String>(
+                  value: entry.key,
+                  child: Row(
+                    children: [
+                      Icon(entry.value.$2,
+                          color: context.color.territoryColor),
+                      const SizedBox(width: 8),
+                      Text(entry.value.$1),
+                    ],
+                  ),
+                ),
+              )
+              .toList(),
+          onChanged: (newVal) {
+            if (newVal == null) return;
+            HapticFeedback.selectionClick();
+            onChanged(newVal);
+          },
+        ),
+        const SizedBox(height: 4),
+        Text(
+          "accountTypeHelper".translate(context),
+          style: TextStyle(
+            fontSize: context.font.small,
+            color: context.color.textLightColor,
+          ),
+        ),
       ],
+    );
+  }
+}
+
+class _TermsAgreement extends StatelessWidget {
+  final bool agreed;
+  final ValueChanged<bool> onChanged;
+  final Future<void> Function({required String title, required String param})
+      onOpenStaticContent;
+
+  const _TermsAgreement({
+    required this.agreed,
+    required this.onChanged,
+    required this.onOpenStaticContent,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: context.color.secondaryColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: context.color.borderColor.darken(10),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Checkbox(
+            value: agreed,
+            activeColor: context.color.territoryColor,
+            onChanged: (value) => onChanged(value ?? false),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "bySigningUpLoggingIn".translate(context),
+                  style: TextStyle(
+                    fontSize: context.font.small,
+                    color: context.color.textDefaultColor,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 4,
+                  runSpacing: 4,
+                  children: [
+                    InkWell(
+                      onTap: () => onOpenStaticContent(
+                        title: "termsConditions".translate(context),
+                        param: Api.termsAndConditions,
+                      ),
+                      child: Text("termsOfService".translate(context))
+                          .underline()
+                          .color(context.color.territoryColor)
+                          .size(context.font.small),
+                    ),
+                    Text("andTxt".translate(context))
+                        .size(context.font.small)
+                        .color(context.color.textLightColor),
+                    InkWell(
+                      onTap: () => onOpenStaticContent(
+                        title: "privacyPolicy".translate(context),
+                        param: Api.privacyPolicy,
+                      ),
+                      child: Text("privacyPolicy".translate(context))
+                          .underline()
+                          .color(context.color.territoryColor)
+                          .size(context.font.small),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

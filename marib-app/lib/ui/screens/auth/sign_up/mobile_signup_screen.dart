@@ -25,7 +25,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:sms_autofill/sms_autofill.dart';
-import '../widgets/auth_status_bar.dart';
+import 'package:marib/ui/screens/auth/widgets/auth_status_bar.dart';
+import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
 
 class MobileSignUpScreen extends StatefulWidget {
   final String? mobile;
@@ -52,7 +53,6 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
   String? phone, otp, countryName, flagEmoji, countryCode;
 
   // Timer? timer;
-  late Size size;
   CountryService countryCodeService = CountryService();
   bool isLoginButtonDisabled = true;
   final _formKey = GlobalKey<FormState>();
@@ -63,6 +63,7 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
   late PhoneLoginPayload phoneLoginPayload =
       PhoneLoginPayload(widget.mobile!, widget.countryCode!);
   bool isBack = false;
+  bool _isBootstrapping = true;
   String signature = "";
   VoidCallback? _authenticationListenerDisposer;
 
@@ -100,13 +101,20 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
     getSimCountry().then((value) {
       if (!mounted) return;
 
-      countryCode = value.phoneCode;
-      flagEmoji = value.flagEmoji;
-      phoneLoginPayload = PhoneLoginPayload(
-        widget.mobile ?? '',
-        countryCode ?? Constant.defaultCountryCode,
-      );
-      setState(() {});
+      setState(() {
+        countryCode = value.phoneCode;
+        flagEmoji = value.flagEmoji;
+        phoneLoginPayload = PhoneLoginPayload(
+          widget.mobile ?? '',
+          countryCode ?? Constant.defaultCountryCode,
+        );
+        _isBootstrapping = false;
+      });
+    }).catchError((_) {
+      if (!mounted) return;
+      setState(() {
+        _isBootstrapping = false;
+      });
     });
   }
 
@@ -265,60 +273,86 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
       context,
       override: context.color.backgroundColor,
     );
-    size = MediaQuery.of(context).size;
     final settingsState = context.watch<FetchSystemSettingsCubit>().state;
     final bool isSettingsReady = settingsState is FetchSystemSettingsSuccess;
     final bool isSettingsLoading =
         settingsState is FetchSystemSettingsInProgress;
+    final bool showSkeleton = _isBootstrapping || isSettingsLoading;
+    final overlay = LoginStatusBar.overlayFor(
+      context,
+      baseColor: statusBarBase,
+    );
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: LoginStatusBar.overlayFor(
-        context,
-        baseColor: statusBarBase,
-      ),
-      child: SafeArea(
-        top: false,
-        child: GestureDetector(
-          onTap: () => FocusScope.of(context).unfocus(),
-          child: PopScope(
-            canPop: isBack,
-            onPopInvoked: (didPop) {
-              if (didPop) {
-                if (mounted) {
-                  setState(() => isBack = false);
-                }
-                return;
-              }
-              HelperUtils.showSnackBarMessage(
-                context,
-                'اضغط مرة أخرى للتأكيد',
-              );
+      value: overlay,
+      child: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: PopScope(
+          canPop: isBack,
+          onPopInvoked: (didPop) {
+            if (didPop) {
               if (mounted) {
-                setState(() => isBack = true);
+                setState(() => isBack = false);
               }
-            },
-            child: AnnotatedRegion<SystemUiOverlayStyle>(
-              value: LoginStatusBar.overlayFor(
-                context,
-                baseColor: statusBarBase,
+              return;
+            }
+            HelperUtils.showSnackBarMessage(
+              context,
+              'اضغط مرة أخرى للتأكيد',
+            );
+            if (mounted) {
+              setState(() => isBack = true);
+            }
+          },
+          child: Scaffold(
+            backgroundColor: context.color.backgroundColor,
+            appBar: _buildAppBar(context),
+            body: SafeArea(
+              top: false,
+              child: Form(
+                key: _formKey,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 250),
+                    child: showSkeleton
+                        ? const _SignUpShimmer(key: ValueKey('signup-shimmer'))
+                        : KeyedSubtree(
+                            key: const ValueKey('signup-body'),
+                            child: buildLoginWidget(
+                              isSettingsReady: isSettingsReady,
+                              isSettingsLoading: isSettingsLoading,
+                            ),
+                          ),
+                  ),
+                ),
               ),
-              child: Scaffold(
-                backgroundColor: context.color.backgroundColor,
-                bottomNavigationBar: termAndPolicyTxt(),
-                body: Builder(builder: (context) {
-                  return Form(
-                    key: _formKey,
-                    child: buildLoginWidget(
-                      isSettingsReady: isSettingsReady,
-                      isSettingsLoading: isSettingsLoading,
-                      statusBarBase: statusBarBase,
-                    ),
-                  );
-                }),
-              ),
+            ),
+            bottomNavigationBar: _SignUpActionBar(
+              legalNotice: termAndPolicyTxt(),
+              onContinue: sendVerificationCode,
+              isBusy: showSkeleton,
             ),
           ),
         ),
       ),
+    );
+  }
+
+  PreferredSizeWidget _buildAppBar(BuildContext context) {
+    return AppBar(
+      backgroundColor: context.color.backgroundColor,
+      elevation: 0,
+      centerTitle: false,
+      titleSpacing: 0,
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back),
+        onPressed: () => Navigator.of(context).maybePop(),
+        tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+      ),
+      title: Text("signUp".translate(context))
+          .size(context.font.large)
+          .color(context.color.textColorDark),
     );
   }
 
@@ -354,142 +388,102 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
   Widget buildLoginWidget({
     required bool isSettingsReady,
     required bool isSettingsLoading,
-    required Color statusBarBase,
   }) {
-    return SingleChildScrollView(
-      child: SizedBox(
-        height: context.screenHeight - 50,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              LoginStatusBar.topSpacer(
+    return ListView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.only(bottom: 160),
+      children: [
+        Align(
+          alignment: AlignmentDirectional.centerEnd,
+          child: TextButton(
+            onPressed: () {
+              Navigator.pushReplacementNamed(
                 context,
-                baseColor: statusBarBase,
-              ),
-              Align(
-                alignment: AlignmentDirectional.topEnd,
-                child: FittedBox(
-                  fit: BoxFit.none,
-                  child: MaterialButton(
-                    onPressed: () {
-                      //HiveUtils.setUserIsNotNew();
-
-                      Navigator.pushReplacementNamed(
-                        context,
-                        Routes.main,
-                        arguments: {
-                          "from": "login",
-                          "isSkipped": true,
-                        },
-                      );
-                    },
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    color: context.color.forthColor.withOpacity(0.102),
-                    elevation: 0,
-                    height: 28,
-                    minWidth: 64,
-                    child: Text("skip".translate(context))
-                        .color(context.color.forthColor),
-                  ),
-                ),
-              ),
-              const SizedBox(
-                height: 66,
-              ),
-              if (isSettingsLoading && !isSettingsReady)
-                const Padding(
-                  padding: EdgeInsets.only(bottom: 16.0),
-                  child: SizedBox(
-                    height: 3,
-                    child: LinearProgressIndicator(minHeight: 3),
-                  ),
-                ),
-              Text("welcome".translate(context))
-                  .size(context.font.extraLarge)
-                  .color(context.color.textDefaultColor),
-              const SizedBox(
-                height: 8,
-              ),
-              Text("signUpTomarib".translate(context))
-                  .size(context.font.large)
-                  .color(
-                    context.color.textColorDark,
-                  ),
-              const SizedBox(
-                height: 24,
-              ),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 5, vertical: 18),
-                decoration: BoxDecoration(
-                    color: context.color.secondaryColor,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                        color: context.color.borderColor.darken(30))),
-                child: Row(
-                  children: [
-                    // Display the country code as text
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                      child: Text(
-                        "${flagEmoji != null ? "${flagEmoji!} " : ""}+${countryCode ?? widget.countryCode ?? Constant.defaultCountryCode}",
-                      ).size(context.font.large).centerAlign(),
-                    ),
-                    Expanded(
-                      child: Text(
-                        widget.mobile!,
-                      ).size(context.font.large),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(
-                height: 46,
-              ),
-              UiUtils.buildButton(context,
-                  onPressed: sendVerificationCode,
-                  buttonTitle: "verifyMobileNumberLbl".translate(context),
-                  radius: 10,
-                  disabledColor: const Color.fromARGB(255, 104, 102, 106)),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  if (Constant.isEmailAuthEnabled) emailSignUp(),
-                  if (Constant.isGoogleAuthEnabled ||
-                      Constant.isAppleAuthEnabled)
-                    googleAndAppleAuth(),
-                  const SizedBox(
-                    height: 24,
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text("alreadyHaveAcc".translate(context))
-                          .color(context.color.textColorDark.brighten(50)),
-                      const SizedBox(
-                        width: 12,
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.pushNamed(context, Routes.login);
-                        },
-                        child: Text("login".translate(context))
-                            .underline()
-                            .color(context.color.territoryColor),
-                      )
-                    ],
-                  ),
-                  const SizedBox(
-                    height: 24,
-                  ),
-                ],
-              ),
-            ],
+                Routes.main,
+                arguments: {
+                  "from": "login",
+                  "isSkipped": true,
+                },
+              );
+            },
+            child: Text("skip".translate(context))
+                .color(context.color.forthColor)
+                .size(context.font.normal),
           ),
         ),
+        if (isSettingsLoading && !isSettingsReady)
+          const Padding(
+            padding: EdgeInsets.only(bottom: 16.0),
+            child: SizedBox(
+              height: 3,
+              child: LinearProgressIndicator(minHeight: 3),
+            ),
+          ),
+        Text("welcome".translate(context))
+            .size(context.font.extraLarge)
+            .color(context.color.textDefaultColor),
+        const SizedBox(height: 8),
+        Text("signUpTomarib".translate(context))
+            .size(context.font.large)
+            .color(context.color.textColorDark),
+        const SizedBox(height: 24),
+        _buildPhoneSummaryTile(),
+        const SizedBox(height: 32),
+        if (Constant.isEmailAuthEnabled) emailSignUp(),
+        if (Constant.isGoogleAuthEnabled || Constant.isAppleAuthEnabled)
+          googleAndAppleAuth(),
+        const SizedBox(height: 24),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text("alreadyHaveAcc".translate(context))
+                .color(context.color.textColorDark.brighten(50)),
+            const SizedBox(width: 12),
+            GestureDetector(
+              onTap: () => Navigator.pushNamed(context, Routes.login),
+              child: Text("login".translate(context))
+                  .underline()
+                  .color(context.color.territoryColor),
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
+  Widget _buildPhoneSummaryTile() {
+    final resolvedCode =
+        "+${countryCode ?? widget.countryCode ?? Constant.defaultCountryCode}";
+    final String resolvedFlag = flagEmoji != null ? "${flagEmoji!} " : "";
+    return InputDecorator(
+      decoration: InputDecoration(
+        labelText: "mobileNumber".translate(context),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide(
+            color: context.color.borderColor.withOpacity(0.6),
+          ),
+        ),
+        contentPadding:
+            const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+      ),
+      child: Row(
+        children: [
+          Text("$resolvedFlag$resolvedCode")
+              .size(context.font.large)
+              .color(context.color.textColorDark),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              widget.mobile ?? '',
+              overflow: TextOverflow.ellipsis,
+            ).size(context.font.large),
+          ),
+        ],
       ),
     );
   }
@@ -554,86 +548,111 @@ class MobileSignUpScreenState extends State<MobileSignUpScreen> {
   }
 
   Widget termAndPolicyTxt() {
-    return Padding(
-      padding: EdgeInsetsDirectional.only(bottom: 15.0, start: 25.0, end: 25.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text("bySigningUpLoggingIn".translate(context))
-              .centerAlign()
-              .size(context.font.small)
-              .color(context.color.textLightColor.withOpacity(0.8)),
-          const SizedBox(
-            height: 3,
-          ),
-          Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text("bySigningUpLoggingIn".translate(context))
+            .centerAlign()
+            .size(context.font.small)
+            .color(context.color.textLightColor.withOpacity(0.8)),
+        const SizedBox(height: 4),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
             InkWell(
-                child: Text("termsOfService".translate(context))
-                    .underline()
-                    .color(context.color.territoryColor)
-                    .size(context.font.small),
-                onTap: () => _openStaticContent(
-                      title: "termsConditions".translate(context),
-                      param: Api.termsAndConditions,
-                    )),
-            /*CustomTextButton(
-                text:Text("termsOfService".translate(context)).underline().color(context.color.teritoryColor).size(context.font.small),
-                onPressed: () => Navigator.pushNamed(
-                        context, Routes.profileSettings,
-                        arguments: {
-                          'title': UiUtils.getTranslatedLabel(
-                              context, "termsConditions"),
-                          'param': Api.termsAndConditions
-                        })),*/
-            const SizedBox(
-              width: 5.0,
+              child: Text("termsOfService".translate(context))
+                  .underline()
+                  .color(context.color.territoryColor)
+                  .size(context.font.small),
+              onTap: () => _openStaticContent(
+                title: "termsConditions".translate(context),
+                param: Api.termsAndConditions,
+              ),
             ),
+            const SizedBox(width: 5.0),
             Text("andTxt".translate(context))
                 .size(context.font.small)
                 .color(context.color.textLightColor.withOpacity(0.8)),
-            const SizedBox(
-              width: 5.0,
-            ),
+            const SizedBox(width: 5.0),
             InkWell(
-                child: Text("privacyPolicy".translate(context))
-                    .underline()
-                    .color(context.color.territoryColor)
-                    .size(context.font.small),
-                onTap: () => _openStaticContent(
-                      title: "privacyPolicy".translate(context),
-                      param: Api.privacyPolicy,
-                    )),
-            /*CustomTextButton(
-                text:
-                    Text("privacyPolicy".translate(context)).underline().color(context.color.teritoryColor).size(context.font.small),
-                onPressed: () => Navigator.pushNamed(
-                      context,
-                      Routes.profileSettings,
-                      arguments: {
-                        'title': UiUtils.getTranslatedLabel(
-                            context, "privacyPolicy"),
-                        'param': Api.privacyPolicy
-                      },
-                    )),*/
-          ]),
-        ],
+              child: Text("privacyPolicy".translate(context))
+                  .underline()
+                  .color(context.color.territoryColor)
+                  .size(context.font.small),
+              onTap: () => _openStaticContent(
+                title: "privacyPolicy".translate(context),
+                param: Api.privacyPolicy,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _SignUpActionBar extends StatelessWidget {
+  final Widget legalNotice;
+  final VoidCallback onContinue;
+  final bool isBusy;
+
+  const _SignUpActionBar({
+    required this.legalNotice,
+    required this.onContinue,
+    required this.isBusy,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            legalNotice,
+            const SizedBox(height: 14),
+            UiUtils.buildButton(
+              context,
+              onPressed: onContinue,
+              buttonTitle: "verifyMobileNumberLbl".translate(context),
+              radius: 14,
+              isInProgress: isBusy,
+              disabled: isBusy,
+            ),
+          ],
+        ),
       ),
     );
   }
+}
 
-/*  void showCountryCode() {
-    showCountryPicker(
-      context: context,
-      showWorldWide: false,
-      showPhoneCode: true,
-      countryListTheme:
-          CountryListThemeData(borderRadius: BorderRadius.circular(11)),
-      onSelect: (Country value) {
-        flagEmoji = value.flagEmoji;
-        countryCode = value.phoneCode;
-        setState(() {});
-      },
+class _SignUpShimmer extends StatelessWidget {
+  const _SignUpShimmer({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.only(bottom: 160),
+      children: const [
+        SizedBox(height: 8),
+        ShimmerBox(height: 18, width: 120),
+        SizedBox(height: 12),
+        ShimmerBox(height: 20, width: 200),
+        SizedBox(height: 24),
+        ShimmerBox(height: 70),
+        SizedBox(height: 20),
+        ShimmerBox(height: 46, width: 240),
+        SizedBox(height: 16),
+        ShimmerBox(height: 46, width: 240),
+        SizedBox(height: 16),
+        ShimmerBox(height: 20, width: 180),
+        SizedBox(height: 12),
+        ShimmerBox(height: 20, width: 160),
+      ],
     );
-  }*/
+  }
 }

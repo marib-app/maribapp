@@ -100,9 +100,75 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
     if (trimmed.isEmpty) {
       return '';
     }
-    final String sanitized =
-        trimmed.replaceAll(RegExp(r'[^a-z0-9\\s-]'), '').replaceAll(' ', '-');
-    return sanitized.replaceAll(RegExp('-+'), '-');
+    final String transliterated = _transliterate(trimmed);
+    final String sanitized = transliterated
+        .replaceAll(RegExp(r'[^a-z0-9\s-]'), '')
+        .replaceAll(RegExp(r'\s+'), '-')
+        .replaceAll(RegExp('-+'), '-')
+        .trim();
+    if (sanitized.isNotEmpty) {
+      return sanitized;
+    }
+    final int timestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    return 'network-$timestamp';
+  }
+
+  String _transliterate(String input) {
+    const Map<String, String> replacements = {
+      'أ': 'a',
+      'إ': 'i',
+      'آ': 'a',
+      'ا': 'a',
+      'ب': 'b',
+      'ت': 't',
+      'ث': 'th',
+      'ج': 'j',
+      'ح': 'h',
+      'خ': 'kh',
+      'د': 'd',
+      'ذ': 'th',
+      'ر': 'r',
+      'ز': 'z',
+      'س': 's',
+      'ش': 'sh',
+      'ص': 's',
+      'ض': 'd',
+      'ط': 't',
+      'ظ': 'th',
+      'ع': 'a',
+      'غ': 'gh',
+      'ف': 'f',
+      'ق': 'q',
+      'ك': 'k',
+      'ل': 'l',
+      'م': 'm',
+      'ن': 'n',
+      'ه': 'h',
+      'و': 'w',
+      'ي': 'y',
+      'ى': 'a',
+      'ئ': 'y',
+      'ؤ': 'w',
+      'ة': 'h',
+      'ء': '',
+      '٠': '0',
+      '١': '1',
+      '٢': '2',
+      '٣': '3',
+      '٤': '4',
+      '٥': '5',
+      '٦': '6',
+      '٧': '7',
+      '٨': '8',
+      '٩': '9',
+    };
+
+    final StringBuffer buffer = StringBuffer();
+    for (int i = 0; i < input.length; i++) {
+      final String char = input[i];
+      buffer.write(replacements[char] ?? char);
+    }
+    return buffer.toString();
   }
 
   void _switchStep(int target) {
@@ -170,7 +236,7 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
   }
 
   bool _validateAllSteps() {
-    final bool networkValid = _networkFormKey.currentState?.validate() ?? false;
+    final bool networkValid = _validateNetworkStep();
     if (!networkValid) {
       _log('Network form validation failed.');
       _switchStep(0);
@@ -478,25 +544,6 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          _LabeledField(
-            label: 'الاسم المختصر (Slug)',
-            helper:
-                'يُستخدم في روابط لوحة التحكم والتكامل. يتم توليده تلقائيًا ويمكنك تعديله.',
-            child: TextFormField(
-              controller: _slugController,
-              textInputAction: TextInputAction.next,
-              validator: (value) {
-                final text = value?.trim() ?? '';
-                if (text.isEmpty) {
-                  return 'يرجى إدخال الاسم المختصر';
-                }
-                if (!RegExp(r'^[a-z0-9-]+$').hasMatch(text)) {
-                  return 'مسموح بالأحرف الإنجليزية، الأرقام، والشرطات فقط';
-                }
-                return null;
-              },
-            ),
-          ),
           const SizedBox(height: 12),
           _FilePickerTile(
             title: 'شعار الشبكة',
@@ -572,13 +619,6 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
                           labelText: 'رقم الهاتف / واتساب',
                         ),
                         keyboardType: TextInputType.phone,
-                        validator: (value) {
-                          final text = value?.trim() ?? '';
-                          if (text.isEmpty) {
-                            return 'أدخل الرقم أو قم بحذفه';
-                          }
-                          return null;
-                        },
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -1053,3 +1093,21 @@ class _FilePickerTile extends StatelessWidget {
     );
   }
 }
+  bool _validateNetworkStep() {
+    final List<String> missing = [];
+    if (_nameController.text.trim().isEmpty) {
+      missing.add('اسم الشبكة');
+    }
+    if (_logoFile == null) {
+      missing.add('شعار الشبكة');
+    }
+    if (_loginScreenshotFile == null) {
+      missing.add('صورة شاشة تسجيل الدخول');
+    }
+    if (missing.isNotEmpty) {
+      final String message = 'أكمل الحقول: ${missing.join('، ')}';
+      _showMessage(message);
+      return false;
+    }
+    return true;
+  }

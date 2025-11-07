@@ -177,6 +177,21 @@ class _ProfileScreenState extends State<ProfileScreen>
                     ),
                     const SizedBox(height: 10),
 
+                    if (isCommercial) ...[
+                      _ServiceItemTile(
+                        title: "لوحة المتجر",
+                        svg: AppIcons.home,
+                        onTap: () {
+                          UiUtils.checkUser(
+                            onNotGuest: () => Navigator.pushNamed(
+                                context, Routes.merchantDashboard),
+                            context: context,
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 10),
+                    ],
+
                     _ServiceItemTile(
                       title: "طلباتي",
                       svg: AppIcons.competition,

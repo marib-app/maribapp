@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:marib/data/model/subscription_pacakage_model.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/helper_utils.dart';
+import 'package:marib/ui/theme/theme.dart';
 
 class SubscriptionPackageCard extends StatelessWidget {
   const SubscriptionPackageCard({

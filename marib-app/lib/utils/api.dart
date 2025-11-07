@@ -806,6 +806,9 @@ class Api {
   /// مسار CRUD العام لحسابات بوابات المتجر.
   static const String storeGatewayAccountsApi = 'store-gateway-accounts';
 
+  /// مسار إحضار مؤشرات المتجر للتاجر.
+  static const String storeDashboardSummaryApi = 'store/dashboard/summary';
+
   /// مسار حساب محدد ضمن [storeGatewayAccountsApi].
   static String storeGatewayAccountApi(dynamic accountId) {
     final String normalized = Uri.encodeComponent('$accountId');

@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\DeliveryPriceCalculatorController;
 use App\Http\Controllers\Api\MetalRateController as PublicMetalRateController;
 use App\Http\Controllers\Api\MetalRateManagementController;
 use App\Http\Controllers\Api\AdDraftController;
+use App\Http\Controllers\Api\StoreDashboardController as ApiStoreDashboardController;
 use App\Http\Controllers\Api\StoreGatewayAccountController;
 use App\Http\Controllers\Api\StoreGatewayController;
 use App\Http\Controllers\Api\StoreGatewayPublicController;
@@ -65,7 +66,9 @@ Route::get('metal-rates', [PublicMetalRateController::class, 'index']);
 
 
 /* Authenticated Routes */
-    Route::group(['middleware' => ['auth:sanctum']], static function () {
+Route::group(['middleware' => ['auth:sanctum']], static function () {
+
+    Route::get('store/dashboard/summary', [ApiStoreDashboardController::class, 'summary']);
 
     Route::prefix('wifi/owner')->group(function (): void {
         Route::get('networks', [OwnerNetworkController::class, 'index']);

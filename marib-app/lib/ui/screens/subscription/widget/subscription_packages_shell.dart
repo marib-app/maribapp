@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:marib/ui/screens/subscription/widget/subscription_packages_tab_switcher.dart';
 import 'package:marib/utils/extensions/extensions.dart';
+import 'package:marib/ui/theme/theme.dart';
+import 'package:marib/ui/theme/theme.dart';
+import 'package:marib/ui/theme/theme.dart';
 
 class SubscriptionHighlightItem {
   const SubscriptionHighlightItem({

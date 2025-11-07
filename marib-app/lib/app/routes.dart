@@ -35,6 +35,7 @@ import 'package:marib/ui/screens/sold_out_bought_screen.dart';
 import 'package:marib/ui/screens/support_screen.dart';
 import 'package:marib/ui/screens/user_profile/edit_profile.dart';
 import 'package:marib/ui/screens/item/add_item_screen/add_item_details.dart';
+import 'package:marib/ui/screens/merchant/merchant_dashboard_screen.dart';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -202,6 +203,7 @@ class Routes {
   static const postedSinceFilterScreen = '/postedSinceFilterScreen';
   static const locationPermissionScreen = '/locationPermissionScreen';
   static const sellerProfileScreen = '/sellerProfileScreen';
+  static const merchantDashboard = '/merchantDashboard';
   static const nearbyLocationScreen = '/nearbyLocationScreen';
 
   static const myAdvertisment = '/myAdvertisment';
@@ -524,6 +526,8 @@ class Routes {
         return SoldOutBoughtScreen.route(routeSettings);
       case sellerProfileScreen:
         return SellerProfileScreen.route(routeSettings);
+      case merchantDashboard:
+        return MerchantDashboardScreen.route(routeSettings);
       case sellerIntroVerificationScreen:
         return SellerIntroVerificationScreen.route(routeSettings);
       case sellerVerificationScreen:
@@ -624,5 +628,3 @@ Route<T> _buildFadeBlurOverlay<T>({
     opaque: false,
   );
 }
-
-

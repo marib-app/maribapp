@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:marib/utils/extensions/extensions.dart';
+import 'package:marib/ui/theme/theme.dart';
 
 class SubscriptionTabData {
   const SubscriptionTabData({

@@ -1,13 +1,8 @@
 @php
-    use App\Models\ManualPaymentRequest;
-    use App\Models\PaymentTransaction;
+    $manualPayment = $request instanceof \App\Models\ManualPaymentRequest ? $request : null;
+    $paymentTransaction = $transaction instanceof \App\Models\PaymentTransaction ? $transaction : null;
 
-    $manualPayment = $request instanceof ManualPaymentRequest ? $request : null;
-    $paymentTransaction = $transaction instanceof PaymentTransaction ? $transaction : null;
-
-    use App\Support\Payments\ReferencePresenter;
-
-    $reference = ReferencePresenter::forManualRequest($manualPayment, $paymentTransaction)
+    $reference = \App\Support\Payments\ReferencePresenter::forManualRequest($manualPayment, $paymentTransaction)
         ?? ($manualPayment?->getKey() ? __('Manual Payment #:id', ['id' => $manualPayment->getKey()]) : __('Manual Payment'));
 
     $submittedAt = $manualPayment?->created_at ?? $paymentTransaction?->created_at;
@@ -32,17 +27,18 @@
 
     $bankName = $paymentLabels['bank_name'] ?? null;
 
-    $normalizedStatus = ManualPaymentRequest::normalizeStatus($manualPayment?->status ?? null) ?? ManualPaymentRequest::STATUS_PENDING;
+    $normalizedStatus = \App\Models\ManualPaymentRequest::normalizeStatus($manualPayment?->status ?? null)
+        ?? \App\Models\ManualPaymentRequest::STATUS_PENDING;
     $statusBadgeClass = match ($normalizedStatus) {
-        ManualPaymentRequest::STATUS_APPROVED => 'badge bg-success',
-        ManualPaymentRequest::STATUS_REJECTED => 'badge bg-danger',
-        ManualPaymentRequest::STATUS_UNDER_REVIEW => 'badge bg-info text-dark',
+        \App\Models\ManualPaymentRequest::STATUS_APPROVED => 'badge bg-success',
+        \App\Models\ManualPaymentRequest::STATUS_REJECTED => 'badge bg-danger',
+        \App\Models\ManualPaymentRequest::STATUS_UNDER_REVIEW => 'badge bg-info text-dark',
         default => 'badge bg-warning text-dark',
     };
 
     $statusDisplay = $paymentStatusLabel ?? __('Pending');
 
-    $transactionIdDisplay = $transactionId ?? ReferencePresenter::forTransaction($paymentTransaction);
+    $transactionIdDisplay = $transactionId ?? \App\Support\Payments\ReferencePresenter::forTransaction($paymentTransaction);
 @endphp
 
 <div class="row g-3">

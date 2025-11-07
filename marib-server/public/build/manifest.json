@@ -4,18 +4,37 @@
     "src": "resources/js/items/index.js",
     "isEntry": true
   },
+  "resources/js/wifi/index.js": {
+    "file": "assets/index.4dae2799.js",
+    "src": "resources/js/wifi/index.js",
+    "isEntry": true,
+    "imports": [
+      "_index.83bc9570.js"
+    ]
+  },
   "resources/js/app.js": {
-    "file": "assets/app.3fb1524f.js",
+    "file": "assets/app.85f05090.js",
     "src": "resources/js/app.js",
-    "isEntry": true
+    "isEntry": true,
+    "imports": [
+      "_index.83bc9570.js"
+    ]
+  },
+  "_index.83bc9570.js": {
+    "file": "assets/index.83bc9570.js"
   },
   "resources/js/items/index.scss": {
-    "file": "assets/index.5de519f3.css",
+    "file": "assets/index.40b916f0.css",
     "src": "resources/js/items/index.scss",
     "isEntry": true
   },
+  "resources/js/wifi/index.scss": {
+    "file": "assets/index.e0c7ed0d.css",
+    "src": "resources/js/wifi/index.scss",
+    "isEntry": true
+  },
   "resources/sass/app.scss": {
-    "file": "assets/app.737e2b77.css",
+    "file": "assets/app.69f3207f.css",
     "src": "resources/sass/app.scss",
     "isEntry": true
   }

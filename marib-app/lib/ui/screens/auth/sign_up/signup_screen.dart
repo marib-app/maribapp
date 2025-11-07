@@ -893,7 +893,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
                     Text(
                       "readytoserve".translate(context),
                       style: TextStyle(
-                        fontSize: context.font.medium,
+                        fontSize: context.font.normal,
                         color: context.color.textLightColor,
                         height: 1.4,
                       ),

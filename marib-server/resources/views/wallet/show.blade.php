@@ -1,9 +1,5 @@
 @extends('layouts.main')
 
-@php
-    use Illuminate\Support\Str;
-@endphp
-
 @section('title')
     {{ __('Wallet for :name', ['name' => $user->name]) }}
 @endsection
@@ -175,19 +171,21 @@
                                             <div class="small text-muted">
                                                 @if($transaction->manualPaymentRequest)
                                                     @php
-                                                        use App\Support\Payments\ReferencePresenter;
-                                                        $mprRef = ReferencePresenter::forManualRequest($transaction->manualPaymentRequest, $transaction->paymentTransaction ?? null);
+                                                        $mprRef = \App\Support\Payments\ReferencePresenter::forManualRequest(
+                                                            $transaction->manualPaymentRequest,
+                                                            $transaction->paymentTransaction ?? null
+                                                        );
                                                     @endphp
                                                     <div>{{ __('Manual payment request') }}: {{ $mprRef ?? $transaction->manualPaymentRequest->getKey() }}</div>
                                                 @endif
                                                 @if($transaction->paymentTransaction)
                                                     @php
-                                                        $txRef = ReferencePresenter::forTransaction($transaction->paymentTransaction);
+                                                        $txRef = \App\Support\Payments\ReferencePresenter::forTransaction($transaction->paymentTransaction);
                                                     @endphp
                                                     <div>{{ __('Payment transaction') }}: {{ $txRef ?? $transaction->paymentTransaction->getKey() }}</div>
                                                 @endif
                                                 @if($metaReason)
-                                                    <div>{{ __('Reason') }}: {{ Str::headline($metaReason) }}</div>
+                                                    <div>{{ __('Reason') }}: {{ \Illuminate\Support\Str::headline($metaReason) }}</div>
                                                 @endif
                                                 @if($notes)
                                                     <div>{{ __('Notes') }}: {{ $notes }}</div>

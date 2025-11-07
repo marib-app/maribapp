@@ -1,9 +1,13 @@
 ﻿import 'dart:async';
+import 'dart:developer' as developer;
+
 import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:marib/data/wifi/wifi_repository.dart';
+import 'package:marib/utils/api.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/errorFilter.dart';
 import 'package:marib/utils/extensions/extensions.dart';
@@ -28,10 +32,6 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
   final TextEditingController _slugController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
-  final TextEditingController _addressController = TextEditingController();
-  final TextEditingController _latitudeController = TextEditingController();
-  final TextEditingController _longitudeController = TextEditingController();
-  final TextEditingController _radiusController = TextEditingController();
 
   final List<_ContactFieldData> _contactFields = <_ContactFieldData>[
     _ContactFieldData(),
@@ -66,10 +66,6 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
       ..dispose();
     _descriptionController.dispose();
     _notesController.dispose();
-    _addressController.dispose();
-    _latitudeController.dispose();
-    _longitudeController.dispose();
-    _radiusController.dispose();
     for (final _ContactFieldData contact in _contactFields) {
       contact.dispose();
     }
@@ -117,10 +113,19 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
   }
 
   void _showMessage(String message) {
+    _log(message);
     UiUtils.showSoftSnackBar(
       context,
       message: message,
     );
+  }
+
+  void _log(String message) {
+    if (kDebugMode) {
+      debugPrint('[WifiCabinRequest] $message');
+    } else {
+      developer.log(message, name: 'WifiCabinRequest');
+    }
   }
 
   Future<void> _pickLogo() async {
@@ -167,11 +172,13 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
   bool _validateAllSteps() {
     final bool networkValid = _networkFormKey.currentState?.validate() ?? false;
     if (!networkValid) {
+      _log('Network form validation failed.');
       _switchStep(0);
       return false;
     }
     final bool plansValid = _plansFormKey.currentState?.validate() ?? false;
     if (!plansValid) {
+      _log('Plans form validation failed.');
       _switchStep(1);
       return false;
     }
@@ -194,6 +201,7 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
 
   Future<void> _submitRequest() async {
     if (!_validateAllSteps()) {
+      _log('Submission blocked because validation failed.');
       return;
     }
 
@@ -221,11 +229,6 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
     });
 
     try {
-      final double? latitude = double.tryParse(_latitudeController.text.trim());
-      final double? longitude =
-          double.tryParse(_longitudeController.text.trim());
-      final double? coverage = double.tryParse(_radiusController.text.trim());
-
       final MultipartFile? logo =
           _logoFile != null ? await _multipartFromXFile(_logoFile!) : null;
       final MultipartFile? loginScreenshot = _loginScreenshotFile != null
@@ -235,12 +238,6 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
       final network = await _repository.submitOwnerNetworkRequest(
         name: _nameController.text.trim(),
         slug: _slugController.text.trim(),
-        latitude: latitude,
-        longitude: longitude,
-        coverageRadiusKm: coverage,
-        address: _addressController.text.trim().isEmpty
-            ? null
-            : _addressController.text.trim(),
         description: _descriptionController.text.trim().isEmpty
             ? null
             : _descriptionController.text.trim(),
@@ -289,9 +286,12 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
           file: batchFile,
         );
       }
+      _log(
+        'تم إرسال طلب شبكة جديدة (${network.id}) بعدد ${_plans.length} فئات.',
+      );
 
       if (!mounted) return;
-      await showDialog<void>(
+      final bool? goBack = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('تم استلام الطلب'),
@@ -300,17 +300,39 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('حسنًا'),
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('إغلاق'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('العودة للشبكات'),
             ),
           ],
         ),
       );
-      if (!mounted) return;
+      if (!mounted || goBack != true) {
+        _log('اكتملت العملية وبقي المستخدم في نفس الصفحة.');
+        return;
+      }
+      _log('اكتملت العملية وتمت العودة لقائمة الشبكات.');
       Navigator.pop(context, true);
     } catch (error) {
       if (!mounted) return;
-      _showMessage(ErrorFilter.check(error).error);
+      if (error is ApiHttpException) {
+        final String serverMessage = (error.payload?['message'] ??
+                error.errorMessage ??
+                error.toString())
+            .toString();
+        final dynamic serverErrors = error.payload?['errors'];
+        _log(
+          'فشل إرسال الطلب [${error.statusCode}] $serverMessage '
+          'errors: ${serverErrors ?? 'n/a'}',
+        );
+        _showMessage(serverMessage);
+      } else {
+        _log('فشل إرسال الطلب: ${error.toString()}');
+        _showMessage(ErrorFilter.check(error).error.toString());
+      }
     } finally {
       if (mounted) {
         setState(() => _isSubmitting = false);
@@ -492,50 +514,6 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
             onPick: _pickLoginScreenshot,
           ),
           const SizedBox(height: 16),
-          Text(
-            'الموقع والتغطية',
-            style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  controller: _latitudeController,
-                  decoration: const InputDecoration(labelText: 'خط العرض'),
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextFormField(
-                  controller: _longitudeController,
-                  decoration: const InputDecoration(labelText: 'خط الطول'),
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextFormField(
-                  controller: _radiusController,
-                  decoration:
-                      const InputDecoration(labelText: 'نصف القطر (كم)'),
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _addressController,
-            decoration: const InputDecoration(
-              labelText: 'العنوان التفصيلي',
-            ),
-          ),
-          const SizedBox(height: 12),
           TextFormField(
             controller: _descriptionController,
             decoration: const InputDecoration(

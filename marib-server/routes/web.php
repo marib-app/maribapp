@@ -32,6 +32,7 @@ use App\Http\Controllers\MetalRateController;
 use App\Http\Controllers\StoreDashboardController;
 use App\Http\Controllers\Store\StoreManualPaymentController;
 use App\Http\Controllers\Store\StoreOrderController;
+use App\Http\Controllers\Store\StoreSettingsController as MerchantStoreSettingsController;
 use App\Http\Controllers\StoreSettingsController;
 
 use App\Http\Controllers\SettingController;
@@ -737,13 +738,18 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
             ->whereNumber('order')
             ->name('orders.status');
         Route::get('manual-payments', [StoreManualPaymentController::class, 'index'])->name('manual-payments.index');
-        Route::get('manual-payments/{manualPaymentRequest}', [StoreManualPaymentController::class, 'show'])
-            ->whereNumber('manualPaymentRequest')
-            ->name('manual-payments.show');
-        Route::post('manual-payments/{manualPaymentRequest}/decide', [StoreManualPaymentController::class, 'decide'])
-            ->whereNumber('manualPaymentRequest')
-            ->name('manual-payments.decide');
-    });
+          Route::get('manual-payments/{manualPaymentRequest}', [StoreManualPaymentController::class, 'show'])
+              ->whereNumber('manualPaymentRequest')
+              ->name('manual-payments.show');
+          Route::post('manual-payments/{manualPaymentRequest}/decide', [StoreManualPaymentController::class, 'decide'])
+              ->whereNumber('manualPaymentRequest')
+              ->name('manual-payments.decide');
+          Route::get('settings', [MerchantStoreSettingsController::class, 'index'])->name('settings');
+          Route::post('settings/general', [MerchantStoreSettingsController::class, 'updateGeneral'])->name('settings.general');
+          Route::post('settings/hours', [MerchantStoreSettingsController::class, 'updateHours'])->name('settings.hours');
+          Route::post('settings/policies', [MerchantStoreSettingsController::class, 'updatePolicies'])->name('settings.policies');
+          Route::post('settings/staff', [MerchantStoreSettingsController::class, 'updateStaff'])->name('settings.staff');
+      });
 
     /* --------------------------------- الإعدادات Settings --------------------------------- */
     Route::group(['prefix' => 'settings'], static function () {

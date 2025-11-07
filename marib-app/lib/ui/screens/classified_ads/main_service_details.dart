@@ -7,6 +7,7 @@ import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/responsiveSize.dart';
 import 'package:marib/utils/ui_utils.dart';
+import 'package:marib/utils/helper_utils.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
 import 'package:marib/utils/api.dart';
@@ -329,7 +330,7 @@ class _MainServiceDetailsState extends State<MainServiceDetails> {
           )
               : UiUtils.buildButton(
             context,
-            onPressed: () {
+            onPressed: () async {
               if (_error) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('تعذر تحميل الخدمة')),
@@ -376,13 +377,22 @@ class _MainServiceDetailsState extends State<MainServiceDetails> {
                 args['breadCrumbItems'] = [category];
               }
 
-              Navigator.pushNamed(
+              final result = await Navigator.pushNamed(
                 context,
 
                 Routes.serviceAddMoreDetails,
                 arguments: args,
 
               );
+
+              if (!mounted) return;
+              if (result == true) {
+                HelperUtils.showSnackBarMessage(
+                  context,
+                  'تم إرسال طلبك بنجاح، سنبقيك على اطلاع.',
+                  type: MessageType.success,
+                );
+              }
             },
             buttonTitle: "createServiceContinue".translate(context),
             radius: 10,

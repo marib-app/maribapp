@@ -280,6 +280,12 @@
                 <span class="menu-item">{{ __('الحوالات اليدوية') }}</span>
               </a>
             </li>
+            <li class="sidebar-item">
+              <a href="{{ route('merchant.settings') }}" class="sidebar-link">
+                <i class="bi bi-gear"></i>
+                <span class="menu-item">{{ __('إعدادات المتجر') }}</span>
+              </a>
+            </li>
           @endif
 
         @endcanany

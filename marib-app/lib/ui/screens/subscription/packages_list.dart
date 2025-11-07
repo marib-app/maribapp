@@ -3,10 +3,14 @@ import 'dart:io';
 import 'package:marib/data/cubits/subscription/fetch_ads_listing_subscription_packages_cubit.dart';
 import 'package:marib/data/cubits/system/get_api_keys_cubit.dart';
 import 'package:marib/settings.dart';
-import 'package:marib/ui/screens/subscription/widget/featured_ads_subscription_plan_item.dart';
-import 'package:marib/ui/screens/subscription/widget/item_listing_subscription_plans_item.dart';
+import 'package:marib/ui/screens/subscription/widget/subscription_package_card.dart';
+import 'package:marib/ui/screens/subscription/widget/subscription_packages_bottom_bar.dart';
+import 'package:marib/ui/screens/subscription/widget/subscription_packages_indicator.dart';
+import 'package:marib/ui/screens/subscription/widget/subscription_packages_shell.dart';
+import 'package:marib/ui/screens/subscription/widget/subscription_packages_tab_switcher.dart';
 import 'package:marib/ui/screens/widgets/intertitial_ads_screen.dart';
 import 'package:marib/ui/theme/theme.dart';
+import 'package:marib/data/helper/widgets.dart';
 
 // ✅ حل تعارض HiveUtils عبر Alias
 import 'package:marib/utils/hive_utils.dart' as OldHive;
@@ -262,111 +266,56 @@ class _SubscriptionPackageListScreenState
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
-  String _priceLabel(SubscriptionPackageModel? m) {
-    if (m == null) return "";
-    final p = m.price?.toString() ?? "";
-    return p; // 🔒 لا نعتمد على خصائص غير موجودة (title/durationText)
-  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: context.color.backgroundColor,
-      appBar: UiUtils.buildAppBar(
-        context,
-        showBackButton: true,
-        title: "subsctiptionPlane".translate(context),
-        bottomHeight: 49,
-        bottom: [
-          Container(
-            decoration: BoxDecoration(
-              color: context.color.secondaryColor,
-              boxShadow: [
-                BoxShadow(
-                  color: context.color.borderColor.withOpacity(0.8),
-                  spreadRadius: 3,
-                  blurRadius: 2,
-                  offset: const Offset(0, 1),
-                ),
-              ],
-            ),
-            child: TabBar(
-              controller: _tabController,
-              tabs: [
-                Tab(text: "adsListing".translate(context)),
-                Tab(text: "featuredAdsLbl".translate(context)),
-              ],
-              indicatorColor: context.color.territoryColor,
-              indicatorWeight: 3,
-              labelColor: context.color.territoryColor,
-              unselectedLabelColor:
-                  context.color.textDefaultColor.withOpacity(0.5),
-              labelStyle: const TextStyle(fontSize: 16),
-              labelPadding: const EdgeInsets.symmetric(horizontal: 16),
-              indicatorSize: TabBarIndicatorSize.tab,
-            ),
-          ),
-        ],
-      ),
+    final listingAccent = context.color.territoryColor;
+    final featuredAccent = context.color.forthColor;
+    final highlights = _buildHighlightItems(context);
+    final tabs = _buildTabs(context);
 
-      // ====== CTA ثابت أسفل الشاشة لكل تبويب ======
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: Container(
-          decoration: BoxDecoration(
-            color: context.color.secondaryColor,
-            border: Border(
-              top: BorderSide(color: context.color.borderColor),
-            ),
-          ),
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-          child: _CtaSwitcher(
-            tabController: _tabController,
-            selectedListing: _selectedListing,
-            selectedFeatured: _selectedFeatured,
-            listingIndex: _listingIndex,
-            featuredIndex: _featuredIndex,
-            labelBuilder: (sel, isFeatured) {
-              // 🔒 لا نستخدم title — نعرض تسمية عامة مع رقم الصفحة + السعر
-              final idx = isFeatured ? _featuredIndex : _listingIndex;
-              final price = _priceLabel(sel);
-              final base = isFeatured ? "باقة التمييز" : "باقة النشر";
-              return price.isNotEmpty
-                  ? "$base #${idx + 1} • $price"
-                  : "$base #${idx + 1}";
-            },
-            onPickGateway: (selected, type) {
-              _startManualBankTransfer(
-                selected,
-                isFeatured: type == _PackageType.featured,
+    return MultiBlocListener(
+        listeners: [
+        BlocListener<GetApiKeysCubit, GetApiKeysState>(
+    listener: (context, state) {
+      if (state is GetApiKeysSuccess) {
+        AppSettings.updatePaymentGateways(
+          wallet: state.walletEnabled,
+          manualBanks: state.manualBanks,
+          eastYemenBank: state.eastYemenBank,
               );
-            },
-          ),
+      }
+    },
         ),
-      ),
-
-      body: BlocListener<GetApiKeysCubit, GetApiKeysState>(
-        listener: (context, state) {
-          if (state is GetApiKeysSuccess) {
-            AppSettings.updatePaymentGateways(
-              wallet: state.walletEnabled,
-              manualBanks: state.manualBanks,
-              eastYemenBank: state.eastYemenBank,
-            );
-          }
-        },
-        child: TabBarView(
-          controller: _tabController,
-          children: [
-            adsListing(),
-            featuredAds(),
-          ],
+      BlocListener<AssignFreePackageCubit, AssignFreePackageState>(
+        listener: _handleAssignState,
         ),
+        ],
+      child: SubscriptionPackageShell(
+        tabController: _tabController,
+        tabs: tabs,
+        tabViews: [
+          _buildListingTab(context, listingAccent),
+          _buildFeaturedTab(context, featuredAccent),
+        ],
+        bottomBar: SubscriptionPackageBottomBar(
+          tabController: _tabController,
+          selectedListing: _selectedListing,
+          selectedFeatured: _selectedFeatured,
+          listingIndex: _listingIndex,
+          featuredIndex: _featuredIndex,
+          onPay: _onPurchase,
+          listingAccentColor: listingAccent,
+          featuredAccentColor: featuredAccent,
+        ),
+        title: 'subsctiptionPlane'.translate(context),
+        subtitle: 'اختر الباقة المثالية لتعزيز ظهور إعلاناتك',
+        highlights: highlights,
       ),
     );
   }
 
-  Builder adsListing() {
+  Widget _buildListingTab(BuildContext context, Color accentColor) {
     return Builder(builder: (context) {
       if (!isInterstitialAdShown) {
         AdHelper.showInterstitialAd();
@@ -378,11 +327,14 @@ class _SubscriptionPackageListScreenState
         listener: (context, state) {
           if (state is FetchAdsListingSubscriptionPackagesSuccess) {
             final list = state.subscriptionPackages;
-            if (_selectedListing.value == null && list.isNotEmpty) {
-              // ✅ تهيئة أولية خارج مرحلة البناء
+            final focused = applyListingFocus(list);
+            if (!focused && list.isNotEmpty) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted) return;
                 final safeIndex = _listingIndex.clamp(0, list.length - 1);
-                _selectedListing.value = list[safeIndex];
+                if (safeIndex >= 0 && safeIndex < list.length) {
+                  _selectedListing.value = list[safeIndex];
+                }
               });
             }
           }
@@ -415,45 +367,48 @@ class _SubscriptionPackageListScreenState
               );
             }
 
-            // ❌ لا نعين _selectedListing.value هنا
-            return Stack(
-              children: [
-                PageView.builder(
-                  controller: adsPageController,
-                  itemCount: list.length,
-                  onPageChanged: (i) => _onListingPageChanged(i, list),
-                  itemBuilder: (context, index) {
-                    final model = list[index];
-                    final active = index == _listingIndex;
+            return Column(
 
-                    return AnimatedPadding(
-                      duration: const Duration(milliseconds: 220),
-                      padding: EdgeInsets.symmetric(vertical: active ? 8 : 18),
-                      child: AnimatedScale(
-                        duration: const Duration(milliseconds: 220),
-                        scale: active ? 1.0 : 0.95,
-                        child: ItemListingSubscriptionPlansItem(
-                          itemIndex: _listingIndex,
-                          index: index,
-                          model: model,
-                          inAppPurchaseManager: _inAppPurchaseManager,
+              children: [
+            Expanded(
+            child: PageView.builder(
+            controller: adsPageController,
+              physics: const BouncingScrollPhysics(),
+              itemCount: list.length,
+              onPageChanged: (i) => _onListingPageChanged(i, list),
+              itemBuilder: (context, index) {
+                final model = list[index];
+                final active = index == _listingIndex;
+                return AnimatedPadding(
+                  duration: const Duration(milliseconds: 260),
+                  curve: Curves.easeOut,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: active ? 4 : 12,
+                    vertical: active ? 0 : 12,
                         ),
-                      ),
-                    );
-                  },
-                ),
-                Positioned(
-                  bottom: 12,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: _DotsIndicator(
-                      count: list.length,
-                      index: _listingIndex,
-                      activeColor: context.color.territoryColor,
-                      color: context.color.borderColor.withOpacity(0.6),
+                  child: AnimatedScale(
+                    duration: const Duration(milliseconds: 260),
+                    curve: Curves.easeOutBack,
+                    scale: active ? 1 : 0.94,
+                    child: SubscriptionPackageCard(
+                      model: model,
+                      position: index + 1,
+                      selected: active,
+                      accentColor: accentColor,
+                      icon: Icons.view_list_rounded,
+                      categoryLabel: 'adsListing'.translate(context),
+                      onTap: () => _onListingCardTapped(index, list),
                     ),
                   ),
+                );
+              },
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SubscriptionPackagesIndicator(
+                  count: list.length,
+                  index: _listingIndex,
+                  activeColor: accentColor,
                 ),
               ],
             );
@@ -465,7 +420,7 @@ class _SubscriptionPackageListScreenState
     });
   }
 
-  Builder featuredAds() {
+  Widget _buildFeaturedTab(BuildContext context, Color accentColor) {
     return Builder(builder: (context) {
       if (!isInterstitialAdShown) {
         AdHelper.showInterstitialAd();
@@ -477,11 +432,14 @@ class _SubscriptionPackageListScreenState
         listener: (context, state) {
           if (state is FetchFeaturedSubscriptionPackagesSuccess) {
             final list = state.subscriptionPackages;
-            if (_selectedFeatured.value == null && list.isNotEmpty) {
-              // ✅ تهيئة أولية خارج مرحلة البناء
+            final focused = applyFeaturedFocus(list);
+            if (!focused && list.isNotEmpty) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted) return;
                 final safeIndex = _featuredIndex.clamp(0, list.length - 1);
-                _selectedFeatured.value = list[safeIndex];
+                if (safeIndex >= 0 && safeIndex < list.length) {
+                  _selectedFeatured.value = list[safeIndex];
+                }
               });
             }
           }
@@ -492,7 +450,7 @@ class _SubscriptionPackageListScreenState
           }
 
           if (state is FetchFeaturedSubscriptionPackagesFailure) {
-            if (state.errorMessage == "no-internet") {
+            if (state.errorMessage == 'no-internet') {
               return NoInternet(
                 onRetry: () => context
                     .read<FetchFeaturedSubscriptionPackagesCubit>()
@@ -513,43 +471,47 @@ class _SubscriptionPackageListScreenState
               );
             }
 
-            // ❌ لا نعين _selectedFeatured.value هنا
-            return Stack(
+            return Column(
               children: [
-                PageView.builder(
-                  controller: featuredPageController,
-                  itemCount: list.length,
-                  onPageChanged: (i) => _onFeaturedPageChanged(i, list),
-                  itemBuilder: (context, index) {
-                    final model = list[index];
-                    final active = index == _featuredIndex;
-
-                    return AnimatedPadding(
-                      duration: const Duration(milliseconds: 220),
-                      padding: EdgeInsets.symmetric(vertical: active ? 8 : 18),
-                      child: AnimatedScale(
-                        duration: const Duration(milliseconds: 220),
-                        scale: active ? 1.0 : 0.95,
-                        child: FeaturedAdsSubscriptionPlansItem(
-                          modelList: [model], // الودجت يتوقع قائمة
-                          inAppPurchaseManager: _inAppPurchaseManager,
+            Expanded(
+            child: PageView.builder(
+            controller: featuredPageController,
+              physics: const BouncingScrollPhysics(),
+              itemCount: list.length,
+              onPageChanged: (i) => _onFeaturedPageChanged(i, list),
+              itemBuilder: (context, index) {
+                final model = list[index];
+                final active = index == _featuredIndex;
+                return AnimatedPadding(
+                  duration: const Duration(milliseconds: 260),
+                  curve: Curves.easeOut,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: active ? 4 : 12,
+                    vertical: active ? 0 : 12,
                         ),
-                      ),
-                    );
-                  },
-                ),
-                Positioned(
-                  bottom: 12,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: _DotsIndicator(
-                      count: list.length,
-                      index: _featuredIndex,
-                      activeColor: context.color.territoryColor,
-                      color: context.color.borderColor.withOpacity(0.6),
+                  child: AnimatedScale(
+                    duration: const Duration(milliseconds: 260),
+                    curve: Curves.easeOutBack,
+                    scale: active ? 1 : 0.94,
+                    child: SubscriptionPackageCard(
+                      model: model,
+                      position: index + 1,
+                      selected: active,
+                      accentColor: accentColor,
+                      icon: Icons.workspace_premium_outlined,
+                      categoryLabel: 'featuredAdsLbl'.translate(context),
+                      onTap: () => _onFeaturedCardTapped(index, list),
                     ),
                   ),
+                );
+              },
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SubscriptionPackagesIndicator(
+                  count: list.length,
+                  index: _featuredIndex,
+                  activeColor: accentColor,
                 ),
               ],
             );
@@ -561,18 +523,158 @@ class _SubscriptionPackageListScreenState
     });
   }
 
+
+
+
+
+
+
+  void _onListingCardTapped(
+      int index, List<SubscriptionPackageModel> list) {
+    if (index < 0 || index >= list.length) {
+      return;
+    }
+    _jumpToPage(adsPageController, index);
+    setState(() {
+      _listingIndex = index;
+      _selectedListing.value = list[index];
+    });
+  }
+
+  void _onFeaturedCardTapped(
+      int index, List<SubscriptionPackageModel> list) {
+    if (index < 0 || index >= list.length) {
+      return;
+    }
+    _jumpToPage(featuredPageController, index);
+    setState(() {
+      _featuredIndex = index;
+      _selectedFeatured.value = list[index];
+    });
+  }
+
+  Future<void> _onPurchase(
+      SubscriptionPackageModel? selected,
+      SubscriptionPackageTab tab,
+      ) async {
+    if (!OldHive.HiveUtils.isUserAuthenticated()) {
+      _showSnack('loginFirst'.translate(context));
+      return;
+    }
+
+    if (selected == null) {
+      _showSnack('اختر باقة أولاً'.translate(context));
+      return;
+    }
+
+    final packageId = selected.id;
+    if (packageId == null) {
+      _showSnack('حدث خطأ أثناء تحديد الباقة'.translate(context));
+      return;
+    }
+
+    final amount = (selected.finalPrice ?? selected.price ?? 0).toDouble();
+    if (amount <= 0) {
+      context
+          .read<AssignFreePackageCubit>()
+          .assignFreePackage(packageId: packageId);
+      return;
+    }
+
+    await _startManualBankTransfer(
+      selected,
+      isFeatured: tab == SubscriptionPackageTab.featured,
+    );
+  }
+
+  void _refreshPackages() {
+    context.read<FetchAdsListingSubscriptionPackagesCubit>().fetchPackages();
+    context.read<FetchFeaturedSubscriptionPackagesCubit>().fetchPackages();
+  }
+
+  void _handleAssignState(
+      BuildContext context,
+      AssignFreePackageState state,
+      ) {
+    if (state is AssignFreePackageInProgress) {
+      Widgets.showLoader(context);
+      return;
+    }
+
+    Widgets.hideLoder(context);
+
+    if (state is AssignFreePackageInSuccess) {
+      HelperUtils.showSnackBarMessage(
+        context,
+        state.responseMessage,
+        type: MessageType.success,
+      );
+      _refreshPackages();
+    } else if (state is AssignFreePackageFailure) {
+      HelperUtils.showSnackBarMessage(
+        context,
+        state.error,
+        type: MessageType.error,
+      );
+    }
+  }
+
+  List<SubscriptionHighlightItem> _buildHighlightItems(
+      BuildContext context) {
+    final scheme = context.color;
+    return [
+      SubscriptionHighlightItem(
+        icon: Icons.auto_graph_rounded,
+        label: 'متابعة فورية لأداء إعلاناتك وإحصائيات دقيقة',
+        accentColor: scheme.territoryColor,
+      ),
+      SubscriptionHighlightItem(
+        icon: Icons.security_rounded,
+        label: 'طرق دفع موثوقة تشمل التحويل البنكي والمحافظ المحلية',
+        accentColor: scheme.forthColor,
+      ),
+      SubscriptionHighlightItem(
+        icon: Icons.notifications_active_rounded,
+        label: 'تنبيهات وتجديد مبكر لضمان عدم توقف ظهور إعلاناتك',
+        accentColor: scheme.headingAccentColor,
+      ),
+    ];
+  }
+
+  List<SubscriptionTabData> _buildTabs(BuildContext context) {
+    final scheme = context.color;
+    return [
+      SubscriptionTabData(
+        icon: Icons.layers_rounded,
+        label: 'adsListing'.translate(context),
+        accentColor: scheme.territoryColor,
+      ),
+      SubscriptionTabData(
+        icon: Icons.workspace_premium_outlined,
+        label: 'featuredAdsLbl'.translate(context),
+        accentColor: scheme.forthColor,
+      ),
+    ];
+  }
+
+
+
+
+
+
+
   // ===== BottomSheet لاختيار بوابة الدفع =====
   Future<void> _startManualBankTransfer(
     SubscriptionPackageModel? selected, {
     required bool isFeatured,
   }) async {
     if (!OldHive.HiveUtils.isUserAuthenticated()) {
-      _showSnack("يتطلب تسجيل الدخول لإتمام الشراء".translate(context));
+      _showSnack('يتطلب تسجيل الدخول لإتمام الشراء'.translate(context));
       return;
     }
 
     if (selected == null) {
-      _showSnack("اختر باقة أولاً".translate(context));
+      _showSnack('اختر باقة أولاً'.translate(context));
       return;
     }
 
@@ -636,142 +738,4 @@ class _SubscriptionPackageListScreenState
   }
 }
 
-// ======== Widgets مساعدة =========
 
-enum _PackageType { listing, featured }
-
-class _CtaSwitcher extends StatelessWidget {
-  final TabController? tabController;
-  final ValueNotifier<SubscriptionPackageModel?> selectedListing;
-  final ValueNotifier<SubscriptionPackageModel?> selectedFeatured;
-  final int listingIndex;
-  final int featuredIndex;
-
-  final String Function(SubscriptionPackageModel?, bool isFeatured)
-      labelBuilder;
-  final void Function(SubscriptionPackageModel?, _PackageType) onPickGateway;
-
-  const _CtaSwitcher({
-    required this.tabController,
-    required this.selectedListing,
-    required this.selectedFeatured,
-    required this.listingIndex,
-    required this.featuredIndex,
-    required this.labelBuilder,
-    required this.onPickGateway,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final idx = tabController?.index ?? 0;
-    if (idx == 1) {
-      return ValueListenableBuilder<SubscriptionPackageModel?>(
-        valueListenable: selectedFeatured,
-        builder: (_, sel, __) => _BottomCtaBar(
-          label: labelBuilder(sel, true),
-          enabled: sel != null,
-          onPay: () => onPickGateway(sel, _PackageType.featured),
-        ),
-      );
-    }
-    return ValueListenableBuilder<SubscriptionPackageModel?>(
-      valueListenable: selectedListing,
-      builder: (_, sel, __) => _BottomCtaBar(
-        label: labelBuilder(sel, false),
-        enabled: sel != null,
-        onPay: () => onPickGateway(sel, _PackageType.listing),
-      ),
-    );
-  }
-}
-
-class _BottomCtaBar extends StatelessWidget {
-  final String label;
-  final bool enabled;
-  final VoidCallback onPay;
-
-  const _BottomCtaBar({
-    required this.label,
-    required this.enabled,
-    required this.onPay,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: AnimatedOpacity(
-            duration: const Duration(milliseconds: 180),
-            opacity: enabled ? 1 : 0.7,
-            child: Text(
-              label.isEmpty ? "اختر باقة أولاً".translate(context) : label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: context.color.textDefaultColor,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        SizedBox(
-          height: 44,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: enabled
-                  ? context.color.territoryColor
-                  : context.color.borderColor,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 18),
-            ),
-            onPressed: enabled ? onPay : null,
-            child: Text(
-              "اختر طريقة الدفع".translate(context),
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _DotsIndicator extends StatelessWidget {
-  final int count;
-  final int index;
-  final Color activeColor;
-  final Color color;
-
-  const _DotsIndicator({
-    required this.count,
-    required this.index,
-    required this.activeColor,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    if (count <= 1) return const SizedBox.shrink();
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(count, (i) {
-        final active = i == index;
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          margin: const EdgeInsets.symmetric(horizontal: 3),
-          width: active ? 18 : 7,
-          height: 7,
-          decoration: BoxDecoration(
-            color: active ? activeColor : color,
-            borderRadius: BorderRadius.circular(8),
-          ),
-        );
-      }),
-    );
-  }
-}

@@ -15,6 +15,7 @@ import 'package:flutter/services.dart'; // Clipboard إن احتجته
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:marib/data/repositories/my_services_repository.dart';
+import 'package:marib/data/repositories/service_request_repository.dart';
 
 import 'package:marib/app/routes.dart';
 import 'package:marib/data/cubits/chat/get_buyer_chat_users_cubit.dart';
@@ -31,6 +32,7 @@ import 'package:marib/ui/screens/chat/chat_screen.dart';
 
 import 'package:marib/utils/api.dart';
 import 'package:marib/utils/extensions/extensions.dart';
+import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/hive_utils.dart';
 
@@ -139,6 +141,8 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
   bool _isProcessing = false; // لمنع تكرار النقر على زر الاستمرار
   bool _isReporting = false;
   final MyServicesRepository _ownerRepository = MyServicesRepository();
+  final ServiceRequestRepository _serviceRequestRepository =
+      ServiceRequestRepository();
   bool _statusUpdating = false;
   bool? _ownerStatusOverride;
   String? get _initialTitle => widget.initialTitle ?? widget.classified?.title;
@@ -582,6 +586,7 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
 
     if (hasCF) return _NextAction.customFields;
     if (isPaid) return _NextAction.payment;
+    if (_data?.id != null) return _NextAction.directRequest;
     return _NextAction.none;
   }
 
@@ -607,6 +612,9 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
         break;
       case _NextAction.payment:
         await _openPayment(context);
+        break;
+      case _NextAction.directRequest:
+        await _submitDirectRequest(context);
         break;
       case _NextAction.none:
       // UiUtils.showSnackBar(context, message: 'continue'.translate(context), type: SnackBarType.info);
@@ -644,6 +652,42 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
     }
   }
 
+  Future<void> _submitDirectRequest(BuildContext context) async {
+    final serviceId = _data?.id;
+    if (serviceId == null) {
+      HelperUtils.showSnackBarMessage(
+        context,
+        'لا يمكن تحديد هذه الخدمة حالياً.',
+        type: MessageType.error,
+      );
+      return;
+    }
+
+    try {
+      await _serviceRequestRepository.createRequest(
+        serviceId: serviceId,
+        serviceUid: _data?.serviceUid,
+      );
+      if (!mounted) return;
+      HelperUtils.showSnackBarMessage(
+        context,
+        'تم إرسال طلبك بنجاح، سنبقيك على اطلاع.',
+        type: MessageType.success,
+      );
+    } on ApiHttpException catch (error) {
+      HelperUtils.showSnackBarMessage(
+        context,
+        error.errorMessage ?? error.payload ?? error.toString(),
+        type: MessageType.error,
+      );
+    } catch (error) {
+      HelperUtils.showSnackBarMessage(
+        context,
+        error.toString(),
+        type: MessageType.error,
+      );
+    }
+  }
 
 
 
@@ -653,7 +697,7 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
 
     final schema = _pickServiceSchema(); // ✅ التقط السكيمة من أي مفتاح/تعشيق
 
-    Navigator.pushNamed(
+    final result = await Navigator.pushNamed(
       context,
       Routes.serviceAddMoreDetails,
       arguments: {
@@ -664,6 +708,15 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
         'serviceFieldsSchema': schema, // ✅ مهم جدًا
       },
     );
+
+    if (!mounted) return;
+    if (result == true) {
+      HelperUtils.showSnackBarMessage(
+        context,
+        'تم إرسال طلبك بنجاح، سنبقيك على اطلاع.',
+        type: MessageType.success,
+      );
+    }
   }
 
 
@@ -1120,4 +1173,4 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
   }
 }
 
-enum _NextAction { customFields, payment, none }
+enum _NextAction { customFields, payment, directRequest, none }

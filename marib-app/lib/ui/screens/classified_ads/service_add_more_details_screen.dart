@@ -1228,7 +1228,7 @@ class _ServiceAddMoreDetailsScreenState
     }
 
     if (Navigator.of(context).canPop()) {
-      Navigator.of(context).pop();
+      Navigator.of(context).pop(true);
     }
   }
 

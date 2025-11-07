@@ -1,0 +1,13 @@
+@media (max-width: 767.98px) {
+    .wifi-admin {
+        .wifi-stat-card {
+            &__value {
+                font-size: 1.65rem;
+            }
+        }
+
+        .wifi-toolbar {
+            padding: 0.75rem;
+        }
+    }
+}

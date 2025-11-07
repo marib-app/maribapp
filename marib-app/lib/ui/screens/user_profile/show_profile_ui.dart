@@ -41,45 +41,47 @@ class ProfileScreenUI extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final height = MediaQuery.of(context).size.height;
+    final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 6),
-        _HeaderSection(buildProfileImage: buildProfileImage),
-        const SizedBox(height: 11),
-        const _StatsRow(),
-        const SizedBox(height: 14),
-
-        _ProfileButtons(
-          onEditProfilePressed: onEditProfilePressed,
-          onShareProfilePressed: onShareProfilePressed,
+    return NestedScrollView(
+      physics: AppScrollBehavior.defaultPhysics,
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      headerSliverBuilder: (context, innerBoxIsScrolled) => [
+        SliverToBoxAdapter(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 6),
+              _HeaderSection(buildProfileImage: buildProfileImage),
+              const SizedBox(height: 11),
+              _ProfileButtons(
+                onEditProfilePressed: onEditProfilePressed,
+                onShareProfilePressed: onShareProfilePressed,
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
         ),
-
-        const SizedBox(height: 14),
-
-        _ProfileTabBar(
-          controller: tabController,
-          adTabs: adTabs,
-        ),
-
-        const SizedBox(height: 8),
-
-        // ملاحظة: لأن الواجهة تُستخدم داخل SingleChildScrollView في الشاشة الأم،
-        // نعطي TabBarView ارتفاعًا ثابتًا نسبيًا من الشاشة حتى يكون لها قيود صالحة.
-        SizedBox(
-          height: height * 0.7,
-          child: TabBarView(
-            controller: tabController,
-            physics: AppScrollBehavior.defaultPhysics,
-            children: adTabs.map((tab) {
-              final status = tab["status"];
-              return MyItemTab(getItemsWithStatus: status);
-            }).toList(),
+        SliverPersistentHeader(
+          pinned: true,
+          delegate: _StatsTabsHeaderDelegate(
+            backgroundColor: backgroundColor,
+            statsBuilder: (ctx) => _StatsRow(),
+            tabBarBuilder: (ctx) => _ProfileTabBar(
+              controller: tabController,
+              adTabs: adTabs,
+            ),
           ),
         ),
       ],
+      body: TabBarView(
+        controller: tabController,
+        physics: AppScrollBehavior.defaultPhysics,
+        children: adTabs.map((tab) {
+          final status = tab["status"];
+          return MyItemTab(getItemsWithStatus: status);
+        }).toList(),
+      ),
     );
   }
 }
@@ -375,43 +377,47 @@ class _ProfileTabBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textStyle = Theme.of(context).textTheme.bodyLarge;
-    final indicatorThickness =
-        ((textStyle?.fontSize ?? 16) / 6).clamp(2.0, 4.0);
+    final theme = Theme.of(context);
+    final textTheme = theme.textTheme.labelLarge ??
+        theme.textTheme.bodyLarge ??
+        const TextStyle(fontSize: 14);
+    final isDark = theme.brightness == Brightness.dark;
+    final Color borderColor = isDark ? Colors.white12 : Colors.black12;
+    final Color background = theme.colorScheme.surface;
+    final Color onBackground = theme.colorScheme.onSurface;
+    final Color brand = context.color.territoryColor;
+
+    final selectedStyle =
+    textTheme.copyWith(fontWeight: FontWeight.w700, height: 1.1);
+    final unselectedStyle =
+    textTheme.copyWith(fontWeight: FontWeight.w500, height: 1.1);
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+
       decoration: BoxDecoration(
-        color: context.color.secondaryColor.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(10),
+        color: background,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: borderColor),
       ),
       child: TabBar(
         controller: controller,
         isScrollable: true,
         physics: AppScrollBehavior.defaultPhysics,
 
-        // تباعد أفضل للنصّ داخل التبويب
-        labelPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        labelPadding:
+        const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
 
         indicator: UnderlineTabIndicator(
-          borderSide: BorderSide(
-            width: indicatorThickness,
-            color: context.color.territoryColor,
-          ),
-          insets: const EdgeInsets.symmetric(horizontal: 20.0),
-        ),
-        indicatorSize: TabBarIndicatorSize.label,
-
-        // استخدام MaterialStateProperty لمواءمة الإصدارات المختلفة
-        overlayColor: MaterialStatePropertyAll(
-          context.color.territoryColor.withOpacity(.06),
+            borderSide: BorderSide(color: brand, width: 3),
+            insets: const EdgeInsets.symmetric(horizontal: 24)
         ),
 
-        labelColor: context.color.territoryColor,
-        unselectedLabelColor: context.color.textLightColor,
-        labelStyle: textStyle?.copyWith(fontWeight: FontWeight.w700),
-        unselectedLabelStyle: textStyle,
+        overlayColor: MaterialStateProperty.all(Colors.transparent),
+        labelColor: onBackground,
+        unselectedLabelColor: onBackground.withOpacity(0.55),
+        labelStyle: selectedStyle,
+        unselectedLabelStyle: unselectedStyle,
         onTap: onTap,
 
         tabs: List.generate(adTabs.length, (i) {
@@ -424,7 +430,7 @@ class _ProfileTabBar extends StatelessWidget {
               label: count == null ? title : '$title ($count)',
               selected: controller.index == i,
               child: ConstrainedBox(
-                constraints: const BoxConstraints(minWidth: 88), // حد أدنى مريح
+                constraints: const BoxConstraints(minWidth: 92),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -449,6 +455,88 @@ class _ProfileTabBar extends StatelessWidget {
     );
   }
 }
+
+
+
+class _StatsTabsHeaderDelegate extends SliverPersistentHeaderDelegate {
+  _StatsTabsHeaderDelegate({
+    required this.backgroundColor,
+    required this.statsBuilder,
+    required this.tabBarBuilder,
+  });
+
+  final Color backgroundColor;
+  final WidgetBuilder statsBuilder;
+  final WidgetBuilder tabBarBuilder;
+
+  static const double _statsSectionExtent = 128;
+  static const double _tabsSectionExtent = 72;
+
+  @override
+  double get minExtent => _tabsSectionExtent;
+
+  @override
+  double get maxExtent => _tabsSectionExtent + _statsSectionExtent;
+
+  @override
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    final double deltaExtent = maxExtent - minExtent;
+    final double t = deltaExtent <= 0
+        ? 1.0
+        : (shrinkOffset / deltaExtent).clamp(0.0, 1.0);
+    final double statsOpacity = 1 - t;
+    final double heightFactor = math.max(0.0001, statsOpacity);
+    final double translateY = -12 * t;
+
+    final showShadow = overlapsContent || shrinkOffset > 0;
+    final shadowStrength = showShadow ? 0.08 * (0.5 + t / 2) : 0.0;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        boxShadow: showShadow
+            ? [
+          BoxShadow(
+            color: Colors.black.withOpacity(shadowStrength),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ]
+            : const [],
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          const SizedBox(height: 4),
+          ClipRect(
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              heightFactor: heightFactor,
+              child: Opacity(
+                opacity: statsOpacity,
+                child: Transform.translate(
+                  offset: Offset(0, translateY),
+                  child: statsBuilder(context),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          tabBarBuilder(context),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _StatsTabsHeaderDelegate oldDelegate) {
+    return true;
+  }
+}
+
+
 
 /// شارة عدّاد صغيرة
 class _Badge extends StatelessWidget {

@@ -1,0 +1,23 @@
+.wifi-admin {
+    table.table {
+        thead {
+            th {
+                font-weight: 600;
+                font-size: 0.9rem;
+                text-transform: none;
+            }
+        }
+
+        tbody {
+            td {
+                vertical-align: middle;
+                font-size: 0.92rem;
+            }
+        }
+    }
+
+    .bootstrap-table .fixed-table-toolbar .columns-right,
+    .bootstrap-table .fixed-table-toolbar .search {
+        margin-top: 0;
+    }
+}

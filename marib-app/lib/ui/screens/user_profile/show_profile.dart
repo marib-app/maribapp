@@ -30,7 +30,6 @@ import 'show_profile_ui.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/hive_utils.dart';
-import 'package:marib/app/app_scroll_behavior.dart';
 
 // شاشة عرض الملف الشخصي + الوصول لأزرار:
 // - مشاركة الملف الشخصي
@@ -206,27 +205,24 @@ class UserProfileScreenState extends State<ShowUserProfileScreen>
           /// - تم إبقاء الواجهة الفعلية في ProfileScreenUI (ملف منفصل) لتبسيط الصيانة.
           body: ScrollConfiguration(
             behavior: RemoveGlow(),
-            child: SingleChildScrollView(
-              physics: AppScrollBehavior.defaultPhysics,
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              child: ProfileScreenUI(
-                // التبويبات + الحالات
-                tabController: _tabController,
-                adTabs: adTabs,
+            child: ProfileScreenUI(
+              // التبويبات + الحالات
+              tabController: _tabController,
+              adTabs: adTabs,
 
-                // زر "تعديل الملف الشخصي":
-                // نمرّر allowProfileRoute=true حتى لا يعترضه الحارس الموجود في الراوتر.
-                onEditProfilePressed: () {
-                  HelperUtils.goToNextPage(
-                    Routes.completeProfile,
-                    context,
-                    false,
-                    args: {
-                      "from": "profile",
-                      "allowProfileRoute": true, // ← ضروري للسماح بالانتقال
-                    },
-                  );
-                },
+              // زر "تعديل الملف الشخصي":
+              // نمرّر allowProfileRoute=true حتى لا يعترضه الحارس الموجود في الراوتر.
+              onEditProfilePressed: () {
+                HelperUtils.goToNextPage(
+                  Routes.completeProfile,
+                  context,
+                  false,
+                  args: {
+                    "from": "profile",
+                    "allowProfileRoute": true, // ← ضروري للسماح بالانتقال
+                  },
+                );
+              },
 
                 // زر "مشاركة الملف" (جاهز للتنفيذ لاحقًا)
                 onShareProfilePressed: () {
@@ -236,9 +232,8 @@ class UserProfileScreenState extends State<ShowUserProfileScreen>
                 // زر تغيير صورة الحساب (يفتح BottomSheet)
                 onAvatarEditPressed: showPicker,
 
-                // باني صورة الحساب
-                buildProfileImage: getProfileImage,
-              ),
+              // باني صورة الحساب
+              buildProfileImage: getProfileImage,
             ),
           ),
         ),

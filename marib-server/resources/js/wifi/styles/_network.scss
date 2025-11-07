@@ -1,0 +1,119 @@
+.wifi-admin {
+    .wifi-network-card {
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        border-radius: var(--wifi-card-radius);
+        padding: 1.1rem;
+        background: #fff;
+        box-shadow: var(--wifi-shadow);
+
+        &__logo-wrapper {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px dashed rgba(0, 0, 0, 0.08);
+            border-radius: var(--wifi-card-radius);
+            text-align: center;
+            background: linear-gradient(135deg, rgba(13, 110, 253, 0.06), rgba(13, 110, 253, 0.02));
+        }
+
+        &__logo {
+            max-width: 100%;
+            height: auto;
+            border-radius: 0.75rem;
+            object-fit: contain;
+        }
+    }
+
+    .wifi-network-info {
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        border-radius: var(--wifi-card-radius);
+        padding: 1rem;
+        background-color: #fff;
+        box-shadow: var(--wifi-shadow);
+
+        &__title {
+            font-weight: 700;
+            font-size: 0.95rem;
+            margin-bottom: 0.75rem;
+            color: #343a40;
+        }
+
+        &__list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.65rem;
+        }
+
+        &__item {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            font-size: 0.9rem;
+            color: #495057;
+
+            span:first-child {
+                color: #6c757d;
+            }
+        }
+    }
+
+    .wifi-network-map {
+        border-radius: var(--wifi-card-radius);
+        border: 1px dashed rgba(13, 110, 253, 0.35);
+        padding: 1rem;
+        background: rgba(13, 110, 253, 0.04);
+        min-height: 180px;
+        position: relative;
+        overflow: hidden;
+
+        iframe {
+            border: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        &__placeholder {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #0d6efd;
+            gap: 0.5rem;
+            font-weight: 600;
+            text-align: center;
+
+            i {
+                font-size: 2rem;
+            }
+        }
+    }
+
+    .wifi-network-plans {
+        border-radius: var(--wifi-card-radius);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        background: #fff;
+        padding: 1rem;
+        box-shadow: var(--wifi-shadow);
+
+        &__list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        &__item {
+            border-radius: 0.75rem;
+            border: 1px solid rgba(0, 0, 0, 0.04);
+            padding: 0.75rem 0.9rem;
+            background: linear-gradient(135deg, rgba(248, 249, 252, 0.9), #fff);
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 0.5rem;
+        }
+    }
+}

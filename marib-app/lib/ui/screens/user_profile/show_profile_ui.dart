@@ -52,9 +52,9 @@ class ProfileScreenUI extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 6),
+              const SizedBox(height: 0),
               _HeaderSection(buildProfileImage: buildProfileImage),
-              const SizedBox(height: 11),
+              const SizedBox(height: 8),
               _ProfileButtons(
                 onEditProfilePressed: onEditProfilePressed,
                 onShareProfilePressed: onShareProfilePressed,
@@ -98,14 +98,14 @@ class _HeaderSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsetsDirectional.only(top: 18, start: 16, end: 16),
+      padding: const EdgeInsetsDirectional.only(top: 12, start: 16, end: 16),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           // إطار صورة بروفايل دائري
           Container(
-            height: 100.rh(context),
-            width: 100.rw(context),
+            height: 84.rh(context),
+            width: 84.rw(context),
             alignment: AlignmentDirectional.center,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
@@ -116,8 +116,8 @@ class _HeaderSection extends StatelessWidget {
             ),
             child: ClipOval(
               child: SizedBox(
-                width: 92.rw(context),
-                height: 92.rh(context),
+                width: 76.rw(context),
+                height: 76.rh(context),
                 child: buildProfileImage(),
               ),
             ),
@@ -133,8 +133,8 @@ class _HeaderSection extends StatelessWidget {
                 return Text(
                   name,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 22,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 20,
                       ),
                   overflow: TextOverflow.ellipsis,
                 );
@@ -172,7 +172,7 @@ class _StatsRow extends StatelessWidget {
         String showRating(double v) => isReady ? v.toStringAsFixed(1) : '—';
 
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
@@ -205,10 +205,16 @@ class StatBox extends StatelessWidget {
   Widget build(BuildContext context) {
     final content = Column(
       children: [
-        Text(value,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 4),
-        Text(label, style: const TextStyle(color: Colors.grey)),
+        Text(
+          value,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          label,
+          style: const TextStyle(color: Colors.grey, fontSize: 12),
+          textAlign: TextAlign.center,
+        ),
       ],
     );
     return onTap == null
@@ -251,11 +257,11 @@ class _ProfileButtons extends StatelessWidget {
     double clamp(num v, num min, num max) =>
         math.max(min.toDouble(), math.min(max.toDouble(), v.toDouble()));
 
-    final iconSize = clamp(width * 0.045, 16, 20);
-    final fontSize = clamp(width * 0.035, 12, 16);
-    final hPad = clamp(width * 0.04, 12, 20);
-    final vPad = clamp(width * 0.02, 10, 14);
-    final minH = clamp(width * 0.12, 44, 52);
+    final iconSize = clamp(width * 0.04, 15, 18);
+    final fontSize = clamp(width * 0.032, 11, 15);
+    final hPad = clamp(width * 0.035, 10, 18);
+    final vPad = clamp(width * 0.018, 8, 12);
+    final minH = clamp(width * 0.105, 40, 48);
 
     final cs = Theme.of(context).colorScheme;
 
@@ -317,7 +323,7 @@ class _ProfileButtons extends StatelessWidget {
     }
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Row(
         mainAxisSize: MainAxisSize.max, // يغطي العرض كامل
         children: [
@@ -336,7 +342,7 @@ class _ProfileButtons extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
 
           // زر المشاركة أضيق
           Expanded(
@@ -390,12 +396,12 @@ class _ProfileTabBar extends StatelessWidget {
     final Color brand = context.color.territoryColor;
 
     final selectedStyle =
-        textTheme.copyWith(fontWeight: FontWeight.w700, height: 1.1);
+    textTheme.copyWith(fontWeight: FontWeight.w600, height: 1.05);
     final unselectedStyle =
-        textTheme.copyWith(fontWeight: FontWeight.w500, height: 1.1);
+    textTheme.copyWith(fontWeight: FontWeight.w500, height: 1.05);
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
+      margin: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(12),
@@ -406,10 +412,10 @@ class _ProfileTabBar extends StatelessWidget {
         isScrollable: true,
         physics: AppScrollBehavior.defaultPhysics,
 
-        labelPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        labelPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         indicator: UnderlineTabIndicator(
-            borderSide: BorderSide(color: brand, width: 3),
-            insets: const EdgeInsets.symmetric(horizontal: 24)),
+            borderSide: BorderSide(color: brand, width: 2.5),
+            insets: const EdgeInsets.symmetric(horizontal: 20)),
         overlayColor: MaterialStateProperty.all(Colors.transparent),
         labelColor: onBackground,
         unselectedLabelColor: onBackground.withOpacity(0.55),
@@ -426,7 +432,7 @@ class _ProfileTabBar extends StatelessWidget {
               label: count == null ? title : '$title ($count)',
               selected: controller.index == i,
               child: ConstrainedBox(
-                constraints: const BoxConstraints(minWidth: 92),
+                constraints: const BoxConstraints(minWidth: 80),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -438,7 +444,7 @@ class _ProfileTabBar extends StatelessWidget {
                       ),
                     ),
                     if (count != null) ...[
-                      const SizedBox(width: 6),
+                      const SizedBox(width: 5),
                       _Badge(count: count),
                     ],
                   ],
@@ -463,8 +469,8 @@ class _StatsTabsHeaderDelegate extends SliverPersistentHeaderDelegate {
   final WidgetBuilder statsBuilder;
   final WidgetBuilder tabBarBuilder;
 
-  static const double _statsSectionExtent = 128;
-  static const double _tabsSectionExtent = 72;
+  static const double _statsSectionExtent = 95;
+  static const double _tabsSectionExtent = 40;
 
   @override
   double get minExtent => _tabsSectionExtent;
@@ -480,7 +486,7 @@ class _StatsTabsHeaderDelegate extends SliverPersistentHeaderDelegate {
         deltaExtent <= 0 ? 1.0 : (shrinkOffset / deltaExtent).clamp(0.0, 1.0);
     final double statsOpacity = 1 - t;
     final double heightFactor = math.max(0.0001, statsOpacity);
-    final double translateY = -12 * t;
+    final double translateY = -8 * t;
 
     final showShadow = overlapsContent || shrinkOffset > 0;
     final shadowStrength = showShadow ? 0.08 * (0.5 + t / 2) : 0.0;
@@ -515,9 +521,9 @@ class _StatsTabsHeaderDelegate extends SliverPersistentHeaderDelegate {
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           tabBarBuilder(context),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
         ],
       ),
     );

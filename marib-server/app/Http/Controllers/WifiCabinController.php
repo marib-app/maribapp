@@ -19,11 +19,10 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Throwable;
-
-
 
 
 class WifiCabinController extends Controller
@@ -45,6 +44,13 @@ class WifiCabinController extends Controller
 
         $networkQuery = $this->wifiNetwork->newQuery()->with(['owner:id,name,email']);
 
+
+        $wifiPlanHasStatusColumn = Schema::hasColumn($this->wifiPlan->getTable(), 'status');
+        $wifiNetworkHasStatusColumn = Schema::hasColumn($this->wifiNetwork->getTable(), 'status');
+        $wifiCodeBatchHasStatusColumn = Schema::hasColumn($this->wifiCodeBatch->getTable(), 'status');
+        $wifiCodeHasStatusColumn = Schema::hasColumn((new WifiCode())->getTable(), 'status');
+
+
         if ($search !== '') {
             $term = mb_strtolower($search);
             $networkQuery->where(function ($query) use ($term): void {
@@ -53,20 +59,37 @@ class WifiCabinController extends Controller
             });
         }
 
-        /** @var LengthAwarePaginator $networks */
-        $networks = $networkQuery
-            ->withCount([
-                'plans',
+        $networkQuery->withCount(['plans']);
+
+        if ($wifiPlanHasStatusColumn) {
+            $networkQuery->withCount([
                 'plans as active_plans_count' => function ($query): void {
                     $query->where('status', WifiPlanStatus::ACTIVE->value);
                 },
-            ])
+            ]);
+        }
+
+        /** @var LengthAwarePaginator $networks */
+        $networks = $networkQuery
+
             ->orderByDesc('created_at')
             ->paginate($perPage)
             ->appends($request->query());
 
-        $pendingRequests = $this->wifiCodeBatch->newQuery()
-            ->where('status', WifiCodeBatchStatus::UPLOADED->value)
+        if (! $wifiPlanHasStatusColumn) {
+            $networks->getCollection()->each(static function ($network): void {
+                $network->active_plans_count = 0;
+            });
+        }
+
+        $pendingRequestsQuery = $this->wifiCodeBatch->newQuery();
+
+        if ($wifiCodeBatchHasStatusColumn) {
+            $pendingRequestsQuery->where('status', WifiCodeBatchStatus::UPLOADED->value);
+        }
+
+        $pendingRequests = $pendingRequestsQuery
+
             ->with([
                 'plan:id,name,wifi_network_id',
                 'plan.network:id,name'
@@ -78,25 +101,45 @@ class WifiCabinController extends Controller
         $stats = [
             'networks' => [
                 'total' => $this->wifiNetwork->newQuery()->count(),
-                'active' => $this->wifiNetwork->newQuery()->where('status', WifiNetworkStatus::ACTIVE->value)->count(),
-                'inactive' => $this->wifiNetwork->newQuery()->where('status', WifiNetworkStatus::INACTIVE->value)->count(),
-                'suspended' => $this->wifiNetwork->newQuery()->where('status', WifiNetworkStatus::SUSPENDED->value)->count(),
+                'active' => $wifiNetworkHasStatusColumn
+                    ? $this->wifiNetwork->newQuery()->where('status', WifiNetworkStatus::ACTIVE->value)->count()
+                    : 0,
+                'inactive' => $wifiNetworkHasStatusColumn
+                    ? $this->wifiNetwork->newQuery()->where('status', WifiNetworkStatus::INACTIVE->value)->count()
+                    : 0,
+                'suspended' => $wifiNetworkHasStatusColumn
+                    ? $this->wifiNetwork->newQuery()->where('status', WifiNetworkStatus::SUSPENDED->value)->count()
+                    : 0,
             ],
             'plans' => [
                 'total' => $this->wifiPlan->newQuery()->count(),
-                'active' => $this->wifiPlan->newQuery()->where('status', WifiPlanStatus::ACTIVE->value)->count(),
-                'uploaded' => $this->wifiPlan->newQuery()->where('status', WifiPlanStatus::UPLOADED->value)->count(),
-                'archived' => $this->wifiPlan->newQuery()->where('status', WifiPlanStatus::ARCHIVED->value)->count(),
+                'active' => $wifiPlanHasStatusColumn
+                    ? $this->wifiPlan->newQuery()->where('status', WifiPlanStatus::ACTIVE->value)->count()
+                    : 0,
+                'uploaded' => $wifiPlanHasStatusColumn
+                    ? $this->wifiPlan->newQuery()->where('status', WifiPlanStatus::UPLOADED->value)->count()
+                    : 0,
+                'archived' => $wifiPlanHasStatusColumn
+                    ? $this->wifiPlan->newQuery()->where('status', WifiPlanStatus::ARCHIVED->value)->count()
+                    : 0,
             ],
             'batches' => [
                 'total' => $this->wifiCodeBatch->newQuery()->count(),
-                'pending' => $this->wifiCodeBatch->newQuery()->where('status', WifiCodeBatchStatus::UPLOADED->value)->count(),
-                'active' => $this->wifiCodeBatch->newQuery()->where('status', WifiCodeBatchStatus::ACTIVE->value)->count(),
+                'pending' => $wifiCodeBatchHasStatusColumn
+                    ? $this->wifiCodeBatch->newQuery()->where('status', WifiCodeBatchStatus::UPLOADED->value)->count()
+                    : 0,
+                'active' => $wifiCodeBatchHasStatusColumn
+                    ? $this->wifiCodeBatch->newQuery()->where('status', WifiCodeBatchStatus::ACTIVE->value)->count()
+                    : 0,
             ],
             'codes' => [
                 'total' => WifiCode::query()->count(),
-                'available' => WifiCode::query()->where('status', WifiCodeStatus::AVAILABLE->value)->count(),
-                'sold' => WifiCode::query()->where('status', WifiCodeStatus::SOLD->value)->count(),
+                'available' => $wifiCodeHasStatusColumn
+                    ? WifiCode::query()->where('status', WifiCodeStatus::AVAILABLE->value)->count()
+                    : 0,
+                'sold' => $wifiCodeHasStatusColumn
+                    ? WifiCode::query()->where('status', WifiCodeStatus::SOLD->value)->count()
+                    : 0,
             ],
         ];
 

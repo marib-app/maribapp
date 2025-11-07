@@ -825,88 +825,6 @@ class _SignupScreenState extends CloudState<SignupScreen> {
                                 showLogoPreviewHint: _officeLogoPreviewHint,
                               )
                             ],
-
-                            // ط§ظ„طھط¬ط§ط±ظٹ
-                            if (widget.selectedAccountType == "3") ...[
-                              BlocBuilder<FetchCategoryCubit,
-                                  FetchCategoryState>(
-                                builder: (context, catState) {
-                                  List<CategoryModel> cats = [];
-                                  if (catState is FetchCategorySuccess) {
-                                    final CategoryModel category6 =
-                                        catState.categories.firstWhere(
-                                      (c) => c.id == 6,
-                                      orElse: () => CategoryModel(),
-                                    );
-                                    cats = category6.children ?? [];
-                                  }
-                                  return BusinessSection(
-                                    logo: _businessLogoImage,
-                                    onPickLogo: () =>
-                                        _pickImage('business_logo'),
-                                    commercialFile: _commercialRegisterFile,
-                                    onPickFile: _pickFile,
-                                    isUploading: isUploading,
-                                    name: _businessNameController,
-                                    phone: _businessPhoneController,
-                                    whatsapp: _businessWhatsappController,
-                                    location: _businessLocationController,
-                                    prefixText:
-                                        "${flagEmoji ?? "ًں‡¾ًں‡ھ"} ${countryCode ?? "+967"}",
-                                    onPickCountry: _showCountryPicker,
-                                    isLocationLoading: _isLocationLoading,
-                                    onGetLocation: _getLocationCallback(),
-                                    showLogoPicker: false,
-                                    categories: cats,
-                                    selectedCategoryIds:
-                                        selectedBusinessCategories,
-                                    onToggleCategory: (id) {
-                                      setState(() {
-                                        if (selectedBusinessCategories
-                                            .contains(id)) {
-                                          selectedBusinessCategories.remove(id);
-                                        } else {
-                                          selectedBusinessCategories.add(id);
-                                        }
-                                      });
-                                    },
-                                    openingTime: _openingTime,
-                                    closingTime: _closingTime,
-                                    onPickOpening: () =>
-                                        _selectTime(context, true),
-                                    onPickClosing: () =>
-                                        _selectTime(context, false),
-                                    storeGateways: _storeGateways,
-                                    selectedGatewayIds:
-                                        _selectedStoreGatewayIds,
-                                    beneficiaryControllers:
-                                        _storeGatewayBeneficiaryControllers,
-                                    accountControllers:
-                                        _storeGatewayAccountControllers,
-                                    onToggleGateway: _toggleStoreGateway,
-                                    isGatewaysLoading: _isLoadingStoreGateways,
-                                    gatewaysError: _storeGatewaysError,
-                                    onRetryGateways: _loadStoreGateways,
-
-                                    // â¬‡ï¸ڈ ظ…ظ‡ظ…: ط£ظˆظ‚ط§طھ ط§ظ„ط¯ظˆط§ظ… (ط§ظ„ط¬ط¯ظٹط¯)
-                                    workingHours: _workingHours,
-                                    onChangedWorkingHours: (updated) {
-                                      setState(() {
-                                        _workingHours =
-                                            updated; // ط®ط²ظ‘ظ†ظ‡ط§ ط£ظˆ ط£ط±ط³ظ„ظ‡ط§ ظ„ظ„ظƒظٹظˆط¨ظٹطھ/ط§ظ„ط¨ط§ظƒ-ط¥ظ†ط¯
-                                      });
-                                    },
-
-                                    // ط§ط®طھظٹط§ط±ظٹ: ط¹ط±ط¶/طھط­ظ…ظٹظ„ ط§ظ„ط´ط¹ط§ط±
-                                    isLogoUploading: _businessLogoUploading,
-                                    logoUploadProgress: _businessLogoProgress,
-                                    showLogoPreviewHint:
-                                        _businessLogoPreviewHint,
-                                  );
-                                },
-                              ),
-                            ],
-
                             // ط§ظ„ط£ظپط±ط§ط¯
                             if (widget.selectedAccountType == "1" ||
                                 widget.selectedAccountType == "individual") ...[
@@ -933,6 +851,179 @@ class _SignupScreenState extends CloudState<SignupScreen> {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCommercialLayout(BuildContext context) {
+    final statusBarBase = LoginStatusBar.resolveBaseColor(
+      context,
+      override: context.color.backgroundColor,
+    );
+    final double bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: LoginStatusBar.overlayFor(
+        context,
+        baseColor: statusBarBase,
+      ),
+      child: Scaffold(
+        backgroundColor: context.color.backgroundColor,
+        body: Column(
+          children: [
+            LoginStatusBar.topSpacer(
+              context,
+              baseColor: statusBarBase,
+            ),
+            _buildCommercialAppBar(context),
+            Expanded(
+              child: Form(
+                key: _formKey,
+                child: ListView(
+                  physics: const ClampingScrollPhysics(),
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+                  children: [
+                    Text(_getTitle())
+                        .size(context.font.extraLarge)
+                        .color(context.color.textDefaultColor),
+                    const SizedBox(height: 8),
+                    Text(
+                      "readytoserve".translate(context),
+                      style: TextStyle(
+                        fontSize: context.font.medium,
+                        color: context.color.textLightColor,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    BlocBuilder<FetchCategoryCubit, FetchCategoryState>(
+                      builder: (context, catState) {
+                        List<CategoryModel> cats = [];
+                        if (catState is FetchCategorySuccess) {
+                          final CategoryModel category6 =
+                              catState.categories.firstWhere(
+                            (c) => c.id == 6,
+                            orElse: () => CategoryModel(),
+                          );
+                          cats = category6.children ?? [];
+                        }
+                        return BusinessSection(
+                          logo: _businessLogoImage,
+                          onPickLogo: () => _pickImage('business_logo'),
+                          commercialFile: _commercialRegisterFile,
+                          onPickFile: _pickFile,
+                          isUploading: isUploading,
+                          name: _businessNameController,
+                          phone: _businessPhoneController,
+                          whatsapp: _businessWhatsappController,
+                          location: _businessLocationController,
+                          prefixText:
+                              "${flagEmoji ?? "ًں‡¾ًں‡ھ"} ${countryCode ?? "+967"}",
+                          onPickCountry: _showCountryPicker,
+                          isLocationLoading: _isLocationLoading,
+                          onGetLocation: _getLocationCallback(),
+                          showLogoPicker: false,
+                          categories: cats,
+                          selectedCategoryIds: selectedBusinessCategories,
+                          onToggleCategory: (id) {
+                            setState(() {
+                              if (selectedBusinessCategories.contains(id)) {
+                                selectedBusinessCategories.remove(id);
+                              } else {
+                                selectedBusinessCategories.add(id);
+                              }
+                            });
+                          },
+                          openingTime: _openingTime,
+                          closingTime: _closingTime,
+                          onPickOpening: () => _selectTime(context, true),
+                          onPickClosing: () => _selectTime(context, false),
+                          storeGateways: _storeGateways,
+                          selectedGatewayIds: _selectedStoreGatewayIds,
+                          beneficiaryControllers:
+                              _storeGatewayBeneficiaryControllers,
+                          accountControllers: _storeGatewayAccountControllers,
+                          onToggleGateway: _toggleStoreGateway,
+                          isGatewaysLoading: _isLoadingStoreGateways,
+                          gatewaysError: _storeGatewaysError,
+                          onRetryGateways: _loadStoreGateways,
+                          workingHours: _workingHours,
+                          onChangedWorkingHours: (updated) {
+                            setState(() {
+                              _workingHours = updated;
+                            });
+                          },
+                          isLogoUploading: _businessLogoUploading,
+                          logoUploadProgress: _businessLogoProgress,
+                          showLogoPreviewHint: _businessLogoPreviewHint,
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 40),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        bottomNavigationBar: AnimatedPadding(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOut,
+          padding: EdgeInsets.only(bottom: bottomInset),
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+              child: UiUtils.buildButton(
+                context,
+                onPressed: _submitForm,
+                buttonTitle: "completeRegistration".translate(context),
+                radius: 14,
+                height: 52,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCommercialAppBar(BuildContext context) {
+    return SafeArea(
+      bottom: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 4, 12, 12),
+        child: Row(
+          children: [
+            IconButton(
+              tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+              icon: Icon(
+                Icons.arrow_back,
+                color: context.color.textDefaultColor,
+              ),
+              onPressed: () => Navigator.of(context).maybePop(),
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Text(
+                _getTitle(),
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: context.color.textDefaultColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ),
+            TextButton(
+              onPressed: () =>
+                  Navigator.of(context).pushNamed(Routes.login),
+              child: Text("login".translate(context))
+                  .underline()
+                  .color(context.color.territoryColor),
+            ),
+          ],
         ),
       ),
     );
@@ -1536,4 +1627,5 @@ class _StoreGatewayAccountDraft {
     };
   }
 }
+
 

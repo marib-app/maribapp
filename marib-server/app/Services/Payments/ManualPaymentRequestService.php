@@ -118,6 +118,21 @@ class ManualPaymentRequestService
             data_set($metaUpdates, 'bank.account_id', $bankAccountId);
         }
 
+        $storeGatewayAccountId = Arr::get($data, 'store_gateway_account_id');
+        if ($storeGatewayAccountId !== null) {
+            data_set($metaUpdates, 'store_gateway_account.id', (int) $storeGatewayAccountId);
+        }
+
+        $storeGatewayAccountSnapshot = Arr::get($data, 'store_gateway_account');
+        if (is_array($storeGatewayAccountSnapshot) && $storeGatewayAccountSnapshot !== []) {
+            data_set($metaUpdates, 'store_gateway_account.snapshot', $storeGatewayAccountSnapshot);
+        }
+
+        $storeSnapshot = Arr::get($data, 'store');
+        if (is_array($storeSnapshot) && $storeSnapshot !== []) {
+            data_set($metaUpdates, 'store', $storeSnapshot);
+        }
+
 
         if ($manualBank) {
             $normalizedBankName = $manualBank->name !== null ? trim((string) $manualBank->name) : null;
@@ -159,7 +174,6 @@ class ManualPaymentRequestService
 
 
         $department = $this->determineDepartmentForOrderPayable($payableType, $payableId, $existingRequest);
-        $storeId = $this->resolveStoreIdForPayable($payableType, $payableId);
 
 
         $duplicateRequest = null;
@@ -414,6 +428,21 @@ class ManualPaymentRequestService
                 data_set($meta, 'bank.beneficiary_name', $beneficiaryName);
                 data_set($meta, 'manual_bank.beneficiary_name', $beneficiaryName);
             }
+        }
+
+        $storeGatewayAccountId = Arr::get($data, 'store_gateway_account_id');
+        if ($storeGatewayAccountId !== null) {
+            data_set($meta, 'store_gateway_account.id', (int) $storeGatewayAccountId);
+        }
+
+        $storeGatewayAccountSnapshot = Arr::get($data, 'store_gateway_account');
+        if (is_array($storeGatewayAccountSnapshot) && $storeGatewayAccountSnapshot !== []) {
+            data_set($meta, 'store_gateway_account.snapshot', $storeGatewayAccountSnapshot);
+        }
+
+        $storeSnapshot = Arr::get($data, 'store');
+        if (is_array($storeSnapshot) && $storeSnapshot !== []) {
+            data_set($meta, 'store', $storeSnapshot);
         }
 
 
@@ -1652,6 +1681,23 @@ class ManualPaymentRequestService
 
             if ($trimmed !== '') {
                 return $trimmed;
+            }
+        }
+
+        $attachments = Arr::get($data, 'attachments');
+        if (is_iterable($attachments)) {
+            foreach ($attachments as $attachment) {
+                $attachmentPath = Arr::get($attachment, 'path');
+
+                if (! is_string($attachmentPath)) {
+                    continue;
+                }
+
+                $trimmedAttachment = trim($attachmentPath);
+
+                if ($trimmedAttachment !== '') {
+                    return $trimmedAttachment;
+                }
             }
         }
 

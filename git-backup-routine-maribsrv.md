@@ -29,8 +29,6 @@ php artisan cache:clear; php artisan config:clear ;  php artisan route:clear
 
 
 
-
-
 استطلاع قواعد البيانات 
 mysql -h 127.0.0.1 -u root -p -e "SHOW DATABASES;"
 

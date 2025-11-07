@@ -6,6 +6,7 @@ use App\Models\CartItem;
 use App\Models\Category;
 use App\Models\Item;
 use App\Models\Store;
+use App\Models\StoreGatewayAccount;
 use App\Models\User;
 use App\Services\DepartmentReportService;
 use Illuminate\Http\JsonResponse;
@@ -1088,18 +1089,32 @@ class CartController extends Controller
         if (! $store) {
             $storeId = $cartItems->pluck('store_id')->filter()->unique()->values()->first();
 
-            return $storeId ? ['id' => $storeId] : null;
+            if (! $storeId) {
+                return null;
+            }
+
+            $store = Store::with(['settings', 'workingHours'])->find($storeId);
+
+            if (! $store) {
+                return ['id' => $storeId];
+            }
         }
 
         $status = $this->storeStatusService->resolve($store);
-
-        return [
+        $summary = [
             'id' => $store->id,
             'name' => $store->name,
             'slug' => $store->slug,
             'logo_url' => $this->resolveStoreLogoUrl($store->logo_path),
             'status' => $status,
         ];
+
+        $manualBanks = $this->resolveStoreManualBanks($store);
+        if ($manualBanks !== []) {
+            $summary['manual_banks'] = $manualBanks;
+        }
+
+        return $summary;
     }
 
     protected function latestCartTimestamp(Collection $cartItems): ?Carbon
@@ -1930,8 +1945,40 @@ class CartController extends Controller
         $payload['meta'] = $meta;
 
         return $payload;
+    }
 
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    protected function resolveStoreManualBanks(?Store $store): array
+    {
+        if (! $store) {
+            return [];
+        }
 
+        $accounts = StoreGatewayAccount::query()
+            ->where('store_id', $store->getKey())
+            ->where('is_active', true)
+            ->whereHas('storeGateway', static fn ($query) => $query->where('is_active', true))
+            ->with('storeGateway')
+            ->orderBy('id')
+            ->get();
+
+        return $accounts->map(static function (StoreGatewayAccount $account) {
+            $gateway = $account->storeGateway;
+
+            return array_filter([
+                'store_gateway_account_id' => $account->getKey(),
+                'store_gateway_id' => $account->store_gateway_id,
+                'gateway' => $gateway ? [
+                    'id' => $gateway->getKey(),
+                    'name' => $gateway->name,
+                    'logo_url' => $gateway->logo_url,
+                ] : null,
+                'beneficiary_name' => $account->beneficiary_name,
+                'account_number' => $account->account_number,
+            ], static fn ($value) => $value !== null && $value !== '');
+        })->values()->all();
     }
 
     /**

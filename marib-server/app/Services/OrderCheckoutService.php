@@ -12,6 +12,7 @@ use App\Models\ManualBank;
 use App\Models\Order;
 use App\Models\OrderHistory;
 use App\Models\OrderItem;
+use App\Models\PaymentTransaction;
 use App\Models\Store;
 use App\Models\StoreGatewayAccount;
 use App\Models\User;
@@ -27,6 +28,7 @@ use App\Services\LegalNumberingService;
 use App\Services\ItemPurchaseOptionsService;
 
 use App\Services\DelegateNotificationService;
+use App\Services\Payments\ManualPaymentRequestService;
 use App\Services\Store\StoreStatusService;
 
 use Throwable;
@@ -153,6 +155,7 @@ class OrderCheckoutService
         private readonly ItemPurchaseOptionsService $itemPurchaseOptionsService,
         private readonly DelegateNotificationService $delegateNotificationService,
         private readonly StoreStatusService $storeStatusService,
+        private readonly ManualPaymentRequestService $manualPaymentRequestService,
 
     ) {
     }
@@ -201,6 +204,7 @@ class OrderCheckoutService
                 
                 ]);
             }
+            $orderCurrency = $cartCurrencies->first() ?? config('app.currency', 'SAR');
 
 
             $requestedDeliveryTiming = $data['delivery_payment_timing'] ?? null;
@@ -231,6 +235,8 @@ class OrderCheckoutService
 
             $cartMetrics = $this->shippingQuoteService->computeCartMetrics($cartItems);
             $subTotal = round($cartMetrics['cart_value'], 2);
+
+            $storeGatewayAccountModel = null;
 
             if ($storeModel !== null && $storeStatus !== null) {
                 $this->guardStoreCheckout($storeStatus, $subTotal);
@@ -314,6 +320,7 @@ class OrderCheckoutService
 
                 $paymentDetails = $storeTransferContext['payment'];
                 $manualTransferDetails = $storeTransferContext['manual_transfer'];
+                $storeGatewayAccountModel = $storeTransferContext['store_gateway_account'] ?? null;
             }
 
 
@@ -1314,6 +1321,103 @@ class OrderCheckoutService
         }
 
         return $account;
+    }
+
+    private function createManualPaymentRequestForOrder(
+        Order $order,
+        User $user,
+        ?array $paymentDetails,
+        array $manualTransferDetails,
+        ?StoreGatewayAccount $storeGatewayAccount,
+        float $finalAmount,
+        string $currency
+    ): void {
+        try {
+            $storeGatewayAccountSnapshot = $manualTransferDetails['store_gateway_account']
+                ?? $this->normalizeStoreGatewayAccountSnapshot($storeGatewayAccount);
+
+            $transactionMeta = array_filter([
+                'payment' => $paymentDetails,
+                'manual_transfer' => $manualTransferDetails,
+                'store_gateway_account' => $storeGatewayAccountSnapshot,
+            ], static fn ($value) => $value !== null && $value !== [] && $value !== '');
+
+            $transaction = PaymentTransaction::create([
+                'user_id' => $user->getKey(),
+                'order_id' => $order->getKey(),
+                'payable_type' => Order::class,
+                'payable_id' => $order->getKey(),
+                'amount' => $finalAmount,
+                'currency' => $currency,
+                'payment_gateway' => 'manual_bank',
+                'payment_status' => 'pending',
+                'meta' => $transactionMeta === [] ? null : $transactionMeta,
+                'idempotency_key' => sprintf('checkout:manual:%d:%s', $order->getKey(), Str::uuid()),
+            ]);
+
+            $manualBankId = $paymentDetails['manual_bank_id']
+                ?? $paymentDetails['bank_id']
+                ?? $this->resolveFallbackManualBankId();
+
+            $storeGatewayAccountId = $manualTransferDetails['store_gateway_account_id']
+                ?? ($storeGatewayAccount?->getKey());
+
+            $manualRequestPayload = array_filter([
+                'manual_bank_id' => $manualBankId,
+                'bank_id' => $manualBankId,
+                'bank_name' => $paymentDetails['bank_name'] ?? null,
+                'sender_name' => $manualTransferDetails['sender_name'] ?? null,
+                'reference' => $manualTransferDetails['transfer_reference']
+                    ?? $manualTransferDetails['transfer_code']
+                    ?? null,
+                'note' => $manualTransferDetails['note'] ?? null,
+                'manual_transfer' => $manualTransferDetails,
+                'attachments' => $manualTransferDetails['attachments'] ?? null,
+                'receipt_path' => $manualTransferDetails['receipt_path'] ?? null,
+                'receipt_url' => $manualTransferDetails['receipt_url'] ?? null,
+                'store_gateway_account_id' => $storeGatewayAccountId,
+                'store_gateway_account' => $storeGatewayAccountSnapshot,
+                'store' => $manualTransferDetails['store'] ?? null,
+                'metadata' => ['manual_transfer' => $manualTransferDetails],
+            ], static fn ($value) => $value !== null && $value !== '');
+
+            $manualRequest = $this->manualPaymentRequestService->createOrUpdateForManualTransaction(
+                $user,
+                Order::class,
+                $order->getKey(),
+                $transaction,
+                $manualRequestPayload
+            );
+
+            if ($manualRequest instanceof ManualPaymentRequest
+                && $transaction->manual_payment_request_id !== $manualRequest->getKey()
+            ) {
+                $transaction->manual_payment_request_id = $manualRequest->getKey();
+                $transaction->save();
+            }
+        } catch (Throwable $exception) {
+            $this->telemetry->record('checkout.manual_transfer.draft_failed', [
+                'order_id' => $order->getKey(),
+                'message' => $exception->getMessage(),
+            ]);
+        }
+    }
+
+    private function normalizeStoreGatewayAccountSnapshot(?StoreGatewayAccount $account): ?array
+    {
+        if (! $account) {
+            return null;
+        }
+
+        $snapshot = array_filter([
+            'id' => $account->getKey(),
+            'store_id' => $account->store_id,
+            'store_gateway_id' => $account->store_gateway_id,
+            'beneficiary_name' => $account->beneficiary_name,
+            'account_number' => $account->account_number,
+        ], static fn ($value) => $value !== null && $value !== '');
+
+        return $snapshot === [] ? null : $snapshot;
     }
 
     private function resolveFallbackManualBankId(): ?int

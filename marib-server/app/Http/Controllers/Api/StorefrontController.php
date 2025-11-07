@@ -132,31 +132,8 @@ class StorefrontController extends Controller
     {
         $storeModel = $this->findStore($store);
 
-        $accounts = StoreGatewayAccount::query()
-            ->where('store_id', $storeModel->id)
-            ->where('is_active', true)
-            ->whereHas('storeGateway', static fn ($query) => $query->where('is_active', true))
-            ->with('storeGateway')
-            ->orderBy('id')
-            ->get();
-
-        $data = $accounts->map(static function (StoreGatewayAccount $account) {
-            $gateway = $account->storeGateway;
-
-            return [
-                'id' => $account->id,
-                'beneficiary_name' => $account->beneficiary_name,
-                'account_number' => $account->account_number,
-                'gateway' => [
-                    'id' => $gateway?->id,
-                    'name' => $gateway?->name,
-                    'logo_url' => $gateway?->logo_url,
-                ],
-            ];
-        })->values()->all();
-
         return response()->json([
-            'data' => $data,
+            'data' => $this->formatStoreManualBanks($storeModel),
         ]);
     }
 
@@ -206,6 +183,7 @@ class StorefrontController extends Controller
                 'min_order_amount' => $statusPayload['min_order_amount'],
                 'checkout_notice' => $statusPayload['checkout_notice'],
             ];
+            $data['manual_banks'] = $this->formatStoreManualBanks($store);
         }
 
         return $data;
@@ -340,5 +318,35 @@ class StorefrontController extends Controller
         }
 
         return $query->firstOrFail();
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function formatStoreManualBanks(Store $store): array
+    {
+        $accounts = StoreGatewayAccount::query()
+            ->where('store_id', $store->getKey())
+            ->where('is_active', true)
+            ->whereHas('storeGateway', static fn ($query) => $query->where('is_active', true))
+            ->with('storeGateway')
+            ->orderBy('id')
+            ->get();
+
+        return $accounts->map(static function (StoreGatewayAccount $account) {
+            $gateway = $account->storeGateway;
+
+            return array_filter([
+                'store_gateway_account_id' => $account->getKey(),
+                'store_gateway_id' => $account->store_gateway_id,
+                'gateway' => $gateway ? [
+                    'id' => $gateway->getKey(),
+                    'name' => $gateway->name,
+                    'logo_url' => $gateway->logo_url,
+                ] : null,
+                'beneficiary_name' => $account->beneficiary_name,
+                'account_number' => $account->account_number,
+            ], static fn ($value) => $value !== null && $value !== '');
+        })->values()->all();
     }
 }

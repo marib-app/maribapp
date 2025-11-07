@@ -609,7 +609,10 @@ class OrderPaymentService
                 ?? Arr::get($data, 'note')
         );
 
-        $bankId = Arr::get($data, 'manual_bank_id') ?? Arr::get($data, 'bank_id');
+        $bankId = Arr::get($data, 'manual_bank_id')
+            ?? Arr::get($data, 'bank_id')
+            ?? Arr::get($data, 'payment.manual_bank_id')
+            ?? Arr::get($data, 'payment.bank_id');
         $normalizedBankId = $this->normalizeManualBankId($bankId);
         $hasTransferDetails = $senderName !== null
             || $transferReference !== null
@@ -624,6 +627,11 @@ class OrderPaymentService
             Arr::get($data, 'bank_name')
                 ?? Arr::get($data, 'payment.bank_name')
         );
+
+        $storeGatewayAccountId = Arr::get($manualTransfer, 'store_gateway_account_id')
+            ?? Arr::get($data, 'store_gateway_account_id');
+        $storeGatewayAccountSnapshot = Arr::get($manualTransfer, 'store_gateway_account');
+        $storeSnapshot = Arr::get($manualTransfer, 'store');
 
         $payload = array_filter([
             'manual_bank_id' => $normalizedBankId,
@@ -646,7 +654,7 @@ class OrderPaymentService
         }
 
 
-        $receiptContext = $this->resolveManualReceiptContext($data);
+        $receiptContext = $this->resolveManualReceiptContext($data, $manualTransfer);
 
         if ($receiptContext['attachments'] !== []) {
             $payload['attachments'] = $receiptContext['attachments'];
@@ -666,6 +674,28 @@ class OrderPaymentService
                 'disk' => 'public',
                 'url' => $receiptContext['receipt_url'],
             ], static fn ($value) => $value !== null && $value !== '');
+        }
+
+        if ($order->store_id !== null) {
+            $payload['store_id'] = $order->store_id;
+        }
+
+        if ($storeSnapshot) {
+            if (! isset($storeSnapshot['id']) && $order->store_id !== null) {
+                $storeSnapshot['id'] = $order->store_id;
+            }
+
+            $payload['store'] = $storeSnapshot;
+        } elseif ($order->store_id !== null) {
+            $payload['store'] = ['id' => $order->store_id];
+        }
+
+        if ($storeGatewayAccountId !== null) {
+            $payload['store_gateway_account_id'] = (int) $storeGatewayAccountId;
+        }
+
+        if (is_array($storeGatewayAccountSnapshot) && $storeGatewayAccountSnapshot !== []) {
+            $payload['store_gateway_account'] = $storeGatewayAccountSnapshot;
         }
 
 
@@ -770,25 +800,28 @@ class OrderPaymentService
 
     /**
      * @param array<string, mixed> $data
+     * @param array<string, mixed> $manualTransfer
      * @return array{attachments: array<int, array<string, mixed>>, receipt_path: ?string, receipt_url: ?string}
      */
-    private function resolveManualReceiptContext(array $data): array
+    private function resolveManualReceiptContext(array $data, array $manualTransfer = []): array
     {
-        $attachments = $this->normalizeManualTransferAttachments(Arr::get($data, 'attachments'));
+        $attachments = $this->normalizeManualTransferAttachments(
+            Arr::get($data, 'attachments')
+                ?? Arr::get($manualTransfer, 'attachments')
+        );
 
         $receiptPath = Arr::get($data, 'receipt_path');
-        if (! is_string($receiptPath) || trim($receiptPath) === '') {
-            $receiptPath = null;
-        } else {
-            $receiptPath = trim($receiptPath);
+        if ($receiptPath === null) {
+            $receiptPath = Arr::get($manualTransfer, 'receipt_path');
         }
+        $receiptPath = $this->normalizeManualString($receiptPath);
 
         $receiptUrl = Arr::get($data, 'receipt_url');
-        if (! is_string($receiptUrl) || trim($receiptUrl) === '') {
-            $receiptUrl = null;
-        } else {
-            $receiptUrl = trim($receiptUrl);
+        if ($receiptUrl === null) {
+            $receiptUrl = Arr::get($manualTransfer, 'receipt_url')
+                ?? Arr::get($manualTransfer, 'receipt.url');
         }
+        $receiptUrl = $this->normalizeManualString($receiptUrl);
 
         if ($receiptUrl === null) {
             foreach ($attachments as $attachment) {

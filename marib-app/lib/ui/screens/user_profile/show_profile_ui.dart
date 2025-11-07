@@ -656,7 +656,7 @@ class _ProfileScreenShimmer extends StatelessWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    const CustomShimmer(
+                    CustomShimmer(
                       height: 84,
                       width: 84,
                       borderRadius: 50,
@@ -783,7 +783,7 @@ class _ProfileItemSkeletonCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const CustomShimmer(
+          CustomShimmer(
             height: 84,
             width: 110,
             borderRadius: 12,

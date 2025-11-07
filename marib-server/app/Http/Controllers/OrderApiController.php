@@ -223,6 +223,16 @@ class OrderApiController extends Controller
             try {
                 $order = $this->checkoutService->checkout($user, $validated);
 
+                $orderPaymentPayload = is_array($order->payment_payload ?? null) ? $order->payment_payload : [];
+                $enrichedPayment = data_get($orderPaymentPayload, 'payment');
+                if (is_array($enrichedPayment) && $enrichedPayment !== []) {
+                    $paymentPayload = $enrichedPayment;
+                }
+
+                $enrichedManualTransfer = data_get($orderPaymentPayload, 'manual_transfer');
+                if (is_array($enrichedManualTransfer) && $enrichedManualTransfer !== []) {
+                    $manualTransferPayload = $enrichedManualTransfer;
+                }
 
             } catch (ValidationException $exception) {
                 if ($this->isAddressRequiredException($exception)) {

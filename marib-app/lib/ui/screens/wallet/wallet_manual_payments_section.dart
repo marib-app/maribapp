@@ -76,6 +76,37 @@ class _ManualPaymentsCard extends StatelessWidget {
   final bool isRefreshing;
   final VoidCallback onRefresh;
 
+  String _localizedStatus(dynamic status) {
+    final normalized = status?.toString().toLowerCase().trim() ?? '';
+    if (normalized.isEmpty) {
+      return 'قيد المعالجة';
+    }
+    switch (normalized) {
+      case 'pending':
+      case 'processing':
+      case 'in_review':
+      case 'waiting':
+        return 'قيد المراجعة';
+      case 'approved':
+      case 'completed':
+      case 'paid':
+      case 'success':
+        return 'مكتمل';
+      case 'rejected':
+      case 'failed':
+      case 'cancelled':
+      case 'canceled':
+      case 'declined':
+        return 'مرفوض';
+      default:
+        final fallback = status.toString().trim();
+        if (fallback.isEmpty) {
+          return 'حالة غير معروفة';
+        }
+        return 'حالة: $fallback';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -120,7 +151,7 @@ class _ManualPaymentsCard extends StatelessWidget {
               Column(
                 children: requests.take(3).map<Widget>((entry) {
                   final ManualPayment payment = entry;
-                  final status = payment.paymentStatus.toString().capitalize();
+                  final status = _localizedStatus(payment.paymentStatus);
                   return ListTile(
                     contentPadding: EdgeInsets.zero,
                     title: Text(payment.manualReference ?? payment.transactionIdentifier ?? '#${payment.manualPaymentId ?? ''}'),

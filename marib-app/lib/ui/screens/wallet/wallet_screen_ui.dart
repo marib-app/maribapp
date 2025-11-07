@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import 'dart:typed_data';
 import 'package:marib/data/cubits/wallet/wallet_transfers_cubit.dart';
 import 'package:marib/data/cubits/wallet/wallet_withdrawals_cubit.dart';
 import 'package:marib/data/cubits/wallet/wallet_summary_cubit.dart';
 import 'package:marib/data/cubits/wallet/wallet_transactions_cubit.dart';
-import 'package:marib/data/model/wallet/wallet_filter.dart';
 import 'package:marib/data/model/wallet/wallet_operation_options.dart';
 import 'package:marib/data/model/wallet/wallet_withdrawal.dart';
 
@@ -19,15 +17,11 @@ import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/ui/screens/wallet/wallet_transfer_sheet.dart';
 import 'package:marib/ui/screens/wallet/wallet_withdrawal_sheet.dart';
 import 'package:marib/ui/theme/theme.dart';
-import 'package:marib/ui/screens/wallet/wallet_manual_payments_section.dart';
 import 'package:marib/utils/currency_utils.dart';
 import 'package:marib/data/model/wallet/wallet_summary.dart';
 import 'package:marib/utils/payment/manual_payment_service.dart';
-import 'package:marib/ui/screens/wallet/components/wallet_summary_card.dart';
-import 'package:marib/ui/screens/wallet/components/wallet_withdrawals_cards.dart';
-import 'package:marib/ui/screens/wallet/components/wallet_filters_list.dart';
-import 'package:marib/ui/screens/wallet/components/wallet_transactions_sliver.dart';
-import 'package:marib/ui/screens/wallet/components/wallet_actions_card.dart';
+import 'package:marib/ui/screens/wallet/views/wallet_actions_page.dart';
+import 'package:marib/ui/screens/wallet/views/wallet_transactions_page.dart';
 import 'package:marib/utils/api.dart';
 
 import 'package:marib/data/cubits/wallet/manual_payment_requests_cubit.dart';
@@ -44,8 +38,6 @@ class WalletScreenUI extends StatefulWidget {
 
 class _WalletScreenUIState extends State<WalletScreenUI> {
   final PageController _pageController = PageController();
-
-  final ScrollController _scrollController = ScrollController();
   final NumberFormat _numberFormat =
       NumberFormat.currency(decimalDigits: 2, symbol: '');
   final DateFormat _dateTimeFormat = DateFormat('dd MMM yyyy, HH:mm');
@@ -55,7 +47,6 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
   @override
   void initState() {
     super.initState();
-    _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) {
         return;
@@ -77,9 +68,6 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
     _walletScopeRegistration?.dispose();
 
     _pageController.dispose();
-
-    _scrollController.removeListener(_onScroll);
-    _scrollController.dispose();
     super.dispose();
   }
 
@@ -106,14 +94,6 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
     }
 
     _consumedInitialRouteArgs = true;
-  }
-
-  void _onScroll() {
-    if (!_scrollController.hasClients) return;
-    final position = _scrollController.position;
-    if (position.pixels >= position.maxScrollExtent - 180) {
-      context.read<WalletTransactionsCubit>().loadMore();
-    }
   }
 
   Future<void> _onRefresh() async {
@@ -455,182 +435,18 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
         controller: _pageController,
         physics: AppScrollBehavior.defaultPhysics,
         children: [
-          _buildTransactionsPage(),
-          _buildActionsPage(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTransactionsPage() {
-    return RefreshIndicator(
-      color: context.color.territoryColor,
-      onRefresh: _onRefresh,
-      child: CustomScrollView(
-        controller: _scrollController,
-        physics: AppScrollBehavior.defaultPhysics,
-        slivers: [
-          SliverToBoxAdapter(child: _buildSummarySection()),
-          SliverToBoxAdapter(child: _buildWithdrawalsSection()),
-          SliverToBoxAdapter(child: _buildFiltersSection()),
-          BlocBuilder<WalletTransactionsCubit, WalletTransactionsState>(
-            builder: (context, state) {
-              return WalletTransactionsSliver(
-                state: state,
-                formatAmount: _formatAmount,
-                dateFormat: _dateTimeFormat,
-                onRetry: () =>
-                    context.read<WalletTransactionsCubit>().loadInitial(),
-                onRefresh: () =>
-                    context.read<WalletTransactionsCubit>().refresh(),
-              );
-            },
+          WalletTransactionsPage(
+            onRefresh: _onRefresh,
+            formatAmount: _formatAmount,
+            dateFormat: _dateTimeFormat,
+          ),
+          WalletActionsPage(
+            onTopUp: () => _startTopUp(),
+            onTransfer: _showTransferSheet,
+            onWithdrawal: _showWithdrawalSheet,
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildWithdrawalsSection() {
-    return BlocBuilder<WalletWithdrawalsCubit, WalletWithdrawalsState>(
-      builder: (context, state) {
-        if (state is WalletWithdrawalsLoading) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 24),
-            child: Center(child: CircularProgressIndicator()),
-          );
-        }
-
-        if (state is WalletWithdrawalsFailure) {
-          return WalletWithdrawalsErrorCard(
-            message: state.error.toString(),
-            onRetry: () => context
-                .read<WalletWithdrawalsCubit>()
-                .loadInitial(includeOptions: true),
-          );
-        }
-
-        if (state is WalletWithdrawalsSuccess) {
-          return WalletWithdrawalsCard(
-
-            withdrawals: state.withdrawals,
-            formatAmount: _formatAmount,
-            dateFormat: _dateTimeFormat,
-            isRefreshing: state.isRefreshing,
-            isLoadingMore: state.isLoadingMore,
-            hasMore: state.hasMore,
-            lastError: state.lastError,
-            onRefresh: () => context.read<WalletWithdrawalsCubit>().refresh(),
-            onLoadMore: state.hasMore
-                ? () => context.read<WalletWithdrawalsCubit>().loadMore()
-                : null,
-          );
-        }
-
-        return const SizedBox.shrink();
-      },
-    );
-  }
-
-  Widget _buildActionsPage() {
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(
-          16,
-          24,
-          16,
-          24 + MediaQuery.of(context).padding.bottom,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'walletTopUpHeader'.translate(context),
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 12),
-            _buildActionButtonsCard(),
-            const SizedBox(height: 24),
-            WalletManualPaymentsSection(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSummarySection() {
-    return BlocBuilder<WalletSummaryCubit, WalletSummaryState>(
-      builder: (context, state) {
-        if (state is WalletSummaryLoading && state.previous != null) {
-          return WalletSummaryCard(
-            balanceText: _formatAmount(state.previous!.summary.balance,
-                state.previous!.summary.currency),
-            lastUpdated: state.previous!.summary.lastUpdatedAt,
-            isLoading: true,
-          );
-        }
-        if (state is WalletSummaryLoadSuccess) {
-          return WalletSummaryCard(
-
-            balanceText:
-                _formatAmount(state.summary.balance, state.summary.currency),
-            lastUpdated: state.summary.lastUpdatedAt,
-          );
-        }
-        if (state is WalletSummaryFailure) {
-          return Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'walletSummaryError'.translate(context),
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 8),
-                Text(state.error.toString()),
-                const SizedBox(height: 12),
-                OutlinedButton(
-                  onPressed: () => context
-                      .read<WalletSummaryCubit>()
-                      .fetchSummary(forceReload: true),
-                  child: Text('retry'.translate(context)),
-                ),
-              ],
-            ),
-          );
-        }
-        return const WalletSummaryCard(isLoading: true);
-      },
-    );
-  }
-
-  Widget _buildFiltersSection() {
-    return BlocBuilder<WalletTransactionsCubit, WalletTransactionsState>(
-      builder: (context, state) {
-        List<WalletFilter> filters = const [];
-        String? activeFilter;
-        if (state is WalletTransactionsSuccess) {
-          filters = state.availableFilters;
-          activeFilter = state.appliedFilter;
-        }
-        return WalletFiltersList(
-          filters: filters,
-          activeFilter: activeFilter,
-          onClear: () =>
-              context.read<WalletTransactionsCubit>().clearFilters(),
-          onFilterSelected: (value) =>
-              context.read<WalletTransactionsCubit>().applyFilter(value),
-        );
-      },
-    );
-  }
-
-  Widget _buildActionButtonsCard() {
-    return WalletActionsCard(
-      onTopUp: _startTopUp,
-      onTransfer: _showTransferSheet,
-      onWithdrawal: _showWithdrawalSheet,
     );
   }
 }

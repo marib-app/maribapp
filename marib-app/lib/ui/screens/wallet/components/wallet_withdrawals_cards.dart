@@ -136,7 +136,7 @@ class WalletWithdrawalTile extends StatelessWidget {
         ? formatAmount(
         amountValue > 0 ? -amountValue : amountValue, withdrawal.currency)
         : '--';
-    final status = withdrawal.status?.capitalize() ?? 'غير معروف';
+    final status = _localizedStatus(withdrawal.status);
     final timestamp = withdrawal.updatedAt ?? withdrawal.createdAt;
     final subtitleText =
     timestamp != null ? dateFormat.format(timestamp.toLocal()) : null;
@@ -204,6 +204,34 @@ class WalletWithdrawalTile extends StatelessWidget {
       return context.color.territoryColor;
     }
     return Theme.of(context).colorScheme.primary;
+  }
+
+  String _localizedStatus(String? status) {
+    final normalized = status?.toLowerCase().trim() ?? '';
+    if (normalized.isEmpty) {
+      return 'قيد المتابعة';
+    }
+    switch (normalized) {
+      case 'pending':
+      case 'processing':
+      case 'in_review':
+        return 'قيد المراجعة';
+      case 'completed':
+      case 'paid':
+      case 'success':
+        return 'مكتمل';
+      case 'failed':
+      case 'rejected':
+      case 'cancelled':
+      case 'canceled':
+        return 'مرفوض';
+      default:
+        final fallback = status?.capitalize() ?? '';
+        if (fallback.isEmpty) {
+          return 'حالة غير معروفة';
+        }
+        return 'حالة: $fallback';
+    }
   }
 }
 

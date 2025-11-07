@@ -51,31 +51,37 @@
                                 <th>{{ __('العميل') }}</th>
                                 <th>{{ __('المبلغ') }}</th>
                                 <th>{{ __('البنك') }}</th>
-                                <th>{{ __('الحالة') }}</th>
-                                <th>{{ __('تاريخ الإنشاء') }}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse ($manualPayments as $requestRow)
-                                <tr>
+                            <th>{{ __('الحالة') }}</th>
+                            <th>{{ __('تاريخ الإنشاء') }}</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($manualPayments as $requestRow)
+                            <tr>
                                     <td>#{{ $requestRow->id }}</td>
                                     <td>{{ $requestRow->user?->name ?? __('مستخدم') }}</td>
                                     <td>{{ number_format($requestRow->amount ?? 0, 2) }} {{ $requestRow->currency ?? 'ر.ي' }}</td>
                                     <td>{{ $requestRow->manualBank?->name ?? __('تحويل يدوي') }}</td>
                                     <td>
-                                        <span class="badge bg-{{ $requestRow->status === 'approved' ? 'success' : ($requestRow->status === 'rejected' ? 'danger' : 'warning') }}">
-                                            {{ __($requestRow->status) }}
-                                        </span>
-                                    </td>
-                                    <td>{{ optional($requestRow->created_at)->format('Y-m-d H:i') }}</td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="6" class="text-center text-muted py-4">
-                                        {{ __('لا توجد حوالات يدوية حالياً.') }}
-                                    </td>
-                                </tr>
-                            @endforelse
+                                    <span class="badge bg-{{ $requestRow->status === 'approved' ? 'success' : ($requestRow->status === 'rejected' ? 'danger' : 'warning') }}">
+                                        {{ __($requestRow->status) }}
+                                    </span>
+                                </td>
+                                <td>{{ optional($requestRow->created_at)->format('Y-m-d H:i') }}</td>
+                                <td class="text-end">
+                                    <a href="{{ route('merchant.manual-payments.show', $requestRow) }}" class="btn btn-sm btn-outline-primary">
+                                        {{ __('عرض') }}
+                                    </a>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-4">
+                                    {{ __('لا توجد حوالات يدوية حالياً.') }}
+                                </td>
+                            </tr>
+                        @endforelse
                         </tbody>
                     </table>
                 </div>

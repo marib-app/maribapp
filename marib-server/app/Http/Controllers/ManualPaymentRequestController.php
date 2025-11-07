@@ -58,7 +58,7 @@ class ManualPaymentRequestController extends Controller
         private readonly DepartmentReportService $departmentReportService,
         private readonly WalletService $walletService,
         private readonly ManualPaymentRequestService $manualPaymentRequestService,
-
+        private readonly \App\Services\Payments\ManualPaymentDecisionService $manualPaymentDecisionService,
     ) {
     }
 
@@ -1058,159 +1058,17 @@ class ManualPaymentRequestController extends Controller
 
 
 
-        DB::beginTransaction();
-
         try {
-            $transaction = $this->resolveTransaction($manualPaymentRequest);
-
-            if (!$transaction) {
-                throw new RuntimeException(trans('manual_payment.decide.unable_to_resolve_transaction'));
-            }
-
-            $manualPaymentRequest->update([
-                'status' => $status,
-                'admin_note' => $note,
-                'reviewed_by' => Auth::id(),
-                'reviewed_at' => Carbon::now(),
-            ]);
-
-
-            $historyMeta = array_filter([
-                'attachment_path' => $attachmentPath,
-                'attachment_disk' => $attachmentPath ? 'public' : null,
-                'attachment_name' => $attachmentOriginalName,
-                'notification_sent' => $shouldNotify,
-                'document_valid_until' => $documentValidUntil?->toDateString(),
-
-            ], static fn($value) => $value !== null && $value !== '' && $value !== false);
-
-
-
-
-            $history = ManualPaymentRequestHistory::create([
-                'manual_payment_request_id' => $manualPaymentRequest->id,
-                'user_id' => Auth::id(),
-                'status' => $status,
+            $history = $this->manualPaymentDecisionService->decide($manualPaymentRequest, $status, [
                 'note' => $note,
-                'meta' => empty($historyMeta) ? null : $historyMeta,
-
+                'notify' => $shouldNotify,
+                'attachment_path' => $attachmentPath,
+                'attachment_name' => $attachmentOriginalName,
+                'document_valid_until' => $documentValidUntil?->toDateString(),
+                'actor_id' => Auth::id(),
             ]);
-
-            if ($status === ManualPaymentRequest::STATUS_APPROVED) {
-                if ($manualPaymentRequest->isWalletTopUp()) {
-                    $manualPaymentRequest->loadMissing('user');
-
-                    if (!$manualPaymentRequest->user) {
-                        throw new RuntimeException('The requester is no longer associated with this wallet top-up.');
-                    }
-
-                    $walletTransaction = $this->walletService->credit(
-                        $manualPaymentRequest->user,
-                        $this->walletIdempotencyKey($manualPaymentRequest),
-                        (float) $manualPaymentRequest->amount,
-                        [
-                            'manual_payment_request' => $manualPaymentRequest,
-                            'payment_transaction' => $transaction,
-                            'meta' => [
-                                'reason' => ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP,
-                            ],
-                        ]
-                    );
-
-                    $transactionMeta = $transaction->meta ?? [];
-                    data_set($transactionMeta, 'wallet.transaction_id', $walletTransaction->getKey());
-                    data_set($transactionMeta, 'wallet.account_id', $walletTransaction->wallet_account_id);
-
-                    $transaction->fill([
-                        'payment_status' => 'succeed',
-                        'payable_type' => WalletTransaction::class,
-                        'payable_id' => $walletTransaction->getKey(),
-
-
-
-                        'manual_payment_request_id' => $manualPaymentRequest->id,
-                        'meta' => $transactionMeta,
-                    ])->save();
-
-
-
-                    $requestMeta = $manualPaymentRequest->meta ?? [];
-                    data_set($requestMeta, 'wallet.purpose', ManualPaymentRequest::PAYABLE_TYPE_WALLET_TOP_UP);
-                    data_set($requestMeta, 'wallet.transaction_id', $walletTransaction->getKey());
-                    data_set($requestMeta, 'wallet.idempotency_key', $walletTransaction->idempotency_key);
-
-
-
-
-                    $manualPaymentRequest->forceFill([
-                        'payable_id' => $walletTransaction->wallet_account_id,
-                        'meta' => $requestMeta,
-                    ])->save();
-
-                    $transaction->refresh();
-                } else {
-                    $fulfillment = $this->paymentFulfillmentService->fulfill(
-                        $transaction,
-                        $manualPaymentRequest->payable_type,
-                        $manualPaymentRequest->payable_id,
-                        $manualPaymentRequest->user_id,
-                        [
-                            'manual_payment_request_id' => $manualPaymentRequest->id,
-                            'notify' => false,
-                        ]
-                    );
-
-                    if ($fulfillment['error']) {
-                        throw new RuntimeException($fulfillment['message']);
-                    }
-
-                    $transaction->refresh();
-                }
-            
-            
-            } else {
-                $transaction->update([
-                    'payment_status' => 'failed',
-
-
-
-                    
-                    'manual_payment_request_id' => $manualPaymentRequest->id,
-                             ]);
-
-
-
-
-                $transaction->refresh();
-
-            }
-
-
-            DB::commit();
-
-            $manualPaymentRequest->refresh();
-
         } catch (Throwable $throwable) {
-            DB::rollBack();
-
-
-            if ($attachmentPath) {
-                Storage::disk('public')->delete($attachmentPath);
-            }
-
-            Log::error('Manual payment decision error: ' . $throwable->getMessage(), [
-                
-                'request_id' => $manualPaymentRequest->id,
-            ]);
-            return ResponseService::errorResponse(trans('manual_payment.decide.unable_to_process'));
-
-        }
-
-        $attachmentUrl = $attachmentPath ? Storage::disk('public')->url($attachmentPath) : null;
-
-
-        if ($shouldNotify) {
-            $this->sendDecisionNotification($manualPaymentRequest, $transaction, $status, $note, $attachmentUrl);
+            return ResponseService::errorResponse($throwable->getMessage());
         }
 
         $message = $status === ManualPaymentRequest::STATUS_APPROVED

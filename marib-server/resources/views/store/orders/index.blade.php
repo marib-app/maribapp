@@ -47,6 +47,7 @@
                                 <th>{{ __('الحالة') }}</th>
                                 <th>{{ __('الدفع') }}</th>
                                 <th>{{ __('أنشئ في') }}</th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -62,10 +63,15 @@
                                     </td>
                                     <td>{{ __($order->payment_status) }}</td>
                                     <td>{{ optional($order->created_at)->format('Y-m-d H:i') }}</td>
+                                    <td class="text-end">
+                                        <a href="{{ route('merchant.orders.show', $order) }}" class="btn btn-sm btn-outline-primary">
+                                            {{ __('عرض') }}
+                                        </a>
+                                    </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="6" class="text-center text-muted py-4">
+                                    <td colspan="7" class="text-center text-muted py-4">
                                         {{ __('لا توجد طلبات حالياً.') }}
                                     </td>
                                 </tr>

@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
@@ -205,15 +205,14 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
         .toList();
 
     if (contacts.isEmpty) {
-      _showMessage('ط£ط¶ظپ ط±ظ‚ظ… طھظˆط§طµظ„ ظˆط§ط­ط¯ظ‹ط§ ط¹ظ„ظ‰ ط§ظ„ط£ظ‚ظ„.');
+      _showMessage('ط£ط¶ظپ ط±ظ‚ظ… طھظˆط§طµظ„ ظˆط§ط­ط¯ ط¹ظ„ظ‰ ط§ظ„ط£ظ‚ظ„.');
       _switchStep(0);
       return;
     }
 
     if (_plans.any((plan) => plan.voucherFile == null)) {
       _showMessage(
-        'ظٹط¬ط¨ ط±ظپط¹ ظ…ظ„ظپ ط§ظ„ط£ظƒظˆط§ط¯ ظ„ظƒظ„ ظپط¦ط© ظ‚ط¨ظ„ ط¥ط±ط³ط§ظ„ ط§ظ„ط·ظ„ط¨.',
-      );
+          'ظٹط±ط¬ظ‰ ط±ظپط¹ ظ…ظ„ظپ ط§ظ„ط£ظƒظˆط§ط¯ ظ„ظƒظ„ ظپط¦ط© ظ‚ط¨ظ„ ط§ظ„ط¥ط±ط³ط§ظ„.');
       _switchStep(1);
       return;
     }
@@ -298,7 +297,7 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
         builder: (context) => AlertDialog(
           title: const Text('طھظ… ط§ط³طھظ„ط§ظ… ط§ظ„ط·ظ„ط¨'),
           content: const Text(
-            'ط³ظٹطھظ… ظ…ط±ط§ط¬ط¹ط© ط§ظ„ط´ط¨ظƒط© ظˆط³ظٹطµظ„ظƒ ط¥ط´ط¹ط§ط± ط¹ظ†ط¯ ط§ظ„طھظپط¹ظٹظ„. ط´ظƒط±ظ‹ط§ ظ„ط§ظ†ط¶ظ…ط§ظ…ظƒ ط¥ظ„ظ‰ Marib Wi-Fi.',
+            'ط³ظٹطھظ… ظ…ط±ط§ط¬ط¹ط© ط§ظ„ط´ط¨ظƒط© ظˆط¥ط¨ظ„ط§ط؛ظƒ ط¹ظ†ط¯ ط§ظ„طھظپط¹ظٹظ„. ط´ظƒط±ظ‹ط§ ظ„ط§ظ†ط¶ظ…ط§ظ…ظƒ ط¥ظ„ظ‰ Marib Wi-Fi.',
           ),
           actions: [
             TextButton(
@@ -359,7 +358,7 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
       appBar: UiUtils.buildAppBar(
         context,
         showBackButton: true,
-        title: 'طلب إضافة شبكة',
+        title: 'ط·ظ„ط¨ ط¥ط¶ط§ظپط© ط´ط¨ظƒط©',
       ),
       body: Stack(
         children: [
@@ -384,7 +383,7 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
                         Expanded(
                           child: OutlinedButton(
                             onPressed: () => _switchStep(_currentStep - 1),
-                            child: const Text('السابق'),
+                            child: const Text('ط§ظ„ط³ط§ط¨ظ‚'),
                           ),
                         ),
                       if (_currentStep > 0) const SizedBox(width: 12),
@@ -407,8 +406,8 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
                           },
                           child: Text(
                             _currentStep == 0
-                                ? 'التالي'
-                                : 'إرسال الطلب',
+                                ? 'ط§ظ„طھط§ظ„ظٹ'
+                                : 'ط¥ط±ط³ط§ظ„ ط§ظ„ط·ظ„ط¨',
                           ),
                         ),
                       ),
@@ -443,20 +442,20 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'ط·آ¨ط¸ظ¹ط·آ§ط¸â€ ط·آ§ط·ع¾ ط·آ§ط¸â€‍ط·آ´ط·آ¨ط¸ئ’ط·آ©',
+            'ط¨ظٹط§ظ†ط§طھ ط§ظ„ط´ط¨ظƒط©',
             style: textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 12),
           _LabeledField(
-            label: 'ط·آ§ط·آ³ط¸â€¦ ط·آ§ط¸â€‍ط·آ´ط·آ¨ط¸ئ’ط·آ©',
+            label: 'ط§ط³ظ… ط§ظ„ط´ط¨ظƒط©',
             child: TextFormField(
               controller: _nameController,
               textInputAction: TextInputAction.next,
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
-                  return 'ط¸ظ¹ط·آ±ط·آ¬ط¸â€° ط·آ¥ط·آ¯ط·آ®ط·آ§ط¸â€‍ ط·آ§ط·آ³ط¸â€¦ ط·آ§ط¸â€‍ط·آ´ط·آ¨ط¸ئ’ط·آ©';
+                  return 'ظٹط±ط¬ظ‰ ط¥ط¯ط®ط§ظ„ ط§ط³ظ… ط§ظ„ط´ط¨ظƒط©';
                 }
                 return null;
               },
@@ -464,19 +463,19 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
           ),
           const SizedBox(height: 12),
           _LabeledField(
-            label: 'ط·آ§ط¸â€‍ط·آ§ط·آ³ط¸â€¦ ط·آ§ط¸â€‍ط¸â€¦ط·آ®ط·ع¾ط·آµط·آ± (Slug)',
+            label: 'ط§ظ„ط§ط³ظ… ط§ظ„ظ…ط®طھطµط± (Slug)',
             helper:
-                'ط¸ظ¹ط¸عˆط·آ³ط·ع¾ط·آ®ط·آ¯ط¸â€¦ ط¸ظ¾ط¸ظ¹ ط·آ±ط¸ث†ط·آ§ط·آ¨ط·آ· ط¸â€‍ط¸ث†ط·آ­ط·آ© ط·آ§ط¸â€‍ط·ع¾ط·آ­ط¸ئ’ط¸â€¦ ط¸ث†ط·آ§ط¸â€‍ط·ع¾ط¸ئ’ط·آ§ط¸â€¦ط¸â€‍. ط¸ظ¹ط·ع¾ط¸â€¦ ط·ع¾ط¸ث†ط¸â€‍ط¸ظ¹ط·آ¯ط¸â€، ط·ع¾ط¸â€‍ط¸â€ڑط·آ§ط·آ¦ط¸ظ¹ط¸â€¹ط·آ§ ط¸ث†ط¸ظ¹ط¸â€¦ط¸ئ’ط¸â€ ط¸ئ’ ط·ع¾ط·آ¹ط·آ¯ط¸ظ¹ط¸â€‍ط¸â€،.',
+                'ظٹظڈط³طھط®ط¯ظ… ظپظٹ ط±ظˆط§ط¨ط· ظ„ظˆط­ط© ط§ظ„طھط­ظƒظ… ظˆط§ظ„طھظƒط§ظ…ظ„. ظٹطھظ… طھظˆظ„ظٹط¯ظ‡ طھظ„ظ‚ط§ط¦ظٹظ‹ط§ ظˆظٹظ…ظƒظ†ظƒ طھط¹ط¯ظٹظ„ظ‡.',
             child: TextFormField(
               controller: _slugController,
               textInputAction: TextInputAction.next,
               validator: (value) {
                 final text = value?.trim() ?? '';
                 if (text.isEmpty) {
-                  return 'ط¸ظ¹ط·آ±ط·آ¬ط¸â€° ط·آ¥ط·آ¯ط·آ®ط·آ§ط¸â€‍ ط·آ§ط¸â€‍ط·آ§ط·آ³ط¸â€¦ ط·آ§ط¸â€‍ط¸â€¦ط·آ®ط·ع¾ط·آµط·آ±';
+                  return 'ظٹط±ط¬ظ‰ ط¥ط¯ط®ط§ظ„ ط§ظ„ط§ط³ظ… ط§ظ„ظ…ط®طھطµط±';
                 }
                 if (!RegExp(r'^[a-z0-9-]+$').hasMatch(text)) {
-                  return 'ط¸â€¦ط·آ³ط¸â€¦ط¸ث†ط·آ­ ط·آ¨ط·آ§ط¸â€‍ط·آ£ط·آ­ط·آ±ط¸ظ¾ ط·آ§ط¸â€‍ط·آ¥ط¸â€ ط·آ¬ط¸â€‍ط¸ظ¹ط·آ²ط¸ظ¹ط·آ©ط·إ’ ط·آ§ط¸â€‍ط·آ£ط·آ±ط¸â€ڑط·آ§ط¸â€¦ط·إ’ ط¸ث†ط·آ§ط¸â€‍ط·آ´ط·آ±ط·آ·ط·آ§ط·ع¾ ط¸ظ¾ط¸â€ڑط·آ·';
+                  return 'ظ…ط³ظ…ظˆط­ ط¨ط§ظ„ط£ط­ط±ظپ ط§ظ„ط¥ظ†ط¬ظ„ظٹط²ظٹط©طŒ ط§ظ„ط£ط±ظ‚ط§ظ…طŒ ظˆط§ظ„ط´ط±ط·ط§طھ ظپظ‚ط·';
                 }
                 return null;
               },
@@ -484,16 +483,16 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
           ),
           const SizedBox(height: 12),
           _FilePickerTile(
-            title: 'ط·آ´ط·آ¹ط·آ§ط·آ± ط·آ§ط¸â€‍ط·آ´ط·آ¨ط¸ئ’ط·آ©',
-            description: 'ط¸ظ¹ط·آ¸ط¸â€،ط·آ± ط·آ¯ط·آ§ط·آ®ط¸â€‍ ط·آ§ط¸â€‍ط·ع¾ط·آ·ط·آ¨ط¸ظ¹ط¸â€ڑ ط¸ث†ط·آ§ط¸â€‍ط¸â€‍ط¸ث†ط·آ­ط·آ©.',
+            title: 'ط´ط¹ط§ط± ط§ظ„ط´ط¨ظƒط©',
+            description: 'ظٹط¸ظ‡ط± ط¯ط§ط®ظ„ ط§ظ„طھط·ط¨ظٹظ‚ ظˆط§ظ„ظ„ظˆط­ط©.',
             fileName: _logoFile != null ? p.basename(_logoFile!.path) : null,
             onPick: _pickLogo,
           ),
           const SizedBox(height: 12),
           _FilePickerTile(
-            title: 'ط·آµط¸ث†ط·آ±ط·آ© ط·آ´ط·آ§ط·آ´ط·آ© ط·ع¾ط·آ³ط·آ¬ط¸ظ¹ط¸â€‍ ط·آ§ط¸â€‍ط·آ¯ط·آ®ط¸ث†ط¸â€‍',
+            title: 'طµظˆط±ط© ط´ط§ط´ط© طھط³ط¬ظٹظ„ ط§ظ„ط¯ط®ظˆظ„',
             description:
-                'ط¸â€‍ط¸â€¦ط·آ³ط·آ§ط·آ¹ط·آ¯ط·آ© ط¸ظ¾ط·آ±ط¸ظ¹ط¸â€ڑ ط·آ§ط¸â€‍ط¸â€¦ط·آ±ط·آ§ط·آ¬ط·آ¹ط·آ© ط·آ¹ط¸â€‍ط¸â€° ط·آ¶ط·آ¨ط·آ· ط¸â€¦ط·آ¹ط¸â€‍ط¸ث†ط¸â€¦ط·آ§ط·ع¾ ط·آ§ط¸â€‍ط·آ´ط·آ¨ط¸ئ’ط·آ©.',
+                'ظ„ظ…ط³ط§ط¹ط¯ط© ظپط±ظٹظ‚ ط§ظ„ظ…ط±ط§ط¬ط¹ط© ط¹ظ„ظ‰ ط¶ط¨ط· ظ…ط¹ظ„ظˆظ…ط§طھ ط§ظ„ط´ط¨ظƒط©.',
             fileName: _loginScreenshotFile != null
                 ? p.basename(_loginScreenshotFile!.path)
                 : null,
@@ -501,7 +500,7 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            'ط·آ§ط¸â€‍ط¸â€¦ط¸ث†ط¸â€ڑط·آ¹ ط¸ث†ط·آ§ط¸â€‍ط·ع¾ط·ط›ط·آ·ط¸ظ¹ط·آ©',
+            'ط§ظ„ظ…ظˆظ‚ط¹ ظˆط§ظ„طھط؛ط·ظٹط©',
             style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 12),
@@ -511,7 +510,7 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
                 child: TextFormField(
                   controller: _latitudeController,
                   decoration:
-                      const InputDecoration(labelText: 'ط·آ®ط·آ· ط·آ§ط¸â€‍ط·آ¹ط·آ±ط·آ¶'),
+                      const InputDecoration(labelText: 'ط®ط· ط§ظ„ط¹ط±ط¶'),
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                 ),
@@ -521,7 +520,7 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
                 child: TextFormField(
                   controller: _longitudeController,
                   decoration:
-                      const InputDecoration(labelText: 'ط·آ®ط·آ· ط·آ§ط¸â€‍ط·آ·ط¸ث†ط¸â€‍'),
+                      const InputDecoration(labelText: 'ط®ط· ط§ظ„ط·ظˆظ„'),
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                 ),
@@ -531,7 +530,7 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
                 child: TextFormField(
                   controller: _radiusController,
                   decoration: const InputDecoration(
-                      labelText: 'ط¸â€ ط·آµط¸ظ¾ ط·آ§ط¸â€‍ط¸â€ڑط·آ·ط·آ± (ط¸ئ’ط¸â€¦)'),
+                      labelText: 'ظ†طµظپ ط§ظ„ظ‚ط·ط± (ظƒظ…)'),
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                 ),
@@ -542,14 +541,14 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
           TextFormField(
             controller: _addressController,
             decoration: const InputDecoration(
-              labelText: 'ط·آ§ط¸â€‍ط·آ¹ط¸â€ ط¸ث†ط·آ§ط¸â€  ط·آ§ط¸â€‍ط·ع¾ط¸ظ¾ط·آµط¸ظ¹ط¸â€‍ط¸ظ¹',
+              labelText: 'ط§ظ„ط¹ظ†ظˆط§ظ† ط§ظ„طھظپطµظٹظ„ظٹ',
             ),
           ),
           const SizedBox(height: 12),
           TextFormField(
             controller: _descriptionController,
             decoration: const InputDecoration(
-              labelText: 'ط¸ث†ط·آµط¸ظ¾ ط·آ§ط¸â€‍ط·آ´ط·آ¨ط¸ئ’ط·آ© (ط·آ§ط·آ®ط·ع¾ط¸ظ¹ط·آ§ط·آ±ط¸ظ¹)',
+              labelText: 'ظˆطµظپ ط§ظ„ط´ط¨ظƒط© (ط§ط®طھظٹط§ط±ظٹ)',
             ),
             maxLines: 3,
           ),
@@ -557,13 +556,13 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
           TextFormField(
             controller: _notesController,
             decoration: const InputDecoration(
-              labelText: 'ط¸â€¦ط¸â€‍ط·آ§ط·آ­ط·آ¸ط·آ§ط·ع¾ ط·آ¥ط·آ¶ط·آ§ط¸ظ¾ط¸ظ¹ط·آ© (ط·آ§ط·آ®ط·ع¾ط¸ظ¹ط·آ§ط·آ±ط¸ظ¹)',
+              labelText: 'ظ…ظ„ط§ط­ط¸ط§طھ ط¥ط¶ط§ظپظٹط© (ط§ط®طھظٹط§ط±ظٹ)',
             ),
             maxLines: 3,
           ),
           const SizedBox(height: 16),
           Text(
-            'ط·آ£ط·آ±ط¸â€ڑط·آ§ط¸â€¦ ط·آ§ط¸â€‍ط·ع¾ط¸ث†ط·آ§ط·آµط¸â€‍',
+            'ط£ط±ظ‚ط§ظ… ط§ظ„طھظˆط§طµظ„',
             style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
@@ -580,7 +579,7 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
                       child: DropdownButtonFormField<ContactType>(
                         value: contact.type,
                         decoration:
-                            const InputDecoration(labelText: 'ط·آ§ط¸â€‍ط¸â€ ط¸ث†ط·آ¹'),
+                            const InputDecoration(labelText: 'ط§ظ„ظ†ظˆط¹'),
                         items: ContactType.values
                             .map(
                               (type) => DropdownMenuItem<ContactType>(
@@ -602,13 +601,13 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
                       child: TextFormField(
                         controller: contact.controller,
                         decoration: const InputDecoration(
-                          labelText: 'ط·آ±ط¸â€ڑط¸â€¦ ط·آ§ط¸â€‍ط¸â€،ط·آ§ط·ع¾ط¸ظ¾ / ط¸ث†ط·آ§ط·ع¾ط·آ³ط·آ§ط·آ¨',
+                          labelText: 'ط±ظ‚ظ… ط§ظ„ظ‡ط§طھظپ / ظˆط§طھط³ط§ط¨',
                         ),
                         keyboardType: TextInputType.phone,
                         validator: (value) {
                           final text = value?.trim() ?? '';
                           if (text.isEmpty) {
-                            return 'ط·آ£ط·آ¯ط·آ®ط¸â€‍ ط·آ§ط¸â€‍ط·آ±ط¸â€ڑط¸â€¦ ط·آ£ط¸ث† ط¸â€ڑط¸â€¦ ط·آ¨ط·آ­ط·آ°ط¸ظ¾ط¸â€،';
+                            return 'ط£ط¯ط®ظ„ ط§ظ„ط±ظ‚ظ… ط£ظˆ ظ‚ظ… ط¨ط­ط°ظپظ‡';
                           }
                           return null;
                         },
@@ -629,7 +628,7 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
             child: TextButton.icon(
               onPressed: _addContactField,
               icon: const Icon(Icons.add),
-              label: const Text('ط·آ¥ط·آ¶ط·آ§ط¸ظ¾ط·آ© ط·آ±ط¸â€ڑط¸â€¦ ط·آ¢ط·آ®ط·آ±'),
+              label: const Text('ط¥ط¶ط§ظپط© ط±ظ‚ظ… ط¢ط®ط±'),
             ),
           ),
         ],
@@ -646,7 +645,7 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'ط¸ظ¾ط·آ¦ط·آ§ط·ع¾ ط·آ§ط¸â€‍ط¸ئ’ط·آ±ط¸ث†ط·ع¾',
+            'ظپط¦ط§طھ ط§ظ„ظƒط±ظˆطھ',
             style: textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.bold,
             ),
@@ -667,7 +666,7 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
             child: TextButton.icon(
               onPressed: _addPlan,
               icon: const Icon(Icons.add_circle_outline),
-              label: const Text('ط·آ¥ط·آ¶ط·آ§ط¸ظ¾ط·آ© ط¸ظ¾ط·آ¦ط·آ© ط·آ£ط·آ®ط·آ±ط¸â€°'),
+              label: const Text('ط¥ط¶ط§ظپط© ظپط¦ط© ط£ط®ط±ظ‰'),
             ),
           ),
         ],
@@ -686,7 +685,7 @@ class _StepHeader extends StatelessWidget {
     final colors = context.color;
     final textTheme = Theme.of(context).textTheme;
 
-    const steps = ['ط·آ¨ط¸ظ¹ط·آ§ط¸â€ ط·آ§ط·ع¾ ط·آ§ط¸â€‍ط·آ´ط·آ¨ط¸ئ’ط·آ©', 'ط¸ظ¾ط·آ¦ط·آ§ط·ع¾ ط·آ§ط¸â€‍ط¸ئ’ط·آ±ط¸ث†ط·ع¾'];
+    const steps = ['ط¨ظٹط§ظ†ط§طھ ط§ظ„ط´ط¨ظƒط©', 'ظپط¦ط§طھ ط§ظ„ظƒط±ظˆطھ'];
 
     return Row(
       children: List.generate(steps.length, (index) {
@@ -787,7 +786,7 @@ class _PlanCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  'ط¸ظ¾ط·آ¦ط·آ© ${index + 1}',
+                  'ظپط¦ط© ${index + 1}',
                   style: textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -803,10 +802,10 @@ class _PlanCard extends StatelessWidget {
           const SizedBox(height: 12),
           TextFormField(
             controller: plan.nameController,
-            decoration: const InputDecoration(labelText: 'ط·آ§ط·آ³ط¸â€¦ ط·آ§ط¸â€‍ط¸ظ¾ط·آ¦ط·آ©'),
+            decoration: const InputDecoration(labelText: 'ط§ط³ظ… ط§ظ„ظپط¦ط©'),
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
-                return 'ط·آ£ط·آ¯ط·آ®ط¸â€‍ ط·آ§ط·آ³ط¸â€¦ ط·آ§ط¸â€‍ط¸ظ¾ط·آ¦ط·آ©';
+                return 'ط£ط¯ط®ظ„ ط§ط³ظ… ط§ظ„ظپط¦ط©';
               }
               return null;
             },
@@ -815,13 +814,13 @@ class _PlanCard extends StatelessWidget {
           TextFormField(
             controller: plan.priceController,
             decoration: const InputDecoration(
-              labelText: 'ط·آ§ط¸â€‍ط·آ³ط·آ¹ط·آ± (ط·آ±ط¸ظ¹ط·آ§ط¸â€‍ ط¸ظ¹ط¸â€¦ط¸â€ ط¸ظ¹)',
+              labelText: 'ط§ظ„ط³ط¹ط± (ط±ظٹط§ظ„ ظٹظ…ظ†ظٹ)',
             ),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             validator: (value) {
               final num? parsed = num.tryParse(value ?? '');
               if (parsed == null || parsed <= 0) {
-                return 'ط·آ£ط·آ¯ط·آ®ط¸â€‍ ط·آ³ط·آ¹ط·آ±ط¸â€¹ط·آ§ ط·آµط·آ§ط¸â€‍ط·آ­ط¸â€¹ط·آ§';
+                return 'ط£ط¯ط®ظ„ ط³ط¹ط±ظ‹ط§ طµط§ظ„ط­ظ‹ط§';
               }
               return null;
             },
@@ -833,12 +832,12 @@ class _PlanCard extends StatelessWidget {
                 child: TextFormField(
                   controller: plan.durationController,
                   decoration: const InputDecoration(
-                      labelText: 'ط¸â€¦ط·آ¯ط·آ© ط·آ§ط¸â€‍ط·آµط¸â€‍ط·آ§ط·آ­ط¸ظ¹ط·آ© (ط·آ£ط¸ظ¹ط·آ§ط¸â€¦)'),
+                      labelText: 'ظ…ط¯ط© ط§ظ„طµظ„ط§ط­ظٹط© (ط£ظٹط§ظ…)'),
                   keyboardType: TextInputType.number,
                   validator: (value) {
                     final int? parsed = int.tryParse(value ?? '');
                     if (parsed == null || parsed <= 0) {
-                      return 'ط·آ£ط·آ¯ط·آ®ط¸â€‍ ط·آ¹ط·آ¯ط·آ¯ ط·آ§ط¸â€‍ط·آ£ط¸ظ¹ط·آ§ط¸â€¦';
+                      return 'ط£ط¯ط®ظ„ ط¹ط¯ط¯ ط§ظ„ط£ظٹط§ظ…';
                     }
                     return null;
                   },
@@ -849,7 +848,7 @@ class _PlanCard extends StatelessWidget {
                 child: TextFormField(
                   controller: plan.speedController,
                   decoration: const InputDecoration(
-                    labelText: 'ط·آ§ط¸â€‍ط·آ³ط·آ±ط·آ¹ط·آ© (Mbps) - ط·آ§ط·آ®ط·ع¾ط¸ظ¹ط·آ§ط·آ±ط¸ظ¹',
+                    labelText: 'ط§ظ„ط³ط±ط¹ط© (Mbps) - ط§ط®طھظٹط§ط±ظٹ',
                   ),
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
@@ -864,7 +863,7 @@ class _PlanCard extends StatelessWidget {
                 child: TextFormField(
                   controller: plan.dataController,
                   decoration: const InputDecoration(
-                    labelText: 'ط·آ³ط·آ¹ط·آ© ط·آ§ط¸â€‍ط·آ¨ط¸ظ¹ط·آ§ط¸â€ ط·آ§ط·ع¾',
+                    labelText: 'ط³ط¹ط© ط§ظ„ط¨ظٹط§ظ†ط§طھ',
                   ),
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
@@ -874,7 +873,7 @@ class _PlanCard extends StatelessWidget {
               Expanded(
                 child: DropdownButtonFormField<_DataUnit>(
                   value: plan.dataUnit,
-                  decoration: const InputDecoration(labelText: 'ط·آ§ط¸â€‍ط¸ث†ط·آ­ط·آ¯ط·آ©'),
+                  decoration: const InputDecoration(labelText: 'ط§ظ„ظˆط­ط¯ط©'),
                   onChanged: (value) {
                     if (value != null) {
                       plan.dataUnit = value;
@@ -896,7 +895,7 @@ class _PlanCard extends StatelessWidget {
           TextFormField(
             controller: plan.descriptionController,
             decoration: const InputDecoration(
-              labelText: 'ط¸ث†ط·آµط¸ظ¾ ط·آ§ط¸â€‍ط¸ظ¾ط·آ¦ط·آ© (ط·آ§ط·آ®ط·ع¾ط¸ظ¹ط·آ§ط·آ±ط¸ظ¹)',
+              labelText: 'ظˆطµظپ ط§ظ„ظپط¦ط© (ط§ط®طھظٹط§ط±ظٹ)',
             ),
             maxLines: 2,
           ),
@@ -904,7 +903,7 @@ class _PlanCard extends StatelessWidget {
           FormField<PlatformFile?>(
             validator: (_) {
               if (plan.voucherFile == null) {
-                return 'ط¸ظ¹ط·آ±ط·آ¬ط¸â€° ط·آ±ط¸ظ¾ط·آ¹ ط¸â€¦ط¸â€‍ط¸ظ¾ ط·آ§ط¸â€‍ط·آ£ط¸ئ’ط¸ث†ط·آ§ط·آ¯';
+                return 'ظٹط±ط¬ظ‰ ط±ظپط¹ ظ…ظ„ظپ ط§ظ„ط£ظƒظˆط§ط¯';
               }
               return null;
             },
@@ -920,7 +919,7 @@ class _PlanCard extends StatelessWidget {
                     icon: const Icon(Icons.upload_file_rounded),
                     label: Text(
                       plan.voucherFile?.name ??
-                          'ط·آ±ط¸ظ¾ط·آ¹ ط¸â€¦ط¸â€‍ط¸ظ¾ ط·آ§ط¸â€‍ط·آ£ط¸ئ’ط¸ث†ط·آ§ط·آ¯ (CSV / XLSX)',
+                          'ط±ظپط¹ ظ…ظ„ظپ ط§ظ„ط£ظƒظˆط§ط¯ (CSV / XLSX)',
                     ),
                   ),
                   if (state.hasError)
@@ -969,11 +968,11 @@ extension on ContactType {
   String get label {
     switch (this) {
       case ContactType.phone:
-        return 'ط¸â€،ط·آ§ط·ع¾ط¸ظ¾';
+        return 'ظ‡ط§طھظپ';
       case ContactType.whatsapp:
-        return 'ط¸ث†ط·آ§ط·ع¾ط·آ³ط·آ§ط·آ¨';
+        return 'ظˆط§طھط³ط§ط¨';
       case ContactType.other:
-        return 'ط·آ£ط·آ®ط·آ±ط¸â€°';
+        return 'ط£ط®ط±ظ‰';
     }
   }
 
@@ -1027,7 +1026,7 @@ enum _DataUnit { mb, gb }
 
 extension on _DataUnit {
   String get label =>
-      this == _DataUnit.gb ? 'ط·آ¬ط¸ظ¹ط·آ¬ط·آ§ط·آ¨ط·آ§ط¸ظ¹ط·ع¾' : 'ط¸â€¦ط¸ظ¹ط·آ¬ط·آ§ط·آ¨ط·آ§ط¸ظ¹ط·ع¾';
+      this == _DataUnit.gb ? 'ط¬ظٹط¬ط§ط¨ط§ظٹطھ' : 'ظ…ظٹط¬ط§ط¨ط§ظٹطھ';
 }
 
 class _FilePickerTile extends StatelessWidget {
@@ -1081,12 +1080,11 @@ class _FilePickerTile extends StatelessWidget {
           TextButton.icon(
             onPressed: onPick,
             icon: const Icon(Icons.attach_file),
-            label: Text(fileName == null ? 'ط§ط®طھظٹط§ط±' : 'طھط؛ظٹظٹط±'),
+            label: Text(fileName == null ? 'اختيار' : 'تغيير'),
           ),
         ],
       ),
     );
   }
 }
-
 

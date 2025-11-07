@@ -730,7 +730,19 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
     ], static function () {
         Route::get('dashboard', [StoreDashboardController::class, 'index'])->name('dashboard');
         Route::get('orders', [StoreOrderController::class, 'index'])->name('orders.index');
+        Route::get('orders/{order}', [StoreOrderController::class, 'show'])
+            ->whereNumber('order')
+            ->name('orders.show');
+        Route::post('orders/{order}/status', [StoreOrderController::class, 'updateStatus'])
+            ->whereNumber('order')
+            ->name('orders.status');
         Route::get('manual-payments', [StoreManualPaymentController::class, 'index'])->name('manual-payments.index');
+        Route::get('manual-payments/{manualPaymentRequest}', [StoreManualPaymentController::class, 'show'])
+            ->whereNumber('manualPaymentRequest')
+            ->name('manual-payments.show');
+        Route::post('manual-payments/{manualPaymentRequest}/decide', [StoreManualPaymentController::class, 'decide'])
+            ->whereNumber('manualPaymentRequest')
+            ->name('manual-payments.decide');
     });
 
     /* --------------------------------- الإعدادات Settings --------------------------------- */

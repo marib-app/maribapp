@@ -2,8 +2,6 @@
 // File: lib/ui/screens/auth/signup/sign_up_main_screen.dart
 // Purpose: Logic/State holder. Delegates all UI to SignUpMainUI in sign_up_main_ui.dart
 // ================================
-import 'package:flutter_linkify/flutter_linkify.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import 'dart:async';
 import 'dart:io';
@@ -13,22 +11,17 @@ import 'package:device_region/device_region.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_svg/svg.dart';
 
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 
-import 'package:marib/app/app_theme.dart';
 import 'package:marib/app/routes.dart';
 import 'package:marib/data/cubits/auth/authentication_cubit.dart';
-import 'package:marib/data/cubits/system/app_theme_cubit.dart';
 import 'package:marib/data/cubits/system/fetch_system_settings_cubit.dart';
 import 'package:marib/data/cubits/system/user_details.dart';
 import 'package:marib/data/helper/widgets.dart';
 import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
-import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/api.dart';
-import 'package:marib/utils/app_icon.dart';
 import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/hive_utils.dart';
@@ -38,10 +31,8 @@ import 'package:marib/utils/login/lib/payloads.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/ui/screens/auth/sign_up/sign_up_main_ui.dart'; // ✅
 
-import 'sign_up_main_ui.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:marib/data/cubits/system/fetch_system_settings_cubit.dart';
 import 'package:marib/utils/notification/notification_service.dart';
 
 import '../widgets/auth_status_bar.dart';
@@ -153,6 +144,72 @@ class LoginScreenState extends State<SignUpMainScreen> {
         flagEmoji = country.flagEmoji;
       });
     } catch (_) {}
+  }
+
+  Future<void> _showAccountTypeDetailsSheet(String? type) async {
+    if (!mounted || type == null || type.isEmpty) return;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            20,
+            16,
+            20,
+            16 + MediaQuery.of(ctx).viewPadding.bottom,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 42,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: context.color.textLightColor.withOpacity(0.35),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                "chooseaccountAlertTitle".translate(context),
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 12),
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.6,
+                ),
+                child: SingleChildScrollView(
+                  child: Text(
+                    "chooseaccountAlertcontent $type".translate(context),
+                    style: TextStyle(
+                      fontSize: context.font.small,
+                      color: context.color.textDefaultColor,
+                      height: 1.5,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              UiUtils.buildButton(
+                ctx,
+                onPressed: () => Navigator.of(ctx).pop(),
+                buttonTitle: 'ok'.translate(context),
+                radius: 12,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
 
@@ -813,35 +870,7 @@ class LoginScreenState extends State<SignUpMainScreen> {
                     onAgreeChanged: onAgreeChanged,
                     onAccountTypeChanged: (v) async {
                       onAccountTypeChanged(v);
-                      await UiUtils.showBlurredDialoge(
-                        context,
-                        dialoge: BlurredDialogBox(
-                          showCancleButton: false,
-                          title: "chooseaccountAlertTitle".translate(context),
-                          content: ConstrainedBox(
-                            constraints: BoxConstraints(
-                              maxHeight:
-                              MediaQuery.of(context).size.height * 0.6,
-                            ),
-                            child: SingleChildScrollView(
-                              child: Text(
-                                "chooseaccountAlertcontent ${v ?? ''}"
-                                    .translate(context),
-                                style: TextStyle(
-                                  fontSize: context.font.small,
-                                  color: context.color.textDefaultColor,
-                                  height: 1.5,
-                                ),
-                              ),
-                            ),
-                          ),
-                          acceptButtonName: 'ok'.translate(context),
-                          isAcceptContainesPush: true,
-                          onAccept: () async {
-                            Navigator.of(context).pop();
-                          },
-                        ),
-                      );
+                      await _showAccountTypeDetailsSheet(v);
                     },
                     onShowCountryPicker: onShowCountryPicker,
                     onSubmit: onSubmit,

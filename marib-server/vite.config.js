@@ -12,6 +12,8 @@ export default defineConfig({
                 'resources/sass/app.scss',
                 'resources/js/items/index.scss',
                 'resources/js/items/index.js',
+                'resources/js/wifi/index.scss',
+                'resources/js/wifi/index.js',
                 'resources/js/app.js',
             ],
             refresh: true,

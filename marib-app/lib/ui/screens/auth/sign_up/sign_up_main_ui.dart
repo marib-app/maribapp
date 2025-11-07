@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:marib/ui/screens/auth/widgets/auth_status_bar.dart';
-import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart';
 import 'package:marib/ui/screens/widgets/custom_text_form_field.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
@@ -466,31 +465,71 @@ class ReferralCodeField extends StatelessWidget {
           Icons.info_outline,
           color: context.color.textColorDark.withOpacity(0.5),
         ),
-        onPressed: () {
-          final locale = Localizations.maybeLocaleOf(context);
-          final isArabic = locale != null &&
-              locale.languageCode.toLowerCase().startsWith('ar');
-          final titleKey =
-              isArabic ? 'referralCodeInfoTitle_ar' : 'referralCodeInfoTitle';
-          final messageKey =
-              isArabic ? 'referralCodeInfoMarib_ar' : 'referralCodeInfoMarib';
-          UiUtils.showBlurredDialoge(
-            context,
-            dialoge: BlurredDialogBox(
-              showCancleButton: false,
-              title: titleKey.translate(context),
-              content: Text(
+        onPressed: () => _showReferralInfoSheet(context),
+      ),
+    );
+  }
+
+  Future<void> _showReferralInfoSheet(BuildContext context) async {
+    final locale = Localizations.maybeLocaleOf(context);
+    final isArabic =
+        locale != null && locale.languageCode.toLowerCase().startsWith('ar');
+    final titleKey =
+        isArabic ? 'referralCodeInfoTitle_ar' : 'referralCodeInfoTitle';
+    final messageKey =
+        isArabic ? 'referralCodeInfoMarib_ar' : 'referralCodeInfoMarib';
+
+    await showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            20,
+            16,
+            20,
+            16 + MediaQuery.of(ctx).viewPadding.bottom,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: context.color.textLightColor.withOpacity(0.4),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                titleKey.translate(context),
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 12),
+              Text(
                 messageKey.translate(context),
                 textAlign: isArabic ? TextAlign.right : TextAlign.start,
+                style: TextStyle(
+                  color: context.color.textDefaultColor,
+                  height: 1.5,
+                ),
               ),
-              acceptButtonName: "ok".translate(context),
-              isAcceptContainesPush: true,
-              onAccept: () async {
-                Navigator.of(context).pop();
-              },
-            ),
-          );
-        },
+              const SizedBox(height: 16),
+              UiUtils.buildButton(
+                ctx,
+                onPressed: () => Navigator.of(ctx).pop(),
+                buttonTitle: "ok".translate(context),
+                radius: 12,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -506,9 +545,7 @@ class AccountTypeDropdown extends StatelessWidget {
   final String? value;
   final ValueChanged<String?> onChanged;
 
-  Map<String, (String label, IconData icon)> _defaultTypes(
-          BuildContext context) =>
-      {
+  Map<String, (String label, IconData icon)> _options(BuildContext context) => {
         "1": ("individual".translate(context), Icons.person),
         "2": ("realEstate".translate(context), Icons.home_work_outlined),
         "3": ("commercial".translate(context), Icons.storefront_outlined),
@@ -516,7 +553,7 @@ class AccountTypeDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final options = _defaultTypes(context);
+    final options = _options(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -524,7 +561,6 @@ class AccountTypeDropdown extends StatelessWidget {
         DropdownButtonFormField<String>(
           initialValue: value,
           isExpanded: true,
-          autovalidateMode: AutovalidateMode.onUserInteraction,
           icon: Icon(
             Icons.keyboard_arrow_down_rounded,
             color: context.color.textDefaultColor.withOpacity(0.7),
@@ -555,7 +591,7 @@ class AccountTypeDropdown extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(
                 color: context.color.territoryColor,
-                width: 1.5,
+                width: 1.4,
               ),
             ),
           ),

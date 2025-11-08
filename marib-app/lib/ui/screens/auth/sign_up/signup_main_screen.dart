@@ -37,8 +37,6 @@ import 'package:marib/utils/notification/notification_service.dart';
 
 import '../widgets/auth_status_bar.dart';
 
-
-
 class SignUpMainScreen extends StatefulWidget {
   final Map<String, dynamic>? arguments;
 
@@ -96,14 +94,10 @@ class LoginScreenState extends State<SignUpMainScreen> {
 
   late final Future<void> _bootstrapFuture;
   Future<void> _bootstrapSignUpFlow() async {
-
-
     final authCubit = context.read<AuthenticationCubit>();
     authCubit.init();
 
-
     _authenticationSubscription = authCubit.stream.listen((state) {
-
       if (!mounted) return;
       if (state is AuthenticationSuccess) {
         if (state.type == AuthenticationType.google ||
@@ -120,7 +114,6 @@ class LoginScreenState extends State<SignUpMainScreen> {
 
     _loginStateListenerDisposer?.call();
     _loginStateListenerDisposer = authCubit.listen((MLoginState state) {
-
       if (!mounted) return;
       if (state is MOtpSendInProgress) Widgets.showLoader(context);
       if (state is MVerificationPending) {
@@ -223,7 +216,6 @@ class LoginScreenState extends State<SignUpMainScreen> {
     );
   }
 
-
   @override
   void initState() {
     super.initState();
@@ -240,7 +232,6 @@ class LoginScreenState extends State<SignUpMainScreen> {
     }
 
     _bootstrapFuture = _bootstrapSignUpFlow();
-
   }
 
   @override
@@ -268,10 +259,10 @@ class LoginScreenState extends State<SignUpMainScreen> {
     } catch (_) {}
 
     Country simCountry = countryList.firstWhere(
-          (element) {
+      (element) {
         if (Constant.isDemoModeOn) {
           return countryList.any(
-                (e) => e.phoneCode == Constant.defaultCountryCode,
+            (e) => e.phoneCode == Constant.defaultCountryCode,
           );
         } else {
           return element.phoneCode == simCountryCode;
@@ -285,17 +276,13 @@ class LoginScreenState extends State<SignUpMainScreen> {
     );
 
     if (Constant.isDemoModeOn) {
-      simCountry =
-          countryList
-              .where((e) => e.phoneCode == Constant.demoCountryCode)
-              .first;
+      simCountry = countryList
+          .where((e) => e.phoneCode == Constant.demoCountryCode)
+          .first;
     }
 
     return simCountry;
   }
-
-
-
 
   Future<bool> _ensureSystemSettingsAvailable() async {
     final cubit = context.read<FetchSystemSettingsCubit>();
@@ -309,8 +296,8 @@ class LoginScreenState extends State<SignUpMainScreen> {
     try {
       if (currentState is FetchSystemSettingsInProgress) {
         resolvedState = await cubit.stream.firstWhere(
-              (state) =>
-          state is FetchSystemSettingsSuccess ||
+          (state) =>
+              state is FetchSystemSettingsSuccess ||
               state is FetchSystemSettingsFailure,
         );
       } else {
@@ -354,11 +341,6 @@ class LoginScreenState extends State<SignUpMainScreen> {
     );
   }
 
-
-
-
-
-
   // ====== Social login handler: send to backend, route appropriately ======
   Future<void> _handleSocialLogin(AuthenticationSuccess state) async {
     try {
@@ -382,6 +364,24 @@ class LoginScreenState extends State<SignUpMainScreen> {
         'code_present: ${payload.containsKey('code')}',
       );
 
+      if (selectedAccountType == "3") {
+        Widgets.hideLoder(context);
+        HelperUtils.showSnackBarMessage(
+          context,
+          'أكمل خطوات المتجر لإرسال طلب التسجيل.',
+          messageDuration: 3,
+          type: MessageType.warning,
+        );
+        Navigator.pushNamed(
+          context,
+          Routes.merchantOnboarding,
+          arguments: {
+            'signupDraft': payload,
+          },
+        );
+        return;
+      }
+
       final response = await Api.post(url: "user-signup", parameter: payload);
       debugPrint(
         '[SignUpMainScreen] user-signup response => error: ${response['error']}',
@@ -396,9 +396,7 @@ class LoginScreenState extends State<SignUpMainScreen> {
             userData['account_type'] != null && userData['account_type'] != 0;
         final bool isEmailVerified = userData['email_verified_at'] != null;
         final bool hasCompleteName =
-            userData['name'] != null && userData['name']
-                .toString()
-                .isNotEmpty;
+            userData['name'] != null && userData['name'].toString().isNotEmpty;
 
         final bool shouldAuthenticate =
             hasAccountType && isEmailVerified && hasCompleteName;
@@ -415,7 +413,6 @@ class LoginScreenState extends State<SignUpMainScreen> {
         );
 
         if (shouldAuthenticate) {
-
           if ((HiveUtils.getCityName() ?? '').isNotEmpty &&
               HiveUtils.getCityName() != 'null') {
             HelperUtils.killPreviousPages(
@@ -439,12 +436,9 @@ class LoginScreenState extends State<SignUpMainScreen> {
             usernameCtrl.text = incomingGoogleData['name'] ?? '';
             emailCtrl.text = incomingGoogleData['email'] ?? '';
           });
-
-
         }
       } else {
-        HelperUtils.showSnackBarMessage(
-            context,
+        HelperUtils.showSnackBarMessage(context,
             response['message'] ?? "registrationError".translate(context));
       }
     } catch (e) {
@@ -467,8 +461,8 @@ class LoginScreenState extends State<SignUpMainScreen> {
       context: context,
       showWorldWide: true,
       showPhoneCode: true,
-      countryListTheme: CountryListThemeData(
-          borderRadius: BorderRadius.circular(11)),
+      countryListTheme:
+          CountryListThemeData(borderRadius: BorderRadius.circular(11)),
       onSelect: (Country value) {
         flagEmoji = value.flagEmoji;
         if (!mounted) return;
@@ -477,8 +471,6 @@ class LoginScreenState extends State<SignUpMainScreen> {
       },
     );
   }
-
-
 
   Future<Map<String, dynamic>?> _prepareLocationPayload() async {
     try {
@@ -542,8 +534,8 @@ class LoginScreenState extends State<SignUpMainScreen> {
             'street': placemark.street,
           };
           possibleMeta.removeWhere(
-                (key, value) =>
-            value == null || (value is String && value.trim().isEmpty),
+            (key, value) =>
+                value == null || (value is String && value.trim().isEmpty),
           );
           if (possibleMeta.isNotEmpty) {
             meta = possibleMeta;
@@ -577,9 +569,6 @@ class LoginScreenState extends State<SignUpMainScreen> {
     }
   }
 
-
-
-
   // Submit action for primary button
   Future<void> onSubmit() async {
     final form = formKey.currentState;
@@ -587,7 +576,6 @@ class LoginScreenState extends State<SignUpMainScreen> {
     form.save();
 
     if (!form.validate()) return;
-
 
     if (!agreed) {
       HelperUtils.showSnackBarMessage(
@@ -608,7 +596,6 @@ class LoginScreenState extends State<SignUpMainScreen> {
       return;
     }
 
-
     Widgets.showLoader(context);
 
     Map<String, dynamic>? locationPayload;
@@ -623,7 +610,6 @@ class LoginScreenState extends State<SignUpMainScreen> {
     }
 
     try {
-
       final basePayload = <String, dynamic>{
         "name": usernameCtrl.text,
         "mobile": mobileCtrl.text,
@@ -647,9 +633,7 @@ class LoginScreenState extends State<SignUpMainScreen> {
         // Complete profile for social login
         payload = {
           ...basePayload,
-
           "type": "google",
-
           "firebase_id": googleData!['firebase_id'],
           "profile": googleData!['profile'] ?? "",
         };
@@ -661,14 +645,12 @@ class LoginScreenState extends State<SignUpMainScreen> {
           firebaseId = currentUser.uid;
         } else {
           firebaseId =
-          "user_${countryCode}${mobileCtrl.text}"; // temporary fallback
+              "user_${countryCode}${mobileCtrl.text}"; // temporary fallback
         }
 
         payload = {
           ...basePayload,
-
           "type": "phone",
-
           "firebase_id": firebaseId,
         };
       }
@@ -690,12 +672,15 @@ class LoginScreenState extends State<SignUpMainScreen> {
         if (!mounted) return;
 
         if (_kSkipPhoneVerification) {
-          HelperUtils.showSnackBarMessage(
-            context,
-            'تم إنشاء الحساب وسيتم تفعيل التحقق لاحقاً.',
-            messageDuration: 3,
-            type: MessageType.success,
-          );
+          final bool isCommercialAccount = selectedAccountType == "3";
+          if (!isCommercialAccount) {
+            HelperUtils.showSnackBarMessage(
+              context,
+              'تم إنشاء الحساب وسيتم تفعيل التحقق لاحقاً.',
+              messageDuration: 3,
+              type: MessageType.success,
+            );
+          }
           await _completeSignupFlowWithoutOtp();
         } else {
           Navigator.pushNamed(
@@ -742,7 +727,6 @@ class LoginScreenState extends State<SignUpMainScreen> {
         message,
         messageDuration: 3,
       );
-
     } finally {
       Widgets.hideLoder(context);
     }
@@ -809,7 +793,6 @@ class LoginScreenState extends State<SignUpMainScreen> {
 
   @override
   Widget build(BuildContext context) {
-
     final statusBarBase = LoginStatusBar.resolveBaseColor(context);
 
     // واجهة الشاشة
@@ -840,7 +823,6 @@ class LoginScreenState extends State<SignUpMainScreen> {
                 setState(() => isBack = true);
               }
             },
-
             child: AnnotatedRegion<SystemUiOverlayStyle>(
               value: LoginStatusBar.overlayFor(
                 context,
@@ -858,9 +840,9 @@ class LoginScreenState extends State<SignUpMainScreen> {
                   final settingsState =
                       context.watch<FetchSystemSettingsCubit>().state;
                   final bool isSettingsReady =
-                  settingsState is FetchSystemSettingsSuccess;
+                      settingsState is FetchSystemSettingsSuccess;
                   final bool isSettingsLoading =
-                  settingsState is FetchSystemSettingsInProgress;
+                      settingsState is FetchSystemSettingsInProgress;
 
                   final vm = SignUpVM(
                     formKey: formKey,
@@ -892,22 +874,22 @@ class LoginScreenState extends State<SignUpMainScreen> {
                     onSubmit: onSubmit,
                     onNavigateToLogin: () =>
                         Navigator.pushNamed(context, Routes.login),
-                    onOpenStaticContent:
-                        ({required String title, required String param}) {
+                    onOpenStaticContent: (
+                        {required String title, required String param}) {
                       return _openStaticContent(title: title, param: param);
                     },
                     onGoogleAuth: () {
                       context.read<AuthenticationCubit>().setData(
-                        payload: GoogleLoginPayload(),
-                        type: AuthenticationType.google,
-                      );
+                            payload: GoogleLoginPayload(),
+                            type: AuthenticationType.google,
+                          );
                       context.read<AuthenticationCubit>().authenticate();
                     },
                     onAppleAuth: () {
                       context.read<AuthenticationCubit>().setData(
-                        payload: AppleLoginPayload(),
-                        type: AuthenticationType.apple,
-                      );
+                            payload: AppleLoginPayload(),
+                            type: AuthenticationType.apple,
+                          );
                       context.read<AuthenticationCubit>().authenticate();
                     },
                   );

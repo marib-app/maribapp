@@ -214,7 +214,6 @@ class Routes {
   static const walletTransactionDetails = '/wallet/transaction-details';
   static const paymentRequestDetails = '/wallet/payment-request-details';
 
-
   static const personalizedItemScreen = '/personalizedItemScreen';
   static const myItemScreen = '/myItemScreen';
   static const pdfViewerScreen = '/pdfViewerScreen';
@@ -410,7 +409,7 @@ class Routes {
       case mobileSignUp:
         return MobileSignUpScreen.route(routeSettings);
       case merchantOnboarding:
-        return MerchantOnboardingScreen.route();
+        return MerchantOnboardingScreen.route(routeSettings);
 
       // ✅ بدّل هذه: كانت تفتح UserProfileScreen، خلّها ترجع الرئيسية
       case completeProfile:

@@ -1,19 +1,36 @@
 import 'package:flutter/material.dart';
 import 'phase1_activity_info.dart';
 import 'phase2_categories_hours.dart';
+import 'phase3_store_policy.dart';
+import 'phase4_payment_methods.dart';
+import 'phase5_store_credentials.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/ui_utils.dart';
 
 class MerchantOnboardingScreen extends StatefulWidget {
-  const MerchantOnboardingScreen({super.key});
+  final Map<String, dynamic>? signupDraft;
 
-  static Route<void> route() {
-    return MaterialPageRoute(builder: (context) => const MerchantOnboardingScreen());
+  const MerchantOnboardingScreen({super.key, this.signupDraft});
+
+  static Route<void> route(RouteSettings settings) {
+    Map<String, dynamic>? draft;
+    final args = settings.arguments;
+    if (args is Map<String, dynamic>) {
+      final dynamic maybeDraft = args['signupDraft'];
+      if (maybeDraft is Map<String, dynamic>) {
+        draft = maybeDraft;
+      }
+    }
+    return MaterialPageRoute(
+      settings: settings,
+      builder: (context) => MerchantOnboardingScreen(signupDraft: draft),
+    );
   }
 
   @override
-  State<MerchantOnboardingScreen> createState() => _MerchantOnboardingScreenState();
+  State<MerchantOnboardingScreen> createState() =>
+      _MerchantOnboardingScreenState();
 }
 
 class _MerchantOnboardingScreenState extends State<MerchantOnboardingScreen> {
@@ -32,12 +49,40 @@ class _MerchantOnboardingScreenState extends State<MerchantOnboardingScreen> {
 
   void _onPhase1Next(ActivityInfoData data) {
     _goToPage(1);
-    UiUtils.showSoftSnackBar(context, message: 'dataSavedStage'.translate(context));
+    UiUtils.showSoftSnackBar(context,
+        message: 'dataSavedStage'.translate(context));
   }
 
   void _onPhase2Next(Phase2Data data) {
     _goToPage(2);
-    UiUtils.showSoftSnackBar(context, message: 'dataSavedStage'.translate(context));
+    UiUtils.showSoftSnackBar(context,
+        message: 'dataSavedStage'.translate(context));
+  }
+
+  void _onPhase3Next(StorePolicyData data) {
+    _goToPage(3);
+    UiUtils.showSoftSnackBar(context,
+        message: 'dataSavedStage'.translate(context));
+  }
+
+  void _onPhase4Next(PaymentOptionsData data) {
+    _goToPage(4);
+    UiUtils.showSoftSnackBar(context,
+        message: 'dataSavedStage'.translate(context));
+  }
+
+  void _onPhase5Next(StoreCredentialsData data) {
+    _goToPage(5);
+    UiUtils.showSoftSnackBar(context,
+        message: 'dataSavedStage'.translate(context));
+  }
+
+  void _handleBackPressed() {
+    if (_currentPage > 0) {
+      _goToPage(_currentPage - 1);
+    } else {
+      Navigator.of(context).maybePop();
+    }
   }
 
   @override
@@ -53,7 +98,11 @@ class _MerchantOnboardingScreenState extends State<MerchantOnboardingScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: BackButton(color: context.color.textDefaultColor),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          color: context.color.textDefaultColor,
+          onPressed: _handleBackPressed,
+        ),
         title: Text('merchantOnboarding'.translate(context)),
         centerTitle: true,
       ),
@@ -77,9 +126,18 @@ class _MerchantOnboardingScreenState extends State<MerchantOnboardingScreen> {
                   onBack: () => _goToPage(0),
                   onNext: _onPhase2Next,
                 ),
-                Center(child: Text('phase3_pending'.translate(context))),
-                Center(child: Text('phase4_pending'.translate(context))),
-                Center(child: Text('phase5_pending'.translate(context))),
+                Phase3StorePolicy(
+                  onBack: () => _goToPage(1),
+                  onNext: _onPhase3Next,
+                ),
+                Phase4PaymentMethods(
+                  onBack: () => _goToPage(2),
+                  onNext: _onPhase4Next,
+                ),
+                Phase5StoreCredentials(
+                  onBack: () => _goToPage(3),
+                  onNext: _onPhase5Next,
+                ),
                 Center(child: Text('phase6_pending'.translate(context))),
               ],
             ),

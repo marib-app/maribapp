@@ -3609,26 +3609,28 @@ class ApiController extends Controller {
 
 
             $item = Item::select(['id', 'category_id'])->find($request->item_id);
+            $categoryId = $item?->category_id;
 
-            if (!$item) {
+            if ($categoryId === null) {
+                $serviceRecord = Service::select(['id', 'category_id'])->find($request->item_id);
+                $categoryId = $serviceRecord?->category_id;
+            }
+
+            if ($categoryId === null) {
                 ResponseService::errorResponse(__('The selected item could not be found.'));
             }
 
-            $department = $this->resolveReportDepartment($item->category_id);
+            $department = $this->resolveReportDepartment($categoryId);
 
             if (empty($department)) {
                 ResponseService::errorResponse(__('Unable to determine the department for this report.'));
             }
-
-
 
             UserReports::create([
                 ...$request->all(),
                 'user_id'       => $user->id,
                 'other_message' => $request->other_message ?? '',
                 'department'    => $department,
-
-
             ]);
             ResponseService::successResponse("Report Submitted Successfully");
         } catch (Throwable $th) {
@@ -3652,7 +3654,26 @@ class ApiController extends Controller {
             if ($validator->fails()) {
                 ResponseService::validationError($validator->errors()->first());
             }
-            Item::findOrFail($request->item_id)->increment('clicks');
+
+            $itemId = (int) $request->item_id;
+            $recorded = false;
+
+            $item = Item::find($itemId);
+            if ($item) {
+                $item->increment('clicks');
+                $recorded = true;
+            } else {
+                $service = Service::find($itemId);
+                if ($service) {
+                    $service->increment('views');
+                    $recorded = true;
+                }
+            }
+
+            if (!$recorded) {
+                ResponseService::errorResponse(__('The selected item could not be found.'));
+            }
+
             ResponseService::successResponse(null, 'Update Successfully');
         } catch (Throwable $th) {
             ResponseService::logErrorResponse($th, "API Controller -> setItemTotalClick");
@@ -6574,12 +6595,16 @@ class ApiController extends Controller {
         }
 
         if (Schema::hasTable('service_requests')) {
-            $hasApprovedRequest = ServiceRequest::where('service_id', $service->id)
+            $hasQualifiedRequest = ServiceRequest::where('service_id', $service->id)
                 ->where('user_id', $user->id)
-                ->whereIn('status', ['approved'])
+                ->whereNull('deleted_at')
+                ->where(function ($query) {
+                    $query->whereNull('status')
+                        ->orWhereIn('status', ['approved', 'review', 'completed', 'closed']);
+                })
                 ->exists();
 
-            if ($hasApprovedRequest) {
+            if ($hasQualifiedRequest) {
                 return true;
             }
         }

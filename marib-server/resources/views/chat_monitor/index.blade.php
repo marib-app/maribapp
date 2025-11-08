@@ -1,594 +1,333 @@
-@extends('layouts.main')
+﻿@extends('layouts.main')
 
 @section('title')
     {{ __('مراقبة المحادثات') }}
 @endsection
 
 @section('css')
-<style>
-    /* تنسيق عام للصفحة */
-    .chat-container {
-        background-color: #f5f5f5;
-        border-radius: 8px;
-        overflow: hidden;
-        display: flex;
-        height: 75vh;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        margin-bottom: 20px;
-    }
+    <style>
+        .chat-monitor-dashboard {
+            --chat-card-gradient: linear-gradient(145deg, #ffffff 0%, #f7f9fb 100%);
+            --chat-card-shadow: 0 10px 30px rgba(15, 35, 95, 0.08);
+            --chat-heading-color: var(--bs-body-color);
+            --chat-muted-color: var(--bs-secondary-color, #6c757d);
+            --chat-border-color: var(--bs-border-color, #edf0f7);
+            --chat-panel-bg: var(--bs-tertiary-bg, #fafbfc);
+            --chat-panel-contrast: var(--bs-body-bg, #ffffff);
+            --chat-scroll-thumb: color-mix(in srgb, var(--bs-body-color) 20%, transparent);
+            --chat-tile-bg: var(--bs-tertiary-bg, #ffffff);
+            --chat-tile-hover-border: color-mix(in srgb, var(--bs-primary) 45%, transparent);
+            --chat-text-soft: color-mix(in srgb, var(--bs-body-color) 70%, var(--bs-body-bg));
+            --chat-agent-gradient-start: var(--bs-primary, #3558ff);
+            --chat-agent-gradient-end: color-mix(in srgb, var(--bs-primary, #4776e6) 80%, #3558ff);
+            --chat-client-bg: var(--bs-body-bg, #ffffff);
+            --chat-client-border: color-mix(in srgb, var(--bs-body-color) 10%, transparent);
+        }
 
-    /* قائمة المحادثات */
-    .conversations-list {
-        width: 30%;
-        background-color: #fff;
-        border-right: 1px solid #e5e5e5;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-    }
+        [data-bs-theme="dark"] .chat-monitor-dashboard {
+            --chat-card-gradient: linear-gradient(145deg, color-mix(in srgb, var(--bs-body-bg) 80%, #1f2937), color-mix(in srgb, var(--bs-body-bg) 60%, #111827));
+            --chat-card-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+            --chat-panel-bg: color-mix(in srgb, var(--bs-body-bg) 85%, #111827);
+            --chat-panel-contrast: color-mix(in srgb, var(--bs-body-bg) 95%, #0f172a);
+            --chat-scroll-thumb: color-mix(in srgb, var(--bs-body-color) 40%, transparent);
+            --chat-tile-bg: color-mix(in srgb, var(--bs-body-bg) 92%, #0b1120);
+            --chat-client-bg: color-mix(in srgb, var(--bs-body-bg) 80%, #0f172a);
+            --chat-client-border: color-mix(in srgb, var(--bs-body-color) 25%, transparent);
+            --chat-muted-color: color-mix(in srgb, var(--bs-body-color) 65%, var(--bs-body-bg));
+        }
 
-    .conversation-search {
-        padding: 10px;
-        border-bottom: 1px solid #e5e5e5;
-        background-color: #f8f8f8;
-    }
-
-    .conversations-container {
-        flex-grow: 1;
-        overflow-y: auto;
-        scrollbar-width: thin;
-    }
-
-    .conversations-container::-webkit-scrollbar {
-        width: 6px;
-    }
-
-    .conversations-container::-webkit-scrollbar-track {
-        background: #f1f1f1;
-    }
-
-    .conversations-container::-webkit-scrollbar-thumb {
-        background: #c1c1c1;
-        border-radius: 10px;
-    }
-
-    .conversations-container::-webkit-scrollbar-thumb:hover {
-        background: #a8a8a8;
-    }
-
-    .conversation-item {
-        padding: 10px;
-        border-bottom: 1px solid #f1f1f1;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-
-    .conversation-item:hover, .conversation-item.active {
-        background-color: #f5f5f5;
-    }
-
-    .conversation-item .user-avatar {
-        width: 50px;
-        height: 50px;
-        border-radius: 50%;
-        object-fit: cover;
-    }
-
-    .conversation-item .message-preview {
-        color: #888;
-        font-size: 13px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 150px;
-    }
-
-    /* عرض المحادثة */
-    .chat-view {
-        width: 70%;
-        display: flex;
-        flex-direction: column;
-        background-color: #f5f5f5;
-        height: 100%;
-    }
-
-    .chat-header {
-        padding: 15px;
-        background-color: #fff;
-        border-bottom: 1px solid #e5e5e5;
-        display: flex;
-        align-items: center;
-    }
-
-    .chat-header .user-avatar {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        margin-right: 10px;
-    }
-
-    .chat-header .user-name {
-        font-weight: bold;
-        font-size: 16px;
-        color: #435ebe;
-    }
-
-    .chat-header .conversation-id {
-        font-size: 12px;
-        color: #888;
-        margin-top: 3px;
-    }
-
-    .messages-container {
-        flex-grow: 1;
-        overflow-y: auto;
-        padding: 20px;
-        height: calc(100% - 160px); /* خصم ارتفاع الهيدر والأكشن والعنوان */
-        scrollbar-width: thin;
-    }
-
-    .messages-container::-webkit-scrollbar {
-        width: 6px;
-    }
-
-    .messages-container::-webkit-scrollbar-track {
-        background: #f1f1f1;
-    }
-
-    .messages-container::-webkit-scrollbar-thumb {
-        background: #c1c1c1;
-        border-radius: 10px;
-    }
-
-    .messages-container::-webkit-scrollbar-thumb:hover {
-        background: #a8a8a8;
-    }
-
-    .message {
-        margin-bottom: 12px;
-        display: flex;
-        flex-direction: column;
-        width: 100%;
-    }
-
-    /* رسائل المستخدم الحالي (المرسل) - على اليمين */
-    .message-sender {
-        align-self: flex-end;
-        max-width: 70%;
-        background-color: #e3f2fd;
-        border-radius: 18px 18px 0 18px;
-        position: relative;
-        padding: 12px 16px;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-        text-align: right;
-        margin-bottom: 8px;
-    }
-    
-    /* رسائل المستخدمين الآخرين (المستقبل) - على اليسار */
-    .message-receiver {
-        align-self: flex-start;
-        max-width: 70%;
-        background-color: #ffffff;
-        border-radius: 18px 18px 18px 0;
-        position: relative;
-        padding: 12px 16px;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-        text-align: left;
-        margin-bottom: 8px;
-    }
-
-    .message-username {
-        font-weight: bold;
-        font-size: 0.85rem;
-        margin-bottom: 5px;
-        color: #1f7aec;
-    }
-    
-    /* تمييز اسم المرسل والمستقبل بألوان مختلفة */
-    .message-sender .message-username {
-        color: #0d6e0d;
-    }
-    
-    .message-receiver .message-username {
-        color: #1f7aec;
-    }
-
-    .message-text {
-        word-break: break-word;
-        white-space: pre-wrap;
-        font-size: 14px;
-        line-height: 1.5;
-    }
-
-    .message-time {
-        text-align: right;
-        font-size: 0.7rem;
-        color: #999;
-        margin-top: 5px;
-    }
-
-    .message-date {
-        margin-left: 5px;
-        font-size: 0.65rem;
-        color: #aaa;
-    }
-
-    [dir="rtl"] .message-date {
-        margin-left: 0;
-        margin-right: 5px;
-    }
-
-    .message-media img {
-        max-width: 200px;
-        max-height: 150px;
-        border-radius: 8px;
-        cursor: pointer;
-        margin-top: 8px;
-    }
-
-    .message-group {
-        margin-bottom: 15px;
-    }
-
-    .empty-chat {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        height: 100%;
-        color: #888;
-        font-size: 16px;
-        background-color: #f8f8f8;
-    }
-
-    .empty-chat i {
-        font-size: 70px;
-        margin-bottom: 20px;
-        color: #999;
-    }
-
-    .chat-loading {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100%;
-        font-size: 14px;
-        color: #666;
-    }
-
-    .chat-actions {
-        padding: 10px;
-        background-color: #f0f0f0;
-        border-top: 1px solid #e5e5e5;
-        display: flex;
-        justify-content: space-between;
-    }
-
-    /* للغة العربية */
-    [dir="rtl"] .conversation-item .user-avatar,
-    [dir="rtl"] .chat-header .user-avatar {
-        margin-right: 0;
-        margin-left: 10px;
-    }
-
-    /* تصحيح اتجاه الرسائل في وضع RTL */
-    [dir="rtl"] .message-sender {
-        align-self: flex-end;
-        border-radius: 12px 0 12px 12px;
-        text-align: left;
-    }
-
-    [dir="rtl"] .message-receiver {
-        align-self: flex-start;
-        border-radius: 0 12px 12px 12px;
-        text-align: right;
-    }
-
-    [dir="rtl"] .message-time {
-        float: left;
-        margin-left: 0;
-        margin-right: 8px;
-    }
-
-    @media (max-width: 768px) {
-        .chat-container {
+        .chat-monitor-dashboard .stat-card {
+            border: none;
+            border-radius: 16px;
+            padding: 22px;
+            background: var(--chat-card-gradient);
+            box-shadow: var(--chat-card-shadow);
+            height: 100%;
+            display: flex;
             flex-direction: column;
-            height: auto;
+            justify-content: space-between;
         }
 
-        .conversations-list,
-        .chat-view {
+        .chat-monitor-dashboard .stat-card h2 {
+            font-size: 30px;
+            margin: 10px 0 4px;
+            font-weight: 700;
+            color: var(--chat-heading-color);
+        }
+
+        .chat-monitor-dashboard .stat-card small {
+            color: var(--chat-muted-color);
+        }
+
+        .chat-monitor-dashboard .stat-card .stat-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #fff;
+        }
+
+        .chat-monitor-dashboard .filter-card .form-label {
+            font-weight: 600;
+            color: var(--chat-heading-color);
+        }
+
+        .chat-monitor-dashboard .text-muted {
+            color: var(--chat-muted-color) !important;
+        }
+
+        .chat-monitor-dashboard .chat-workspace-card {
+            border-radius: 18px;
+            overflow: hidden;
+        }
+
+        .chat-workspace {
+            display: grid;
+            grid-template-columns: 340px 1fr;
+            min-height: 520px;
+            height: clamp(520px, 70vh, 820px);
+        }
+
+        .chat-workspace > .conversation-panel,
+        .chat-workspace > .reader-panel {
+            min-height: 0;
+        }
+
+        @media (max-width: 992px) {
+            .chat-workspace {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+        }
+
+        .conversation-panel {
+            border-right: 1px solid var(--chat-border-color);
+            background-color: var(--chat-panel-bg);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .conversation-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+        }
+
+        .conversation-list::-webkit-scrollbar,
+        .reader-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .conversation-list::-webkit-scrollbar-thumb,
+        .reader-messages::-webkit-scrollbar-thumb {
+            background: var(--chat-scroll-thumb);
+            border-radius: 4px;
+        }
+
+        .conversation-tile {
             width: 100%;
-            height: 50vh;
+            border: 1px solid transparent;
+            border-radius: 14px;
+            background-color: var(--chat-tile-bg);
+            padding: 14px;
+            text-align: start;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 10px;
         }
-    }
-    
-    /* تنسيق الفلاتر */
-    .filters-card {
-        margin-bottom: 20px;
-    }
-    
-    .filters-card .form-label {
-        font-weight: 600;
-        margin-bottom: 8px;
-        font-size: 1rem;
-    }
-    
-    .filters-card .form-control,
-    .filters-card .form-select {
-        border-radius: 6px;
-        padding: 12px 15px;
-        height: auto;
-        border: 1px solid #dce7f1;
-        font-size: 1rem;
-    }
-    
-    .filters-card .form-control:focus,
-    .filters-card .form-select:focus {
-        border-color: #435ebe;
-        box-shadow: 0 0 0 0.25rem rgba(67, 94, 190, 0.1);
-    }
-    
-    .filters-card .select2-container--bootstrap-5 .select2-selection {
-        min-height: 50px;
-        padding: 12px 15px;
-        border: 1px solid #dce7f1;
-        font-size: 1rem;
-    }
-    
-    .filters-card .select2-container--bootstrap-5 .select2-selection--single .select2-selection__rendered {
-        padding: 0;
-        font-size: 1rem;
-        line-height: 1.5;
-    }
-    
-    .filters-card .select2-container--bootstrap-5.select2-container--focus .select2-selection {
-        border-color: #435ebe;
-        box-shadow: 0 0 0 0.25rem rgba(67, 94, 190, 0.1);
-    }
-    
-    .select2-container--bootstrap-5 .select2-dropdown {
-        border-color: #dce7f1;
-        border-radius: 6px;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-    }
-    
-    .select2-container--bootstrap-5 .select2-dropdown .select2-results__option {
-        padding: 10px 15px;
-        font-size: 1rem;
-    }
-    
-    .select2-container--bootstrap-5 .select2-dropdown .select2-results__option--highlighted {
-        background-color: #435ebe;
-        color: white;
-    }
-    
-    .filters-card .btn-actions {
-        text-align: center;
-        margin-top: 10px;
-    }
-    
-    .filters-card .btn {
-        padding: 12px 25px;
-        font-weight: 600;
-        border-radius: 6px;
-        min-width: 140px;
-        font-size: 1rem;
-    }
 
-    /* تنسيق الإحصائيات */
-    .stats-card {
-        border: none;
-        border-radius: 10px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        overflow: hidden;
-        transition: transform 0.3s ease;
-        height: 100%;
-    }
+        .conversation-tile.active,
+        .conversation-tile:hover {
+            border-color: var(--chat-tile-hover-border);
+            box-shadow: 0 12px 30px rgba(55, 71, 133, 0.12);
+        }
 
-    .stats-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
-    }
+        .conversation-tile .tile-title {
+            font-weight: 600;
+            color: var(--chat-heading-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-    .stats-card .card-body {
-        padding: 20px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-    }
+        .conversation-tile .tile-meta {
+            font-size: 12px;
+            color: var(--chat-muted-color);
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
 
-    .stats-card .icon-container {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 80px;
-        height: 80px;
-        border-radius: 50%;
-        margin-bottom: 15px;
-        margin-left: auto;
-        margin-right: auto;
-    }
+        .conversation-tile .tile-preview {
+            font-size: 13px;
+            color: var(--chat-text-soft);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
 
-    .stats-card .icon-container i {
-        font-size: 32px;
-        color: white;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 100%;
-        height: 100%;
-    }
+        .conversation-tile .badge {
+            background-color: color-mix(in srgb, var(--chat-heading-color) 12%, var(--chat-panel-contrast));
+            color: var(--chat-heading-color);
+        }
 
-    .stats-card h2 {
-        font-size: 32px;
-        font-weight: 700;
-        margin-bottom: 5px;
-        text-align: center;
-    }
+        .reader-panel {
+            background-color: var(--chat-panel-contrast);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            color: var(--chat-heading-color);
+        }
 
-    .stats-card p {
-        font-size: 16px;
-        color: #6c757d;
-        margin-bottom: 0;
-        text-align: center;
-    }
+        .reader-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--chat-border-color);
+        }
 
-    /* عناوين الأقسام */
-    .list-header h5, .view-header h5 {
-        font-size: 16px;
-        font-weight: 600;
-        color: #435ebe;
-        margin: 0;
-    }
+        .reader-messages {
+            flex: 1;
+            padding: 24px;
+            background: var(--chat-panel-bg);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            color: var(--chat-heading-color);
+        }
 
-    /* تنسيق الرسائل الصوتية والملفات */
-    .message-file {
-        margin-top: 10px;
-    }
-    
-    .message-file a.btn {
-        display: inline-flex;
-        align-items: center;
-        padding: 8px 12px;
-        border-radius: 8px;
-        background-color: #f8f9fa;
-        border: 1px solid #e2e6ea;
-        color: #495057;
-        text-decoration: none;
-        transition: all 0.2s;
-        font-size: 14px;
-    }
-    
-    .message-file a.btn:hover {
-        background-color: #e2e6ea;
-        border-color: #dae0e5;
-    }
-    
-    .message-file a.btn i {
-        margin-right: 8px;
-        font-size: 16px;
-        color: #435ebe;
-    }
-    
-    [dir="rtl"] .message-file a.btn i {
-        margin-right: 0;
-        margin-left: 8px;
-    }
-</style>
+        .reader-composer {
+            padding: 20px;
+            border-top: 1px solid var(--chat-border-color);
+            background-color: var(--chat-panel-contrast);
+            color: var(--chat-heading-color);
+        }
+
+        .message-bubble {
+            max-width: 75%;
+            padding: 14px 16px;
+            border-radius: 18px;
+            position: relative;
+            font-size: 14px;
+            line-height: 1.5;
+            word-break: break-word;
+            align-self: flex-start;
+        }
+
+        .message-bubble .message-author {
+            font-weight: 600;
+            margin-bottom: 6px;
+            font-size: 12px;
+        }
+
+        .message-bubble .message-time {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.8);
+            margin-top: 8px;
+            display: inline-flex;
+            gap: 4px;
+            align-items: center;
+        }
+
+        .bubble-agent {
+            align-self: flex-end;
+            background: linear-gradient(135deg, var(--chat-agent-gradient-start), var(--chat-agent-gradient-end));
+            color: #fff;
+            border-bottom-right-radius: 4px;
+        }
+
+        .bubble-client {
+            align-self: flex-start;
+            background: var(--chat-client-bg);
+            color: var(--chat-heading-color);
+            border: 1px solid var(--chat-client-border);
+            border-bottom-left-radius: 4px;
+        }
+
+        .bubble-client .message-time {
+            color: var(--chat-muted-color);
+        }
+
+
+        .reader-state {
+            padding: 80px 20px;
+            color: var(--chat-heading-color);
+        }
+
+        .reader-state small {
+            color: var(--chat-muted-color);
+        }
+
+    </style>
 @endsection
-
-
 @section('content')
-    <section class="section">
+    @php
+        $totalConversations = $conversations->total();
+        $averageMessages = $totalConversations > 0 ? round($totalMessages / $totalConversations, 1) : 0;
+    @endphp
 
-
-
-
-        <div class="mb-3">
-            <ul class="nav nav-pills gap-2 flex-wrap">
-                <li class="nav-item">
-                    <a class="nav-link {{ $department ? '' : 'active' }}" href="{{ route('chat-monitor.index') }}">
-                        <i class="bi bi-chat-square-dots me-1"></i>
-                        {{ __('كل الأقسام') }}
-                    </a>
-                </li>
-                @foreach($availableDepartments as $key => $label)
-                    <li class="nav-item">
-                        @php
-                            $sectionRoute = $key === 'shein' ? route('item.shein.support') : ($key === 'computer' ? route('item.computer.support') : route('chat-monitor.index'));
-                        @endphp
-                        <a class="nav-link {{ $department === $key ? 'active' : '' }}" href="{{ $sectionRoute }}">
-                            <i class="bi bi-collection me-1"></i>
-                            {{ $label }}
-                        </a>
-                    </li>
-                @endforeach
-            </ul>
-        </div>
-
-
-
-
-        <!-- إحصائيات المحادثات -->
-        <div class="row mb-4">
-            <div class="col-md-6 col-12 mb-4">
-                <div class="card stats-card">
-                    <div class="card-body">
-                        <div class="icon-container bg-primary">
-                            <i class="bi bi-chat-dots"></i>
-                        </div>
+    <section class="section chat-monitor-dashboard">
+        <div class="row g-3">
+            <div class="col-12 col-sm-6 col-xl-3">
+                <div class="stat-card">
+                    <div class="stat-icon bg-primary"><i class="bi bi-chat-dots"></i></div>
+                    <div>
+                        <p class="text-muted mb-1">{{ __('إجمالي الرسائل') }}</p>
                         <h2>{{ number_format($totalMessages) }}</h2>
-                        <p>{{ __('إجمالي الرسائل') }}</p>
+                        <small>{{ __('كل الرسائل المتداولة عبر المنصة') }}</small>
                     </div>
                 </div>
             </div>
-            <div class="col-md-6 col-12 mb-4">
-                <div class="card stats-card">
-                    <div class="card-body">
-                        <div class="icon-container bg-success">
-                            <i class="bi bi-people"></i>
-                        </div>
-                        <h2>{{ number_format($totalUsers) }}</h2>
-                        <p>{{ __('عدد المستخدمين') }}</p>
+            <div class="col-12 col-sm-6 col-xl-3">
+                <div class="stat-card">
+                    <div class="stat-icon bg-success"><i class="bi bi-activity"></i></div>
+                    <div>
+                        <p class="text-muted mb-1">{{ __('المحادثات النشطة') }}</p>
+                        <h2>{{ number_format($totalConversations) }}</h2>
+                        <small>{{ __('يشمل نتائج الترشيح الحالية') }}</small>
                     </div>
                 </div>
             </div>
-
-
-
-
-
-
-            <div class="col-md-6 col-12 mb-4">
-                <div class="card stats-card">
-                    <div class="card-body">
-                        <div class="icon-container bg-warning text-dark">
-                            <i class="bi bi-life-preserver"></i>
-                        </div>
-                        <h2>{{ $ticketsStats->get(\App\Models\DepartmentTicket::STATUS_OPEN, 0) }}</h2>
-                        <p>{{ __('البلاغات المفتوحة') }}</p>
+            <div class="col-12 col-sm-6 col-xl-3">
+                <div class="stat-card">
+                    <div class="stat-icon bg-warning text-dark"><i class="bi bi-people"></i></div>
+                    <div>
+                        <p class="text-muted mb-1">{{ __('وكلاء متاحون') }}</p>
+                        <h2>{{ number_format($assignableAgents->count()) }}</h2>
+                        <small>{{ __('وكلاء يملكون صلاحية مراقبة المحادثات') }}</small>
                     </div>
                 </div>
             </div>
-            <div class="col-md-6 col-12 mb-4">
-                <div class="card stats-card">
-                    <div class="card-body">
-                        <div class="icon-container bg-info">
-                            <i class="bi bi-check-circle"></i>
-                        </div>
-                        <h2>{{ $ticketsStats->sum() }}</h2>
-                        <p>{{ __('إجمالي البلاغات المسجلة') }}</p>
+            <div class="col-12 col-sm-6 col-xl-3">
+                <div class="stat-card">
+                    <div class="stat-icon bg-info"><i class="bi bi-graph-up"></i></div>
+                    <div>
+                        <p class="text-muted mb-1">{{ __('متوسط الرسائل لكل محادثة') }}</p>
+                        <h2>{{ number_format($averageMessages, 1) }}</h2>
+                        <small>{{ __('يساعد على تقييم كثافة التواصل') }}</small>
                     </div>
                 </div>
             </div>
-
-
-
-
         </div>
-<!-- فلاتر البحث -->
-<div class="card filters-card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h5>{{ __('تصفية المحادثات') }}</h5>
-        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse" aria-expanded="false">
-            <i class="bi bi-funnel"></i> {{ __('عرض/إخفاء الفلاتر') }}
-        </button>
-    </div>
-    <div class="collapse show" id="filterCollapse">
-        <div class="card-body">
-            <form id="filter-form" action="{{ url()->current() }}" method="GET">
-                @if($department)
-                    <input type="hidden" name="department" value="{{ $department }}">
-                @endif
-                
-                
-                <div class="row g-3 mb-4 align-items-end">
-                    <!-- المستخدم -->
-                    {{-- <div class="col-md-3">
-                        <label for="user_id" class="form-label fw-bold">{{ __('المستخدم') }}</label>
-                        <select class="form-select form-select-lg" id="user_id" name="user_id">
+
+        <div class="card filter-card border-0 shadow-sm mt-4">
+            <div class="card-body">
+                <form method="GET" action="{{ route('chat-monitor.index') }}" class="row g-3 align-items-end">
+                    <div class="col-12 col-md-3">
+                        <label class="form-label" for="keyword">{{ __('بحث نصي') }}</label>
+                        <input type="text" name="keyword" id="keyword" class="form-control"
+                               placeholder="{{ __('اسم مستخدم، رقم محادثة، كلمة مفتاحية...') }}"
+                               value="{{ request('keyword') }}">
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <label class="form-label" for="user_id">{{ __('مستخدم محدد') }}</label>
+                        <select name="user_id" id="user_id" class="form-select">
                             <option value="">{{ __('جميع المستخدمين') }}</option>
                             @foreach($allUsers as $user)
                                 <option value="{{ $user->id }}" {{ request('user_id') == $user->id ? 'selected' : '' }}>
@@ -596,722 +335,297 @@
                                 </option>
                             @endforeach
                         </select>
-                    </div> --}}
-
-                    <!-- من تاريخ -->
-                    <div class="col-md-3">
-                        <label for="date_from" class="form-label fw-bold">{{ __('من تاريخ') }}</label>
-                        <input type="date" class="form-control form-control-lg" id="date_from" name="date_from" value="{{ request('date_from') }}">
                     </div>
-
-                    <!-- إلى تاريخ -->
-                    <div class="col-md-3">
-                        <label for="date_to" class="form-label fw-bold">{{ __('إلى تاريخ') }}</label>
-                        <input type="date" class="form-control form-control-lg" id="date_to" name="date_to" value="{{ request('date_to') }}">
+                    <div class="col-6 col-md-2">
+                        <label class="form-label" for="date_from">{{ __('من تاريخ') }}</label>
+                        <input type="date" name="date_from" id="date_from" class="form-control"
+                               value="{{ request('date_from') }}">
                     </div>
-
-                    <!-- بحث -->
-                    <div class="col-md-3">
-                        <label for="keyword" class="form-label fw-bold">{{ __('بحث في الرسائل') }}</label>
-                        <input type="text" class="form-control form-control-lg" id="keyword" name="keyword" value="{{ request('keyword') }}" placeholder="{{ __('اكتب كلمة للبحث...') }}">
+                    <div class="col-6 col-md-2">
+                        <label class="form-label" for="date_to">{{ __('إلى تاريخ') }}</label>
+                        <input type="date" name="date_to" id="date_to" class="form-control"
+                               value="{{ request('date_to') }}">
                     </div>
-
-
-
-
-
-                    <div class="col-md-3">
-                        <label for="ticket_status" class="form-label fw-bold">{{ __('حالة البلاغات') }}</label>
-                        <select name="ticket_status" id="ticket_status" class="form-select form-select-lg">
-                            <option value="">{{ __('كل الحالات') }}</option>
-                            <option value="{{ \App\Models\DepartmentTicket::STATUS_OPEN }}" {{ request('ticket_status') === \App\Models\DepartmentTicket::STATUS_OPEN ? 'selected' : '' }}>{{ __('مفتوح') }}</option>
-                            <option value="{{ \App\Models\DepartmentTicket::STATUS_IN_PROGRESS }}" {{ request('ticket_status') === \App\Models\DepartmentTicket::STATUS_IN_PROGRESS ? 'selected' : '' }}>{{ __('قيد المعالجة') }}</option>
-                            <option value="{{ \App\Models\DepartmentTicket::STATUS_RESOLVED }}" {{ request('ticket_status') === \App\Models\DepartmentTicket::STATUS_RESOLVED ? 'selected' : '' }}>{{ __('مغلق') }}</option>
-                        </select>
-                    </div>
-
-
-                </div>
-
-                <!-- الأزرار -->
-                <div class="row">
-                    <div class="col-12 text-center">
-                        <button type="submit" class="btn btn-lg btn-primary me-2">
-                            <i class="bi bi-filter"></i> {{ __('تصفية') }}
-                        </button>
-                        <a href="{{ url()->current() }}" class="btn btn-lg btn-secondary">
-                            <i class="bi bi-arrow-clockwise"></i> {{ __('إعادة تعيين') }}
-                        </a>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-        <!-- واجهة المحادثات على طريقة واتساب -->
-        <div class="chat-container">
-            <!-- قائمة المحادثات -->
-            <div class="conversations-list">
-                <div class="list-header">
-                    <h5 class="mb-0 py-2 px-3 bg-light border-bottom">{{ __('قائمة المحادثات') }}</h5>
-                </div>
-                <div class="conversation-search">
-                    <input type="text" class="form-control form-control-sm" id="search-conversations" placeholder="{{ __('بحث في المحادثات...') }}">
-                </div>
-                <div class="conversations-container">
-                    @forelse($conversationsData as $conversation)
-                        <div class="conversation-item" 
-                             data-conversation-id="{{ $conversation['item_offer_id'] }}"
-                             data-bs-toggle="tooltip" 
-                             title="{{ __('انقر لعرض المحادثة') }}">
-                            <div class="d-flex">
-                                @if(count($conversation['participants']) >= 2)
-                                    <img src="{{ $conversation['participants'][0]->image ?? asset('assets/images/no_image_available.png') }}" 
-                                         class="user-avatar" alt="User" onerror="onErrorImage(event)">
-                                @else
-                                    <img src="{{ isset($conversation['sender']) ? ($conversation['sender']->image ?? asset('assets/images/no_image_available.png')) : asset('assets/images/no_image_available.png') }}" 
-                                         class="user-avatar" alt="User" onerror="onErrorImage(event)">
-                                @endif
-                                <div class="ms-2 flex-grow-1">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div class="fw-bold">
-                                            @if(count($conversation['participants']) >= 2)
-                                                {{ $conversation['participants'][0]->name }} ⟷ {{ $conversation['participants'][1]->name }}
-                                            @elseif(isset($conversation['sender']))
-                                                {{ $conversation['sender']->name }}
-                                            @else
-                                                {{ __('مستخدم غير معروف') }}
-                                            @endif
-                                        </div>
-                                        <span class="small text-muted conversation-time" data-time="{{ $conversation['created_at'] }}">
-                                            {{ \Carbon\Carbon::parse($conversation['created_at'])->timezone('Asia/Riyadh')->format('d/m/Y H:i') }}
-                                        </span>
-                                    </div>
-                                    <div class="message-preview">
-                                        {{ $conversation['last_message'] ?: __('ملف مرفق') }}
-                                    </div>
-
-
-
-
-                                                                        @php
-                                        $departmentLabel = $conversation['department']
-                                            ? ($availableDepartments[$conversation['department']] ?? ($conversation['department'] === 'general' ? __('قسم عام') : $conversation['department']))
-                                            : __('قسم عام');
-                                    @endphp
-                                    <div class="d-flex justify-content-between align-items-center mt-2">
-                                        <span class="badge bg-light text-secondary border">
-                                            {{ $departmentLabel }}
-                                        </span>
-                                        @if($conversation['assigned_agent'])
-                                            <small class="text-muted">
-                                                <i class="bi bi-person-check me-1"></i>
-                                                {{ $conversation['assigned_agent']->name }}
-                                            </small>
-                                        @else
-                                            <small class="text-muted">{{ __('غير مسند') }}</small>
-                                        @endif
-                                    </div>
-                                    @if($assignableAgents->isNotEmpty())
-                                        <form action="{{ route('chat-monitor.assign', $conversation['conversation_id']) }}" method="POST" class="mt-2">
-                                            @csrf
-                                            <div class="input-group input-group-sm">
-                                                <select name="assigned_to" class="form-select form-select-sm">
-                                                    <option value="">{{ __('بدون تعيين') }}</option>
-                                                    @foreach($assignableAgents as $agent)
-                                                        <option value="{{ $agent->id }}" {{ $conversation['assigned_to'] == $agent->id ? 'selected' : '' }}>
-                                                            {{ $agent->name }}
-                                                        </option>
-                                                    @endforeach
-                                                </select>
-                                                <button class="btn btn-outline-primary" type="submit">
-                                                    <i class="bi bi-save"></i>
-                                                </button>
-                                            </div>
-                                        </form>
-                                    @endif
-
-
-
-
-                                </div>
-                            </div>
-                        </div>
-                    @empty
-                        <div class="p-3 text-center text-muted">
-                            <i class="bi bi-chat-dots d-block fs-2 mb-2"></i>
-                            {{ __('لا توجد محادثات متاحة') }}
-                        </div>
-                    @endforelse
-                </div>
-            </div>
-
-            <!-- عرض المحادثة المحددة -->
-            <div class="chat-view">
-                <div class="view-header">
-                    <h5 class="mb-0 py-2 px-3 bg-light border-bottom">{{ __('عرض المحادثة') }}</h5>
-                </div>
-                <div id="empty-state" class="empty-chat">
-                    <i class="bi bi-chat-dots"></i>
-                    {{-- <p>{{ __('اختر محادثة لعرض الرسائل') }}</p> --}}
-                </div>
-
-                
-                
-                <div id="loading-state" class="chat-loading d-none">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">{{ __('جاري التحميل...') }}</span>
-                    </div>
-                    <span class="ms-2">{{ __('جاري تحميل المحادثة...') }}</span>
-                </div>
-
-                <!-- سيتم إضافة محتوى المحادثة هنا عبر JavaScript -->
-                <div id="chat-content" class="d-none">
-                    <div class="chat-header" id="chat-header">
-                        <!-- سيتم إضافة معلومات المستخدم هنا -->
-                    </div>
-                    <div class="messages-container" id="messages-container">
-                        <!-- سيتم إضافة الرسائل هنا -->
-                    </div>
-                    <div class="chat-actions">
-                        <a href="#" id="return-to-list" class="btn btn-sm btn-secondary d-md-none">
-                            <i class="bi bi-arrow-left"></i> {{ __('العودة') }}
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-
-
-
-        <div class="card mt-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">{{ __('سجل البلاغات والدعم') }}</h5>
-                <span class="text-muted small">{{ __('يتم عرض البلاغات المرتبطة بالقسم الحالي.') }}</span>
-            </div>
-            <div class="card-body">
-                <form action="{{ route('chat-monitor.tickets.store') }}" method="POST" class="row g-3 align-items-end mb-4">
-                    @csrf
-                    <input type="hidden" name="department" value="{{ $department }}">
-                    <div class="col-md-4">
-                        <label class="form-label fw-bold" for="ticket-subject">{{ __('موضوع البلاغ') }}</label>
-                        <input type="text" name="subject" id="ticket-subject" class="form-control" placeholder="{{ __('ادخل عنواناً واضحاً') }}" required>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label fw-bold" for="ticket-conversation">{{ __('رقم المحادثة (اختياري)') }}</label>
-                        <input type="text" name="chat_conversation_id" id="ticket-conversation" class="form-control" list="conversationOptions" placeholder="{{ __('اختر محادثة أو اتركه فارغاً') }}">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label fw-bold" for="ticket-agent">{{ __('تعيين إلى') }}</label>
-                        <select name="assigned_to" id="ticket-agent" class="form-select">
-                            <option value="">{{ __('يتم التعيين لاحقاً') }}</option>
-                            @foreach($assignableAgents as $agent)
-                                <option value="{{ $agent->id }}">{{ $agent->name }}</option>
+                    <div class="col-12 col-md-2">
+                        <label class="form-label" for="department-filter">{{ __('القسم') }}</label>
+                        <select name="department" id="department-filter" class="form-select">
+                            <option value="">{{ __('كل الأقسام') }}</option>
+                            @foreach($availableDepartments as $key => $label)
+                                <option value="{{ $key }}" {{ $department === $key ? 'selected' : '' }}>
+                                    {{ $label }}
+                                </option>
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-12">
-                        <label class="form-label fw-bold" for="ticket-description">{{ __('وصف البلاغ') }}</label>
-                        <textarea name="description" id="ticket-description" class="form-control" rows="3" placeholder="{{ __('اشرح تفاصيل المشكلة أو الطلب') }}"></textarea>
-                    </div>
-                    <div class="col-12 text-end">
+                    <div class="col-12 d-flex gap-2 justify-content-end">
+                        <a href="{{ route('chat-monitor.index') }}" class="btn btn-light">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i>{{ __('إعادة التعيين') }}
+                        </a>
                         <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-plus-circle me-1"></i>{{ __('إضافة بلاغ جديد') }}
+                            <i class="bi bi-filter-circle me-1"></i>{{ __('تطبيق الفلاتر') }}
                         </button>
                     </div>
                 </form>
-
-                <datalist id="conversationOptions">
-                    @foreach($conversationsData as $conversation)
-                        <option value="{{ $conversation['conversation_id'] }}">#{{ $conversation['conversation_id'] }} - {{ $conversation['sender']->name ?? __('محادثة') }}</option>
-                    @endforeach
-                </datalist>
-
-                <div class="table-responsive">
-                    <table class="table table-striped align-middle">
-                        <thead class="bg-light">
-                            <tr>
-                                <th>{{ __('الموضوع') }}</th>
-                                <th>{{ __('القسم') }}</th>
-                                <th>{{ __('الحالة الحالية') }}</th>
-                                <th>{{ __('المكلف') }}</th>
-                                <th>{{ __('المبلغ') }}</th>
-                                <th>{{ __('تم الإنشاء') }}</th>
-                                <th class="text-center">{{ __('إجراءات') }}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($tickets as $ticket)
-                                <tr>
-                                    <td>
-                                        <div class="fw-semibold">{{ $ticket->subject }}</div>
-                                        @if($ticket->chat_conversation_id)
-                                            <small class="text-muted">{{ __('محادثة رقم') }}: {{ $ticket->chat_conversation_id }}</small>
-                                        @endif
-                                    </td>
-                                    <td>{{ $availableDepartments[$ticket->department] ?? ($ticket->department === 'general' ? __('قسم عام') : $ticket->department) }}</td>
-                                    <td>
-                                        @php
-                                            $statusClasses = [
-                                                \App\Models\DepartmentTicket::STATUS_OPEN => 'bg-warning text-dark',
-                                                \App\Models\DepartmentTicket::STATUS_IN_PROGRESS => 'bg-info text-dark',
-                                                \App\Models\DepartmentTicket::STATUS_RESOLVED => 'bg-success',
-                                            ];
-                                        @endphp
-                                        <span class="badge {{ $statusClasses[$ticket->status] ?? 'bg-secondary' }}">
-                                            {{ match ($ticket->status) {
-                                                \App\Models\DepartmentTicket::STATUS_OPEN => __('مفتوح'),
-                                                \App\Models\DepartmentTicket::STATUS_IN_PROGRESS => __('قيد المعالجة'),
-                                                \App\Models\DepartmentTicket::STATUS_RESOLVED => __('مغلق'),
-                                                default => $ticket->status,
-                                            } }}
-                                        </span>
-                                    </td>
-                                    <td>{{ optional($ticket->assignedAgent)->name ?? __('غير محدد') }}</td>
-                                    <td>{{ optional($ticket->reporter)->name ?? __('غير محدد') }}</td>
-                                    <td>{{ optional($ticket->created_at)->format('Y-m-d H:i') }}</td>
-                                    <td>
-                                        <form action="{{ route('chat-monitor.tickets.update-status', $ticket) }}" method="POST" class="row g-2 align-items-center">
-                                            @csrf
-                                            <div class="col-md-5">
-                                                <select name="status" class="form-select form-select-sm">
-                                                    <option value="{{ \App\Models\DepartmentTicket::STATUS_OPEN }}" {{ $ticket->status === \App\Models\DepartmentTicket::STATUS_OPEN ? 'selected' : '' }}>{{ __('مفتوح') }}</option>
-                                                    <option value="{{ \App\Models\DepartmentTicket::STATUS_IN_PROGRESS }}" {{ $ticket->status === \App\Models\DepartmentTicket::STATUS_IN_PROGRESS ? 'selected' : '' }}>{{ __('قيد المعالجة') }}</option>
-                                                    <option value="{{ \App\Models\DepartmentTicket::STATUS_RESOLVED }}" {{ $ticket->status === \App\Models\DepartmentTicket::STATUS_RESOLVED ? 'selected' : '' }}>{{ __('مغلق') }}</option>
-                                                </select>
-                                            </div>
-                                            <div class="col-md-5">
-                                                <select name="assigned_to" class="form-select form-select-sm">
-                                                    <option value="">{{ __('غير محدد') }}</option>
-                                                    @foreach($assignableAgents as $agent)
-                                                        <option value="{{ $agent->id }}" {{ $ticket->assigned_to === $agent->id ? 'selected' : '' }}>{{ $agent->name }}</option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
-                                            <div class="col-md-2 text-end">
-                                                <button type="submit" class="btn btn-sm btn-outline-primary">
-                                                    <i class="bi bi-save"></i>
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="7" class="text-center text-muted">{{ __('لا توجد بلاغات مسجلة لهذا القسم حتى الآن.') }}</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="mt-3">
-                    {{ $tickets->links() }}
-                </div>
             </div>
         </div>
 
-
-
-
-
-
-
-    </section>
-@endsection
-
-
-@php
-    $testConversationRouteTemplate = \Illuminate\Support\Facades\Route::has('chat-monitor.test-conversation')
-        ? route('chat-monitor.test-conversation', ['id' => '__ID__'])
-        : null;
-@endphp
-
-<script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
-{{-- @section('script') --}}
-<script>
-    $(document).ready(function() {
-        console.log("Document ready - initializing chat monitor...");
-        
-        // تهيئة Select2
-        if ($.fn.select2) {
-            $('#user_id').select2({
-                theme: 'bootstrap-5',
-                width: '100%',
-                dropdownParent: $('#filterCollapse'),
-                language: {
-                    noResults: function() {
-                        return "{{ __('لا توجد نتائج') }}";
-                    }
-                },
-                templateResult: formatOption,
-                templateSelection: formatOption
-            });
-        }
-        
-        // دالة تنسيق خيارات Select2
-        function formatOption(option) {
-            if (!option.id) {
-                return option.text;
-            }
-            return $('<span>' + option.text + '</span>');
-        }
-        
-        // تفعيل تلميحات البيانات
-        $('[data-bs-toggle="tooltip"]').tooltip();
-        
-        // تنفيذ البحث في المحادثات
-        $("#search-conversations").on("keyup", function() {
-            var value = $(this).val().toLowerCase();
-            $(".conversation-item").filter(function() {
-                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
-            });
-        });
-        
-        // عند النقر على محادثة
-        $(document).on("click", ".conversation-item", function(e) {
-            e.preventDefault();
-            const conversationId = $(this).data('conversation-id');
-            console.log("تم النقر على المحادثة:", conversationId);
-            
-            if (!conversationId) {
-                console.error("معرف المحادثة غير موجود!");
-                return;
-            }
-            
-            // تحديث الحالة النشطة
-            $(".conversation-item").removeClass("active");
-            $(this).addClass("active");
-            
-            // عرض حالة التحميل
-            $("#empty-state").addClass("d-none");
-            $("#chat-content").addClass("d-none");
-            $("#loading-state").removeClass("d-none");
-            
-            // عرض المحادثة باستخدام بيانات الاختبار
-            displayConversation(conversationId);
-            
-            // إخفاء قائمة المحادثات في الأجهزة الصغيرة
-            if (window.innerWidth < 768) {
-                $(".conversations-list").hide();
-                $(".chat-view").show();
-            }
-        });
-        
-        // العودة إلى القائمة في الأجهزة الصغيرة
-        $("#return-to-list").on("click", function(e) {
-            e.preventDefault();
-            $(".conversations-list").show();
-            $(".chat-view").hide();
-        });
-    });
-    
-    // عرض المحادثة
-    function displayConversation(conversationIdOrData) {
-        console.log("بدء عرض المحادثة...");
-        
-        try {
-            // التحقق مما إذا كان المعامل هو معرف محادثة أو كائن بيانات
-            if (typeof conversationIdOrData === 'object') {
-                // إذا كان كائن بيانات، عرض المحادثة مباشرة
-                displayConversationData(conversationIdOrData);
-                return;
-            }
-
-
-            
-            // إذا كان معرف محادثة، جلب البيانات أولاً
-            const conversationId = conversationIdOrData;
-            
-
-
-
-
-            // استخدام طريق الاختبار للتحقق من البيانات
-            const testConversationRouteTemplate = @json($testConversationRouteTemplate);
-
-            if (!testConversationRouteTemplate) {
-                console.error("رابط اختبار المحادثة غير متوفر.");
-                showError("لا يمكن تحميل بيانات المحادثة التجريبية في الوقت الحالي.");
-                return;
-            }
-
-            const testUrl = testConversationRouteTemplate.replace('__ID__', conversationId) + "?_=" + new Date().getTime();
-            
-            
-            console.log("رابط طلب الاختبار:", testUrl);
-            
-            $.ajax({
-                url: testUrl,
-                type: "GET",
-                dataType: "json",
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Accept': 'application/json'
-                },
-                success: function(response) {
-                    console.log("تم استلام بيانات الاختبار بنجاح:", response);
-                    
-                    if (response.error) {
-                        console.error("خطأ في بيانات الاختبار:", response.message);
-                        showError("خطأ في بيانات الاختبار: " + response.message);
-                        return;
-                    }
-                    
-                    console.log("عدد الرسائل المستلمة:", response.chats_count);
-                    console.log("عدد المستخدمين المستلمين:", response.users_count);
-                    
-                    // عرض المحادثة باستخدام بيانات الاختبار
-                    displayConversationData(response);
-                },
-                error: function(xhr, status, error) {
-                    console.error("خطأ في تحميل بيانات الاختبار:", error);
-                    console.error("حالة الخطأ:", status);
-                    console.error("رمز الحالة:", xhr.status);
-                    console.error("استجابة الخطأ:", xhr.responseText);
-                    
-                    try {
-                        const errorResponse = JSON.parse(xhr.responseText);
-                        console.log("تفاصيل الخطأ:", errorResponse);
-                    } catch (e) {
-                        console.log("لا يمكن تحليل استجابة الخطأ كـ JSON");
-                    }
-                    
-                    showError("حدث خطأ أثناء تحميل المحادثة. يرجى المحاولة مرة أخرى.");
-                }
-            });
-        } catch (error) {
-            console.error("خطأ أثناء عرض المحادثة:", error);
-            console.error("تفاصيل الخطأ:", error.message);
-            console.error("مكان الخطأ:", error.stack);
-            
-            showError("حدث خطأ أثناء عرض المحادثة. يرجى المحاولة مرة أخرى.");
-        }
-    }
-    
-    // عرض رسالة خطأ
-    function showError(message) {
-        Swal.fire({
-            icon: 'error',
-            title: "{{ __('خطأ') }}",
-            text: message
-        });
-        
-        $("#loading-state").addClass("d-none");
-        $("#empty-state").removeClass("d-none");
-    }
-    
-    // عرض بيانات المحادثة
-    function displayConversationData(data) {
-        console.log("عرض بيانات المحادثة:", data);
-        
-        try {
-            // تأكد من أن البيانات تحتوي على المعلومات المطلوبة
-            if (!data) {
-                console.error("البيانات غير صالحة:", data);
-                showError("بيانات المحادثة غير صالحة");
-                return;
-            }
-            
-            // استخدام معرف المحادثة المناسب
-            const conversationId = data.id || data.item_offer_id;
-            if (!conversationId) {
-                console.error("معرف المحادثة غير موجود:", data);
-                showError("معرف المحادثة غير موجود");
-                return;
-            }
-            
-            console.log("معرف المحادثة:", conversationId);
-            console.log("عدد الرسائل:", data.chats ? data.chats.length : 0);
-            console.log("المستخدمون:", data.users);
-            
-            // تحديث معلومات المستخدمين في الهيدر
-            let headerHtml = '';
-            
-            // التحقق من وجود بيانات المستخدمين
-            if (data.users && Object.keys(data.users).length > 0) {
-                // الحصول على مستخدمين من كائن المستخدمين
-                const userIds = Object.keys(data.users);
-                console.log("معرفات المستخدمين:", userIds);
-                
-                const firstUser = data.users[userIds[0]];
-                let secondUser = null;
-                
-                // إذا كان هناك أكثر من مستخدم، نعرض المستخدم الثاني أيضًا
-                if (userIds.length > 1) {
-                    secondUser = data.users[userIds[1]];
-                }
-                
-                console.log("المستخدم الأول:", firstUser);
-                if (secondUser) console.log("المستخدم الثاني:", secondUser);
-                
-                headerHtml = `
-                    <img src="${firstUser.image || "{{ asset('assets/images/no_image_available.png') }}"}" 
-                         class="user-avatar" alt="User" onerror="onErrorImage(event)">
-                    <div>
-                        <div class="user-name">${firstUser.name} ${secondUser ? ' ⟷ ' + secondUser.name : ''}</div>
-                        <div class="conversation-id">{{ __('محادثة رقم') }}: #${conversationId}</div>
+        <div class="card chat-workspace-card mt-4 border-0 shadow-sm">
+            <div class="card-header bg-white d-flex flex-wrap gap-2 align-items-center justify-content-between">
+                <h5 class="mb-0">{{ __('جميع المحادثات في التطبيق') }}</h5>
+                <button type="button" class="btn btn-outline-secondary" id="refreshConversations">
+                    <i class="bi bi-arrow-repeat me-1"></i>{{ __('تحديث القائمة') }}
+                </button>
+            </div>
+            <div class="chat-workspace">
+                <div class="conversation-panel">
+                    <div class="conversation-list" id="conversationList">
+                        @forelse($conversationsData as $conversation)
+                            @php
+                                $departmentLabel = $conversation['department']
+                                    ? ($availableDepartments[$conversation['department']] ?? ($conversation['department'] === 'general' ? __('قسم عام') : $conversation['department']))
+                                    : __('قسم عام');
+                                $assignedName = optional($conversation['assigned_agent'])->name;
+                                $assignedId = $conversation['assigned_to'];
+                            @endphp
+                            <button type="button" class="conversation-tile"
+                                    data-conversation-id="{{ $conversation['item_offer_id'] }}"
+                                    data-conversation-key="{{ $conversation['conversation_id'] }}"
+                                    data-assigned-name="{{ $assignedName }}"
+                                    data-assigned-id="{{ $assignedId }}"
+                                    data-department-label="{{ $departmentLabel }}"
+                                    data-created-at="{{ $conversation['created_at'] }}">
+                                <div class="tile-title">
+                                    <span>#{{ $conversation['conversation_id'] ?? $conversation['item_offer_id'] }}</span>
+                                    <span class="badge rounded-pill bg-light text-dark">
+                                        {{ $conversation['total_messages'] }} {{ __('رسالة') }}
+                                    </span>
+                                </div>
+                                <div class="tile-preview">
+                                    {{ \Illuminate\Support\Str::limit($conversation['last_message'] ?? __('لا يوجد محتوى'), 80) }}
+                                </div>
+                                <div class="tile-meta">
+                                    <span><i class="bi bi-diagram-3 me-1"></i>{{ $departmentLabel }}</span>
+                                    <span>
+                                        <i class="bi bi-person-workspace me-1"></i>
+                                        {{ $assignedName ?? __('غير معيّن') }}
+                                    </span>
+                                    <span class="text-muted">
+                                        <i class="bi bi-clock-history me-1"></i>
+                                        {{ optional($conversation['created_at']) ? \Carbon\Carbon::parse($conversation['created_at'])->diffForHumans() : '' }}
+                                    </span>
+                                </div>
+                            </button>
+                        @empty
+                            <div class="text-center text-muted py-5">
+                                <i class="bi bi-chat-left-dots fs-1 d-block mb-3"></i>
+                                <p class="mb-0">{{ __('لا توجد محادثات مطابقة للمرشحات الحالية.') }}</p>
+                            </div>
+                        @endforelse
                     </div>
-                `;
-            } else {
-                headerHtml = `
-                    <img src="{{ asset('assets/images/no_image_available.png') }}" class="user-avatar" alt="User">
-                    <div>
-                        <div class="user-name">{{ __('محادثة') }} #${conversationId}</div>
+                    <div class="conversation-pagination border-top p-3">
+                        {{ $conversations->links() }}
                     </div>
-                `;
-            }
-            $("#chat-header").html(headerHtml);
-            console.log("تم تحديث رأس المحادثة");
-            
-            // عرض الرسائل
-            let messagesHtml = '';
-            let lastSenderId = null;
-            let currentUserId = {{ auth()->id() }};
-            
-            console.log("معرف المستخدم الحالي:", currentUserId);
-            
-            if (data.chats && data.chats.length > 0) {
-                console.log("جاري معالجة " + data.chats.length + " رسالة...");
-                
-                data.chats.forEach((chat, index) => {
-                    console.log("معالجة الرسالة #" + (index + 1), chat);
-                    
-                    if (!chat || !chat.sender_id) {
-                        console.error("بيانات الرسالة غير صالحة:", chat);
-                        return;
-                    }
-                    
-                    // تحديد ما إذا كان المستخدم هو المرسل أو المستقبل
-                    // نفترض أن المستخدم الأول في القائمة هو المرسل دائمًا
-                    const userIds = Object.keys(data.users);
-                    const firstUserId = userIds[0];
-                    const isSender = parseInt(chat.sender_id) === parseInt(firstUserId);
-                    
-                    // الرسائل المرسلة من المرسل تظهر على اليمين
-                    const messageClass = isSender ? 'message-sender' : 'message-receiver';
-                    
-                    const userInfo = data.users && data.users[chat.sender_id] ? data.users[chat.sender_id].name : '{{ __('مستخدم غير معروف') }}';
-                    
-                    messagesHtml += `
-                        <div class="message">
-                            <div class="${messageClass}">
-                    `;
-                    
-                    // إضافة اسم المستخدم بشكل بسيط
-                    messagesHtml += `<div class="message-username">${userInfo}</div>`;
-                    
-                    if (chat.message) {
-                        messagesHtml += `<div class="message-text">${chat.message}</div>`;
-                    }
-                    
-                    if (chat.file) {
-                        const fileUrl = chat.file;
-                        const fileExt = fileUrl.split('.').pop().toLowerCase();
-                        
-                        // عرض جميع الملفات كروابط تنزيل
-                        messagesHtml += `
-                            <div class="message-file">
-                                <a href="${fileUrl}" class="btn btn-sm btn-light" download>
-                                    <i class="bi bi-file-earmark"></i> {{ __('تنزيل الملف') }}
-                                </a>
+                </div>
+                <div class="reader-panel" id="conversationPanel">
+                    <div id="chatEmptyState" class="reader-state text-center">
+                        <i class="bi bi-chat-square-text fs-1 mb-3 d-block"></i>
+                        <p class="mb-1">{{ __('اختر محادثة من القائمة لمعاينة التفاصيل والرد.') }}</p>
+                        <small>{{ __('تظهر المحادثات هنا بمجرد اختيار أي محادثة من القائمة اليمنى.') }}</small>
+                    </div>
+                    <div id="chatLoadingState" class="reader-state text-center d-none">
+                        <div class="spinner-border text-primary mb-3" role="status"></div>
+                        <p class="mb-0">{{ __('يتم تحميل المحادثة ...') }}</p>
+                    </div>
+                    <div id="chatContent" class="d-none h-100 d-flex flex-column">
+                        <div class="reader-header d-flex flex-wrap gap-3 align-items-center justify-content-between">
+                            <div class="d-flex align-items-center gap-3">
+                                <img id="chatPartnerAvatar" src="{{ asset('assets/images/no_image_available.png') }}" alt="avatar" width="56" height="56" class="rounded-circle border">
+                                <div>
+                                    <h5 class="mb-1" id="chatPartnerName">—</h5>
+                                    <div class="text-muted small" id="chatConversationMeta"></div>
+                                </div>
                             </div>
-                        `;
-                    }
-                    
-                    if (chat.audio) {
-                        // عرض الصوت كرابط تنزيل بدلاً من مشغل الصوت
-                        messagesHtml += `
-                            <div class="message-file">
-                                <a href="${chat.audio}" class="btn btn-sm btn-light" download>
-                                    <i class="bi bi-file-music"></i> {{ __('تنزيل الملف الصوتي') }}
-                                </a>
-                            </div>
-                        `;
-                    }
-                    
-                    // تنسيق التاريخ والوقت بتوقيت الرياض
-                    const messageDate = new Date(chat.created_at);
-                    const options = { 
-                        timeZone: 'Asia/Riyadh',
-                        hour: '2-digit', 
-                        minute: '2-digit',
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric'
-                    };
-                    const formattedTime = messageDate.toLocaleString('ar-SA', options);
-                    
-                    messagesHtml += `
-                            <div class="message-time">
-                                <i class="bi bi-clock me-1"></i> ${formattedTime}
-                            </div>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" id="reassignConversationBtn"
+                                        data-bs-toggle="modal" data-bs-target="#assignConversationModal" disabled>
+                                    <i class="bi bi-person-plus me-1"></i>{{ __('تعيين لوكيل آخر') }}
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" id="markCompleteBtn" disabled>
+                                    <i class="bi bi-check2-circle me-1"></i>{{ __('إغلاق المحادثة') }}
+                                </button>
                             </div>
                         </div>
-                    `;
-                    
-                    lastSenderId = chat.sender_id;
-                });
-                
-            } else {
-                messagesHtml = `
-                    <div class="text-center p-5">
-                        <i class="bi bi-chat-dots fs-1 text-muted mb-3"></i>
-                        <p class="fs-5">{{ __('لا توجد رسائل في هذه المحادثة') }}</p>
+                        <div class="reader-messages" id="chatMessages"></div>
+                        <div class="reader-composer">
+                            <div class="input-group">
+                                <textarea id="chatReplyInput" class="form-control" rows="2"
+                                          placeholder="{{ __('قريباً: سيتم دعم الرد المباشر من لوحة المراقبة') }}" disabled></textarea>
+                                <button class="btn btn-primary" id="sendReplyBtn" type="button" disabled>
+                                    <i class="bi bi-send-fill"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted d-block mt-2">
+                                {{ __('يتم ربط الردود القادمة من هنا بمنصة الدعم الحالية. سنفعّل الإرسال فور ربط واجهة البرمجة.') }}
+                            </small>
+                        </div>
                     </div>
-                `;
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="modal fade" id="assignConversationModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">{{ __('تعيين المحادثة لوكيل') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="assignConversationForm" method="POST" action="#">
+                    @csrf
+                    <div class="modal-body">
+                        <input type="hidden" id="assignConversationId" name="conversation_id">
+                        <div class="mb-3">
+                            <label class="form-label" for="assignAgentSelect">{{ __('الوكيل المسؤول') }}</label>
+                            <select class="form-select" id="assignAgentSelect" name="assigned_to">
+                                <option value="">{{ __('غير معيّن') }}</option>
+                                @foreach($assignableAgents as $agent)
+                                    <option value="{{ $agent->id }}">{{ $agent->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">{{ __('إلغاء') }}</button>
+                        <button type="submit" class="btn btn-primary">{{ __('حفظ التعيين') }}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+@endsection
+@section('script')
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const conversationTiles = document.querySelectorAll('.conversation-tile');
+            const viewRouteTemplate = @json(route('chat-monitor.view-conversation', ['id' => '__ID__']));
+            const assignRouteTemplate = @json(route('chat-monitor.assign', ['conversation' => '__ID__']));
+            const chatEmptyState = document.getElementById('chatEmptyState');
+            const chatLoadingState = document.getElementById('chatLoadingState');
+            const chatContent = document.getElementById('chatContent');
+            const chatMessages = document.getElementById('chatMessages');
+            const chatPartnerName = document.getElementById('chatPartnerName');
+            const chatConversationMeta = document.getElementById('chatConversationMeta');
+            const chatPartnerAvatar = document.getElementById('chatPartnerAvatar');
+            const reassignBtn = document.getElementById('reassignConversationBtn');
+            const assignConversationIdInput = document.getElementById('assignConversationId');
+            const assignForm = document.getElementById('assignConversationForm');
+            const assignSelect = document.getElementById('assignAgentSelect');
+            const refreshButton = document.getElementById('refreshConversations');
+            const currentUserId = {{ auth()->id() ?? 'null' }};
+            let activeTile = null;
+
+            function setState(state) {
+                chatEmptyState.classList.toggle('d-none', state !== 'empty');
+                chatLoadingState.classList.toggle('d-none', state !== 'loading');
+                chatContent.classList.toggle('d-none', state !== 'content');
             }
-            
-            $("#messages-container").html(messagesHtml);
-            console.log("تم تحديث محتوى الرسائل");
-            
-            // تحسين السكرول - تأخير التمرير لضمان تحميل جميع العناصر
-            setTimeout(function() {
-                const messagesContainer = document.getElementById('messages-container');
-                if (messagesContainer) {
-                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                    console.log("تم التمرير إلى آخر رسالة بعد التأخير");
+
+            function escapeHtml(text) {
+                const div = document.createElement('div');
+                div.appendChild(document.createTextNode(text ?? ''));
+                return div.innerHTML;
+            }
+
+            function createMessageBubble(message, users) {
+                const sender = users[String(message.sender_id)] || null;
+                const isAgent = currentUserId !== null && parseInt(message.sender_id, 10) === parseInt(currentUserId, 10);
+                const bubble = document.createElement('div');
+                bubble.className = 'message-bubble ' + (isAgent ? 'bubble-agent ms-auto' : 'bubble-client me-auto');
+                const authorName = sender ? sender.name : '{{ __('مستخدم غير معروف') }}';
+                const createdAt = message.created_at ? new Date(message.created_at) : null;
+                bubble.innerHTML = `
+                    <div class="message-author">${escapeHtml(authorName)}</div>
+                    <div class="message-text">${message.message ? escapeHtml(message.message) : '{{ __('(رسالة بدون نص)') }}'}</div>
+                    ${message.file ? `<div class="mt-2"><a class="btn btn-sm btn-light" target="_blank" href="${message.file}"><i class="bi bi-paperclip me-1"></i>{{ __('عرض المرفق') }}</a></div>` : ''}
+                    ${message.audio ? `<div class="mt-2"><audio controls src="${message.audio}" class="w-100"></audio></div>` : ''}
+                    <div class="message-time">${createdAt ? createdAt.toLocaleString('ar-EG') : ''}</div>
+                `;
+                return bubble;
+            }
+
+            function renderConversation(data, tile) {
+                const users = data.users || {};
+                const partner = Object.values(users).find(user => parseInt(user.id, 10) !== parseInt(currentUserId ?? -1, 10)) || Object.values(users)[0];
+                chatPartnerName.textContent = partner ? partner.name : '{{ __('محادثة بدون اسم') }}';
+                chatPartnerAvatar.src = partner && partner.image ? partner.image : '{{ asset('assets/images/no_image_available.png') }}';
+                const departmentLabel = tile?.dataset.departmentLabel || '{{ __('قسم غير محدد') }}';
+                chatConversationMeta.textContent = `#${data.conversation_id ?? data.id} · ${departmentLabel}`;
+
+                chatMessages.innerHTML = '';
+                (data.chats || []).forEach(message => {
+                    chatMessages.appendChild(createMessageBubble(message, users));
+                });
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+
+                if (tile) {
+                    reassignBtn.disabled = false;
+                    assignSelect.value = tile.dataset.assignedId || '';
+                    reassignBtn.dataset.conversationId = tile.dataset.conversationKey;
                 }
-            }, 100);
-            
-            // إظهار المحادثة
-            $("#loading-state").addClass("d-none");
-            $("#chat-content").removeClass("d-none");
-            console.log("تم إظهار محتوى المحادثة");
-            
-        } catch (error) {
-            console.error("خطأ أثناء عرض بيانات المحادثة:", error);
-            console.error("تفاصيل الخطأ:", error.message);
-            console.error("مكان الخطأ:", error.stack);
-            
-            showError("حدث خطأ أثناء عرض المحادثة. يرجى المحاولة مرة أخرى.");
-        }
-    }
-    
-    // معالجة خطأ تحميل الصور
-    function onErrorImage(event) {
-        console.log("خطأ في تحميل الصورة، استخدام الصورة الافتراضية");
-        event.target.src = "{{ asset('assets/images/no_image_available.png') }}";
-    }
-    
-    // دالة تنسيق التاريخ والوقت بتوقيت الرياض
-    function formatDateTimeRiyadh(dateString) {
-        // إنشاء كائن تاريخ
-        const date = new Date(dateString);
-        
-        // تحويل التاريخ إلى توقيت الرياض (UTC+3)
-        const options = { 
-            timeZone: 'Asia/Riyadh',
-            hour: '2-digit', 
-            minute: '2-digit',
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
-        };
-        
-        // تنسيق التاريخ والوقت
-        return date.toLocaleString('ar-SA', options);
-    }
-</script>
+            }
+
+            function loadConversation(tile) {
+                const conversationId = tile.dataset.conversationId;
+                setState('loading');
+                fetch(viewRouteTemplate.replace('__ID__', encodeURIComponent(conversationId)), {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                    .then(response => {
+                        if (!response.ok) throw new Error();
+                        return response.json();
+                    })
+                    .then(data => {
+                        setState('content');
+                        renderConversation(data, tile);
+                    })
+                    .catch(() => {
+                        setState('empty');
+                        if (window.Swal) {
+                            Swal.fire('Oops', '{{ __('تعذر تحميل المحادثة، حاول مرة أخرى لاحقاً.') }}', 'error');
+                        }
+                    });
+            }
+
+            conversationTiles.forEach(tile => {
+                tile.addEventListener('click', function () {
+                    if (activeTile) {
+                        activeTile.classList.remove('active');
+                    }
+                    this.classList.add('active');
+                    activeTile = this;
+                    loadConversation(this);
+                });
+            });
+
+            if (refreshButton) {
+                refreshButton.addEventListener('click', () => window.location.reload());
+            }
+
+            const assignModal = document.getElementById('assignConversationModal');
+            assignModal?.addEventListener('show.bs.modal', function () {
+                if (!activeTile) {
+                    assignConversationIdInput.value = '';
+                    return;
+                }
+                assignConversationIdInput.value = activeTile.dataset.conversationKey;
+                assignSelect.value = activeTile.dataset.assignedId || '';
+                assignForm.action = assignRouteTemplate.replace('__ID__', encodeURIComponent(activeTile.dataset.conversationKey));
+            });
+
+        });
+    </script>
+@endsection

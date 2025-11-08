@@ -38,7 +38,8 @@ class Phase1ActivityInfo extends StatefulWidget {
   State<Phase1ActivityInfo> createState() => _Phase1ActivityInfoState();
 }
 
-class _Phase1ActivityInfoState extends State<Phase1ActivityInfo> {
+class _Phase1ActivityInfoState extends State<Phase1ActivityInfo>
+    with AutomaticKeepAliveClientMixin {
   final _formKey = GlobalKey<FormState>();
   final _storeNameCtrl = TextEditingController();
   final _descriptionCtrl = TextEditingController();
@@ -407,6 +408,7 @@ class _Phase1ActivityInfoState extends State<Phase1ActivityInfo> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     if (!_isReady) {
       return _buildLoadingSkeleton(context);
     }
@@ -577,4 +579,7 @@ class _Phase1ActivityInfoState extends State<Phase1ActivityInfo> {
       ),
     );
   }
+
+  @override
+  bool get wantKeepAlive => true;
 }

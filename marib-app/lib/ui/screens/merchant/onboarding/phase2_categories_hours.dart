@@ -1,11 +1,12 @@
-﻿import 'package:flutter/material.dart';
-import 'package:marib/app/routes.dart';
+import 'package:flutter/material.dart';
 import 'package:marib/data/model/category_model.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/api.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/ui_utils.dart';
+
+import 'widgets/legacy_selectors.dart';
 
 class Phase2Data {
   final List<int> categoryIds;
@@ -19,9 +20,17 @@ class DaySchedule {
   final TimeOfDay from;
   final TimeOfDay to;
 
-  DaySchedule({required this.enabled, required this.from, required this.to});
+  DaySchedule({
+    required this.enabled,
+    required this.from,
+    required this.to,
+  });
 
-  DaySchedule copyWith({bool? enabled, TimeOfDay? from, TimeOfDay? to}) {
+  DaySchedule copyWith({
+    bool? enabled,
+    TimeOfDay? from,
+    TimeOfDay? to,
+  }) {
     return DaySchedule(
       enabled: enabled ?? this.enabled,
       from: from ?? this.from,
@@ -34,13 +43,18 @@ class Phase2CategoriesHours extends StatefulWidget {
   final VoidCallback onBack;
   final void Function(Phase2Data data) onNext;
 
-  const Phase2CategoriesHours({super.key, required this.onBack, required this.onNext});
+  const Phase2CategoriesHours({
+    super.key,
+    required this.onBack,
+    required this.onNext,
+  });
 
   @override
   State<Phase2CategoriesHours> createState() => _Phase2CategoriesHoursState();
 }
 
-class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours> {
+class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
+    with AutomaticKeepAliveClientMixin {
   late Future<List<CategoryModel>> _categoriesFuture;
   final Set<int> _selectedCategoryIds = <int>{};
   final Map<int, DaySchedule> _hours = {
@@ -52,6 +66,8 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours> {
       ),
   };
 
+  bool get _canProceed => _selectedCategoryIds.isNotEmpty;
+
   @override
   void initState() {
     super.initState();
@@ -59,8 +75,8 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours> {
   }
 
   Future<List<CategoryModel>> _loadCategories() async {
-    final Map<String, dynamic> response =
-        await Api.get(url: Api.getCategoriesApi, queryParameters: {Api.page: 1});
+    final Map<String, dynamic> response = await Api.get(
+        url: Api.getCategoriesApi, queryParameters: {Api.page: 1});
     final dynamic data = response['data'];
     if (data is Map<String, dynamic>) {
       final List<dynamic> items = data['items'] ?? data['data'] ?? [];
@@ -89,188 +105,390 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours> {
     });
   }
 
-  Future<void> _pickTime(int day, bool isFrom) async {
-    final TimeOfDay initial = isFrom ? _hours[day]!.from : _hours[day]!.to;
-    final TimeOfDay? picked = await showTimePicker(
-      context: context,
-      initialTime: initial,
+  void _submit() {
+    if (_selectedCategoryIds.isEmpty) {
+      HelperUtils.showSnackBarMessage(
+        context,
+        'pleaseSelectAtLeastOneBusinessCategory'.translate(context),
+      );
+      return;
+    }
+
+    widget.onNext(
+      Phase2Data(
+        categoryIds: _selectedCategoryIds.toList(),
+        workingHours: Map.of(_hours),
+      ),
     );
-    if (picked != null) {
+  }
+
+  Future<void> _openCategoriesPicker(List<CategoryModel> categories) async {
+    final valid = categories
+        .where((e) => e.id != null && (e.name?.trim().isNotEmpty ?? false))
+        .toList();
+    if (valid.isEmpty) {
+      HelperUtils.showSnackBarMessage(context, '???? ???????? ???????? ?????????? ????????????');
+      return;
+    }
+
+    final result = await showLegacyCategoriesPalette(
+      context: context,
+      categories: valid,
+      initialSelection: _selectedCategoryIds.toSet(),
+    );
+
+    if (result != null && mounted) {
       setState(() {
-        _hours[day] = isFrom
-            ? _hours[day]!.copyWith(from: picked)
-            : _hours[day]!.copyWith(to: picked);
+        _selectedCategoryIds
+          ..clear()
+          ..addAll(result);
       });
     }
   }
 
-  void _applyToAll() {
-    final DaySchedule reference = _hours[0]!;
-    setState(() {
-      for (int i = 0; i < 7; i++) {
-        _hours[i] = _hours[i]!.copyWith(
-          enabled: reference.enabled,
-          from: reference.from,
-          to: reference.to,
-        );
-      }
-    });
-  }
+  Future<void> _openWorkingHoursSheet() async {
+    final initial = <int, LegacyDayHours>{
+      for (int i = 0; i < 7; i++)
+        i: LegacyDayHours(
+          enabled: _hours[i]!.enabled,
+          from: _hours[i]!.from,
+          to: _hours[i]!.to,
+        ),
+    };
 
-  void _submit() {
-    if (_selectedCategoryIds.isEmpty) {
-      HelperUtils.showSnackBarMessage(
-          context, 'pleaseSelectAtLeastOneBusinessCategory'.translate(context));
-      return;
+    final result = await showLegacyWorkingHoursSheet(
+      context: context,
+      initialDays: initial,
+    );
+
+    if (result != null && mounted) {
+      setState(() {
+        result.forEach((key, value) {
+          _hours[key] = DaySchedule(
+            enabled: value.enabled,
+            from: value.from ?? _hours[key]!.from,
+            to: value.to ?? _hours[key]!.to,
+          );
+        });
+      });
     }
-    widget.onNext(Phase2Data(
-      categoryIds: _selectedCategoryIds.toList(),
-      workingHours: Map.of(_hours),
-    ));
   }
 
-  Widget _buildDaysColumn() {
-    const weekdays = ['sat', 'sun', 'mon', 'tue', 'wed', 'thu', 'fri'];
+  Widget _buildSectionHeader(String title, String subtitle) {
+    final theme = context.color;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: context.font.extraLarge,
+            fontWeight: FontWeight.w700,
+            color: theme.textColorDark,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          subtitle,
+          style: TextStyle(
+            fontSize: context.font.normal,
+            color: theme.textColorDark.withOpacity(0.7),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCategoryCard(bool loading, List<CategoryModel> categories) {
+    final colors = context.color;
+    final selectedCount = _selectedCategoryIds.length;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.category_rounded, color: colors.territoryColor),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                '???? ??????? ????????',
+                style: TextStyle(
+                  fontSize: context.font.large,
+                  fontWeight: FontWeight.w700,
+                  color: colors.textColorDark,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          '???? ???? ???? ?? ????? ????? ??????? ? ??? ?????? ?? ?? ????? ?????????? ?????? ?? ????? ????.',
+          style: TextStyle(
+            fontSize: context.font.small,
+            color: colors.textColorDark.withOpacity(0.7),
+            height: 1.4,
+          ),
+        ),
+        const SizedBox(height: 14),
+        SizedBox(
+          height: 52,
+          width: double.infinity,
+          child: FilledButton.icon(
+            onPressed: loading ? null : () => _openCategoriesPicker(categories),
+            icon: loading
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : const Icon(Icons.tune_rounded),
+            label: Text('???? ??????? ? $selectedCount'),
+            style: FilledButton.styleFrom(
+              backgroundColor: colors.territoryColor,
+              foregroundColor: Colors.white,
+              textStyle: TextStyle(
+                fontSize: context.font.normal,
+                fontWeight: FontWeight.w600,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (_selectedCategoryIds.isNotEmpty)
+          _buildSelectedCategoriesSummary(categories)
+        else
+          Text(
+            '?? ???? ?? ??? ??? ????.',
+            style: TextStyle(color: colors.textColorDark.withOpacity(0.6)),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildSelectedCategoriesSummary(List<CategoryModel> categories) {
+    final selected = categories
+        .where((c) => c.id != null && _selectedCategoryIds.contains(c.id))
+        .toList();
+
+    if (selected.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return SizedBox(
+      height: 40,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsetsDirectional.only(start: 4, end: 4),
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemCount: selected.length,
+        itemBuilder: (_, index) {
+          final item = selected[index];
+          final id = item.id!;
+          return InkWell(
+            borderRadius: BorderRadius.circular(18),
+            onTap: () => _toggleCategory(id),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: context.color.territoryColor),
+                color: context.color.territoryColor.withOpacity(0.08),
+              ),
+              alignment: Alignment.center,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.check_rounded,
+                      size: 16, color: context.color.territoryColor),
+                  const SizedBox(width: 6),
+                  Text(
+                    item.name ?? '??? ?????',
+                    style: TextStyle(
+                      fontSize: context.font.small,
+                      fontWeight: FontWeight.w600,
+                      color: context.color.territoryColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildWorkingHoursCard() {
+    final colors = context.color;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.access_time_filled, color: colors.primaryColor),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                '????? ?????',
+                style: TextStyle(
+                  fontSize: context.font.large,
+                  fontWeight: FontWeight.w700,
+                  color: colors.textColorDark,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          '??? ????? ??? ????? ? ????? ??????? ?????? ?? ??????? ??????? ????? ???????? ???? ????? ????? ?????? ???????/?????? ???????.',
+          style: TextStyle(
+            fontSize: context.font.small,
+            color: colors.textColorDark.withOpacity(0.7),
+            height: 1.4,
+          ),
+        ),
+        const SizedBox(height: 14),
+        SizedBox(
+          height: 52,
+          width: double.infinity,
+          child: FilledButton.icon(
+            onPressed: _openWorkingHoursSheet,
+            icon: const Icon(Icons.schedule),
+            label: const Text('????? ????? ?????'),
+            style: FilledButton.styleFrom(
+              backgroundColor: colors.primaryColor,
+              foregroundColor: colors.onPrimary,
+              textStyle: TextStyle(
+                fontSize: context.font.normal,
+                fontWeight: FontWeight.w600,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        _buildWorkingHoursSummary(),
+      ],
+    );
+  }
+  Widget _buildWorkingHoursSummary() {
+    const weekdays = [
+      '??????????',
+      '??????????',
+      '??????????????',
+      '????????????????',
+      '????????????????',
+      '????????????',
+      '????????????'
+    ];
+
     return Column(
       children: List.generate(7, (index) {
-        final DaySchedule schedule = _hours[index]!;
-        return ListTile(
-          title: Text(weekdays[index].translate(context)),
-          subtitle: Text(schedule.enabled
-              ? '${schedule.from.format(context)} � ${schedule.to.format(context)}'
-              : 'closed'.translate(context)),
-          trailing: Switch.adaptive(
-            value: schedule.enabled,
-            onChanged: (value) {
-              setState(() {
-                _hours[index] = schedule.copyWith(enabled: value);
-              });
-            },
+        final entry = _hours[index]!;
+        final enabled = entry.enabled;
+        final text = enabled
+            ? '${entry.from.format(context)} - ${entry.to.format(context)}'
+            : '????????';
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  weekdays[index],
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: context.color.textColorDark,
+                  ),
+                ),
+              ),
+              Text(
+                text,
+                style: TextStyle(
+                  color: enabled
+                      ? context.color.textColorDark.withOpacity(0.8)
+                      : context.color.textColorDark.withOpacity(0.5),
+                ),
+              ),
+            ],
           ),
-          onTap: schedule.enabled
-              ? () async {
-                  await showDialog<void>(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      title: Text('adjustHours'.translate(context)),
-                      content: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          ListTile(
-                            title: Text('from'.translate(context)),
-                            trailing: TextButton(
-                              onPressed: () => _pickTime(index, true),
-                              child: Text(schedule.from.format(context)),
-                            ),
-                          ),
-                          ListTile(
-                            title: Text('to'.translate(context)),
-                            trailing: TextButton(
-                              onPressed: () => _pickTime(index, false),
-                              child: Text(schedule.to.format(context)),
-                            ),
-                          ),
-                        ],
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(ctx).pop(),
-                          child: Text('close'.translate(context)),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-              : null,
         );
       }),
     );
   }
 
-  Widget _buildCategoryChips(List<CategoryModel> categories) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: categories
-          .map((category) => FilterChip(
-                label: Text(category.name ?? 'unknown'.translate(context)),
-                selected: category.id != null && _selectedCategoryIds.contains(category.id),
-                onSelected: category.id != null ? (_) => _toggleCategory(category.id!) : null,
-              ))
-          .toList(),
-    );
+  Future<bool> _handlePop() async {
+    widget.onBack();
+    return false;
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = context.color;
+    super.build(context);
     return FutureBuilder<List<CategoryModel>>(
       future: _categoriesFuture,
       builder: (context, snapshot) {
         final bool loading = snapshot.connectionState != ConnectionState.done;
         final List<CategoryModel> categories = snapshot.data ?? [];
-        return ListView(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-          children: [
-            Text('phase2_title'.translate(context)).size(context.font.extraLarge).color(theme.textDefaultColor).bold(),
-            const SizedBox(height: 14),
-            Text('phase2_description'.translate(context))
-                .color(theme.textColorDark.withOpacity(0.75))
-                .size(context.font.normal),
-            const SizedBox(height: 18),
-            Text('selectCategories'.translate(context))
-                .size(context.font.large)
-                .color(theme.textDefaultColor)
-                .bold(),
-            const SizedBox(height: 10),
-            if (loading) ...[
-              const SizedBox(height: 180, child: Center(child: CircularProgressIndicator())),
-            ] else
-              _buildCategoryChips(categories),
-            const SizedBox(height: 16),
-            Divider(color: theme.borderColor),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _applyToAll,
-                    style: ElevatedButton.styleFrom(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      backgroundColor: theme.secondaryColor,
+        return WillPopScope(
+          onWillPop: _handlePop,
+          child: Scaffold(
+            body: SafeArea(
+              bottom: false,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 140), 
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildSectionHeader(
+                      '???????????? ???????????? ??????????',
+                      '???????? ?????????????? ???????????????? ???????? ?????????? ???????????? ???????????? ???????????? ?????? ?????????? ?????????????? ???????? ????????.',
                     ),
-                    child: Text('applyToAllDays'.translate(context))
-                        .size(context.font.normal)
-                        .color(theme.textDefaultColor),
-                  ),
+                    const SizedBox(height: 24),
+                    _buildCategoryCard(loading, categories),
+                    const SizedBox(height: 24),
+                    _buildWorkingHoursCard(),
+                  ],
                 ),
-              ],
+              ),
             ),
-            const SizedBox(height: 14),
-            _buildDaysColumn(),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: widget.onBack,
-                    child: Text('back'.translate(context)),
-                  ),
+            bottomNavigationBar: SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                child: UiUtils.buildButton(
+                  context,
+                  onPressed: _submit,
+                  buttonTitle: 'nextStage'.translate(context),
+                  disabled: !_canProceed,
+                  autoManageState: false,
+                  autoDisableWhenInvalid: false,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: UiUtils.buildButton(
-                    context,
-                    onPressed: _submit,
-                    buttonTitle: 'nextStage'.translate(context),
-                    radius: 12,
-                  ),
-                ),
-              ],
+              ),
             ),
-          ],
+          ),
         );
       },
     );
   }
+
+  @override
+  bool get wantKeepAlive => true;
 }
+
+
+

@@ -425,6 +425,7 @@ class ReportService {
         payload['details']        = detailsNorm;
         payload['report_message'] = detailsNorm;
         payload[Api.description]  = detailsNorm; // description
+        payload['other_message']  = detailsNorm;
       }
 
       // منع required_without: إن لم يوجد سبب ID ولا رسالة، أرسل رسالة افتراضية

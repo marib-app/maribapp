@@ -145,6 +145,7 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
       ServiceRequestRepository();
   bool _statusUpdating = false;
   bool? _ownerStatusOverride;
+  bool _viewRecorded = false;
   String? get _initialTitle => widget.initialTitle ?? widget.classified?.title;
 
 
@@ -247,6 +248,11 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
         _ownerStatusOverride = null;
         _statusUpdating = false;
       });
+
+      final int? viewId = fresh.id ?? id;
+      if (viewId != null && viewId > 0) {
+        unawaited(_recordView(viewId));
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -254,6 +260,19 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
         _error = true;
         _errorMsg = e.toString();
       });
+    }
+  }
+
+  Future<void> _recordView(int id) async {
+    if (_viewRecorded || id <= 0) return;
+    _viewRecorded = true;
+    try {
+      await Api.post(
+        url: Api.setItemTotalClickApi,
+        parameter: {Api.itemId: id},
+      );
+    } catch (_) {
+      // تجاهل أخطاء عداد المشاهدات حتى لا تؤثر على واجهة المستخدم
     }
   }
 

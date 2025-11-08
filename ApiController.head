@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Http\Controllers;
 
@@ -30,6 +30,7 @@ use App\Models\CustomField;
 use App\Models\Faq;
 use App\Models\Favourite;
 use App\Models\FeaturedItems;
+use App\Models\FeatureSection;
 use App\Models\Item;
 use App\Models\ItemCustomFieldValue;
 use App\Models\ItemImages;
@@ -83,6 +84,8 @@ use App\Models\Challenge;
 use App\Models\Referral;
 use App\Models\DepartmentTicket;
 use App\Services\DepartmentSupportService;
+use App\Exceptions\UnknownFeaturedSectionSlugException;
+use App\Services\FeaturedSectionService;
 use App\Enums\NotificationFrequency;
 use App\Http\Resources\UserPreferenceResource;
 use App\Models\UserPreference;
@@ -92,7 +95,7 @@ use App\Services\CachingService;
 use App\Services\DelegateAuthorizationService;
 use App\Services\DepartmentReportService;
 use App\Services\FileService;
-use App\Services\InterfaceSectionService;
+use App\Services\FeatureSectionCategoryService;
 use App\Services\HelperService;
 use App\Services\NotificationService;
 use App\Services\PaymentFulfillmentService;
@@ -164,7 +167,7 @@ class ApiController extends Controller {
 
         return array_values(array_unique(array_merge(
             self::INTERFACE_TYPES,
-            InterfaceSectionService::legacySectionTypes()
+            FeatureSectionCategoryService::legacySectionTypes()
         )));
     }
 
@@ -1989,10 +1992,10 @@ class ApiController extends Controller {
             $interfaceTypeVariants = [];
 
             if ($request->filled('interface_type')) {
-                $interfaceTypeFilter = InterfaceSectionService::normalizeSectionType($request->input('interface_type'));
+                $interfaceTypeFilter = FeatureSectionCategoryService::normalizeSectionType($request->input('interface_type'));
 
                 if ($interfaceTypeFilter !== null && $interfaceTypeFilter !== 'all') {
-                    $interfaceTypeVariants = InterfaceSectionService::sectionTypeVariants($interfaceTypeFilter);
+                    $interfaceTypeVariants = FeatureSectionCategoryService::sectionTypeVariants($interfaceTypeFilter);
                 }
             }
 
@@ -2193,26 +2196,31 @@ class ApiController extends Controller {
 
             // Feature Section Filtration
             if (!empty($request->featured_section_id) || !empty($request->featured_section_slug)) {
-                $supportedFilters = config('interface_sections.default_filters', ['latest']);
-                if (!is_array($supportedFilters) || $supportedFilters === []) {
-                    $supportedFilters = ['latest'];
+                if (!empty($request->featured_section_id)) {
+                    $featuredSection = FeatureSection::findOrFail($request->featured_section_id);
+                } else {
+                    $featuredSection = FeatureSection::where('slug', $request->featured_section_slug)->firstOrFail();
                 }
 
-                $filter = $request->input('featured_filter');
-                if (!is_string($filter) || $filter === '') {
-                    $filter = $supportedFilters[0] ?? 'latest';
-                }
 
-                $filter = strtolower($filter);
-                if (!in_array($filter, $supportedFilters, true)) {
-                    $filter = $supportedFilters[0] ?? 'latest';
-                }
+                $supportedFilters = FeatureSection::supportedFilters();
+                $filter = in_array($featuredSection->filter, $supportedFilters, true)
+                
+                ? $featuredSection->filter
+                    : ($supportedFilters[0] ?? 'latest');
+
+
+
 
                 $sql = match ($filter) {
                     'most_viewed' => $sql->reorder()->orderBy('clicks', 'DESC'),
-                    'price_high_to_low', 'price-high-to-low' => $sql->reorder()->orderBy('price', 'DESC'),
-                    'price_low_to_high', 'price-low-to-high' => $sql->reorder()->orderBy('price', 'ASC'),
+
+
+
                     default => $sql->reorder()->orderBy('created_at', 'DESC'),
+
+
+
                 };
             }
 
@@ -2819,10 +2827,10 @@ class ApiController extends Controller {
             $interfaceTypeVariants = [];
 
             if ($request->filled('interface_type')) {
-                $interfaceTypeFilter = InterfaceSectionService::normalizeSectionType($request->input('interface_type'));
+                $interfaceTypeFilter = FeatureSectionCategoryService::normalizeSectionType($request->input('interface_type'));
 
                 if ($interfaceTypeFilter !== 'all') {
-                    $interfaceTypeVariants = InterfaceSectionService::sectionTypeVariants($interfaceTypeFilter);
+                    $interfaceTypeVariants = FeatureSectionCategoryService::sectionTypeVariants($interfaceTypeFilter);
                 }
             }
 
@@ -3307,10 +3315,10 @@ class ApiController extends Controller {
             }
 
             if ($requestedInterfaceType !== 'all') {
-                $normalizedInterfaceType = InterfaceSectionService::normalizeSectionType($requestedInterfaceType);
+                $normalizedInterfaceType = FeatureSectionCategoryService::normalizeSectionType($requestedInterfaceType);
                 $interfaceTypes = array_values(array_unique(array_merge(
                     ['all'],
-                    InterfaceSectionService::sectionTypeVariants($normalizedInterfaceType)
+                    FeatureSectionCategoryService::sectionTypeVariants($normalizedInterfaceType)
                 )));
             } else {
                 $interfaceTypes = ['all'];
@@ -3363,182 +3371,6 @@ class ApiController extends Controller {
 
         } catch (Throwable $th) {
             ResponseService::logErrorResponse($th, "API Controller -> getSlider");
-            ResponseService::errorResponse();
-        }
-    }
-
-    public function getFeaturedSections(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'interface_type' => ['nullable', 'string', 'max:191'],
-            'section_type'   => ['nullable', 'string', 'max:191'],
-            'slug'           => ['nullable', 'string', 'max:191'],
-            'limit'          => ['nullable', 'integer', 'min:1', 'max:50'],
-            'filters'        => ['nullable'],
-            'filters.*'      => ['nullable', 'string', 'max:191'],
-        ]);
-
-        if ($validator->fails()) {
-            ResponseService::validationError($validator->errors()->first());
-        }
-
-        try {
-            $defaultFilters = config('interface_sections.default_filters', ['latest']);
-            if (! is_array($defaultFilters) || $defaultFilters === []) {
-                $defaultFilters = ['latest'];
-            }
-            $filterPool = array_values(array_unique(array_merge($defaultFilters, [
-                'featured',
-                'latest',
-                'most_viewed',
-                'price_range',
-            ])));
-
-            $filtersInput = $request->input('filters');
-            if (is_string($filtersInput)) {
-                $filtersInput = array_map('trim', explode(',', $filtersInput));
-            }
-
-            $filters = [];
-            foreach (Arr::wrap($filtersInput) as $filterValue) {
-                if (! is_string($filterValue)) {
-                    continue;
-                }
-                $normalized = (string) Str::of($filterValue)
-                    ->lower()
-                    ->replaceMatches('/[\s]+/u', '_')
-                    ->replace('-', '_')
-                    ->trim('_');
-
-                if ($normalized !== '' && in_array($normalized, $filterPool, true)) {
-                    $filters[] = $normalized;
-                }
-            }
-
-            if ($filters === []) {
-                $filters = $defaultFilters;
-            }
-
-            $filters = array_values(array_unique($filters));
-
-            $limitDefault = max(1, (int) config('interface_sections.section_item_limit', 12));
-            $limit = $request->integer('limit');
-            $limit = $limit !== null ? max(1, min($limit, 50)) : $limitDefault;
-
-            $sectionTypeInput = $request->input('section_type') ?? $request->input('interface_type');
-            $sectionType = InterfaceSectionService::normalizeSectionType($sectionTypeInput);
-            if ($sectionType === null || $sectionType === '') {
-                $sectionType = InterfaceSectionService::defaultSectionType() ?? 'homepage';
-            }
-
-            $allowedSectionTypes = InterfaceSectionService::allowedSectionTypes();
-            if (! in_array($sectionType, $allowedSectionTypes, true)) {
-                $sectionType = InterfaceSectionService::defaultSectionType() ?? 'homepage';
-            }
-
-            $categoryIds = InterfaceSectionService::categoryIdsForSection($sectionType);
-            if ($categoryIds === []) {
-                ResponseService::successResponse(
-                    __('Featured sections fetched successfully.'),
-                    [
-                        'interface_type' => $sectionType,
-                        'filters' => $filters,
-                        'sections' => [],
-                    ]
-                );
-
-                return;
-            }
-
-            $rootIdentifiers = InterfaceSectionService::rootIdentifiers();
-            $rootIdentifier = $rootIdentifiers[$sectionType] ?? null;
-            $interfaceVariants = InterfaceSectionService::sectionTypeVariants($sectionType);
-
-            $relations = [
-                'user:id,name,email,mobile,profile,country_code,show_personal_details',
-                'category:id,name,image',
-                'gallery_images:id,image,item_id,thumbnail_url,detail_image_url',
-                'featured_items',
-                'favourites',
-                'item_custom_field_values.custom_field',
-                'area:id,name',
-            ];
-
-            $baseQuery = Item::query()
-                ->approved()
-                ->with($relations)
-                ->withCount('favourites')
-                ->withCount('featured_items');
-
-            if ($categoryIds !== null) {
-                $baseQuery->whereIn('category_id', $categoryIds);
-            }
-
-            if ($sectionType !== null && $sectionType !== 'all') {
-                $baseQuery->whereIn('interface_type', $interfaceVariants);
-            }
-
-            $titleMap = [
-                'featured'    => __('Featured Items'),
-                'latest'      => __('Latest Listings'),
-                'most_viewed' => __('Popular Items'),
-                'price_range' => __('Budget Friendly'),
-            ];
-
-            $sections = [];
-            foreach ($filters as $index => $filter) {
-                $query = clone $baseQuery;
-
-                switch ($filter) {
-                    case 'featured':
-                        $query->whereHas('featured_items')->orderByDesc('items.updated_at');
-                        break;
-                    case 'most_viewed':
-                        $query->orderByDesc('items.clicks');
-                        break;
-                    case 'price_range':
-                        $query->orderBy('items.price');
-                        break;
-                    case 'latest':
-                    default:
-                        $query->orderByDesc('items.created_at');
-                        break;
-                }
-
-                $items = $query->limit($limit)->get();
-
-                if ($items->isEmpty()) {
-                    continue;
-                }
-
-                $sectionData = array_values((new ItemCollection($items))->toArray($request));
-
-                $sections[] = [
-                    'id' => null,
-                    'title' => $titleMap[$filter] ?? Str::title(str_replace('_', ' ', $filter)),
-                    'style' => 'list',
-                    'section_type' => $sectionType,
-                    'filter' => $filter,
-                    'slug' => $request->input('slug') ?? Str::slug($sectionType . '-' . $filter),
-                    'sequence' => $index + 1,
-                    'root_identifier' => $rootIdentifier,
-                    'total_data' => count($sectionData),
-                    'min_price' => $items->min('price'),
-                    'max_price' => $items->max('price'),
-                    'section_data' => $sectionData,
-                ];
-            }
-
-            ResponseService::successResponse(
-                __('Featured sections fetched successfully.'),
-                [
-                    'interface_type' => $sectionType,
-                    'filters' => $filters,
-                    'sections' => array_values($sections),
-                ]
-            );
-        } catch (Throwable $th) {
-            ResponseService::logErrorResponse($th, 'API Controller -> getFeaturedSections');
             ResponseService::errorResponse();
         }
     }
@@ -3660,9 +3492,101 @@ class ApiController extends Controller {
         }
     }
 
-    public function getFeaturedSection(Request $request)
+    public function getFeaturedSection(Request $request, FeaturedSectionService $featuredSectionService)
     {
-        $this->getFeaturedSections($request);
+        try {
+
+
+            $validator = Validator::make($request->all(), [
+                'limit' => ['nullable', 'integer', 'min:1'],
+            ]);
+
+            if ($validator->fails()) {
+                return ResponseService::validationError($validator->errors()->first());
+            }
+
+            $limit = null;
+
+            if ($request->filled('limit')) {
+                $limit = (int) $request->input('limit');
+
+                if ($limit > FeaturedSectionService::MAX_SECTION_LIMIT) {
+                    $limit = FeaturedSectionService::MAX_SECTION_LIMIT;
+                }
+            }
+
+
+
+
+            $result = $featuredSectionService->getSections(
+                $request->input('section_type'),
+                $request->input('interface_type'),
+                $request->input('slug'),
+                $limit,
+                $request->input('root_identifier'),
+
+
+            );
+
+
+
+
+            $etag = $result->etag;
+            $cacheControl = $result->cacheControl;
+
+            $requestEtags = $request->getETags();
+
+            if ($etag !== '' && (in_array($etag, $requestEtags, true) || in_array('"' . $etag . '"', $requestEtags, true))) {
+                return response()->noContent(HttpResponse::HTTP_NOT_MODIFIED)
+                    ->setEtag($etag)
+                    ->header('Cache-Control', $cacheControl);
+                
+
+
+            }
+
+            $response = response()->json([
+                'error' => false,
+                'message' => __('Data Fetched Successfully'),
+                'data' => $result->sections,
+                'code' => config('constants.RESPONSE_CODE.SUCCESS'),
+            ]);
+
+            if ($etag !== '') {
+                $response->setEtag($etag);
+            
+            }
+            if ($cacheControl !== '') {
+                $response->header('Cache-Control', $cacheControl);
+            }
+
+            return $response;
+        
+        } catch (UnknownFeaturedSectionSlugException $exception) {
+            return response()->json([
+                'error' => true,
+                'message' => __('Unknown featured section slug.'),
+                'data' => null,
+                'code' => HttpResponse::HTTP_NOT_FOUND,
+            ], HttpResponse::HTTP_NOT_FOUND);
+
+
+        } catch (Throwable $th) {
+            Log::error('API Controller -> getFeaturedSection failed', [
+                'message' => $th->getMessage(),
+                'file' => $th->getFile(),
+                'line' => $th->getLine(),
+            ]);
+
+            return response()->json([
+                'error' => true,
+                'message' => __('Error Occurred'),
+                'data' => null,
+                'code' => config('constants.RESPONSE_CODE.EXCEPTION_ERROR'),
+            ], HttpResponse::HTTP_INTERNAL_SERVER_ERROR);
+
+            
+        }
     }
 
     public function getPaymentIntent(Request $request) {

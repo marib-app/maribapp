@@ -249,6 +249,38 @@
                                             <span class="badge bg-light text-dark" data-root-badge data-context="create" data-template="{{ $rootBadgeTemplate }}" data-null-label="{{ $rootBadgeAll }}" data-missing-label="{{ $rootBadgeMissing }}"></span>
                                         </div>
                                     </div>
+                                    <div class="col-md-12">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">{{ __('Data Source') }} <span class="text-danger">*</span></label>
+                                            <div class="d-flex flex-wrap gap-3" data-data-source-group="create" role="radiogroup">
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio" name="data_source" value="dynamic" id="create_data_source_dynamic" checked data-data-source-option>
+                                                    <label class="form-check-label" for="create_data_source_dynamic">{{ __('Automatic (filter-based)') }}</label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio" name="data_source" value="manual" id="create_data_source_manual" data-data-source-option>
+                                                    <label class="form-check-label" for="create_data_source_manual">{{ __('Manual selection') }}</label>
+                                                </div>
+                                            </div>
+                                            <small class="text-muted">{{ __('Switch to manual mode to hand-pick the advertisements that will appear in this section.') }}</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="card mb-3 d-none" data-manual-container="create" data-manual-max-items="{{ $manualItemLimit ?? 20 }}">
+                                            <div class="card-body">
+                                                <div class="mb-3">
+                                                    <label class="form-label fw-bold">{{ __('Select featured advertisements') }}</label>
+                                                    <select class="form-control select2" data-manual-items-select="create" data-placeholder="{{ __('Search approved ads...') }}" data-items-search-url="{{ route('feature-section.items.search') }}" data-section-field="#section_type"></select>
+                                                    <small class="text-muted d-block mt-1">{{ __('You can add up to :count ads.', ['count' => $manualItemLimit ?? 20]) }}</small>
+                                                </div>
+                                                <div class="list-group gap-2 manual-items-list" data-manual-items-list="create"></div>
+                                                <div data-manual-hidden-inputs="create"></div>
+                                                <p class="text-muted mt-2 mb-0">
+                                                    <i class="fas fa-arrows-alt-v me-1"></i>{{ __('Use the arrows to reorder or click remove to exclude an ad from this section.') }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
 
 
@@ -526,11 +558,43 @@
 
 
                                                     </select>
-                                                    <div class="form-text mt-1">
-                                                        <span class="badge bg-light text-dark" data-root-badge data-context="edit" data-template="{{ $rootBadgeTemplate }}" data-null-label="{{ $rootBadgeAll }}" data-missing-label="{{ $rootBadgeMissing }}"></span>
-                                                    </div>
+                                            <div class="form-text mt-1">
+                                                <span class="badge bg-light text-dark" data-root-badge data-context="edit" data-template="{{ $rootBadgeTemplate }}" data-null-label="{{ $rootBadgeAll }}" data-missing-label="{{ $rootBadgeMissing }}"></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-12">
+                                            <div class="mb-3">
+                                            <label class="form-label fw-bold">{{ __('Data Source') }} <span class="text-danger">*</span></label>
+                                            <div class="d-flex flex-wrap gap-3" data-data-source-group="edit" role="radiogroup">
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio" name="data_source" value="dynamic" id="edit_data_source_dynamic" data-data-source-option>
+                                                    <label class="form-check-label" for="edit_data_source_dynamic">{{ __('Automatic (filter-based)') }}</label>
+                                                </div>
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio" name="data_source" value="manual" id="edit_data_source_manual" data-data-source-option>
+                                                    <label class="form-check-label" for="edit_data_source_manual">{{ __('Manual selection') }}</label>
                                                 </div>
                                             </div>
+                                            <small class="text-muted">{{ __('Switch to manual mode to hand-pick the advertisements that will appear in this section.') }}</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-12">
+                                            <div class="card mb-3 d-none" data-manual-container="edit" data-manual-max-items="{{ $manualItemLimit ?? 20 }}">
+                                                <div class="card-body">
+                                                    <div class="mb-3">
+                                                        <label class="form-label fw-bold">{{ __('Select featured advertisements') }}</label>
+                                                        <select class="form-control select2" data-manual-items-select="edit" data-placeholder="{{ __('Search approved ads...') }}" data-items-search-url="{{ route('feature-section.items.search') }}" data-section-field="#edit_section_type"></select>
+                                                        <small class="text-muted d-block mt-1">{{ __('You can add up to :count ads.', ['count' => $manualItemLimit ?? 20]) }}</small>
+                                                    </div>
+                                                    <div class="list-group gap-2 manual-items-list" data-manual-items-list="edit"></div>
+                                                    <div data-manual-hidden-inputs="edit"></div>
+                                                    <p class="text-muted mt-2 mb-0">
+                                                        <i class="fas fa-arrows-alt-v me-1"></i>{{ __('Use the arrows to reorder or click remove to exclude an ad from this section.') }}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                         </div>
 
 
@@ -1279,6 +1343,265 @@
             const $createSectionType = $('#section_type');
             const $editSectionType = $('#edit_section_type');
 
+            const manualLimitMessage = @json(__('You have reached the maximum number of ads for this section.'));
+            const manualDuplicateMessage = @json(__('This advertisement is already in the list.'));
+            const manualSelectors = {
+                container: '[data-manual-container]',
+                list: '[data-manual-items-list]',
+                hidden: '[data-manual-hidden-inputs]',
+                select: '[data-manual-items-select]',
+            };
+            const manualDefaultLimit = Number(@json($manualItemLimit ?? 20));
+
+            const getFormContext = ($form) => ($form.attr('data-feature-section-context') || '').trim();
+
+            const getManualContainer = ($form) => {
+                const context = getFormContext($form);
+                if (context) {
+                    const $container = $form.find(`[data-manual-container="${context}"]`);
+                    if ($container.length) {
+                        return $container;
+                    }
+                }
+                return $form.find(manualSelectors.container).first();
+            };
+
+            const getManualList = ($form) => {
+                const context = getFormContext($form);
+                if (context) {
+                    const $list = $form.find(`[data-manual-items-list="${context}"]`);
+                    if ($list.length) {
+                        return $list;
+                    }
+                }
+                return $form.find(manualSelectors.list).first();
+            };
+
+            const getManualHiddenInputs = ($form) => {
+                const context = getFormContext($form);
+                if (context) {
+                    const $hidden = $form.find(`[data-manual-hidden-inputs="${context}"]`);
+                    if ($hidden.length) {
+                        return $hidden;
+                    }
+                }
+                return $form.find(manualSelectors.hidden).first();
+            };
+
+            const getSelectedDataSource = ($form) => {
+                const raw = $form.find('input[name="data_source"]:checked').val();
+                const value = typeof raw === 'string' ? raw.trim() : '';
+                return value === '' ? 'dynamic' : value;
+            };
+
+            const getManualLimit = ($form) => {
+                const $container = getManualContainer($form);
+                const limit = parseInt($container.data('manualMaxItems'), 10);
+                return Number.isFinite(limit) && limit > 0 ? limit : manualDefaultLimit;
+            };
+
+            const getManualIds = ($form) => {
+                return getManualList($form)
+                    .find('[data-item-id]')
+                    .map((_, element) => {
+                        const id = parseInt($(element).data('itemId'), 10);
+                        return Number.isFinite(id) && id > 0 ? id : null;
+                    })
+                    .get()
+                    .filter((id) => id !== null);
+            };
+
+            const syncManualHiddenInputs = ($form) => {
+                const $hidden = getManualHiddenInputs($form);
+                $hidden.find('input[name="manual_items[]"]').remove();
+
+                if (getSelectedDataSource($form) !== 'manual') {
+                    return;
+                }
+
+                getManualIds($form).forEach((id) => {
+                    $('<input>', {
+                        type: 'hidden',
+                        name: 'manual_items[]',
+                        value: id,
+                    }).appendTo($hidden);
+                });
+            };
+
+            const renderManualEntry = ($form, id, title) => {
+                const safeTitle = escapeHtml(title || '#' + id);
+                return $(`
+                    <div class="list-group-item d-flex align-items-center justify-content-between gap-3" data-item-id="${id}">
+                        <div class="flex-grow-1">
+                            <span class="fw-semibold">${safeTitle}</span>
+                            <small class="text-muted ms-2">#${id}</small>
+                        </div>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button class="btn btn-outline-secondary" type="button" data-move-manual="up" title="{{ __('Move up') }}">
+                                <i class="fas fa-arrow-up"></i>
+                            </button>
+                            <button class="btn btn-outline-secondary" type="button" data-move-manual="down" title="{{ __('Move down') }}">
+                                <i class="fas fa-arrow-down"></i>
+                            </button>
+                            <button class="btn btn-outline-danger" type="button" data-remove-manual-item title="{{ __('Remove') }}">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                `);
+            };
+
+            const addManualItem = ($form, item) => {
+                const id = parseInt(item?.id ?? item?.value ?? item, 10);
+                if (!Number.isFinite(id) || id <= 0) {
+                    return;
+                }
+
+                const $list = getManualList($form);
+                if ($list.find(`[data-item-id=\"${id}\"]`).length) {
+                    if (manualDuplicateMessage) {
+                        alert(manualDuplicateMessage);
+                    }
+                    return;
+                }
+
+                const currentCount = $list.find('[data-item-id]').length;
+                const limit = getManualLimit($form);
+
+                if (currentCount >= limit) {
+                    if (manualLimitMessage) {
+                        alert(manualLimitMessage);
+                    }
+                    return;
+                }
+
+                const title = item?.text || item?.title || `#${id}`;
+                const $entry = renderManualEntry($form, id, title);
+                $list.append($entry);
+                syncManualHiddenInputs($form);
+            };
+
+            const populateManualItems = ($form, items) => {
+                const $list = getManualList($form);
+                $list.empty();
+
+                (items || []).forEach((item) => {
+                    const id = parseInt(item?.id ?? item, 10);
+                    if (!Number.isFinite(id) || id <= 0) {
+                        return;
+                    }
+                    const title = item?.title || item?.text || `#${id}`;
+                    const $entry = renderManualEntry($form, id, title);
+                    $list.append($entry);
+                });
+
+                syncManualHiddenInputs($form);
+            };
+
+            const toggleManualContainer = ($form, dataSource) => {
+                const $container = getManualContainer($form);
+                const isManual = dataSource === 'manual';
+                $container.toggleClass('d-none', !isManual);
+                syncManualHiddenInputs($form);
+            };
+
+            const setDataSourceValue = ($form, value) => {
+                const normalized = (value || 'dynamic').toString().trim() || 'dynamic';
+                const $inputs = $form.find('input[name="data_source"]');
+                if ($inputs.length) {
+                    const $target = $inputs.filter(`[value=\"${normalized}\"]`);
+                    if ($target.length) {
+                        $target.prop('checked', true);
+                    } else {
+                        $inputs.first().prop('checked', true);
+                    }
+                }
+                toggleManualContainer($form, normalized);
+            };
+
+            $(document).on('click', '[data-remove-manual-item]', function () {
+                const $entry = $(this).closest('[data-item-id]');
+                const $form = $entry.closest('form');
+                $entry.remove();
+                syncManualHiddenInputs($form);
+            });
+
+            $(document).on('click', '[data-move-manual]', function () {
+                const direction = $(this).data('move-manual');
+                const $entry = $(this).closest('[data-item-id]');
+                const $form = $entry.closest('form');
+
+                if (direction === 'up') {
+                    $entry.prev('[data-item-id]').before($entry);
+                } else if (direction === 'down') {
+                    $entry.next('[data-item-id]').after($entry);
+                }
+
+                syncManualHiddenInputs($form);
+            });
+
+            $('[data-data-source-group]').on('change', 'input[name="data_source"]', function () {
+                const $form = $(this).closest('form');
+                toggleManualContainer($form, getSelectedDataSource($form));
+            });
+
+            $(manualSelectors.select).each(function () {
+                const $select = $(this);
+                const ajaxUrl = $select.data('itemsSearchUrl');
+
+                if (!ajaxUrl) {
+                    return;
+                }
+
+                const $form = $select.closest('form');
+                const $modal = $select.closest('.modal');
+
+                $select.select2({
+                    dropdownParent: $modal.length ? $modal : $(document.body),
+                    allowClear: true,
+                    placeholder: $select.data('placeholder') || '{{ __('Search ads') }}',
+                    minimumInputLength: 2,
+                    ajax: {
+                        url: ajaxUrl,
+                        delay: 250,
+                        data: function (params) {
+                            const sectionField = $select.data('sectionField');
+                            const sectionType = sectionField ? $(sectionField).val() : $form.find('select[name="section_type"]').val();
+                            return {
+                                q: params.term,
+                                section_type: sectionType,
+                            };
+                        },
+                        processResults: function (data) {
+                            const results = Array.isArray(data?.results) ? data.results : [];
+                            return {
+                                results: results.map((item) => ({
+                                    id: item.id,
+                                    text: item.text || (`#${item.id}`),
+                                })),
+                            };
+                        },
+                    },
+                }).on('select2:select', function (event) {
+                    addManualItem($form, event.params.data);
+                    $select.val(null).trigger('change');
+                });
+            });
+
+            $('[data-feature-section-context]').on('feature-section:update-manual', function (event, row) {
+                const $form = $(this);
+                const nextSource = (row?.data_source || 'dynamic').toString().trim() || 'dynamic';
+                setDataSourceValue($form, nextSource);
+                populateManualItems($form, row?.manual_items || []);
+            });
+
+            $('[data-feature-section-context]').each(function () {
+                const $form = $(this);
+                const initialSource = getSelectedDataSource($form);
+                setDataSourceValue($form, initialSource);
+                populateManualItems($form, []);
+            });
+
 
             const getDataString = ($element, key) => {
                 if (!$element.length) {
@@ -1588,6 +1911,12 @@
                     description: ($form.find('textarea[name="description"]').val() || '').trim(),
                     style: $form.find('input[name="style"]:checked').val() || null,
                 };
+
+                const dataSourceValue = getSelectedDataSource($form);
+                formData.data_source = dataSourceValue;
+                if (dataSourceValue === 'manual') {
+                    formData.manual_items = getManualIds($form);
+                }
 
                 const $isActiveInput = $form.find('input[type="checkbox"][name="is_active"]').first();
                 if ($isActiveInput.length) {

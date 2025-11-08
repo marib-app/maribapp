@@ -941,6 +941,9 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
     Route::post('feature-section/flush-cache', [FeatureSectionController::class, 'flushCache'])
         ->name('feature-section.flush-cache')
         ->middleware('permission:feature-section-create|feature-section-update');
+    Route::get('feature-section/items/search', [FeatureSectionController::class, 'searchItems'])
+        ->name('feature-section.items.search')
+        ->middleware('permission:feature-section-create|feature-section-update');
 
     Route::get('feature-section/list', [FeatureSectionController::class, 'list'])
         ->name('feature-section.list')

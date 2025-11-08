@@ -10,13 +10,11 @@ class CurrencyHeader extends StatelessWidget implements PreferredSizeWidget {
   const CurrencyHeader({
     super.key,
     required this.state,
-    required this.onToggleWatchlistFilter,
     required this.onGovernorateChanged,
     required this.onNotificationFrequencyChanged,
   });
 
   final CurrencyViewState state;
-  final ValueChanged<bool> onToggleWatchlistFilter;
   final ValueChanged<String?> onGovernorateChanged;
   final ValueChanged<String> onNotificationFrequencyChanged;
 
@@ -35,7 +33,6 @@ class CurrencyHeader extends StatelessWidget implements PreferredSizeWidget {
         _GovernorateButton(
           brand: brand,
           state: state,
-          onToggleWatchlistFilter: onToggleWatchlistFilter,
           onGovernorateChanged: onGovernorateChanged,
           onNotificationFrequencyChanged: onNotificationFrequencyChanged,
           isDark: _isDark(context),
@@ -52,7 +49,6 @@ class _GovernorateButton extends StatelessWidget {
   const _GovernorateButton({
     required this.brand,
     required this.state,
-    required this.onToggleWatchlistFilter,
     required this.onGovernorateChanged,
     required this.onNotificationFrequencyChanged,
     required this.isDark,
@@ -60,7 +56,6 @@ class _GovernorateButton extends StatelessWidget {
 
   final Color brand;
   final CurrencyViewState state;
-  final ValueChanged<bool> onToggleWatchlistFilter;
   final ValueChanged<String?> onGovernorateChanged;
   final ValueChanged<String> onNotificationFrequencyChanged;
   final bool isDark;
@@ -155,21 +150,6 @@ class _GovernorateButton extends StatelessWidget {
                     onGovernorateChanged: onGovernorateChanged,
                   ),
                   const SizedBox(height: 16),
-                  SwitchListTile.adaptive(
-                    value: state.showWatchlistOnly,
-                    onChanged: onToggleWatchlistFilter,
-                    activeColor: sheetBrand,
-                    contentPadding: EdgeInsets.zero,
-                    secondary: Icon(Icons.visibility_outlined, color: sheetBrand),
-                    title: Text(
-                      'عرض قائمة المراقبة فقط',
-                      style: Theme.of(sheetContext).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: sheetOnBg,
-                      ),
-                      textDirection: TextDirection.rtl,
-                    ),
-                  ),
                   if (notificationSettings != null) ...[
                     const SizedBox(height: 16),
                     notificationSettings,

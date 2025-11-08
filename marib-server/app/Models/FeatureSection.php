@@ -9,6 +9,9 @@ use Illuminate\Support\Str;
 class FeatureSection extends Model {
     use HasFactory;
 
+    public const DATA_SOURCE_DYNAMIC = 'dynamic';
+    public const DATA_SOURCE_MANUAL = 'manual';
+
 
     public const FILTER_DEFINITIONS = [
         'latest' => [
@@ -56,6 +59,7 @@ class FeatureSection extends Model {
         'slug',
         'sequence',
         'filter',
+        'data_source',
         'value',
         'style',
         'section_type',
@@ -69,7 +73,11 @@ class FeatureSection extends Model {
         'is_active' => 'boolean',
         'min_price' => 'float',
         'max_price' => 'float',
+        'data_source' => 'string',
+    ];
 
+    protected $attributes = [
+        'data_source' => self::DATA_SOURCE_DYNAMIC,
     ];
 
 
@@ -210,9 +218,60 @@ class FeatureSection extends Model {
 
 
 
+
+
+    public static function dataSources(): array
+    {
+        return [
+            self::DATA_SOURCE_DYNAMIC,
+            self::DATA_SOURCE_MANUAL,
+        ];
+    }
+
+    public static function normalizeDataSource(?string $value): string
+    {
+        if (! is_string($value)) {
+            return self::DATA_SOURCE_DYNAMIC;
+        }
+
+        $normalized = strtolower(trim($value));
+
+        return in_array($normalized, self::dataSources(), true)
+            ? $normalized
+            : self::DATA_SOURCE_DYNAMIC;
+    }
+
+
     public function category() {
         return $this->belongsTo(Category::class, 'category_id', 'id');
     }
+
+    public function manualEntries() {
+        return $this->hasMany(FeatureSectionItem::class)->orderBy('position');
+    }
+
+    public function manualItems() {
+        return $this->belongsToMany(Item::class, 'feature_section_items')
+            ->withPivot('position')
+            ->orderBy('feature_section_items.position');
+    }
+
+    public function manualItemIds(): array {
+        if ($this->relationLoaded('manualEntries')) {
+            return $this->manualEntries
+                ->sortBy('position')
+                ->pluck('item_id')
+                ->map(static fn($id) => (int) $id)
+                ->all();
+        }
+
+        return $this->manualEntries()
+            ->orderBy('position')
+            ->pluck('item_id')
+            ->map(static fn($id) => (int) $id)
+            ->all();
+    }
+
 
     public function scopeSearch($query, $search) {
         $search = "%" . $search . "%";
@@ -236,3 +295,5 @@ class FeatureSection extends Model {
     }
 
 }
+
+

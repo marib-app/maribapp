@@ -14,6 +14,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/currency_utils.dart';
 import 'package:marib/utils/money_formatter.dart';
+import 'package:marib/utils/store_status_view_model.dart';
+import 'package:marib/ui/widgets/store_status_card.dart';
 
 class CartUI extends StatelessWidget {
   // مدخلات الحالة
@@ -24,6 +26,7 @@ class CartUI extends StatelessWidget {
   final String? currency;
   final String? currencyCode;
   final String? loadErrorMessage;
+  final Map<String, dynamic>? store;
 
   final String? supportWhatsappLabel;
   final String? supportWhatsappNumber;
@@ -67,6 +70,7 @@ class CartUI extends StatelessWidget {
     required this.currency,
     this.currencyCode,
     this.loadErrorMessage,
+    this.store,
     required this.couponController,
     required this.couponInProgress,
     required this.couponError,
@@ -122,23 +126,18 @@ class CartUI extends StatelessWidget {
       currencyCode: currencyCode ?? fallbackCurrencyCode,
       fallbackLabel: fallbackCurrencyLabel ?? fallbackCurrencyCode,
     );
-    final String? storeName = () {
-      if (cartItems.isEmpty) return null;
-      for (final cart in cartItems) {
-        final String? candidate = cart.user?.name?.trim();
-        if (candidate != null && candidate.isNotEmpty) {
-          return candidate;
-        }
-      }
-      return null;
-    }();
+    final StoreStatusViewModel storeStatus =
+        StoreStatusViewModel.fromMap(store);
+    final String? inferredStoreName = _resolveCartStoreName(cartItems);
 
     final String localizedFallbackRaw =
         UiUtils.getTranslatedLabel(context, 'notAvailable');
     final String fallbackStoreName = localizedFallbackRaw == 'notAvailable'
         ? 'غير متوفر'
         : localizedFallbackRaw;
-    final String resolvedStoreName = storeName ?? fallbackStoreName;
+    final String resolvedStoreName = storeStatus.hasData
+        ? (storeStatus.name ?? fallbackStoreName)
+        : (inferredStoreName ?? fallbackStoreName);
 
     final String? whatsappLabelRaw = supportWhatsappLabel?.trim();
     final String? whatsappNumberRaw = supportWhatsappNumber?.trim();
@@ -1050,9 +1049,8 @@ class CartUI extends StatelessWidget {
           itemCount: isLoading ? 5 : cartItems.length + 1,
           itemBuilder: (context, index) {
             if (index == 0) {
-              return Padding(
-                padding: EdgeInsets.symmetric(vertical: 8.rh(context)),
-                child: Row(
+              Widget buildSelectRow() {
+                return Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     GestureDetector(
@@ -1081,6 +1079,27 @@ class CartUI extends StatelessWidget {
                       ],
                     ),
                   ],
+                );
+              }
+
+              final List<Widget> headerChildren = [];
+              if (storeStatus.hasData) {
+                headerChildren.add(
+                  StoreStatusCard(
+                    store: storeStatus,
+                    moneyFormatter: moneyFormatter,
+                    showManualBanks: true,
+                  ),
+                );
+                headerChildren.add(const SizedBox(height: 8));
+              }
+              headerChildren.add(buildSelectRow());
+
+              return Padding(
+                padding: EdgeInsets.symmetric(vertical: 8.rh(context)),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: headerChildren,
                 ),
               );
             }
@@ -1351,6 +1370,19 @@ class CartUI extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String? _resolveCartStoreName(List<Cart> items) {
+    if (items.isEmpty) {
+      return null;
+    }
+    for (final Cart cart in items) {
+      final String? candidate = cart.user?.name?.trim();
+      if (candidate != null && candidate.isNotEmpty) {
+        return candidate;
+      }
+    }
+    return null;
   }
 }
 

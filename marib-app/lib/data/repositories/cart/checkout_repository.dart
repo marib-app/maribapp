@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:marib/config/feature_flags.dart';
 import 'package:marib/data/model/cart/checkout_models.dart';
@@ -181,8 +182,7 @@ class CheckoutRepository {
 
     final Map<String, dynamic>? storeMeta = cartSummary.store;
 
-    List<CheckoutBank> storeBanks =
-        _parseStoreManualBanks(storeMeta);
+    List<CheckoutBank> storeBanks = _parseStoreManualBanks(storeMeta);
 
     if (storeBanks.isEmpty) {
       storeBanks = await _fetchStoreGatewayBanks(cartItems);
@@ -194,11 +194,11 @@ class CheckoutRepository {
       banks = _parseBanks(paymentData ?? paymentSettings);
     } else {
       final Map<String, dynamic>? paymentSource =
-      _mapify(paymentData ?? paymentSettings);
+          _mapify(paymentData ?? paymentSettings);
       final CheckoutBank? eastYemenBank = _parseEastYemenBank(paymentSource);
       if (eastYemenBank != null &&
-          !banks
-              .any((CheckoutBank bank) => bank.paymentMethod == eastYemenBank.paymentMethod)) {
+          !banks.any((CheckoutBank bank) =>
+              bank.paymentMethod == eastYemenBank.paymentMethod)) {
         banks = List<CheckoutBank>.from(banks)..add(eastYemenBank);
       }
     }
@@ -434,6 +434,8 @@ class CheckoutRepository {
     final Map<String, dynamic> payment = <String, dynamic>{
       if (apiPaymentMethod != null) 'method': apiPaymentMethod,
       if (paymentBank?.id != null) 'bank_id': paymentBank!.id,
+      if (paymentBank?.storeGatewayAccountId != null)
+        'store_gateway_account_id': paymentBank!.storeGatewayAccountId,
       if (paymentBank?.name.isNotEmpty == true) 'bank_name': paymentBank!.name,
       if (paymentBank?.accountNumber?.isNotEmpty == true)
         'account_number': paymentBank!.accountNumber,
@@ -444,7 +446,16 @@ class CheckoutRepository {
     }
 
     Map<String, dynamic>? manualTransferPayload;
+    File? manualTransferReceiptFile;
     if (manualTransferData != null && manualTransferData.isNotEmpty) {
+      final Map<String, dynamic> normalizedManualTransfer =
+          Map<String, dynamic>.from(manualTransferData);
+      final dynamic receiptCandidate =
+          normalizedManualTransfer.remove('receipt_file');
+      if (receiptCandidate is File) {
+        manualTransferReceiptFile = receiptCandidate;
+      }
+
       String? trimmed(dynamic value) {
         final String? raw = _asString(value);
         if (raw == null) {
@@ -454,16 +465,63 @@ class CheckoutRepository {
         return normalized.isEmpty ? null : normalized;
       }
 
-      final String? senderName = trimmed(manualTransferData['sender_name']);
+      final String? senderName =
+          trimmed(normalizedManualTransfer['sender_name']);
       final String? transferReference =
-          trimmed(manualTransferData['transfer_reference']);
-      final String? note = trimmed(manualTransferData['note']);
+          trimmed(normalizedManualTransfer['transfer_reference']);
+      final String? note = trimmed(normalizedManualTransfer['note']);
 
       final Map<String, dynamic> sanitized = <String, dynamic>{
         if (senderName != null) 'sender_name': senderName,
         if (transferReference != null) 'transfer_reference': transferReference,
         if (note != null) 'note': note,
       };
+
+      final int? storeGatewayAccountId = _asInt(
+        normalizedManualTransfer['store_gateway_account_id'] ??
+            normalizedManualTransfer['store_bank_id'],
+      );
+      if (storeGatewayAccountId != null) {
+        sanitized['store_gateway_account_id'] = storeGatewayAccountId;
+      }
+
+      final Map<String, dynamic>? storeMeta =
+          _mapify(normalizedManualTransfer['store']);
+      if (storeMeta != null && storeMeta.isNotEmpty) {
+        sanitized['store'] = storeMeta;
+      }
+
+      final Map<String, dynamic>? receiptMeta =
+          _mapify(normalizedManualTransfer['receipt']);
+      if (receiptMeta != null && receiptMeta.isNotEmpty) {
+        sanitized['receipt'] = receiptMeta;
+      }
+
+      void copyReceiptField(String key) {
+        final String? value = trimmed(normalizedManualTransfer[key]);
+        if (value != null) {
+          sanitized[key] = value;
+        }
+      }
+
+      copyReceiptField('receipt_path');
+      copyReceiptField('receipt_url');
+      copyReceiptField('receipt_disk');
+
+      final dynamic attachmentsRaw = normalizedManualTransfer['attachments'];
+      if (attachmentsRaw is Iterable) {
+        final List<Map<String, dynamic>> normalizedAttachments =
+            <Map<String, dynamic>>[];
+        for (final dynamic entry in attachmentsRaw) {
+          final Map<String, dynamic>? attachment = _mapify(entry);
+          if (attachment != null && attachment.isNotEmpty) {
+            normalizedAttachments.add(attachment);
+          }
+        }
+        if (normalizedAttachments.isNotEmpty) {
+          sanitized['attachments'] = normalizedAttachments;
+        }
+      }
 
       if (sanitized.isNotEmpty) {
         manualTransferPayload = sanitized;
@@ -472,6 +530,9 @@ class CheckoutRepository {
 
     if (manualTransferPayload != null && manualTransferPayload.isNotEmpty) {
       payload['manual_transfer'] = jsonEncode(manualTransferPayload);
+    }
+    if (manualTransferReceiptFile != null) {
+      payload['manual_transfer_receipt'] = manualTransferReceiptFile;
     }
 
     final Map<String, dynamic> response = await _apiPostHandler(
@@ -880,8 +941,8 @@ class CheckoutRepository {
     );
   }
 
-
-  Future<List<CheckoutBank>> _fetchStoreGatewayBanks(List<Cart> cartItems) async {
+  Future<List<CheckoutBank>> _fetchStoreGatewayBanks(
+      List<Cart> cartItems) async {
     if (cartItems.isEmpty) {
       return const <CheckoutBank>[];
     }
@@ -927,8 +988,7 @@ class CheckoutRepository {
     return _dedupeCheckoutBanks(aggregated);
   }
 
-  List<CheckoutBank> _parseStoreManualBanks(
-      Map<String, dynamic>? store) {
+  List<CheckoutBank> _parseStoreManualBanks(Map<String, dynamic>? store) {
     if (store == null || store.isEmpty) {
       return const <CheckoutBank>[];
     }
@@ -975,8 +1035,7 @@ class CheckoutRepository {
       return null;
     }
 
-    final int? accountId =
-        _asInt(map['store_gateway_account_id'] ?? map['id']);
+    final int? accountId = _asInt(map['store_gateway_account_id'] ?? map['id']);
     final int? gatewayId = _asInt(map['store_gateway_id']);
     final String? accountNumber = _asNonEmptyString(map['account_number']);
     final String? logoUrl =
@@ -1024,16 +1083,16 @@ class CheckoutRepository {
   }
 
   List<CheckoutBank> _parseStoreGateways(
-      dynamic payload, {
-        required String sellerIdentifier,
-      }) {
+    dynamic payload, {
+    required String sellerIdentifier,
+  }) {
     final List<CheckoutBank> banks = <CheckoutBank>[];
     final Set<int> visited = <int>{};
 
     void inspect(
-        dynamic node,
-        _StoreGatewayContext context,
-        ) {
+      dynamic node,
+      _StoreGatewayContext context,
+    ) {
       if (node == null) {
         return;
       }
@@ -1066,46 +1125,50 @@ class CheckoutRepository {
       if (_looksLikeStoreGateway(map)) {
         final Map<String, dynamic> gateway = Map<String, dynamic>.from(map);
         final int? gatewayId = _asInt(_firstValue(gateway, const <List<String>>[
-          <String>['store_gateway_id'],
-          <String>['gateway_id'],
-          <String>['id'],
-          <String>['pivot', 'store_gateway_id'],
-        ])) ??
+              <String>['store_gateway_id'],
+              <String>['gateway_id'],
+              <String>['id'],
+              <String>['pivot', 'store_gateway_id'],
+            ])) ??
             currentContext.gatewayId;
 
-        final String? gatewayKey = _asString(_firstValue(gateway, const <List<String>>[
-          <String>['gateway'],
-          <String>['payment_gateway'],
-          <String>['payment_method'],
-          <String>['method'],
-          <String>['key'],
-          <String>['slug'],
-        ])) ??
-            currentContext.gatewayKey;
+        final String? gatewayKey =
+            _asString(_firstValue(gateway, const <List<String>>[
+                  <String>['gateway'],
+                  <String>['payment_gateway'],
+                  <String>['payment_method'],
+                  <String>['method'],
+                  <String>['key'],
+                  <String>['slug'],
+                ])) ??
+                currentContext.gatewayKey;
 
-        final String? gatewayLabel = _asString(_firstValue(gateway, const <List<String>>[
-          <String>['display_name'],
-          <String>['displayName'],
-          <String>['name'],
-          <String>['label'],
-          <String>['title'],
-        ])) ??
-            currentContext.gatewayLabel;
+        final String? gatewayLabel =
+            _asString(_firstValue(gateway, const <List<String>>[
+                  <String>['display_name'],
+                  <String>['displayName'],
+                  <String>['name'],
+                  <String>['label'],
+                  <String>['title'],
+                ])) ??
+                currentContext.gatewayLabel;
 
-        final bool? gatewayActive = _asBool(_firstValue(gateway, const <List<String>>[
-          <String>['is_active'],
-          <String>['active'],
-          <String>['enabled'],
-          <String>['status'],
-        ])) ??
-            currentContext.isGatewayActive;
+        final bool? gatewayActive =
+            _asBool(_firstValue(gateway, const <List<String>>[
+                  <String>['is_active'],
+                  <String>['active'],
+                  <String>['enabled'],
+                  <String>['status'],
+                ])) ??
+                currentContext.isGatewayActive;
 
-        final Map<String, dynamic>? gatewayRaw = currentContext.gatewayRaw == null
-            ? Map<String, dynamic>.from(gateway)
-            : <String, dynamic>{
-          ...currentContext.gatewayRaw!,
-          ...gateway,
-        };
+        final Map<String, dynamic>? gatewayRaw =
+            currentContext.gatewayRaw == null
+                ? Map<String, dynamic>.from(gateway)
+                : <String, dynamic>{
+                    ...currentContext.gatewayRaw!,
+                    ...gateway,
+                  };
 
         currentContext = currentContext.copyWith(
           gatewayId: gatewayId,
@@ -1126,7 +1189,7 @@ class CheckoutRepository {
 
       if (_looksLikeStoreGatewayAccount(map)) {
         final CheckoutBank? bank =
-        _checkoutBankFromStoreAccount(map, currentContext);
+            _checkoutBankFromStoreAccount(map, currentContext);
         if (bank != null) {
           banks.add(bank);
         }
@@ -1165,16 +1228,16 @@ class CheckoutRepository {
     }
 
     final _StoreGatewayContext initialContext =
-    _StoreGatewayContext(sellerId: sellerIdentifier);
+        _StoreGatewayContext(sellerId: sellerIdentifier);
     inspect(payload, initialContext);
 
     return banks;
   }
 
   CheckoutBank? _checkoutBankFromStoreAccount(
-      Map<String, dynamic> source,
-      _StoreGatewayContext context,
-      ) {
+    Map<String, dynamic> source,
+    _StoreGatewayContext context,
+  ) {
     final Map<String, dynamic> map = Map<String, dynamic>.from(source);
 
     for (final String key in const <String>['account', 'details', 'meta']) {
@@ -1186,19 +1249,20 @@ class CheckoutRepository {
 
     final Map<String, dynamic>? pivot = _mapify(source['pivot']);
 
-    final int? storeGatewayAccountId = _asInt(_firstValue(map, const <List<String>>[
-      <String>['store_gateway_account_id'],
-      <String>['account_id'],
-      <String>['id'],
-      <String>['pivot', 'account_id'],
-    ])) ??
-        _asInt(pivot?['account_id']);
+    final int? storeGatewayAccountId =
+        _asInt(_firstValue(map, const <List<String>>[
+              <String>['store_gateway_account_id'],
+              <String>['account_id'],
+              <String>['id'],
+              <String>['pivot', 'account_id'],
+            ])) ??
+            _asInt(pivot?['account_id']);
 
     final int? storeGatewayId = _asInt(_firstValue(map, const <List<String>>[
-      <String>['store_gateway_id'],
-      <String>['gateway_id'],
-      <String>['pivot', 'store_gateway_id'],
-    ])) ??
+          <String>['store_gateway_id'],
+          <String>['gateway_id'],
+          <String>['pivot', 'store_gateway_id'],
+        ])) ??
         _asInt(pivot?['store_gateway_id']) ??
         context.gatewayId;
 
@@ -1212,14 +1276,14 @@ class CheckoutRepository {
         ]));
 
     final String? name = _asString(_firstValue(map, const <List<String>>[
-      <String>['bank_name'],
-      <String>['bankName'],
-      <String>['name'],
-      <String>['title'],
-      <String>['label'],
-      <String>['display_name'],
-      <String>['displayName'],
-    ])) ??
+          <String>['bank_name'],
+          <String>['bankName'],
+          <String>['name'],
+          <String>['title'],
+          <String>['label'],
+          <String>['display_name'],
+          <String>['displayName'],
+        ])) ??
         context.gatewayLabel;
 
     final String? accountName = _asString(_firstValue(map, const <List<String>>[
@@ -1230,7 +1294,8 @@ class CheckoutRepository {
       <String>['holder'],
     ]));
 
-    final String? accountNumber = _asString(_firstValue(map, const <List<String>>[
+    final String? accountNumber =
+        _asString(_firstValue(map, const <List<String>>[
       <String>['account_number'],
       <String>['accountNumber'],
       <String>['number'],
@@ -1265,11 +1330,11 @@ class CheckoutRepository {
     ]));
 
     final bool? isActive = _asBool(_firstValue(map, const <List<String>>[
-      <String>['is_active'],
-      <String>['active'],
-      <String>['enabled'],
-      <String>['status'],
-    ])) ??
+          <String>['is_active'],
+          <String>['active'],
+          <String>['enabled'],
+          <String>['status'],
+        ])) ??
         _asBool(pivot?['is_active']) ??
         context.isGatewayActive;
 
@@ -1285,7 +1350,9 @@ class CheckoutRepository {
 
     paymentMethod = () {
       final String? trimmed = paymentMethod?.trim();
-      if (trimmed == null || trimmed.isEmpty || trimmed.toLowerCase() == 'null') {
+      if (trimmed == null ||
+          trimmed.isEmpty ||
+          trimmed.toLowerCase() == 'null') {
         return 'manual_bank';
       }
       return trimmed;
@@ -1382,13 +1449,14 @@ class CheckoutRepository {
 
   int? _storeGatewayDisplayOrder(CheckoutBank bank) {
     final Map<String, dynamic>? accountRaw =
-    _mapify(bank.raw?['store_gateway_account']);
+        _mapify(bank.raw?['store_gateway_account']);
     final int? accountOrder = _asInt(accountRaw?['display_order']);
     if (accountOrder != null) {
       return accountOrder;
     }
 
-    final Map<String, dynamic>? gatewayRaw = _mapify(bank.raw?['store_gateway']);
+    final Map<String, dynamic>? gatewayRaw =
+        _mapify(bank.raw?['store_gateway']);
     final int? gatewayOrder = _asInt(gatewayRaw?['display_order']);
     if (gatewayOrder != null) {
       return gatewayOrder;
@@ -1399,9 +1467,9 @@ class CheckoutRepository {
 
   @visibleForTesting
   List<CheckoutBank> parseStoreGatewaysForTesting(
-      dynamic payload, {
-        required String sellerIdentifier,
-      }) {
+    dynamic payload, {
+    required String sellerIdentifier,
+  }) {
     return _dedupeCheckoutBanks(
       _parseStoreGateways(
         payload,
@@ -1409,7 +1477,6 @@ class CheckoutRepository {
       ),
     );
   }
-
 
   List<CheckoutBank> _parseBanks(dynamic payload) {
     final Iterable<Map<String, dynamic>> candidates = _extractBankMaps(payload);
@@ -1523,26 +1590,25 @@ class CheckoutRepository {
     final Map<String, dynamic>? storeGateway =
         _mapify(map['store_gateway']) ?? _mapify(map['storeGateway']);
 
-
     final String? accountName = _asString(_firstValue(map, const [
-      ['account_name'],
-      ['beneficiary_name'],
-      ['recipient_name'],
-      ['account_holder'],
-      ['holder'],
-    ])) ??
+          ['account_name'],
+          ['beneficiary_name'],
+          ['recipient_name'],
+          ['account_holder'],
+          ['holder'],
+        ])) ??
         _asString(_firstValue(storeGateway ?? const <String, dynamic>{}, const [
           ['account_name'],
           ['beneficiary_name'],
         ]));
 
     final String? accountNumber = _asString(_firstValue(map, const [
-      ['account_number'],
-      ['account_no'],
-      ['beneficiary_account'],
-      ['number'],
-      ['iban'],
-    ])) ??
+          ['account_number'],
+          ['account_no'],
+          ['beneficiary_account'],
+          ['number'],
+          ['iban'],
+        ])) ??
         _asString(storeGateway?['account_number']);
 
     final String? iban = _asString(_firstValue(map, const [
@@ -2122,7 +2188,6 @@ class CheckoutRepository {
     return null;
   }
 }
-
 
 class _StoreGatewayContext {
   const _StoreGatewayContext({

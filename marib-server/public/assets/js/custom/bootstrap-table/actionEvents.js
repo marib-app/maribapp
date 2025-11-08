@@ -203,6 +203,7 @@ window.featuredSectionEvents = {
         if ($form.length) {
             $form.find('input[name="min_price"]').val(minPrice);
             $form.find('input[name="max_price"]').val(maxPrice);
+            $form.trigger('feature-section:update-manual', [row]);
         }
         
     }

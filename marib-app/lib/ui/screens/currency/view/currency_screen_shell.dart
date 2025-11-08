@@ -10,17 +10,14 @@ import 'package:flutter/services.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:marib/data/cubits/currency/currency_filters.dart';
 
-import 'package:marib/data/model/preference_option.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart'; // context.color
-import 'package:marib/utils/ui_utils.dart';
 import 'metals/metals_tab_view.dart';
 import '../state/state.dart';
 import 'convert_tab_view.dart';
 import 'rates_tab_view.dart';
 import 'shell/currency_header.dart';
 import 'shell/currency_tab_bar.dart';
-import 'shell/rates_filter_bar.dart';
 
 class CurrencyScreenUI extends StatelessWidget {
   const CurrencyScreenUI({
@@ -37,7 +34,6 @@ class CurrencyScreenUI extends StatelessWidget {
     required this.onShareRates,
     required this.amountInputFormatters,
     required this.systemUiOverlayStyle,
-    required this.onToggleWatchlistFilter,
     required this.onToggleCurrencyWatchlist,
     required this.onToggleMetalWatchlist,
     required this.onNotificationFrequencyChanged,
@@ -47,7 +43,6 @@ class CurrencyScreenUI extends StatelessWidget {
   });
 
   final CurrencyViewState state;
-  final void Function(bool) onToggleWatchlistFilter;
   final void Function(int) onToggleCurrencyWatchlist;
   final void Function(int) onToggleMetalWatchlist;
   final void Function(String) onNotificationFrequencyChanged;
@@ -82,7 +77,6 @@ class CurrencyScreenUI extends StatelessWidget {
         backgroundColor: bg,
         appBar: CurrencyHeader(
           state: state,
-          onToggleWatchlistFilter: onToggleWatchlistFilter,
           onGovernorateChanged: onGovernorateChanged,
           onNotificationFrequencyChanged: onNotificationFrequencyChanged,
         ),
@@ -90,27 +84,6 @@ class CurrencyScreenUI extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             CurrencyTabBar(tabController: tabController),
-            AnimatedBuilder(
-              animation: tabController,
-              builder: (context, child) {
-                final bool showFilters = tabController.index == 0;
-                return AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 200),
-                  switchInCurve: Curves.easeInOut,
-                  switchOutCurve: Curves.easeInOut,
-                  child: showFilters
-                      ? RatesFilterBar(
-                          key: const ValueKey('rates-compact-filters'),
-                          state: state,
-                          onToggleWatchlistFilter: onToggleWatchlistFilter,
-                          onDirectionFilterChanged: onDirectionFilterChanged,
-                        )
-                      : const SizedBox.shrink(
-                          key: ValueKey('rates-compact-filters-hidden'),
-                        ),
-                );
-              },
-            ),
             const SizedBox(height: 4),
             Expanded(child: _buildBody(context, brand, onBg)),
           ],
@@ -135,9 +108,9 @@ class CurrencyScreenUI extends StatelessWidget {
               onShareRates: onShareRates,
               brand: brand,
               onToggleCurrencyWatchlist: onToggleCurrencyWatchlist,
-              onToggleMetalWatchlist: onToggleMetalWatchlist,
               onSelectHistoryRange: onSelectHistoryRange,
               onNotificationRegionChanged: onNotificationRegionChanged,
+              onDirectionFilterChanged: onDirectionFilterChanged,
             ),
             ConvertTabView(
               state: state,

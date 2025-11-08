@@ -9,12 +9,10 @@ class RatesFilterBar extends StatelessWidget {
   const RatesFilterBar({
     super.key,
     required this.state,
-    required this.onToggleWatchlistFilter,
     required this.onDirectionFilterChanged,
   });
 
   final CurrencyViewState state;
-  final ValueChanged<bool> onToggleWatchlistFilter;
   final ValueChanged<RateChangeFilter> onDirectionFilterChanged;
 
   bool _isDark(BuildContext context) =>
@@ -83,33 +81,6 @@ class RatesFilterBar extends StatelessWidget {
       );
     }
 
-    final watchlistChip = FilterChip(
-      label: Text(
-        'قائمة المراقبة',
-        style: theme.textTheme.labelMedium?.copyWith(
-          fontWeight: FontWeight.w600,
-          color: state.showWatchlistOnly ? onBackground : onBackground.withOpacity(0.8),
-        ),
-      ),
-      avatar: Icon(
-        Icons.visibility_outlined,
-        size: 18,
-        color: state.showWatchlistOnly ? onBackground : onBackground.withOpacity(0.8),
-      ),
-      selected: state.showWatchlistOnly,
-      onSelected: onToggleWatchlistFilter,
-      showCheckmark: false,
-      backgroundColor: Colors.transparent,
-      selectedColor: selectedBg,
-      shape: StadiumBorder(
-        side: BorderSide(
-          color: state.showWatchlistOnly ? brand : borderColor,
-        ),
-      ),
-      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      visualDensity: VisualDensity.compact,
-    );
-
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Padding(
@@ -138,8 +109,6 @@ class RatesFilterBar extends StatelessWidget {
               onTap: () => onDirectionFilterChanged(RateChangeFilter.falling),
               icon: Icons.trending_down,
             ),
-            const SizedBox(width: 12),
-            watchlistChip,
           ],
         ),
       ),

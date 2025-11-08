@@ -20,6 +20,8 @@ import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/money_formatter.dart';
 import 'components/delivery_and_payment/manual_transfer_submission.dart';
 import 'dart:math' as math;
+import 'package:marib/ui/widgets/store_status_card.dart';
+import 'package:marib/utils/store_status_view_model.dart';
 
 class DeliveryAndPaymentUI extends StatelessWidget {
   // حالة عامة
@@ -97,6 +99,7 @@ class DeliveryAndPaymentUI extends StatelessWidget {
   final List<dynamic>? deliveryPaymentOptions;
   final String? deliveryPaymentTiming;
   final ValueChanged<String>? onSelectDeliveryPaymentTiming;
+  final Map<String, dynamic>? store;
 
   const DeliveryAndPaymentUI({
     super.key,
@@ -156,6 +159,7 @@ class DeliveryAndPaymentUI extends StatelessWidget {
     this.checkoutErrorIsAddressIssue = false,
     this.checkoutErrorCanRetry = false,
     this.onRetryCheckout,
+    this.store,
   });
 
   @override
@@ -181,6 +185,8 @@ class DeliveryAndPaymentUI extends StatelessWidget {
     final bool showCheckoutError =
         checkoutErrorMessage != null && checkoutErrorMessage!.trim().isNotEmpty;
     final bool hasReturnDepositTab = _hasReturnDepositToShow();
+    final StoreStatusViewModel storeStatus =
+        StoreStatusViewModel.fromMap(store);
 
     return Scaffold(
       bottomNavigationBar: addressReady
@@ -206,9 +212,16 @@ class DeliveryAndPaymentUI extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
+              if (storeStatus.hasData) ...[
+                StoreStatusCard(
+                  store: storeStatus,
+                  moneyFormatter: totalFormatter,
+                ),
+                const SizedBox(height: 11),
+              ],
               if (showAddressBlock)
                 CartDeliveryAddressTab(
-                  loading: loading,
+                  loading: loading, 
                   address: address,
                   onManageAddresses: onManageAddresses,
                   initiallyExpanded: true,
@@ -273,6 +286,7 @@ class DeliveryAndPaymentUI extends StatelessWidget {
                   selectedDeliveryPaymentTiming: deliveryPaymentTiming,
                   onSelectDeliveryPaymentTiming: onSelectDeliveryPaymentTiming,
                   initiallyExpanded: true,
+                  storeStatus: storeStatus,
                 ),
                 const SizedBox(height: 6),
               ],

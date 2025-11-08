@@ -3,6 +3,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:marib/data/model/cart/checkout_models.dart';
 import 'package:marib/data/model/wallet/wallet_summary.dart';
 import 'package:marib/utils/app_icon.dart';
+import 'package:marib/utils/store_status_view_model.dart';
+import 'package:marib/utils/store_status_view_model.dart';
 import 'delivery_payment_timing_selector.dart';
 
 import 'payment_methods_section.dart';
@@ -30,11 +32,11 @@ class CartPaymentMethodsTab extends StatelessWidget {
     required this.allowPayNow,
     required this.allowPayOnDelivery,
     required this.payOnDeliverySelected,
-    this.deliveryPaymentTimingOptions =
-    const <DeliveryPaymentTimingOption>[],
+    this.deliveryPaymentTimingOptions = const <DeliveryPaymentTimingOption>[],
     this.selectedDeliveryPaymentTiming,
     this.onSelectDeliveryPaymentTiming,
     this.initiallyExpanded = true,
+    this.storeStatus,
   });
 
   /// حالة التحميل لعرض مؤشر مناسب في التبويب.
@@ -82,7 +84,6 @@ class CartPaymentMethodsTab extends StatelessWidget {
   /// نص عرض عملة الطلب الحالية.
   final String? orderCurrencyLabel;
 
-
   /// إجمالي المبلغ المطلوب للدفع.
   final double requiredAmount;
 
@@ -97,6 +98,7 @@ class CartPaymentMethodsTab extends StatelessWidget {
 
   /// تحديد حالة التوسع المبدئي للتبويب.
   final bool initiallyExpanded;
+
   /// خيارات توقيت الدفع المتاحة للتحديد.
   final List<DeliveryPaymentTimingOption> deliveryPaymentTimingOptions;
 
@@ -105,11 +107,20 @@ class CartPaymentMethodsTab extends StatelessWidget {
 
   /// رد الفعل عند اختيار توقيت دفع مختلف.
   final ValueChanged<String>? onSelectDeliveryPaymentTiming;
-
+  final StoreStatusViewModel? storeStatus;
 
   @override
   Widget build(BuildContext context) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final bool manualPaymentsEnabled = storeStatus?.allowManualPayments ?? true;
+    String? manualPaymentsMessage;
+    if (!manualPaymentsEnabled) {
+      manualPaymentsMessage = 'قام التاجر بتعطيل الحوالات اليدوية مؤقتاً.';
+    } else if (!(storeStatus?.isOpenNow ?? true)) {
+      manualPaymentsMessage = storeStatus?.browseOnly == true
+          ? 'المتجر في وضع التصفح فقط حالياً؛ قد تتأخر معالجة الحوالات.'
+          : 'المتجر مغلق حالياً وقد تتأخر معالجة الحوالة اليدوية.';
+    }
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
@@ -139,7 +150,8 @@ class CartPaymentMethodsTab extends StatelessWidget {
             'الدفع',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
           ),
-          childrenPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          childrenPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           children: [
             if (deliveryPaymentTimingOptions.isNotEmpty) ...[
               DeliveryPaymentTimingSelector(
@@ -171,6 +183,8 @@ class CartPaymentMethodsTab extends StatelessWidget {
               walletCurrencyLabel: walletCurrencyLabel,
               orderCurrencyCode: orderCurrencyCode,
               orderCurrencyLabel: orderCurrencyLabel,
+              manualPaymentsEnabled: manualPaymentsEnabled,
+              manualPaymentsMessage: manualPaymentsMessage,
             ),
           ],
         ),

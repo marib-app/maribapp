@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' show DateFormat, NumberFormat;
 import 'widgets/rate_detail_sheet.dart';
 import 'package:marib/data/model/metal_rate.dart';
+import 'package:marib/data/cubits/currency/currency_filters.dart';
 
 import 'package:marib/data/model/currency_history.dart';
 import 'package:marib/data/model/currency_rate.dart';
 
 import '../state/state.dart';
+import 'shell/rates_filter_bar.dart';
 
 class RatesTabView extends StatelessWidget {
   const RatesTabView({
@@ -14,10 +16,10 @@ class RatesTabView extends StatelessWidget {
     required this.state,
     required this.onShareRates,
     required this.brand,
-    required this.onToggleMetalWatchlist,
     required this.onToggleCurrencyWatchlist,
     required this.onSelectHistoryRange,
     required this.onNotificationRegionChanged,
+    required this.onDirectionFilterChanged,
   });
 
   final CurrencyViewState state;
@@ -25,11 +27,9 @@ class RatesTabView extends StatelessWidget {
   final Color brand;
   final void Function(int) onToggleCurrencyWatchlist;
   final void Function(int? currencyId, int days) onSelectHistoryRange;
-  final void Function(int) onToggleMetalWatchlist;
   final void Function(int currencyId, String? regionCode)
       onNotificationRegionChanged;
-  static const String _defaultGovernorateLabel = 'المتوسط الوطني';
-
+  final void Function(RateChangeFilter) onDirectionFilterChanged;
   bool _isDark(BuildContext c) => Theme.of(c).brightness == Brightness.dark;
 
   String? _resolveQuoteSource() {
@@ -417,45 +417,6 @@ class RatesTabView extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoCard(
-    BuildContext context,
-    String label,
-    String value,
-    Color onBg,
-  ) {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: onBg.withOpacity(0.08)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              label,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: onBg.withOpacity(0.7),
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: onBg,
-                    fontWeight: FontWeight.w800,
-                  ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   // ---------- صفّ العملة (نظيف مع عرض بيع/شراء احترافي) ----------
   Widget _row(
     BuildContext context, {
@@ -577,36 +538,50 @@ class RatesTabView extends StatelessWidget {
       );
     }
 
-    Widget priceColumn(String label, String value, Color color) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label,
-            style: theme.textTheme.labelSmall?.copyWith(
-                  color: onBg.withOpacity(0.6),
-                  fontWeight: FontWeight.w700,
-                ) ??
-                TextStyle(
-                  color: onBg.withOpacity(0.6),
-                  fontWeight: FontWeight.w700,
-                ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: theme.textTheme.titleSmall?.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.w800,
-                ) ??
-                TextStyle(
-                  color: color,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 15.5,
-                ),
-          ),
-        ],
+    Widget priceChip({
+      required String label,
+      required String value,
+      required Color bg,
+      required Color fg,
+    }) {
+      return Container(
+        padding: const EdgeInsetsDirectional.fromSTEB(12, 8, 12, 8),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: fg.withOpacity(0.15)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              textDirection: TextDirection.rtl,
+              style: theme.textTheme.labelSmall?.copyWith(
+                    color: onBg.withOpacity(0.6),
+                    fontWeight: FontWeight.w700,
+                  ) ??
+                  TextStyle(
+                    color: onBg.withOpacity(0.6),
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              value,
+              textDirection: TextDirection.rtl,
+              style: theme.textTheme.titleSmall?.copyWith(
+                    color: fg,
+                    fontWeight: FontWeight.w900,
+                  ) ??
+                  TextStyle(
+                    color: fg,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 15.5,
+                  ),
+            ),
+          ],
+        ),
       );
     }
 
@@ -618,55 +593,70 @@ class RatesTabView extends StatelessWidget {
         highlightColor: brand.withOpacity(0.03),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
           decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: divider, width: 1)),
+            color: theme.cardColor,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: divider),
           ),
           child: Directionality(
             textDirection: TextDirection.rtl,
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-
+                leading,
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        name,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                              color: onBg,
-                              fontWeight: FontWeight.w800,
-                            ) ??
-                            TextStyle(
-                              color: onBg,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 15.5,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              name,
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                    color: onBg,
+                                    fontWeight: FontWeight.w800,
+                                  ) ??
+                                  TextStyle(
+                                    color: onBg,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 15.5,
+                                  ),
+                              textDirection: TextDirection.rtl,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                        textDirection: TextDirection.rtl,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(width: 8),
+                          changeIndicator,
+                        ],
                       ),
                       const SizedBox(height: 6),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
                         children: [
-                          priceColumn('سعر البيع', formatValue(sell), brand),
-                          const SizedBox(width: 16),
-                          priceColumn(
-                            'سعر الشراء',
-                            formatValue(buy),
-                            onBg.withOpacity(0.85),
+                          priceChip(
+                            label: 'سعر البيع',
+                            value: formatValue(sell),
+                            bg: brand.withOpacity(0.04),
+                            fg: brand,
+                          ),
+                          priceChip(
+                            label: 'سعر الشراء',
+                            value: formatValue(buy),
+                            bg: onBg.withOpacity(0.06),
+                            fg: onBg.withOpacity(0.85),
                           ),
                         ],
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 12),
-                leading,
-                const SizedBox(width: 12),
-                changeIndicator,
-                const SizedBox(width: 6),
+                const SizedBox(width: 10),
                 Icon(
                   Icons.chevron_left_rounded,
                   color: onBg.withOpacity(0.4),
@@ -724,410 +714,34 @@ class RatesTabView extends StatelessWidget {
     );
   }
 
-  Widget _metalRow(
-    BuildContext context, {
-    required MetalRate rate,
-    required bool isWatchlisted,
-    required VoidCallback onToggleWatchlist,
-  }) {
-    final ThemeData theme = Theme.of(context);
-    final bool dark = _isDark(context);
-    final Color onBg = dark ? Colors.white : Colors.black;
-    final Color divider = dark ? Colors.white12 : Colors.black12;
-    final NumberFormat formatter = NumberFormat('#,##0.###', 'en');
-
-    String format(double? value) {
-      if (value == null || value.isNaN || value.isInfinite) {
-        return '--';
-      }
-      return formatter.format(value);
-    }
-
-    final String sellValue = format(rate.sellPrice);
-    final String buyValue = format(rate.buyPrice);
-
-    final Widget leading = _buildMetalIcon(
-      rate: rate,
-      onBg: onBg,
-    );
-    final Widget detailLeading = _buildMetalIcon(
-      rate: rate,
-      onBg: onBg,
-      size: 56,
-    );
-
-    final Widget changeIndicator = _buildChangeIndicatorWidget(
-      context,
-      icon: Icons.trending_flat,
-      color: onBg.withOpacity(0.6),
-      text: '--',
-      compact: true,
-    );
-
-    final Widget detailChangeIndicator = _buildChangeIndicatorWidget(
-      context,
-      icon: Icons.trending_flat,
-      color: onBg.withOpacity(0.6),
-      text: '--',
-    );
-
-    final List<Widget> infoSections =
-        _buildMetalInfoSections(context, rate, onBg);
-
-    void handleTap() {
-      _showMetalDetails(
-        context: context,
-        rate: rate,
-        sell: sellValue,
-        buy: buyValue,
-        isWatchlisted: isWatchlisted,
-        onToggleWatchlist: onToggleWatchlist,
-        leading: detailLeading,
-        changeIndicator: detailChangeIndicator,
-        infoSections: infoSections,
-      );
-    }
-
-    Widget priceColumn(String label, String value, Color color) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label,
-            style: theme.textTheme.labelSmall?.copyWith(
-                  color: onBg.withOpacity(0.6),
-                  fontWeight: FontWeight.w700,
-                ) ??
-                TextStyle(
-                  color: onBg.withOpacity(0.6),
-                  fontWeight: FontWeight.w700,
-                ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: theme.textTheme.titleSmall?.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.w800,
-                ) ??
-                TextStyle(
-                  color: color,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 15.5,
-                ),
-          ),
-        ],
-      );
-    }
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: handleTap,
-        splashColor: brand.withOpacity(0.06),
-        highlightColor: brand.withOpacity(0.03),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: divider, width: 1)),
-          ),
-          child: Row(
-            children: [
-              leading,
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      rate.displayName,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                            color: onBg,
-                            fontWeight: FontWeight.w800,
-                          ) ??
-                          TextStyle(
-                            color: onBg,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 15.5,
-                          ),
-                      textDirection: TextDirection.rtl,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      rate.karatLabel,
-                      style: theme.textTheme.labelMedium?.copyWith(
-                            color: onBg.withOpacity(0.6),
-                            fontWeight: FontWeight.w600,
-                          ) ??
-                          TextStyle(
-                            color: onBg.withOpacity(0.6),
-                            fontWeight: FontWeight.w600,
-                          ),
-                      textDirection: TextDirection.rtl,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 8),
-                    Directionality(
-                      textDirection: TextDirection.rtl,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          priceColumn('سعر البيع', sellValue, brand),
-                          const SizedBox(width: 16),
-                          priceColumn(
-                            'سعر الشراء',
-                            buyValue,
-                            onBg.withOpacity(0.85),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              changeIndicator,
-              const SizedBox(width: 6),
-              Icon(
-                Icons.chevron_left_rounded,
-                color: onBg.withOpacity(0.4),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showMetalDetails({
-    required BuildContext context,
-    required MetalRate rate,
-    required String sell,
-    required String buy,
-    required bool isWatchlisted,
-    required VoidCallback onToggleWatchlist,
-    required Widget leading,
-    required Widget changeIndicator,
-    required List<Widget> infoSections,
-  }) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (BuildContext ctx) {
-        return RateDetailSheet(
-          title: rate.displayName,
-          subtitle: rate.karatLabel,
-          leading: leading,
-          sellLabel: 'سعر البيع',
-          sellValue: sell,
-          buyLabel: 'سعر الشراء',
-          buyValue: buy,
-          brand: brand,
-          isWatchlisted: isWatchlisted,
-          onToggleWatchlist: onToggleWatchlist,
-          onShare: onShareRates,
-          history: null,
-          initialHistoryRange: null,
-          onHistoryRangeSelected: null,
-          notificationSelector: null,
-          changeIndicator: changeIndicator,
-          additionalSections: infoSections,
-        );
-      },
-    );
-  }
-
-  Widget _buildMetalIcon({
-    required MetalRate rate,
-    required Color onBg,
-    double size = 44,
-  }) {
-    final bool isGold = rate.isGold;
-    final bool isSilver = rate.isSilver;
-    final Color accent = isGold
-        ? Colors.amber[700] ?? Colors.amber
-        : isSilver
-            ? Colors.blueGrey[300] ?? Colors.blueGrey
-            : brand;
-    final IconData icon = isGold
-        ? Icons.workspace_premium_outlined
-        : isSilver
-            ? Icons.diamond_outlined
-            : Icons.inventory_2_outlined;
-
-    return Container(
-      width: size,
-      height: size,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: onBg.withOpacity(0.20)),
-      ),
-      child: Icon(
-        icon,
-        color: accent,
-        size: size * 0.55,
-      ),
-    );
-  }
-
-  List<Widget> _buildMetalInfoSections(
-    BuildContext context,
-    MetalRate rate,
-    Color onBg,
-  ) {
-    final List<Widget> cards = <Widget>[
-      _buildInfoCard(
-        context,
-        'المحافظة المعروضة',
-        _metalGovernorateLabel(rate),
-        onBg,
-      ),
-    ];
-
-    if (rate.source != null && rate.source!.trim().isNotEmpty) {
-      cards.add(
-        _buildInfoCard(
-          context,
-          'المصدر',
-          rate.source!.trim(),
-          onBg,
-        ),
-      );
-    }
-
-    if (rate.quotedAt != null) {
-      cards.add(
-        _buildInfoCard(
-          context,
-          'آخر تحديث',
-          DateFormat('yyyy-MM-dd HH:mm').format(rate.quotedAt!),
-          onBg,
-        ),
-      );
-    }
-
-    if (cards.isEmpty) {
-      return const <Widget>[];
-    }
-
-    return <Widget>[
-      Wrap(
-        spacing: 12,
-        runSpacing: 12,
-        alignment: WrapAlignment.end,
-        children: cards,
-      ),
-    ];
-  }
-
-  String _metalGovernorateLabel(MetalRate rate) {
-    final String? name = rate.quoteGovernorateName ??
-        state.appliedGovernorateName ??
-        state.requestedGovernorateName;
-    final String base =
-        (name == null || name.isEmpty) ? _defaultGovernorateLabel : name;
-    if (rate.quoteUsedFallback || rate.quoteIsDefault) {
-      return '$base (افتراضي)';
-    }
-    return base;
-  }
-
-  // ---------- بطاقة الملاحظة (احتفظنا بها كما أعجبتك) ----------
-  Widget _noteCard(BuildContext context) {
-    final theme = Theme.of(context);
-    final onBg = _isDark(context) ? Colors.white : Colors.black;
-
-    // TODO(backend): مرّر نص الملاحظة من السيرفر عبر state.note مثلاً
-    final serverNote = null; // استبدلها لاحقًا بقيمة قادمة من الـ API
-    final text = serverNote ??
-        "الأسعار المعروضة يتم جلبها من بنك الشرق اليمني، وهي الأسعار الرسمية المعتمدة من البنك المركزي - عدن.";
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(12, 12, 12, 18),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: brand.withOpacity(0.35)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.info_outline_rounded, size: 18, color: brand),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text("ملاحظة",
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: onBg.withOpacity(0.9),
-                      fontWeight: FontWeight.w800,
-                    )),
-                const SizedBox(height: 4),
-                Text(
-                  text,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: onBg.withOpacity(0.78),
-                    height: 1.45,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  "⚙ يمكن استبدال هذا النص من السيرفر لاحقًا.",
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: onBg.withOpacity(0.5),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+  Widget _filters(BuildContext context) {
+    return RatesFilterBar(
+      state: state,
+      onDirectionFilterChanged: onDirectionFilterChanged,
     );
   }
 
   // ---------- Build ----------
   @override
   Widget build(BuildContext context) {
-    final rates = state.displayRates;
+    final List<CurrencyRate> rates =
+        state.displayRates.whereType<CurrencyRate>().toList(growable: false);
 
-    String _name(d) => (d as dynamic).currencyName?.toString() ?? '';
-    String _sell(d) => (d as dynamic).sellPrice?.toString() ?? '';
-    String _buy(d) => (d as dynamic).buyPrice?.toString() ?? '';
-    String? _icon(d) => (d as dynamic).iconUrl?.toString();
-    String? _iconAlt(d) => (d as dynamic).iconAlt?.toString();
-    CurrencyHistoryBundle? _history(d) => d is CurrencyRate ? d.history : null;
-    int? _id(d) {
-      try {
-        final dynamic raw = (d as dynamic).id;
-        if (raw is int) return raw;
-        if (raw is num) return raw.toInt();
-      } catch (_) {}
-      return null;
-    }
+    final List<Widget> staticItems = <Widget>[
+      _header(context),
+      _filters(context),
+    ];
 
     if (rates.isEmpty) {
       final onBg = _isDark(context) ? Colors.white : Colors.black;
       return ListView(
         children: [
-          _header(context),
+          ...staticItems,
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 40),
             child: Center(
               child: Text(
-                state.showWatchlistOnly
-                    ? 'قائمة المراقبة فارغة حاليًا'
-                    : 'لا توجد بيانات حالياً',
+                'لا توجد أسعار متاحة حالياً',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: onBg,
                       fontWeight: FontWeight.w700,
@@ -1135,73 +749,41 @@ class RatesTabView extends StatelessWidget {
               ),
             ),
           ),
-          _noteCard(context),
         ],
       );
     }
 
+    final int headerCount = staticItems.length;
+
     return ListView.builder(
-      itemCount: rates.length + 2, // + header + note
+      itemCount: headerCount + rates.length,
       itemBuilder: (ctx, i) {
-        if (i == 0) return _header(context);
-        if (i == rates.length + 1) return _noteCard(context);
-        final dynamic r = rates[i - 1];
-
-        if (r is CurrencyRate) {
-          final bool isWatchlisted = state.currencyWatchlist.contains(r.id);
-          return _row(
-            context,
-            name: r.currencyName,
-            sell: r.sellPrice.toString(),
-            buy: r.buyPrice.toString(),
-            iconUrl: r.iconUrl,
-            iconAlt: r.iconAlt,
-            isWatchlisted: isWatchlisted,
-            onToggleWatchlist: () => onToggleCurrencyWatchlist(r.id),
-            history: r.history,
-            selectedRangeDays: state.historyRangeForCurrency(r.id),
-            onHistoryRangeSelected: (int days) =>
-                onSelectHistoryRange(r.id, days),
-            currencyId: r.id,
-            onNotificationRegionChanged: (String? code) =>
-                onNotificationRegionChanged(r.id, code),
-          );
+        if (i < headerCount) {
+          return staticItems[i];
         }
-
-        if (r is MetalRate) {
-          final bool isWatchlisted = state.metalWatchlist.contains(r.id);
-          return _metalRow(
-            context,
-            rate: r,
-            isWatchlisted: isWatchlisted,
-            onToggleWatchlist: () => onToggleMetalWatchlist(r.id),
-          );
-        }
-
-        final int? currencyId = _id(r);
-        final int rateId = currencyId ?? 0;
-        final bool isWatchlisted = state.currencyWatchlist.contains(rateId);
+        final CurrencyRate r = rates[i - headerCount];
+        final bool isWatchlisted = state.currencyWatchlist.contains(r.id);
         return _row(
           context,
-          name: _name(r),
-          sell: _sell(r),
-          buy: _buy(r),
-          iconUrl: _icon(r),
-          iconAlt: _iconAlt(r),
+          name: r.currencyName,
+          sell: r.sellPrice.toString(),
+          buy: r.buyPrice.toString(),
+          iconUrl: r.iconUrl,
+          iconAlt: r.iconAlt,
           isWatchlisted: isWatchlisted,
-          onToggleWatchlist: () => onToggleCurrencyWatchlist(rateId),
-          history: _history(r),
-          selectedRangeDays: state.historyRangeForCurrency(currencyId),
+          onToggleWatchlist: () => onToggleCurrencyWatchlist(r.id),
+          history: r.history,
+          selectedRangeDays: state.historyRangeForCurrency(r.id),
           onHistoryRangeSelected: (int days) =>
-              onSelectHistoryRange(currencyId, days),
-          currencyId: currencyId,
-          onNotificationRegionChanged: currencyId == null
-              ? null
-              : (String? code) => onNotificationRegionChanged(currencyId, code),
+              onSelectHistoryRange(r.id, days),
+          currencyId: r.id,
+          onNotificationRegionChanged: (String? code) =>
+              onNotificationRegionChanged(r.id, code),
         );
       },
     );
   }
+
 }
 
 class _StaleBadge extends StatelessWidget {

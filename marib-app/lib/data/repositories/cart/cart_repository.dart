@@ -1253,6 +1253,7 @@ class CartRepository {
       deliveryPaymentOptions: summary.deliveryPaymentOptions,
       deliveryPaymentTiming: summary.deliveryPaymentTiming,
       departmentNotice: departmentNotice,
+      store: summary.store,
     );
   }
 

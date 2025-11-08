@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' show DateFormat, NumberFormat;
 
 import 'package:marib/data/model/metal_rate.dart';
-import 'dart:ui' as ui;
 import '../../state/state.dart';
 import '../widgets/rate_detail_sheet.dart';
 import 'metal_rate_card.dart';

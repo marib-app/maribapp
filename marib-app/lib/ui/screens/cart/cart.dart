@@ -532,6 +532,7 @@ class _CartScreenState extends State<CartScreen> {
           currency: _resolveCartCurrencyLabel(cartState),
           currencyCode: _resolveCartCurrencyCode(cartState),
           loadErrorMessage: _loadErrorMessage,
+          store: cartState.store,
           selectAll: _selectAll,
           selectedItemIds: _selectedItems,
           whatsappBottom: _whatsappBottom,

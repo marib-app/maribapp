@@ -35,6 +35,8 @@ class PaymentMethodsSection extends StatelessWidget {
   final String? walletCurrencyLabel;
   final String? orderCurrencyCode;
   final String? orderCurrencyLabel;
+  final bool manualPaymentsEnabled;
+  final String? manualPaymentsMessage;
 
   const PaymentMethodsSection({
     super.key,
@@ -45,6 +47,8 @@ class PaymentMethodsSection extends StatelessWidget {
     required this.walletCurrencyLabel,
     required this.orderCurrencyCode,
     required this.orderCurrencyLabel,
+    this.manualPaymentsEnabled = true,
+    this.manualPaymentsMessage,
     required this.banks,
     required this.selectedBankIndex,
     required this.onSelectBank,
@@ -102,6 +106,38 @@ class PaymentMethodsSection extends StatelessWidget {
     final Color borderColor = isDark ? Colors.grey.shade600 : accentColor;
 
     final List<Widget> paymentOptions = [];
+    if (!manualPaymentsEnabled && manualPaymentsMessage != null) {
+      paymentOptions.add(
+        Container(
+          width: double.infinity,
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.orangeAccent.withOpacity(0.12),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.orangeAccent.withOpacity(0.35)),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.info_outline,
+                  color: Colors.orangeAccent, size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  manualPaymentsMessage!,
+                  style: const TextStyle(
+                    color: Colors.orangeAccent,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     if (walletAvailable || walletSummary != null) {
       paymentOptions.add(
@@ -123,12 +159,20 @@ class PaymentMethodsSection extends StatelessWidget {
     }
 
     for (var index = 0; index < banks.length; index++) {
+      final CheckoutBank bank = banks[index];
+      final bool isManualBank = _isManualGateway(bank.paymentMethod);
+      final bool manualAllowed = manualPaymentsEnabled || !isManualBank;
+      final bool cardEnabled = allowPayNow && manualAllowed;
+      final String? manualRestriction = !manualAllowed
+          ? (manualPaymentsMessage ??
+              'قام التاجر بتعطيل الحوالات اليدوية مؤقتاً لهذا المتجر.')
+          : null;
       paymentOptions.add(
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 6),
           child: _buildBankCard(
             context,
-            bank: banks[index],
+            bank: bank,
             index: index,
             isSelected: selectedBankIndex == index,
             isDark: isDark,
@@ -137,7 +181,8 @@ class PaymentMethodsSection extends StatelessWidget {
             lightBackground: lightBackground,
             borderColor: borderColor,
             secondaryColor: secondaryColor,
-            isEnabled: allowPayNow,
+            isEnabled: cardEnabled,
+            disabledReason: manualRestriction,
           ),
         ),
       );
@@ -369,6 +414,7 @@ class PaymentMethodsSection extends StatelessWidget {
     required Color borderColor,
     required Color secondaryColor,
     required bool isEnabled,
+    String? disabledReason,
   }) {
     final String accountDisplay = bank.accountNumber?.trim().isNotEmpty == true
         ? bank.accountNumber!.trim()
@@ -384,8 +430,9 @@ class PaymentMethodsSection extends StatelessWidget {
         isDark ? Colors.white.withOpacity(0.14) : const Color(0xFFE0E0E0);
     final Color iconColor = isDark ? Colors.white70 : const Color(0xFF616161);
 
-    final String? restrictionText =
-        isEnabled ? null : '🚫 الدفع الآن غير متاح لهذه الطلبية.';
+    final String? restrictionText = isEnabled
+        ? null
+        : disabledReason ?? '🚫 الدفع الآن غير متاح لهذه الطلبية.';
 
     return Opacity(
       opacity: isEnabled ? 1 : 0.6,
@@ -518,6 +565,29 @@ class PaymentMethodsSection extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  bool _isManualGateway(String? method) {
+    if (method == null) {
+      return true;
+    }
+    final String normalized = method.trim().toLowerCase();
+
+    if (normalized.isEmpty) {
+      return true;
+    }
+
+    if (normalized.contains('manual')) {
+      return true;
+    }
+
+    if (normalized.contains('bank_transfer') ||
+        normalized.contains('bank') ||
+        normalized.contains('transfer')) {
+      return true;
+    }
+
+    return normalized == 'east_yemen_bank';
   }
 
   Widget _buildBankLogo(CheckoutBank bank, bool isDark) {

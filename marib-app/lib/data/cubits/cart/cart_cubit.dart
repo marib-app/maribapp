@@ -34,6 +34,7 @@ class CartState {
     this.departmentNotice,
     this.currency,
     this.currencyCode,
+    this.store,
   });
 
   final List<Cart> items;
@@ -54,6 +55,7 @@ class CartState {
   final String? departmentNotice;
   final String? currency;
   final String? currencyCode;
+  final Map<String, dynamic>? store;
 
   CartState copyWith({
     List<Cart>? items,
@@ -77,6 +79,7 @@ class CartState {
     Object? departmentNotice = _sentinel,
     Object? currency = _sentinel,
     Object? currencyCode = _sentinel,
+    Object? store = _sentinel,
   }) {
     return CartState(
       items: items ?? this.items,
@@ -117,6 +120,9 @@ class CartState {
       currencyCode: identical(currencyCode, _sentinel)
           ? this.currencyCode
           : currencyCode as String?,
+      store: identical(store, _sentinel)
+          ? this.store
+          : store as Map<String, dynamic>?,
     );
   }
 
@@ -248,6 +254,7 @@ class CartCubit extends Cubit<CartState> {
         checkoutLoading: true,
         currency: summary.currency ?? state.currency,
         currencyCode: summary.currencyCode ?? state.currencyCode,
+        store: summary.store,
       ),
     );
 
@@ -272,6 +279,7 @@ class CartCubit extends Cubit<CartState> {
           deliveryPaymentOptions: null,
           deliveryPaymentTiming: null,
           departmentNotice: null,
+          store: null,
         ),
       );
       return;
@@ -308,6 +316,7 @@ class CartCubit extends Cubit<CartState> {
               latestState.deliveryPaymentTiming,
           departmentNotice:
               checkoutDetails.departmentNotice ?? latestState.departmentNotice,
+          store: checkoutDetails.store,
         ),
       );
     } catch (error) {
@@ -368,6 +377,7 @@ class CartCubit extends Cubit<CartState> {
           checkoutLoading: true,
           currency: summary.currency ?? state.currency,
           currencyCode: summary.currencyCode ?? state.currencyCode,
+          store: summary.store,
         ),
       );
 
@@ -537,6 +547,7 @@ class CartCubit extends Cubit<CartState> {
           checkoutLoading: true,
           currency: summary.currency ?? state.currency,
           currencyCode: summary.currencyCode ?? state.currencyCode,
+          store: summary.store,
         ),
       );
       _pendingAdditionCache = null;
@@ -595,6 +606,7 @@ class CartCubit extends Cubit<CartState> {
               summary.deliveryPaymentTiming ?? state.deliveryPaymentTiming,
           currency: summary.currency ?? state.currency,
           currencyCode: summary.currencyCode ?? state.currencyCode,
+          store: summary.store,
           checkoutLoading: true,
         ),
       );
@@ -694,6 +706,7 @@ class CartCubit extends Cubit<CartState> {
         checkoutLoading: true,
         currency: summary.currency ?? state.currency,
         currencyCode: summary.currencyCode ?? state.currencyCode,
+        store: summary.store,
       ),
     );
     unawaited(refreshCheckoutDetails());
@@ -751,6 +764,7 @@ class CartCubit extends Cubit<CartState> {
         checkoutLoading: true,
         currency: summary.currency ?? state.currency,
         currencyCode: summary.currencyCode ?? state.currencyCode,
+        store: summary.store,
       ),
     );
     unawaited(refreshCheckoutDetails());
@@ -776,6 +790,7 @@ class CartCubit extends Cubit<CartState> {
         checkoutLoading: true,
         currency: summary.currency ?? state.currency,
         currencyCode: summary.currencyCode ?? state.currencyCode,
+        store: summary.store,
       ),
     );
     unawaited(refreshCheckoutDetails());
@@ -827,6 +842,7 @@ class CartCubit extends Cubit<CartState> {
           checkoutLoading: true,
           currency: summary.currency ?? state.currency,
           currencyCode: summary.currencyCode ?? state.currencyCode,
+          store: summary.store,
         ),
       );
       unawaited(refreshCheckoutDetails());
@@ -917,6 +933,7 @@ class CartCubit extends Cubit<CartState> {
           checkoutLoading: true,
           currency: summary.currency ?? state.currency,
           currencyCode: summary.currencyCode ?? state.currencyCode,
+          store: summary.store,
         ),
       );
       unawaited(refreshCheckoutDetails());
@@ -1136,6 +1153,7 @@ class CartCubit extends Cubit<CartState> {
         checkoutLoading: true,
         currency: summary.currency ?? state.currency,
         currencyCode: summary.currencyCode ?? state.currencyCode,
+        store: summary.store,
       ),
     );
     unawaited(refreshCheckoutDetails());

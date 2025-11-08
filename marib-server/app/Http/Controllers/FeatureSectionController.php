@@ -3,14 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\FeatureSection;
-use App\Services\BootstrapTableService;
+use App\Models\FeatureSectionItem;
 use App\Models\Item;
+use App\Services\BootstrapTableService;
 use App\Services\FeaturedSectionService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use App\Services\ResponseService;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use App\Services\FeatureSectionCategoryService;
 use Illuminate\Support\Facades\Auth;
@@ -22,6 +24,8 @@ use App\Support\FeaturedSectionQueryHelper;
 use Throwable;
 
 class FeatureSectionController extends Controller {
+
+    public const MANUAL_ITEM_LIMIT = 20;
 
 
 
@@ -49,6 +53,7 @@ class FeatureSectionController extends Controller {
             'probeRoute'           => route('feature-section.probe'),
             'flushCacheRoute'      => route('feature-section.flush-cache'),
             'slugUnavailableMessage' => __('All slug variants for this filter are already assigned. Please edit the existing feature section instead of creating a duplicate.'),
+            'manualItemLimit'      => self::MANUAL_ITEM_LIMIT,
 
 
         ]);
@@ -90,6 +95,52 @@ class FeatureSectionController extends Controller {
         }
     }
 
+    public function searchItems(Request $request): JsonResponse
+    {
+        ResponseService::noAnyPermissionThenSendJson(['feature-section-create', 'feature-section-update']);
+
+        $query = trim((string) $request->input('q', ''));
+        $sectionType = FeatureSectionCategoryService::normalizeSectionType(
+            $request->input('section_type')
+        );
+        $categoryIds = FeatureSectionCategoryService::categoryIdsForSection($sectionType);
+
+        $itemsQuery = Item::query()
+            ->select(['id', 'name', 'status', 'category_id'])
+            ->where('status', 'approved')
+            ->orderByDesc('created_at')
+            ->limit(20);
+
+        if ($query !== '') {
+            $itemsQuery->where('name', 'LIKE', '%' . $query . '%');
+        }
+
+        if (is_array($categoryIds)) {
+            if ($categoryIds === []) {
+                return response()->json(['results' => []]);
+            }
+
+            $itemsQuery->whereIn('category_id', $categoryIds);
+        }
+
+        $results = $itemsQuery->get()->map(static function (Item $item): array {
+            $title = trim((string) $item->name);
+
+            if ($title === '') {
+                $title = '#' . $item->id;
+            }
+
+            return [
+                'id' => $item->id,
+                'text' => $title,
+            ];
+        })->values();
+
+        return response()->json([
+            'results' => $results,
+        ]);
+    }
+
 
     public function store(Request $request) {
         ResponseService::noPermissionThenSendJson('feature-section-create');
@@ -102,6 +153,8 @@ class FeatureSectionController extends Controller {
         if ($request->has('filter_type')) {
             $request->merge(['filter' => $request->input('filter_type')]);
         }
+
+        $dataSource = $this->resolveDataSource($request);
 
         $this->ensureTitleFromFilter($request);
 
@@ -167,6 +220,7 @@ class FeatureSectionController extends Controller {
             ],
             
             'filter'      => ['required', Rule::in(FeatureSection::supportedFilters())],
+            'data_source' => ['required', Rule::in(FeatureSection::dataSources())],
             'style'       => 'required|in:style_1,style_2,style_3,style_4',
 
             'description' => 'nullable|string',
@@ -197,6 +251,9 @@ class FeatureSectionController extends Controller {
             ResponseService::validationError($validator->errors()->first());
         }
         $validated = $validator->validated();
+        $requiresManualItems = $dataSource === FeatureSection::DATA_SOURCE_MANUAL;
+        $manualItemIds = $this->resolveManualItemIds($request, requireItems: $requiresManualItems);
+
         try {
             $nextSequence = (int) ((FeatureSection::max('sequence')) ?? 0) + 1;
 
@@ -206,6 +263,7 @@ class FeatureSectionController extends Controller {
 
             $data['section_type'] = $request->input('section_type', $defaultSectionType);
             $data['slug'] = $expectedSlug;
+            $data['data_source'] = $dataSource;
 
             $data = $this->applyPriceBoundsToData($data);
 
@@ -218,8 +276,12 @@ class FeatureSectionController extends Controller {
 
 
 
-            $featureSection = FeatureSection::create($data);
-            $featureSection->refresh()->load('category');
+            $featureSection = DB::transaction(function () use ($data, $manualItemIds) {
+                $section = FeatureSection::create($data);
+                $this->syncManualItems($section, $manualItemIds);
+
+                return $section->refresh()->load(['category', 'manualEntries.item']);
+            });
 
             ResponseService::successResponse(
                 'Feature Section Added Successfully',
@@ -309,7 +371,12 @@ class FeatureSectionController extends Controller {
 
     private function buildListQuery(Request $request): Builder
     {
-        $query = FeatureSection::query()->with('category');
+        $query = FeatureSection::query()->with([
+            'category',
+            'manualEntries' => static function ($query) {
+                $query->orderBy('position')->with('item:id,name');
+            },
+        ]);
 
         $search = trim((string) $request->input('search', ''));
 
@@ -366,6 +433,8 @@ class FeatureSectionController extends Controller {
         if ($request->has('filter_type')) {
             $request->merge(['filter' => $request->input('filter_type')]);
         }
+
+        $dataSource = $this->resolveDataSource($request, $feature_section->data_source);
 
         $this->ensureTitleFromFilter($request);
         $this->preparePriceBoundsForValidation($request);
@@ -439,6 +508,7 @@ class FeatureSectionController extends Controller {
 
 
             'filter'      => ['required', Rule::in(FeatureSection::supportedFilters())],
+            'data_source' => ['required', Rule::in(FeatureSection::dataSources())],
 
             'style'       => 'required|in:style_1,style_2,style_3,style_4',
 
@@ -470,6 +540,8 @@ class FeatureSectionController extends Controller {
             ResponseService::validationError($validator->errors()->first());
         }
         $validated = $validator->validated();
+        $requiresManualItems = $dataSource === FeatureSection::DATA_SOURCE_MANUAL;
+        $manualItemIds = $this->resolveManualItemIds($request, requireItems: $requiresManualItems);
 
         try {
             $data = $validated;
@@ -477,6 +549,7 @@ class FeatureSectionController extends Controller {
 
             $data['section_type'] = $request->input('section_type', $fallbackSectionType);
             $data['slug'] = $expectedSlug;
+            $data['data_source'] = $dataSource;
 
             $data = $this->applyPriceBoundsToData($data, $feature_section);
 
@@ -489,9 +562,13 @@ class FeatureSectionController extends Controller {
 
 
 
-            $feature_section->fill($data);
-            $feature_section->save();
-            $feature_section->refresh()->load('category');
+            $feature_section = DB::transaction(function () use ($feature_section, $data, $manualItemIds) {
+                $feature_section->fill($data);
+                $feature_section->save();
+                $this->syncManualItems($feature_section, $manualItemIds);
+
+                return $feature_section->refresh()->load(['category', 'manualEntries.item']);
+            });
 
             ResponseService::successResponse(
                 'Feature Section Updated Successfully',
@@ -520,6 +597,7 @@ class FeatureSectionController extends Controller {
         if ($request->has('filter_type')) {
             $request->merge(['filter' => $request->input('filter_type')]);
         }
+        $dataSource = $this->resolveDataSource($request);
         $this->preparePriceBoundsForValidation($request);
 
         $expectedSlug = $this->resolveSlugFromRequest($request);
@@ -540,6 +618,7 @@ class FeatureSectionController extends Controller {
             'limit'         => ['nullable', 'integer', 'min:1', 'max:100'],
             'min_price'     => ['nullable', 'numeric', 'min:0'],
             'max_price'     => ['nullable', 'numeric', 'min:0'],
+            'data_source'   => ['required', Rule::in(FeatureSection::dataSources())],
 
         ], $messages, [
             'section_type' => 'section type',
@@ -583,11 +662,14 @@ class FeatureSectionController extends Controller {
 
 
 
+            $manualItemIds = $this->resolveManualItemIds($request, $dataSource === FeatureSection::DATA_SOURCE_MANUAL);
+
             $section = new FeatureSection([
                 'title'        => $request->input('title', ''),
                 'slug'         => $slug,
                 'filter'       => $filter,
                 'section_type' => $sectionType,
+                'data_source'  => $dataSource,
                 'value'        => $request->input('value'),
                 'style'        => $request->input('style', 'style_1'),
                 'description'  => $request->input('description'),
@@ -605,8 +687,9 @@ class FeatureSectionController extends Controller {
 
 
             $previewResult = $featuredSectionService->previewSection($section, [
-                'limit'         => $limit,
-
+                'limit' => $limit,
+                'manual_items' => $manualItemIds,
+                'data_source' => $dataSource,
             ]);
 
             $sectionPayload = $previewResult->section;
@@ -833,6 +916,12 @@ class FeatureSectionController extends Controller {
 
     private function shouldValidatePriceBounds(Request $request): bool
     {
+        $dataSource = FeatureSection::normalizeDataSource($request->input('data_source'));
+
+        if ($dataSource === FeatureSection::DATA_SOURCE_MANUAL) {
+            return false;
+        }
+
         $filter = $this->resolveFilterValue($request);
 
 
@@ -841,6 +930,12 @@ class FeatureSectionController extends Controller {
 
     private function resolvePriceBounds(Request $request): array
     {
+        $dataSource = FeatureSection::normalizeDataSource($request->input('data_source'));
+
+        if ($dataSource === FeatureSection::DATA_SOURCE_MANUAL) {
+            return [null, null];
+        }
+
         $filter = $this->resolveFilterValue($request);
 
         if (! $this->filterSupportsPriceBounds($filter)) {
@@ -857,6 +952,12 @@ class FeatureSectionController extends Controller {
 
     private function resolvePriceBoundsFromData(array $data, ?string $filter = null, array $options = []): array
     {
+        $dataSource = FeatureSection::normalizeDataSource($data['data_source'] ?? null);
+
+        if ($dataSource === FeatureSection::DATA_SOURCE_MANUAL) {
+            return [null, null];
+        }
+
         $filter ??= $data['filter'] ?? null;
 
         if ($filter !== null) {
@@ -947,6 +1048,15 @@ class FeatureSectionController extends Controller {
      */
     private function applyPriceBoundsToData(array $data, ?FeatureSection $currentSection = null): array
     {
+        $dataSource = FeatureSection::normalizeDataSource($data['data_source'] ?? null);
+
+        if ($dataSource === FeatureSection::DATA_SOURCE_MANUAL) {
+            $data['min_price'] = null;
+            $data['max_price'] = null;
+
+            return $data;
+        }
+
         $filterValue = $data['filter'] ?? null;
 
         [$minPrice, $maxPrice] = $this->resolvePriceBoundsFromData($data, $filterValue, [
@@ -970,6 +1080,9 @@ class FeatureSectionController extends Controller {
         $data['total_data'] = $this->calculateSectionTotalData($section);
         $data['is_active'] = (bool) $section->is_active;
         $data['status_update_url'] = route('feature-section.status', $section->id);
+        $data['data_source'] = FeatureSection::normalizeDataSource($section->data_source);
+        $data['manual_items'] = $this->serializeManualItems($section);
+        $data['manual_item_count'] = count($data['manual_items']);
 
 
         if ($includeActions) {
@@ -1033,9 +1146,121 @@ class FeatureSectionController extends Controller {
 
 
 
+
+    private function serializeManualItems(FeatureSection $section): array
+    {
+        $section->loadMissing(['manualEntries.item']);
+
+        return $section->manualEntries
+            ->sortBy('position')
+            ->map(static function (FeatureSectionItem $entry): array {
+                $title = $entry->item->name ?? null;
+                $resolvedTitle = is_string($title) && trim($title) !== ''
+                    ? trim($title)
+                    : '#' . $entry->item_id;
+
+                return [
+                    'id' => $entry->item_id,
+                    'title' => $resolvedTitle,
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    private function resolveDataSource(Request $request, ?string $fallback = null): string
+    {
+        $candidate = $request->input('data_source', $fallback);
+        $normalized = FeatureSection::normalizeDataSource($candidate);
+
+        $request->merge(['data_source' => $normalized]);
+
+        return $normalized;
+    }
+
+    private function resolveManualItemIds(Request $request, bool $requireItems = false): array
+    {
+        $raw = $request->input('manual_items', []);
+
+        if (is_string($raw)) {
+            $raw = array_filter(array_map(static fn($value) => trim((string) $value), explode(',', $raw)));
+        }
+
+        if (! is_array($raw)) {
+            $raw = [];
+        }
+
+        $normalized = [];
+
+        foreach ($raw as $value) {
+            if (is_numeric($value)) {
+                $id = (int) $value;
+
+                if ($id > 0 && ! in_array($id, $normalized, true)) {
+                    $normalized[] = $id;
+                }
+            }
+        }
+
+        if ($requireItems && $normalized === []) {
+            ResponseService::validationError(__('Please select at least one advertisement.'));
+        }
+
+        if (count($normalized) > self::MANUAL_ITEM_LIMIT) {
+            ResponseService::validationError(__('You can only select up to :count advertisements.', ['count' => self::MANUAL_ITEM_LIMIT]));
+        }
+
+        if ($normalized === []) {
+            return [];
+        }
+
+        $validIds = Item::query()
+            ->whereIn('id', $normalized)
+            ->where('status', 'approved')
+            ->pluck('id')
+            ->map(static fn($id) => (int) $id)
+            ->all();
+
+        $missing = array_diff($normalized, $validIds);
+
+        if ($missing) {
+            ResponseService::validationError(__('Some selected advertisements are no longer available.'));
+        }
+
+        return array_values(array_intersect($normalized, $validIds));
+    }
+
+    private function syncManualItems(FeatureSection $section, array $itemIds): void
+    {
+        FeatureSectionItem::where('feature_section_id', $section->id)->delete();
+
+        if ($itemIds === []) {
+            return;
+        }
+
+        $now = now();
+        $records = [];
+
+        foreach ($itemIds as $position => $itemId) {
+            $records[] = [
+                'feature_section_id' => $section->id,
+                'item_id' => $itemId,
+                'position' => $position,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
+
+        FeatureSectionItem::insert($records);
+    }
+
     private function calculateSectionTotalData(FeatureSection $section): int
     {
         try {
+            if (FeatureSection::normalizeDataSource($section->data_source) === FeatureSection::DATA_SOURCE_MANUAL) {
+                return count($section->manualItemIds());
+            }
+
             $canonicalSectionType = FeatureSectionCategoryService::normalizeSectionType($section->section_type);
 
 

@@ -59,7 +59,10 @@ class FeaturedSectionService
             $sectionType,
             $limit,
             $configuredRootIdentifier,
-
+            [
+                'manual_items' => $options['manual_items'] ?? null,
+                'data_source' => $options['data_source'] ?? $section->data_source,
+            ]
         );
 
         if ($result->section['section_data'] instanceof JsonResource) {
@@ -106,6 +109,9 @@ class FeaturedSectionService
         $normalizedSlug = $slugInput !== null ? FeatureSection::normalizeSlug($slugInput) : null;
 
         $featureSectionQuery = FeatureSection::query()
+            ->with(['manualEntries' => static function ($query) {
+                $query->orderBy('position');
+            }])
             ->active()
             ->orderBy('sequence', 'asc');
 
@@ -171,7 +177,9 @@ class FeaturedSectionService
                 $sectionType,
                 $limit,
                 $configuredRootIdentifier,
-
+                [
+                    'data_source' => $section->data_source,
+                ]
             );
 
             $sectionsPayload[] = $built->section;
@@ -210,66 +218,72 @@ class FeaturedSectionService
         string $canonicalSectionType,
         int $limit,
         mixed $configuredRootIdentifier,
-
+        array $options = [],
     ): SectionPayloadResult {
 
-        $itemsQuery = Item::query()
-            ->select('items.*')
-            ->with([
-                'user:id,name,email,mobile,profile,is_verified,show_personal_details,country_code',
-                'category:id,name,image',
-                'gallery_images:id,image,item_id,thumbnail_url,detail_image_url',
-                'featured_items',
-                'favourites',
-                'item_custom_field_values.custom_field',
-            ])
-            ->withCount('favourites')
-            ->withAvg('review as ratings_avg', 'ratings')
-            ->withCount('review as ratings_count')
-            ->has('user')
-            ->approved()
-            ->getNonExpiredItems();
-
-
-
-        $queryState = FeaturedSectionQueryHelper::configureQuery(
-            $itemsQuery,
-            $section,
-            $canonicalSectionType
-        );
-
-        $filter = $queryState->filter;
-        $priceColumn = $queryState->priceColumn;
-        $priceColumnName = $queryState->priceColumnQualified;
-        $minPrice = $queryState->minPrice;
-        $maxPrice = $queryState->maxPrice;
-
-        if (Auth::check()) {
-            $itemsQuery->with([
-                'item_offers' => static function ($query) {
-                    $query->where('buyer_id', Auth::id());
-                },
-                'user_reports' => static function ($query) {
-                    $query->where('user_id', Auth::id());
-                },
-            ]);
-        }
-
-        $items = $itemsQuery->limit($limit)->get();
-
+        $dataSource = FeatureSection::normalizeDataSource($options['data_source'] ?? $section->data_source);
+        $filter = $section->filter ?? 'latest';
+        $minPrice = null;
+        $maxPrice = null;
+        $items = new EloquentCollection();
         $sectionSummary = [
             'section_id' => $section->id,
             'section_updated_at' => optional($section->updated_at)->toDateTimeString(),
-            'filter' => $filter,
-            'items' => $items->map(fn(Item $item) => [
+            'data_source' => $dataSource,
+        ];
+
+        if ($dataSource === FeatureSection::DATA_SOURCE_MANUAL) {
+            $manualItemIds = $this->resolveManualItemIdsForSection($section, $options['manual_items'] ?? null);
+            $limitedIds = $manualItemIds;
+
+            if ($limit > 0 && $limitedIds !== []) {
+                $limitedIds = array_slice($limitedIds, 0, $limit);
+            }
+
+            $items = $limitedIds === []
+                ? new EloquentCollection()
+                : $this->fetchManualItemsByIds($limitedIds);
+
+            $sectionSummary['filter'] = $filter;
+            $sectionSummary['manual_item_ids'] = $limitedIds;
+        } else {
+            $itemsQuery = $this->baseItemsQuery();
+
+            $queryState = FeaturedSectionQueryHelper::configureQuery(
+                $itemsQuery,
+                $section,
+                $canonicalSectionType
+            );
+
+            $filter = $queryState->filter;
+            $priceColumn = $queryState->priceColumn;
+            $priceColumnName = $queryState->priceColumnQualified;
+            $minPrice = $queryState->minPrice;
+            $maxPrice = $queryState->maxPrice;
+
+            if (Auth::check()) {
+                $itemsQuery->with([
+                    'item_offers' => static function ($query) {
+                        $query->where('buyer_id', Auth::id());
+                    },
+                    'user_reports' => static function ($query) {
+                        $query->where('user_id', Auth::id());
+                    },
+                ]);
+            }
+
+            $items = $itemsQuery->limit($limit)->get();
+
+            $sectionSummary['filter'] = $filter;
+            $sectionSummary['items'] = $items->map(fn(Item $item) => [
                 'id' => $item->id,
                 'updated_at' => optional($item->updated_at)->toDateTimeString(),
                 'clicks' => $item->clicks,
                 'price' => $item->getAttribute($priceColumn),
                 'ratings_avg' => $item->ratings_avg,
                 'ratings_count' => $item->ratings_count,
-            ])->toArray(),
-        ];
+            ])->toArray();
+        }
 
         $sectionEtag = $this->hashForSummary($sectionSummary);
         $cacheKey = $this->cacheKey($canonicalSectionType, $section->slug);
@@ -280,6 +294,7 @@ class FeaturedSectionService
 
         $sectionPayload = $section->toArray();
         $sectionPayload['section_type'] = $canonicalSectionType;
+        $sectionPayload['data_source'] = $dataSource;
         $sectionPayload['root_identifier'] = $this->stringifyRootIdentifier(
             $configuredRootIdentifier
         ) ?? $canonicalSectionType;
@@ -297,6 +312,68 @@ class FeaturedSectionService
 
 
         return new SectionPayloadResult($sectionPayload, $sectionEtag);
+    }
+
+    private function baseItemsQuery(): Builder
+    {
+        return Item::query()
+            ->select('items.*')
+            ->with([
+                'user:id,name,email,mobile,profile,is_verified,show_personal_details,country_code',
+                'category:id,name,image',
+                'gallery_images:id,image,item_id,thumbnail_url,detail_image_url',
+                'featured_items',
+                'favourites',
+                'item_custom_field_values.custom_field',
+            ])
+            ->withCount('favourites')
+            ->withAvg('review as ratings_avg', 'ratings')
+            ->withCount('review as ratings_count')
+            ->has('user')
+            ->approved()
+            ->getNonExpiredItems();
+    }
+
+    private function resolveManualItemIdsForSection(FeatureSection $section, ?array $override = null): array
+    {
+        if ($override !== null) {
+            return array_values(array_map(static fn($id) => (int) $id, $override));
+        }
+
+        if ($section->relationLoaded('manualEntries')) {
+            return $section->manualEntries
+                ->sortBy('position')
+                ->pluck('item_id')
+                ->map(static fn($id) => (int) $id)
+                ->all();
+        }
+
+        return $section->manualEntries()
+            ->orderBy('position')
+            ->pluck('item_id')
+            ->map(static fn($id) => (int) $id)
+            ->all();
+    }
+
+    private function fetchManualItemsByIds(array $itemIds): EloquentCollection
+    {
+        if ($itemIds === []) {
+            return new EloquentCollection();
+        }
+
+        $items = $this->baseItemsQuery()
+            ->whereIn('items.id', $itemIds)
+            ->get();
+
+        $orderMap = array_values($itemIds);
+
+        return $items
+            ->sortBy(static function (Item $item) use ($orderMap) {
+                $position = array_search($item->id, $orderMap, true);
+
+                return $position === false ? PHP_INT_MAX : $position;
+            })
+            ->values();
     }
 
 

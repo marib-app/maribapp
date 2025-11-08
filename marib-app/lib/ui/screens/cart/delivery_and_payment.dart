@@ -59,6 +59,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
   final ManualPaymentService _manualPaymentService = ManualPaymentService();
 
   int? _selectedBankIndex;
+  int? _selectedStoreGatewayAccountId;
   String? _selectedPaymentMethod;
   WalletSummary? _walletSummary;
   bool _walletAvailable = false;
@@ -96,6 +97,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
   String? _departmentNotice;
   String? _returnPolicyText;
   Map<String, dynamic>? _depositInfo;
+  Map<String, dynamic>? _store;
   bool _allowPayNow = true;
   bool _allowPayOnDelivery = true;
   double? _codFeeAmount;
@@ -113,6 +115,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
 
     _cartCubit = context.read<CartCubit>();
     _latestCartState = _cartCubit.state;
+    _store = _latestCartState.store;
     _cartItems = _latestCartState.items;
     _discounts = _latestCartState.discounts;
     final _PolicyData initialPolicyData =
@@ -237,6 +240,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       distanceFuture: _distanceFuture,
       selectedBankIndex: _selectedBankIndex,
       selectedPaymentMethod: _selectedPaymentMethod,
+      selectedStoreGatewayAccountId: _selectedStoreGatewayAccountId,
       shippingQuote: _shippingQuote,
       shippingPayment: _shippingPayment,
       freeShippingApplied: _freeShippingApplied,
@@ -329,6 +333,8 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
 
       final Map<String, dynamic>? mergedDeliveryQuote = _mergeStringKeyedMaps(
           _latestCartState.deliveryQuote, incomingDeliveryQuote);
+      final Map<String, dynamic>? resolvedStoreMeta =
+          result.store ?? _latestCartState.store;
 
       _cartCubit.replaceWithSummary(
         CartSummary(
@@ -340,10 +346,10 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
           blocking: _latestCartState.blocking,
           deliveryPaymentOptions: _latestCartState.deliveryPaymentOptions,
           deliveryPaymentTiming: _latestCartState.deliveryPaymentTiming,
-          store: result.store ?? _latestCartState.store,
+          store: resolvedStoreMeta,
         ),
       );
-      Future.microtask(() { 
+      Future.microtask(() {
         _suppressCartListener = false;
       });
 
@@ -371,6 +377,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
         _orderCurrencyCode,
         _orderCurrencyLabel,
       );
+      _restoreSelectedBankPreference();
 
       _requiresAddressBlock = requiresAddressBlock;
       _deliveryInfo =
@@ -498,6 +505,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       if (mounted) {
         setState(() {
           _checkoutError = null;
+          _store = resolvedStoreMeta;
           applyQuotePolicy();
         });
       } else {
@@ -511,11 +519,13 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       if (requiresAddressBlock && !addressAvailable) {
         _selectedBankIndex = null;
         _selectedPaymentMethod = null;
+        _selectedStoreGatewayAccountId = null;
         _addressController.clear();
       } else {
         if (_selectedBankIndex != null &&
             (_selectedBankIndex! < 0 || _selectedBankIndex! >= _banks.length)) {
           _selectedBankIndex = null;
+          _selectedStoreGatewayAccountId = null;
         }
 
         final String? fetchedAddress = _userAddress?.label;
@@ -614,6 +624,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     _distanceFuture = snapshot.distanceFuture;
     _selectedBankIndex = snapshot.selectedBankIndex;
     _selectedPaymentMethod = snapshot.selectedPaymentMethod;
+    _selectedStoreGatewayAccountId = snapshot.selectedStoreGatewayAccountId;
     _shippingQuote = snapshot.shippingQuote;
     _shippingPayment = snapshot.shippingPayment;
     _freeShippingApplied = snapshot.freeShippingApplied;
@@ -663,6 +674,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     setState(() {
       _cartItems = state.items;
       _discounts = state.discounts;
+      _store = state.store;
       if (shouldUpdateDepartment) {
         _activeDepartment = resolvedDepartment;
       }
@@ -2326,9 +2338,27 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       }
     }
 
+    final String paymentMethod =
+        (selectedBank?.paymentMethod ?? (_selectedPaymentMethod ?? ''))
+            .trim()
+            .toLowerCase();
+    final bool manualPaymentSelected = paymentTimingMeta.isManualTransfer ||
+        paymentMethod == 'manual_bank' ||
+        paymentMethod == 'east_yemen_bank';
+
+    if (manualPaymentSelected && manualTransfer == null) {
+      HelperUtils.showSnackBarMessage(
+        context,
+        'يرجى إدخال بيانات الحوالة البنكية وإرفاق الإيصال قبل متابعة الطلب.',
+      );
+      return;
+    }
+
     setState(() => _submitting = true);
 
     Map<String, dynamic>? manualTransferPayload;
+    final int? selectedStoreGatewayAccountId =
+        selectedBank?.storeGatewayAccountId ?? selectedBank?.id;
     if (manualTransfer != null) {
       final String senderName = manualTransfer.trimmedSenderName;
       final String transferCode = manualTransfer.trimmedTransferCode;
@@ -2340,6 +2370,12 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
         if (senderName.isNotEmpty) 'sender_name': senderName,
         if (transferReference != null) 'transfer_reference': transferReference,
         if (note != null && note.isNotEmpty) 'note': note,
+        if (selectedStoreGatewayAccountId != null)
+          'store_gateway_account_id': selectedStoreGatewayAccountId,
+        if (_store != null && _store!.isNotEmpty)
+          'store': Map<String, dynamic>.from(_store!),
+        if (manualTransfer.receiptFile != null)
+          'receipt_file': manualTransfer.receiptFile,
       };
 
       if (payload.isNotEmpty) {
@@ -2405,6 +2441,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       CheckoutBank? selectedBank,
       _DeliveryPaymentMeta paymentTimingMeta,
       ManualTransferSubmissionData? manualTransfer) async {
+    final bool isStoreOrder = _store != null && _store!.isNotEmpty;
     final List<Map<String, dynamic>> payloadCandidates =
         _collectPayloadCandidates(result);
     final String? orderId = _resolveOrderIdentifier(result, payloadCandidates);
@@ -2457,7 +2494,8 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     _ManualPaymentAttemptResult manualAttempt =
         const _ManualPaymentAttemptResult(attempted: false, success: false);
 
-    if (manualTransfer != null &&
+    if (!isStoreOrder &&
+        manualTransfer != null &&
         manualTransfer.hasReceipt &&
         manualBankSelected &&
         selectedBank != null &&
@@ -3053,7 +3091,45 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     setState(() {
       _selectedBankIndex = index;
       _selectedPaymentMethod = _banks[index].paymentMethod;
+      _selectedStoreGatewayAccountId =
+          _banks[index].storeGatewayAccountId ?? _banks[index].id;
     });
+  }
+
+  void _restoreSelectedBankPreference() {
+    if (_banks.isEmpty) {
+      _selectedBankIndex = null;
+      return;
+    }
+
+    if (_selectedStoreGatewayAccountId != null) {
+      final int matchedIndex = _banks.indexWhere((CheckoutBank bank) {
+        final int? bankAccountId = bank.storeGatewayAccountId ?? bank.id;
+        return bankAccountId != null &&
+            bankAccountId == _selectedStoreGatewayAccountId;
+      });
+
+      if (matchedIndex >= 0) {
+        _selectedBankIndex = matchedIndex;
+        _selectedPaymentMethod = _banks[matchedIndex].paymentMethod;
+        return;
+      }
+    }
+
+    if (_selectedBankIndex != null &&
+        _selectedBankIndex! >= 0 &&
+        _selectedBankIndex! < _banks.length) {
+      final CheckoutBank bank = _banks[_selectedBankIndex!];
+      _selectedStoreGatewayAccountId = bank.storeGatewayAccountId ?? bank.id;
+      return;
+    }
+
+    if (_banks.length == 1) {
+      _selectedBankIndex = 0;
+      _selectedPaymentMethod = _banks[0].paymentMethod;
+      _selectedStoreGatewayAccountId =
+          _banks[0].storeGatewayAccountId ?? _banks[0].id;
+    }
   }
 
   String? _normalizeCurrencyToken(String? value, {String? code}) {
@@ -3467,6 +3543,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     setState(() {
       _selectedBankIndex = null;
       _selectedPaymentMethod = 'wallet';
+      _selectedStoreGatewayAccountId = null;
     });
   }
 
@@ -4062,6 +4139,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
         returnPolicyText: _returnPolicyText,
         depositInfo: depositViewModel,
         onToggleDeposit: _depositToggleAllowed ? _handleDepositToggle : null,
+        store: _store,
         deliveryInfo: addressReady ? _deliveryInfo : null,
         deliveryPrice: addressReady ? _deliveryPrice : null,
         canProceed: addressReady ? _canProceed : false,
@@ -4084,6 +4162,7 @@ class _CheckoutStateSnapshot {
     this.distanceFuture,
     this.selectedBankIndex,
     this.selectedPaymentMethod,
+    this.selectedStoreGatewayAccountId,
     this.shippingQuote,
     this.shippingPayment,
     this.freeShippingApplied = false,
@@ -4102,6 +4181,7 @@ class _CheckoutStateSnapshot {
   final Future<double?>? distanceFuture;
   final int? selectedBankIndex;
   final String? selectedPaymentMethod;
+  final int? selectedStoreGatewayAccountId;
   final CheckoutShippingQuote? shippingQuote;
   final Map<String, dynamic>? shippingPayment;
   final bool freeShippingApplied;

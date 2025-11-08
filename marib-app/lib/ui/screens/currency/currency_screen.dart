@@ -401,9 +401,6 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
     return requestedStatus.isGranted || requestedStatus.isLimited;
   }
 
-  void _onToggleWatchlistFilter(bool enabled) {
-    context.read<CurrencyCubit>().toggleWatchlistFilter(enabled);
-  }
 
   void _onToggleCurrencyWatchlist(int currencyId) {
     context.read<CurrencyCubit>().toggleCurrencyWatchlist(currencyId);
@@ -733,7 +730,6 @@ class _CurrencyScreenLogicState extends State<_CurrencyScreenLogic>
           onShareRates: () => _onShareRates(viewState),
           onGovernorateChanged: _onGovernorateChanged,
 
-          onToggleWatchlistFilter: _onToggleWatchlistFilter,
           onToggleCurrencyWatchlist: _onToggleCurrencyWatchlist,
           onToggleMetalWatchlist: _onToggleMetalWatchlist,
           onNotificationFrequencyChanged: _onNotificationFrequencyChanged,

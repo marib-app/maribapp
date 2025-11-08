@@ -95,9 +95,21 @@
             </div>
 
             @php
-                $featureSectionRoute = Route::has('feature-section.list')
-                    ? route('feature-section.list', ['include_actions' => 0])
-                    : null;
+                $featureSectionRoute = null;
+
+                try {
+                    if (\Illuminate\Support\Facades\Route::has('feature-section.list')) {
+                        $featureSectionRoute = route('feature-section.list', ['include_actions' => 0]);
+                    }
+                } catch (\Throwable $exception) {
+                    // Prevent the entire dashboard from failing if the optional route is missing.
+                    if (config('app.debug')) {
+                        logger()->warning('feature-section.list route is missing or misconfigured.', [
+                            'message' => $exception->getMessage(),
+                        ]);
+                    }
+                    $featureSectionRoute = null;
+                }
             @endphp
             <div class="col-md-8">
                 <div class="card h-100">

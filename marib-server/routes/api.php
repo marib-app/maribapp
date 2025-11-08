@@ -63,6 +63,7 @@ Route::prefix('wifi')->group(function (): void {
 Route::get('products/{item}/purchase-options', [ProductPurchaseOptionsController::class, 'show'])
     ->whereNumber('item');
 Route::get('metal-rates', [PublicMetalRateController::class, 'index']);
+Route::get('get-featured-section', [ApiController::class, 'getFeaturedSections']);
 
     
 

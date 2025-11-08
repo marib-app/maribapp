@@ -448,6 +448,12 @@ class _ProfileTabBar extends StatelessWidget {
   // حدث تغيير التبويب (اختياري)
   final void Function(int index)? onTap;
 
+  static const EdgeInsets _labelPadding =
+      EdgeInsets.symmetric(horizontal: 10, vertical: 4);
+  static const double _extraVerticalInset = 6;
+  static double get preferredHeight =>
+      kTextTabBarHeight + _labelPadding.vertical + _extraVerticalInset;
+
   const _ProfileTabBar({
     required this.controller,
     required this.adTabs,
@@ -484,7 +490,7 @@ class _ProfileTabBar extends StatelessWidget {
         isScrollable: true,
         physics: AppScrollBehavior.defaultPhysics,
 
-        labelPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        labelPadding: _labelPadding,
         indicator: UnderlineTabIndicator(
             borderSide: BorderSide(color: brand, width: 2.5),
             insets: const EdgeInsets.symmetric(horizontal: 20)),
@@ -542,7 +548,15 @@ class _StatsTabsHeaderDelegate extends SliverPersistentHeaderDelegate {
   final WidgetBuilder tabBarBuilder;
 
   static const double _statsSectionExtent = 95;
-  static const double _tabsSectionExtent = 40;
+  static const double _topSpacing = 4;
+  static const double _betweenSpacing = 6;
+  static const double _bottomSpacing = 12;
+
+  double get _tabsSectionExtent =>
+      _ProfileTabBar.preferredHeight +
+      _topSpacing +
+      _betweenSpacing +
+      _bottomSpacing;
 
   @override
   double get minExtent => _tabsSectionExtent;
@@ -579,7 +593,7 @@ class _StatsTabsHeaderDelegate extends SliverPersistentHeaderDelegate {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          const SizedBox(height: 4),
+          const SizedBox(height: _topSpacing),
           ClipRect(
             child: Align(
               alignment: Alignment.bottomCenter,
@@ -593,9 +607,9 @@ class _StatsTabsHeaderDelegate extends SliverPersistentHeaderDelegate {
               ),
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: _betweenSpacing),
           tabBarBuilder(context),
-          const SizedBox(height: 12),
+          const SizedBox(height: _bottomSpacing),
         ],
       ),
     );

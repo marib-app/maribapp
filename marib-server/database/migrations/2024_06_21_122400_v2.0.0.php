@@ -2,7 +2,6 @@
 
 use App\Models\Blog;
 use App\Models\Category;
-use App\Models\FeatureSection;
 use App\Models\Item;
 use App\Models\User;
 use App\Models\UserFcmToken;
@@ -16,22 +15,6 @@ return new class extends Migration {
      * Run the migrations.
      */
     public function up(): void {
-        Schema::table('feature_sections', static function (Blueprint $table) {
-            $table->string('slug', 191)->after('title');
-        });
-
-        FeatureSection::chunk(100, static function ($data) {
-            foreach ($data as $featureSection) {
-                $featureSection->update([
-                    'slug' => HelperService::generateUniqueSlug(new FeatureSection(), $featureSection->title, $featureSection->id)
-                ]);
-            }
-        });
-
-        Schema::table('feature_sections', static function (Blueprint $table) {
-            $table->unique('slug');
-        });
-
         Blog::chunk(100, static function ($data) {
             foreach ($data as $blog) {
                 $blog->update([
@@ -70,10 +53,12 @@ return new class extends Migration {
             $table->dropColumn('slug');
         });
 
-        Schema::useNativeSchemaOperationsIfPossible();
-        Schema::table('social_logins', static function (Blueprint $table) {
-            $table->enum('type', ['google', 'email', 'phone', 'apple'])->change();
-        });
+        if (Schema::getConnection()->getDriverName() !== 'sqlite') {
+            Schema::useNativeSchemaOperationsIfPossible();
+            Schema::table('social_logins', static function (Blueprint $table) {
+                $table->enum('type', ['google', 'email', 'phone', 'apple'])->change();
+            });
+        }
 
         Schema::create('contact_us', static function (Blueprint $table) {
             $table->id();
@@ -105,19 +90,17 @@ return new class extends Migration {
             UserFcmToken::insertOrIgnore($tokens);
         }
 
-        Schema::table('users', static function (Blueprint $table) {
-            $table->string('fcm_id')->comment('remove this in next update')->change();
-        });
+        if (Schema::getConnection()->getDriverName() !== 'sqlite') {
+            Schema::table('users', static function (Blueprint $table) {
+                $table->string('fcm_id')->comment('remove this in next update')->change();
+            });
+        }
     }
 
     /**
      * Reverse the migrations.
      */
     public function down(): void {
-        Schema::table('feature_sections', static function (Blueprint $table) {
-            $table->dropColumn('slug');
-        });
-
         Schema::table('blogs', static function (Blueprint $table) {
             $table->dropUnique('blogs_slug_unique');
         });
@@ -134,16 +117,20 @@ return new class extends Migration {
             $table->string('slug')->after('name');
         });
 
-        Schema::useNativeSchemaOperationsIfPossible();
-        Schema::table('social_logins', static function (Blueprint $table) {
-            $table->enum('type', ['google', 'email', 'phone'])->change();
-        });
+        if (Schema::getConnection()->getDriverName() !== 'sqlite') {
+            Schema::useNativeSchemaOperationsIfPossible();
+            Schema::table('social_logins', static function (Blueprint $table) {
+                $table->enum('type', ['google', 'email', 'phone'])->change();
+            });
+        }
 
         Schema::dropIfExists('contact_us');
         Schema::dropIfExists('user_fcm_tokens');
 
-        Schema::table('users', static function (Blueprint $table) {
-            $table->string('fcm_id')->comment('')->change();
-        });
+        if (Schema::getConnection()->getDriverName() !== 'sqlite') {
+            Schema::table('users', static function (Blueprint $table) {
+                $table->string('fcm_id')->comment('')->change();
+            });
+        }
     }
 };

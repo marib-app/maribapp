@@ -30,10 +30,11 @@ class ItemFactory extends Factory
             'status' => 'approved',
             'video_link' => null,
             'product_link' => $this->faker->url(),
+            'clicks' => 0,
 
 
             'city' => $this->faker->city(),
-            'state' => $this->faker->state(),
+            'state' => $this->faker->word(),
             'country' => $this->faker->country(),
             'user_id' => User::factory(),
             'image' => $this->faker->imageUrl(),

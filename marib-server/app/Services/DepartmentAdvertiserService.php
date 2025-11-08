@@ -7,7 +7,7 @@ use App\Models\Item;
 use App\Models\Setting;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
-use App\Services\FeatureSectionCategoryService;
+use App\Services\InterfaceSectionService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Storage;
@@ -254,7 +254,7 @@ class DepartmentAdvertiserService
             return null;
         }
 
-        $canonical = FeatureSectionCategoryService::canonicalSectionTypeOrNull($interfaceType);
+        $canonical = InterfaceSectionService::canonicalSectionTypeOrNull($interfaceType);
 
         if ($canonical !== null) {
             return $canonical;

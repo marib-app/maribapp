@@ -8,16 +8,18 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
-        Schema::table('cart_items', function (Blueprint $table) {
-            if (Schema::hasColumn('cart_items', 'user_id')) {
-               try {
+        $isSqlite = Schema::getConnection()->getDriverName() === 'sqlite';
+
+        Schema::table('cart_items', function (Blueprint $table) use ($isSqlite) {
+            if (! $isSqlite && Schema::hasColumn('cart_items', 'user_id')) {
+                try {
                     $table->dropForeign(['user_id']);
                 } catch (\Throwable $exception) {
                     // Foreign key already removed or never created; continue.
                 }
             }
 
-            if (Schema::hasColumn('cart_items', 'item_id')) {
+            if (! $isSqlite && Schema::hasColumn('cart_items', 'item_id')) {
                 try {
                     $table->dropForeign(['item_id']);
                 } catch (\Throwable $exception) {
@@ -87,8 +89,10 @@ return new class extends Migration {
 
     public function down(): void
     {
-        Schema::table('cart_items', function (Blueprint $table) {
-            if (Schema::hasColumn('cart_items', 'user_id')) {
+        $isSqlite = Schema::getConnection()->getDriverName() === 'sqlite';
+
+        Schema::table('cart_items', function (Blueprint $table) use ($isSqlite) {
+            if (! $isSqlite && Schema::hasColumn('cart_items', 'user_id')) {
                 try {
                     $table->dropForeign(['user_id']);
                 } catch (\Throwable $exception) {
@@ -96,7 +100,7 @@ return new class extends Migration {
                 }
             }
 
-            if (Schema::hasColumn('cart_items', 'item_id')) {
+            if (! $isSqlite && Schema::hasColumn('cart_items', 'item_id')) {
                 try {
                     $table->dropForeign(['item_id']);
                 } catch (\Throwable $exception) {

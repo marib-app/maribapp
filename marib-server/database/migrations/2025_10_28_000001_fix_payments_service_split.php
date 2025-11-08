@@ -11,6 +11,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::getConnection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         /** =========================
          *  payment_transactions
          *  ========================= */
@@ -141,6 +145,10 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (Schema::getConnection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         // payment_transactions
         if (Schema::hasTable('payment_transactions')) {
             Schema::table('payment_transactions', function (Blueprint $table): void {

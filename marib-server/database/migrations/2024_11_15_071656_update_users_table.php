@@ -11,10 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->boolean('show_personal_details')->default(1)->change();
-            $table->boolean('notification')->default(1)->change();
-        });
+        if (Schema::getConnection()->getDriverName() !== 'sqlite') {
+            Schema::table('users', function (Blueprint $table) {
+                $table->boolean('show_personal_details')->default(1)->change();
+                $table->boolean('notification')->default(1)->change();
+            });
+        }
     }
 
     /**
@@ -22,9 +24,11 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->boolean('show_personal_details')->default(0);
-            $table->boolean('notification')->default(0);
-        });
+        if (Schema::getConnection()->getDriverName() !== 'sqlite') {
+            Schema::table('users', function (Blueprint $table) {
+                $table->boolean('show_personal_details')->default(0);
+                $table->boolean('notification')->default(0);
+            });
+        }
     }
 };

@@ -11,7 +11,7 @@ $serviceCategoryMap = [
     'services_marib_guide'   => (int) env('SERVICE_CATEGORY_MARIB_GUIDE_ID', 177),
 ];
 
-$featureSectionRoots = [
+$interfaceSectionRoots = [
     'homepage'    => null,
     'public'      => null,
     'request_ad'  => null,
@@ -31,7 +31,7 @@ foreach ($serviceCategoryMap as $serviceKey => $categoryId) {
     $serviceSectionRoots[$serviceKey] = $categoryId;
 }
 
-$featureSectionRoots = array_merge($featureSectionRoots, $serviceSectionRoots);
+$interfaceSectionRoots = array_merge($interfaceSectionRoots, $serviceSectionRoots);
 
 return [
     'cache_ttl_seconds' => (int) env('FEATURE_SECTION_CACHE_TTL_SECONDS', 300),
@@ -42,8 +42,8 @@ return [
         'most_viewed',
         'price_range',
     ],
-    'root_identifiers' => $featureSectionRoots,
-    'allowed_section_types' => array_keys($featureSectionRoots),
+    'root_identifiers' => $interfaceSectionRoots,
+    'allowed_section_types' => array_keys($interfaceSectionRoots),
 
     'section_type_aliases' => [
         'real_estate_services' => 'real_estate',

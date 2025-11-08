@@ -15,6 +15,13 @@ class _ProfileScreenState extends State<ProfileScreen>
   final ScrollController _scroll = ScrollController();
   final ValueNotifier<double> _scrollY = ValueNotifier(0);
   final InAppReview _inAppReview = InAppReview.instance;
+  StreamSubscription<ThemeState>? _themeSubscription;
+
+  void _onThemeChanged(bool isDark) {
+    if (_isDark.value != isDark) {
+      _isDark.value = isDark;
+    }
+  }
 
   @override
   bool get wantKeepAlive => true;
@@ -22,13 +29,19 @@ class _ProfileScreenState extends State<ProfileScreen>
   @override
   void initState() {
     super.initState();
-    _isDark.value = context.read<AppThemeCubit>().isDarkMode();
+    final appThemeCubit = context.read<AppThemeCubit>();
+    _onThemeChanged(appThemeCubit.isDarkMode());
+    _themeSubscription = appThemeCubit.stream.listen((state) {
+      if (!mounted) return;
+      _onThemeChanged(state.appTheme == AppTheme.dark);
+    });
 
     _scroll.addListener(() => _scrollY.value = _scroll.offset);
   }
 
   @override
   void dispose() {
+    _themeSubscription?.cancel();
     _isDark.dispose();
     _scroll.dispose();
     _scrollY.dispose();

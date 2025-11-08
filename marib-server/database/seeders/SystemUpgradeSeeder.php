@@ -44,7 +44,6 @@ class SystemUpgradeSeeder extends Seeder {
             'slider'                      => [
                 'only' => ['create', 'delete', 'list']
             ],
-            'feature-section'             => '*',
             'report-reason'               => '*',
             'user-reports'                => [
                 'only' => ['list']

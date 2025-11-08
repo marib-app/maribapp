@@ -311,7 +311,6 @@ Route::post('sliders/{slider}/click', [ApiController::class, 'recordSliderClick'
 Route::get('get-report-reasons', [ApiController::class, 'getReportReasons']);
 Route::get('get-categories', [ApiController::class, 'getSubCategories']);
 Route::get('get-parent-categories', [ApiController::class, 'getParentCategoryTree']);
-Route::get('get-featured-section', [ApiController::class, 'getFeaturedSection']);
 Route::get('blogs', [ApiController::class, 'getBlog']);
 Route::get('blog-tags', [ApiController::class, 'getAllBlogTags']);
 Route::get('faq', [ApiController::class, 'getFaqs']);

@@ -187,6 +187,11 @@ class DeliveryAndPaymentUI extends StatelessWidget {
     final bool hasReturnDepositTab = _hasReturnDepositToShow();
     final StoreStatusViewModel storeStatus =
         StoreStatusViewModel.fromMap(store);
+    final MoneyFormatter totalFormatter = MoneyFormatter.fromCartCurrency(
+      currency: orderCurrencyLabel,
+      currencyCode: orderCurrencyCode,
+      fallbackLabel: orderCurrencyLabel ?? orderCurrencyCode,
+    );
 
     return Scaffold(
       bottomNavigationBar: addressReady
@@ -195,6 +200,7 @@ class DeliveryAndPaymentUI extends StatelessWidget {
               requiredAmountDisplay,
               canProceed,
               submitting,
+              totalFormatter,
             )
           : null,
       backgroundColor: Theme.of(context).brightness == Brightness.dark
@@ -302,6 +308,7 @@ class DeliveryAndPaymentUI extends StatelessWidget {
     String totalAmountDisplay,
     bool isButtonEnabled,
     bool submitting,
+    MoneyFormatter totalFormatter,
   ) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -341,12 +348,6 @@ class DeliveryAndPaymentUI extends StatelessWidget {
         math.max(0, discountedTotal + totalDiscountAmount);
     final bool showOriginalTotal = totalDiscountAmount > discountEpsilon &&
         (originalTotal - discountedTotal) > discountEpsilon;
-
-    final MoneyFormatter totalFormatter = MoneyFormatter.fromCartCurrency(
-      currency: orderCurrencyLabel,
-      currencyCode: orderCurrencyCode,
-      fallbackLabel: orderCurrencyLabel ?? orderCurrencyCode,
-    );
 
     final String discountedTotalDisplay =
         totalFormatter.format(discountedTotal);

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ManualPaymentRequest;
+use App\Models\ManualPaymentRequestHistory;
 use App\Models\Order;
 use App\Models\Store;
 use Carbon\Carbon;
@@ -21,11 +23,52 @@ class StoreDashboardController extends Controller
         ];
 
         $status = $this->buildStatusCard($store);
+        $manualPaymentStats = $this->buildManualPaymentSummary($store);
+        $recentManualPayments = $store->manualPaymentRequests()
+            ->with('user')
+            ->latest()
+            ->limit(5)
+            ->get();
+        $recentOrders = $store->orders()
+            ->latest()
+            ->limit(5)
+            ->get();
+
+        $pendingOrderStates = [
+            Order::STATUS_PROCESSING,
+            Order::STATUS_PREPARING,
+            Order::STATUS_READY_FOR_DELIVERY,
+            Order::STATUS_OUT_FOR_DELIVERY,
+        ];
+
+        $pendingOrders = $store->orders()
+            ->whereIn('order_status', $pendingOrderStates);
+
+        $pendingOrderCount = (clone $pendingOrders)->count();
+        $pendingOrderValue = (clone $pendingOrders)->sum('final_amount');
+
+        $recentActivities = ManualPaymentRequestHistory::query()
+            ->with(['manualPaymentRequest', 'user'])
+            ->whereHas('manualPaymentRequest', static function ($query) use ($store) {
+                $query->where('store_id', $store->getKey());
+            })
+            ->latest()
+            ->limit(7)
+            ->get();
+
+        $alerts = $this->buildAlertCards($status, $manualPaymentStats, $pendingOrderCount);
 
         return view('store.dashboard', [
             'store' => $store,
             'overview' => $overview,
             'statusCard' => $status,
+            'manualPaymentStats' => $manualPaymentStats,
+            'recentManualPayments' => $recentManualPayments,
+            'recentOrders' => $recentOrders,
+            'pendingOrderCount' => $pendingOrderCount,
+            'pendingOrderValue' => $pendingOrderValue,
+            'recentActivities' => $recentActivities,
+            'alerts' => $alerts,
         ]);
     }
 
@@ -78,5 +121,68 @@ class StoreDashboardController extends Controller
             'allow_delivery' => (bool) ($settings?->allow_delivery ?? true),
             'allow_pickup' => (bool) ($settings?->allow_pickup ?? true),
         ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildManualPaymentSummary(Store $store): array
+    {
+        $openStatuses = ManualPaymentRequest::OPEN_STATUSES;
+
+        $base = $store->manualPaymentRequests();
+
+        $openQuery = (clone $base)->whereIn('status', $openStatuses);
+
+        $approvedToday = (clone $base)
+            ->where('status', ManualPaymentRequest::STATUS_APPROVED)
+            ->whereDate('updated_at', now())
+            ->count();
+
+        $rejectedToday = (clone $base)
+            ->where('status', ManualPaymentRequest::STATUS_REJECTED)
+            ->whereDate('updated_at', now())
+            ->count();
+
+        return [
+            'open_count' => $openQuery->count(),
+            'open_amount' => (clone $openQuery)->sum('amount'),
+            'approved_today' => $approvedToday,
+            'rejected_today' => $rejectedToday,
+            'total_requests' => $store->manualPaymentRequests()->count(),
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $statusCard
+     * @param array<string, mixed> $manualPaymentStats
+     * @return array<int, array{type:string,message:string}>
+     */
+    private function buildAlertCards(array $statusCard, array $manualPaymentStats, int $pendingOrderCount): array
+    {
+        $alerts = [];
+
+        if (($statusCard['is_manually_closed'] ?? false) === true) {
+            $alerts[] = [
+                'type' => 'warning',
+                'message' => __('المتجر مغلق يدوياً حالياً، لن يتمكن العملاء من إنهاء الطلبات.'),
+            ];
+        }
+
+        if (($manualPaymentStats['open_count'] ?? 0) > 0) {
+            $alerts[] = [
+                'type' => 'primary',
+                'message' => __('هناك :count حوالات تنتظر الإجراء.', ['count' => $manualPaymentStats['open_count']]),
+            ];
+        }
+
+        if ($pendingOrderCount > 0) {
+            $alerts[] = [
+                'type' => 'info',
+                'message' => __('هناك :count طلبات قيد التنفيذ وتحتاج لتحديث الحالة.', ['count' => $pendingOrderCount]),
+            ];
+        }
+
+        return $alerts;
     }
 }

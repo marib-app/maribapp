@@ -10,7 +10,7 @@ use App\Services\BootstrapTableService;
 use App\Services\DepartmentAdvertiserService;
 use App\Services\DepartmentReportService;
 use App\Services\FileService;
-use App\Services\FeatureSectionCategoryService;
+use App\Services\InterfaceSectionService;
 use App\Policies\SectionDelegatePolicy;
 use App\Services\ImageVariantService;
 
@@ -276,7 +276,7 @@ class ItemController extends Controller {
 
             
 
-            $interfaceType = FeatureSectionCategoryService::normalizeSectionType($request->input('interface_type', 'computer'));
+            $interfaceType = InterfaceSectionService::normalizeSectionType($request->input('interface_type', 'computer'));
             $sectionRoots = [
                 'computer' => 5,
             ];

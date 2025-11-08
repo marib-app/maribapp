@@ -8,6 +8,10 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
+        if (Schema::getConnection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         // 1) فرض قيمة افتراضية وعدم السماح بـ NULL في حالة الدفع لطلبات الخدمة
         DB::statement("UPDATE service_requests SET payment_status='pending' WHERE payment_status IS NULL");
         DB::statement("
@@ -181,6 +185,10 @@ return new class extends Migration {
 
     public function down(): void
     {
+        if (Schema::getConnection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         // F?F?F? F?F?F?F??/?????????????/??????F?F?F?F?F? F?F?F? F?F?F?
         DB::unprepared("DROP TRIGGER IF EXISTS trg_pt_norm_gateway_bi");
         DB::unprepared("DROP TRIGGER IF EXISTS trg_pt_norm_gateway_bu");

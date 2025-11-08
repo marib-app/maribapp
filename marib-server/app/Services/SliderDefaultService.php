@@ -91,7 +91,7 @@ class SliderDefaultService
             return 'all';
         }
 
-        return FeatureSectionCategoryService::normalizeSectionType($interfaceType);
+        return InterfaceSectionService::normalizeSectionType($interfaceType);
     }
 
     private function expandInterfaceTypes(string $interfaceType): array
@@ -100,7 +100,7 @@ class SliderDefaultService
             return ['all'];
         }
 
-        $variants = FeatureSectionCategoryService::sectionTypeVariants($interfaceType);
+        $variants = InterfaceSectionService::sectionTypeVariants($interfaceType);
 
         return array_values(array_unique(array_merge($variants, ['all'])));
     }

@@ -32,7 +32,6 @@ use App\Models\CustomField;
 use App\Models\Faq;
 use App\Models\Favourite;
 use App\Models\FeaturedItems;
-use App\Models\FeatureSection;
 use App\Models\Item;
 use App\Models\ItemCustomFieldValue;
 use App\Models\ItemImages;
@@ -86,8 +85,6 @@ use App\Models\Challenge;
 use App\Models\Referral;
 use App\Models\DepartmentTicket;
 use App\Services\DepartmentSupportService;
-use App\Exceptions\UnknownFeaturedSectionSlugException;
-use App\Services\FeaturedSectionService;
 use App\Enums\NotificationFrequency;
 use App\Http\Resources\UserPreferenceResource;
 use App\Models\UserPreference;
@@ -97,7 +94,7 @@ use App\Services\CachingService;
 use App\Services\DelegateAuthorizationService;
 use App\Services\DepartmentReportService;
 use App\Services\FileService;
-use App\Services\FeatureSectionCategoryService;
+use App\Services\InterfaceSectionService;
 use App\Services\HelperService;
 use App\Services\NotificationService;
 use App\Services\PaymentFulfillmentService;
@@ -169,7 +166,7 @@ class ApiController extends Controller {
 
         return array_values(array_unique(array_merge(
             self::INTERFACE_TYPES,
-            FeatureSectionCategoryService::legacySectionTypes()
+            InterfaceSectionService::legacySectionTypes()
         )));
     }
 
@@ -190,43 +187,43 @@ class ApiController extends Controller {
 
     private const CURRENCY_SYNONYMS = [
         'yer' => 'YER',
-        'ريال يمني' => 'YER',
-        'ريال يمنى' => 'YER',
-        'ر.ي' => 'YER',
-        'ر. ي.' => 'YER',
+        'ط±ظٹط§ظ„ ظٹظ…ظ†ظٹ' => 'YER',
+        'ط±ظٹط§ظ„ ظٹظ…ظ†ظ‰' => 'YER',
+        'ط±.ظٹ' => 'YER',
+        'ط±. ظٹ.' => 'YER',
         'sar' => 'SAR',
-        'ريال سعودي' => 'SAR',
-        'ر.س' => 'SAR',
-        'ر. س.' => 'SAR',
-        'sar ر.س' => 'SAR',
+        'ط±ظٹط§ظ„ ط³ط¹ظˆط¯ظٹ' => 'SAR',
+        'ط±.ط³' => 'SAR',
+        'ط±. ط³.' => 'SAR',
+        'sar ط±.ط³' => 'SAR',
         'omr' => 'OMR',
-        'ريال عماني' => 'OMR',
-        'ر.ع' => 'OMR',
+        'ط±ظٹط§ظ„ ط¹ظ…ط§ظ†ظٹ' => 'OMR',
+        'ط±.ط¹' => 'OMR',
         'aed' => 'AED',
-        'درهم اماراتي' => 'AED',
-        'د.إ' => 'AED',
+        'ط¯ط±ظ‡ظ… ط§ظ…ط§ط±ط§طھظٹ' => 'AED',
+        'ط¯.ط¥' => 'AED',
         'kwd' => 'KWD',
-        'دينار كويتي' => 'KWD',
-        'د.ك' => 'KWD',
+        'ط¯ظٹظ†ط§ط± ظƒظˆظٹطھظٹ' => 'KWD',
+        'ط¯.ظƒ' => 'KWD',
         'bhd' => 'BHD',
-        'دينار بحريني' => 'BHD',
-        'د.ب' => 'BHD',
+        'ط¯ظٹظ†ط§ط± ط¨ط­ط±ظٹظ†ظٹ' => 'BHD',
+        'ط¯.ط¨' => 'BHD',
         'egp' => 'EGP',
-        'جنيه مصري' => 'EGP',
-        'ج.م' => 'EGP',
+        'ط¬ظ†ظٹظ‡ ظ…طµط±ظٹ' => 'EGP',
+        'ط¬.ظ…' => 'EGP',
         'usd' => 'USD',
-        'أ.ر' => 'USD',
-        'دولار' => 'USD',
-        'دولار امريكي' => 'USD',
+        'ط£.ط±' => 'USD',
+        'ط¯ظˆظ„ط§ط±' => 'USD',
+        'ط¯ظˆظ„ط§ط± ط§ظ…ط±ظٹظƒظٹ' => 'USD',
         '$' => 'USD',
         'eur' => 'EUR',
-        '€' => 'EUR',
-        'جنيه استرليني' => 'GBP',
+        'â‚¬' => 'EUR',
+        'ط¬ظ†ظٹظ‡ ط§ط³طھط±ظ„ظٹظ†ظٹ' => 'GBP',
         'gbp' => 'GBP',
-        '£' => 'GBP',
+        'آ£' => 'GBP',
         'try' => 'TRY',
-        '₺' => 'TRY',
-        'ليرة تركية' => 'TRY',
+        'â‚؛' => 'TRY',
+        'ظ„ظٹط±ط© طھط±ظƒظٹط©' => 'TRY',
     ];
 
 
@@ -740,7 +737,7 @@ class ApiController extends Controller {
 
     public function userSignup(Request $request) {
         try {
-            \Log::info('📝 UserSignup Request:', [
+            \Log::info('ًں“‌ UserSignup Request:', [
                 'type' => $request->type,
                 'firebase_id' => $request->firebase_id,
                 'mobile' => $request->mobile ?? 'not provided',
@@ -757,9 +754,9 @@ class ApiController extends Controller {
                 'platform_type' => 'nullable|in:android,ios'
             ];
             
-            // إضافة validation للهاتف إذا كان نوع التسجيل هو google
+            // ط¥ط¶ط§ظپط© validation ظ„ظ„ظ‡ط§طھظپ ط¥ط°ط§ ظƒط§ظ† ظ†ظˆط¹ ط§ظ„طھط³ط¬ظٹظ„ ظ‡ظˆ google
             if ($request->type == 'google') {
-                $validationRules['mobile'] = 'nullable'; // جعل الهاتف اختياري للـ Google
+                $validationRules['mobile'] = 'nullable'; // ط¬ط¹ظ„ ط§ظ„ظ‡ط§طھظپ ط§ط®طھظٹط§ط±ظٹ ظ„ظ„ظ€ Google
             } elseif ($request->type == 'phone') {
                 $validationRules['mobile'] = 'required';
             } elseif ($request->type == 'email') {
@@ -773,12 +770,12 @@ class ApiController extends Controller {
             }
 
             
-            // رسائل خطأ مخصصة
+            // ط±ط³ط§ط¦ظ„ ط®ط·ط£ ظ…ط®طµطµط©
             $customMessages = [
-                'mobile.required' => 'رقم الهاتف مطلوب.',
-                'email.required' => 'الإيميل مطلوب.',
-                'email.email' => 'يرجى إدخال إيميل صحيح.',
-                'code.exists' => 'كود الإحالة غير صحيح.'
+                'mobile.required' => 'ط±ظ‚ظ… ط§ظ„ظ‡ط§طھظپ ظ…ط·ظ„ظˆط¨.',
+                'email.required' => 'ط§ظ„ط¥ظٹظ…ظٹظ„ ظ…ط·ظ„ظˆط¨.',
+                'email.email' => 'ظٹط±ط¬ظ‰ ط¥ط¯ط®ط§ظ„ ط¥ظٹظ…ظٹظ„ طµط­ظٹط­.',
+                'code.exists' => 'ظƒظˆط¯ ط§ظ„ط¥ط­ط§ظ„ط© ط؛ظٹط± طµط­ظٹط­.'
             ];
             
             $validator = Validator::make($request->all(), $validationRules, $customMessages);
@@ -803,14 +800,14 @@ class ApiController extends Controller {
 
                 $request->merge(['email' => $generatedEmail]);
 
-                \Log::info('📧 Generated fallback email for phone signup', [
+                \Log::info('ًں“§ Generated fallback email for phone signup', [
                     'mobile' => $request->mobile,
                     'country_code' => $request->country_code,
                     'generated_email' => $generatedEmail,
                 ]);
             }
 
-            // البحث عن مستخدم موجود بـ Google firebase_id
+            // ط§ظ„ط¨ط­ط« ط¹ظ† ظ…ط³طھط®ط¯ظ… ظ…ظˆط¬ظˆط¯ ط¨ظ€ Google firebase_id
             $existingGoogleUser = null;
             if ($type == 'google') {
                 $existingGoogleUser = SocialLogin::where('firebase_id', $firebase_id)
@@ -818,7 +815,7 @@ class ApiController extends Controller {
                     ->with('user')
                     ->first();
                     
-                \Log::info('🔍 Searching for existing Google user by firebase_id:', [
+                \Log::info('ًں”چ Searching for existing Google user by firebase_id:', [
                     'firebase_id' => $firebase_id,
                     'found' => $existingGoogleUser ? 'yes' : 'no',
                     'user_id' => $existingGoogleUser ? $existingGoogleUser->user->id : null
@@ -835,34 +832,34 @@ class ApiController extends Controller {
                 ResponseService::errorResponse("User is deactivated. Please Contact the administrator");
             }
             
-            // البحث عن مستخدم موجود بنفس رقم الهاتف أو الإيميل
+            // ط§ظ„ط¨ط­ط« ط¹ظ† ظ…ط³طھط®ط¯ظ… ظ…ظˆط¬ظˆط¯ ط¨ظ†ظپط³ ط±ظ‚ظ… ط§ظ„ظ‡ط§طھظپ ط£ظˆ ط§ظ„ط¥ظٹظ…ظٹظ„
             $existingUser = null;
             if ($request->type == 'phone' && !empty($request->mobile)) {
                 $existingUser = User::where('mobile', $request->mobile)->first();
             } elseif ($request->type == 'email' && !empty($request->email)) {
                 $existingUser = User::where('email', $request->email)->first();
             } elseif ($request->type == 'google') {
-                // للـ Google، ابحث بالـ email أولاً، ثم بالـ mobile إذا كان متوفراً
+                // ظ„ظ„ظ€ GoogleطŒ ط§ط¨ط­ط« ط¨ط§ظ„ظ€ email ط£ظˆظ„ط§ظ‹طŒ ط«ظ… ط¨ط§ظ„ظ€ mobile ط¥ط°ط§ ظƒط§ظ† ظ…طھظˆظپط±ط§ظ‹
                 if (!empty($request->email)) {
                     $existingUser = User::where('email', $request->email)->first();
-                    \Log::info('🔍 Searching for Google user by email:', [
+                    \Log::info('ًں”چ Searching for Google user by email:', [
                         'email' => $request->email,
                         'found' => $existingUser ? 'yes' : 'no'
                     ]);
                 }
                 if (!$existingUser && !empty($request->mobile)) {
                     $existingUser = User::where('mobile', $request->mobile)->first();
-                    \Log::info('🔍 Searching for Google user by mobile:', [
+                    \Log::info('ًں”چ Searching for Google user by mobile:', [
                         'mobile' => $request->mobile,
                         'found' => $existingUser ? 'yes' : 'no'
                     ]);
                 }
             }
 
-            // التحقق من حالة المستخدم الموجود
+            // ط§ظ„طھط­ظ‚ظ‚ ظ…ظ† ط­ط§ظ„ط© ط§ظ„ظ…ط³طھط®ط¯ظ… ط§ظ„ظ…ظˆط¬ظˆط¯
             $shouldUpdateExistingUser = false;
             if ($existingUser) {
-                \Log::info('🔍 Found existing user:', [
+                \Log::info('ًں”چ Found existing user:', [
                     'user_id' => $existingUser->id,
                     'email' => $existingUser->email,
                     'mobile' => $existingUser->mobile,
@@ -873,26 +870,26 @@ class ApiController extends Controller {
                 
                 if ($existingUser->is_verified == 0 && $existingUser->email_verified_at === null) {
                     $shouldUpdateExistingUser = true;
-                    \Log::info('✅ User is not verified, allowing update');
+                    \Log::info('âœ… User is not verified, allowing update');
                 } elseif ($existingUser->is_verified == 1 && $existingUser->email_verified_at !== null) {
-                    // للـ Google users، السماح بالتحديث حتى لو كان محققاً
+                    // ظ„ظ„ظ€ Google usersطŒ ط§ظ„ط³ظ…ط§ط­ ط¨ط§ظ„طھط­ط¯ظٹط« ط­طھظ‰ ظ„ظˆ ظƒط§ظ† ظ…ط­ظ‚ظ‚ط§ظ‹
                     if ($request->type == 'google') {
                         $shouldUpdateExistingUser = true;
-                        \Log::info('✅ Allowing Google user to update verified account:', [
+                        \Log::info('âœ… Allowing Google user to update verified account:', [
                             'user_id' => $existingUser->id,
                             'email' => $existingUser->email
                         ]);
                     } else {
-                        // المستخدم محقق مسبقاً - إرجاع رسالة خطأ
+                        // ط§ظ„ظ…ط³طھط®ط¯ظ… ظ…ط­ظ‚ظ‚ ظ…ط³ط¨ظ‚ط§ظ‹ - ط¥ط±ط¬ط§ط¹ ط±ط³ط§ظ„ط© ط®ط·ط£
                         if ($request->type == 'phone') {
-                            ResponseService::errorResponse('هذا الحساب موجود مسبقا. يرجى تسجيل برقم هاتف آخر.');
+                            ResponseService::errorResponse('ظ‡ط°ط§ ط§ظ„ط­ط³ط§ط¨ ظ…ظˆط¬ظˆط¯ ظ…ط³ط¨ظ‚ط§. ظٹط±ط¬ظ‰ طھط³ط¬ظٹظ„ ط¨ط±ظ‚ظ… ظ‡ط§طھظپ ط¢ط®ط±.');
                         } else {
-                            ResponseService::errorResponse('هذا الحساب موجود. يرجى تسجيل بإيميل آخر.');
+                            ResponseService::errorResponse('ظ‡ط°ط§ ط§ظ„ط­ط³ط§ط¨ ظ…ظˆط¬ظˆط¯. ظٹط±ط¬ظ‰ طھط³ط¬ظٹظ„ ط¨ط¥ظٹظ…ظٹظ„ ط¢ط®ط±.');
                         }
                     }
                 }
             } else {
-                \Log::info('🔍 No existing user found for:', [
+                \Log::info('ًں”چ No existing user found for:', [
                     'type' => $request->type,
                     'email' => $request->email ?? 'not provided',
                     'mobile' => $request->mobile ?? 'not provided'
@@ -900,7 +897,7 @@ class ApiController extends Controller {
             }
 
             if ($type == 'google' && $existingGoogleUser) {
-                \Log::info('🔄 Updating existing Google user:', [
+                \Log::info('ًں”„ Updating existing Google user:', [
                     'firebase_id' => $firebase_id,
                     'user_id' => $existingGoogleUser->user->id,
                     'mobile' => $request->mobile,
@@ -912,13 +909,13 @@ class ApiController extends Controller {
                 $user = $existingGoogleUser->user;
                 $userData = $request->all();
                 
-                // تحديث بيانات المستخدم
+                // طھط­ط¯ظٹط« ط¨ظٹط§ظ†ط§طھ ط§ظ„ظ…ط³طھط®ط¯ظ…
                 if (!empty($request->password)) {
                     $userData['password'] = Hash::make($request->password);
                 }
                 $userData['profile'] = $request->hasFile('profile') ? $request->file('profile')->store('user_profile', 'public') : $request->profile;
                 
-                // تحديث البيانات المطلوبة
+                // طھط­ط¯ظٹط« ط§ظ„ط¨ظٹط§ظ†ط§طھ ط§ظ„ظ…ط·ظ„ظˆط¨ط©
                 $user->update([
                     'name' => $userData['name'] ?? $user->name,
                     'mobile' => $userData['mobile'] ?? $user->mobile,
@@ -930,7 +927,7 @@ class ApiController extends Controller {
                     'flag_emoji' => $userData['flag_emoji'] ?? $user->flag_emoji,
                 ]);
                 
-                \Log::info('✅ Google user updated successfully:', [
+                \Log::info('âœ… Google user updated successfully:', [
                     'user_id' => $user->id,
                     'updated_fields' => [
                         'name' => $user->name,
@@ -939,7 +936,7 @@ class ApiController extends Controller {
                     ]
                 ]);
                 
-                // معالجة كود الإحالة إذا تم إرساله
+                // ظ…ط¹ط§ظ„ط¬ط© ظƒظˆط¯ ط§ظ„ط¥ط­ط§ظ„ط© ط¥ط°ط§ طھظ… ط¥ط±ط³ط§ظ„ظ‡
                 if (!empty($request->code)) {
                     $referralAttempt = $this->handleReferralCode(
                         $request->code,
@@ -960,8 +957,8 @@ class ApiController extends Controller {
                 DB::beginTransaction();
 
                 if ($shouldUpdateExistingUser) {
-                    // تحديث المستخدم الموجود
-                    \Log::info('🔄 Updating existing user:', [
+                    // طھط­ط¯ظٹط« ط§ظ„ظ…ط³طھط®ط¯ظ… ط§ظ„ظ…ظˆط¬ظˆط¯
+                    \Log::info('ًں”„ Updating existing user:', [
                         'user_id' => $existingUser->id,
                         'type' => $request->type,
                         'mobile' => $request->mobile,
@@ -974,7 +971,7 @@ class ApiController extends Controller {
                     }
                     $userData['profile'] = $request->hasFile('profile') ? $request->file('profile')->store('user_profile', 'public') : $request->profile;
                     
-                    // تعيين حالة التحقق حسب نوع التسجيل
+                    // طھط¹ظٹظٹظ† ط­ط§ظ„ط© ط§ظ„طھط­ظ‚ظ‚ ط­ط³ط¨ ظ†ظˆط¹ ط§ظ„طھط³ط¬ظٹظ„
                     if (in_array($request->type, ['google', 'apple'])) {
                         $userData['is_verified'] = 1;
                         $userData['email_verified_at'] = now();
@@ -986,7 +983,7 @@ class ApiController extends Controller {
                     $existingUser->update($userData);
                     $user = $existingUser;
                     
-                    \Log::info('✅ Existing user updated successfully:', [
+                    \Log::info('âœ… Existing user updated successfully:', [
                         'user_id' => $user->id,
                         'updated_fields' => [
                             'name' => $user->name,
@@ -995,7 +992,7 @@ class ApiController extends Controller {
                         ]
                     ]);
                     
-                    // معالجة كود الإحالة إذا تم إرساله
+                    // ظ…ط¹ط§ظ„ط¬ط© ظƒظˆط¯ ط§ظ„ط¥ط­ط§ظ„ط© ط¥ط°ط§ طھظ… ط¥ط±ط³ط§ظ„ظ‡
                     if (!empty($request->code)) {
                         $referralAttempt = $this->handleReferralCode(
                             $request->code,
@@ -1020,14 +1017,14 @@ class ApiController extends Controller {
                     Auth::guard('web')->login($user);
                     $auth = User::find($user->id);
                 } else {
-                    // إنشاء مستخدم جديد
+                    // ط¥ظ†ط´ط§ط، ظ…ط³طھط®ط¯ظ… ط¬ط¯ظٹط¯
                     $userData = $request->all();
                     if (!empty($request->password)) {
                         $userData['password'] = Hash::make($request->password);
                     }
                     $userData['profile'] = $request->hasFile('profile') ? $request->file('profile')->store('user_profile', 'public') : $request->profile;
                     
-                    // تعيين حالة التحقق حسب نوع التسجيل
+                    // طھط¹ظٹظٹظ† ط­ط§ظ„ط© ط§ظ„طھط­ظ‚ظ‚ ط­ط³ط¨ ظ†ظˆط¹ ط§ظ„طھط³ط¬ظٹظ„
                     if (in_array($request->type, ['google', 'apple'])) {
                         $userData['is_verified'] = 1;
                         $userData['email_verified_at'] = now();
@@ -1036,17 +1033,17 @@ class ApiController extends Controller {
                         $userData['email_verified_at'] = null;
                     }
                     
-                    // للـ Google users، إذا لم يتم تمرير رقم الهاتف، استخدم email كـ mobile مؤقت
+                    // ظ„ظ„ظ€ Google usersطŒ ط¥ط°ط§ ظ„ظ… ظٹطھظ… طھظ…ط±ظٹط± ط±ظ‚ظ… ط§ظ„ظ‡ط§طھظپطŒ ط§ط³طھط®ط¯ظ… email ظƒظ€ mobile ظ…ط¤ظ‚طھ
                     if ($type == 'google' && empty($request->mobile)) {
                         $userData['mobile'] = $request->email ?? 'temp_' . time();
-                        \Log::info('📱 Using temporary mobile for Google user:', [
+                        \Log::info('ًں“± Using temporary mobile for Google user:', [
                             'email' => $request->email,
                             'temp_mobile' => $userData['mobile']
                         ]);
                     }
                     
                     if ($type == 'google') {
-                        \Log::info('🆕 Creating new Google user:', [
+                        \Log::info('ًں†• Creating new Google user:', [
                             'firebase_id' => $firebase_id,
                             'mobile' => $userData['mobile'],
                             'name' => $request->name
@@ -1056,13 +1053,13 @@ class ApiController extends Controller {
                     $user = User::create($userData);
                     
                     if ($type == 'google') {
-                        \Log::info('✅ New Google user created:', [
+                        \Log::info('âœ… New Google user created:', [
                             'user_id' => $user->id,
                             'firebase_id' => $firebase_id
                         ]);
                     }
                     
-                    // معالجة كود الإحالة إذا تم إرساله
+                    // ظ…ط¹ط§ظ„ط¬ط© ظƒظˆط¯ ط§ظ„ط¥ط­ط§ظ„ط© ط¥ط°ط§ طھظ… ط¥ط±ط³ط§ظ„ظ‡
                     if (!empty($request->code)) {
                         $referralAttempt = $this->handleReferralCode(
                             $request->code,
@@ -1156,23 +1153,23 @@ class ApiController extends Controller {
                            ->first();
 
                 if (!$user) {
-                    ResponseService::errorResponse('رقم الهاتف غير مسجل. يرجى إنشاء حساب جديد أولاً.', null, config('constants.RESPONSE_CODE.INVALID_LOGIN'));
+                    ResponseService::errorResponse('ط±ظ‚ظ… ط§ظ„ظ‡ط§طھظپ ط؛ظٹط± ظ…ط³ط¬ظ„. ظٹط±ط¬ظ‰ ط¥ظ†ط´ط§ط، ط­ط³ط§ط¨ ط¬ط¯ظٹط¯ ط£ظˆظ„ط§ظ‹.', null, config('constants.RESPONSE_CODE.INVALID_LOGIN'));
                 }
 
                 if ($user->trashed()) {
-                    ResponseService::errorResponse('تم إلغاء تفعيل حسابك. يرجى التواصل مع الإدارة.', null, config('constants.RESPONSE_CODE.DEACTIVATED_ACCOUNT'));
+                    ResponseService::errorResponse('طھظ… ط¥ظ„ط؛ط§ط، طھظپط¹ظٹظ„ ط­ط³ط§ط¨ظƒ. ظٹط±ط¬ظ‰ ط§ظ„طھظˆط§طµظ„ ظ…ط¹ ط§ظ„ط¥ط¯ط§ط±ط©.', null, config('constants.RESPONSE_CODE.DEACTIVATED_ACCOUNT'));
                 }
 
                 // Check if user has password set
                 if (!$user->password) {
                     ResponseService::errorResponse('
                     
-                    لم يتم تعيين كلمة مرور لهذا الحساب. يرجى تسجيل الدخول باستخدام OTP أو إعادة تعيين كلمة المرور.', null, config('constants.RESPONSE_CODE.INVALID_LOGIN'));
+                    ظ„ظ… ظٹطھظ… طھط¹ظٹظٹظ† ظƒظ„ظ…ط© ظ…ط±ظˆط± ظ„ظ‡ط°ط§ ط§ظ„ط­ط³ط§ط¨. ظٹط±ط¬ظ‰ طھط³ط¬ظٹظ„ ط§ظ„ط¯ط®ظˆظ„ ط¨ط§ط³طھط®ط¯ط§ظ… OTP ط£ظˆ ط¥ط¹ط§ط¯ط© طھط¹ظٹظٹظ† ظƒظ„ظ…ط© ط§ظ„ظ…ط±ظˆط±.', null, config('constants.RESPONSE_CODE.INVALID_LOGIN'));
                 }
 
                 // Verify password
                 if (!Hash::check($request->password, $user->password)) {
-                    ResponseService::errorResponse('كلمة المرور غير صحيحة.', null, config('constants.RESPONSE_CODE.INVALID_LOGIN'));
+                    ResponseService::errorResponse('ظƒظ„ظ…ط© ط§ظ„ظ…ط±ظˆط± ط؛ظٹط± طµط­ظٹط­ط©.', null, config('constants.RESPONSE_CODE.INVALID_LOGIN'));
                 }
 
                 Auth::guard('web')->login($user);
@@ -1187,11 +1184,11 @@ class ApiController extends Controller {
                 })->first();
 
                 if (!$socialLogin) {
-                    ResponseService::errorResponse('المستخدم غير مسجل. يرجى إنشاء حساب جديد أولاً.', null, config('constants.RESPONSE_CODE.INVALID_LOGIN'));
+                    ResponseService::errorResponse('ط§ظ„ظ…ط³طھط®ط¯ظ… ط؛ظٹط± ظ…ط³ط¬ظ„. ظٹط±ط¬ظ‰ ط¥ظ†ط´ط§ط، ط­ط³ط§ط¨ ط¬ط¯ظٹط¯ ط£ظˆظ„ط§ظ‹.', null, config('constants.RESPONSE_CODE.INVALID_LOGIN'));
                 }
 
                 if (!empty($socialLogin->user->deleted_at)) {
-                    ResponseService::errorResponse("تم إلغاء تفعيل المستخدم. يرجى التواصل مع الإدارة", null, config('constants.RESPONSE_CODE.DEACTIVATED_ACCOUNT'));
+                    ResponseService::errorResponse("طھظ… ط¥ظ„ط؛ط§ط، طھظپط¹ظٹظ„ ط§ظ„ظ…ط³طھط®ط¯ظ…. ظٹط±ط¬ظ‰ ط§ظ„طھظˆط§طµظ„ ظ…ط¹ ط§ظ„ط¥ط¯ط§ط±ط©", null, config('constants.RESPONSE_CODE.DEACTIVATED_ACCOUNT'));
                 }
 
                 Auth::guard('web')->login($socialLogin->user);
@@ -1199,7 +1196,7 @@ class ApiController extends Controller {
             }
 
             if (!$auth->hasRole('User')) {
-                ResponseService::errorResponse('بيانات تسجيل الدخول غير صحيحة', null, config('constants.RESPONSE_CODE.INVALID_LOGIN'));
+                ResponseService::errorResponse('ط¨ظٹط§ظ†ط§طھ طھط³ط¬ظٹظ„ ط§ظ„ط¯ط®ظˆظ„ ط؛ظٹط± طµط­ظٹط­ط©', null, config('constants.RESPONSE_CODE.INVALID_LOGIN'));
             }
 
             // Update FCM token
@@ -1217,7 +1214,7 @@ class ApiController extends Controller {
             // Generate token
             $token = $auth->createToken($auth->name ?? '')->plainTextToken;
 
-            ResponseService::successResponse('تم تسجيل الدخول بنجاح', $auth, ['token' => $token]);
+            ResponseService::successResponse('طھظ… طھط³ط¬ظٹظ„ ط§ظ„ط¯ط®ظˆظ„ ط¨ظ†ط¬ط§ط­', $auth, ['token' => $token]);
         } catch (Throwable $th) {
             ResponseService::logErrorResponse($th, "API Controller -> Login");
             ResponseService::errorResponse();
@@ -1265,7 +1262,7 @@ class ApiController extends Controller {
             }
             $data['show_personal_details'] = $request->show_personal_details;
 
-            // معالجة البيانات الإضافية للحسابات التجارية والعقارية
+            // ظ…ط¹ط§ظ„ط¬ط© ط§ظ„ط¨ظٹط§ظ†ط§طھ ط§ظ„ط¥ط¶ط§ظپظٹط© ظ„ظ„ط­ط³ط§ط¨ط§طھ ط§ظ„طھط¬ط§ط±ظٹط© ظˆط§ظ„ط¹ظ‚ط§ط±ظٹط©
             if ($request->has('additional_data') && !empty($request->additional_data)) {
                 $additionalInfo = $app_user->additional_info ?: [];
                 if (!is_array($additionalInfo)) {
@@ -1276,7 +1273,7 @@ class ApiController extends Controller {
                     $additionalInfo['contact_info'] = [];
                 }
                 
-                // تحديث البيانات الإضافية حسب نوع الحساب
+                // طھط­ط¯ظٹط« ط§ظ„ط¨ظٹط§ظ†ط§طھ ط§ظ„ط¥ط¶ط§ظپظٹط© ط­ط³ط¨ ظ†ظˆط¹ ط§ظ„ط­ط³ط§ط¨
                 foreach ($request->additional_data as $key => $value) {
                     $additionalInfo['contact_info'][$key] = $value;
                 }
@@ -1995,10 +1992,10 @@ class ApiController extends Controller {
             $interfaceTypeVariants = [];
 
             if ($request->filled('interface_type')) {
-                $interfaceTypeFilter = FeatureSectionCategoryService::normalizeSectionType($request->input('interface_type'));
+                $interfaceTypeFilter = InterfaceSectionService::normalizeSectionType($request->input('interface_type'));
 
                 if ($interfaceTypeFilter !== null && $interfaceTypeFilter !== 'all') {
-                    $interfaceTypeVariants = FeatureSectionCategoryService::sectionTypeVariants($interfaceTypeFilter);
+                    $interfaceTypeVariants = InterfaceSectionService::sectionTypeVariants($interfaceTypeFilter);
                 }
             }
 
@@ -2196,37 +2193,6 @@ class ApiController extends Controller {
                     $sql->where('status', 'approved')->has('featured_items');
                 }
             }
-
-            // Feature Section Filtration
-            if (!empty($request->featured_section_id) || !empty($request->featured_section_slug)) {
-                if (!empty($request->featured_section_id)) {
-                    $featuredSection = FeatureSection::findOrFail($request->featured_section_id);
-                } else {
-                    $featuredSection = FeatureSection::where('slug', $request->featured_section_slug)->firstOrFail();
-                }
-
-
-                $supportedFilters = FeatureSection::supportedFilters();
-                $filter = in_array($featuredSection->filter, $supportedFilters, true)
-                
-                ? $featuredSection->filter
-                    : ($supportedFilters[0] ?? 'latest');
-
-
-
-
-                $sql = match ($filter) {
-                    'most_viewed' => $sql->reorder()->orderBy('clicks', 'DESC'),
-
-
-
-                    default => $sql->reorder()->orderBy('created_at', 'DESC'),
-
-
-
-                };
-            }
-
 
             if (!empty($request->search)) {
                 $sql->search($request->search);
@@ -2830,10 +2796,10 @@ class ApiController extends Controller {
             $interfaceTypeVariants = [];
 
             if ($request->filled('interface_type')) {
-                $interfaceTypeFilter = FeatureSectionCategoryService::normalizeSectionType($request->input('interface_type'));
+                $interfaceTypeFilter = InterfaceSectionService::normalizeSectionType($request->input('interface_type'));
 
                 if ($interfaceTypeFilter !== 'all') {
-                    $interfaceTypeVariants = FeatureSectionCategoryService::sectionTypeVariants($interfaceTypeFilter);
+                    $interfaceTypeVariants = InterfaceSectionService::sectionTypeVariants($interfaceTypeFilter);
                 }
             }
 
@@ -3127,7 +3093,7 @@ class ApiController extends Controller {
             ResponseService::validationError($validator->errors()->first());
         }
         try {
-            DB::beginTransaction(); // تصحيح: يجب أن يكون beginTransaction وليس commit
+            DB::beginTransaction(); // طھطµط­ظٹط­: ظٹط¬ط¨ ط£ظ† ظٹظƒظˆظ† beginTransaction ظˆظ„ظٹط³ commit
             $user = Auth::user();
             $item = Item::where('user_id', $user->id)->where('status', 'approved')->findOrFail($request->item_id);
 
@@ -3148,7 +3114,7 @@ class ApiController extends Controller {
             }
 
             
-            // التحقق من أن الإعلان ليس مميزاً بالفعل
+            // ط§ظ„طھط­ظ‚ظ‚ ظ…ظ† ط£ظ† ط§ظ„ط¥ط¹ظ„ط§ظ† ظ„ظٹط³ ظ…ظ…ظٹط²ط§ظ‹ ط¨ط§ظ„ظپط¹ظ„
             $featuredItems = FeaturedItems::where([
                 'item_id'    => $request->item_id,
                 'package_id' => $user_package->package_id,
@@ -3163,7 +3129,7 @@ class ApiController extends Controller {
                 ResponseService::errorResponse("Item is already featured");
             }
 
-            // إنشاء إعلان مميز مجاناً بدون باقة
+            // ط¥ظ†ط´ط§ط، ط¥ط¹ظ„ط§ظ† ظ…ظ…ظٹط² ظ…ط¬ط§ظ†ط§ظ‹ ط¨ط¯ظˆظ† ط¨ط§ظ‚ط©
             FeaturedItems::create([
                 'item_id'                   => $request->item_id,
                 'package_id'                => $user_package->package_id,
@@ -3318,10 +3284,10 @@ class ApiController extends Controller {
             }
 
             if ($requestedInterfaceType !== 'all') {
-                $normalizedInterfaceType = FeatureSectionCategoryService::normalizeSectionType($requestedInterfaceType);
+                $normalizedInterfaceType = InterfaceSectionService::normalizeSectionType($requestedInterfaceType);
                 $interfaceTypes = array_values(array_unique(array_merge(
                     ['all'],
-                    FeatureSectionCategoryService::sectionTypeVariants($normalizedInterfaceType)
+                    InterfaceSectionService::sectionTypeVariants($normalizedInterfaceType)
                 )));
             } else {
                 $interfaceTypes = ['all'];
@@ -3389,7 +3355,7 @@ class ApiController extends Controller {
 
             $sliderMetricService->recordClick($slider, $userId, $sessionId, $now);
 
-            ResponseService::successResponse(__('تم تسجيل النقرة بنجاح.'));
+            ResponseService::successResponse(__('طھظ… طھط³ط¬ظٹظ„ ط§ظ„ظ†ظ‚ط±ط© ط¨ظ†ط¬ط§ط­.'));
         } catch (Throwable $th) {
             ResponseService::logErrorResponse($th, 'API Controller -> recordSliderClick');
             ResponseService::errorResponse();
@@ -3492,103 +3458,6 @@ class ApiController extends Controller {
         } catch (Throwable $th) {
             ResponseService::logErrorResponse($th, "API Controller -> setItemTotalClick");
             ResponseService::errorResponse();
-        }
-    }
-
-    public function getFeaturedSection(Request $request, FeaturedSectionService $featuredSectionService)
-    {
-        try {
-
-
-            $validator = Validator::make($request->all(), [
-                'limit' => ['nullable', 'integer', 'min:1'],
-            ]);
-
-            if ($validator->fails()) {
-                return ResponseService::validationError($validator->errors()->first());
-            }
-
-            $limit = null;
-
-            if ($request->filled('limit')) {
-                $limit = (int) $request->input('limit');
-
-                if ($limit > FeaturedSectionService::MAX_SECTION_LIMIT) {
-                    $limit = FeaturedSectionService::MAX_SECTION_LIMIT;
-                }
-            }
-
-
-
-
-            $result = $featuredSectionService->getSections(
-                $request->input('section_type'),
-                $request->input('interface_type'),
-                $request->input('slug'),
-                $limit,
-                $request->input('root_identifier'),
-
-
-            );
-
-
-
-
-            $etag = $result->etag;
-            $cacheControl = $result->cacheControl;
-
-            $requestEtags = $request->getETags();
-
-            if ($etag !== '' && (in_array($etag, $requestEtags, true) || in_array('"' . $etag . '"', $requestEtags, true))) {
-                return response()->noContent(HttpResponse::HTTP_NOT_MODIFIED)
-                    ->setEtag($etag)
-                    ->header('Cache-Control', $cacheControl);
-                
-
-
-            }
-
-            $response = response()->json([
-                'error' => false,
-                'message' => __('Data Fetched Successfully'),
-                'data' => $result->sections,
-                'code' => config('constants.RESPONSE_CODE.SUCCESS'),
-            ]);
-
-            if ($etag !== '') {
-                $response->setEtag($etag);
-            
-            }
-            if ($cacheControl !== '') {
-                $response->header('Cache-Control', $cacheControl);
-            }
-
-            return $response;
-        
-        } catch (UnknownFeaturedSectionSlugException $exception) {
-            return response()->json([
-                'error' => true,
-                'message' => __('Unknown featured section slug.'),
-                'data' => null,
-                'code' => HttpResponse::HTTP_NOT_FOUND,
-            ], HttpResponse::HTTP_NOT_FOUND);
-
-
-        } catch (Throwable $th) {
-            Log::error('API Controller -> getFeaturedSection failed', [
-                'message' => $th->getMessage(),
-                'file' => $th->getFile(),
-                'line' => $th->getLine(),
-            ]);
-
-            return response()->json([
-                'error' => true,
-                'message' => __('Error Occurred'),
-                'data' => null,
-                'code' => config('constants.RESPONSE_CODE.EXCEPTION_ERROR'),
-            ], HttpResponse::HTTP_INTERNAL_SERVER_ERROR);
-
-            
         }
     }
 
@@ -6860,7 +6729,7 @@ class ApiController extends Controller {
         }
 
         if (!$this->serviceAuthorizationService->userCanManageService($user, $service)) {
-            return ResponseService::errorResponse('غير مصرح لك بإدارة هذه الخدمة.', null, 403);
+            return ResponseService::errorResponse('ط؛ظٹط± ظ…طµط±ط­ ظ„ظƒ ط¨ط¥ط¯ط§ط±ط© ظ‡ط°ظ‡ ط§ظ„ط®ط¯ظ…ط©.', null, 403);
         }
 
         $service->load([
@@ -6911,7 +6780,7 @@ class ApiController extends Controller {
         }
 
         if ((int) $service->owner_id !== (int) $user->id) {
-            return ResponseService::errorResponse('غير مصرح لك بإدارة هذه الخدمة.', null, 403);
+            return ResponseService::errorResponse('ط؛ظٹط± ظ…طµط±ط­ ظ„ظƒ ط¨ط¥ط¯ط§ط±ط© ظ‡ط°ظ‡ ط§ظ„ط®ط¯ظ…ط©.', null, 403);
         }
 
         $validator = Validator::make($request->all(), [
@@ -6926,7 +6795,7 @@ class ApiController extends Controller {
         $payload = $validator->validated();
 
         if (empty($payload)) {
-            ResponseService::validationError('لا توجد بيانات لتحديث الخدمة.');
+            ResponseService::validationError('ظ„ط§ طھظˆط¬ط¯ ط¨ظٹط§ظ†ط§طھ ظ„طھط­ط¯ظٹط« ط§ظ„ط®ط¯ظ…ط©.');
         }
 
         if ($request->has('status')) {
@@ -6959,7 +6828,7 @@ class ApiController extends Controller {
         }
 
         if ((int) $service->owner_id !== (int) $user->id) {
-            return ResponseService::errorResponse('غير مصرح لك بإدارة هذه الخدمة.', null, 403);
+            return ResponseService::errorResponse('ط؛ظٹط± ظ…طµط±ط­ ظ„ظƒ ط¨ط¥ط¯ط§ط±ط© ظ‡ط°ظ‡ ط§ظ„ط®ط¯ظ…ط©.', null, 403);
         }
 
         DB::beginTransaction();
@@ -7007,7 +6876,7 @@ class ApiController extends Controller {
             ResponseService::validationError($validator->errors()->first());
         }
 
-        // فلتر خدمة واحدة بالمعرّف (إن طُلب)
+        // ظپظ„طھط± ط®ط¯ظ…ط© ظˆط§ط­ط¯ط© ط¨ط§ظ„ظ…ط¹ط±ظ‘ظپ (ط¥ظ† ط·ظڈظ„ط¨)
         if ($request->filled('id')) {
             $s = Service::where('status', true)
                 ->where(function($q){
@@ -7026,7 +6895,7 @@ class ApiController extends Controller {
             ResponseService::successResponse('Service fetched successfully.', $payload);
         }
 
-        // قائمة خدمات
+        // ظ‚ط§ط¦ظ…ط© ط®ط¯ظ…ط§طھ
         $query = Service::with([
                 'category',
                 'serviceCustomFields.value',
@@ -7120,10 +6989,10 @@ class ApiController extends Controller {
 }
 
 /**
- * يحوّل كائن Service إلى مصفوفة JSON جاهزة للتطبيق.
+ * ظٹط­ظˆظ‘ظ„ ظƒط§ط¦ظ† Service ط¥ظ„ظ‰ ظ…طµظپظˆظپط© JSON ط¬ط§ظ‡ط²ط© ظ„ظ„طھط·ط¨ظٹظ‚.
  *  *
  * @param  Service  $s
- * @param  bool     $includeOwnerEmail هل يجب تضمين البريد الإلكتروني للمالك؟
+ * @param  bool     $includeOwnerEmail ظ‡ظ„ ظٹط¬ط¨ طھط¶ظ…ظٹظ† ط§ظ„ط¨ط±ظٹط¯ ط§ظ„ط¥ظ„ظƒطھط±ظˆظ†ظٹ ظ„ظ„ظ…ط§ظ„ظƒطں
  */
 private function mapService(Service $s, bool $includeOwnerEmail = false): array
 {
@@ -7162,15 +7031,15 @@ private function mapService(Service $s, bool $includeOwnerEmail = false): array
         'views'             => (int) ($s->views ?? 0),
         'expiry_date'       => $expiry,
 
-        // ✅ حافظ على المفاتيح القديمة مع روابط كاملة
+        // âœ… ط­ط§ظپط¸ ط¹ظ„ظ‰ ط§ظ„ظ…ظپط§طھظٹط­ ط§ظ„ظ‚ط¯ظٹظ…ط© ظ…ط¹ ط±ظˆط§ط¨ط· ظƒط§ظ…ظ„ط©
         'image'             => $url($s->image),
         'icon'              => $url($s->icon),
 
-        // (إضافي متوافق للخلف)
+        // (ط¥ط¶ط§ظپظٹ ظ…طھظˆط§ظپظ‚ ظ„ظ„ط®ظ„ظپ)
         'image_url'         => $url($s->image),
         'icon_url'          => $url($s->icon),
 
-        // الحقول الجديدة
+        // ط§ظ„ط­ظ‚ظˆظ„ ط§ظ„ط¬ط¯ظٹط¯ط©
         'is_paid'           => (bool) $s->is_paid,
         'price'             => $s->price !== null ? (float) $s->price : null,
         'currency'          => $s->currency,
@@ -7189,7 +7058,7 @@ private function mapService(Service $s, bool $includeOwnerEmail = false): array
 
         'service_uid'       => $s->service_uid,
 
-        // (إضافي) تواريخ قد يحتاجها التطبيق
+        // (ط¥ط¶ط§ظپظٹ) طھظˆط§ط±ظٹط® ظ‚ط¯ ظٹط­طھط§ط¬ظ‡ط§ ط§ظ„طھط·ط¨ظٹظ‚
         'created_at'        => optional($s->created_at)->toISOString(),
         'updated_at'        => optional($s->updated_at)->toISOString(),
     ];
@@ -7213,7 +7082,7 @@ private function deleteServiceMedia(Service $service): void
         try {
             $disk->delete($path);
         } catch (Throwable) {
-            // تجاهل أي أخطاء في الحذف من التخزين العام.
+            // طھط¬ط§ظ‡ظ„ ط£ظٹ ط£ط®ط·ط§ط، ظپظٹ ط§ظ„ط­ط°ظپ ظ…ظ† ط§ظ„طھط®ط²ظٹظ† ط§ظ„ط¹ط§ظ….
         }
     }
 }
@@ -8257,7 +8126,7 @@ private function formatServiceFieldValueForApi(ServiceCustomField $field, ?Servi
                 'department' => ['nullable', 'string', Rule::in(array_keys($departments))],
             ],
             [
-                'department.in' => 'القسم المحدد غير مدعوم.',
+                'department.in' => 'ط§ظ„ظ‚ط³ظ… ط§ظ„ظ…ط­ط¯ط¯ ط؛ظٹط± ظ…ط¯ط¹ظˆظ….',
             ]
         );
 
@@ -8279,7 +8148,7 @@ private function formatServiceFieldValueForApi(ServiceCustomField $field, ?Servi
             if (!$policy) {
                 return response()->json([
                     'status' => false,
-                    'message' => 'لم يتم العثور على سياسة تسعير نشطة.',
+                    'message' => 'ظ„ظ… ظٹطھظ… ط§ظ„ط¹ط«ظˆط± ط¹ظ„ظ‰ ط³ظٹط§ط³ط© طھط³ط¹ظٹط± ظ†ط´ط·ط©.',
                 ], 404);
 
 
@@ -8387,7 +8256,7 @@ private function formatServiceFieldValueForApi(ServiceCustomField $field, ?Servi
             
             return response()->json([
                 'status' => true,
-                'message' => 'تم جلب سياسة التسعير بنجاح.',
+                'message' => 'طھظ… ط¬ظ„ط¨ ط³ظٹط§ط³ط© ط§ظ„طھط³ط¹ظٹط± ط¨ظ†ط¬ط§ط­.',
                 'data' => [
                     'policy' => $policyData,
                     'weight_tiers' => $weightTiers,
@@ -8424,7 +8293,7 @@ private function formatServiceFieldValueForApi(ServiceCustomField $field, ?Servi
                 
                 return response()->json([
                     'error' => true,
-                    'message' => __('نوع الحساب المطلوب غير صالح.'),
+                    'message' => __('ظ†ظˆط¹ ط§ظ„ط­ط³ط§ط¨ ط§ظ„ظ…ط·ظ„ظˆط¨ ط؛ظٹط± طµط§ظ„ط­.'),
                 ], 422);
             }
 
@@ -8443,7 +8312,7 @@ private function formatServiceFieldValueForApi(ServiceCustomField $field, ?Servi
 
             return response()->json([
                 'error' => false,
-                'message' => __('تم جلب الحسابات بنجاح.'),
+                'message' => __('طھظ… ط¬ظ„ط¨ ط§ظ„ط­ط³ط§ط¨ط§طھ ط¨ظ†ط¬ط§ط­.'),
                 'data' => $users,
             ]);
         } catch (\Throwable $th) {
@@ -8502,7 +8371,7 @@ public function storeRequestDevice(Request $request)
 
     return response()->json([
         'status' => true,
-        'message' => 'تم إرسال الطلب بنجاح',
+        'message' => 'طھظ… ط¥ط±ط³ط§ظ„ ط§ظ„ط·ظ„ط¨ ط¨ظ†ط¬ط§ط­',
         'data' => $requestDevice
     ]);
 }
@@ -8520,7 +8389,7 @@ public function storeRequestDevice(Request $request)
         $otpEnabled = filter_var($settings['whatsapp_otp_enabled'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
         if (!$otpEnabled) {
-            return ResponseService::errorResponse('خدمة رمز التحقق عبر واتساب غير مفعلة حالياً.');
+            return ResponseService::errorResponse('ط®ط¯ظ…ط© ط±ظ…ط² ط§ظ„طھط­ظ‚ظ‚ ط¹ط¨ط± ظˆط§طھط³ط§ط¨ ط؛ظٹط± ظ…ظپط¹ظ„ط© ط­ط§ظ„ظٹط§ظ‹.');
         }
 
         $phone = $request->country_code . $request->phone;
@@ -8529,7 +8398,7 @@ public function storeRequestDevice(Request $request)
         $check = $whatsApp->checkNumber($phone);
 
         if (!($check['status'] ?? false)) {
-            return ResponseService::errorResponse("عذرًا، هذا الرقم غير مرتبط بحساب واتساب.");
+            return ResponseService::errorResponse("ط¹ط°ط±ظ‹ط§طŒ ظ‡ط°ط§ ط§ظ„ط±ظ‚ظ… ط؛ظٹط± ظ…ط±طھط¨ط· ط¨ط­ط³ط§ط¨ ظˆط§طھط³ط§ط¨.");
         }
 
         $otp = rand(100000, 999999);
@@ -8543,18 +8412,18 @@ public function storeRequestDevice(Request $request)
             'expires_at' => now()->addMinutes(5)->timestamp,
         ]);
 
-        $defaultNewUserMessage = "مرحبًا بك في *مارب بين يديك*! 🎉\n\n"
-            . "نحن سعداء بانضمامك إلى عائلتنا.\n"
-            . "لتأكيد هويتك وضمان أمان حسابك، نرسل لك رمز التحقق الخاص بك:\n\n"
-            . "*رمز التحقق:* :otp\n\n"
-            . "⚠️ *ملاحظة:* لا تشارك هذا الرمز مع أي شخص. إذا لم تطلب هذا الرمز، يرجى تجاهل هذه الرسالة.\n\n"
-            . "شكرًا لاختيارك *مارب بين يديك* ونتمنى لك تجربة مميزة وآمنة! 😊";
+        $defaultNewUserMessage = "ظ…ط±ط­ط¨ظ‹ط§ ط¨ظƒ ظپظٹ *ظ…ط§ط±ط¨ ط¨ظٹظ† ظٹط¯ظٹظƒ*! ًںژ‰\n\n"
+            . "ظ†ط­ظ† ط³ط¹ط¯ط§ط، ط¨ط§ظ†ط¶ظ…ط§ظ…ظƒ ط¥ظ„ظ‰ ط¹ط§ط¦ظ„طھظ†ط§.\n"
+            . "ظ„طھط£ظƒظٹط¯ ظ‡ظˆظٹطھظƒ ظˆط¶ظ…ط§ظ† ط£ظ…ط§ظ† ط­ط³ط§ط¨ظƒطŒ ظ†ط±ط³ظ„ ظ„ظƒ ط±ظ…ط² ط§ظ„طھط­ظ‚ظ‚ ط§ظ„ط®ط§طµ ط¨ظƒ:\n\n"
+            . "*ط±ظ…ط² ط§ظ„طھط­ظ‚ظ‚:* :otp\n\n"
+            . "âڑ ï¸ڈ *ظ…ظ„ط§ط­ط¸ط©:* ظ„ط§ طھط´ط§ط±ظƒ ظ‡ط°ط§ ط§ظ„ط±ظ…ط² ظ…ط¹ ط£ظٹ ط´ط®طµ. ط¥ط°ط§ ظ„ظ… طھط·ظ„ط¨ ظ‡ط°ط§ ط§ظ„ط±ظ…ط²طŒ ظٹط±ط¬ظ‰ طھط¬ط§ظ‡ظ„ ظ‡ط°ظ‡ ط§ظ„ط±ط³ط§ظ„ط©.\n\n"
+            . "ط´ظƒط±ظ‹ط§ ظ„ط§ط®طھظٹط§ط±ظƒ *ظ…ط§ط±ط¨ ط¨ظٹظ† ظٹط¯ظٹظƒ* ظˆظ†طھظ…ظ†ظ‰ ظ„ظƒ طھط¬ط±ط¨ط© ظ…ظ…ظٹط²ط© ظˆط¢ظ…ظ†ط©! ًںکٹ";
 
-        $defaultForgotPasswordMessage = "مرحبًا بك في *مارب بين يديك*! 🎉\n\n"
-            . "لتأكيد هويتك واستعادة الوصول إلى حسابك، نرسل لك رمز التحقق الخاص بك:\n\n"
-            . "*رمز التحقق:* :otp\n\n"
-            . "⚠️ *ملاحظة:* لا تشارك هذا الرمز مع أي شخص. إذا لم تطلب هذا الرمز، يرجى تجاهل هذه الرسالة.\n\n"
-            . "شكرًا لاختيارك *مارب بين يديك* ونتمنى لك تجربة مميزة وآمنة! 😊";
+        $defaultForgotPasswordMessage = "ظ…ط±ط­ط¨ظ‹ط§ ط¨ظƒ ظپظٹ *ظ…ط§ط±ط¨ ط¨ظٹظ† ظٹط¯ظٹظƒ*! ًںژ‰\n\n"
+            . "ظ„طھط£ظƒظٹط¯ ظ‡ظˆظٹطھظƒ ظˆط§ط³طھط¹ط§ط¯ط© ط§ظ„ظˆطµظˆظ„ ط¥ظ„ظ‰ ط­ط³ط§ط¨ظƒطŒ ظ†ط±ط³ظ„ ظ„ظƒ ط±ظ…ط² ط§ظ„طھط­ظ‚ظ‚ ط§ظ„ط®ط§طµ ط¨ظƒ:\n\n"
+            . "*ط±ظ…ط² ط§ظ„طھط­ظ‚ظ‚:* :otp\n\n"
+            . "âڑ ï¸ڈ *ظ…ظ„ط§ط­ط¸ط©:* ظ„ط§ طھط´ط§ط±ظƒ ظ‡ط°ط§ ط§ظ„ط±ظ…ط² ظ…ط¹ ط£ظٹ ط´ط®طµ. ط¥ط°ط§ ظ„ظ… طھط·ظ„ط¨ ظ‡ط°ط§ ط§ظ„ط±ظ…ط²طŒ ظٹط±ط¬ظ‰ طھط¬ط§ظ‡ظ„ ظ‡ط°ظ‡ ط§ظ„ط±ط³ط§ظ„ط©.\n\n"
+            . "ط´ظƒط±ظ‹ط§ ظ„ط§ط®طھظٹط§ط±ظƒ *ظ…ط§ط±ط¨ ط¨ظٹظ† ظٹط¯ظٹظƒ* ظˆظ†طھظ…ظ†ظ‰ ظ„ظƒ طھط¬ط±ط¨ط© ظ…ظ…ظٹط²ط© ظˆط¢ظ…ظ†ط©! ًںکٹ";
 
         $templates = [
             'new_user' => $settings['whatsapp_otp_message_new_user'] ?? $defaultNewUserMessage,
@@ -8568,7 +8437,7 @@ public function storeRequestDevice(Request $request)
         SendOtpWhatsAppJob::dispatch($phone, $message);
 
 
-        return ResponseService::successResponse('تم إرسال رمز التحقق عبر WhatsApp بنجاح.');
+        return ResponseService::successResponse('طھظ… ط¥ط±ط³ط§ظ„ ط±ظ…ط² ط§ظ„طھط­ظ‚ظ‚ ط¹ط¨ط± WhatsApp ط¨ظ†ط¬ط§ط­.');
     }
 
 
@@ -8587,7 +8456,7 @@ public function storeRequestDevice(Request $request)
 
         if (!$user) {
             return ResponseService::errorResponse(
-                'المستخدم غير موجود لهذا الرقم',
+                'ط§ظ„ظ…ط³طھط®ط¯ظ… ط؛ظٹط± ظ…ظˆط¬ظˆط¯ ظ„ظ‡ط°ط§ ط§ظ„ط±ظ‚ظ…',
                 404
             );
         }
@@ -8597,7 +8466,7 @@ public function storeRequestDevice(Request $request)
             $user->is_verified = 1;
             $user->save();
 
-            return ResponseService::successResponse('تم التحقق بنجاح (تم تعطيل التحقق عبر واتساب حالياً).');
+            return ResponseService::successResponse('طھظ… ط§ظ„طھط­ظ‚ظ‚ ط¨ظ†ط¬ط§ط­ (طھظ… طھط¹ط·ظٹظ„ ط§ظ„طھط­ظ‚ظ‚ ط¹ط¨ط± ظˆط§طھط³ط§ط¨ ط­ط§ظ„ظٹط§ظ‹).');
         }
 
         $otpRecord = OTP::where('phone', $phone)
@@ -8608,14 +8477,14 @@ public function storeRequestDevice(Request $request)
 
         if (!$otpRecord) {
             return ResponseService::errorResponse(
-                'رمز التحقق غير صحيح أو لا يمكن العثور عليه',
+                'ط±ظ…ط² ط§ظ„طھط­ظ‚ظ‚ ط؛ظٹط± طµط­ظٹط­ ط£ظˆ ظ„ط§ ظٹظ…ظƒظ† ط§ظ„ط¹ط«ظˆط± ط¹ظ„ظٹظ‡',
                 404
             );
         }
 
         if ($otpRecord->expires_at < now()->timestamp) {
             return ResponseService::errorResponse(
-                'رمز التحقق منتهي الصلاحية',
+                'ط±ظ…ط² ط§ظ„طھط­ظ‚ظ‚ ظ…ظ†طھظ‡ظٹ ط§ظ„طµظ„ط§ط­ظٹط©',
                 410
             );
         }
@@ -8628,23 +8497,23 @@ public function storeRequestDevice(Request $request)
         $user->is_verified = 1;
         $user->save();
 
-        return ResponseService::successResponse('تم التحقق بنجاح');
+        return ResponseService::successResponse('طھظ… ط§ظ„طھط­ظ‚ظ‚ ط¨ظ†ط¬ط§ط­');
 
     }
 
     /**
-     * إكمال التسجيل للمستخدمين
+     * ط¥ظƒظ…ط§ظ„ ط§ظ„طھط³ط¬ظٹظ„ ظ„ظ„ظ…ط³طھط®ط¯ظ…ظٹظ†
      */
     public function completeRegistration(Request $request)
     {
         try {
             DB::beginTransaction();
             
-            // تسجيل البيانات المرسلة للتصحيح
+            // طھط³ط¬ظٹظ„ ط§ظ„ط¨ظٹط§ظ†ط§طھ ط§ظ„ظ…ط±ط³ظ„ط© ظ„ظ„طھطµط­ظٹط­
             \Log::info('Complete Registration Request:', $request->all());
             \Log::info('User Account Type:', ['account_type' => $request->account_type]);
             
-            // التحقق الأساسي
+            // ط§ظ„طھط­ظ‚ظ‚ ط§ظ„ط£ط³ط§ط³ظٹ
             $validator = Validator::make($request->all(), [
                 'phone_number' => 'nullable|string',
                 'country_code' => 'nullable|string',
@@ -8652,8 +8521,8 @@ public function storeRequestDevice(Request $request)
                 'email' => 'nullable|email|unique:users,email,' . Auth::id(),
             ]);
 
-            // التحقق المشروط حسب نوع الحساب - مرن للحسابات التجارية
-            // نقبل البيانات المرسلة كما هي ونحفظها
+            // ط§ظ„طھط­ظ‚ظ‚ ط§ظ„ظ…ط´ط±ظˆط· ط­ط³ط¨ ظ†ظˆط¹ ط§ظ„ط­ط³ط§ط¨ - ظ…ط±ظ† ظ„ظ„ط­ط³ط§ط¨ط§طھ ط§ظ„طھط¬ط§ط±ظٹط©
+            // ظ†ظ‚ط¨ظ„ ط§ظ„ط¨ظٹط§ظ†ط§طھ ط§ظ„ظ…ط±ط³ظ„ط© ظƒظ…ط§ ظ‡ظٹ ظˆظ†ط­ظپط¸ظ‡ط§
 
             if ($validator->fails()) {
                 return ResponseService::validationError($validator->errors()->first());
@@ -8661,7 +8530,7 @@ public function storeRequestDevice(Request $request)
 
             $user = Auth::user();
             
-            // تحديث البيانات الأساسية فقط إذا كانت مرسلة
+            // طھط­ط¯ظٹط« ط§ظ„ط¨ظٹط§ظ†ط§طھ ط§ظ„ط£ط³ط§ط³ظٹط© ظپظ‚ط· ط¥ط°ط§ ظƒط§ظ†طھ ظ…ط±ط³ظ„ط©
             if ($request->has('phone_number') && !empty($request->phone_number)) {
                 $user->mobile = $request->phone_number;
             }
@@ -8676,14 +8545,14 @@ public function storeRequestDevice(Request $request)
                 $user->email = $request->email;
             }
             
-            // إعداد المعلومات الإضافية للحسابات التجارية والعقارية
-            // الحفاظ على البيانات الموجودة وتحديثها فقط
+            // ط¥ط¹ط¯ط§ط¯ ط§ظ„ظ…ط¹ظ„ظˆظ…ط§طھ ط§ظ„ط¥ط¶ط§ظپظٹط© ظ„ظ„ط­ط³ط§ط¨ط§طھ ط§ظ„طھط¬ط§ط±ظٹط© ظˆط§ظ„ط¹ظ‚ط§ط±ظٹط©
+            // ط§ظ„ط­ظپط§ط¸ ط¹ظ„ظ‰ ط§ظ„ط¨ظٹط§ظ†ط§طھ ط§ظ„ظ…ظˆط¬ظˆط¯ط© ظˆطھط­ط¯ظٹط«ظ‡ط§ ظپظ‚ط·
             $additionalInfo = $user->additional_info ?: [];
             if (!is_array($additionalInfo)) {
                 $additionalInfo = [];
             }
             
-            // التأكد من وجود المفاتيح الأساسية
+            // ط§ظ„طھط£ظƒط¯ ظ…ظ† ظˆط¬ظˆط¯ ط§ظ„ظ…ظپط§طھظٹط­ ط§ظ„ط£ط³ط§ط³ظٹط©
             if (!isset($additionalInfo['contact_info'])) {
                 $additionalInfo['contact_info'] = [];
             }
@@ -8695,11 +8564,11 @@ public function storeRequestDevice(Request $request)
             $registeredStore = null;
             
             if ((int) $request->account_type === User::ACCOUNT_TYPE_REAL_ESTATE) {
-                // حساب عقاري - معالجة البيانات الخاصة بالعقارات
-                // الحفاظ على البيانات الموجودة وتحديث المرسلة فقط
+                // ط­ط³ط§ط¨ ط¹ظ‚ط§ط±ظٹ - ظ…ط¹ط§ظ„ط¬ط© ط§ظ„ط¨ظٹط§ظ†ط§طھ ط§ظ„ط®ط§طµط© ط¨ط§ظ„ط¹ظ‚ط§ط±ط§طھ
+                // ط§ظ„ط­ظپط§ط¸ ط¹ظ„ظ‰ ط§ظ„ط¨ظٹط§ظ†ط§طھ ط§ظ„ظ…ظˆط¬ظˆط¯ط© ظˆطھط­ط¯ظٹط« ط§ظ„ظ…ط±ط³ظ„ط© ظپظ‚ط·
                 $contactInfo = $additionalInfo['contact_info'];
                 
-                // بيانات الحساب العقاري
+                // ط¨ظٹط§ظ†ط§طھ ط§ظ„ط­ط³ط§ط¨ ط§ظ„ط¹ظ‚ط§ط±ظٹ
                 if ($request->has('office_name')) {
                     $contactInfo['office_name'] = $request->office_name;
                 }
@@ -8716,20 +8585,20 @@ public function storeRequestDevice(Request $request)
                     $contactInfo['office_location'] = $request->office_location;
                 }
                 
-                // معالجة الموقع الجغرافي
+                // ظ…ط¹ط§ظ„ط¬ط© ط§ظ„ظ…ظˆظ‚ط¹ ط§ظ„ط¬ط؛ط±ط§ظپظٹ
                 if ($request->has('latitude') && $request->has('longitude')) {
                     $contactInfo['latitude'] = $request->latitude;
                     $contactInfo['longitude'] = $request->longitude;
                 }
                 
-                // معالجة صورة المكتب
+                // ظ…ط¹ط§ظ„ط¬ط© طµظˆط±ط© ط§ظ„ظ…ظƒطھط¨
                 if ($request->has('office_logo')) {
                     try {
                         $imageData = base64_decode($request->office_logo);
                         $imageName = 'office_logo_' . $user->id . '_' . time() . '.jpg';
                         $imagePath = 'uploads/office_logos/' . $imageName;
                         
-                        // إنشاء المجلد إذا لم يكن موجود
+                        // ط¥ظ†ط´ط§ط، ط§ظ„ظ…ط¬ظ„ط¯ ط¥ط°ط§ ظ„ظ… ظٹظƒظ† ظ…ظˆط¬ظˆط¯
                         if (!file_exists(public_path('uploads/office_logos'))) {
                             mkdir(public_path('uploads/office_logos'), 0777, true);
                         }
@@ -8778,7 +8647,7 @@ public function storeRequestDevice(Request $request)
             
             DB::commit();
             
-            // تسجيل نجاح العملية
+            // طھط³ط¬ظٹظ„ ظ†ط¬ط§ط­ ط§ظ„ط¹ظ…ظ„ظٹط©
             \Log::info('Complete Registration Success for User ID: ' . $user->id, [
                 'store_id' => $registeredStore?->id,
             ]);
@@ -8789,7 +8658,7 @@ public function storeRequestDevice(Request $request)
                 $extraResponseData['store'] = $storeResource;
             }
             
-            return ResponseService::successResponse('تم إكمال التسجيل بنجاح', $user, $extraResponseData);
+            return ResponseService::successResponse('طھظ… ط¥ظƒظ…ط§ظ„ ط§ظ„طھط³ط¬ظٹظ„ ط¨ظ†ط¬ط§ط­', $user, $extraResponseData);
             
         } catch (Throwable $th) {
             DB::rollBack();
@@ -8898,7 +8767,7 @@ public function storeRequestDevice(Request $request)
         if ($request->filled('return_policy')) {
             $policies[] = [
                 'policy_type' => 'return_policy',
-                'title' => 'سياسة الاسترجاع',
+                'title' => 'ط³ظٹط§ط³ط© ط§ظ„ط§ط³طھط±ط¬ط§ط¹',
                 'content' => $request->input('return_policy'),
             ];
         }
@@ -8906,7 +8775,7 @@ public function storeRequestDevice(Request $request)
         if ($request->filled('exchange_policy')) {
             $policies[] = [
                 'policy_type' => 'exchange_policy',
-                'title' => 'سياسة الاستبدال',
+                'title' => 'ط³ظٹط§ط³ط© ط§ظ„ط§ط³طھط¨ط¯ط§ظ„',
                 'content' => $request->input('exchange_policy'),
             ];
         }
@@ -8975,7 +8844,7 @@ public function storeRequestDevice(Request $request)
     }
 
     /**
-     * تحديث كلمة المرور بعد التحقق من OTP
+     * طھط­ط¯ظٹط« ظƒظ„ظ…ط© ط§ظ„ظ…ط±ظˆط± ط¨ط¹ط¯ ط§ظ„طھط­ظ‚ظ‚ ظ…ظ† OTP
      */
     public function updatePassword(Request $request)
     {
@@ -8990,7 +8859,7 @@ public function storeRequestDevice(Request $request)
                 return ResponseService::validationError($validator->errors()->first());
             }
 
-            // البحث عن المستخدم بناءً على رقم الهاتف
+            // ط§ظ„ط¨ط­ط« ط¹ظ† ط§ظ„ظ…ط³طھط®ط¯ظ… ط¨ظ†ط§ط،ظ‹ ط¹ظ„ظ‰ ط±ظ‚ظ… ط§ظ„ظ‡ط§طھظپ
             $user = User::where('mobile', $request->phone)
                        ->whereHas('roles', function ($q) {
                            $q->where('name', 'User');
@@ -8998,24 +8867,24 @@ public function storeRequestDevice(Request $request)
                        ->first();
 
             if (!$user) {
-                return ResponseService::errorResponse('رقم الهاتف غير مسجل.', null, 404);
+                return ResponseService::errorResponse('ط±ظ‚ظ… ط§ظ„ظ‡ط§طھظپ ط؛ظٹط± ظ…ط³ط¬ظ„.', null, 404);
             }
 
             if ($user->trashed()) {
-                return ResponseService::errorResponse('تم إلغاء تفعيل حسابك. يرجى التواصل مع الإدارة.', null, config('constants.RESPONSE_CODE.DEACTIVATED_ACCOUNT'));
+                return ResponseService::errorResponse('طھظ… ط¥ظ„ط؛ط§ط، طھظپط¹ظٹظ„ ط­ط³ط§ط¨ظƒ. ظٹط±ط¬ظ‰ ط§ظ„طھظˆط§طµظ„ ظ…ط¹ ط§ظ„ط¥ط¯ط§ط±ط©.', null, config('constants.RESPONSE_CODE.DEACTIVATED_ACCOUNT'));
             }
 
-            // تحديث كلمة المرور
+            // طھط­ط¯ظٹط« ظƒظ„ظ…ط© ط§ظ„ظ…ط±ظˆط±
             $user->password = Hash::make($request->password);
             $user->save();
 
-            // تسجيل دخول المستخدم تلقائياً
+            // طھط³ط¬ظٹظ„ ط¯ط®ظˆظ„ ط§ظ„ظ…ط³طھط®ط¯ظ… طھظ„ظ‚ط§ط¦ظٹط§ظ‹
             Auth::guard('web')->login($user);
             
-            // إنشاء توكن جديد
+            // ط¥ظ†ط´ط§ط، طھظˆظƒظ† ط¬ط¯ظٹط¯
             $token = $user->createToken($user->name ?? '')->plainTextToken;
 
-            // تحديث FCM token إذا كان متوفراً
+            // طھط­ط¯ظٹط« FCM token ط¥ط°ط§ ظƒط§ظ† ظ…طھظˆظپط±ط§ظ‹
             if (!empty($request->fcm_id)) {
                 UserFcmToken::updateOrCreate(
                     ['fcm_token' => $request->fcm_id],
@@ -9027,7 +8896,7 @@ public function storeRequestDevice(Request $request)
                 );
             }
 
-            return ResponseService::successResponse('تم تحديث كلمة المرور بنجاح وتسجيل الدخول', $user, ['token' => $token]);
+            return ResponseService::successResponse('طھظ… طھط­ط¯ظٹط« ظƒظ„ظ…ط© ط§ظ„ظ…ط±ظˆط± ط¨ظ†ط¬ط§ط­ ظˆطھط³ط¬ظٹظ„ ط§ظ„ط¯ط®ظˆظ„', $user, ['token' => $token]);
             
         } catch (Throwable $th) {
             ResponseService::logErrorResponse($th, "API Controller -> updatePassword");
@@ -9072,11 +8941,11 @@ public function storeRequestDevice(Request $request)
 
 
     /**
-     * معالجة كود الإحالة
+     * ظ…ط¹ط§ظ„ط¬ط© ظƒظˆط¯ ط§ظ„ط¥ط­ط§ظ„ط©
      * 
-     * @param string $code كود الإحالة
-     * @param User $user المستخدم الجديد
-     * @param string $contactInfo معلومات الاتصال
+     * @param string $code ظƒظˆط¯ ط§ظ„ط¥ط­ط§ظ„ط©
+     * @param User $user ط§ظ„ظ…ط³طھط®ط¯ظ… ط§ظ„ط¬ط¯ظٹط¯
+     * @param string $contactInfo ظ…ط¹ظ„ظˆظ…ط§طھ ط§ظ„ط§طھطµط§ظ„
      * @param array<string, mixed> $locationPayload
      * @return array<string, mixed>
      * 
@@ -9147,7 +9016,7 @@ public function storeRequestDevice(Request $request)
 
 
         try {
-            // البحث عن المستخدم الذي يملك كود الإحالة
+            // ط§ظ„ط¨ط­ط« ط¹ظ† ط§ظ„ظ…ط³طھط®ط¯ظ… ط§ظ„ط°ظٹ ظٹظ…ظ„ظƒ ظƒظˆط¯ ط§ظ„ط¥ط­ط§ظ„ط©
             $referrer = User::where('referral_code', $code)->first();
             
             if (!$referrer) {
@@ -9181,7 +9050,7 @@ public function storeRequestDevice(Request $request)
 
             }
             
-            // الحصول على أول تحدي نشط
+            // ط§ظ„ط­طµظˆظ„ ط¹ظ„ظ‰ ط£ظˆظ„ طھط­ط¯ظٹ ظ†ط´ط·
 
 
             if ($lat === null || $lng === null || $deviceTime === null) {
@@ -9237,7 +9106,7 @@ public function storeRequestDevice(Request $request)
                 
             }
             
-            // إنشاء سجل الإحالة مع challenge_id و points
+            // ط¥ظ†ط´ط§ط، ط³ط¬ظ„ ط§ظ„ط¥ط­ط§ظ„ط© ظ…ط¹ challenge_id ظˆ points
                  $referral = Referral::create([
                 'referrer_id' => $referrer->id,
                 'referred_user_id' => $user->id,
@@ -9245,7 +9114,7 @@ public function storeRequestDevice(Request $request)
                 'points' => $challenge->points_per_referral,
             ]);
             
-            // تقليل عدد الإحالات المطلوبة بمقدار واحد
+            // طھظ‚ظ„ظٹظ„ ط¹ط¯ط¯ ط§ظ„ط¥ط­ط§ظ„ط§طھ ط§ظ„ظ…ط·ظ„ظˆط¨ط© ط¨ظ…ظ‚ط¯ط§ط± ظˆط§ط­ط¯
             $challenge->decrement('required_referrals');
             
             $auditContext['referral_id'] = $referral->id;
@@ -9380,14 +9249,14 @@ public function storeRequestDevice(Request $request)
                 return ResponseService::errorResponse('User not authenticated', null, 401);
             }
             
-            // عدد الإعلانات
+            // ط¹ط¯ط¯ ط§ظ„ط¥ط¹ظ„ط§ظ†ط§طھ
             $totalAds = Item::where('user_id', $user->id)->count();
             $activeAds = Item::where('user_id', $user->id)->where('status', 'approved')->count();
             
-            // عدد المفضلة
+            // ط¹ط¯ط¯ ط§ظ„ظ…ظپط¶ظ„ط©
             $totalFavorites = Favourite::where('user_id', $user->id)->count();
             
-            // عدد المحادثات (unique conversations)
+            // ط¹ط¯ط¯ ط§ظ„ظ…ط­ط§ط¯ط«ط§طھ (unique conversations)
             $totalChats = Chat::whereHas('itemOffer', function ($query) use ($user) {
 
                     $query->where('seller_id', $user->id)
@@ -9413,7 +9282,7 @@ public function storeRequestDevice(Request $request)
     }
 
     /**
-     * حفظ موقع المستخدم للحسابات الفردية
+     * ط­ظپط¸ ظ…ظˆظ‚ط¹ ط§ظ„ظ…ط³طھط®ط¯ظ… ظ„ظ„ط­ط³ط§ط¨ط§طھ ط§ظ„ظپط±ط¯ظٹط©
      */
     public function saveUserLocation(Request $request) {
         try {
@@ -9425,7 +9294,7 @@ public function storeRequestDevice(Request $request)
                 ], 401);
             }
 
-            // التحقق من أن المستخدم لديه حساب فردي
+            // ط§ظ„طھط­ظ‚ظ‚ ظ…ظ† ط£ظ† ط§ظ„ظ…ط³طھط®ط¯ظ… ظ„ط¯ظٹظ‡ ط­ط³ط§ط¨ ظپط±ط¯ظٹ
             if ($user->user_type != 1) {
                 return response()->json([
                     'error' => true,
@@ -9442,7 +9311,7 @@ public function storeRequestDevice(Request $request)
                 'country' => 'nullable|string',
             ]);
 
-            // تحديث معلومات الموقع في الجدول
+            // طھط­ط¯ظٹط« ظ…ط¹ظ„ظˆظ…ط§طھ ط§ظ„ظ…ظˆظ‚ط¹ ظپظٹ ط§ظ„ط¬ط¯ظˆظ„
             $user->update([
                 'latitude' => $request->latitude,
                 'longitude' => $request->longitude,
@@ -9682,7 +9551,7 @@ public function storeRequestDevice(Request $request)
 
     public function storeManualPaymentRequest(Request $request) {
         if ($request->filled('bank_id') && !$request->filled('manual_bank_id')) {
-            // نقبل bank_id القادم من تطبيقات العميل ونعيد تسميته إلى manual_bank_id قبل التحقق.
+            // ظ†ظ‚ط¨ظ„ bank_id ط§ظ„ظ‚ط§ط¯ظ… ظ…ظ† طھط·ط¨ظٹظ‚ط§طھ ط§ظ„ط¹ظ…ظٹظ„ ظˆظ†ط¹ظٹط¯ طھط³ظ…ظٹطھظ‡ ط¥ظ„ظ‰ manual_bank_id ظ‚ط¨ظ„ ط§ظ„طھط­ظ‚ظ‚.
             $request->merge(['manual_bank_id' => $request->input('bank_id')]);
         }
 
@@ -10370,7 +10239,7 @@ public function storeRequestDevice(Request $request)
             ];
 
             ResponseService::successResponse(
-                'تم جلب طلبات الدفع اليدوي بنجاح',
+                'طھظ… ط¬ظ„ط¨ ط·ظ„ط¨ط§طھ ط§ظ„ط¯ظپط¹ ط§ظ„ظٹط¯ظˆظٹ ط¨ظ†ط¬ط§ط­',
                 [
                     'manual_payment_requests' => $requests,
                     'items' => $requests,
@@ -11345,12 +11214,12 @@ public function storeRequestDevice(Request $request)
             return;
         }
 
-        $senderName = $chatMessage->sender?->name ?? $reporter->name ?? __('مستخدم');
-        $messagePreview = $chatMessage->message ?? __('تم استلام رسالة جديدة.');
+        $senderName = $chatMessage->sender?->name ?? $reporter->name ?? __('ظ…ط³طھط®ط¯ظ…');
+        $messagePreview = $chatMessage->message ?? __('طھظ… ط§ط³طھظ„ط§ظ… ط±ط³ط§ظ„ط© ط¬ط¯ظٹط¯ط©.');
 
         $response = NotificationService::sendFcmNotification(
             $tokens,
-            __('محادثة جديدة من :name', ['name' => $senderName]),
+            __('ظ…ط­ط§ط¯ط«ط© ط¬ط¯ظٹط¯ط© ظ…ظ† :name', ['name' => $senderName]),
             Str::limit($messagePreview, 120),
             'support_chat_assignment',
             [
@@ -11383,7 +11252,7 @@ public function storeRequestDevice(Request $request)
                 'status' => DepartmentTicket::STATUS_OPEN,
             ],
             [
-                'subject' => sprintf('محادثة #%d تنتظر التعيين', $conversation->id),
+                'subject' => sprintf('ظ…ط­ط§ط¯ط«ط© #%d طھظ†طھط¸ط± ط§ظ„طھط¹ظٹظٹظ†', $conversation->id),
                 'description' => $this->buildSupportTicketDescription($chatMessage, $reporter),
                 'reporter_id' => $reporter->id,
             ]
@@ -11392,13 +11261,13 @@ public function storeRequestDevice(Request $request)
 
     private function buildSupportTicketDescription(ChatMessage $chatMessage, User $reporter): string
     {
-        $senderName = $chatMessage->sender?->name ?? $reporter->name ?? __('مستخدم');
+        $senderName = $chatMessage->sender?->name ?? $reporter->name ?? __('ظ…ط³طھط®ط¯ظ…');
         $messagePreview = $chatMessage->message
             ? Str::limit($chatMessage->message, 160)
-            : __('تم فتح محادثة جديدة بدون رسالة نصية.');
+            : __('طھظ… ظپطھط­ ظ…ط­ط§ط¯ط«ط© ط¬ط¯ظٹط¯ط© ط¨ط¯ظˆظ† ط±ط³ط§ظ„ط© ظ†طµظٹط©.');
 
         return sprintf(
-            'المستخدم %s أنشأ محادثة جديدة. آخر رسالة: %s',
+            'ط§ظ„ظ…ط³طھط®ط¯ظ… %s ط£ظ†ط´ط£ ظ…ط­ط§ط¯ط«ط© ط¬ط¯ظٹط¯ط©. ط¢ط®ط± ط±ط³ط§ظ„ط©: %s',
             $senderName,
             $messagePreview
         );
@@ -11883,3 +11752,4 @@ public function storeRequestDevice(Request $request)
         return self::$itemColumnAvailability = $columns;
     }
 }
+

@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:marib/app/app_theme.dart';
 import 'package:marib/app/routes.dart';
 import 'package:marib/data/cubits/cart/cart_cubit.dart';
 import 'package:marib/data/cubits/fetch_notifications_cubit.dart';
@@ -32,12 +35,19 @@ class ProfileHeaderWidget extends StatefulWidget {
 class _ProfileHeaderWidgetState extends State<ProfileHeaderWidget>
     with AutomaticKeepAliveClientMixin<ProfileHeaderWidget> {
   bool notificationsSeen = false;
-  ValueNotifier isDarkTheme = ValueNotifier(false);
+  final ValueNotifier<bool> isDarkTheme = ValueNotifier(false);
   bool isExpanded = false;
+  StreamSubscription<ThemeState>? _themeSubscription;
 
 /*  //bool isGuest = false;
   String username = "";
   String email = "";*/
+
+  void _onThemeStateChanged(bool isDark) {
+    if (isDarkTheme.value != isDark) {
+      isDarkTheme.value = isDark;
+    }
+  }
 
   @override
   void initState() {
@@ -54,17 +64,19 @@ class _ProfileHeaderWidgetState extends State<ProfileHeaderWidget>
           settings.getSetting(SystemSetting.demoMode) ?? false;
     }
 
+    final appThemeCubit = context.read<AppThemeCubit>();
+    _onThemeStateChanged(appThemeCubit.isDarkMode());
+    _themeSubscription = appThemeCubit.stream.listen((state) {
+      if (!mounted) return;
+      _onThemeStateChanged(state.appTheme == AppTheme.dark);
+    });
+
     super.initState();
   }
 
   @override
-  void didChangeDependencies() {
-    isDarkTheme.value = context.read<AppThemeCubit>().isDarkMode();
-    super.didChangeDependencies();
-  }
-
-  @override
   void dispose() {
+    _themeSubscription?.cancel();
     isDarkTheme.dispose();
     super.dispose();
   }
@@ -721,6 +733,30 @@ class _ProfileHeaderWidgetState extends State<ProfileHeaderWidget>
                         Navigator.pushNamed(
                           context,
                           Routes.info,
+                        );
+                      },
+                    ),
+                  ),
+                  Align(
+                    alignment: AlignmentDirectional.centerEnd,
+                    child: ValueListenableBuilder<bool>(
+                      valueListenable: isDarkTheme,
+                      builder: (_, isDark, __) {
+                        return IconButton(
+                          tooltip: isDark
+                              ? "الوضع الفاتح"
+                              : "الوضع الداكن",
+                          icon: UiUtils.getSvg(
+                            isDark ? AppIcons.darkTheme : AppIcons.language,
+                            height: 24,
+                            width: 24,
+                            color: context.color.territoryColor,
+                          ),
+                          onPressed: () {
+                            final nextTheme =
+                                isDark ? AppTheme.light : AppTheme.dark;
+                            context.read<AppThemeCubit>().changeTheme(nextTheme);
+                          },
                         );
                       },
                     ),

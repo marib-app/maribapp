@@ -1,4 +1,4 @@
-{
+﻿{
     "Create Categories": "Create Categories",
     "Edit Categories": "Edit Categories",
     "Back to All Categories": "Back to All Categories",
@@ -51,8 +51,6 @@
     "Address": "Address",
     "Total Post": "Total Post",
     "Status": "Status",
-    "Create Feature Section": "Create Feature Section",
-    "Add Feature Section": "Add Feature Section",
     "Title": "Title",
     "Filters": "Filters",
     "Most Liked": "Most Liked",
@@ -64,7 +62,6 @@
     "Select Style for APP Section": "Select Style for APP Section",
     "Style": "Style",
     "Sequence": "Sequence",
-    "Edit feature Section": "Edit feature Section",
     "Dashboard": "Dashboard",
     "Ads Listing": "Ads Listing",
     "Categories": "Categories",
@@ -73,7 +70,6 @@
     "Item Listing Package": "Item Listing Package",
     "Advertisement Package": "Advertisement Package",
     "Home Screen Management": "Home Screen Management",
-    "Feature Section": "Feature Section",
     "Reports Management": "Reports Management",
     "Report Reasons": "Report Reasons",
     "User Reports": "User Reports",
@@ -88,7 +84,6 @@
     "Hi, Admin": "Hi, Admin",
     "Total Customers": "Total Customers",
     "Total Items": "Total Items",
-    "Featured Sections": "Featured Sections",
     "Recent Items": "Recent Items",
     "Category": "Category",
     "Added By": "Added By",

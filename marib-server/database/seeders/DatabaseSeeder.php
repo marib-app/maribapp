@@ -25,10 +25,6 @@ class DatabaseSeeder extends Seeder
             CurrencyPermissionSeeder::class,
             MetalRatePermissionSeeder::class,
             ChatMonitorPermissionSeeder::class,
-        
-            FeatureSectionActivationSeeder::class,
-
-
             PricingSeeder::class,
 
 

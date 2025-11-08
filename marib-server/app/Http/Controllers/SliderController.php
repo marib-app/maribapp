@@ -6,7 +6,7 @@ use App\Models\Blog;
 use App\Models\Category;
 use App\Models\Item;
 use App\Models\Slider;
-use App\Services\FeatureSectionCategoryService;
+use App\Services\InterfaceSectionService;
 use App\Models\Service;
 use App\Models\User;
 use App\Models\SliderDefault;
@@ -101,7 +101,7 @@ class SliderController extends Controller {
 
         $allowedInterfaceTypes = array_values(array_unique(array_merge(
             ['all'],
-            FeatureSectionCategoryService::allowedSectionTypes(true)
+            InterfaceSectionService::allowedSectionTypes(true)
         )));
 
         $validator = Validator::make($request->all(), [
@@ -117,7 +117,7 @@ class SliderController extends Controller {
 
         $this->sliderDefaultService->upsert($data['interface_type'], $request->file('image'));
 
-        return redirect()->route('slider.index')->with('success', __('تم حفظ الصورة الافتراضية بنجاح.'));
+        return redirect()->route('slider.index')->with('success', __('طھظ… ط­ظپط¸ ط§ظ„طµظˆط±ط© ط§ظ„ط§ظپطھط±ط§ط¶ظٹط© ط¨ظ†ط¬ط§ط­.'));
     }
 
     public function destroyDefault(SliderDefault $sliderDefault)
@@ -126,16 +126,16 @@ class SliderController extends Controller {
 
         $this->sliderDefaultService->delete($sliderDefault);
 
-        return redirect()->route('slider.index')->with('success', __('تم حذف الصورة الافتراضية.'));
+        return redirect()->route('slider.index')->with('success', __('طھظ… ط­ط°ظپ ط§ظ„طµظˆط±ط© ط§ظ„ط§ظپطھط±ط§ط¶ظٹط©.'));
     }
 
     private function buildInterfaceData(): array {
-        $allowedInterfaceTypes = array_values(FeatureSectionCategoryService::allowedSectionTypes());
+        $allowedInterfaceTypes = array_values(InterfaceSectionService::allowedSectionTypes());
 
-        $defaultInterfaceType = FeatureSectionCategoryService::defaultSectionType() ?? ($allowedInterfaceTypes[0] ?? null);
+        $defaultInterfaceType = InterfaceSectionService::defaultSectionType() ?? ($allowedInterfaceTypes[0] ?? null);
         $interfaceTypeLabels = $this->buildInterfaceTypeLabels();
         $interfaceTypeOptions = array_values(array_unique(array_merge(['all'], $allowedInterfaceTypes)));
-        $sliderAliasMap = collect(FeatureSectionCategoryService::sectionTypeAliases() ?? config('feature-section.section_type_aliases', []))
+        $sliderAliasMap = collect(InterfaceSectionService::sectionTypeAliases() ?? config('interface_sections.section_type_aliases', []))
             ->mapWithKeys(fn ($value, $key) => [Str::lower($key) => $value])
             ->toArray();
 
@@ -150,17 +150,17 @@ class SliderController extends Controller {
 
     private function buildFormDatasets(): array {
         $targetTypeLabels = [
-            'item'     => __('منتج'),
-            'category' => __('فئة'),
-            'blog'     => __('صفحة'),
-            'user'     => __('مستخدم'),
-            'service'  => __('خدمة'),
+            'item'     => __('ظ…ظ†طھط¬'),
+            'category' => __('ظپط¦ط©'),
+            'blog'     => __('طµظپط­ط©'),
+            'user'     => __('ظ…ط³طھط®ط¯ظ…'),
+            'service'  => __('ط®ط¯ظ…ط©'),
         ];
 
         $actionTypeLabels = [
-            Slider::ACTION_OPEN_CHAT    => __('فتح دردشة'),
-            Slider::ACTION_APPLY_COUPON => __('تطبيق كوبون'),
-            Slider::ACTION_OPEN_LINK    => __('رابط مخصص'),
+            Slider::ACTION_OPEN_CHAT    => __('ظپطھط­ ط¯ط±ط¯ط´ط©'),
+            Slider::ACTION_APPLY_COUPON => __('طھط·ط¨ظٹظ‚ ظƒظˆط¨ظˆظ†'),
+            Slider::ACTION_OPEN_LINK    => __('ط±ط§ط¨ط· ظ…ط®طµطµ'),
         ];
 
         $sliderStatuses = Slider::availableStatuses();
@@ -181,23 +181,23 @@ class SliderController extends Controller {
     }
     private function buildInterfaceTypeLabels(): array {
         return [
-            'all'                     => __('الكل'),
-            'homepage'                => __('الصفحة الرئيسية'),
-            'real_estate'             => __('الخدمات العقارية'),
-            'tourism'                 => __('الخدمات السياحية'),
-            'merchants'               => __('المتجر الإلكتروني'),
-            'shein'                   => __('منتجات شي إن'),
-            'computer'                => __('قسم الكمبيوتر'),
-            'public'                  => __('إعلانات الجمهور'),
-            'request_ad'              => __('طلب إعلان'),
-            'services_all'            => __('كل الخدمات'),
-            'services_local'          => __('خدمات محلية'),
-            'services_medical'        => __('خدمات طبية'),
-            'services_jobs'           => __('وظائف'),
-            'services_events_offers'  => __('فعاليات وعروض'),
-            'services_marib_lost'     => __('مفقودات مارب'),
-            'services_student'        => __('خدمات طلابية'),
-            'services_marib_guide'    => __('دليل مارب'),
+            'all'                     => __('ط§ظ„ظƒظ„'),
+            'homepage'                => __('ط§ظ„طµظپط­ط© ط§ظ„ط±ط¦ظٹط³ظٹط©'),
+            'real_estate'             => __('ط§ظ„ط®ط¯ظ…ط§طھ ط§ظ„ط¹ظ‚ط§ط±ظٹط©'),
+            'tourism'                 => __('ط§ظ„ط®ط¯ظ…ط§طھ ط§ظ„ط³ظٹط§ط­ظٹط©'),
+            'merchants'               => __('ط§ظ„ظ…طھط¬ط± ط§ظ„ط¥ظ„ظƒطھط±ظˆظ†ظٹ'),
+            'shein'                   => __('ظ…ظ†طھط¬ط§طھ ط´ظٹ ط¥ظ†'),
+            'computer'                => __('ظ‚ط³ظ… ط§ظ„ظƒظ…ط¨ظٹظˆطھط±'),
+            'public'                  => __('ط¥ط¹ظ„ط§ظ†ط§طھ ط§ظ„ط¬ظ…ظ‡ظˆط±'),
+            'request_ad'              => __('ط·ظ„ط¨ ط¥ط¹ظ„ط§ظ†'),
+            'services_all'            => __('ظƒظ„ ط§ظ„ط®ط¯ظ…ط§طھ'),
+            'services_local'          => __('ط®ط¯ظ…ط§طھ ظ…ط­ظ„ظٹط©'),
+            'services_medical'        => __('ط®ط¯ظ…ط§طھ ط·ط¨ظٹط©'),
+            'services_jobs'           => __('ظˆط¸ط§ط¦ظپ'),
+            'services_events_offers'  => __('ظپط¹ط§ظ„ظٹط§طھ ظˆط¹ط±ظˆط¶'),
+            'services_marib_lost'     => __('ظ…ظپظ‚ظˆط¯ط§طھ ظ…ط§ط±ط¨'),
+            'services_student'        => __('ط®ط¯ظ…ط§طھ ط·ظ„ط§ط¨ظٹط©'),
+            'services_marib_guide'    => __('ط¯ظ„ظٹظ„ ظ…ط§ط±ط¨'),
         ];
     }
 
@@ -309,7 +309,7 @@ class SliderController extends Controller {
         $hasLink = ! empty($linkUrl);
 
         if (! $hasTarget && ! $hasAction && ! $hasLink) {
-            ResponseService::validationError(__('يرجى تحديد وجهة أو إجراء أو رابط للسلايدر.'));
+            ResponseService::validationError(__('ظٹط±ط¬ظ‰ طھط­ط¯ظٹط¯ ظˆط¬ظ‡ط© ط£ظˆ ط¥ط¬ط±ط§ط، ط£ظˆ ط±ط§ط¨ط· ظ„ظ„ط³ظ„ط§ظٹط¯ط±.'));
         }
 
         try {
@@ -317,16 +317,16 @@ class SliderController extends Controller {
             $lastSequence = Slider::max('sequence');
             $nextSequence = $lastSequence + 1;
             $rawInterfaceType = $request->input('interface_type');
-            $defaultInterfaceType = FeatureSectionCategoryService::defaultSectionType();
+            $defaultInterfaceType = InterfaceSectionService::defaultSectionType();
 
             if ($defaultInterfaceType === null) {
-                $availableInterfaceTypes = FeatureSectionCategoryService::allowedSectionTypes();
+                $availableInterfaceTypes = InterfaceSectionService::allowedSectionTypes();
                 $defaultInterfaceType = $availableInterfaceTypes[0] ?? null;
             }
 
             $interfaceType = $rawInterfaceType === 'all'
                 ? 'all'
-                : FeatureSectionCategoryService::normalizeSectionType($rawInterfaceType ?? $defaultInterfaceType);
+                : InterfaceSectionService::normalizeSectionType($rawInterfaceType ?? $defaultInterfaceType);
 
 
 
@@ -338,7 +338,7 @@ class SliderController extends Controller {
             if (! empty($dayparting) && ! is_array($dayparting)) {
                 $decodedDayparting = json_decode($dayparting, true);
                 if (json_last_error() !== JSON_ERROR_NONE) {
-                    ResponseService::validationError(__('صيغة التقسيم الزمني غير صحيحة. يرجى استخدام JSON صالح.'));
+                    ResponseService::validationError(__('طµظٹط؛ط© ط§ظ„طھظ‚ط³ظٹظ… ط§ظ„ط²ظ…ظ†ظٹ ط؛ظٹط± طµط­ظٹط­ط©. ظٹط±ط¬ظ‰ ط§ط³طھط®ط¯ط§ظ… JSON طµط§ظ„ط­.'));
                 }
                 $dayparting = $decodedDayparting;
             }
@@ -354,13 +354,13 @@ class SliderController extends Controller {
                 $targetClass = $targetMap[$targetTypeAlias] ?? null;
 
                 if (! $targetClass) {
-                    ResponseService::validationError(__('نوع الوجهة المحدد غير صالح.'));
+                    ResponseService::validationError(__('ظ†ظˆط¹ ط§ظ„ظˆط¬ظ‡ط© ط§ظ„ظ…ط­ط¯ط¯ ط؛ظٹط± طµط§ظ„ط­.'));
                 }
 
                 $targetModel = $targetClass::find($targetId);
 
                 if (! $targetModel) {
-                    ResponseService::validationError(__('العنصر المحدد غير موجود.'));
+                    ResponseService::validationError(__('ط§ظ„ط¹ظ†طµط± ط§ظ„ظ…ط­ط¯ط¯ ط؛ظٹط± ظ…ظˆط¬ظˆط¯.'));
                 }
             }
 
@@ -374,13 +374,13 @@ class SliderController extends Controller {
                 }
 
                 if (! $chatUserId) {
-                    ResponseService::validationError(__('يرجى اختيار مستخدم صالح لبدء الدردشة.'));
+                    ResponseService::validationError(__('ظٹط±ط¬ظ‰ ط§ط®طھظٹط§ط± ظ…ط³طھط®ط¯ظ… طµط§ظ„ط­ ظ„ط¨ط¯ط، ط§ظ„ط¯ط±ط¯ط´ط©.'));
                 }
 
                 $chatUser = User::find($chatUserId);
 
                 if (! $chatUser) {
-                    ResponseService::validationError(__('المستخدم المحدد غير موجود.'));
+                    ResponseService::validationError(__('ط§ظ„ظ…ط³طھط®ط¯ظ… ط§ظ„ظ…ط­ط¯ط¯ ط؛ظٹط± ظ…ظˆط¬ظˆط¯.'));
                 }
 
                 $actionPayload = ['chat_with' => $chatUser->getKey()];
@@ -394,7 +394,7 @@ class SliderController extends Controller {
                 $couponCode = isset($input['action_coupon_code']) ? trim((string) $input['action_coupon_code']) : '';
 
                 if ($couponCode === '') {
-                    ResponseService::validationError(__('يرجى إدخال رمز الكوبون.'));
+                    ResponseService::validationError(__('ظٹط±ط¬ظ‰ ط¥ط¯ط®ط§ظ„ ط±ظ…ط² ط§ظ„ظƒظˆط¨ظˆظ†.'));
                 }
 
                 $actionPayload = array_filter([
@@ -404,7 +404,7 @@ class SliderController extends Controller {
                 ], static fn ($value) => $value !== null && $value !== '');
             } elseif ($actionType === Slider::ACTION_OPEN_LINK) {
                 if (! $linkUrl) {
-                    ResponseService::validationError(__('يرجى إدخال رابط صالح.'));
+                    ResponseService::validationError(__('ظٹط±ط¬ظ‰ ط¥ط¯ط®ط§ظ„ ط±ط§ط¨ط· طµط§ظ„ط­.'));
                 }
 
                 $actionPayload = array_filter([
@@ -414,7 +414,7 @@ class SliderController extends Controller {
             }
 
             if ($targetTypeAlias && ! $targetModel) {
-                ResponseService::validationError(__('العنصر المحدد غير موجود.'));
+                ResponseService::validationError(__('ط§ظ„ط¹ظ†طµط± ط§ظ„ظ…ط­ط¯ط¯ ط؛ظٹط± ظ…ظˆط¬ظˆط¯.'));
             }
 
             $targetTypeMorph = $targetModel?->getMorphClass();
@@ -512,8 +512,8 @@ class SliderController extends Controller {
             if ($request->interface_type === 'all') {
                 $interfaceTypeFilter = 'all';
             } else {
-                $interfaceTypeFilter = FeatureSectionCategoryService::normalizeSectionType($request->interface_type);
-                $interfaceTypeVariants = FeatureSectionCategoryService::sectionTypeVariants($interfaceTypeFilter);
+                $interfaceTypeFilter = InterfaceSectionService::normalizeSectionType($request->interface_type);
+                $interfaceTypeVariants = InterfaceSectionService::sectionTypeVariants($interfaceTypeFilter);
             }
         }
 
@@ -645,3 +645,4 @@ class SliderController extends Controller {
 
     }
 }
+

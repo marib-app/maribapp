@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
+        $isSqlite = Schema::getConnection()->getDriverName() === 'sqlite';
+
         Schema::table('cart_items', static function (Blueprint $table) {
             if (! Schema::hasColumn('cart_items', 'variant_key')) {
                 $table->string('variant_key', 512)->default('')->after('variant_id');
@@ -16,8 +18,8 @@ return new class extends Migration {
 
         DB::table('cart_items')->update(['variant_key' => DB::raw("COALESCE(variant_key, '')")]);
 
-        Schema::table('cart_items', static function (Blueprint $table) {
-            if (Schema::hasColumn('cart_items', 'user_id')) {
+        Schema::table('cart_items', static function (Blueprint $table) use ($isSqlite) {
+            if (! $isSqlite && Schema::hasColumn('cart_items', 'user_id')) {
                 try {
                     $table->dropForeign(['user_id']);
                 } catch (\Throwable $exception) {
@@ -25,7 +27,7 @@ return new class extends Migration {
                 }
             }
 
-            if (Schema::hasColumn('cart_items', 'item_id')) {
+            if (! $isSqlite && Schema::hasColumn('cart_items', 'item_id')) {
                 try {
                     $table->dropForeign(['item_id']);
                 } catch (\Throwable $exception) {
@@ -54,9 +56,11 @@ return new class extends Migration {
 
     public function down(): void
     {
-        Schema::table('cart_items', static function (Blueprint $table) {
+        $isSqlite = Schema::getConnection()->getDriverName() === 'sqlite';
 
-            if (Schema::hasColumn('cart_items', 'user_id')) {
+        Schema::table('cart_items', static function (Blueprint $table) use ($isSqlite) {
+
+            if (! $isSqlite && Schema::hasColumn('cart_items', 'user_id')) {
                 try {
                     $table->dropForeign(['user_id']);
                 } catch (\Throwable $exception) {
@@ -64,7 +68,7 @@ return new class extends Migration {
                 }
             }
 
-            if (Schema::hasColumn('cart_items', 'item_id')) {
+            if (! $isSqlite && Schema::hasColumn('cart_items', 'item_id')) {
                 try {
                     $table->dropForeign(['item_id']);
                 } catch (\Throwable $exception) {

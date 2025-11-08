@@ -3,6 +3,7 @@
 // يُبقي الرمز ProfileScreen معرفاً (لأن الـ part أدناه يحتوي الواجهة).
 import 'package:marib/app/app_scroll_behavior.dart';
 
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui' show Rect;
 
@@ -297,7 +298,6 @@ mixin ProfileScreenLogic<T extends StatefulWidget> on State<T> {
   Color getAccountTypeBadgeColor(BuildContext context) => _getAccountTypeBadgeColor(context);
   String getAccountTypeText() => _getAccountTypeText();
 }
-
 
 
 

@@ -94,32 +94,43 @@
                 </div>
             </div>
 
+            @php
+                $featureSectionRoute = Route::has('feature-section.list')
+                    ? route('feature-section.list', ['include_actions' => 0])
+                    : null;
+            @endphp
             <div class="col-md-8">
                 <div class="card h-100">
                     <div class="card-header border-0 pb-0">
-                        <h3 style="font-weight: 600">{{__("Featured Sections")}}</h3>
+                        <h3 style="font-weight: 600">{{ __("Featured Sections") }}</h3>
                     </div>
                     <div class="card-body">
-                        <table class="table-borderless table-striped" aria-describedby="mydesc"
-                               id="table_list" data-toggle="table" data-url="{{ route('feature-section.list', ['include_actions' => 0]) }}"
-                               data-click-to-select="true" data-search="true" data-toolbar="#toolbar"
-                               data-show-columns="true" data-show-refresh="true" data-fixed-columns="true"
-                               data-fixed-number="1" data-trim-on-search="false" data-responsive="true"
-                               data-escape="true"
-                               data-sort-name="id" data-sort-order="desc" data-query-params="queryParams" data-mobile-responsive="true"
-                               data-side-pagination="server"  data-pagination="true" data-page-size="3">
-                            <thead class="thead-dark">
-                            <tr>
-                                <th scope="col" data-field="id" data-sortable="true">{{ __('ID') }}</th>
-                                <th scope="col" data-field="style" data-formatter="styleImageFormatter">{{ __('Style') }}</th>
-                                <th scope="col" data-field="title" data-sortable="false">{{ __('Title') }}</th>
-                                <th scope="col" data-field="filter" data-sortable="false" data-formatter="filterTextFormatter">{{ __('Filters') }}</th>
-                                <th scope="col" data-field="min_price" data-sortable="true" data-visible="false">{{ __('Min Price') }}</th>
-                                <th scope="col" data-field="max_price" data-sortable="true" data-visible="false">{{ __('Max price') }}</th>
-                                <th scope="col" data-field="values_text" data-sortable="true" data-visible="false">{{ __('Value') }}</th>
-                            </tr>
-                            </thead>
-                        </table>
+                        @if($featureSectionRoute)
+                            <table class="table-borderless table-striped" aria-describedby="mydesc"
+                                   id="table_list" data-toggle="table" data-url="{{ $featureSectionRoute }}"
+                                   data-click-to-select="true" data-search="true" data-toolbar="#toolbar"
+                                   data-show-columns="true" data-show-refresh="true" data-fixed-columns="true"
+                                   data-fixed-number="1" data-trim-on-search="false" data-responsive="true"
+                                   data-escape="true"
+                                   data-sort-name="id" data-sort-order="desc" data-query-params="queryParams" data-mobile-responsive="true"
+                                   data-side-pagination="server"  data-pagination="true" data-page-size="3">
+                                <thead class="thead-dark">
+                                <tr>
+                                    <th scope="col" data-field="id" data-sortable="true">{{ __('ID') }}</th>
+                                    <th scope="col" data-field="style" data-formatter="styleImageFormatter">{{ __('Style') }}</th>
+                                    <th scope="col" data-field="title" data-sortable="false">{{ __('Title') }}</th>
+                                    <th scope="col" data-field="filter" data-sortable="false" data-formatter="filterTextFormatter">{{ __('Filters') }}</th>
+                                    <th scope="col" data-field="min_price" data-sortable="true" data-visible="false">{{ __('Min Price') }}</th>
+                                    <th scope="col" data-field="max_price" data-sortable="true" data-visible="false">{{ __('Max price') }}</th>
+                                    <th scope="col" data-field="values_text" data-sortable="true" data-visible="false">{{ __('Value') }}</th>
+                                </tr>
+                                </thead>
+                            </table>
+                        @else
+                            <div class="text-center py-5">
+                                <p class="text-muted mb-0">{{ __('Feature section data is currently unavailable.') }}</p>
+                            </div>
+                        @endif
                     </div>
                 </div>
             </div>

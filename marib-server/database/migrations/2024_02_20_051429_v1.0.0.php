@@ -153,18 +153,6 @@ return new class extends Migration {
             $table->timestamps();
         });
 
-        Schema::create('feature_sections', static function (Blueprint $table) {
-            $table->id();
-            $table->string('title');
-            $table->integer('sequence');
-            $table->string('filter');
-            $table->string('value')->nullable();
-            $table->string('style');
-            $table->integer('min_price')->nullable();
-            $table->integer('max_price')->nullable();
-            $table->timestamps();
-        });
-
         Schema::create('notifications', static function (Blueprint $table) {
             $table->id();
             $table->text('title');
@@ -267,7 +255,6 @@ return new class extends Migration {
         Schema::dropIfExists('report_reasons');
         Schema::dropIfExists('user_reports');
         Schema::dropIfExists('user_purchased_packages');
-        Schema::dropIfExists('feature_sections');
         Schema::dropIfExists('notification');
         Schema::dropIfExists('advertisements');
         Schema::dropIfExists('favourites');

@@ -136,22 +136,13 @@
                         </li>
                     @endcanany
                 @endcanany
-                @canany(['slider-list','slider-create','slider-update','slider-delete','feature-section-list','feature-section-create','feature-section-update','feature-section-delete'])
+                @canany(['slider-list','slider-create','slider-update','slider-delete'])
                     <div class="sidebar-new-title">{{ __('Home Screen Management') }}</div>
                     @canany(['slider-list','slider-create','slider-update','slider-delete'])
                         <li class="sidebar-item">
                             <a href="{{ url('slider') }}" class='sidebar-link'>
                                 <i class="bi bi-sliders2"></i>
                                 <span class="menu-item">{{ __('Slider') }}</span>
-                            </a>
-                        </li>
-                    @endcanany
-
-                    @canany(['feature-section-list','feature-section-create','feature-section-update','feature-section-delete'])
-                        <li class="sidebar-item">
-                            <a href="{{ route('feature-section.index') }}" class='sidebar-link'>
-                                <i class="bi bi-grid-1x2"></i>
-                                <span class="menu-item">{{ __('Feature Section') }}</span>
                             </a>
                         </li>
                     @endcanany

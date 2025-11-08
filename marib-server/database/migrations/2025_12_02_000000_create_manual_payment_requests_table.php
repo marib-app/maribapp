@@ -6,6 +6,10 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
     public function up(): void {
+        if (Schema::getConnection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         if (!Schema::hasTable('manual_payment_requests')) {
             Schema::create('manual_payment_requests', function (Blueprint $table) {
                 $table->id();
@@ -125,6 +129,10 @@ return new class extends Migration {
 
     public function down(): void {
         if (!Schema::hasTable('manual_payment_requests')) {
+            return;
+        }
+
+        if (Schema::getConnection()->getDriverName() === 'sqlite') {
             return;
         }
 

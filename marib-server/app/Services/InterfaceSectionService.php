@@ -7,7 +7,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
-class FeatureSectionCategoryService
+class InterfaceSectionService
 {
     public static function categoriesForSection(?string $sectionType): Collection
     {
@@ -83,7 +83,7 @@ class FeatureSectionCategoryService
 
     public static function rootIdentifiers(): array
     {
-        $identifiers = config('feature-section.root_identifiers', []);
+        $identifiers = config('interface_sections.root_identifiers', []);
 
         $overridesRaw = CachingService::getSystemSettings('featured_section_root_identifiers');
 
@@ -110,7 +110,7 @@ class FeatureSectionCategoryService
     public static function allowedSectionTypes(bool $includeLegacy = false): array
     {
         $rootIdentifiers = self::rootIdentifiers();
-        $configured = config('feature-section.allowed_section_types');
+        $configured = config('interface_sections.allowed_section_types');
 
         if (is_array($configured) && $configured !== []) {
             $allowed = array_values(array_filter($configured, static function ($sectionType) use ($rootIdentifiers) {
@@ -148,7 +148,7 @@ class FeatureSectionCategoryService
 
     public static function sectionTypeAliases(): array
     {
-        $configured = config('feature-section.section_type_aliases', []);
+        $configured = config('interface_sections.section_type_aliases', []);
 
         return array_merge(self::generatedServiceAliases(), $configured);
     

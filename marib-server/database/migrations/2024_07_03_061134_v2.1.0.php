@@ -20,13 +20,15 @@ return new class extends Migration {
                 $table->boolean('is_verified')->default(0);
             }
         });
-        Schema::table('block_users', static function (Blueprint $table) {
-            $table->dropForeign('block_users_user_id_foreign');
-            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade')->onUpdate('cascade');
+        if (Schema::getConnection()->getDriverName() !== 'sqlite') {
+            Schema::table('block_users', static function (Blueprint $table) {
+                $table->dropForeign('block_users_user_id_foreign');
+                $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade')->onUpdate('cascade');
 
-            $table->dropForeign('block_users_blocked_user_id_foreign');
-            $table->foreign('blocked_user_id')->references('id')->on('users')->onDelete('cascade')->onUpdate('cascade');
-        });
+                $table->dropForeign('block_users_blocked_user_id_foreign');
+                $table->foreign('blocked_user_id')->references('id')->on('users')->onDelete('cascade')->onUpdate('cascade');
+            });
+        }
 
         Schema::table('cities', static function (Blueprint $table) {
             $table->unique(['name', 'state_id', 'country_id']);
@@ -92,10 +94,6 @@ return new class extends Migration {
             $table->timestamps();
         });
 
-        Schema::table('feature_sections', static function (Blueprint $table) {
-            $table->string('description')->nullable();
-        });
-
         Schema::table('user_fcm_tokens', static function (Blueprint $table) {
             $table->enum('platform_type', ['Android', 'iOS'])->nullable();
         });
@@ -128,10 +126,6 @@ return new class extends Migration {
 
         Schema::table('verification_requests', static function (Blueprint $table) {
             $table->dropColumn('rejection_reason');
-        });
-
-        Schema::table('feature_sections', static function (Blueprint $table) {
-            $table->dropColumn('description');
         });
 
         Schema::table('user_fcm_tokens', static function (Blueprint $table) {

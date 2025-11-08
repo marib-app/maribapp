@@ -306,12 +306,8 @@
     const sliderSummaryDefaultStart = @json($reportDefaultStart);
     const sliderSummaryDefaultEnd = @json($reportDefaultEnd);
 
-    window.featureSectionTypeAliasMap = @json($sliderAliasMap);
     const sliderDefaultInterfaceType = @json($defaultInterfaceType);
     window.sliderDefaultInterfaceType = sliderDefaultInterfaceType;
-    if (typeof window.featureSectionDefaultType === 'undefined') {
-        window.featureSectionDefaultType = sliderDefaultInterfaceType;
-    }
 
     function typeFormatter(value, row) {
         const fallback = value || (row && row.target_type) || (row && row.model_type) || '';
@@ -623,5 +619,4 @@
     });
 </script>
 @endsection
-
 

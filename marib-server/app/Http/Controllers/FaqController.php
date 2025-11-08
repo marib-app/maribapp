@@ -125,9 +125,9 @@ class FaqController extends Controller
             ResponseService::validationError($validator->errors()->first());
         }
         try {
-            $feature_section = Faq::findOrFail($id);
+            $faq = Faq::findOrFail($id);
             $data = $request->all();
-            $feature_section->update($data);
+            $faq->update($data);
             ResponseService::successResponse('FAQ Updated Successfully');
         } catch (Throwable $th) {
             ResponseService::logErrorResponse($th, "Faq Controller -> update");
@@ -229,4 +229,3 @@ class FaqController extends Controller
     }
 
 }
-

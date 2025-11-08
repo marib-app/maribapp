@@ -1,6 +1,6 @@
 @extends('layouts.main')
 
-@section('title', __('ط­ظˆط§ظ„ط© #:id', ['id' => $manualPaymentRequest->id]))
+@section('title', __('حوالة #:id', ['id' => $manualPaymentRequest->id]))
 
 @section('page-title')
     <div class="page-title">
@@ -8,13 +8,13 @@
             <div class="col-12 col-md-6 order-md-1 order-last">
                 <h4>@yield('title')</h4>
                 <p class="text-subtitle text-muted">
-                    {{ __('ظ…ط±ط§ط¬ط¹ط© ظƒط§ظ…ظ„ط© ظ„ظ„ط­ظˆط§ظ„ط© ط§ظ„ظٹط¯ظˆظٹط© ظˆطھط£ظƒظٹط¯ ط§ظ„ط¯ظپط¹ ظ‚ط¨ظ„ طھطµط¯ظٹظ‚ط§طھ ط§ظ„ط²ط¨ظˆظ†.') }}
+                    {{ __('مراجعة كاملة للتحويل البنكي واتخاذ القرار قبل تفعيل الطلب.') }}
                 </p>
             </div>
             <div class="col-12 col-md-6 order-md-2 order-first d-flex justify-content-end gap-2 flex-wrap">
                 <a href="{{ route('merchant.manual-payments.index') }}" class="btn btn-outline-secondary">
                     <i class="bi bi-arrow-left"></i>
-                    {{ __('ط§ظ„ط¹ظˆط¯ط© ظ„ظ„ظ‚ط§ط¦ظ…ط©') }}
+                    {{ __('العودة للقائمة') }}
                 </a>
             </div>
         </div>
@@ -200,14 +200,17 @@
             <div class="col-12 col-lg-5">
                 <div class="card">
                     <div class="card-header">
-                        <h6 class="mb-0">{{ __('ط¥ط¬ط±ط§ط، ط§ظ„طªط£ظƒظٹط¯') }}</h6>
+                        <div>
+                            <h6 class="mb-0">{{ __('إجراء التأكيد') }}</h6>
+                            <small class="text-muted">{{ __('استخدم هذا النموذج لقبول أو رفض الحوالة بعد مراجعة البيانات.') }}</small>
+                        </div>
                     </div>
                     <div class="card-body">
                         @if ($canDecide)
                             <form method="post" action="{{ route('merchant.manual-payments.decide', $manualPaymentRequest) }}" enctype="multipart/form-data">
                                 @csrf
                                 <div class="mb-3">
-                                    <label class="form-label">{{ __('ط§ط®طھط§ط± ط§ظ„ظ‚ط±ط§ط±') }}</label>
+                                    <label class="form-label">{{ __('اختيار القرار') }}</label>
                                     <select name="decision" class="form-select">
                                         <option value="{{ \App\Models\ManualPaymentRequest::STATUS_APPROVED }}">{{ __('طھط£ظƒظٹط¯ ط§ظ„ط¯ظپط¹') }}</option>
                                         <option value="{{ \App\Models\ManualPaymentRequest::STATUS_REJECTED }}">{{ __('ط±ظپط¶ ط§ظ„ط¯ظپط¹') }}</option>
@@ -215,8 +218,8 @@
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label d-flex justify-content-between">
-                                        <span>{{ __('ظ…ظ„ط§ط­ط¸ط© ط§ظ„طھط§ط¬ط±') }}</span>
-                                        <small class="text-muted">{{ __('طھط·ظ„ط¨ ظ…ظ„ط§ط­ط¸ط© ظ…ط¹ ط§ظ„ط±ظپط¶') }}</small>
+                                        <span>{{ __('ملاحظة التاجر') }}</span>
+                                        <small class="text-muted">{{ __('تظهر للعميل عند الرفض أو القبول الاختياري.') }}</small>
                                     </label>
                                     <textarea name="note" class="form-control @error('note') is-invalid @enderror" rows="3" placeholder="{{ __('ط£ط¶ظپ طھظپط§طµظٹظ„ ط§ظ„ظ…ط±ط¬ط¹ ط£ظˆ ط³ط¨ط¨ ط§ظ„ط±ظپط¶') }}"></textarea>
                                     @error('note')
@@ -224,7 +227,7 @@
                                     @enderror
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label">{{ __('ط§ط±ظپط§ق ط§ظ„ظ…ط³طھظ†ط¯ط§طھ') }}</label>
+                                    <label class="form-label">{{ __('إرفاق المستندات') }}</label>
                                     <input type="file" name="attachment" class="form-control @error('attachment') is-invalid @enderror" accept=".jpg,.jpeg,.png,.pdf">
                                     <small class="text-muted d-block mt-1">{{ __('ط­ط¯ ط§ظ„ط*ط¬ظ… ط§ظ„ط£ظ‚طµظ‰ 5ظ…ط¨ (PDF/PNG/JPG)') }}</small>
                                     @error('attachment')
@@ -234,7 +237,7 @@
                                 <div class="form-check mb-3">
                                     <input class="form-check-input" type="checkbox" name="notify_customer" value="1" id="notifyCustomerCheck" checked>
                                     <label class="form-check-label" for="notifyCustomerCheck">
-                                        {{ __('ط¥ط±ط³ط§ظ„ ط¥ط´ط¹ط§ط± ظ„ظ„ط²ط¨ظˆظ†') }}
+                                        {{ __('إرسال إشعار للزبون') }}
                                     </label>
                                 </div>
                                 <button type="submit" class="btn btn-primary w-100">
@@ -250,10 +253,36 @@
                 @if ($manualPaymentRequest->admin_note)
                     <div class="card mt-3">
                         <div class="card-header">
-                            <h6 class="mb-0">{{ __('ظ…ظ„ط§ط­ط¸ط§طھ ظ‚ط¨ظ„ط©') }}</h6>
+                            <h6 class="mb-0">{{ __('ملاحظات قبلية') }}</h6>
                         </div>
                         <div class="card-body">
                             <p class="mb-0">{{ $manualPaymentRequest->admin_note }}</p>
+                        </div>
+                    </div>
+                @endif
+                @if ($historyEntries->isNotEmpty())
+                    <div class="card mt-3">
+                        <div class="card-header">
+                            <h6 class="mb-0">{{ __('سجل القرارات') }}</h6>
+                        </div>
+                        <div class="card-body">
+                            <ul class="manual-payment-timeline">
+                                @foreach ($historyEntries as $history)
+                                    <li>
+                                        <div class="timeline-point bg-{{ $history->status === \App\Models\ManualPaymentRequest::STATUS_APPROVED ? 'success' : ($history->status === \App\Models\ManualPaymentRequest::STATUS_REJECTED ? 'danger' : 'warning') }}"></div>
+                                        <div class="timeline-content">
+                                            <div class="d-flex justify-content-between flex-wrap gap-2">
+                                                <strong>{{ __($history->status) }}</strong>
+                                                <small class="text-muted">{{ optional($history->created_at)->format('Y-m-d H:i') }}</small>
+                                            </div>
+                                            <p class="mb-1 text-muted">{{ $history->user?->name ?? __('النظام') }}</p>
+                                            @if ($history->note)
+                                                <p class="mb-0">{{ $history->note }}</p>
+                                            @endif
+                                        </div>
+                                    </li>
+                                @endforeach
+                            </ul>
                         </div>
                     </div>
                 @endif
@@ -261,3 +290,43 @@
         </div>
     </section>
 @endsection
+
+@push('styles')
+<style>
+    .manual-payment-timeline {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+    .manual-payment-timeline li {
+        position: relative;
+        padding-left: 28px;
+        margin-bottom: 18px;
+    }
+    .manual-payment-timeline li::before {
+        content: '';
+        position: absolute;
+        left: 7px;
+        top: 0;
+        bottom: -10px;
+        width: 2px;
+        background: #e5e7eb;
+    }
+    .manual-payment-timeline li:last-child::before {
+        bottom: 12px;
+    }
+    .manual-payment-timeline .timeline-point {
+        position: absolute;
+        left: 0;
+        top: 4px;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+    }
+    .manual-payment-timeline .timeline-content {
+        background: #f9fafb;
+        border-radius: 8px;
+        padding: 8px 12px;
+    }
+</style>
+@endpush

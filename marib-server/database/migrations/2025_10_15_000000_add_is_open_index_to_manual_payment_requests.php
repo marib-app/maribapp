@@ -13,6 +13,10 @@ return new class extends Migration {
             return;
         }
 
+        if (Schema::getConnection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         if (Schema::hasColumn('manual_payment_requests', 'status')) {
             DB::statement("ALTER TABLE manual_payment_requests MODIFY COLUMN status ENUM('pending','under_review','approved','rejected') NOT NULL DEFAULT 'pending'");
         }
@@ -104,6 +108,10 @@ return new class extends Migration {
     public function down(): void
     {
         if (! Schema::hasTable('manual_payment_requests')) {
+            return;
+        }
+
+        if (Schema::getConnection()->getDriverName() === 'sqlite') {
             return;
         }
 

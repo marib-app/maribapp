@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\CustomersController;
 use App\Http\Controllers\CustomFieldController;
 use App\Http\Controllers\FaqController;
-use App\Http\Controllers\FeatureSectionController;
 use App\Http\Controllers\ChatMonitorController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\InstallerController;
@@ -61,7 +60,6 @@ use App\Http\Controllers\SectionCategoryCloneController;
 use App\Http\Controllers\WalletWithdrawalRequestAdminController;
 use App\Http\Controllers\SheinOrderBatchController;
 use App\Http\Controllers\LegalNumberingSettingController;
-use App\Http\Controllers\FeatureSectionSettingsController;
 use App\Http\Controllers\WifiCodeBatchController;
 use App\Http\Controllers\WifiNetworkController;
 use App\Http\Controllers\WifiPlanController;
@@ -752,7 +750,7 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
       });
 
     /* --------------------------------- الإعدادات Settings --------------------------------- */
-    Route::group(['prefix' => 'settings'], static function () {
+Route::group(['prefix' => 'settings'], static function () {
         Route::get('/', [SettingController::class, 'index'])->name('settings.index');
         Route::post('/store', [SettingController::class, 'store'])->name('settings.store');
 
@@ -892,6 +890,25 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
         Route::delete('/batch-delete', [NotificationController::class, 'batchDelete'])->name('notification.batch.delete');
 });
 
+Route::middleware(['permission:manual-payments-review'])->group(static function () {
+    Route::get('delivery/requests', [\App\Http\Controllers\DeliveryRequestController::class, 'index'])
+        ->name('delivery.requests.index');
+    Route::get('delivery/requests/{deliveryRequest}', [\App\Http\Controllers\DeliveryRequestController::class, 'show'])
+        ->name('delivery.requests.show');
+    Route::patch('delivery/requests/{deliveryRequest}', [\App\Http\Controllers\DeliveryRequestController::class, 'update'])
+        ->name('delivery.requests.update');
+    Route::post('delivery/requests/{deliveryRequest}/notify', [\App\Http\Controllers\DeliveryRequestController::class, 'notifyAgent'])
+        ->name('delivery.requests.notify');
+    Route::get('delivery/agents', [\App\Http\Controllers\DeliveryAgentController::class, 'index'])
+        ->name('delivery.agents.index');
+    Route::post('delivery/agents', [\App\Http\Controllers\DeliveryAgentController::class, 'store'])
+        ->name('delivery.agents.store');
+    Route::post('delivery/agents/{deliveryAgent}/toggle', [\App\Http\Controllers\DeliveryAgentController::class, 'toggle'])
+        ->name('delivery.agents.toggle');
+    Route::delete('delivery/agents/{deliveryAgent}', [\App\Http\Controllers\DeliveryAgentController::class, 'destroy'])
+        ->name('delivery.agents.destroy');
+});
+
     Route::prefix('notification/campaigns')->as('notification.campaigns.')->group(function () {
         Route::post('/', [MarketingCampaignController::class, 'store'])->name('store');
         Route::put('{campaign}', [MarketingCampaignController::class, 'update'])->name('update');
@@ -907,52 +924,6 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
         ->name('notification.automation.trigger');
 
     Route::resource('notification', NotificationController::class);
-
-
-
-    /* --------------------------------- الأقسام المميّزة Feature Section --------------------------------- */
-
-
-    Route::get('feature-section/settings', [FeatureSectionSettingsController::class, 'edit'])
-        ->name('feature-section.settings.edit')
-        ->middleware('permission:feature-section-create|feature-section-update');
-
-    Route::put('feature-section/settings', [FeatureSectionSettingsController::class, 'update'])
-        ->name('feature-section.settings.update')
-        ->middleware('permission:feature-section-create|feature-section-update');
-
-    Route::post('feature-section/settings/flush-cache', [FeatureSectionSettingsController::class, 'flushCache'])
-        ->name('feature-section.settings.flush-cache')
-        ->middleware('permission:feature-section-create|feature-section-update');
-
-
-
-    Route::get('feature-section/categories', [FeatureSectionController::class, 'categories'])
-        ->name('feature-section.categories');
-
-    Route::post('feature-section/preview', [FeatureSectionController::class, 'preview'])
-        ->name('feature-section.preview')
-        ->middleware('permission:feature-section-create|feature-section-update');
-
-    Route::post('feature-section/probe', [FeatureSectionController::class, 'probe'])
-        ->name('feature-section.probe')
-        ->middleware('permission:feature-section-create|feature-section-update');
-
-    Route::post('feature-section/flush-cache', [FeatureSectionController::class, 'flushCache'])
-        ->name('feature-section.flush-cache')
-        ->middleware('permission:feature-section-create|feature-section-update');
-    Route::get('feature-section/items/search', [FeatureSectionController::class, 'searchItems'])
-        ->name('feature-section.items.search')
-        ->middleware('permission:feature-section-create|feature-section-update');
-
-    Route::get('feature-section/list', [FeatureSectionController::class, 'list'])
-        ->name('feature-section.list')
-        ->middleware('permission:feature-section-list');
-
-    Route::patch('feature-section/{feature_section}/status', [FeatureSectionController::class, 'updateStatus'])
-        ->name('feature-section.status');
-
-    Route::resource('feature-section', FeatureSectionController::class);
 
 
 

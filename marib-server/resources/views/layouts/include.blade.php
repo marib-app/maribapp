@@ -40,8 +40,7 @@
     <link rel="stylesheet" href="{{ asset('assets/css/custom.css') }}"/>
 @endif
 {{--Dark Theme--}}
-
-<!--<link rel="stylesheet" href="{{ asset('assets/css/dark-theme.css') }}">-->
+<link rel="stylesheet" href="{{ asset('assets/css/dark-theme.css') }}">
 
 {{--Bootstrap Switch --}}
 <link rel="stylesheet" href="{{asset("assets/css/bootstrap-switch-button.min.css")}}">

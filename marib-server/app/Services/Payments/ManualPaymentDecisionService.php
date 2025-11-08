@@ -2,10 +2,14 @@
 
 namespace App\Services\Payments;
 
+use App\Models\DeliveryRequest;
 use App\Models\ManualPaymentRequest;
 use App\Models\ManualPaymentRequestHistory;
 use App\Models\Order;
 use App\Models\PaymentTransaction;
+use App\Models\Store;
+use App\Models\StoreStaff;
+use App\Models\User;
 use App\Models\UserFcmToken;
 use App\Models\WalletTransaction;
 use App\Services\NotificationService;
@@ -14,6 +18,7 @@ use App\Services\ResponseService;
 use App\Services\WalletService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 use Throwable;
@@ -85,25 +90,62 @@ class ManualPaymentDecisionService
 
             DB::commit();
 
-        if ($shouldNotify) {
-            $attachmentUrl = null;
+            if ($shouldNotify) {
+                $attachmentUrl = null;
 
-            if ($attachmentPath) {
-                try {
-                    $attachmentUrl = Storage::disk('public')->url($attachmentPath);
-                } catch (Throwable) {
-                    $attachmentUrl = null;
+                if ($attachmentPath) {
+                    try {
+                        $attachmentUrl = Storage::disk('public')->url($attachmentPath);
+                    } catch (Throwable) {
+                        $attachmentUrl = null;
+                    }
+                }
+
+                $this->sendDecisionNotification(
+                    $manualPaymentRequest,
+                    $transaction,
+                    $decision,
+                    $note,
+                    $attachmentUrl
+                );
+            }
+
+            if ($manualPaymentRequest->store_id !== null) {
+                $this->notifyStoreTeam(
+                    $manualPaymentRequest,
+                    $transaction,
+                    $decision,
+                    $note,
+                    $actorId
+                );
+            }
+
+            $deliveryRequest = null;
+
+            if ($decision === ManualPaymentRequest::STATUS_APPROVED
+                && $manualPaymentRequest->payable_type === Order::class
+                && $manualPaymentRequest->payable_id
+            ) {
+                $order = Order::query()->find($manualPaymentRequest->payable_id);
+                if ($order) {
+                    $deliveryRequest = DeliveryRequest::recordHandoff($order, 'manual_payment_approved');
                 }
             }
 
-            $this->sendDecisionNotification(
+            $this->notifyAdministrators(
                 $manualPaymentRequest,
                 $transaction,
                 $decision,
                 $note,
-                $attachmentUrl
+                $actorId
             );
-        }
+
+            if ($deliveryRequest) {
+                Log::info('delivery_request.handoff_recorded', [
+                    'delivery_request_id' => $deliveryRequest->getKey(),
+                    'order_id' => $deliveryRequest->order_id,
+                ]);
+            }
 
             return $history;
         } catch (Throwable $throwable) {
@@ -304,5 +346,192 @@ class ManualPaymentDecisionService
             'payment-transaction',
             $data
         );
+    }
+
+    private function notifyStoreTeam(
+        ManualPaymentRequest $manualPaymentRequest,
+        PaymentTransaction $transaction,
+        string $status,
+        ?string $note,
+        ?int $actorId
+    ): void {
+        if (! $manualPaymentRequest->store_id) {
+            return;
+        }
+
+        $store = $manualPaymentRequest->store ?? Store::query()->find($manualPaymentRequest->store_id);
+
+        if (! $store) {
+            return;
+        }
+
+        $userIds = collect([$store->user_id])
+            ->filter()
+            ->values();
+
+        $staffUserIds = StoreStaff::query()
+            ->where('store_id', $store->getKey())
+            ->whereNull('revoked_at')
+            ->whereNotNull('user_id')
+            ->pluck('user_id');
+
+        $recipientIds = $userIds
+            ->merge($staffUserIds)
+            ->filter(static fn ($id) => $id !== null && $id !== $actorId)
+            ->unique()
+            ->values();
+
+        if ($recipientIds->isEmpty()) {
+            return;
+        }
+
+        $tokens = UserFcmToken::query()
+            ->whereIn('user_id', $recipientIds)
+            ->pluck('fcm_token')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($tokens === []) {
+            return;
+        }
+
+        $title = $status === ManualPaymentRequest::STATUS_APPROVED
+            ? __('تم تأكيد حوالة أحد العملاء')
+            : __('تم رفض حوالة أحد العملاء');
+
+        $reference = $manualPaymentRequest->reference ?? $manualPaymentRequest->id;
+        $orderId = $transaction->order_id ?? $manualPaymentRequest->payable_id;
+
+        $body = __('الحوالة رقم :ref أصبحت :status.', [
+            'ref' => $reference,
+            'status' => $this->humanReadableStatus($status),
+        ]);
+
+        $deeplink = $this->resolveStoreManualPaymentRoute($manualPaymentRequest);
+
+        $payload = [
+            'manual_payment_request_id' => $manualPaymentRequest->id,
+            'order_id' => $orderId,
+            'store_id' => $store->getKey(),
+            'status' => $status,
+            'reference' => $reference,
+            'note' => $note,
+            'deeplink' => $deeplink,
+            'click_action' => $deeplink,
+            'type' => 'store_manual_payment_decision',
+        ];
+
+        NotificationService::sendFcmNotification(
+            $tokens,
+            $title,
+            $body,
+            'store_manual_payment_decision',
+            $payload
+        );
+    }
+
+    private function notifyAdministrators(
+        ManualPaymentRequest $manualPaymentRequest,
+        PaymentTransaction $transaction,
+        string $status,
+        ?string $note,
+        ?int $actorId
+    ): void {
+        $adminRoles = ['admin', 'Admin', 'super-admin', 'Super Admin'];
+
+        $adminIds = User::role($adminRoles)
+            ->pluck('id')
+            ->filter(static fn ($id) => $id !== $actorId)
+            ->unique()
+            ->values();
+
+        if ($adminIds->isEmpty()) {
+            return;
+        }
+
+        $tokens = UserFcmToken::query()
+            ->whereIn('user_id', $adminIds)
+            ->pluck('fcm_token')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($tokens === []) {
+            return;
+        }
+
+        $reference = $manualPaymentRequest->reference ?? $manualPaymentRequest->id;
+        $orderId = $transaction->order_id ?? $manualPaymentRequest->payable_id;
+
+        $title = $status === ManualPaymentRequest::STATUS_APPROVED
+            ? __('تم اعتماد حوالة يدويـة')
+            : __('تم رفض حوالة يدويـة');
+
+        $body = __('الحوالة رقم :ref للطلب :order أصبحت :status.', [
+            'ref' => $reference,
+            'order' => $orderId ?? '-',
+            'status' => $this->humanReadableStatus($status),
+        ]);
+
+        $deeplink = $this->resolveAdminManualPaymentRoute($manualPaymentRequest);
+
+        $payload = [
+            'manual_payment_request_id' => $manualPaymentRequest->id,
+            'order_id' => $orderId,
+            'reference' => $reference,
+            'status' => $status,
+            'store_id' => $manualPaymentRequest->store_id,
+            'note' => $note,
+            'deeplink' => $deeplink,
+            'click_action' => $deeplink,
+            'type' => 'manual_payment_decision_admin',
+        ];
+
+        NotificationService::sendFcmNotification(
+            $tokens,
+            $title,
+            $body,
+            'manual_payment_decision_admin',
+            $payload
+        );
+    }
+
+    private function humanReadableStatus(string $status): string
+    {
+        return match ($status) {
+            ManualPaymentRequest::STATUS_APPROVED => __('مقبولة'),
+            ManualPaymentRequest::STATUS_REJECTED => __('مرفوضة'),
+            ManualPaymentRequest::STATUS_UNDER_REVIEW => __('قيد المراجعة'),
+            default => __('قيد المعالجة'),
+        };
+    }
+
+    private function resolveStoreManualPaymentRoute(ManualPaymentRequest $manualPaymentRequest): ?string
+    {
+        if (! Route::has('merchant.manual-payments.show')) {
+            return null;
+        }
+
+        try {
+            return route('merchant.manual-payments.show', $manualPaymentRequest);
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    private function resolveAdminManualPaymentRoute(ManualPaymentRequest $manualPaymentRequest): ?string
+    {
+        if (! Route::has('payment-requests.review')) {
+            return null;
+        }
+
+        try {
+            return route('payment-requests.review', $manualPaymentRequest);
+        } catch (Throwable) {
+            return null;
+        }
     }
 }

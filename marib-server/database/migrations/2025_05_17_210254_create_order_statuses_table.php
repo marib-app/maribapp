@@ -26,18 +26,12 @@ return new class extends Migration
 
         // 2) تأكيد وجود عمود code قبل الفهرس
         if (Schema::hasColumn('order_statuses', 'code')) {
-            // أضف فهرس فريد على code إن لم يكن موجودًا
-            $idx = DB::selectOne("
-                SELECT COUNT(1) c
-                FROM information_schema.statistics
-                WHERE table_schema = DATABASE()
-                  AND table_name = 'order_statuses'
-                  AND index_name = 'order_statuses_code_unique'
-            ");
-            if (($idx->c ?? 0) == 0) {
+            try {
                 Schema::table('order_statuses', function (Blueprint $table) {
                     $table->unique('code', 'order_statuses_code_unique');
                 });
+            } catch (\Throwable $exception) {
+                // Ignore if the unique index already exists or the driver cannot create it twice.
             }
         }
 

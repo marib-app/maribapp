@@ -8,6 +8,10 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
+        if (Schema::getConnection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         $defaultCurrency = strtoupper((string) config('app.currency', 'SAR'));
 
         Schema::table('wallet_accounts', static function (Blueprint $table) {
@@ -64,6 +68,10 @@ return new class extends Migration {
 
     public function down(): void
     {
+        if (Schema::getConnection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         Schema::table('wallet_transactions', static function (Blueprint $table) {
             if (Schema::hasColumn('wallet_transactions', 'currency')) {
                 $table->dropIndex('wallet_transactions_currency_index');

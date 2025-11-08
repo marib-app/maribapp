@@ -651,37 +651,6 @@ const shouldLockSlugField = ($field) => {
     return $field.is('[data-enforce-filter-slug="true"]');
 };
 
-$('.feature-section-name').on('input', function () {
-    const $form = $(this).closest('form');
-    let $slugField = $form.find('.feature-section-slug');
-
-    if (!$slugField.length) {
-        $slugField = $('.feature-section-slug');
-    }
-
-    if (shouldLockSlugField($slugField)) {
-        return;
-    }
-
-    const slug = generateSlug($(this).val());
-    $slugField.val(slug);
-});
-
-$('.edit-feature-section-name').on('input', function () {
-    const $form = $(this).closest('form');
-    let $slugField = $form.find('.edit-feature-section-slug');
-
-    if (!$slugField.length) {
-        $slugField = $('.edit-feature-section-slug');
-    }
-
-    if (shouldLockSlugField($slugField)) {
-        return;
-    }
-
-    const slug = generateSlug($(this).val());
-    $slugField.val(slug);
-});
 $('#title').on('input', function () {
     const $slugField = $('#slug');
 
@@ -938,4 +907,3 @@ $("#update-custom-fields-order-form").on("submit", function (e) {
         successCallback
     );
 });
-

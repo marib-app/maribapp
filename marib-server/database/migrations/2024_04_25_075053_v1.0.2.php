@@ -4,6 +4,7 @@ use App\Models\Package;
 use App\Models\Setting;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
     /**
@@ -21,11 +22,14 @@ return new class extends Migration {
         ]);
 
         Schema::table('packages', static function (Blueprint $table) {
-            /*Rename the column*/
             $table->renameColumn('price', 'final_price');
-            $table->renameColumn('discount_price', 'price');
+        });
 
-            /*Add new column*/
+        Schema::table('packages', static function (Blueprint $table) {
+            $table->renameColumn('discount_price', 'price');
+        });
+
+        Schema::table('packages', static function (Blueprint $table) {
             $table->float('discount_in_percentage')->after('price')->default(0);
         });
 
@@ -86,11 +90,14 @@ return new class extends Migration {
         ])->delete();
 
         Schema::table('packages', static function (Blueprint $table) {
-            /*Rename the column*/
             $table->renameColumn('price', 'discount_price');
-            $table->renameColumn('final_price', 'price');
+        });
 
-            /*Add new column*/
+        Schema::table('packages', static function (Blueprint $table) {
+            $table->renameColumn('final_price', 'price');
+        });
+
+        Schema::table('packages', static function (Blueprint $table) {
             $table->dropColumn('discount_in_percentage');
         });
 

@@ -8,6 +8,10 @@ use Illuminate\Support\Facades\DB;
 return new class extends Migration {
     public function up(): void
     {
+        if (Schema::getConnection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         $constraints = DB::table('information_schema.KEY_COLUMN_USAGE')
             ->select('CONSTRAINT_NAME', 'COLUMN_NAME')
             ->where('TABLE_SCHEMA', DB::raw('DATABASE()'))
@@ -45,6 +49,10 @@ return new class extends Migration {
 
     public function down(): void
     {
+        if (Schema::getConnection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         Schema::table('featured_items', static function (Blueprint $table) {
             $table->dropForeign(['package_id']);
             $table->dropForeign(['user_purchased_package_id']);

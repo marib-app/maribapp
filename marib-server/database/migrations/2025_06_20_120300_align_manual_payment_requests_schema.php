@@ -27,19 +27,29 @@ return new class extends Migration {
             if (Schema::hasColumn('manual_payment_requests', 'payable_id')) {
                 $table->unsignedBigInteger('payable_id')->nullable()->change();
             }
+        });
 
-            if (Schema::hasColumn('manual_payment_requests', 'reference_number') && !Schema::hasColumn('manual_payment_requests', 'reference')) {
+        if (Schema::hasColumn('manual_payment_requests', 'reference_number') && !Schema::hasColumn('manual_payment_requests', 'reference')) {
+            Schema::table('manual_payment_requests', function (Blueprint $table) {
                 $table->renameColumn('reference_number', 'reference');
-            } elseif (!Schema::hasColumn('manual_payment_requests', 'reference')) {
+            });
+        } elseif (!Schema::hasColumn('manual_payment_requests', 'reference')) {
+            Schema::table('manual_payment_requests', function (Blueprint $table) {
                 $table->string('reference')->nullable()->after('bank_swift_code');
-            }
+            });
+        }
 
-            if (Schema::hasColumn('manual_payment_requests', 'note') && !Schema::hasColumn('manual_payment_requests', 'user_note')) {
+        if (Schema::hasColumn('manual_payment_requests', 'note') && !Schema::hasColumn('manual_payment_requests', 'user_note')) {
+            Schema::table('manual_payment_requests', function (Blueprint $table) {
                 $table->renameColumn('note', 'user_note');
-            } elseif (!Schema::hasColumn('manual_payment_requests', 'user_note')) {
+            });
+        } elseif (!Schema::hasColumn('manual_payment_requests', 'user_note')) {
+            Schema::table('manual_payment_requests', function (Blueprint $table) {
                 $table->text('user_note')->nullable()->after('reference');
-            }
+            });
+        }
 
+        Schema::table('manual_payment_requests', function (Blueprint $table) {
             if (Schema::hasColumn('manual_payment_requests', 'receipt_path')) {
                 $table->string('receipt_path', 2048)->nullable()->change();
             } else {
@@ -71,15 +81,21 @@ return new class extends Migration {
             if (Schema::hasColumn('manual_payment_requests', 'payable_id')) {
                 $table->unsignedBigInteger('payable_id')->nullable(false)->change();
             }
+        });
 
-            if (Schema::hasColumn('manual_payment_requests', 'reference') && !Schema::hasColumn('manual_payment_requests', 'reference_number')) {
+        if (Schema::hasColumn('manual_payment_requests', 'reference') && !Schema::hasColumn('manual_payment_requests', 'reference_number')) {
+            Schema::table('manual_payment_requests', function (Blueprint $table) {
                 $table->renameColumn('reference', 'reference_number');
-            }
+            });
+        }
 
-            if (Schema::hasColumn('manual_payment_requests', 'user_note') && !Schema::hasColumn('manual_payment_requests', 'note')) {
+        if (Schema::hasColumn('manual_payment_requests', 'user_note') && !Schema::hasColumn('manual_payment_requests', 'note')) {
+            Schema::table('manual_payment_requests', function (Blueprint $table) {
                 $table->renameColumn('user_note', 'note');
-            }
+            });
+        }
 
+        Schema::table('manual_payment_requests', function (Blueprint $table) {
             if (Schema::hasColumn('manual_payment_requests', 'receipt_path')) {
                 $table->string('receipt_path', 255)->nullable()->change();
             }

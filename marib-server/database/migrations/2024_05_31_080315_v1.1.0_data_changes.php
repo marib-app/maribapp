@@ -90,11 +90,13 @@ return new class extends Migration {
                 Item::upsert($tempItems, ['id'], ['slug', 'status']);
             }
         });
-        Schema::useNativeSchemaOperationsIfPossible();
-        Schema::table('items', static function (Blueprint $table) {
-            //Featured status removed
-            $table->enum('status', ['review', 'approved', 'rejected', 'sold out'])->change();
-        });
+        if (Schema::getConnection()->getDriverName() !== 'sqlite') {
+            Schema::useNativeSchemaOperationsIfPossible();
+            Schema::table('items', static function (Blueprint $table) {
+                //Featured status removed
+                $table->enum('status', ['review', 'approved', 'rejected', 'sold out'])->change();
+            });
+        }
     }
 
     /**

@@ -253,12 +253,8 @@
 
 @section('script')
 <script>
-    window.featureSectionTypeAliasMap = @json($sliderAliasMap);
     const sliderDefaultInterfaceType = @json($defaultInterfaceType);
     window.sliderDefaultInterfaceType = sliderDefaultInterfaceType;
-    if (typeof window.featureSectionDefaultType === 'undefined') {
-        window.featureSectionDefaultType = sliderDefaultInterfaceType;
-    }
 
     const sliderTargetContainers = $('.target-option');
     const sliderActionContainers = $('.action-option');

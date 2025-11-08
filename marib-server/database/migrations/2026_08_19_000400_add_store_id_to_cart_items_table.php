@@ -8,6 +8,10 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
+        if (Schema::getConnection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         Schema::table('cart_items', function (Blueprint $table) {
             $table->foreignId('store_id')
                 ->nullable()
@@ -26,6 +30,10 @@ return new class extends Migration {
 
     public function down(): void
     {
+        if (Schema::getConnection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         Schema::table('cart_items', function (Blueprint $table) {
             $table->dropConstrainedForeignId('store_id');
         });

@@ -3492,6 +3492,16 @@ class ApiController extends Controller {
         }
     }
 
+
+    /**
+     * @deprecated Temporary alias for getFeaturedSection(). Prefer getFeaturedSection().
+     */
+    public function getFeaturedSections(Request $request, FeaturedSectionService $featuredSectionService)
+    {
+        return $this->getFeaturedSection($request, $featuredSectionService);
+    }
+
+
     public function getFeaturedSection(Request $request, FeaturedSectionService $featuredSectionService)
     {
         try {

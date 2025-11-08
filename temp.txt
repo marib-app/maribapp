@@ -1,0 +1,200 @@
+            $itemOffer = $itemOffer->paginate();
+    
+            $offerIds = $itemOffer->getCollection()->pluck('id')->filter()->values();
+            $legacyLastMessageTimes = $this->resolveLegacyLastMessageTimes($offerIds);
+    
+            $itemOffer->getCollection()->transform(function (ItemOffer $offer) use (
+                $user,
+                $authUserBlockList,
+                $otherUserBlockList,
+                $legacyLastMessageTimes,
+                $request
+            ) {
+                return $this->enrichOfferWithChatData(
+                    $offer,
+                    $user,
+                    $authUserBlockList,
+                    $otherUserBlockList,
+                    $legacyLastMessageTimes,
+                    $request->type
+                );
+
+
+            });
+
+            ResponseService::successResponse('Chat List Fetched Successfully', $itemOffer);
+
+
+        } catch (Throwable $th) {
+            ResponseService::logErrorResponse($th, 'API Controller -> getChatList');
+            ResponseService::errorResponse();
+        }
+    }
+
+    public function sendMessage(Request $request) {
+        $validator = Validator::make($request->all(), [
+            'item_offer_id' => 'required|integer',
+            'message'       => (!$request->file('file') && !$request->file('audio')) ? "required" : "nullable",
+            'file'          => 'nullable|mimes:jpg,jpeg,png|max:4096',
+            'audio'         => 'nullable|mimetypes:audio/mpeg,video/mp4,audio/x-wav,text/plain|max:4096',
+        ]);
+        if ($validator->fails()) {
+            ResponseService::validationError($validator->errors()->first());
+        }
+        try {
+            DB::beginTransaction();
+            $user = Auth::user();
+            //List of users that Auth user has blocked
+            $authUserBlockList = BlockUser::where('user_id', $user->id)->get();
+
+            //List of Other users that have blocked the Auth user
+            $otherUserBlockList = BlockUser::where('blocked_user_id', $user->id)->get();
+
+            $itemOffer = ItemOffer::with('item')->findOrFail($request->item_offer_id);
+            if ($itemOffer->seller_id == $user->id) {
+                //If Auth user is seller then check if buyer has blocked the user
+                $blockStatus = $authUserBlockList->filter(function ($data) use ($itemOffer) {
+                    return $data->user_id == $itemOffer->seller_id && $data->blocked_user_id == $itemOffer->buyer_id;
+                });
+                if (count($blockStatus) !== 0) {
+                    ResponseService::errorResponse("You Cannot send message because You have blocked this user");
+                }
+
+                $blockStatus = $otherUserBlockList->filter(function ($data) use ($itemOffer) {
+                    return $data->user_id == $itemOffer->buyer_id && $data->blocked_user_id == $itemOffer->seller_id;
+                });
+                if (count($blockStatus) !== 0) {
+                    ResponseService::errorResponse("You Cannot send message because other user has blocked you.");
+                }
+            } else {
+                //If Auth user is seller then check if buyer has blocked the user
+                $blockStatus = $authUserBlockList->filter(function ($data) use ($itemOffer) {
+                    return $data->user_id == $itemOffer->buyer_id && $data->blocked_user_id == $itemOffer->seller_id;
+                });
+                if (count($blockStatus) !== 0) {
+                    ResponseService::errorResponse("You Cannot send message because You have blocked this user");
+                }
+
+                $blockStatus = $otherUserBlockList->filter(function ($data) use ($itemOffer) {
+                    return $data->user_id == $itemOffer->seller_id && $data->blocked_user_id == $itemOffer->buyer_id;
+                });
+                if (count($blockStatus) !== 0) {
+                    ResponseService::errorResponse("You Cannot send message because other user has blocked you.");
+                }
+            }
+
+            $department = $this->resolveSectionByCategoryId($itemOffer->item?->category_id);
+            $delegates = !empty($department)
+                ? $this->delegateAuthorizationService->getDelegatesForSection($department)
+                : [];
+            $assignedAgentId = $this->resolveConversationAssignedAgent($itemOffer, $delegates);
+
+
+            $conversationAttributes = [];
+
+            if ($department !== null && $this->chatConversationsSupportsColumn('department')) {
+                $conversationAttributes['department'] = $department;
+            }
+
+            if ($assignedAgentId !== null && $this->chatConversationsSupportsColumn('assigned_to')) {
+                $conversationAttributes['assigned_to'] = $assignedAgentId;
+            }
+
+
+            $conversation = Chat::firstOrCreate(
+                [
+                    'item_offer_id' => $itemOffer->id,
+                ],
+                $conversationAttributes
+
+            );
+
+
+           
+            $conversationWasJustCreated = $conversation->wasRecentlyCreated;
+            $assignmentWasAutoUpdated = false;
+
+            if (!$conversationWasJustCreated) {
+                $assignmentWasAutoUpdated = $this->syncConversationDepartmentAndAssignment(
+                    $conversation,
+                    $department,
+                    $assignedAgentId
+                );
+            }
+
+
+            $conversation->participants()->syncWithoutDetaching(array_filter([
+                $itemOffer->seller_id,
+                $itemOffer->buyer_id,
+            ]));
+
+                        $now = Carbon::now();
+
+            $conversation->participants()->updateExistingPivot($user->id, [
+                'is_online' => true,
+                'last_seen_at' => $now,
+                'is_typing' => false,
+                'last_typing_at' => $now,
+                'updated_at' => $now,
+            ]);
+
+
+            $filePath = $request->hasFile('file') ? FileService::compressAndUpload($request->file('file'), 'chat') : null;
+            $audioPath = $request->hasFile('audio') ? FileService::compressAndUpload($request->file('audio'), 'chat') : null;
+
+            $chatMessage = $conversation->messages()->create([
+                'sender_id' => Auth::id(),
+                'message'   => $request->message,
+                'file'      => $filePath,
+                'audio'     => $audioPath,
+                'status'    => ChatMessage::STATUS_SENT,
+    
+            ]);
+
+            $conversation->touch();
+
+            $chatMessage->load('sender');
+
+
+            if ($conversationWasJustCreated || $assignmentWasAutoUpdated) {
+                $this->handleSupportEscalation(
+                    $conversation,
+                    $chatMessage,
+                    $conversation->department ?? $department,
+                    $user
+                );
+            }
+
+
+
+            
+            try {
+                broadcast(new UserTyping($conversation, $user, false, $now))->toOthers();
+            } catch (Throwable $broadcastException) {
+                \Log::warning('Broadcast typing indicator failed', [
+                    'conversation_id' => $conversation->id,
+                    'user_id' => $user->id,
+                    'error' => $broadcastException->getMessage(),
+                ]);
+            }
+
+            try {
+                broadcast(new MessageSent($conversation, $chatMessage))->toOthers();
+            } catch (Throwable $broadcastException) {
+                \Log::warning('Broadcast chat message failed', [
+                    'conversation_id' => $conversation->id,
+                    'message_id' => $chatMessage->id,
+                    'error' => $broadcastException->getMessage(),
+                ]);
+            }
+
+
+
+            if ($itemOffer->seller_id == $user->id) {
+                $receiver_id = $itemOffer->buyer_id;
+                $userType = "Seller";
+            } else {
+                $receiver_id = $itemOffer->seller_id;
+                $userType = "Buyer";
+            }
+

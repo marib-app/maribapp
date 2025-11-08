@@ -104,6 +104,7 @@ import 'package:marib/ui/screens/classified_ads/service_add_more_details_screen.
 import 'package:marib/ui/screens/home_screen/section/section_screen/widgets/map_search/map_search_screen.dart'; // عدّل المسار حسب موقع الملف الفعلي
 import 'package:marib/ui/screens/wallet/wallet_screen.dart';
 import 'package:marib/ui/screens/cart/orders_list_screen.dart';
+import 'package:marib/ui/screens/merchant/onboarding/merchant_onboarding_screen.dart';
 
 class Routes {
   //private constructor
@@ -138,6 +139,7 @@ class Routes {
   static const signup = 'signup';
   static const signupMainScreen = 'signUpMainScreen';
   static const mobileSignUp = 'mobileSignUp';
+  static const merchantOnboarding = '/merchant-onboarding';
   static const completeProfile = 'complete_profile';
   static const showProfile = 'show_profile';
   static const main = 'main';
@@ -407,6 +409,8 @@ class Routes {
         return SignUpMainScreen.route(routeSettings);
       case mobileSignUp:
         return MobileSignUpScreen.route(routeSettings);
+      case merchantOnboarding:
+        return MerchantOnboardingScreen.route();
 
       // ✅ بدّل هذه: كانت تفتح UserProfileScreen، خلّها ترجع الرئيسية
       case completeProfile:

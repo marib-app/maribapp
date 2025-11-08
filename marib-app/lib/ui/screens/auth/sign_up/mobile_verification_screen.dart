@@ -325,9 +325,10 @@ class _MobileVerificationScreenState extends State<MobileVerificationScreen> {
                 print("User authenticated: ${HiveUtils.isUserAuthenticated()}");
 
                 // تحديد الخطوة التالية حسب نوع الحساب
-                if (widget.selectedAccountType == "2" ||
-                    widget.selectedAccountType == "3") {
-                  // للحسابات العقارية والتجارية - الانتقال لشاشة التسجيل المتقدمة
+                if (widget.selectedAccountType == "3") {
+                  Navigator.pushNamed(context, Routes.merchantOnboarding);
+                } else if (widget.selectedAccountType == "2") {
+                  // للحسابات العقارية - الانتقال لشاشة التسجيل المتقدمة
                   Navigator.pushNamed(
                     context,
                     Routes.signup,

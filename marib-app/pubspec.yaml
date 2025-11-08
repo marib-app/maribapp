@@ -75,7 +75,7 @@ dependencies:
   video_player: ^2.9.1
   path: ^1.9.0
 
-
+  flutter_app_badger: ^1.5.0
   in_app_purchase: ^3.2.0 #^3.2.0
   #flutter_paystack: ^1.0.7
   device_info_plus: ^11.1.0

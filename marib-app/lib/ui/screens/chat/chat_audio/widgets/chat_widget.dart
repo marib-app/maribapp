@@ -10,7 +10,6 @@ import 'package:dio/dio.dart';
 import 'package:marib/app/app_theme.dart';
 import 'package:marib/data/cubits/chat/send_message.dart';
 import 'package:marib/data/cubits/system/app_theme_cubit.dart';
-import 'package:marib/ui/screens/chat/chat_screen.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/helper_utils.dart';
@@ -52,6 +51,10 @@ class ChatMessage extends StatefulWidget {
   final String? status;
   final String? deliveredAt;
   final String? readAt;
+  final bool isSelected;
+  final bool isDeleteMode;
+  final ValueChanged<int>? onSelected;
+  final VoidCallback? onSelectionCleared;
 
   const ChatMessage(
       {super.key,
@@ -67,7 +70,11 @@ class ChatMessage extends StatefulWidget {
         this.isSentNow,
         this.status,
         this.deliveredAt,
-        this.readAt})
+        this.readAt,
+        this.isSelected = false,
+        this.isDeleteMode = false,
+        this.onSelected,
+        this.onSelectionCleared})
       : message = message ?? '',
         file = file ?? '',
         audio = audio ?? '';
@@ -119,7 +126,6 @@ class ChatMessage extends StatefulWidget {
 class ChatMessageState extends State<ChatMessage>
     with AutomaticKeepAliveClientMixin {
   bool isChatSent = false;
-  bool selectedMessage = false;
   static bool isMounted = false;
   bool _sendFailed = false;
   String? link;
@@ -382,11 +388,15 @@ class ChatMessageState extends State<ChatMessage>
 
     return GestureDetector(
       onLongPress: () {
-        selectedMessageid.value = (widget.key as ValueKey).value;
-        showDeletebutton.value = true;
+        final int? messageId = widget.id;
+        if (messageId != null) {
+          widget.onSelected?.call(messageId);
+        }
       },
       onTap: () {
-        selectedMessage = false;
+        if (widget.isDeleteMode) {
+          widget.onSelectionCleared?.call();
+        }
       },
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 7),
@@ -410,7 +420,7 @@ class ChatMessageState extends State<ChatMessage>
                 constraints:
                     BoxConstraints(maxWidth: context.screenWidth * 0.74),
                 decoration: BoxDecoration(
-                    color: selectedMessage == true
+                    color: widget.isSelected
                         ? (widget.senderId.toString() == HiveUtils.getUserId()
                             ? context.color.territoryColor.darken(45)
                             : context.color.secondaryColor.darken(45))

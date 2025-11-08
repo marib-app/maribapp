@@ -37,20 +37,11 @@ import 'package:flutter_svg/svg.dart';
 import 'package:marib/data/repositories/chat_repository.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:marib/data/cubits/chat/get_seller_chat_users_cubit.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:marib/data/cubits/chat/get_seller_chat_users_cubit.dart';
-import 'dart:async';
 import 'package:marib/utils/chat/chat_sync_controller.dart';
 import 'package:marib/data/model/chat/chat_message_modal.dart';
 import 'package:marib/utils/chat/conversation_id_utils.dart';
 
 part 'chat_screen_ui.dart';
-
-int totalMessageCount = 0;
-
-ValueNotifier<bool> showDeletebutton = ValueNotifier<bool>(false);
-
-ValueNotifier<int> selectedMessageid = ValueNotifier<int>(-5);
 
 class ChatScreen extends StatefulWidget {
   final String? from;
@@ -108,7 +99,6 @@ class _ChatScreenState extends State<ChatScreen>
   AnimationController? _recordButtonAnimation;
   TextEditingController controller = TextEditingController();
   PlatformFile? messageAttachment;
-  bool isFetchedFirstTime = false;
   double scrollPositionWhenLoadMore = 0;
   double _maxScrollExtentBeforeLoadMore = 0;
   bool _loadMoreRequestInFlight = false;
@@ -123,6 +113,8 @@ class _ChatScreenState extends State<ChatScreen>
 
   bool isNotificationPermissionGranted = true;
   bool showRecordButton = true;
+  bool _isDeleteMode = false;
+  int? _selectedMessageId;
   int _rating = 0;
   final TextEditingController _feedbackController = TextEditingController();
   late final ScrollController _pageScrollController = ScrollController()
@@ -643,6 +635,58 @@ class _ChatScreenState extends State<ChatScreen>
 
   void _setMessageAttachment(PlatformFile? attachment) {
     _syncComposerState(updateAttachment: true, attachment: attachment);
+  }
+
+  void _onMessageSelected(int messageId) {
+    if (!mounted) {
+      _selectedMessageId = messageId;
+      _isDeleteMode = true;
+      return;
+    }
+
+    setState(() {
+      _isDeleteMode = true;
+      _selectedMessageId = messageId;
+    });
+  }
+
+  void _clearSelection() {
+    if (!mounted) {
+      _isDeleteMode = false;
+      _selectedMessageId = null;
+      return;
+    }
+
+    setState(() {
+      _isDeleteMode = false;
+      _selectedMessageId = null;
+    });
+  }
+
+  bool get isDeleteMode => _isDeleteMode;
+  int? get selectedMessageId => _selectedMessageId;
+
+  void _handleRecordedAudio(String? path) {
+    if (path == null || path.isEmpty) {
+      return;
+    }
+
+    final DateTime now = DateTime.now();
+
+    ChatMessageHandler.add(ChatMessageModal(
+      localId: _generateLocalMessageId(),
+      senderId: int.tryParse(HiveUtils.getUserId() ?? '') ?? 0,
+      receiverId: int.tryParse(widget.userId),
+      itemOfferId: widget.itemOfferId,
+      itemId: int.tryParse(widget.itemId),
+      message: '',
+      audio: path,
+      file: '',
+      messageType: 'audio',
+      createdAt: now.toIso8601String(),
+      updatedAt: now.toIso8601String(),
+      isSentNow: true,
+    ));
   }
 
   void _syncComposerState({

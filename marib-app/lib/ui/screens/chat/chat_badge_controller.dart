@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'dart:async';
+import 'package:flutter_app_badger/flutter_app_badger.dart';
 import 'package:marib/utils/chat/chat_badge_store.dart';
 
 /// Simple controller to keep chat unread badges in sync across the app.
@@ -15,6 +16,8 @@ class ChatBadgeController {
   static int _buyerUnread = 0;
   static int _sellerUnread = 0;
   static String? _userId;
+  static bool _badgeSupportKnown = false;
+  static bool _isBadgeSupported = false;
 
   /// Loads the cached unread counters for the supplied [userId]. Passing `null`
   /// resets the controller to zero which is used on logout.
@@ -52,11 +55,15 @@ class ChatBadgeController {
   }
 
   static void incrementTempUnread() {
-    totalUnread.value = (_buyerUnread + _sellerUnread + 1).clamp(0, 9999);
+    final int tempTotal = (_buyerUnread + _sellerUnread + 1).clamp(0, 9999);
+    totalUnread.value = tempTotal;
+    _updateAppBadge(tempTotal);
   }
 
   static void _notify() {
-    totalUnread.value = (_buyerUnread + _sellerUnread).clamp(0, 9999);
+    final int total = (_buyerUnread + _sellerUnread).clamp(0, 9999);
+    totalUnread.value = total;
+    _updateAppBadge(total);
   }
   static void _persist() {
     final String? userId = _userId;
@@ -68,5 +75,28 @@ class ChatBadgeController {
       buyer: _buyerUnread,
       seller: _sellerUnread,
     ));
+  }
+
+  static void _updateAppBadge(int count) {
+    unawaited(_setBadgeCount(count));
+  }
+
+  static Future<void> _setBadgeCount(int count) async {
+    try {
+      if (!_badgeSupportKnown) {
+        _isBadgeSupported = await FlutterAppBadger.isAppBadgeSupported();
+        _badgeSupportKnown = true;
+      }
+      if (!_isBadgeSupported) {
+        return;
+      }
+      if (count <= 0) {
+        await FlutterAppBadger.removeBadge();
+      } else {
+        await FlutterAppBadger.updateBadgeCount(count);
+      }
+    } catch (_) {
+      _isBadgeSupported = false;
+    }
   }
 }

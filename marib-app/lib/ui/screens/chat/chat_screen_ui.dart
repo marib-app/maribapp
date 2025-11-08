@@ -33,11 +33,6 @@ extension _ChatScreenUi on _ChatScreenState {
 
   Widget buildChatScreen(BuildContext context) {
     var chatBackground = "assets/chat_background/light.svg";
-    var attachmentMIME = "";
-    if (messageAttachment != null) {
-      attachmentMIME =
-          (messageAttachment?.path?.split(".").last.toLowerCase()) ?? "";
-    }
 
     final presenceText = _presenceLabel(context);
     final bool isOnline = _otherParticipantStatus?.isOnline == true;
@@ -54,8 +49,7 @@ extension _ChatScreenUi on _ChatScreenState {
         canPop: true,
         onPopInvoked: (didPop) {
           currentlyChatingWith = "";
-          showDeletebutton.value = false;
-
+          _clearSelection();
           currentlyChatItemId = "";
           notificationStreamSubsctription.cancel();
           ChatMessageHandler.flushMessages();
@@ -350,12 +344,12 @@ extension _ChatScreenUi on _ChatScreenState {
                     listener: (context, state) {
                       if (state is DeleteMessageSuccess) {
                         ChatMessageHandler.removeMessage(state.id);
-                        showDeletebutton.value = false;
+                        _clearSelection();
                       }
                     },
                     child: GestureDetector(
                       onTap: () {
-                        showDeletebutton.value = false;
+                        _clearSelection();
                       },
                       child: BlocConsumer<LoadChatMessagesCubit,
                           LoadChatMessagesState>(
@@ -402,9 +396,6 @@ extension _ChatScreenUi on _ChatScreenState {
                               _maxScrollExtentBeforeLoadMore = 0;
                             }
 
-                            totalMessageCount = state.messages.length;
-                            isFetchedFirstTime = true;
-                            setState(() {});
                             _loadMoreRequestInFlight = false;
                           }
                           if (state is LoadChatMessagesFailed) {
@@ -709,6 +700,9 @@ extension _ChatScreenUi on _ChatScreenState {
       messageKey = ValueKey(modal.hashCode);
     }
 
+    final bool isSelected =
+        modal.id != null && modal.id == selectedMessageId;
+
     final ChatMessage chatWidget = ChatMessage(
       key: messageKey,
       id: modal.id,
@@ -724,6 +718,10 @@ extension _ChatScreenUi on _ChatScreenState {
       status: modal.status,
       deliveredAt: modal.deliveredAt,
       readAt: modal.readAt,
+      isSelected: isSelected,
+      isDeleteMode: isDeleteMode,
+      onSelected: _onMessageSelected,
+      onSelectionCleared: _clearSelection,
     );
 
     if (modal.isSentNow) {
@@ -888,8 +886,8 @@ class _ChatHeader extends StatelessWidget {
       ),
     );
   }
-}
 
+}
 
 class _ChatBottomBar extends StatefulWidget {
   final _ChatScreenState state;
@@ -901,197 +899,295 @@ class _ChatBottomBar extends StatefulWidget {
 }
 
 class _ChatBottomBarState extends State<_ChatBottomBar> {
-  late bool isBlocked;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // التأكد من حالة الحظر
-    isBlocked = context.read<BlockedUsersListCubit>().isUserBlocked(int.parse(widget.state.widget.userId));
-  }
+  bool get _hasText => widget.state.controller.text.trim().isNotEmpty;
+  bool get _hasAttachment => widget.state.messageAttachment != null;
+  bool get _canSendMessage => _hasText || _hasAttachment;
 
   @override
   Widget build(BuildContext context) {
-    final messageAttachment = widget.state.messageAttachment;
-    final supportedImageTypes = widget.state.supportedImageTypes;
-    var attachmentMIME = "";
-    if (messageAttachment != null) {
-      attachmentMIME = (messageAttachment?.path?.split(".").last.toLowerCase()) ?? "";
-    }
+    final PlatformFile? messageAttachment = widget.state.messageAttachment;
+    final List<String> supportedImageTypes = widget.state.supportedImageTypes;
+    final bool isDeleteMode = widget.state.isDeleteMode;
+    final int otherUserId = int.tryParse(widget.state.widget.userId) ?? 0;
+    final bool isBlocked =
+        context.watch<BlockedUsersListCubit>().isUserBlocked(otherUserId);
+    final String attachmentMime = _resolveAttachmentMime(messageAttachment);
 
     return SafeArea(
       bottom: true,
-      child: Padding(
+      child: Container(
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).viewInsets.bottom,
         ),
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () {},
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // فقط الحقل في الأسفل
-              const SizedBox(height: 10),
-
-              // زر الحظر أو إلغاء الحظر
-              _buildBlockButton(context),
-
-              // المرفقات
-              _buildAttachmentWidget(context, messageAttachment, supportedImageTypes, attachmentMIME),
-
-              // شريط التطبيق BottomAppBar
-              _buildBottomAppBar(context),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-
-
-
-  // 1. Widget لإدخال الرسائل
-  Widget _buildMessageInputField(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8.0),
-      child: TextField(
-        controller: widget.state.controller,
-        cursorColor: context.color.territoryColor,
-        onTap: () {
-          showDeletebutton.value = false;
-        },
-        textInputAction: TextInputAction.newline,
-        minLines: 1,
-        maxLines: null,
-        decoration: InputDecoration(
-          suffixIconColor: context.color.textLightColor,
-          suffixIcon: IconButton(
-            onPressed: () async {
-              if (widget.state.messageAttachment == null) {
-                final FilePickerResult? pickedAttachment = await FilePicker.platform.pickFiles(
-                  allowMultiple: false,
-                  type: FileType.custom,
-                  allowedExtensions: ['jpg', 'jpeg', 'png'],
-                );
-                widget.state._setMessageAttachment(pickedAttachment?.files.first);
-              } else {
-                widget.state._setMessageAttachment(null);
-              }
-            },
-            icon: widget.state.messageAttachment != null
-                ? const Icon(Icons.close)
-                : const Icon(Icons.attachment),
-          ),
-          contentPadding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide(color: context.color.territoryColor)),
-          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide(color: context.color.territoryColor)),
-          hintText: "writeHere".translate(context),
-        ),
-      ),
-    );
-  }
-
-
-
-  // 2. Widget لزر الحظر أو إلغاء الحظر
-  Widget _buildBlockButton(BuildContext context) {
-    return isBlocked
-        ? TextButton(
-      onPressed: () async {
-        final unBlock = await UiUtils.showBlurredDialoge(
-          context,
-          dialoge: BlurredDialogBox(
-            acceptButtonName: "unBlockLbl".translate(context),
-            content: Text(
-              "${"unBlockLbl".translate(context)}\t${widget.state.widget.userName}\t${"toSendMessage".translate(context)}"
-                  .translate(context),
-            ),
-          ),
-        );
-        if (unBlock == true) {
-          context.read<UnblockUserCubit>().unBlockUser(blockUserId: int.parse(widget.state.widget.userId));
-        }
-      },
-      child: Text(
-        "unBlockLbl".translate(context),
-        style: TextStyle(
-          color: context.color.territoryColor,
-          fontSize: context.font.smaller,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    )
-        : SizedBox();
-  }
-
-
-
-  // 3. Widget لعرض المرفقات
-  Widget _buildAttachmentWidget(BuildContext context, dynamic messageAttachment, List<String> supportedImageTypes, String attachmentMIME) {
-    if (messageAttachment != null) {
-      if (supportedImageTypes.contains(attachmentMIME)) {
-        return Container(
-          decoration: BoxDecoration(
-              color: context.color.secondaryColor,
-              border: Border.all(color: context.color.borderColor, width: 1.5)),
-          child: Row(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: SizedBox(
-                    height: 100,
-                    width: 100,
-                    child: GestureDetector(
-                      onTap: () {
-                        UiUtils.showFullScreenImage(context,
-                            provider: FileImage(File(
-                              messageAttachment?.path ?? "",
-                            )));
-                      },
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.file(
-                          File(
-                            messageAttachment?.path ?? "",
-                          ),
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    )),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 6),
+            if (isBlocked) _buildBlockButton(context, otherUserId),
+            if (isDeleteMode) _buildDeleteToolbar(context),
+            if (messageAttachment != null)
+              _buildAttachmentWidget(
+                context,
+                messageAttachment,
+                supportedImageTypes,
+                attachmentMime,
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(messageAttachment?.name ?? ""),
-                  Text(HelperUtils.getFileSizeString(
-                    bytes: messageAttachment!.size,
-                  ).toString()),
-                ],
-              )
-            ],
-          ),
-        );
-      } else {
-        return Container(
-          color: context.color.secondaryColor,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: AttachmentMessage(url: messageAttachment!.path!),
-          ),
-        );
-      }
-    } else {
-      return SizedBox.shrink();
+            _buildBottomAppBar(context, isBlocked),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _resolveAttachmentMime(PlatformFile? file) {
+    final String? extension = file?.extension;
+    if (extension != null && extension.isNotEmpty) {
+      return extension.toLowerCase();
+    }
+    final String path = file?.path ?? '';
+    if (path.isEmpty) {
+      return '';
+    }
+    final List<String> segments = path.split('.');
+    if (segments.length < 2) {
+      return '';
+    }
+    return segments.last.toLowerCase();
+  }
+
+  Future<void> _deleteSelectedMessage(BuildContext context) async {
+    final int? messageId = widget.state.selectedMessageId;
+    if (messageId == null) {
+      widget.state._clearSelection();
+      return;
+    }
+
+    final bool? shouldDelete = await UiUtils.showBlurredDialoge(
+      context,
+      dialoge: BlurredDialogBox(
+        title: "deleteBtnLbl".translate(context),
+        content: Text(
+          "msgWillNotRecover".translate(context),
+          textAlign: TextAlign.center,
+        ),
+        acceptButtonName: "deleteBtnLbl".translate(context),
+      ),
+    );
+
+    if (shouldDelete == true && mounted) {
+      context.read<DeleteMessageCubit>().delete(messageId);
     }
   }
 
+  Widget _buildDeleteToolbar(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final String toolbarLabel = widget.state.selectedMessageId != null
+        ? "message".translate(context)
+        : "selectLbl".translate(context);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: Container(
+        decoration: BoxDecoration(
+          color: context.color.secondaryColor,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: context.color.borderColor.withOpacity(0.4),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.close_rounded),
+              color: context.color.textDefaultColor,
+              onPressed: widget.state._clearSelection,
+            ),
+            Expanded(
+              child: Text(
+                toolbarLabel,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ).size(context.font.normal),
+            ),
+            IconButton(
+              onPressed: widget.state.selectedMessageId == null
+                  ? null
+                  : () => _deleteSelectedMessage(context),
+              icon: const Icon(Icons.delete_outline_rounded),
+              color: theme.colorScheme.error,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
 
 
-  // 4. Widget لعرض شريط BottomAppBar
-  Widget _buildBottomAppBar(BuildContext context) {
+
+  Widget _buildMessageInputField(BuildContext context, bool isBlocked) {
+    return TextField(
+      enabled: !isBlocked,
+      controller: widget.state.controller,
+      cursorColor: context.color.territoryColor,
+      onTap: widget.state._clearSelection,
+      textInputAction: TextInputAction.newline,
+      minLines: 1,
+      maxLines: null,
+      decoration: InputDecoration(
+        contentPadding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(20),
+          borderSide: BorderSide(color: context.color.territoryColor),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(20),
+          borderSide: BorderSide(color: context.color.territoryColor),
+        ),
+        hintText: "writeHere".translate(context),
+      ),
+    );
+  }
+
+
+
+  Widget _buildBlockButton(BuildContext context, int otherUserId) {
+    final String promptText =
+        "${"unBlockLbl".translate(context)} ${widget.state.widget.userName} ${"toSendMessage".translate(context)}";
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: Align(
+        alignment: AlignmentDirectional.centerEnd,
+        child: TextButton(
+          onPressed: () async {
+            final bool? unBlock = await UiUtils.showBlurredDialoge(
+              context,
+              dialoge: BlurredDialogBox(
+                acceptButtonName: "unBlockLbl".translate(context),
+                content: Text(
+                  promptText,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            );
+            if (unBlock == true && mounted) {
+              context
+                  .read<UnblockUserCubit>()
+                  .unBlockUser(blockUserId: otherUserId);
+            }
+          },
+          child: Text(
+            "unBlockLbl".translate(context),
+            style: TextStyle(
+              color: context.color.territoryColor,
+              fontSize: context.font.smaller,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+
+
+  Widget _buildAttachmentWidget(
+    BuildContext context,
+    PlatformFile messageAttachment,
+    List<String> supportedImageTypes,
+    String attachmentMIME,
+  ) {
+    final bool isImage = supportedImageTypes.contains(attachmentMIME);
+    final String filePath = messageAttachment.path ?? '';
+    final List<Widget> children = <Widget>[];
+
+    if (isImage && filePath.isNotEmpty) {
+      children.add(
+        GestureDetector(
+          onTap: () {
+            UiUtils.showFullScreenImage(
+              context,
+              provider: FileImage(File(filePath)),
+            );
+          },
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.file(
+              File(filePath),
+              width: 72,
+              height: 72,
+              fit: BoxFit.cover,
+            ),
+          ),
+        ),
+      );
+      children.add(const SizedBox(width: 12));
+      children.add(
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                messageAttachment.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ).size(context.font.normal),
+              const SizedBox(height: 4),
+              Text(
+                HelperUtils.getFileSizeString(
+                  bytes: messageAttachment.size,
+                ),
+              ).size(context.font.smaller),
+            ],
+          ),
+        ),
+      );
+    } else {
+      children.add(
+        Expanded(
+          child: AttachmentMessage(
+            url: filePath,
+          ),
+        ),
+      );
+    }
+
+    children.add(const SizedBox(width: 8));
+    children.add(
+      IconButton(
+        icon: const Icon(Icons.close_rounded),
+        onPressed: () => widget.state._setMessageAttachment(null),
+      ),
+    );
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: context.color.secondaryColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: context.color.borderColor.withOpacity(0.5)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: children,
+      ),
+    );
+  }
+
+
+
+
+  Widget _buildBottomAppBar(BuildContext context, bool isBlocked) {
     return BottomAppBar(
       padding: const EdgeInsetsDirectional.all(10),
       elevation: 5,
@@ -1099,63 +1195,137 @@ class _ChatBottomBarState extends State<_ChatBottomBar> {
       child: Directionality(
         textDirection: Directionality.of(context),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Row(
               children: [
-                Expanded(
-                  child: _buildMessageInputField(context), // حقل الإدخال
-                ),
-                const SizedBox(
-                  width: 9.5,
-                ),
-                GestureDetector(
-                  onTap: () {
-                    if (widget.state.controller.text.trim().isEmpty && widget.state.messageAttachment == null) return;
-
-                    String? messageType;
-                    final attachmentPath = widget.state.messageAttachment?.path;
-                    if (attachmentPath != null && attachmentPath.isNotEmpty) {
-                      messageType = widget.state._isImageAttachmentPath(attachmentPath) ? 'image' : 'file';
-                    } else if (widget.state.controller.text.trim().isNotEmpty) {
-                      messageType = 'text';
-                    }
-                    final DateTime now = DateTime.now();
-
-                    ChatMessageHandler.add(
-                      ChatMessageModal(
-                        localId: widget.state._generateLocalMessageId(),
-                        senderId: int.tryParse(HiveUtils.getUserId() ?? '') ?? 0,
-                        receiverId: int.tryParse(widget.state.widget.userId),
-                        itemOfferId: widget.state.widget.itemOfferId,
-                        itemId: int.tryParse(widget.state.widget.itemId),
-                        message: widget.state.controller.text,
-                        audio: '',
-                        file: widget.state.messageAttachment?.path ?? '',
-                        messageType: messageType,
-                        createdAt: now.toIso8601String(),
-                        updatedAt: now.toIso8601String(),
-                        isSentNow: true,
-                      ),
-                    );
-                    totalMessageCount++;
-                    widget.state.controller.text = "";
-                    widget.state._setMessageAttachment(null);
-                  },
-                  child: CircleAvatar(
-                    radius: 20,
-                    backgroundColor: context.color.territoryColor,
-                    child: Icon(
-                      Icons.send,
-                      color: context.color.buttonColor,
-                    ),
-                  ),
-                )
+                _buildAttachmentButton(context, isBlocked),
+                const SizedBox(width: 10),
+                Expanded(child: _buildMessageInputField(context, isBlocked)),
+                const SizedBox(width: 10),
+                _buildActionButton(context, isBlocked),
               ],
             ),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildAttachmentButton(BuildContext context, bool isBlocked) {
+    final Color iconColor = isBlocked
+        ? context.color.textLightColor.withOpacity(0.5)
+        : context.color.textDefaultColor;
+    return Container(
+      decoration: BoxDecoration(
+        color: context.color.backgroundColor,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: context.color.borderColor.withOpacity(0.4)),
+      ),
+      child: IconButton(
+        onPressed: isBlocked ? null : _handleAttachmentTap,
+        icon: Icon(
+          widget.state.messageAttachment != null
+              ? Icons.close_rounded
+              : Icons.attach_file_outlined,
+        ),
+        color: iconColor,
+      ),
+    );
+  }
+
+  Widget _buildActionButton(BuildContext context, bool isBlocked) {
+    final bool shouldShowRecordButton =
+        widget.state.showRecordButton && !isBlocked;
+    if (shouldShowRecordButton) {
+      final AnimationController? controller =
+          widget.state._recordButtonAnimation;
+      if (controller != null) {
+        return SizedBox(
+          height: 56,
+          width: 56,
+          child: RecordButton(
+            controller: controller,
+            callback: (path) =>
+                widget.state._handleRecordedAudio(path as String?),
+            isSending: false,
+          ),
+        );
+      }
+    }
+    return _buildSendButton(context, isBlocked);
+  }
+
+  Widget _buildSendButton(BuildContext context, bool isBlocked) {
+    final bool enabled = _canSendMessage && !isBlocked;
+    return GestureDetector(
+      onTap: enabled ? _handleSendPressed : null,
+      child: CircleAvatar(
+        radius: 22,
+        backgroundColor: enabled
+            ? context.color.territoryColor
+            : context.color.territoryColor.withOpacity(0.3),
+        child: Icon(
+          Icons.send_rounded,
+          color: context.color.buttonColor,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleAttachmentTap() async {
+    widget.state._clearSelection();
+    if (widget.state.messageAttachment != null) {
+      widget.state._setMessageAttachment(null);
+      return;
+    }
+    final FilePickerResult? pickedAttachment =
+        await FilePicker.platform.pickFiles(
+      allowMultiple: false,
+      type: FileType.custom,
+      allowedExtensions: widget.state.supportedImageTypes,
+    );
+    widget.state._setMessageAttachment(pickedAttachment?.files.first);
+  }
+
+  void _handleSendPressed() {
+    if (!_canSendMessage) {
+      return;
+    }
+
+    final String trimmedMessage = widget.state.controller.text.trim();
+    final String? attachmentPath = widget.state.messageAttachment?.path;
+    String? messageType;
+
+    if (attachmentPath != null && attachmentPath.isNotEmpty) {
+      messageType = widget.state._isImageAttachmentPath(attachmentPath)
+          ? 'image'
+          : 'file';
+    } else if (trimmedMessage.isNotEmpty) {
+      messageType = 'text';
+    }
+
+    final DateTime now = DateTime.now();
+
+    ChatMessageHandler.add(
+      ChatMessageModal(
+        localId: widget.state._generateLocalMessageId(),
+        senderId: int.tryParse(HiveUtils.getUserId() ?? '') ?? 0,
+        receiverId: int.tryParse(widget.state.widget.userId),
+        itemOfferId: widget.state.widget.itemOfferId,
+        itemId: int.tryParse(widget.state.widget.itemId),
+        message: trimmedMessage,
+        audio: '',
+        file: widget.state.messageAttachment?.path ?? '',
+        messageType: messageType,
+        createdAt: now.toIso8601String(),
+        updatedAt: now.toIso8601String(),
+        isSentNow: true,
+      ),
+    );
+
+    widget.state.controller.clear();
+    widget.state._setMessageAttachment(null);
   }
 }
 
@@ -1176,3 +1346,7 @@ class _ChatListEntry {
   factory _ChatListEntry.date(String label) =>
       _ChatListEntry._(dateLabel: label);
 }
+
+
+
+

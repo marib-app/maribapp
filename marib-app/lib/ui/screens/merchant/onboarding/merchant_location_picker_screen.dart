@@ -103,14 +103,14 @@ class _MerchantLocationPickerScreenState extends State<MerchantLocationPickerScr
     final theme = context.color;
     if (_loading || _currentTarget == null) {
       return Scaffold(
-        appBar: AppBar(title: Text('pickStoreLocation'.translate(context))),
+        appBar: AppBar(title: const Text('تحديد موقع المتجر')),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('pickStoreLocation'.translate(context)),
+        title: const Text('تحديد موقع المتجر'),
       ),
       body: Stack(
         children: [
@@ -137,8 +137,11 @@ class _MerchantLocationPickerScreenState extends State<MerchantLocationPickerScr
                 color: theme.primaryColor.withOpacity(0.9),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Text('movePointerToStore'.translate(context),
-                  style: TextStyle(color: theme.textDefaultColor)),
+              child: Text(
+                'حرك الخريطة حتى يكون المؤشر في وسط موقع متجرك',
+                style: TextStyle(color: theme.textDefaultColor),
+                textAlign: TextAlign.center,
+              ),
             ),
           ),
           Positioned(
@@ -162,8 +165,8 @@ class _MerchantLocationPickerScreenState extends State<MerchantLocationPickerScr
                   children: [
                     Text(
                       _addressLoading
-                          ? 'loadingAddress'.translate(context)
-                          : (_currentAddress ?? 'addressUnknown'.translate(context)),
+                          ? 'جاري تحديث العنوان...'
+                          : (_currentAddress ?? 'لم يتم تحديد العنوان بعد'),
                       style: TextStyle(color: theme.textDefaultColor, fontSize: context.font.normal),
                     ),
                     const SizedBox(height: 12),
@@ -171,7 +174,7 @@ class _MerchantLocationPickerScreenState extends State<MerchantLocationPickerScr
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: _confirmSelection,
-                        child: Text('confirmLocation'.translate(context)),
+                        child: const Text('تأكيد العنوان'),
                       ),
                     ),
                   ],

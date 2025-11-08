@@ -758,7 +758,12 @@ class LoginScreenState extends State<SignUpMainScreen> {
         HiveUtils.setUserData(userDetails.toJson());
       }
 
-      if (selectedAccountType == "2" || selectedAccountType == "3") {
+      if (selectedAccountType == "3") {
+        Navigator.pushNamed(context, Routes.merchantOnboarding);
+        return;
+      }
+
+      if (selectedAccountType == "2") {
         Navigator.pushNamed(
           context,
           Routes.signup,

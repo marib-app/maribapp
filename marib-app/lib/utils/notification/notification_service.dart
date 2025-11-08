@@ -39,7 +39,6 @@ import 'package:marib/utils/notification/chat_message_handler.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:convert';
 import 'dart:collection';
-import 'package:flutter/foundation.dart';
 import 'package:marib/utils/chat/conversation_id_utils.dart';
 import 'package:marib/data/model/orders/user_order.dart';
 import 'package:marib/data/repositories/orders/orders_repository.dart';
@@ -974,7 +973,6 @@ class NotificationService {
 
         ChatMessageHandler.add(chatMessageModel);
 
-        totalMessageCount++;
       } else {
         localNotification.createNotification(
           isLocked: false,
@@ -2313,5 +2311,3 @@ class _CachedParticipantsEntry {
         .toList();
   }
 }
-
-

@@ -270,9 +270,13 @@ extension _ChatScreenUi on _ChatScreenState {
                                 onTap: () {
                                   Navigator.pop(context);
                                 },
-                                child: Container(
-                                  color:
-                                  const Color.fromARGB(69, 0, 0, 0),
+                                child: Stack(
+                                  children: [
+                                    Container(
+                                      color:
+                                          const Color.fromARGB(69, 0, 0, 0),
+                                    ),
+                                  ],
                                 ),
                               );
                             },
@@ -758,35 +762,48 @@ class _ChatHeader extends StatelessWidget {
   }) : super(key: key);
 
   Future<void> _openAd(BuildContext ctx) async {
-    try {
-      Widgets.showLoader(ctx);
+    if (state.isListingUnavailable) {
+      HelperUtils.showSnackBarMessage(
+        ctx,
+        "chatAdUnavailableHint".translate(ctx),
+      );
+      return;
+    }
 
+    Widgets.showLoader(ctx);
+    try {
       final DataOutput<ItemModel> dataOutput =
-      await ItemRepository().fetchItemFromItemId(
+          await ItemRepository().fetchItemFromItemId(
         int.parse(state.widget.itemId),
       );
 
-      Future.delayed(
-        Duration.zero,
-            () {
-          Widgets.hideLoder(ctx);
-          Navigator.pushNamed(
-            ctx,
-            Routes.adDetailsScreen,
-            arguments: {
-              "model": dataOutput.modelList[0],
-            },
-          );
+      if (dataOutput.modelList.isEmpty) {
+        throw StateError('listing-missing');
+      }
+
+      Widgets.hideLoder(ctx);
+      Navigator.pushNamed(
+        ctx,
+        Routes.adDetailsScreen,
+        arguments: {
+          "model": dataOutput.modelList.first,
         },
       );
     } catch (_) {
       Widgets.hideLoder(ctx);
+      state._markListingUnavailable();
+      HelperUtils.showSnackBarMessage(
+        ctx,
+        "chatAdUnavailable".translate(ctx),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final ctx = context;
+
+    final bool disableTap = state.isListingUnavailable;
 
     return Padding(
       // تفصل البطاقة عن الـ AppBar ومن الجانبين
@@ -798,95 +815,118 @@ class _ChatHeader extends StatelessWidget {
         shadowColor: ctx.color.borderColor.withOpacity(0.25),
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: () => _openAd(ctx),
+          onTap: disableTap ? null : () => _openAd(ctx),
           splashColor: ctx.color.territoryColor.withOpacity(0.15),
           highlightColor: ctx.color.territoryColor.withOpacity(0.08),
-          child: Container(
-            height: 72,
-            decoration: BoxDecoration(
-              color: ctx.color.backgroundColor, // كرت بلون الخلفية، غير عن فقاعات الشات
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: ctx.color.borderColor.withOpacity(0.4),
-              ),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Row(
-              textDirection: TextDirection.rtl, // الصورة + العنوان على اليمين
-              children: [
-                // صورة الإعلان (يمين)
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: SizedBox(
-                    width: 48,
-                    height: 48,
-                    child: UiUtils.getImage(
-                      state.widget.itemImage,
-                      fit: BoxFit.cover,
-                    ),
+          child: Stack(
+            children: [
+              Container(
+                height: 72,
+                decoration: BoxDecoration(
+                  color: ctx.color.backgroundColor,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: ctx.color.borderColor.withOpacity(0.4),
                   ),
                 ),
-
-                const SizedBox(width: 10),
-
-                // العنوان + سطر مساعد (محاذاة يمين)
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start, // في RTL = يمين
-                    children: [
-                      Text(
-                        state.widget.itemTitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.right,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: Row(
+                  textDirection: TextDirection.rtl,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: SizedBox(
+                        width: 48,
+                        height: 48,
+                        child: UiUtils.getImage(
+                          state.widget.itemImage,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            state.widget.itemTitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.right,
+                          )
+                              .color(ctx.color.textDefaultColor)
+                              .size(ctx.font.large)
+                              .bold(),
+                          const SizedBox(height: 4),
+                          Text(
+                            'اضغط لمشاهدة تفاصيل الإعلان',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.right,
+                          )
+                              .color(
+                            ctx.color.textDefaultColor.withOpacity(0.6),
+                          )
+                              .size(ctx.font.small),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: ctx.color.territoryColor.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        state._formatPriceWithCurrency(
+                          state.widget.itemPrice,
+                          resolvedCurrencySymbol,
+                        ),
                       )
-                          .color(ctx.color.textDefaultColor)
-                          .size(ctx.font.large)
+                          .color(ctx.color.territoryColor)
+                          .size(ctx.font.small)
                           .bold(),
-                      const SizedBox(height: 4),
-                      Text(
-                        'اضغط لمشاهدة تفاصيل الإعلان',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.right,
-                      )
-                          .color(
-                        ctx.color.textDefaultColor.withOpacity(0.6),
-                      )
-                          .size(ctx.font.small),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(width: 8),
-
-                // كبسولة السعر (على اليسار)
-                Container(
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: ctx.color.territoryColor.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    state._formatPriceWithCurrency(
-                      state.widget.itemPrice,
-                      resolvedCurrencySymbol,
                     ),
-                  )
-                      .color(ctx.color.territoryColor)
-                      .size(ctx.font.small)
-                      .bold(),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              if (disableTap)
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: ctx.color.backgroundColor.withOpacity(0.92),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            color: ctx.color.textDefaultColor.withOpacity(0.8),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            "chatAdUnavailableHint".translate(ctx),
+                            textAlign: TextAlign.center,
+                          )
+                              .color(ctx.color.textDefaultColor)
+                              .size(ctx.font.normal),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
       ),
     );
   }
-
 }
 
 class _ChatBottomBar extends StatefulWidget {
@@ -1346,7 +1386,3 @@ class _ChatListEntry {
   factory _ChatListEntry.date(String label) =>
       _ChatListEntry._(dateLabel: label);
 }
-
-
-
-

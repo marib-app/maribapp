@@ -247,7 +247,17 @@ body.dark-mode {
 
 .bootstrap-table .fixed-table-container .fixed-table-body .fixed-table-loading {
     transition: all 0.3s ease-in-out;
-    visibility: visible !important;
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.bootstrap-table .fixed-table-container .fixed-table-body.loading .fixed-table-loading,
+.bootstrap-table .fixed-table-container .fixed-table-body .fixed-table-loading.open {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+
 }
 
 /* قواعد الجداول في الوضع الفاتح */

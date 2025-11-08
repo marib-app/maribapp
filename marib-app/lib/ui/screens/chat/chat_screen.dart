@@ -116,6 +116,7 @@ class _ChatScreenState extends State<ChatScreen>
   bool _isDeleteMode = false;
   int? _selectedMessageId;
   int _rating = 0;
+  bool _isListingUnavailable = false;
   final TextEditingController _feedbackController = TextEditingController();
   late final ScrollController _pageScrollController = ScrollController()
     ..addListener(_handleScroll);
@@ -665,6 +666,7 @@ class _ChatScreenState extends State<ChatScreen>
 
   bool get isDeleteMode => _isDeleteMode;
   int? get selectedMessageId => _selectedMessageId;
+  bool get isListingUnavailable => _isListingUnavailable;
 
   void _handleRecordedAudio(String? path) {
     if (path == null || path.isEmpty) {
@@ -687,6 +689,19 @@ class _ChatScreenState extends State<ChatScreen>
       updatedAt: now.toIso8601String(),
       isSentNow: true,
     ));
+  }
+
+  void _markListingUnavailable() {
+    if (_isListingUnavailable) {
+      return;
+    }
+    if (!mounted) {
+      _isListingUnavailable = true;
+      return;
+    }
+    setState(() {
+      _isListingUnavailable = true;
+    });
   }
 
   void _syncComposerState({

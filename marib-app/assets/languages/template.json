@@ -101,6 +101,8 @@
   "pickSliderImage": "Pick Slider Image",
   "featured": "Featured",
   "somethingWentWrng": "Something went wrong",
+  "chatAdUnavailable": "This listing is no longer available.",
+  "chatAdUnavailableHint": "This ad was removed or sold and can no longer be opened.",
   "authExpired": "Authentication Expired",
   "defaultErrorMsg": "Something went wrong. Please try again",
   "deleteAccount": "Delete Account",

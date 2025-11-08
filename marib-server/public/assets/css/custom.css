@@ -309,7 +309,7 @@ img.mfp-img {
 
 .table-row {
     position: relative; /* This is required for z-index to work */
-    z-index: -1; /* Or set -2 or -3 as needed */
+    z-index: auto; /* Use the natural stacking order so rows remain interactive */
 }
 
 

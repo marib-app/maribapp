@@ -102,7 +102,7 @@ class LoginScreenState extends State<SignUpMainScreen> {
     if (!mounted) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!context.mounted) return;
-      Navigator.of(context, rootNavigator: true).pushNamed(
+      Navigator.of(context, rootNavigator: true).pushReplacementNamed(
         Routes.merchantOnboarding,
         arguments: {
           'signupDraft': draft,

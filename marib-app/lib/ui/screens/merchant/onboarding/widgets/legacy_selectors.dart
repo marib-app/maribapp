@@ -185,7 +185,7 @@ Future<Map<int, LegacyDayHours>?> showLegacyWorkingHoursSheet({
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'إعداد ساعات العمل',
+                    'ضبط ساعات العمل',
                     style: TextStyle(
                       fontSize: context.font.large,
                       fontWeight: FontWeight.w700,

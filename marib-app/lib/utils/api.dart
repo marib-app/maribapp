@@ -798,6 +798,11 @@ class Api {
     'banks',
   ];
 
+
+  /// مسار فهرس بوابات المتجر الحالية للتاجر المصادق (المسار القديم).
+  static String storeGatewaysCatalogApi() => 'store-gateways';
+
+
   /// مسار بوابات المتجر الجديدة (يجب تمرير هوية التاجر أو السلَج/المعرف).
   static String storeGatewaysApi(dynamic seller) {
     final String normalized = _normalizeStoreIdentifier(seller);

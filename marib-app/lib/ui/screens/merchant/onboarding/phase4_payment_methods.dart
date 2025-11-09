@@ -129,7 +129,7 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
     await _loadManualGateways();
     try {
       final Map<String, dynamic> response =
-          await Api.get(url: Api.storeGatewaysApi('current'));
+      await Api.get(url: Api.storeGatewaysCatalogApi());
       final List<dynamic> rawList = response['data'] is List
           ? response['data'] as List<dynamic>
           : (response['storeGateways'] is List
@@ -174,7 +174,7 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
 
     try {
       final Map<String, dynamic> gateways =
-          await Api.get(url: Api.storeGatewaysApi('current'));
+      await Api.get(url: Api.storeGatewaysCatalogApi());
       merge(_extractGatewayAccounts(gateways));
     } catch (_) {}
 

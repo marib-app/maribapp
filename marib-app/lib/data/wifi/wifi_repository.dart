@@ -63,13 +63,25 @@ class WifiRepository {
     return int.tryParse(value.toString());
   }
 
-  Future<List<WifiNetwork>> fetchOwnerNetworks({
+  Future<List<WifiNetwork>> fetchNetworks({
     String? query,
-    int perPage = 100,
+    int perPage = 30,
+    int? ownerId,
+    bool includePlans = false,
   }) async {
+    final int normalizedPerPage = perPage.clamp(1, 100).toInt();
+    final String normalizedQuery = query?.trim() ?? '';
+
+    final Map<String, dynamic> queryParameters = <String, dynamic>{
+      'per_page': normalizedPerPage,
+      if (normalizedQuery.isNotEmpty) 'q': normalizedQuery,
+      if (ownerId != null) 'owner_id': ownerId,
+      if (includePlans) 'with_plans': true,
+    };
+
     final response = await Api.get(
-      url: Api.ownerWifiNetworksApi,
-      queryParameters: <String, dynamic>{'per_page': perPage},
+      url: Api.wifiNetworksApi,
+      queryParameters: queryParameters,
     );
 
     final List<dynamic> rawList = _extractNetworksList(response);
@@ -89,18 +101,18 @@ class WifiRepository {
         .whereType<WifiNetwork>()
         .toList();
 
-    final String normalizedQuery = query?.trim().toLowerCase() ?? '';
     if (normalizedQuery.isEmpty) {
       return networks;
     }
 
+    final String needle = normalizedQuery.toLowerCase();
     return networks.where((network) {
       final String haystack = <String?>[
         network.name,
         network.slug,
         network.address,
       ].whereType<String>().map((value) => value.toLowerCase()).join(' ');
-      return haystack.contains(normalizedQuery);
+      return haystack.contains(needle);
     }).toList();
   }
 
@@ -210,9 +222,16 @@ class WifiRepository {
     return WifiNetwork.fromJson(data);
   }
 
-  Future<List<WifiPlan>> fetchNetworkPlans(int networkId) async {
+  Future<List<WifiPlan>> fetchNetworkPlans(int networkId,
+      {int perPage = 50}) async {
+    final int normalizedPerPage = perPage.clamp(1, 100).toInt();
+
     final response = await Api.get(
-      url: Api.ownerWifiNetworkPlansApi(networkId),
+      url: Api.wifiPlansApi,
+      queryParameters: <String, dynamic>{
+        'network_id': networkId,
+        'per_page': normalizedPerPage,
+      },
     );
 
     final dynamic container = response['data'] ??

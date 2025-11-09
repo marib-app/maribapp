@@ -126,6 +126,7 @@ class _ChatScreenState extends State<ChatScreen>
   StreamSubscription<UserPresenceEvent>? _presenceEventSubscription;
   List<ChatParticipant>? _fallbackParticipants;
   VoidCallback? _participantStatusListener;
+  VoidCallback? _presenceVersionListener;
 
   late final ChatSyncController _chatSyncController;
   StreamSubscription<List<ChatMessageModal>>? _chatMessagesSubscription;
@@ -181,9 +182,15 @@ class _ChatScreenState extends State<ChatScreen>
         ? effectiveConversationId
         : resolvedConversationId;
 
-    _otherParticipantStatus =
-        NotificationService.participantStatusNotifier.value ??
-            _otherParticipantStatus;
+    _hydratePresenceFromCache();
+    _listenPresenceVersion();
+
+    final UserPresenceEvent? initialPresenceEvent =
+        NotificationService.userPresenceEventNotifier.value;
+    if (initialPresenceEvent != null &&
+        _isPresenceEventForCurrentConversation(initialPresenceEvent)) {
+      _otherParticipantStatus = initialPresenceEvent.status;
+    }
 
     _participantStatusListener = () {
       final ParticipantStatus? latest =
@@ -376,7 +383,11 @@ class _ChatScreenState extends State<ChatScreen>
 
     _presenceEventSubscription ??=
         NotificationService.userPresenceEvents.listen((event) {
+      if (!_isPresenceEventForCurrentConversation(event)) {
+        return;
+      }
       if (!mounted) {
+        _otherParticipantStatus = event.status;
         return;
       }
       setState(() {
@@ -394,6 +405,69 @@ class _ChatScreenState extends State<ChatScreen>
         _otherParticipantStatus = latestStatus;
       });
     }
+  }
+
+  void _hydratePresenceFromCache() {
+    final ParticipantStatus? cachedStatus =
+        NotificationService.resolvePresenceStatus(
+      conversationId: _effectiveConversationId,
+      itemOfferId: widget.itemOfferId > 0 ? widget.itemOfferId : null,
+      userId: widget.userId,
+    );
+    if (!NotificationService.areStatusesEqual(
+      cachedStatus,
+      _otherParticipantStatus,
+    )) {
+      _otherParticipantStatus = cachedStatus;
+    }
+  }
+
+  void _listenPresenceVersion() {
+    _presenceVersionListener = () {
+      final ParticipantStatus? latest =
+          NotificationService.resolvePresenceStatus(
+        conversationId: _effectiveConversationId,
+        itemOfferId: widget.itemOfferId > 0 ? widget.itemOfferId : null,
+        userId: widget.userId,
+      );
+      if (NotificationService.areStatusesEqual(
+        latest,
+        _otherParticipantStatus,
+      )) {
+        return;
+      }
+      if (!mounted) {
+        _otherParticipantStatus = latest;
+        return;
+      }
+      setState(() {
+        _otherParticipantStatus = latest;
+      });
+    };
+    NotificationService.presenceVersionNotifier
+        .addListener(_presenceVersionListener!);
+  }
+
+  bool _isPresenceEventForCurrentConversation(UserPresenceEvent event) {
+    final String normalizedConversation = _effectiveConversationId;
+    if (event.conversationId != null &&
+        event.conversationId!.isNotEmpty &&
+        normalizedConversation.isNotEmpty &&
+        event.conversationId == normalizedConversation) {
+      return true;
+    }
+    if (event.itemOfferId != null &&
+        event.itemOfferId! > 0 &&
+        widget.itemOfferId > 0 &&
+        event.itemOfferId == widget.itemOfferId) {
+      return true;
+    }
+    if (event.userId != null &&
+        event.userId!.isNotEmpty &&
+        event.userId == widget.userId) {
+      return true;
+    }
+    return false;
   }
 
   void _handleScroll() {
@@ -793,6 +867,11 @@ class _ChatScreenState extends State<ChatScreen>
     if (_participantStatusListener != null) {
       NotificationService.participantStatusNotifier
           .removeListener(_participantStatusListener!);
+    }
+    if (_presenceVersionListener != null) {
+      NotificationService.presenceVersionNotifier
+          .removeListener(_presenceVersionListener!);
+      _presenceVersionListener = null;
     }
 
     _chatSyncController.onTypingChanged(false);

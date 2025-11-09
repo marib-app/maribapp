@@ -28,18 +28,38 @@ class ManageItemCubit extends Cubit<ManageItemState> {
   ManageItemCubit() : super(ManageItemInitial());
   final ItemRepository _itemRepository = ItemRepository();
 
-  void manage(ManageItemType type, Map<String, dynamic> data, File? mainImage,
-      List<File>? otherImage) async {
+  void manage(
+    ManageItemType type,
+    Map<String, dynamic> data,
+    File? mainImage,
+    List<File>? otherImage,
+  ) async {
     try {
       emit(ManageItemInProgress());
 
+
+      final List<File>? galleryImages =
+          otherImage == null || otherImage.isEmpty
+              ? null
+              : List<File>.from(otherImage);
+
       if (type == ManageItemType.add) {
-        ItemModel itemModel =
-            await _itemRepository.createItem(data, mainImage!, otherImage!);
+        if (mainImage == null) {
+          throw ArgumentError('mainImage is required when creating an item.');
+        }
+
+        final ItemModel itemModel = await _itemRepository.createItem(
+          data,
+          mainImage,
+          galleryImages,
+        );
         emit(ManageItemSuccess(itemModel, type));
       } else if (type == ManageItemType.edit) {
-        ItemModel itemModel =
-            await _itemRepository.editItem(data, mainImage, otherImage);
+        final ItemModel itemModel = await _itemRepository.editItem(
+          data,
+          mainImage,
+          galleryImages,
+        );
         emit(ManageItemSuccess(itemModel, type));
       }
     } catch (e) {

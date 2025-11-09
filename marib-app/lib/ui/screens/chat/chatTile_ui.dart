@@ -340,8 +340,26 @@ extension _ChatTileUi on ChatTile {
   }
 
   Widget buildChatTile(BuildContext context) {
-    final ParticipantStatus? presenceStatus = _otherParticipantStatus();
+    return ValueListenableBuilder<int>(
+      valueListenable: NotificationService.presenceVersionNotifier,
+      builder: (context, _, __) {
+        final ParticipantStatus? liveStatus =
+            NotificationService.resolvePresenceStatus(
+          conversationId: conversationId,
+          itemOfferId: itemOfferId,
+          userId: id,
+        );
+        final ParticipantStatus? presenceStatus =
+            liveStatus ?? _otherParticipantStatus();
+        return _buildChatTileContent(context, presenceStatus);
+      },
+    );
+  }
 
+  Widget _buildChatTileContent(
+    BuildContext context,
+    ParticipantStatus? presenceStatus,
+  ) {
     final Widget? unreadBadge = _buildUnreadBadge(context);
     final Widget? adCard = _buildAdCard(context);
     final String timeLabel = _timeLabel();

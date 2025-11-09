@@ -62,10 +62,16 @@ class ChatMessageStatusUpdate {
 class UserPresenceEvent {
   final UserPresenceEventType type;
   final ParticipantStatus status;
+  final String? conversationId;
+  final int? itemOfferId;
+  final String? userId;
 
   const UserPresenceEvent({
     required this.type,
     required this.status,
+    this.conversationId,
+    this.itemOfferId,
+    this.userId,
   });
 }
 
@@ -159,6 +165,14 @@ class NotificationService {
     'wallet_deposit',
     'wallet_top_up',
   };
+
+  static final Map<String, ParticipantStatus> _conversationPresenceState =
+      <String, ParticipantStatus>{};
+  static final Map<String, ParticipantStatus> _userPresenceState =
+      <String, ParticipantStatus>{};
+  static final ValueNotifier<int> presenceVersionNotifier =
+      ValueNotifier<int>(0);
+  static int _presenceVersion = 0;
 
   static Stream<ParticipantStatus?> get participantStatusStream =>
       _participantStatusController.stream;
@@ -1916,18 +1930,37 @@ class NotificationService {
 
   static void _handlePresenceNotification(Map<String, dynamic> data) {
     _cacheParticipantsFromData(data);
-    if (!_isMessageForCurrentChat(data)) {
-      return;
-    }
     final ParticipantStatus? participantStatus =
         _parseParticipantStatusFromData(Map<String, dynamic>.from(data));
-    if (participantStatus != null) {
-      _notifyParticipantStatus(participantStatus);
-      _emitUserPresenceEvent(
-        participantStatus: participantStatus,
-        data: data,
-      );
+    if (participantStatus == null) {
+      return;
     }
+
+    final String conversationId = data['conversation_id']?.toString() ??
+        data['conversationId']?.toString() ??
+        '';
+    final int? itemOfferId =
+        _tryParseInt(data['item_offer_id'] ?? data['itemOfferId']);
+    final String? userId = _resolvePresenceUserId(data);
+
+    _updatePresenceCaches(
+      conversationId: conversationId,
+      itemOfferId: itemOfferId,
+      userId: userId,
+      status: participantStatus,
+    );
+
+    final bool matchesCurrent = _isMessageForCurrentChat(data);
+    if (matchesCurrent) {
+      _notifyParticipantStatus(participantStatus);
+    }
+    _emitUserPresenceEvent(
+      participantStatus: participantStatus,
+      data: data,
+      conversationId: conversationId,
+      itemOfferId: itemOfferId,
+      userId: userId,
+    );
   }
 
   static void _handleMessageStatusNotification(Map<String, dynamic> data) {
@@ -2032,19 +2065,25 @@ class NotificationService {
   static void _emitUserPresenceEvent({
     required ParticipantStatus participantStatus,
     required Map<String, dynamic> data,
+    String? conversationId,
+    int? itemOfferId,
+    String? userId,
   }) {
-    if (_userPresenceEventController.isClosed) {
-      userPresenceEventNotifier.value = UserPresenceEvent(
-        type: _resolvePresenceEventType(data, participantStatus),
-        status: participantStatus,
-      );
-
-      return;
-    }
+    final String normalizedConversation =
+        normalizeConversationId(conversationId ?? '');
     final UserPresenceEvent event = UserPresenceEvent(
       type: _resolvePresenceEventType(data, participantStatus),
       status: participantStatus,
+      conversationId:
+          normalizedConversation.isEmpty ? null : normalizedConversation,
+      itemOfferId: itemOfferId,
+      userId: userId,
     );
+
+    if (_userPresenceEventController.isClosed) {
+      userPresenceEventNotifier.value = event;
+      return;
+    }
 
     _userPresenceEventController.add(event);
     userPresenceEventNotifier.value = event;
@@ -2114,6 +2153,120 @@ class NotificationService {
     userPresenceEventNotifier.value = null;
     ChatMessageHandler.clearParticipantStatus();
     clearParticipantsCache();
+    _conversationPresenceState.clear();
+    _userPresenceState.clear();
+    _bumpPresenceVersion();
+  }
+
+  static ParticipantStatus? resolvePresenceStatus({
+    String? conversationId,
+    int? itemOfferId,
+    String? userId,
+  }) {
+    final String? conversationKey =
+        _presenceConversationKey(conversationId, itemOfferId);
+    if (conversationKey != null) {
+      final ParticipantStatus? status =
+          _conversationPresenceState[conversationKey];
+      if (status != null) {
+        return status;
+      }
+    }
+    if (userId != null && userId.isNotEmpty) {
+      return _userPresenceState[userId];
+    }
+    return null;
+  }
+
+  static bool areStatusesEqual(ParticipantStatus? a, ParticipantStatus? b) {
+    return _areStatusesEqual(a, b);
+  }
+
+  static void _updatePresenceCaches({
+    required String? conversationId,
+    required int? itemOfferId,
+    required String? userId,
+    required ParticipantStatus status,
+  }) {
+    bool changed = false;
+    final String? conversationKey =
+        _presenceConversationKey(conversationId, itemOfferId);
+    if (conversationKey != null) {
+      final ParticipantStatus? previous =
+          _conversationPresenceState[conversationKey];
+      if (!_areStatusesEqual(previous, status)) {
+        _conversationPresenceState[conversationKey] = status;
+        changed = true;
+      }
+    }
+    if (userId != null && userId.isNotEmpty) {
+      final ParticipantStatus? previous = _userPresenceState[userId];
+      if (!_areStatusesEqual(previous, status)) {
+        _userPresenceState[userId] = status;
+        changed = true;
+      }
+    }
+    if (changed) {
+      _bumpPresenceVersion();
+    }
+  }
+
+  static String? _presenceConversationKey(
+      String? conversationId, int? itemOfferId) {
+    final String normalizedConversation =
+        normalizeConversationId(conversationId ?? '');
+    if (normalizedConversation.isNotEmpty) {
+      if (itemOfferId != null && itemOfferId > 0) {
+        return 'c:$normalizedConversation#i:$itemOfferId';
+      }
+      return 'c:$normalizedConversation';
+    }
+    if (itemOfferId != null && itemOfferId > 0) {
+      return 'item:$itemOfferId';
+    }
+    return null;
+  }
+
+  static String? _resolvePresenceUserId(Map<String, dynamic> data) {
+    const List<String> candidates = <String>[
+      'user_id',
+      'sender_id',
+      'from_user_id',
+      'participant_id',
+      'participantId',
+    ];
+    for (final String key in candidates) {
+      final dynamic value = data[key];
+      if (value == null) {
+        continue;
+      }
+      final String candidate = value.toString();
+      if (candidate.isNotEmpty) {
+        return candidate;
+      }
+    }
+    return null;
+  }
+
+  static bool _areStatusesEqual(
+    ParticipantStatus? a,
+    ParticipantStatus? b,
+  ) {
+    if (identical(a, b)) {
+      return true;
+    }
+    if (a == null || b == null) {
+      return a == null && b == null;
+    }
+    return a.isOnline == b.isOnline &&
+        a.isTyping == b.isTyping &&
+        a.isBlocked == b.isBlocked &&
+        a.lastSeen == b.lastSeen;
+  }
+
+  static void _bumpPresenceVersion() {
+    _presenceVersion = (_presenceVersion + 1) & 0x7fffffff;
+    presenceVersionNotifier.value = _presenceVersion;
   }
 
   static void _cacheParticipantsFromData(Map<String, dynamic> data) {

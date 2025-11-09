@@ -86,6 +86,7 @@ class LoginScreenState extends State<SignUpMainScreen> {
   bool isBack = false;
   bool isFromGoogleLogin = false;
   Map<String, dynamic>? googleData;
+  bool _isSubmitting = false;
   StreamSubscription<AuthenticationState>? _authenticationSubscription;
   VoidCallback? _loginStateListenerDisposer;
 
@@ -490,17 +491,10 @@ class LoginScreenState extends State<SignUpMainScreen> {
     form.save();
 
     if (!form.validate()) return;
-
-
-    if (codeCtrl.text.trim().isEmpty) {
-      HelperUtils.showSnackBarMessage(
-        context,
-        'Please enter your referral code.',
-        messageDuration: 3,
-        type: MessageType.warning,
-      );
+    if (_isSubmitting) {
       return;
     }
+
 
     if (!agreed) {
       HelperUtils.showSnackBarMessage(
@@ -522,11 +516,13 @@ class LoginScreenState extends State<SignUpMainScreen> {
     }
 
 
+    _isSubmitting = true;
     Widgets.showLoader(context);
 
     final locationPayload = await _prepareLocationPayload();
     if (locationPayload == null) {
       Widgets.hideLoder(context);
+      _isSubmitting = false;
       return;
     }
 
@@ -537,7 +533,6 @@ class LoginScreenState extends State<SignUpMainScreen> {
         "mobile": mobileCtrl.text,
         "password": passwordCtrl.text,
         "account_type": selectedAccountType ?? "1",
-        "code": codeCtrl.text.trim(),
         "email": emailCtrl.text,
         "country_code": countryCode?.toString() ?? "",
         "country_name": countryName ?? "Unknown",
@@ -545,6 +540,12 @@ class LoginScreenState extends State<SignUpMainScreen> {
         "platform_type": Platform.isAndroid ? "android" : "ios",
         ...locationPayload,
       };
+
+      final String referralCode = codeCtrl.text.trim();
+      if (referralCode.isNotEmpty) {
+        basePayload["code"] = referralCode;
+      }
+
 
 
       Map<String, dynamic> payload;
@@ -614,6 +615,7 @@ class LoginScreenState extends State<SignUpMainScreen> {
 
     } finally {
       Widgets.hideLoder(context);
+      _isSubmitting = false;
     }
   }
 

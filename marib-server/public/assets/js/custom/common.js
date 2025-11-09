@@ -43,6 +43,10 @@ $('#create-form,.create-form,.create-form-without-reset').on('submit', function 
     let submitButtonElement = $(this).find(':submit');
     let url = $(this).attr('action');
 
+    if (typeof tinymce !== 'undefined') {
+        tinymce.triggerSave();
+    }
+
     let data = new FormData(this);
     let preSubmitFunction = $(this).data('pre-submit-function');
     if (preSubmitFunction) {
@@ -75,6 +79,9 @@ $('#edit-form,.edit-form').on('submit', function (e) {
     e.preventDefault();
     let formElement = $(this);
     let submitButtonElement = $(this).find(':submit');
+    if (typeof tinymce !== 'undefined') {
+        tinymce.triggerSave();
+    }
     let data = new FormData(this);
     $(formElement).parents('modal').modal('hide');
     // let url = $(this).attr('action') + "/" + data.get('edit_id');

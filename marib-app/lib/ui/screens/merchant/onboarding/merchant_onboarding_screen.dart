@@ -4,6 +4,8 @@ import 'phase2_categories_hours.dart';
 import 'phase3_store_policy.dart';
 import 'phase4_payment_methods.dart';
 import 'phase5_store_credentials.dart';
+import 'phase6_final_submission.dart';
+import 'phase5_store_credentials.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/ui_utils.dart';
@@ -37,6 +39,15 @@ class _MerchantOnboardingScreenState extends State<MerchantOnboardingScreen> {
   final PageController _controller = PageController();
   int _currentPage = 0;
   final int _totalPages = 6;
+  final ValueNotifier<int> _pageVisibilityNotifier = ValueNotifier<int>(0);
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _pageVisibilityNotifier.value = _currentPage;
+    });
+  }
 
   void _goToPage(int next) {
     if (next < 0 || next >= _totalPages) return;
@@ -45,6 +56,9 @@ class _MerchantOnboardingScreenState extends State<MerchantOnboardingScreen> {
     });
     _controller.animateToPage(next,
         duration: const Duration(milliseconds: 400), curve: Curves.ease);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _pageVisibilityNotifier.value = next;
+    });
   }
 
   void _onPhase1Next(ActivityInfoData data) {
@@ -77,6 +91,15 @@ class _MerchantOnboardingScreenState extends State<MerchantOnboardingScreen> {
         message: 'dataSavedStage'.translate(context));
   }
 
+  Future<void> _onPhase6Submit() async {
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    if (!mounted) return;
+    UiUtils.showSoftSnackBar(
+      context,
+      message: 'submittedSuccess'.translate(context),
+    );
+  }
+
   void _handleBackPressed() {
     if (_currentPage > 0) {
       _goToPage(_currentPage - 1);
@@ -88,6 +111,7 @@ class _MerchantOnboardingScreenState extends State<MerchantOnboardingScreen> {
   @override
   void dispose() {
     _controller.dispose();
+    _pageVisibilityNotifier.dispose();
     super.dispose();
   }
 
@@ -125,6 +149,8 @@ class _MerchantOnboardingScreenState extends State<MerchantOnboardingScreen> {
                 Phase2CategoriesHours(
                   onBack: () => _goToPage(0),
                   onNext: _onPhase2Next,
+                  visibilityNotifier: _pageVisibilityNotifier,
+                  pageIndex: 1,
                 ),
                 Phase3StorePolicy(
                   onBack: () => _goToPage(1),
@@ -133,12 +159,19 @@ class _MerchantOnboardingScreenState extends State<MerchantOnboardingScreen> {
                 Phase4PaymentMethods(
                   onBack: () => _goToPage(2),
                   onNext: _onPhase4Next,
+                  visibilityNotifier: _pageVisibilityNotifier,
+                  pageIndex: 3,
                 ),
                 Phase5StoreCredentials(
                   onBack: () => _goToPage(3),
                   onNext: _onPhase5Next,
                 ),
-                Center(child: Text('phase6_pending'.translate(context))),
+                Phase6FinalSubmission(
+                  onBack: () => _goToPage(4),
+                  onSubmit: _onPhase6Submit,
+                  visibilityNotifier: _pageVisibilityNotifier,
+                  pageIndex: 5,
+                ),
               ],
             ),
           ),

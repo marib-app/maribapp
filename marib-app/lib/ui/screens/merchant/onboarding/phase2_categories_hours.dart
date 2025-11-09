@@ -42,11 +42,15 @@ class DaySchedule {
 class Phase2CategoriesHours extends StatefulWidget {
   final VoidCallback onBack;
   final void Function(Phase2Data data) onNext;
+  final ValueNotifier<int> visibilityNotifier;
+  final int pageIndex;
 
   const Phase2CategoriesHours({
     super.key,
     required this.onBack,
     required this.onNext,
+    required this.visibilityNotifier,
+    required this.pageIndex,
   });
 
   @override
@@ -55,7 +59,7 @@ class Phase2CategoriesHours extends StatefulWidget {
 
 class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
     with AutomaticKeepAliveClientMixin {
-  late Future<List<CategoryModel>> _categoriesFuture;
+  Future<List<CategoryModel>>? _categoriesFuture;
   final Set<int> _selectedCategoryIds = <int>{};
   final Map<int, DaySchedule> _hours = {
     for (int i = 0; i < 7; i++)
@@ -68,10 +72,53 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
 
   bool get _canProceed => _selectedCategoryIds.isNotEmpty;
 
+  late final VoidCallback _visibilityListener;
+  bool _refreshQueued = false;
+
   @override
   void initState() {
     super.initState();
-    _categoriesFuture = _loadCategories();
+    _visibilityListener = _handleVisibilityChanged;
+    widget.visibilityNotifier.addListener(_visibilityListener);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _handleVisibilityChanged());
+  }
+
+  @override
+  void didUpdateWidget(covariant Phase2CategoriesHours oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.visibilityNotifier != widget.visibilityNotifier) {
+      oldWidget.visibilityNotifier.removeListener(_visibilityListener);
+      widget.visibilityNotifier.addListener(_visibilityListener);
+      WidgetsBinding.instance.addPostFrameCallback((_) => _handleVisibilityChanged());
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.visibilityNotifier.removeListener(_visibilityListener);
+    super.dispose();
+  }
+
+  void _handleVisibilityChanged() {
+    if (widget.visibilityNotifier.value == widget.pageIndex) {
+      _scheduleRefresh();
+    }
+  }
+
+  void _scheduleRefresh() {
+    if (_refreshQueued) return;
+    _refreshQueued = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _refreshQueued = false;
+      _reloadCategories();
+    });
+  }
+
+  void _reloadCategories() {
+    setState(() {
+      _categoriesFuture = _loadCategories();
+    });
   }
 
   Future<List<CategoryModel>> _loadCategories() async {
@@ -442,7 +489,8 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
     return FutureBuilder<List<CategoryModel>>(
       future: _categoriesFuture,
       builder: (context, snapshot) {
-        final bool loading = snapshot.connectionState != ConnectionState.done;
+        final bool loading = _categoriesFuture == null ||
+            snapshot.connectionState != ConnectionState.done;
         final List<CategoryModel> categories = snapshot.data ?? [];
         return WillPopScope(
           onWillPop: _handlePop,
@@ -489,6 +537,4 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
   @override
   bool get wantKeepAlive => true;
 }
-
-
 

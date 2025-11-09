@@ -900,6 +900,7 @@ class Api {
   static String bathroom = "bathroom";
   static String aboutUs = "about_us";
   static String termsAndConditions = "terms_conditions";
+  static String storeTermsConditions = "store_terms_conditions";
   static String privacyPolicy = "privacy_policy";
   static String currencySymbol = "currency_symbol";
   static String company = "company";

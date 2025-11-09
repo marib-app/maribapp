@@ -25,11 +25,15 @@ class PaymentOptionsData {
 class Phase4PaymentMethods extends StatefulWidget {
   final VoidCallback onBack;
   final void Function(PaymentOptionsData data) onNext;
+  final ValueNotifier<int> visibilityNotifier;
+  final int pageIndex;
 
   const Phase4PaymentMethods({
     super.key,
     required this.onBack,
     required this.onNext,
+    required this.visibilityNotifier,
+    required this.pageIndex,
   });
 
   @override
@@ -50,18 +54,48 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
   bool _submitting = false;
   bool _manualLoading = true;
   String? _manualError;
+  bool _refreshQueued = false;
 
   late final TabController _tabController =
       TabController(length: 2, vsync: this);
+  late final VoidCallback _visibilityListener;
 
   @override
   void initState() {
     super.initState();
     _eastConfig = app_settings.AppSettings.eastYemenBankConfig;
-    _loadStoreGateways();
+    _visibilityListener = _handleVisibilityChanged;
+    widget.visibilityNotifier.addListener(_visibilityListener);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await Future<void>.delayed(const Duration(milliseconds: 250));
       if (mounted) setState(() => _isReady = true);
+      _handleVisibilityChanged();
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant Phase4PaymentMethods oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.visibilityNotifier != widget.visibilityNotifier) {
+      oldWidget.visibilityNotifier.removeListener(_visibilityListener);
+      widget.visibilityNotifier.addListener(_visibilityListener);
+      WidgetsBinding.instance.addPostFrameCallback((_) => _handleVisibilityChanged());
+    }
+  }
+
+  void _handleVisibilityChanged() {
+    if (widget.visibilityNotifier.value == widget.pageIndex) {
+      _scheduleRefresh();
+    }
+  }
+
+  void _scheduleRefresh() {
+    if (_refreshQueued) return;
+    _refreshQueued = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      _refreshQueued = false;
+      await _loadStoreGateways();
     });
   }
 
@@ -91,6 +125,7 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
   }
 
   Future<void> _loadStoreGateways() async {
+    if (!mounted) return;
     await _loadManualGateways();
     try {
       final Map<String, dynamic> response =
@@ -340,6 +375,7 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
 
   @override
   void dispose() {
+    widget.visibilityNotifier.removeListener(_visibilityListener);
     _smartAccountCtrl.dispose();
     _tabController.dispose();
     super.dispose();

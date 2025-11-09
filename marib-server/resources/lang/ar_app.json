@@ -604,6 +604,5 @@
     "cart.currency_not_specified": "غير محددة",
     "payment_under_review": "الدفع قيد المراجعة.",
     "payment_under_review_with_reference": "لا يمكن تحديث الطلب لوجود طلب دفع يدوي رقم #:id قيد المراجعة. يرجى إتمام المراجعة عبر الرابط: :url",
-    "request_ad": "طلب إعلان",
     "manual_payment.decide.only_pending": "يمكن معالجة الطلبات المفتوحة فقط."
 }

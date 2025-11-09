@@ -322,9 +322,7 @@ class CategoryController extends Controller {
                 if (Auth::user()->can('category-delete')) {
                     $operate .= BootstrapTableService::deleteButton(route('category.destroy', $subcategory->id));
                 }
-                if ($subcategory->subcategories_count > 1) {
-                    $operate .= BootstrapTableService::button('fa fa-list-ol',route('sub.category.order.change',$subcategory->id),['btn-secondary']);
-                }
+
 
                 if (Auth::user()->can('category-create')) {
                     $operate .= BootstrapTableService::button(
@@ -340,6 +338,11 @@ class CategoryController extends Controller {
                         ],
                         __('نسخ')
                     );
+                }
+
+
+                if ($subcategory->subcategories_count > 1) {
+                    $operate .= BootstrapTableService::button('fa fa-list-ol',route('sub.category.order.change',$subcategory->id),['btn-secondary']);
                 }
 
                 $subcategory->operate = $operate;

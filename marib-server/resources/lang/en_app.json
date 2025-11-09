@@ -880,5 +880,14 @@
     "مميز": "Featured",
     "هذه الباقة مجانية حالياً": "This package is currently free.",
     "يتطلب تسجيل الدخول لإتمام الشراء": "Sign in is required to complete the purchase.",
-    "يرجى الانتظار ..": "Please wait..."
+    "يرجى الانتظار ..": "Please wait...",
+    "requestYourAd": "Request your ad",
+    "exchangeAndTransfer": "Exchange & transfer",
+    "localServices": "Local services",
+    "medicalServices": "Medical services",
+    "studentServices": "Student services",
+    "jobs": "Jobs",
+    "eventsOffers": "Events & offers",
+    "maribLost": "Marib Lost & Found",
+    "maribGuide": "Marib guide"
 }

@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:developer';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -22,14 +22,14 @@ import 'package:marib/utils/screen_scaler.dart';
 import 'package:marib/utils/ui_utils.dart';
 
 ///==============================
-/// المنطق: SplashController
+/// ط§ظ„ظ…ظ†ط·ظ‚: SplashController
 ///==============================
 class SplashController extends ChangeNotifier {
   SplashController(this.context);
 
   final BuildContext context;
 
-  // الحالة الداخلية
+  // ط§ظ„ط­ط§ظ„ط© ط§ظ„ط¯ط§ط®ظ„ظٹط©
   bool hasInternet = true;
   bool isTimerCompleted = false;
   bool isSettingsLoaded = false;
@@ -43,14 +43,14 @@ class SplashController extends ChangeNotifier {
   Timer? _timer;
   Timer? _fallbackTimer;
 
-  /// بدء العمل
+  /// ط¨ط¯ط، ط§ظ„ط¹ظ…ظ„
   void init() {
     _bindCubitStreams();
     _setupFallbackTimeout();
     _subscribeConnectivity();
   }
 
-  /// إلغاء الاشتراكات
+  /// ط¥ظ„ط؛ط§ط، ط§ظ„ط§ط´طھط±ط§ظƒط§طھ
   @override
   void dispose() {
     _connSub?.cancel();
@@ -61,7 +61,7 @@ class SplashController extends ChangeNotifier {
     super.dispose();
   }
 
-  /// ربط ستريمات الـ Cubits لسماع النجاح/الفشل بدون منطق داخل الواجهة
+  /// ط±ط¨ط· ط³طھط±ظٹظ…ط§طھ ط§ظ„ظ€ Cubits ظ„ط³ظ…ط§ط¹ ط§ظ„ظ†ط¬ط§ط­/ط§ظ„ظپط´ظ„ ط¨ط¯ظˆظ† ظ…ظ†ط·ظ‚ ط¯ط§ط®ظ„ ط§ظ„ظˆط§ط¬ظ‡ط©
   void _bindCubitStreams() {
     _langSub = context.read<FetchLanguageCubit>().stream.listen((state) {
       if (state is FetchLanguageSuccess) {
@@ -77,7 +77,7 @@ class SplashController extends ChangeNotifier {
         notifyListeners();
         _tryNavigate();
       } else if (state is FetchLanguageFailure) {
-        isLanguageLoaded = true; // استخدم الافتراضي
+        isLanguageLoaded = true; // ط§ط³طھط®ط¯ظ… ط§ظ„ط§ظپطھط±ط§ط¶ظٹ
         notifyListeners();
         _tryNavigate();
       }
@@ -98,14 +98,14 @@ class SplashController extends ChangeNotifier {
       } else if (state is FetchSystemSettingsFailure) {
         _completeDefaultLanguageWaiters();
 
-        isSettingsLoaded = true; // استخدم الافتراضي
+        isSettingsLoaded = true; // ط§ط³طھط®ط¯ظ… ط§ظ„ط§ظپطھط±ط§ط¶ظٹ
         notifyListeners();
         _tryNavigate();
       }
     });
   }
 
-  /// اشتراك حالة الإنترنت
+  /// ط§ط´طھط±ط§ظƒ ط­ط§ظ„ط© ط§ظ„ط¥ظ†طھط±ظ†طھ
   void _subscribeConnectivity() {
     _connSub = Connectivity().onConnectivityChanged.listen((results) {
       final online = !results.contains(ConnectivityResult.none);
@@ -119,7 +119,7 @@ class SplashController extends ChangeNotifier {
       }
     });
 
-    // محاولة أولية (بعض الأجهزة لا ترسل أول حدث بسرعة)
+    // ظ…ط­ط§ظˆظ„ط© ط£ظˆظ„ظٹط© (ط¨ط¹ط¶ ط§ظ„ط£ط¬ظ‡ط²ط© ظ„ط§ طھط±ط³ظ„ ط£ظˆظ„ ط­ط¯ط« ط¨ط³ط±ط¹ط©)
     Connectivity().checkConnectivity().then((results) {
       final online = !results.contains(ConnectivityResult.none);
       hasInternet = online;
@@ -139,27 +139,36 @@ class SplashController extends ChangeNotifier {
     _startTimer();
   }
 
-  /// تحميل اللغة الافتراضية (نستخدم العربية كافتراضي)
+  /// طھط­ظ…ظٹظ„ ط§ظ„ظ„ط؛ط© ط§ظ„ط§ظپطھط±ط§ط¶ظٹط© (ظ†ط³طھط®ط¯ظ… ط§ظ„ط¹ط±ط¨ظٹط© ظƒط§ظپطھط±ط§ط¶ظٹ)
   Future<void> _getDefaultLanguage() async {
+    final dynamic stored = HiveUtils.getLanguage();
+    final bool hasCachedTranslations = stored is Map &&
+        stored['data'] is Map &&
+        (stored['data'] as Map).isNotEmpty;
+
+    if (hasCachedTranslations) {
+      context.read<LanguageCubit>().emit(LanguageLoader(stored));
+      isLanguageLoaded = true;
+      notifyListeners();
+      _tryNavigate();
+    }
+
     try {
       final codeFromSettings = await _waitForDefaultLanguageCode();
       final code = (codeFromSettings != null && codeFromSettings.isNotEmpty)
           ? codeFromSettings
           : "ar";
 
-      final stored = HiveUtils.getLanguage();
-      if (stored == null ||
-          stored['data'] == null ||
-          HiveUtils.isUserFirstTime() == true) {
-        context.read<FetchLanguageCubit>().getLanguage(code);
-      } else {
-        isLanguageLoaded = true;
-        notifyListeners();
-        _tryNavigate();
-      }
+      // Always try to refresh the language so panel updates reach the app.
+      context.read<FetchLanguageCubit>().getLanguage(code);
     } catch (e) {
       log("Error while load default language $e");
-      // جرّب العربية مباشرة
+
+      if (hasCachedTranslations) {
+        return;
+      }
+
+      // ط¬ط±ظ‘ط¨ ط§ظ„ط¹ط±ط¨ظٹط© ظ…ط¨ط§ط´ط±ط©
       try {
         context.read<FetchLanguageCubit>().getLanguage("ar");
       } catch (_) {
@@ -170,7 +179,7 @@ class SplashController extends ChangeNotifier {
     }
   }
 
-  /// تحميل الإعدادات
+  /// طھط­ظ…ظٹظ„ ط§ظ„ط¥ط¹ط¯ط§ط¯ط§طھ
   void _fetchSystemSettings() {
     context.read<FetchSystemSettingsCubit>().fetchSettings(forceRefresh: true);
   }
@@ -217,7 +226,7 @@ class SplashController extends ChangeNotifier {
     }
   }
 
-  /// مؤقت بسيط لعرض السبلّاش
+  /// ظ…ط¤ظ‚طھ ط¨ط³ظٹط· ظ„ط¹ط±ط¶ ط§ظ„ط³ط¨ظ„ظ‘ط§ط´
   void _startTimer() {
     _timer?.cancel();
     _timer = Timer(const Duration(seconds: 5), () {
@@ -227,7 +236,7 @@ class SplashController extends ChangeNotifier {
     });
   }
 
-  /// خطة طوارئ: لا تنتظر أكثر من 10 ثوان
+  /// ط®ط·ط© ط·ظˆط§ط±ط¦: ظ„ط§ طھظ†طھط¸ط± ط£ظƒط«ط± ظ…ظ† 10 ط«ظˆط§ظ†
   void _setupFallbackTimeout() {
     _fallbackTimer?.cancel();
     _fallbackTimer = Timer(const Duration(seconds: 10), () {
@@ -240,7 +249,7 @@ class SplashController extends ChangeNotifier {
     });
   }
 
-  /// محاولة التنقل عندما تكتمل الشروط
+  /// ظ…ط­ط§ظˆظ„ط© ط§ظ„طھظ†ظ‚ظ„ ط¹ظ†ط¯ظ…ط§ طھظƒطھظ…ظ„ ط§ظ„ط´ط±ظˆط·
   void _tryNavigate() {
     if (!isTimerCompleted || !isSettingsLoaded || !isLanguageLoaded) return;
 
@@ -321,7 +330,7 @@ class SplashController extends ChangeNotifier {
       return;
     }
 
-    // ضيف/تخطي
+    // ط¶ظٹظپ/طھط®ط·ظٹ
     _go(() {
       if (HiveUtils.isUserSkip() == true) {
         Navigator.of(context)
@@ -332,21 +341,21 @@ class SplashController extends ChangeNotifier {
     });
   }
 
-  /// تنفيذ آمن بعد إطار الرسم
+  /// طھظ†ظپظٹط° ط¢ظ…ظ† ط¨ط¹ط¯ ط¥ط·ط§ط± ط§ظ„ط±ط³ظ…
   void _go(VoidCallback nav) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (Navigator.of(context).mounted) nav();
     });
   }
 
-  /// زر إعادة المحاولة من شاشة عدم الاتصال
+  /// ط²ط± ط¥ط¹ط§ط¯ط© ط§ظ„ظ…ط­ط§ظˆظ„ط© ظ…ظ† ط´ط§ط´ط© ط¹ط¯ظ… ط§ظ„ط§طھطµط§ظ„
   void retry() {
     _startProcessesOnce();
   }
 }
 
 ///==============================
-/// الواجهة: SplashScreen
+/// ط§ظ„ظˆط§ط¬ظ‡ط©: SplashScreen
 ///==============================
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -389,7 +398,7 @@ class SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
-    ScreenScaler.init(context); // مهم
+    ScreenScaler.init(context); // ظ…ظ‡ظ…
 
     return AnimatedBuilder(
       animation: _controller,
@@ -481,13 +490,13 @@ class SplashScreenState extends State<SplashScreen>
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  'جميع الحقوق محفوظة 2026 C',
+                                  'ط¬ظ…ظٹط¹ ط§ظ„ط­ظ‚ظˆظ‚ ظ…ط­ظپظˆط¸ط© 2026 C',
                                   textAlign: TextAlign.center,
                                   style: footerStyle,
                                 ),
                                 SizedBox(height: footerSpacing),
                                 Text(
-                                  'مأرب بين يديك للخدمات الألكترونية',
+                                  'ظ…ط£ط±ط¨ ط¨ظٹظ† ظٹط¯ظٹظƒ ظ„ظ„ط®ط¯ظ…ط§طھ ط§ظ„ط£ظ„ظƒطھط±ظˆظ†ظٹط©',
                                   textAlign: TextAlign.center,
                                   style: footerStyle.copyWith(
                                     fontWeight: FontWeight.w300,
@@ -543,7 +552,7 @@ class _IntroContent extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              'مرحباً بك',
+              'ظ…ط±ط­ط¨ط§ظ‹ ط¨ظƒ',
               textAlign: TextAlign.center,
               style: baseStyle,
             ),
@@ -571,3 +580,4 @@ class _IntroContent extends StatelessWidget {
     );
   }
 }
+

@@ -141,7 +141,6 @@
                 return;
             }
 
-            const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
             const form = document.getElementById('cloneCategoryForm');
             const $modalElement = $('#cloneCategoryModal');
             const $targetSelect = $('#cloneTargetSelect');
@@ -151,7 +150,9 @@
             const loadingIndicator = document.getElementById('cloneCategoryLoadingIndicator');
             const submitButton = document.getElementById('cloneCategorySubmit');
             const sourceNameLabel = document.getElementById('cloneSourceName');
-
+            const bootstrapModalConstructor = window.bootstrap?.Modal;
+            let modalInstance = null;
+            let showModal = null;
 
 
             const destroySelect2 = () => {
@@ -235,6 +236,44 @@
                 submitButton.disabled = true;
             };
 
+            function handleModalHidden() {
+                form.reset();
+                resetModalState();
+            }
+
+            if (bootstrapModalConstructor) {
+                if (typeof bootstrapModalConstructor.getOrCreateInstance === 'function') {
+                    modalInstance = bootstrapModalConstructor.getOrCreateInstance(modalElement);
+                } else if (typeof bootstrapModalConstructor === 'function') {
+                    modalInstance = new bootstrapModalConstructor(modalElement);
+                }
+
+                if (modalInstance && typeof modalInstance.show === 'function') {
+                    showModal = function () {
+                        modalInstance.show();
+                    };
+                    modalElement.addEventListener('hidden.bs.modal', handleModalHidden);
+                }
+            }
+
+            if (!showModal && typeof $modalElement.modal === 'function') {
+                showModal = function () {
+                    $modalElement.modal('show');
+                };
+                $modalElement.on('hidden.bs.modal', handleModalHidden);
+            }
+
+            if (!showModal) {
+                const modalErrorMessage = 'Bootstrap modal library is unavailable. Clone category modal cannot be opened.';
+                if (typeof console !== 'undefined' && typeof console.error === 'function') {
+                    console.error(modalErrorMessage);
+                }
+                if (typeof window.alert === 'function') {
+                    window.alert(modalErrorMessage);
+                }
+                return;
+            }
+
             document.body.addEventListener('click', function (event) {
                 const trigger = event.target.closest('.js-open-clone-category');
                 if (!trigger) {
@@ -288,12 +327,9 @@
                     });
 
 
-                modalInstance.show();
-            });
-
-            modalElement.addEventListener('hidden.bs.modal', function () {
-                form.reset();
-                resetModalState();
+                if (typeof showModal === 'function') {
+                    showModal();
+                }
             });
 
             $targetSelect.on('change.select2', function () {

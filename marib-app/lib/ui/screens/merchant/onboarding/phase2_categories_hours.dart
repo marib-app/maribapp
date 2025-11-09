@@ -6,7 +6,7 @@ import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/ui_utils.dart';
 
-import 'widgets/legacy_selectors.dart';
+import 'package:marib/ui/screens/merchant/onboarding/widgets/legacy_selectors.dart';
 
 class Phase2Data {
   final List<int> categoryIds;
@@ -298,7 +298,7 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
           subtitle,
           style: TextStyle(
             fontSize: context.font.normal,
-            color: theme.textColorDark.withOpacity(0.7),
+            color: theme.textColorDark.withValues(alpha: 0.7),
           ),
         ),
       ],
@@ -333,7 +333,7 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
           'يمكنك تعديل هذه الأقسام لاحقاً من إعدادات المتجر في أي وقت.',
           style: TextStyle(
             fontSize: context.font.small,
-            color: colors.textColorDark.withOpacity(0.7),
+            color: colors.textColorDark.withValues(alpha: 0.7),
             height: 1.4,
           ),
         ),
@@ -374,7 +374,8 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
         else
           Text(
             'لم يتم اختيار أي قسم بعد.',
-            style: TextStyle(color: colors.textColorDark.withOpacity(0.6)),
+            style:
+                TextStyle(color: colors.textColorDark.withValues(alpha: 0.6)),
           ),
       ],
     );
@@ -407,7 +408,7 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(color: context.color.territoryColor),
-                color: context.color.territoryColor.withOpacity(0.08),
+                color: context.color.territoryColor.withValues(alpha: 0.08),
               ),
               alignment: Alignment.center,
               child: Row(
@@ -460,7 +461,7 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
           'يمكنك ضبط ساعات الدوام لكل يوم وإبقاء حالة المتجر دقيقة أمام المستخدمين. احرص على تحديد أوقات الفتح والإغلاق بدقة.',
           style: TextStyle(
             fontSize: context.font.small,
-            color: colors.textColorDark.withOpacity(0.7),
+            color: colors.textColorDark.withValues(alpha: 0.7),
             height: 1.4,
           ),
         ),
@@ -527,8 +528,8 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
                 text,
                 style: TextStyle(
                   color: enabled
-                      ? context.color.textColorDark.withOpacity(0.8)
-                      : context.color.textColorDark.withOpacity(0.5),
+                      ? context.color.textColorDark.withValues(alpha: 0.8)
+                      : context.color.textColorDark.withValues(alpha: 0.5),
                 ),
               ),
             ],

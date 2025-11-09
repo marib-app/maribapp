@@ -41,7 +41,7 @@ Future<Set<int>?> showLegacyCategoriesPalette({
     isScrollControlled: true,
     useSafeArea: true,
     backgroundColor: Colors.transparent,
-    barrierColor: Colors.black.withOpacity(0.35),
+    barrierColor: Colors.black.withValues(alpha: 0.35),
     enableDrag: true,
     builder: (_) => Directionality(
       textDirection: TextDirection.rtl,
@@ -97,7 +97,7 @@ class _LegacyCategoriesPaletteSheetState
     final List<CategoryModel> ordered =
         List<CategoryModel>.from(widget.categories)
           ..sort((a, b) => (a.name ?? '').compareTo(b.name ?? ''));
-    final Color faintDivider = colors.borderColor.withOpacity(0.55);
+    final Color faintDivider = colors.borderColor.withValues(alpha: 0.55);
 
     return SlideTransition(
       position: _slideAnimation,
@@ -150,7 +150,7 @@ class _LegacyCategoriesPaletteSheetState
                                         ? [
                                             BoxShadow(
                                               color: Colors.black
-                                                  .withOpacity(0.06),
+                                                  .withValues(alpha: 0.06),
                                               blurRadius: 10,
                                               offset: const Offset(0, 4),
                                             ),
@@ -183,12 +183,12 @@ class _LegacyCategoriesPaletteSheetState
                                   vertical: 10,
                                 ),
                                 decoration: BoxDecoration(
-                                  color:
-                                      colors.territoryColor.withOpacity(0.06),
+                                  color: colors.territoryColor
+                                      .withValues(alpha: 0.06),
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                    color:
-                                        colors.territoryColor.withOpacity(0.35),
+                                    color: colors.territoryColor
+                                        .withValues(alpha: 0.35),
                                     width: 1,
                                   ),
                                 ),
@@ -258,7 +258,7 @@ class _LegacyCategoriesPaletteSheetState
                                 child: Container(
                                   decoration: BoxDecoration(
                                     color: colors.backgroundColor
-                                        .withOpacity(0.85),
+                                        .withValues(alpha: 0.85),
                                     border: Border(
                                       top:
                                           BorderSide(color: colors.borderColor),
@@ -304,7 +304,8 @@ class _LegacyCategoriesPaletteSheetState
                           child: IconButton(
                             onPressed: () => Navigator.of(context).pop(null),
                             icon: const Icon(Icons.close_rounded),
-                            color: colors.textDefaultColor.withOpacity(0.85),
+                            color:
+                                colors.textDefaultColor.withValues(alpha: 0.85),
                             splashRadius: 22,
                             tooltip: 'إغلاق',
                           ),
@@ -350,15 +351,15 @@ class _LegacyPaletteRowState extends State<_LegacyPaletteRow> {
       onTapDown: (_) => setState(() => _pressed = true),
       onTapCancel: () => setState(() => _pressed = false),
       onTapUp: (_) => setState(() => _pressed = false),
-      splashColor: colors.territoryColor.withOpacity(0.08),
+      splashColor: colors.territoryColor.withValues(alpha: 0.08),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 140),
         curve: Curves.easeOut,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         color: widget.selected
-            ? colors.territoryColor.withOpacity(0.06)
+            ? colors.territoryColor.withValues(alpha: 0.06)
             : (_pressed
-                ? colors.backgroundColor.withOpacity(0.6)
+                ? colors.backgroundColor.withValues(alpha: 0.6)
                 : colors.backgroundColor),
         child: Row(
           children: [
@@ -384,7 +385,7 @@ class _LegacyPaletteRowState extends State<_LegacyPaletteRow> {
                         width: 20,
                         height: 20,
                         decoration: BoxDecoration(
-                          color: colors.territoryColor.withOpacity(0.15),
+                          color: colors.territoryColor.withValues(alpha: 0.15),
                           shape: BoxShape.circle,
                           border: Border.all(
                             color: colors.territoryColor,

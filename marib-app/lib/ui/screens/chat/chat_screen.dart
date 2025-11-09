@@ -95,7 +95,7 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   AnimationController? _recordButtonAnimation;
   TextEditingController controller = TextEditingController();
   PlatformFile? messageAttachment;
@@ -144,6 +144,7 @@ class _ChatScreenState extends State<ChatScreen>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
 
     _recordButtonAnimation = AnimationController(
       vsync: this,
@@ -777,6 +778,7 @@ class _ChatScreenState extends State<ChatScreen>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     notificationStreamSubsctription.cancel();
     _notificationStatusTimer?.cancel();
     _notificationStatusController.close();
@@ -801,6 +803,29 @@ class _ChatScreenState extends State<ChatScreen>
 
     NotificationService.clearParticipantStatus();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (_effectiveConversationId.isEmpty) {
+      return;
+    }
+    if (state == AppLifecycleState.resumed) {
+      _handleAppResumed();
+    } else {
+      _handleAppBackgrounded();
+    }
+  }
+
+  void _handleAppResumed() {
+    _chatSyncController.onTypingChanged(controller.text.trim().isNotEmpty);
+    unawaited(_chatSyncController.setPresenceOnline());
+  }
+
+  void _handleAppBackgrounded() {
+    _chatSyncController.onTypingChanged(false);
+    unawaited(_chatSyncController.setPresenceOffline());
   }
 
   List<String> supportedImageTypes = [

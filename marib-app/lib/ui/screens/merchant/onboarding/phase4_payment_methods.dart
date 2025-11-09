@@ -197,18 +197,26 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
       return const <StoreManualBankAccount>[];
     }
 
-    final Map<String, dynamic> root = payload['data'] is Map<String, dynamic>
-        ? payload['data'] as Map<String, dynamic>
-        : payload;
+    final dynamic rootData = payload['data'];
+    List<dynamic> candidates = const <dynamic>[];
 
-    final List<dynamic> candidates = _resolveCandidateList(root, const <String>[
-      'store_gateway_accounts',
-      'storeGateways',
-      'store_gateways',
-      'manual_gateway_accounts',
-      'manual_banks',
-      'manualBanks',
-    ]);
+    if (rootData is List) {
+      candidates = List<dynamic>.from(rootData);
+    } else {
+      final Map<String, dynamic> root = rootData is Map<String, dynamic>
+          ? rootData as Map<String, dynamic>
+          : payload;
+
+      candidates = _resolveCandidateList(root, const <String>[
+        'store_gateway_accounts',
+        'storeGateways',
+        'store_gateways',
+        'manual_gateway_accounts',
+        'manual_banks',
+        'manualBanks',
+        'data',
+      ]);
+    }
 
     if (candidates.isEmpty) {
       return const <StoreManualBankAccount>[];
@@ -222,8 +230,9 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
             Map<String, dynamic>.from(candidate as Map<dynamic, dynamic>);
 
         final dynamic accounts = normalized['accounts'];
-        if (accounts is Iterable) {
-          for (final dynamic account in accounts) {
+        final List<dynamic>? accountList = _unwrapCollection(accounts);
+        if (accountList != null) {
+          for (final dynamic account in accountList) {
             if (account is Map) {
               final Map<String, dynamic> accountMap =
                   Map<String, dynamic>.from(account as Map<dynamic, dynamic>);
@@ -250,27 +259,10 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
 
   List<dynamic> _resolveCandidateList(
       Map<String, dynamic> map, List<String> keys) {
-    List<dynamic>? asList(dynamic value) {
-      if (value is List) return value;
-      if (value is Iterable) return value.toList();
-      if (value is Map<String, dynamic>) {
-        if (value['data'] is List) return List<dynamic>.from(value['data']);
-        if (value['items'] is List) return List<dynamic>.from(value['items']);
-      } else if (value is Map) {
-        final Map<String, dynamic> normalized = Map<String, dynamic>.from(
-          value.map((dynamic key, dynamic v) => MapEntry(
-                key.toString(),
-                v,
-              )),
-        );
-        return asList(normalized);
-      }
-      return null;
-    }
 
     for (final String key in keys) {
       final dynamic candidate = map[key];
-      final List<dynamic>? list = asList(candidate);
+      final List<dynamic>? list = _unwrapCollection(candidate);
       if (list != null) {
         return list;
       }
@@ -296,6 +288,38 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
     }
 
     return fallback;
+  }
+
+
+  List<dynamic>? _unwrapCollection(dynamic value) {
+    if (value == null) return null;
+    if (value is List<dynamic>) {
+      return List<dynamic>.from(value);
+    }
+    if (value is Iterable) {
+      return List<dynamic>.from(value);
+    }
+    if (value is Map<String, dynamic>) {
+      final dynamic data = value['data'];
+      final List<dynamic>? dataList = _unwrapCollection(data);
+      if (dataList != null) {
+        return dataList;
+      }
+      final dynamic items = value['items'];
+      final List<dynamic>? itemList = _unwrapCollection(items);
+      if (itemList != null) {
+        return itemList;
+      }
+      return null;
+    }
+    if (value is Map) {
+      return _unwrapCollection(Map<String, dynamic>.from(
+        value.map(
+              (dynamic key, dynamic val) => MapEntry(key.toString(), val),
+        ),
+      ));
+    }
+    return null;
   }
 
   String _accountKey(StoreManualBankAccount account) {

@@ -522,6 +522,9 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
         Route::get('/{id}/custom-fields/show', [CategoryController::class, 'getCategoryCustomFields'])->name('category.custom-fields.show');
         Route::delete('/{id}/custom-fields/{customFieldID}/delete', [CategoryController::class, 'destroyCategoryCustomField'])->name('category.custom-fields.destroy');
 
+        Route::get('/{category}/clone-targets', [CategoryController::class, 'cloneTargets'])->name('category.clone-targets');
+        Route::post('/{category}/clone', [CategoryController::class, 'cloneCategory'])->name('category.clone');
+
         Route::get('/{category}/managers', [CategoryManagerController::class, 'edit'])->name('category.managers.edit')->middleware(['category.manager', 'permission:service-managers-manage']);
         Route::post('/{category}/managers', [CategoryManagerController::class, 'update'])->name('category.managers.update')->middleware(['category.manager', 'permission:service-managers-manage']);
 

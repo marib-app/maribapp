@@ -9,13 +9,14 @@ use App\Models\CustomFieldCategory;
 use App\Services\BootstrapTableService;
 use App\Services\CachingService;
 use App\Services\FileService;
+use App\Services\CategoryCloneService;
 use App\Services\HelperService;
 use App\Services\ResponseService;
 use DB;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Collection;
 
 use Throwable;
@@ -24,9 +25,11 @@ use function view;
 
 class CategoryController extends Controller {
     private string $uploadFolder;
+    private CategoryCloneService $categoryCloneService;
 
-    public function __construct() {
+    public function __construct(CategoryCloneService $categoryCloneService) {
         $this->uploadFolder = "category";
+        $this->categoryCloneService = $categoryCloneService;
     }
 
     public function index() {
@@ -115,6 +118,24 @@ class CategoryController extends Controller {
             if (Auth::user()->can('category-edit')) {
                 $operate .= BootstrapTableService::deleteButton(route('category.destroy', $row->id));
             }
+
+
+            if (Auth::user()->can('category-create')) {
+                $operate .= BootstrapTableService::button(
+                    'fas fa-clone',
+                    '#',
+                    ['btn-outline-primary', 'js-open-clone-category'],
+                    [
+                        'title' => __('نسخ الفئة'),
+                        'data-category-id' => $row->id,
+                        'data-category-name' => $row->name,
+                        'data-options-url' => route('category.clone-targets', $row->id),
+                        'data-action-url' => route('category.clone', $row->id),
+                    ],
+                    __('نسخ')
+                );
+            }
+
             if ($row->subcategories_count > 1) {
                 $operate .= BootstrapTableService::button('fa fa-list-ol',route('sub.category.order.change', $row->id),['btn-secondary']);
             }
@@ -127,6 +148,76 @@ class CategoryController extends Controller {
         $bulkData['rows'] = $rows;
         return response()->json($bulkData);
     }
+
+
+    public function cloneTargets(Category $category)
+    {
+        ResponseService::noPermissionThenSendJson('category-list');
+
+        $excludedCategoryIds = HelperService::collectDescendantIds($category);
+        $excludedCategoryIds[] = $category->id;
+
+        $allCategories = Category::select('id', 'name', 'parent_category_id')->orderBy('name')->get();
+        $availableCategories = $allCategories->reject(static function ($candidate) use ($excludedCategoryIds) {
+            return in_array($candidate->id, $excludedCategoryIds, true);
+        });
+
+        $options = $this->buildCategorySelectOptions($availableCategories);
+
+        return response()->json([
+            'options' => $options,
+        ]);
+    }
+
+    public function cloneCategory(Request $request, Category $category)
+    {
+        ResponseService::noPermissionThenRedirect('category-create');
+
+        $validator = Validator::make($request->all(), [
+            'source_category_id' => ['required', 'integer'],
+            'target_parent_category_id' => ['required', 'integer', 'exists:categories,id'],
+        ], [], [
+            'target_parent_category_id' => __('الفئة الهدف'),
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()->withErrors($validator)->withInput();
+        }
+
+        if ((int) $request->input('source_category_id') !== $category->id) {
+            return redirect()->back()->withErrors([
+                'source_category_id' => __('تم تغيير بيانات الفئة أثناء الإرسال. يرجى المحاولة مجدداً.'),
+            ])->withInput();
+        }
+
+        $targetParentId = (int) $request->input('target_parent_category_id');
+
+        $descendantIds = HelperService::collectDescendantIds($category);
+        $descendantIds[] = $category->id;
+
+        if (in_array($targetParentId, $descendantIds, true)) {
+            return redirect()->back()->withErrors([
+                'target_parent_category_id' => __('لا يمكن نسخ الفئة داخل نفس التسلسل الهرمي.'),
+            ])->withInput();
+        }
+
+        try {
+            $result = $this->categoryCloneService->cloneCategoryTree($category->id, $targetParentId);
+
+            $message = __('تم نسخ الفئة بنجاح (:categories فئة جديدة، :fields حقل جديد، :attached ارتباطات).', [
+                'categories' => $result['created_categories'],
+                'fields' => $result['created_fields'],
+                'attached' => $result['attached_fields'],
+            ]);
+
+            return redirect()->back()->with('success', $message);
+        } catch (Throwable $th) {
+            ResponseService::logErrorRedirect($th, 'CategoryController -> cloneCategory');
+
+            return redirect()->back()->with('errors', __('تعذر نسخ الفئة. يرجى المحاولة مرة أخرى لاحقاً.'));
+        }
+    }
+
 
     public function edit($id) {
         ResponseService::noPermissionThenRedirect('category-update');

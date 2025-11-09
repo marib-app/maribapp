@@ -127,18 +127,39 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
     final dynamic data = response['data'];
     if (data is Map<String, dynamic>) {
       final List<dynamic> items = data['items'] ?? data['data'] ?? [];
-      return items
+      final all = items
           .whereType<Map<String, dynamic>>()
           .map(CategoryModel.fromJson)
           .toList();
+      return _storeCategoriesOnly(all);
     }
     if (data is List) {
-      return data
+      final all = data
           .whereType<Map<String, dynamic>>()
           .map(CategoryModel.fromJson)
           .toList();
+      return _storeCategoriesOnly(all);
     }
     return <CategoryModel>[];
+  }
+
+  List<CategoryModel> _storeCategoriesOnly(List<CategoryModel> categories) {
+    const int storeRootId = 3;
+    if (categories.isEmpty) return categories;
+    CategoryModel? storeRoot;
+    final List<CategoryModel> queue = List<CategoryModel>.from(categories);
+    while (queue.isNotEmpty) {
+      final current = queue.removeAt(0);
+      if (current.id == storeRootId) {
+        storeRoot = current;
+        break;
+      }
+      queue.addAll(current.children ?? const <CategoryModel>[]);
+    }
+    if (storeRoot == null) {
+      return categories;
+    }
+    return (storeRoot.children ?? const <CategoryModel>[]);
   }
 
   void _toggleCategory(int id) {
@@ -174,7 +195,10 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
         .where((e) => e.id != null && (e.name?.trim().isNotEmpty ?? false))
         .toList();
     if (valid.isEmpty) {
-      HelperUtils.showSnackBarMessage(context, '???? ???????? ???????? ?????????? ????????????');
+      HelperUtils.showSnackBarMessage(
+        context,
+        'لا توجد أقسام متاحة حالياً',
+      );
       return;
     }
 
@@ -259,7 +283,7 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                '???? ??????? ????????',
+                'اختيار الأقسام',
                 style: TextStyle(
                   fontSize: context.font.large,
                   fontWeight: FontWeight.w700,
@@ -271,7 +295,7 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
         ),
         const SizedBox(height: 8),
         Text(
-          '???? ???? ???? ?? ????? ????? ??????? ? ??? ?????? ?? ?? ????? ?????????? ?????? ?? ????? ????.',
+          'يمكنك تعديل هذه الأقسام لاحقاً من إعدادات المتجر في أي وقت.',
           style: TextStyle(
             fontSize: context.font.small,
             color: colors.textColorDark.withOpacity(0.7),
@@ -294,7 +318,7 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
                     ),
                   )
                 : const Icon(Icons.tune_rounded),
-            label: Text('???? ??????? ? $selectedCount'),
+            label: Text('اختيار الأقسام • $selectedCount'),
             style: FilledButton.styleFrom(
               backgroundColor: colors.territoryColor,
               foregroundColor: Colors.white,
@@ -314,7 +338,7 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
           _buildSelectedCategoriesSummary(categories)
         else
           Text(
-            '?? ???? ?? ??? ??? ????.',
+            'لم يتم اختيار أي قسم بعد.',
             style: TextStyle(color: colors.textColorDark.withOpacity(0.6)),
           ),
       ],

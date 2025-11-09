@@ -29,10 +29,12 @@ Future<Set<int>?> showLegacyCategoriesPalette({
     backgroundColor: Colors.transparent,
     builder: (_) {
       final Set<int> localSelection = {...initialSelection};
-      return DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.9,
-        builder: (_, scrollController) {
+      return StatefulBuilder(
+        builder: (context, modalSetState) {
+          return DraggableScrollableSheet(
+            expand: false,
+            initialChildSize: 0.9,
+            builder: (_, scrollController) {
           return Container(
             decoration: BoxDecoration(
               color: Theme.of(context).scaffoldBackgroundColor,
@@ -67,7 +69,7 @@ Future<Set<int>?> showLegacyCategoriesPalette({
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          'قد تشمل بعض الأقسام فئات فرعية متعددة، اختر ما ينطبق على منتجاتك.',
+                          'يمكنك اختيار أكثر من قسم، وسيُستخدم ذلك لعرض منتجات متجرك للمستخدمين.',
                           style: TextStyle(
                             fontSize: context.font.small,
                             color: Theme.of(context).textTheme.bodySmall?.color,
@@ -78,29 +80,107 @@ Future<Set<int>?> showLegacyCategoriesPalette({
                   ),
                   const SizedBox(height: 12),
                   Expanded(
-                    child: ListView.builder(
-                      controller: scrollController,
-                      itemCount: valid.length,
-                      itemBuilder: (_, index) {
-                        final category = valid[index];
-                        final id = category.id!;
-                        final bool selected = localSelection.contains(id);
-                        return ListTile(
-                          title: Text(category.name ?? ''),
-                          trailing: Icon(
-                            selected
-                                ? Icons.check_circle
-                                : Icons.circle_outlined,
-                            color: selected
-                                ? Theme.of(context).colorScheme.primary
-                                : Theme.of(context).disabledColor,
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final crossAxisCount =
+                            constraints.maxWidth > 520 ? 3 : 2;
+                        return GridView.builder(
+                          controller: scrollController,
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: crossAxisCount,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                            childAspectRatio: 2.4,
                           ),
-                          onTap: () {
-                            if (selected) {
-                              localSelection.remove(id);
-                            } else {
-                              localSelection.add(id);
-                            }
+                          itemCount: valid.length,
+                          itemBuilder: (_, index) {
+                            final category = valid[index];
+                            final id = category.id!;
+                            final bool selected =
+                                localSelection.contains(id);
+                            final Color accent =
+                                Theme.of(context).colorScheme.primary;
+                            final Color borderColor = selected
+                                ? accent
+                                : Theme.of(context).dividerColor;
+                            final Color fillColor = selected
+                                ? accent.withOpacity(0.12)
+                                : Theme.of(context).cardColor;
+                            return Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(16),
+                                onTap: () {
+                                  modalSetState(() {
+                                    if (selected) {
+                                      localSelection.remove(id);
+                                    } else {
+                                      localSelection.add(id);
+                                    }
+                                  });
+                                },
+                                child: AnimatedContainer(
+                                  duration:
+                                      const Duration(milliseconds: 200),
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(color: borderColor),
+                                    color: fillColor,
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Icon(
+                                        selected
+                                            ? Icons.check_circle_rounded
+                                            : Icons.category_outlined,
+                                        color: selected
+                                            ? accent
+                                            : Theme.of(context)
+                                                .textTheme
+                                                .bodyMedium
+                                                ?.color,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        category.name ?? 'بدون اسم',
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          color: Theme.of(context)
+                                              .textTheme
+                                              .bodyLarge
+                                              ?.color,
+                                        ),
+                                      ),
+                                      if ((category.subcategoriesCount ??
+                                              0) >
+                                          0)
+                                        Padding(
+                                          padding:
+                                              const EdgeInsets.only(top: 4),
+                                          child: Text(
+                                            '${category.subcategoriesCount} فئات فرعية',
+                                            style: TextStyle(
+                                              fontSize:
+                                                  context.font.smaller,
+                                              color: Theme.of(context)
+                                                  .textTheme
+                                                  .bodySmall
+                                                  ?.color,
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
                           },
                         );
                       },
@@ -113,7 +193,8 @@ Future<Set<int>?> showLegacyCategoriesPalette({
                       child: ElevatedButton.icon(
                         onPressed: () => Navigator.pop(context, localSelection),
                         icon: const Icon(Icons.check),
-                        label: Text('تم • ${localSelection.length}'),
+                        label:
+                            Text('اعتماد الاختيارات • ${localSelection.length}'),
                       ),
                     ),
                   ),

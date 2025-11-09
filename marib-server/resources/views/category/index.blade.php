@@ -32,6 +32,29 @@
                 <div class="card">
 
                     <div class="card-body">
+
+                        @php
+                            $flashError = session('errors');
+                            if ($flashError instanceof \Illuminate\Support\ViewErrorBag) {
+                                $flashError = null;
+                            }
+                        @endphp
+                        @if(session('success'))
+                            <div class="alert alert-success" role="alert">
+                                {{ session('success') }}
+                            </div>
+                        @endif
+                        @if($flashError)
+                            <div class="alert alert-danger" role="alert">
+                                {{ is_array($flashError) ? implode(' ', \Illuminate\Support\Arr::wrap($flashError)) : $flashError }}
+                            </div>
+                        @endif
+                        @if($errors->any())
+                            <div class="alert alert-danger" role="alert">
+                                {{ $errors->first() }}
+                            </div>
+                        @endif
+
                         <div class="row">
                             <div class="text-right col-md-12">
                                 <a href="{{ route('category.order') }}">{{ __('Set Order of Categories') }}</a>
@@ -69,4 +92,156 @@
             </div>
         </div>
     </section>
+
+
+    <div class="modal fade" id="cloneCategoryModal" tabindex="-1" aria-labelledby="cloneCategoryModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="POST" id="cloneCategoryForm">
+                    @csrf
+                    <input type="hidden" name="source_category_id" value="">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="cloneCategoryModalLabel">{{ __('نسخ الفئة الحالية إلى قسم آخر') }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __('إغلاق') }}"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="mb-3">{{ __('سيتم نسخ جميع الفئات الفرعية والحقول المخصصة ضمن الفئة:') }} <strong id="cloneSourceName">—</strong></p>
+                        <div id="cloneCategoryFeedback" class="alert alert-danger d-none" role="alert"></div>
+                        <div class="mb-3">
+                            <label for="cloneTargetSelect" class="form-label">{{ __('اختر القسم الهدف') }}</label>
+                            <select class="form-select" id="cloneTargetSelect" name="target_parent_category_id" required disabled>
+                                <option value="">{{ __('جارٍ تحميل الأقسام المتاحة...') }}</option>
+                            </select>
+                        </div>
+                        <div id="cloneCategoryLoadingIndicator" class="d-flex align-items-center">
+                            <div class="spinner-border spinner-border-sm text-primary me-2" role="status">
+                                <span class="visually-hidden">{{ __('جارٍ التحميل...') }}</span>
+                            </div>
+                            <span>{{ __('يرجى الانتظار بينما نقوم بتحميل الأقسام المتاحة.') }}</span>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('إلغاء') }}</button>
+                        <button type="submit" class="btn btn-primary" id="cloneCategorySubmit" disabled>{{ __('نسخ') }}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
 @endsection
+
+
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const modalElement = document.getElementById('cloneCategoryModal');
+            if (!modalElement) {
+                return;
+            }
+
+            const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
+            const form = document.getElementById('cloneCategoryForm');
+            const targetSelect = document.getElementById('cloneTargetSelect');
+            const sourceInput = form.querySelector('input[name="source_category_id"]');
+            const feedback = document.getElementById('cloneCategoryFeedback');
+            const loadingIndicator = document.getElementById('cloneCategoryLoadingIndicator');
+            const submitButton = document.getElementById('cloneCategorySubmit');
+            const sourceNameLabel = document.getElementById('cloneSourceName');
+
+            const resetModalState = () => {
+                feedback.classList.add('d-none');
+                feedback.textContent = '';
+                loadingIndicator.classList.remove('d-none');
+                targetSelect.innerHTML = '<option value="">{{ __('جارٍ تحميل الأقسام المتاحة...') }}</option>';
+                targetSelect.disabled = true;
+                submitButton.disabled = true;
+            };
+
+            const populateOptions = (options) => {
+                targetSelect.innerHTML = '';
+
+                if (!Array.isArray(options) || options.length === 0) {
+                    targetSelect.innerHTML = '<option value="">{{ __('لا توجد أقسام متاحة للنسخ إليها.') }}</option>';
+                    targetSelect.disabled = true;
+                    submitButton.disabled = true;
+                    return;
+                }
+
+                const placeholder = document.createElement('option');
+                placeholder.value = '';
+                placeholder.textContent = '{{ __('اختر القسم الهدف') }}';
+                placeholder.disabled = true;
+                placeholder.selected = true;
+                targetSelect.appendChild(placeholder);
+
+                options.forEach(function (option) {
+                    const optionElement = document.createElement('option');
+                    optionElement.value = option.id;
+                    optionElement.textContent = option.label;
+                    targetSelect.appendChild(optionElement);
+                });
+
+                targetSelect.disabled = false;
+                submitButton.disabled = true;
+            };
+
+            document.body.addEventListener('click', function (event) {
+                const trigger = event.target.closest('.js-open-clone-category');
+                if (!trigger) {
+                    return;
+                }
+
+                event.preventDefault();
+
+                const { categoryId, categoryName, optionsUrl, actionUrl } = trigger.dataset;
+
+                if (!categoryId || !optionsUrl || !actionUrl) {
+                    return;
+                }
+
+                resetModalState();
+
+                form.action = actionUrl;
+                sourceInput.value = categoryId;
+                sourceNameLabel.textContent = categoryName || '#';
+
+                fetch(optionsUrl, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                    .then(function (response) {
+                        if (!response.ok) {
+                            throw new Error('Request failed');
+                        }
+                        return response.json();
+                    })
+                    .then(function (data) {
+                        loadingIndicator.classList.add('d-none');
+                        populateOptions(data.options || []);
+                    })
+                    .catch(function () {
+                        loadingIndicator.classList.add('d-none');
+                        feedback.textContent = '{{ __('تعذر تحميل الأقسام المتاحة. يرجى المحاولة مرة أخرى.') }}';
+                        feedback.classList.remove('d-none');
+                        targetSelect.innerHTML = '<option value="">{{ __('حدث خطأ أثناء تحميل البيانات.') }}</option>';
+                        targetSelect.disabled = true;
+                        submitButton.disabled = true;
+                    });
+
+                modalInstance.show();
+            });
+
+            modalElement.addEventListener('hidden.bs.modal', function () {
+                form.reset();
+                resetModalState();
+            });
+
+            targetSelect.addEventListener('change', function () {
+                submitButton.disabled = targetSelect.value === '';
+            });
+        });
+    </script>
+@endpush

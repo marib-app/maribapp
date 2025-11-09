@@ -61,6 +61,7 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
     with AutomaticKeepAliveClientMixin {
   Future<List<CategoryModel>>? _categoriesFuture;
   final Set<int> _selectedCategoryIds = <int>{};
+  static const int _storeRootCategoryId = 3;
   final Map<int, DaySchedule> _hours = {
     for (int i = 0; i < 7; i++)
       i: DaySchedule(
@@ -80,7 +81,8 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
     super.initState();
     _visibilityListener = _handleVisibilityChanged;
     widget.visibilityNotifier.addListener(_visibilityListener);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _handleVisibilityChanged());
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _handleVisibilityChanged());
   }
 
   @override
@@ -89,7 +91,8 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
     if (oldWidget.visibilityNotifier != widget.visibilityNotifier) {
       oldWidget.visibilityNotifier.removeListener(_visibilityListener);
       widget.visibilityNotifier.addListener(_visibilityListener);
-      WidgetsBinding.instance.addPostFrameCallback((_) => _handleVisibilityChanged());
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => _handleVisibilityChanged());
     }
   }
 
@@ -122,44 +125,76 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
   }
 
   Future<List<CategoryModel>> _loadCategories() async {
-    final Map<String, dynamic> response = await Api.get(
-        url: Api.getCategoriesApi, queryParameters: {Api.page: 1});
-    final dynamic data = response['data'];
-    if (data is Map<String, dynamic>) {
-      final List<dynamic> items = data['items'] ?? data['data'] ?? [];
-      final all = items
-          .whereType<Map<String, dynamic>>()
-          .map(CategoryModel.fromJson)
+    try {
+      final Map<String, dynamic> response = await Api.get(
+        url: Api.getCategoriesApi,
+        queryParameters: <String, dynamic>{
+          Api.page: 1,
+          Api.categoryId: _storeRootCategoryId,
+          Api.perPageQuery: 100,
+        },
+      );
+
+      final List<CategoryModel> parsed =
+          _parseCategoriesPayload(response['data']);
+      final List<CategoryModel> filtered = parsed
+          .where((category) => category.id != _storeRootCategoryId)
           .toList();
-      return _storeCategoriesOnly(all);
+
+      if (filtered.isNotEmpty) {
+        filtered.sort((a, b) => (a.name ?? '').compareTo(b.name ?? ''));
+        return filtered;
+      }
+
+      final List<CategoryModel> fallback =
+          _extractSelfCategoryChildren(response);
+      if (fallback.isNotEmpty) {
+        fallback.sort((a, b) => (a.name ?? '').compareTo(b.name ?? ''));
+        return fallback;
+      }
+
+      return const <CategoryModel>[];
+    } catch (_) {
+      HelperUtils.showSnackBarMessage(
+        context,
+        'تعذر تحميل الفئات، حاول مجدداً.',
+      );
+      return const <CategoryModel>[];
     }
-    if (data is List) {
-      final all = data
-          .whereType<Map<String, dynamic>>()
-          .map(CategoryModel.fromJson)
-          .toList();
-      return _storeCategoriesOnly(all);
-    }
-    return <CategoryModel>[];
   }
 
-  List<CategoryModel> _storeCategoriesOnly(List<CategoryModel> categories) {
-    const int storeRootId = 3;
-    if (categories.isEmpty) return categories;
-    CategoryModel? storeRoot;
-    final List<CategoryModel> queue = List<CategoryModel>.from(categories);
-    while (queue.isNotEmpty) {
-      final current = queue.removeAt(0);
-      if (current.id == storeRootId) {
-        storeRoot = current;
-        break;
-      }
-      queue.addAll(current.children ?? const <CategoryModel>[]);
+  List<CategoryModel> _parseCategoriesPayload(dynamic data) {
+    if (data is Map<String, dynamic>) {
+      final List<dynamic> items = data['items'] ?? data['data'] ?? [];
+      return _mapCategories(items);
     }
-    if (storeRoot == null) {
-      return categories;
+    if (data is List) {
+      return _mapCategories(data);
     }
-    return (storeRoot.children ?? const <CategoryModel>[]);
+    return const <CategoryModel>[];
+  }
+
+  List<CategoryModel> _mapCategories(List<dynamic> source) {
+    return source
+        .whereType<Map<String, dynamic>>()
+        .map(CategoryModel.fromJson)
+        .where((category) => category.id != null)
+        .toList();
+  }
+
+  List<CategoryModel> _extractSelfCategoryChildren(
+      Map<String, dynamic> response) {
+    final dynamic rawSelf = response['self_category'] ??
+        (response['data'] is Map<String, dynamic>
+            ? (response['data'] as Map<String, dynamic>)['self_category']
+            : null);
+    if (rawSelf is Map<String, dynamic>) {
+      final CategoryModel root = CategoryModel.fromJson(rawSelf);
+      return (root.children ?? const <CategoryModel>[])
+          .where((category) => category.id != null)
+          .toList();
+    }
+    return const <CategoryModel>[];
   }
 
   void _toggleCategory(int id) {
@@ -456,6 +491,7 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
       ],
     );
   }
+
   Widget _buildWorkingHoursSummary() {
     const weekdays = [
       'الأحد',
@@ -522,7 +558,7 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
             body: SafeArea(
               bottom: false,
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 140), 
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 140),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

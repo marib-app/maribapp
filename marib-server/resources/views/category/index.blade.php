@@ -109,7 +109,7 @@
                         <div id="cloneCategoryFeedback" class="alert alert-danger d-none" role="alert"></div>
                         <div class="mb-3">
                             <label for="cloneTargetSelect" class="form-label">{{ __('اختر القسم الهدف') }}</label>
-                            <select class="form-select" id="cloneTargetSelect" name="target_parent_category_id" required disabled>
+                            <select class="form-select select2 w-100" id="cloneTargetSelect" name="target_parent_category_id" required disabled>
                                 <option value="">{{ __('جارٍ تحميل الأقسام المتاحة...') }}</option>
                             </select>
                         </div>
@@ -143,47 +143,86 @@
 
             const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
             const form = document.getElementById('cloneCategoryForm');
-            const targetSelect = document.getElementById('cloneTargetSelect');
+            const $modalElement = $('#cloneCategoryModal');
+            const $targetSelect = $('#cloneTargetSelect');
             const sourceInput = form.querySelector('input[name="source_category_id"]');
             const feedback = document.getElementById('cloneCategoryFeedback');
             const loadingIndicator = document.getElementById('cloneCategoryLoadingIndicator');
             const submitButton = document.getElementById('cloneCategorySubmit');
             const sourceNameLabel = document.getElementById('cloneSourceName');
 
+
+            const destroySelect2 = () => {
+                if ($targetSelect.data('select2')) {
+                    $targetSelect.select2('destroy');
+                }
+            };
+
+            const initializeSelect2 = () => {
+                $targetSelect.select2({
+                    dropdownParent: $modalElement,
+                    width: '100%'
+                });
+            };
+
+
             const resetModalState = () => {
                 feedback.classList.add('d-none');
                 feedback.textContent = '';
-                loadingIndicator.classList.remove('d-none');
-                targetSelect.innerHTML = '<option value="">{{ __('جارٍ تحميل الأقسام المتاحة...') }}</option>';
+                destroySelect2();
+                $targetSelect.empty().append(
+                    $('<option>', {
+                        value: '',
+                        text: '{{ __('جارٍ تحميل الأقسام المتاحة...') }}'
+                    })
+                );
+                $targetSelect.prop('disabled', true);
+                initializeSelect2();
+                $targetSelect.trigger('change.select2');
                 targetSelect.disabled = true;
                 submitButton.disabled = true;
             };
 
             const populateOptions = (options) => {
-                targetSelect.innerHTML = '';
+                destroySelect2();
+                $targetSelect.empty();
+
 
                 if (!Array.isArray(options) || options.length === 0) {
-                    targetSelect.innerHTML = '<option value="">{{ __('لا توجد أقسام متاحة للنسخ إليها.') }}</option>';
-                    targetSelect.disabled = true;
+                    $targetSelect.append(
+                        $('<option>', {
+                            value: '',
+                            text: '{{ __('لا توجد أقسام متاحة للنسخ إليها.') }}'
+                        })
+                    );
+                    $targetSelect.prop('disabled', true);
+                    initializeSelect2();
+                    $targetSelect.trigger('change.select2');
                     submitButton.disabled = true;
                     return;
                 }
 
-                const placeholder = document.createElement('option');
-                placeholder.value = '';
-                placeholder.textContent = '{{ __('اختر القسم الهدف') }}';
-                placeholder.disabled = true;
-                placeholder.selected = true;
-                targetSelect.appendChild(placeholder);
+                $targetSelect.append(
+                    $('<option>', {
+                        value: '',
+                        text: '{{ __('اختر القسم الهدف') }}',
+                        disabled: true,
+                        selected: true
+                    })
+                );
 
                 options.forEach(function (option) {
-                    const optionElement = document.createElement('option');
-                    optionElement.value = option.id;
-                    optionElement.textContent = option.label;
-                    targetSelect.appendChild(optionElement);
+                    $targetSelect.append(
+                        $('<option>', {
+                            value: option.id,
+                            text: option.label
+                        })
+                    );
                 });
 
-                targetSelect.disabled = false;
+                $targetSelect.prop('disabled', false);
+                initializeSelect2();
+                $targetSelect.trigger('change.select2');
                 submitButton.disabled = true;
             };
 
@@ -226,8 +265,16 @@
                         loadingIndicator.classList.add('d-none');
                         feedback.textContent = '{{ __('تعذر تحميل الأقسام المتاحة. يرجى المحاولة مرة أخرى.') }}';
                         feedback.classList.remove('d-none');
-                        targetSelect.innerHTML = '<option value="">{{ __('حدث خطأ أثناء تحميل البيانات.') }}</option>';
-                        targetSelect.disabled = true;
+                        destroySelect2();
+                        $targetSelect.empty().append(
+                            $('<option>', {
+                                value: '',
+                                text: '{{ __('حدث خطأ أثناء تحميل البيانات.') }}'
+                            })
+                        );
+                        $targetSelect.prop('disabled', true);
+                        initializeSelect2();
+                        $targetSelect.trigger('change.select2');
                         submitButton.disabled = true;
                     });
 
@@ -239,9 +286,13 @@
                 resetModalState();
             });
 
-            targetSelect.addEventListener('change', function () {
-                submitButton.disabled = targetSelect.value === '';
+            $targetSelect.on('change.select2', function () {
+                submitButton.disabled = $targetSelect.val() === '';
             });
         });
+
+            destroySelect2();
+            initializeSelect2();
+
     </script>
 @endpush

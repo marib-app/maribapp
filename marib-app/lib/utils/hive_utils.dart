@@ -890,6 +890,70 @@ class HiveUtils {
   static Future<void> setUserSkip() {
     return Hive.box(HiveKeys.authBox).put(HiveKeys.isUserSkip, true);
   }
+  // ---------------------------------------------------------------------------
+  //                        Merchant Onboarding Helpers
+  // ---------------------------------------------------------------------------
+
+  static bool isMerchantOnboardingInProgress() {
+    return _userDetailsBox.get(HiveKeys.merchantOnboardingInProgress) == true;
+  }
+
+  static Future<void> beginMerchantOnboardingSession({
+    int initialStep = 0,
+    Map<String, dynamic>? draft,
+  }) async {
+    await _userDetailsBox.put(HiveKeys.merchantOnboardingInProgress, true);
+    await setMerchantOnboardingStep(initialStep);
+    if (draft != null && draft.isNotEmpty) {
+      await saveMerchantOnboardingDraft(draft);
+    }
+  }
+
+  static Future<void> setMerchantOnboardingStep(int step) {
+    final int safeStep = step.clamp(0, 5);
+    return _userDetailsBox.put(HiveKeys.merchantOnboardingStep, safeStep);
+  }
+
+  static int getMerchantOnboardingStep() {
+    final dynamic raw = _userDetailsBox.get(HiveKeys.merchantOnboardingStep);
+    if (raw is int) return raw.clamp(0, 5);
+    if (raw is num) return raw.toInt().clamp(0, 5);
+    return 0;
+  }
+
+  static Map<String, dynamic>? getMerchantOnboardingDraft() {
+    final dynamic raw = _userDetailsBox.get(HiveKeys.merchantOnboardingDraft);
+    if (raw is Map<String, dynamic>) {
+      return Map<String, dynamic>.from(raw);
+    }
+    if (raw is Map) {
+      return raw.map(
+        (dynamic key, dynamic value) => MapEntry(
+          key.toString(),
+          value,
+        ),
+      );
+    }
+    return null;
+  }
+
+  static Future<void> saveMerchantOnboardingDraft(
+      Map<String, dynamic> draft) async {
+    final Map<String, dynamic> sanitized = Map<String, dynamic>.from(draft)
+      ..removeWhere(
+        (key, value) =>
+            value == null ||
+            (value is String && value.trim().isEmpty) ||
+            key == 'password',
+      );
+    await _userDetailsBox.put(HiveKeys.merchantOnboardingDraft, sanitized);
+  }
+
+  static Future<void> clearMerchantOnboardingProgress() async {
+    await _userDetailsBox.delete(HiveKeys.merchantOnboardingInProgress);
+    await _userDetailsBox.delete(HiveKeys.merchantOnboardingStep);
+    await _userDetailsBox.delete(HiveKeys.merchantOnboardingDraft);
+  }
 
   static String getAccountTypeCode() {
     // يتوقع: "1" (فردي) | "2" (عقاري) | "3" (تجاري)
@@ -898,3 +962,4 @@ class HiveUtils {
     return (v ?? '').toString().trim();
   }
 }
+

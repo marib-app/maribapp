@@ -24,9 +24,11 @@ use App\Models\Wifi\WifiNetwork;
 use App\Models\Wifi\WifiReport;
 use App\Services\Audit\AuditLogger;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Storage;
 
 class OwnerNetworkController extends Controller
 {
@@ -52,13 +54,30 @@ class OwnerNetworkController extends Controller
     public function store(StoreWifiNetworkRequest $request): JsonResponse
     {
         $data = $request->validated();
+        $logoFile = $request->file('logo');
+        $loginScreenshotFile = $request->file('login_screenshot');
+
+        unset($data['logo'], $data['login_screenshot']);
+
         $network = new WifiNetwork($data);
         $network->user_id = $request->user()->id;
+
+        $auditFields = array_keys($data);
+
+        if ($logoFile !== null) {
+            $network->icon_path = $this->storeNetworkMedia($logoFile, 'wifi/networks/logos');
+            $auditFields[] = 'icon_path';
+        }
+
+        if ($loginScreenshotFile !== null) {
+            $network->login_screenshot_path = $this->storeNetworkMedia($loginScreenshotFile, 'wifi/networks/screenshots');
+            $auditFields[] = 'login_screenshot_path';
+        }
 
         $network->save();
         $network->refresh();
 
-        $this->auditLogger->logChanges($network, 'wifi.network.created', array_keys($data), $request->user(), [
+        $this->auditLogger->logChanges($network, 'wifi.network.created', array_unique($auditFields), $request->user(), [
             'description' => 'Wifi network created by owner',
         ]);
 
@@ -89,6 +108,30 @@ class OwnerNetworkController extends Controller
         $network->save();
 
         return WifiNetworkResource::make($network->refresh());
+    }
+
+    public function destroy(Request $request, WifiNetwork $network)
+    {
+        $this->authorize('delete', $network);
+
+        $iconPath = $network->icon_path;
+        $loginScreenshotPath = $network->login_screenshot_path;
+
+        $this->auditLogger->logChanges($network, 'wifi.network.deleted', ['status'], $request->user(), [
+            'description' => 'Wifi network deleted by owner',
+        ]);
+
+        $network->delete();
+
+        if (! empty($iconPath)) {
+            Storage::disk('public')->delete($iconPath);
+        }
+
+        if (! empty($loginScreenshotPath)) {
+            Storage::disk('public')->delete($loginScreenshotPath);
+        }
+
+        return response()->noContent();
     }
 
     public function setCommission(SetWifiCommissionRequest $request, WifiNetwork $network): WifiNetworkResource
@@ -226,5 +269,10 @@ class OwnerNetworkController extends Controller
                 'reputation_counters' => ReputationCounterResource::collection($counters)->resolve(),
             ],
         ]);
+    }
+
+    private function storeNetworkMedia(UploadedFile $file, string $directory): string
+    {
+        return $file->store($directory, 'public');
     }
 }

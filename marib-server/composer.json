@@ -1,4 +1,4 @@
-    {
+{
     "name": "laravel/laravel",
     "type": "project",
     "description": "The Laravel Framework.",
@@ -29,6 +29,7 @@
         "league/flysystem-aws-s3-v3": "^3.0",
         "nesbot/carbon": "^2.72.3",
         "php-webdriver/webdriver": "^1.14",
+        "phpoffice/phpspreadsheet": "^5.2",
         "rap2hpoutre/laravel-log-viewer": "^2.4",
         "razorpay/razorpay": "2.*",
         "spatie/image": "^2.2",

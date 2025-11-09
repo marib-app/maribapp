@@ -56,6 +56,7 @@ class OwnerBatchController extends Controller
         ]);
 
         $batch->wifi_plan_id = $plan->id;
+        $batch->wifi_network_id = $plan->wifi_network_id;
         $batch->uploaded_by = $request->user()->id;
         $batch->status = WifiCodeBatchStatus::UPLOADED;
         $batch->meta = array_merge($batch->meta ?? [], ['storage_path' => $path]);

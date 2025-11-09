@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'phase1_activity_info.dart';
 import 'phase2_categories_hours.dart';
@@ -8,25 +10,39 @@ import 'phase6_final_submission.dart';
 import 'phase5_store_credentials.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
+import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/utils/ui_utils.dart';
 
 class MerchantOnboardingScreen extends StatefulWidget {
   final Map<String, dynamic>? signupDraft;
+  final int initialPage;
 
-  const MerchantOnboardingScreen({super.key, this.signupDraft});
+  const MerchantOnboardingScreen({
+    super.key,
+    this.signupDraft,
+    this.initialPage = 0,
+  });
 
   static Route<void> route(RouteSettings settings) {
     Map<String, dynamic>? draft;
+    int initialPage = HiveUtils.getMerchantOnboardingStep();
     final args = settings.arguments;
     if (args is Map<String, dynamic>) {
       final dynamic maybeDraft = args['signupDraft'];
       if (maybeDraft is Map<String, dynamic>) {
         draft = maybeDraft;
       }
+      final dynamic maybeStep = args['resumeFromStep'];
+      if (maybeStep is int) {
+        initialPage = maybeStep;
+      }
     }
     return MaterialPageRoute(
       settings: settings,
-      builder: (context) => MerchantOnboardingScreen(signupDraft: draft),
+      builder: (context) => MerchantOnboardingScreen(
+        signupDraft: draft,
+        initialPage: initialPage,
+      ),
     );
   }
 
@@ -36,14 +52,27 @@ class MerchantOnboardingScreen extends StatefulWidget {
 }
 
 class _MerchantOnboardingScreenState extends State<MerchantOnboardingScreen> {
-  final PageController _controller = PageController();
-  int _currentPage = 0;
+  late final PageController _controller;
+  late int _currentPage;
   final int _totalPages = 6;
   final ValueNotifier<int> _pageVisibilityNotifier = ValueNotifier<int>(0);
 
   @override
   void initState() {
     super.initState();
+    _currentPage =
+        widget.initialPage.clamp(0, _totalPages - 1);
+    _controller = PageController(initialPage: _currentPage);
+    final Map<String, dynamic>? draft = widget.signupDraft;
+    if (draft != null && draft.isNotEmpty) {
+      unawaited(HiveUtils.saveMerchantOnboardingDraft(draft));
+    }
+    unawaited(
+      HiveUtils.beginMerchantOnboardingSession(
+        initialStep: _currentPage,
+        draft: draft,
+      ),
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _pageVisibilityNotifier.value = _currentPage;
     });
@@ -56,6 +85,7 @@ class _MerchantOnboardingScreenState extends State<MerchantOnboardingScreen> {
     });
     _controller.animateToPage(next,
         duration: const Duration(milliseconds: 400), curve: Curves.ease);
+    unawaited(HiveUtils.setMerchantOnboardingStep(next));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _pageVisibilityNotifier.value = next;
     });
@@ -93,6 +123,7 @@ class _MerchantOnboardingScreenState extends State<MerchantOnboardingScreen> {
 
   Future<void> _onPhase6Submit() async {
     await Future<void>.delayed(const Duration(milliseconds: 300));
+    await HiveUtils.clearMerchantOnboardingProgress();
     if (!mounted) return;
     UiUtils.showSoftSnackBar(
       context,

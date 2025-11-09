@@ -5,7 +5,7 @@
     "isEntry": true
   },
   "resources/js/wifi/index.js": {
-    "file": "assets/index.3f45aafe.js",
+    "file": "assets/index.96f09911.js",
     "src": "resources/js/wifi/index.js",
     "isEntry": true,
     "imports": [
@@ -29,7 +29,7 @@
     "isEntry": true
   },
   "resources/js/wifi/index.scss": {
-    "file": "assets/index.cc1e83c9.css",
+    "file": "assets/index.198f9f1d.css",
     "src": "resources/js/wifi/index.scss",
     "isEntry": true
   },

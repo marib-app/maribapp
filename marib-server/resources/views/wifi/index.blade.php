@@ -10,6 +10,15 @@
 
 @section('js')
     @vite(['resources/js/wifi/index.js'])
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (window.axios) {
+                window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+                window.axios.defaults.withCredentials = true;
+                window.axios.get('{{ url('/sanctum/csrf-cookie') }}').catch(() => {});
+            }
+        }, { once: true });
+    </script>
 @endsection
 
 @section('page-title')
@@ -31,7 +40,7 @@
 @endsection
 
 @section('content')
-    <section class="section wifi-admin" data-wifi-admin-root data-base-url="{{ $adminApiBaseUrl }}" data-owner-base-url="{{ url('/api/wifi/owner') }}">
+    <section class="section wifi-admin" data-wifi-admin-root data-base-url="{{ $adminApiBaseUrl }}" data-owner-base-url="{{ $ownerApiBaseUrl ?? url('/wifi-cabin/api/owner') }}">
         <div class="row g-3 mb-3">
             <div class="col-12">
                 @if (session('status'))

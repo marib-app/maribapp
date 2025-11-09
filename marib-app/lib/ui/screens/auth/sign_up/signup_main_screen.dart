@@ -2,6 +2,8 @@
 // File: lib/ui/screens/auth/signup/sign_up_main_screen.dart
 // Purpose: Logic/State holder. Delegates all UI to SignUpMainUI in sign_up_main_ui.dart
 // ================================
+import 'package:flutter_linkify/flutter_linkify.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'dart:async';
 import 'dart:io';
@@ -11,17 +13,22 @@ import 'package:device_region/device_region.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_svg/svg.dart';
 
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 
+import 'package:marib/app/app_theme.dart';
 import 'package:marib/app/routes.dart';
 import 'package:marib/data/cubits/auth/authentication_cubit.dart';
+import 'package:marib/data/cubits/system/app_theme_cubit.dart';
 import 'package:marib/data/cubits/system/fetch_system_settings_cubit.dart';
 import 'package:marib/data/cubits/system/user_details.dart';
 import 'package:marib/data/helper/widgets.dart';
 import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
+import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/api.dart';
+import 'package:marib/utils/app_icon.dart';
 import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/hive_utils.dart';
@@ -29,13 +36,13 @@ import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/login/lib/login_status.dart';
 import 'package:marib/utils/login/lib/payloads.dart';
 import 'package:marib/utils/ui_utils.dart';
-import 'package:marib/ui/screens/auth/sign_up/sign_up_main_ui.dart'; // ✅
-
+import 'package:marib/ui/screens/auth/sign_up/sign_up_main_ui.dart';
+import 'package:marib/ui/screens/auth/widgets/auth_status_bar.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:marib/utils/notification/notification_service.dart';
 
-import '../widgets/auth_status_bar.dart';
+
+
 
 class SignUpMainScreen extends StatefulWidget {
   final Map<String, dynamic>? arguments;
@@ -51,17 +58,7 @@ class SignUpMainScreen extends StatefulWidget {
   }
 }
 
-const bool _kSkipPhoneVerification = true;
-
 class LoginScreenState extends State<SignUpMainScreen> {
-  static const Map<String, String> _accountTypeDetailKeys = {
-    '1': 'chooseaccountAlertcontent1',
-    '2': 'chooseaccountAlertcontent2',
-    '3': 'chooseaccountAlertcontent3',
-  };
-  static const String _accountTypeDetailFallbackKey =
-      'chooseaccountAlertcontentDefault';
-
   // ===== Controllers =====
   final TextEditingController mobileCtrl = TextEditingController();
   final TextEditingController emailCtrl = TextEditingController();
@@ -92,12 +89,15 @@ class LoginScreenState extends State<SignUpMainScreen> {
   StreamSubscription<AuthenticationState>? _authenticationSubscription;
   VoidCallback? _loginStateListenerDisposer;
 
-  late final Future<void> _bootstrapFuture;
-  Future<void> _bootstrapSignUpFlow() async {
+  void _scheduleLazyInit() {
+    if (!mounted) return;
+
     final authCubit = context.read<AuthenticationCubit>();
     authCubit.init();
 
+
     _authenticationSubscription = authCubit.stream.listen((state) {
+
       if (!mounted) return;
       if (state is AuthenticationSuccess) {
         if (state.type == AuthenticationType.google ||
@@ -114,6 +114,7 @@ class LoginScreenState extends State<SignUpMainScreen> {
 
     _loginStateListenerDisposer?.call();
     _loginStateListenerDisposer = authCubit.listen((MLoginState state) {
+
       if (!mounted) return;
       if (state is MOtpSendInProgress) Widgets.showLoader(context);
       if (state is MVerificationPending) {
@@ -136,85 +137,16 @@ class LoginScreenState extends State<SignUpMainScreen> {
       }
     });
 
-    try {
-      final country = await getSimCountry();
+    // Pre-fill country from SIM
+    getSimCountry().then((value) {
       if (!mounted) return;
 
-      setState(() {
-        countryCode = country.phoneCode;
-        flagEmoji = country.flagEmoji;
-      });
-    } catch (_) {}
+      countryCode = value.phoneCode;
+      flagEmoji = value.flagEmoji;
+      setState(() {});
+    });
   }
 
-  Future<void> _showAccountTypeDetailsSheet(String? type) async {
-    if (!mounted || type == null || type.isEmpty) return;
-
-    final contentKey =
-        _accountTypeDetailKeys[type] ?? _accountTypeDetailFallbackKey;
-
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(
-            20,
-            16,
-            20,
-            16 + MediaQuery.of(ctx).viewPadding.bottom,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 42,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: context.color.textLightColor.withOpacity(0.35),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                "chooseaccountAlertTitle".translate(context),
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 12),
-              ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.6,
-                ),
-                child: SingleChildScrollView(
-                  child: Text(
-                    contentKey.translate(ctx),
-                    style: TextStyle(
-                      fontSize: context.font.small,
-                      color: context.color.textDefaultColor,
-                      height: 1.5,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              UiUtils.buildButton(
-                ctx,
-                onPressed: () => Navigator.of(ctx).pop(),
-                buttonTitle: 'ok'.translate(context),
-                radius: 12,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   @override
   void initState() {
@@ -231,7 +163,10 @@ class LoginScreenState extends State<SignUpMainScreen> {
       }
     }
 
-    _bootstrapFuture = _bootstrapSignUpFlow();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _scheduleLazyInit();
+    });
   }
 
   @override
@@ -259,10 +194,10 @@ class LoginScreenState extends State<SignUpMainScreen> {
     } catch (_) {}
 
     Country simCountry = countryList.firstWhere(
-      (element) {
+          (element) {
         if (Constant.isDemoModeOn) {
           return countryList.any(
-            (e) => e.phoneCode == Constant.defaultCountryCode,
+                (e) => e.phoneCode == Constant.defaultCountryCode,
           );
         } else {
           return element.phoneCode == simCountryCode;
@@ -276,13 +211,17 @@ class LoginScreenState extends State<SignUpMainScreen> {
     );
 
     if (Constant.isDemoModeOn) {
-      simCountry = countryList
-          .where((e) => e.phoneCode == Constant.demoCountryCode)
-          .first;
+      simCountry =
+          countryList
+              .where((e) => e.phoneCode == Constant.demoCountryCode)
+              .first;
     }
 
     return simCountry;
   }
+
+
+
 
   Future<bool> _ensureSystemSettingsAvailable() async {
     final cubit = context.read<FetchSystemSettingsCubit>();
@@ -296,8 +235,8 @@ class LoginScreenState extends State<SignUpMainScreen> {
     try {
       if (currentState is FetchSystemSettingsInProgress) {
         resolvedState = await cubit.stream.firstWhere(
-          (state) =>
-              state is FetchSystemSettingsSuccess ||
+              (state) =>
+          state is FetchSystemSettingsSuccess ||
               state is FetchSystemSettingsFailure,
         );
       } else {
@@ -341,6 +280,11 @@ class LoginScreenState extends State<SignUpMainScreen> {
     );
   }
 
+
+
+
+
+
   // ====== Social login handler: send to backend, route appropriately ======
   Future<void> _handleSocialLogin(AuthenticationSuccess state) async {
     try {
@@ -356,36 +300,7 @@ class LoginScreenState extends State<SignUpMainScreen> {
         "platform_type": Platform.isAndroid ? "android" : "ios",
       };
 
-      debugPrint(
-        '[SignUpMainScreen] Sending user-signup payload (sanitised) -> '
-        'account_type: ${payload['account_type']} | '
-        'mobile: ${payload['mobile']} | '
-        'email: ${payload['email']} | '
-        'code_present: ${payload.containsKey('code')}',
-      );
-
-      if (selectedAccountType == "3") {
-        Widgets.hideLoder(context);
-        HelperUtils.showSnackBarMessage(
-          context,
-          'أكمل خطوات المتجر لإرسال طلب التسجيل.',
-          messageDuration: 3,
-          type: MessageType.warning,
-        );
-        Navigator.pushNamed(
-          context,
-          Routes.merchantOnboarding,
-          arguments: {
-            'signupDraft': payload,
-          },
-        );
-        return;
-      }
-
       final response = await Api.post(url: "user-signup", parameter: payload);
-      debugPrint(
-        '[SignUpMainScreen] user-signup response => error: ${response['error']}',
-      );
 
       if (response['error'] == false) {
         HiveUtils.setJWT(response['token']);
@@ -396,23 +311,14 @@ class LoginScreenState extends State<SignUpMainScreen> {
             userData['account_type'] != null && userData['account_type'] != 0;
         final bool isEmailVerified = userData['email_verified_at'] != null;
         final bool hasCompleteName =
-            userData['name'] != null && userData['name'].toString().isNotEmpty;
-
-        final bool shouldAuthenticate =
-            hasAccountType && isEmailVerified && hasCompleteName;
-
-        if (shouldAuthenticate) {
-          HiveUtils.setUserIsAuthenticated(true);
-          await NotificationService.resendPendingTokenIfNeeded();
-        }
+            userData['name'] != null && userData['name']
+                .toString()
+                .isNotEmpty;
 
         context.read<UserDetailsCubit>().fill(HiveUtils.getUserDetails());
-        FetchSystemSettingsCubit.refreshPermissionsForCurrentUser(
-          context,
-          clearCacheBeforeFetch: true,
-        );
 
-        if (shouldAuthenticate) {
+        if (hasAccountType && isEmailVerified && hasCompleteName) {
+          HiveUtils.setUserIsAuthenticated(true);
           if ((HiveUtils.getCityName() ?? '').isNotEmpty &&
               HiveUtils.getCityName() != 'null') {
             HelperUtils.killPreviousPages(
@@ -436,9 +342,12 @@ class LoginScreenState extends State<SignUpMainScreen> {
             usernameCtrl.text = incomingGoogleData['name'] ?? '';
             emailCtrl.text = incomingGoogleData['email'] ?? '';
           });
+
+
         }
       } else {
-        HelperUtils.showSnackBarMessage(context,
+        HelperUtils.showSnackBarMessage(
+            context,
             response['message'] ?? "registrationError".translate(context));
       }
     } catch (e) {
@@ -461,8 +370,8 @@ class LoginScreenState extends State<SignUpMainScreen> {
       context: context,
       showWorldWide: true,
       showPhoneCode: true,
-      countryListTheme:
-          CountryListThemeData(borderRadius: BorderRadius.circular(11)),
+      countryListTheme: CountryListThemeData(
+          borderRadius: BorderRadius.circular(11)),
       onSelect: (Country value) {
         flagEmoji = value.flagEmoji;
         if (!mounted) return;
@@ -471,6 +380,8 @@ class LoginScreenState extends State<SignUpMainScreen> {
       },
     );
   }
+
+
 
   Future<Map<String, dynamic>?> _prepareLocationPayload() async {
     try {
@@ -534,8 +445,8 @@ class LoginScreenState extends State<SignUpMainScreen> {
             'street': placemark.street,
           };
           possibleMeta.removeWhere(
-            (key, value) =>
-                value == null || (value is String && value.trim().isEmpty),
+                (key, value) =>
+            value == null || (value is String && value.trim().isEmpty),
           );
           if (possibleMeta.isNotEmpty) {
             meta = possibleMeta;
@@ -569,6 +480,9 @@ class LoginScreenState extends State<SignUpMainScreen> {
     }
   }
 
+
+
+
   // Submit action for primary button
   Future<void> onSubmit() async {
     final form = formKey.currentState;
@@ -576,6 +490,17 @@ class LoginScreenState extends State<SignUpMainScreen> {
     form.save();
 
     if (!form.validate()) return;
+
+
+    if (codeCtrl.text.trim().isEmpty) {
+      HelperUtils.showSnackBarMessage(
+        context,
+        'Please enter your referral code.',
+        messageDuration: 3,
+        type: MessageType.warning,
+      );
+      return;
+    }
 
     if (!agreed) {
       HelperUtils.showSnackBarMessage(
@@ -596,36 +521,31 @@ class LoginScreenState extends State<SignUpMainScreen> {
       return;
     }
 
+
     Widgets.showLoader(context);
 
-    Map<String, dynamic>? locationPayload;
-    final String referralCode = codeCtrl.text.trim();
-
-    if (referralCode.isNotEmpty) {
-      locationPayload = await _prepareLocationPayload();
-      if (locationPayload == null) {
-        Widgets.hideLoder(context);
-        return;
-      }
+    final locationPayload = await _prepareLocationPayload();
+    if (locationPayload == null) {
+      Widgets.hideLoder(context);
+      return;
     }
 
     try {
+
       final basePayload = <String, dynamic>{
         "name": usernameCtrl.text,
         "mobile": mobileCtrl.text,
         "password": passwordCtrl.text,
         "account_type": selectedAccountType ?? "1",
+        "code": codeCtrl.text.trim(),
         "email": emailCtrl.text,
         "country_code": countryCode?.toString() ?? "",
         "country_name": countryName ?? "Unknown",
         "flag_emoji": flagEmoji ?? "ye",
         "platform_type": Platform.isAndroid ? "android" : "ios",
-        ...?locationPayload,
+        ...locationPayload,
       };
 
-      if (referralCode.isNotEmpty) {
-        basePayload["code"] = referralCode;
-      }
 
       Map<String, dynamic> payload;
 
@@ -633,7 +553,9 @@ class LoginScreenState extends State<SignUpMainScreen> {
         // Complete profile for social login
         payload = {
           ...basePayload,
+
           "type": "google",
+
           "firebase_id": googleData!['firebase_id'],
           "profile": googleData!['profile'] ?? "",
         };
@@ -645,12 +567,14 @@ class LoginScreenState extends State<SignUpMainScreen> {
           firebaseId = currentUser.uid;
         } else {
           firebaseId =
-              "user_${countryCode}${mobileCtrl.text}"; // temporary fallback
+          "user_${countryCode}${mobileCtrl.text}"; // temporary fallback
         }
 
         payload = {
           ...basePayload,
+
           "type": "phone",
+
           "firebase_id": firebaseId,
         };
       }
@@ -661,42 +585,22 @@ class LoginScreenState extends State<SignUpMainScreen> {
         HiveUtils.setJWT(response['token']);
         HiveUtils.setUserData(response['data']);
         HiveUtils.setUserIsAuthenticated(true);
-        unawaited(NotificationService.resendPendingTokenIfNeeded());
 
         context.read<UserDetailsCubit>().fill(HiveUtils.getUserDetails());
-        FetchSystemSettingsCubit.refreshPermissionsForCurrentUser(
-          context,
-          clearCacheBeforeFetch: true,
-        );
-        Widgets.hideLoder(context);
-        if (!mounted) return;
 
-        if (_kSkipPhoneVerification) {
-          final bool isCommercialAccount = selectedAccountType == "3";
-          if (!isCommercialAccount) {
-            HelperUtils.showSnackBarMessage(
-              context,
-              'تم إنشاء الحساب وسيتم تفعيل التحقق لاحقاً.',
-              messageDuration: 3,
-              type: MessageType.success,
-            );
-          }
-          await _completeSignupFlowWithoutOtp();
-        } else {
-          Navigator.pushNamed(
-            context,
-            Routes.otp,
-            arguments: {
-              'selectedAccountType': selectedAccountType,
-              'phoneNumber': mobileCtrl.text,
-              'countryCode': countryCode,
-              'username': usernameCtrl.text,
-              'password': passwordCtrl.text,
-              'isFromGoogleLogin': isFromGoogleLogin,
-              'googleData': googleData,
-            },
-          );
-        }
+        Navigator.pushNamed(
+          context,
+          Routes.otp,
+          arguments: {
+            'selectedAccountType': selectedAccountType,
+            'phoneNumber': mobileCtrl.text,
+            'countryCode': countryCode,
+            'username': usernameCtrl.text,
+            'password': passwordCtrl.text,
+            'isFromGoogleLogin': isFromGoogleLogin,
+            'googleData': googleData,
+          },
+        );
       } else {
         HelperUtils.showSnackBarMessage(
           context,
@@ -705,233 +609,159 @@ class LoginScreenState extends State<SignUpMainScreen> {
         );
       }
     } catch (e) {
-      String message = "registrationError".translate(context);
-      if (e is ApiHttpException) {
-        final dynamic payload = e.payload;
-        if (payload is Map<String, dynamic>) {
-          final dynamic serverMessage = payload['message'];
-          if (serverMessage is String && serverMessage.trim().isNotEmpty) {
-            message = serverMessage.trim();
-          }
-        } else if (payload is String && payload.trim().isNotEmpty) {
-          message = payload.trim();
-        }
-      } else if (e is ApiException) {
-        message = e.toString();
-      } else {
-        message = e.toString();
-      }
-
       HelperUtils.showSnackBarMessage(
-        context,
-        message,
-        messageDuration: 3,
-      );
+          context, e.toString(), messageDuration: 3);
+
     } finally {
       Widgets.hideLoder(context);
     }
   }
 
-  Future<void> _completeSignupFlowWithoutOtp() async {
-    if (!mounted) return;
-
-    try {
-      final userDetails = HiveUtils.getUserDetails();
-      if (userDetails != null) {
-        userDetails.isVerified = 1;
-        HiveUtils.setUserData(userDetails.toJson());
-      }
-
-      if (selectedAccountType == "3") {
-        Navigator.pushNamed(context, Routes.merchantOnboarding);
-        return;
-      }
-
-      if (selectedAccountType == "2") {
-        Navigator.pushNamed(
-          context,
-          Routes.signup,
-          arguments: {
-            'selectedAccountType': selectedAccountType,
-            'phoneNumber': mobileCtrl.text,
-            'countryCode': countryCode,
-          },
-        );
-        return;
-      }
-
-      HiveUtils.setUserIsAuthenticated(true);
-      await NotificationService.resendPendingTokenIfNeeded();
-      FetchSystemSettingsCubit.refreshPermissionsForCurrentUser(
-        context,
-        clearCacheBeforeFetch: true,
-      );
-
-      final String? cityName = HiveUtils.getCityName();
-      if (cityName != null &&
-          cityName.isNotEmpty &&
-          cityName.toLowerCase() != 'null') {
-        HelperUtils.killPreviousPages(
-          context,
-          Routes.main,
-          {"from": "signup"},
-        );
-      } else {
-        Navigator.of(context).pushNamedAndRemoveUntil(
-          Routes.locationPermissionScreen,
-          (route) => false,
-        );
-      }
-    } catch (_) {
-      HelperUtils.killPreviousPages(
-        context,
-        Routes.main,
-        {"from": "signup"},
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final statusBarBase = LoginStatusBar.resolveBaseColor(context);
+    // معرفة حجم الشاشة
+    size = MediaQuery
+        .of(context)
+        .size;
+    final Color statusBarBase = LoginStatusBar.resolveBaseColor(
+      context,
+      override: context.color.backgroundColor,
+    );
+
+
+    final settingsState = context.watch<FetchSystemSettingsCubit>().state;
+    final bool isSettingsReady = settingsState is FetchSystemSettingsSuccess;
+    final bool isSettingsLoading = settingsState is FetchSystemSettingsInProgress;
+
+
+    // تهيئة الـ ViewModel (البيانات الخاصة بشاشة التسجيل)
+    final vm = SignUpVM(
+      formKey: formKey,
+      mobileCtrl: mobileCtrl,
+      emailCtrl: emailCtrl,
+      usernameCtrl: usernameCtrl,
+      codeCtrl: codeCtrl,
+      passwordCtrl: passwordCtrl,
+      countryCode: countryCode,
+      countryName: countryName,
+      flagEmoji: flagEmoji,
+      isFromGoogleLogin: isFromGoogleLogin,
+      googleData: googleData,
+      isObscure: isObscure,
+      agreed: agreed,
+      selectedAccountType: selectedAccountType,
+      isSystemSettingsReady: isSettingsReady,
+      isSystemSettingsLoading: isSettingsLoading,
+
+    );
+
+    // تعريف الكولباكات (Callbacks) للأحداث المختلفة
+    final callbacks = SignUpCallbacks(
+      onToggleObscure: onToggleObscure,
+      onAgreeChanged: onAgreeChanged,
+
+      // عند تغيير نوع الحساب
+      onAccountTypeChanged: (v) async {
+        // حفظ القيمة الجديدة في الـ state
+        onAccountTypeChanged(v);
+
+        // عرض نافذة وسط الشاشة بمحتوى من السيرفر (مترجم)
+        await UiUtils.showBlurredDialoge(
+          context,
+          dialoge: BlurredDialogBox(
+            showCancleButton: false,
+            // لا نعرض زر إلغاء
+
+            // العنوان يأتي من الترجمة
+            title: "chooseaccountAlertTitle".translate(context),
+
+            // المحتوى من السيرفر مترجم، يمكن أن يحتوي نص طويل
+            content: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery
+                    .of(context)
+                    .size
+                    .height * 0.6, // أقصى 60% من ارتفاع الشاشة
+              ),
+              child: SingleChildScrollView(
+                child: Text(
+                  "chooseaccountAlertcontent ${v ?? ''}".translate(context),
+                  style: TextStyle(
+                    fontSize: context.font.small,
+                    color: context.color.textDefaultColor,
+                    height: 1.5, // تباعد الأسطر للقراءة المريحة
+                  ),
+                ),
+              ),
+            ),
+
+            // زر قبول/موافق
+            acceptButtonName: 'ok'.translate(context),
+            isAcceptContainesPush: true,
+            onAccept: () async {
+              Navigator.of(context).pop(); // إغلاق النافذة عند الضغط على OK
+            },
+          ),
+        );
+      },
+
+      onShowCountryPicker: onShowCountryPicker,
+      onSubmit: onSubmit,
+      onNavigateToLogin: () => Navigator.pushNamed(context, Routes.login),
+
+
+      onOpenStaticContent: ({required String title, required String param}) {
+        return _openStaticContent(title: title, param: param);
+      },
+
+      // مصادقة Google
+      onGoogleAuth: () {
+        context.read<AuthenticationCubit>().setData(
+          payload: GoogleLoginPayload(),
+          type: AuthenticationType.google,
+        );
+        context.read<AuthenticationCubit>().authenticate();
+      },
+
+      // مصادقة Apple
+      onAppleAuth: () {
+        context.read<AuthenticationCubit>().setData(
+          payload: AppleLoginPayload(),
+          type: AuthenticationType.apple,
+        );
+        context.read<AuthenticationCubit>().authenticate();
+      },
+    );
 
     // واجهة الشاشة
+    final overlay = LoginStatusBar.overlayFor(
+      context,
+      baseColor: statusBarBase,
+    );
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: LoginStatusBar.overlayFor(
-        context,
-        baseColor: statusBarBase,
-      ),
+      value: overlay,
       child: SafeArea(
-        top: false,
         child: GestureDetector(
           onTap: () => FocusScope.of(context).unfocus(),
           // إخفاء الكيبورد عند الضغط خارج الحقول
           child: PopScope(
             canPop: isBack,
-            onPopInvoked: (didPop) {
-              if (didPop) {
-                if (mounted) {
-                  setState(() => isBack = false);
-                }
-                return;
-              }
-              HelperUtils.showSnackBarMessage(
-                context,
-                'اضغط مرة أخرى للتأكيد',
-              );
-              if (mounted) {
-                setState(() => isBack = true);
-              }
-            },
+            onPopInvoked: (didPop) => setState(() => isBack = true),
             child: AnnotatedRegion<SystemUiOverlayStyle>(
-              value: LoginStatusBar.overlayFor(
-                context,
-                baseColor: statusBarBase,
+              value: SystemUiOverlayStyle.light.copyWith(
+                statusBarColor: Colors.transparent,
               ),
-              child: FutureBuilder<void>(
-                future: _bootstrapFuture,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState != ConnectionState.done) {
-                    return const _SignUpLoadingPlaceholder();
-                  }
-
-                  size = MediaQuery.of(context).size;
-
-                  final settingsState =
-                      context.watch<FetchSystemSettingsCubit>().state;
-                  final bool isSettingsReady =
-                      settingsState is FetchSystemSettingsSuccess;
-                  final bool isSettingsLoading =
-                      settingsState is FetchSystemSettingsInProgress;
-
-                  final vm = SignUpVM(
-                    formKey: formKey,
-                    mobileCtrl: mobileCtrl,
-                    emailCtrl: emailCtrl,
-                    usernameCtrl: usernameCtrl,
-                    codeCtrl: codeCtrl,
-                    passwordCtrl: passwordCtrl,
-                    countryCode: countryCode,
-                    countryName: countryName,
-                    flagEmoji: flagEmoji,
-                    isFromGoogleLogin: isFromGoogleLogin,
-                    googleData: googleData,
-                    isObscure: isObscure,
-                    agreed: agreed,
-                    selectedAccountType: selectedAccountType,
-                    isSystemSettingsReady: isSettingsReady,
-                    isSystemSettingsLoading: isSettingsLoading,
-                  );
-
-                  final callbacks = SignUpCallbacks(
-                    onToggleObscure: onToggleObscure,
-                    onAgreeChanged: onAgreeChanged,
-                    onAccountTypeChanged: (v) async {
-                      onAccountTypeChanged(v);
-                      await _showAccountTypeDetailsSheet(v);
-                    },
-                    onShowCountryPicker: onShowCountryPicker,
-                    onSubmit: onSubmit,
-                    onNavigateToLogin: () =>
-                        Navigator.pushNamed(context, Routes.login),
-                    onOpenStaticContent: (
-                        {required String title, required String param}) {
-                      return _openStaticContent(title: title, param: param);
-                    },
-                    onGoogleAuth: () {
-                      context.read<AuthenticationCubit>().setData(
-                            payload: GoogleLoginPayload(),
-                            type: AuthenticationType.google,
-                          );
-                      context.read<AuthenticationCubit>().authenticate();
-                    },
-                    onAppleAuth: () {
-                      context.read<AuthenticationCubit>().setData(
-                            payload: AppleLoginPayload(),
-                            type: AuthenticationType.apple,
-                          );
-                      context.read<AuthenticationCubit>().authenticate();
-                    },
-                  );
-
-                  return Scaffold(
-                    backgroundColor: context.color.backgroundColor,
-                    body: SignUpMainUI(
-                      vm: vm,
-                      callbacks: callbacks,
-                      statusBarBase: statusBarBase,
-                    ),
-                  );
-                },
+              child: Scaffold(
+                backgroundColor: context.color.backgroundColor,
+                body: SignUpMainUI(
+                  vm: vm,
+                  callbacks: callbacks, // تمرير البيانات والأحداث للـ UI الرئيسي
+                  statusBarBase: statusBarBase,
+                ),
               ),
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SignUpLoadingPlaceholder extends StatelessWidget {
-  const _SignUpLoadingPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          colors: [
-            context.color.territoryColor,
-            context.color.territoryColor,
-          ],
-        ),
-      ),
-      child: const Center(
-        child: SizedBox(
-          width: 36,
-          height: 36,
-          child: CircularProgressIndicator(),
         ),
       ),
     );

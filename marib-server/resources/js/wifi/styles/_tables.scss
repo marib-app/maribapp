@@ -20,4 +20,39 @@
     .bootstrap-table .fixed-table-toolbar .search {
         margin-top: 0;
     }
+
+
+    .bootstrap-table .fixed-table-container .fixed-table-body .fixed-table-loading {
+        visibility: hidden;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease, visibility 0.3s ease;
+    }
+
+    .bootstrap-table .fixed-table-container .fixed-table-body.loading .fixed-table-loading,
+    .bootstrap-table .fixed-table-container .fixed-table-body .fixed-table-loading.open {
+        visibility: visible;
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .bootstrap-table .fixed-table-loading {
+        position: absolute;
+        inset: 0;
+        z-index: 5;
+        pointer-events: none;
+        opacity: 0;
+        visibility: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: rgba(255, 255, 255, 0.9);
+        transition: opacity 0.2s ease-in-out, visibility 0.2s ease-in-out;
+    }
+
+    .bootstrap-table.loading .fixed-table-loading {
+        pointer-events: auto;
+        opacity: 1;
+        visibility: visible;
+    }
 }

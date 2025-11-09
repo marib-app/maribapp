@@ -290,6 +290,24 @@ class _MobileVerificationScreenState extends State<MobileVerificationScreen> {
     return "$minutes:$remainingSeconds";
   }
 
+  Map<String, dynamic> _buildMerchantOtpDraft() {
+    final Map<String, dynamic> draft = <String, dynamic>{
+      'mobile': widget.phoneNumber,
+      'country_code': widget.countryCode,
+      'account_type': widget.selectedAccountType ?? '3',
+    };
+    draft.removeWhere(
+      (key, value) {
+        if (value == null) return true;
+        if (value is String) {
+          return value.trim().isEmpty;
+        }
+        return false;
+      },
+    );
+    return draft;
+  }
+
   @override
   Widget build(BuildContext context) {
     final statusBarBase = LoginStatusBar.resolveBaseColor(
@@ -326,7 +344,19 @@ class _MobileVerificationScreenState extends State<MobileVerificationScreen> {
 
                 // تحديد الخطوة التالية حسب نوع الحساب
                 if (widget.selectedAccountType == "3") {
-                  Navigator.pushNamed(context, Routes.merchantOnboarding);
+                  final draft = _buildMerchantOtpDraft();
+                  await HiveUtils.beginMerchantOnboardingSession(
+                    initialStep: 0,
+                    draft: draft,
+                  );
+                  Navigator.pushNamed(
+                    context,
+                    Routes.merchantOnboarding,
+                    arguments: {
+                      'signupDraft': draft,
+                      'resumeFromStep': 0,
+                    },
+                  );
                 } else if (widget.selectedAccountType == "2") {
                   // للحسابات العقارية - الانتقال لشاشة التسجيل المتقدمة
                   Navigator.pushNamed(

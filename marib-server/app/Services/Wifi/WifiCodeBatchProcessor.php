@@ -14,6 +14,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 use RuntimeException;
@@ -126,6 +127,7 @@ class WifiCodeBatchProcessor
 
             foreach ($accepted as $candidate) {
                 $code = new WifiCode();
+                $code->wifi_network_id = $plan->wifi_network_id;
                 $code->wifi_plan_id = $plan->getKey();
                 $code->wifi_code_batch_id = $batch->getKey();
                 $code->status = WifiCodeStatus::AVAILABLE;
@@ -195,17 +197,33 @@ class WifiCodeBatchProcessor
 
         $headers = null;
         $rowIndex = 0;
+        $pendingDataRow = null;
 
         try {
             while (($row = fgetcsv($handle)) !== false) {
                 $rowIndex++;
 
                 if ($headers === null) {
-                    $headers = $this->normalizeHeaders($row);
-                    continue;
+                    $normalizedHeaders = $this->normalizeHeaders($row);
+
+                    if ($this->headersContainCodeColumn($normalizedHeaders)) {
+                        $headers = $normalizedHeaders;
+                        continue;
+                    }
+
+                    if ($this->rowHasAnyValue($row)) {
+                        $headers = $this->buildCodeOnlyHeaders(max(count($row), 1), 0);
+                        $pendingDataRow = $row;
+                    } else {
+                        $headers = $this->buildCodeOnlyHeaders(1, 0);
+                        continue;
+                    }
                 }
 
-                if ($row === [null] || $row === false) {
+                $currentRow = $pendingDataRow ?? $row;
+                $pendingDataRow = null;
+
+                if ($currentRow === [null] || $currentRow === false || ! $this->rowHasAnyValue($currentRow)) {
                     continue;
                 }
 
@@ -215,7 +233,7 @@ class WifiCodeBatchProcessor
                         continue;
                     }
 
-                    $values[$header] = $row[$index] ?? null;
+                    $values[$header] = $currentRow[$index] ?? null;
                 }
 
                 yield $values;
@@ -247,15 +265,28 @@ class WifiCodeBatchProcessor
         $sheet = $spreadsheet->getActiveSheet();
         $highestRow = $sheet->getHighestDataRow();
         $highestColumn = $sheet->getHighestDataColumn();
-        $highestColumnIndex = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($highestColumn);
+        $highestColumnIndex = Coordinate::columnIndexFromString($highestColumn);
 
         $headers = [];
+        $hasCodeHeader = false;
+
         for ($col = 1; $col <= $highestColumnIndex; $col++) {
-            $cellValue = $sheet->getCellByColumnAndRow($col, 1)?->getValue();
-            $headers[$col] = $this->normalizeHeaderValue($cellValue);
+            $columnLetter = Coordinate::stringFromColumnIndex($col);
+            $cellValue = $sheet->getCell($columnLetter . '1')?->getValue();
+            $header = $this->normalizeHeaderValue($cellValue);
+            if ($header === 'code') {
+                $hasCodeHeader = true;
+            }
+            $headers[$col] = $header;
         }
 
-        for ($row = 2; $row <= $highestRow; $row++) {
+        $dataStartRow = 2;
+        if (! $hasCodeHeader) {
+            $headers = $this->buildCodeOnlyHeaders($highestColumnIndex, 1);
+            $dataStartRow = 1;
+        }
+
+        for ($row = $dataStartRow; $row <= $highestRow; $row++) {
             $values = [];
             $rowHasData = false;
 
@@ -265,7 +296,8 @@ class WifiCodeBatchProcessor
                     continue;
                 }
 
-                $cell = $sheet->getCellByColumnAndRow($col, $row);
+                $columnLetter = Coordinate::stringFromColumnIndex($col);
+                $cell = $sheet->getCell($columnLetter . (string) $row);
                 $value = $cell?->getValue();
 
                 if (is_numeric($value) && $header === 'expiry_date' && $cell?->getDataType() === 'n') {
@@ -401,5 +433,47 @@ class WifiCodeBatchProcessor
             ->value();
 
         return hash('sha256', $normalized);
+    }
+
+    /**
+     * @param array<int|string, string|null> $headers
+     */
+    protected function headersContainCodeColumn(array $headers): bool
+    {
+        foreach ($headers as $header) {
+            if ($header === 'code') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    protected function buildCodeOnlyHeaders(int $columnCount, int $startIndex = 0): array
+    {
+        $columnCount = max(1, $columnCount);
+        $headers = [];
+
+        for ($i = 0; $i < $columnCount; $i++) {
+            $index = $startIndex + $i;
+            $headers[$index] = $i === 0 ? 'code' : null;
+        }
+
+        return $headers;
+    }
+
+    protected function rowHasAnyValue(array $row): bool
+    {
+        foreach ($row as $value) {
+            if ($value === null) {
+                continue;
+            }
+            if (is_string($value) && trim($value) === '') {
+                continue;
+            }
+            return true;
+        }
+
+        return false;
     }
 }

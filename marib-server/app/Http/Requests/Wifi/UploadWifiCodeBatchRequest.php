@@ -21,12 +21,33 @@ class UploadWifiCodeBatchRequest extends FormRequest
     {
         return [
             'label' => ['required', 'string', 'max:255'],
-            'source_file' => ['required', 'file', 'mimes:csv,txt,xlsx'],
+            'source_file' => ['required', 'file', 'mimes:csv,txt,xls,xlsx'],
             'notes' => ['nullable', 'string'],
             'total_codes' => ['nullable', 'integer', 'min:1', 'max:50000'],
             'available_codes' => ['nullable', 'integer', 'min:0'],
             'meta' => ['nullable', 'array'],
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if ($this->hasFile('file') && ! $this->hasFile('source_file')) {
+            $this->files->set('source_file', $this->file('file'));
+        }
+
+        if (! $this->filled('label') && $this->hasFile('source_file')) {
+            $this->merge([
+                'label' => $this->file('source_file')->getClientOriginalName(),
+            ]);
+        }
+
+        $meta = $this->input('meta');
+        if (is_string($meta)) {
+            $decodedMeta = json_decode($meta, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decodedMeta)) {
+                $this->merge(['meta' => $decodedMeta]);
+            }
+        }
     }
 
     public function withValidator(Validator $validator): void

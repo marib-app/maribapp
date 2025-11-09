@@ -4,6 +4,7 @@ namespace App\Models\Wifi;
 
 use App\Enums\Wifi\WifiCodeBatchStatus;
 use App\Models\User;
+use App\Models\Wifi\WifiNetwork;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -20,6 +21,7 @@ class WifiCodeBatch extends Model
      */
     protected $fillable = [
         'wifi_plan_id',
+        'wifi_network_id',
         'uploaded_by',
         'label',
         'source_filename',
@@ -46,6 +48,11 @@ class WifiCodeBatch extends Model
     public function plan(): BelongsTo
     {
         return $this->belongsTo(WifiPlan::class, 'wifi_plan_id');
+    }
+
+    public function network(): BelongsTo
+    {
+        return $this->belongsTo(WifiNetwork::class, 'wifi_network_id');
     }
 
     public function uploader(): BelongsTo

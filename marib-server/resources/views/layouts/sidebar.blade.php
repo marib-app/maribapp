@@ -290,6 +290,16 @@
 
         @endcanany
 
+        @can('seller-store-settings-manage')
+          <div class="sidebar-new-title">{{ __('Stores & Merchants') }}</div>
+          <li class="sidebar-item">
+            <a href="{{ route('merchant-stores.index') }}" class="sidebar-link">
+              <i class="bi bi-shop-window"></i>
+              <span class="menu-item">متاجر التجار</span>
+            </a>
+          </li>
+        @endcan
+
 
         {{-- =========================
              Home Screen Management

@@ -13,6 +13,7 @@ class WifiRepository {
   static const int _maxBatchUploadSizeBytes = 5 * 1024 * 1024;
   static const List<String> _allowedBatchExtensions = <String>[
     'csv',
+    'txt',
     'xls',
     'xlsx'
   ];
@@ -139,6 +140,11 @@ class WifiRepository {
     MultipartFile? logo,
     MultipartFile? loginScreenshot,
   }) async {
+    final Map<String, dynamic> metaPayload = <String, dynamic>{
+      'source': 'mobile_app',
+      'request_type': 'owner_network',
+    };
+
     final Map<String, dynamic> formPayload = <String, dynamic>{
       'name': name,
       if (slug != null && slug.isNotEmpty) 'slug': slug,
@@ -149,9 +155,20 @@ class WifiRepository {
       if (description != null && description.isNotEmpty)
         'description': description,
       if (notes != null && notes.isNotEmpty) 'notes': notes,
-      'meta[source]': 'mobile_app',
-      'meta[request_type]': 'owner_network',
-    };
+      'meta': metaPayload,
+    }..removeWhere((key, value) {
+        if (value == null) return true;
+        if (value is String && value.trim().isEmpty) {
+          return true;
+        }
+        if (value is Iterable && value.isEmpty) {
+          return true;
+        }
+        if (value is Map && value.isEmpty) {
+          return true;
+        }
+        return false;
+      });
 
     for (int i = 0; i < currencies.length; i++) {
       final String normalized = currencies[i].trim();
@@ -428,47 +445,58 @@ class WifiRepository {
     required int networkId,
     required String name,
     String? description,
-    required int durationMinutes,
+    required int durationDays,
     required num price,
     required String currency,
-    int? dataAllowanceMb,
-    int? validityDays,
+    double? dataCapGb,
+    bool? isUnlimited,
     num? speedMbps,
     num? commissionRateOverride,
     bool? isActive,
     Map<String, dynamic>? meta,
+    String? notes,
   }) async {
     if (networkId <= 0) {
       throw ArgumentError.value(networkId, 'networkId', 'must be positive');
     }
-    if (durationMinutes <= 0) {
+    if (durationDays <= 0) {
       throw ArgumentError.value(
-        durationMinutes,
-        'durationMinutes',
+        durationDays,
+        'durationDays',
         'must be greater than zero',
       );
     }
     if (price <= 0) {
       throw ArgumentError.value(price, 'price', 'must be greater than zero');
     }
+
+    final Map<String, dynamic> metaPayload = <String, dynamic>{
+      if (meta != null) ...meta,
+      if (speedMbps != null) 'speed_mbps': speedMbps,
+      if (commissionRateOverride != null)
+        'commission_rate_override': commissionRateOverride,
+      if (isActive != null) 'is_active_requested': isActive,
+    }..removeWhere((key, value) => value == null);
+
     final Map<String, dynamic> payload = <String, dynamic>{
       'name': name,
       'description': description,
-      'duration_minutes': durationMinutes,
-      'data_allowance_mb': dataAllowanceMb,
-      'validity_days': validityDays,
-      'speed_mbps': speedMbps,
+      'duration_days': durationDays,
+      'data_cap_gb': dataCapGb,
+      'is_unlimited': isUnlimited,
       'price': price,
       'currency': currency,
-      'commission_rate_override': commissionRateOverride,
-      'is_active': isActive,
-      'meta': meta,
+      'notes': notes,
+      if (metaPayload.isNotEmpty) 'meta': metaPayload,
     }..removeWhere((key, value) {
         if (value == null) return true;
         if (value is String && value.trim().isEmpty) {
           return true;
         }
         if (value is Iterable && value.isEmpty) {
+          return true;
+        }
+        if (value is Map && value.isEmpty) {
           return true;
         }
         if (value is num && value.isNaN) {
@@ -490,13 +518,18 @@ class WifiRepository {
 
   Future<void> createPlanBatch({
     required int planId,
-    required MultipartFile file,
+    required MultipartFile sourceFile,
+    required String label,
+    String? notes,
+    int? totalCodes,
+    int? availableCodes,
+    Map<String, dynamic>? meta,
   }) async {
     if (planId <= 0) {
       throw ArgumentError.value(planId, 'planId', 'must be positive');
     }
 
-    final String fileName = file.filename ?? '';
+    final String fileName = sourceFile.filename ?? '';
     final String extension =
         fileName.contains('.') ? fileName.split('.').last.toLowerCase() : '';
     if (!_allowedBatchExtensions.contains(extension)) {
@@ -506,16 +539,62 @@ class WifiRepository {
       );
     }
 
-    final int? length = file.length;
+    final int? length = sourceFile.length;
     if (length != null && length > _maxBatchUploadSizeBytes) {
       throw ArgumentError(
         'Voucher file exceeds the maximum size of 5 MB.',
       );
     }
 
+    final Map<String, dynamic> metaPayload = <String, dynamic>{
+      if (meta != null) ...meta,
+    }..removeWhere((key, value) => value == null);
+
+    final Map<String, dynamic> payload = <String, dynamic>{
+      'label': label,
+      'source_file': sourceFile,
+      'notes': notes,
+      'total_codes': totalCodes,
+      'available_codes': availableCodes,
+      if (metaPayload.isNotEmpty) 'meta': metaPayload,
+    }..removeWhere((key, value) {
+        if (value == null) return true;
+        if (value is String && value.trim().isEmpty) {
+          return true;
+        }
+        if (value is Iterable && value.isEmpty) {
+          return true;
+        }
+        if (value is Map && value.isEmpty) {
+          return true;
+        }
+        return false;
+      });
+
     await Api.post(
       url: Api.ownerWifiPlanBatchesApi(planId),
-      parameter: <String, dynamic>{'file': file},
+      parameter: FormData.fromMap(
+        payload,
+        ListFormat.multiCompatible,
+      ),
+    );
+  }
+
+  Future<void> deleteOwnerNetwork(int networkId) async {
+    if (networkId <= 0) {
+      throw ArgumentError.value(networkId, 'networkId', 'must be positive');
+    }
+    await Api.delete(
+      url: Api.ownerWifiNetworkApi(networkId),
+    );
+  }
+
+  Future<void> deleteNetworkPlan(int planId) async {
+    if (planId <= 0) {
+      throw ArgumentError.value(planId, 'planId', 'must be positive');
+    }
+    await Api.delete(
+      url: Api.ownerWifiPlanApi(planId),
     );
   }
 

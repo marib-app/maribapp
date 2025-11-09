@@ -683,8 +683,12 @@ class Api {
 
   static String ownerWifiNetworksApi = "wifi/owner/networks";
 
+  static String ownerWifiNetworkApi(int id) => "wifi/owner/networks/$id";
+
   static String ownerWifiNetworkPlansApi(int id) =>
       "wifi/owner/networks/$id/plans";
+
+  static String ownerWifiPlanApi(int planId) => "wifi/owner/plans/$planId";
 
   static String ownerWifiPlanBatchesApi(int planId) =>
       "wifi/owner/plans/$planId/batches";

@@ -61,6 +61,6 @@ class AuditLogger
             $payload['actor'] = $actorContext;
         }
 
-        TelemetryService::record($event, $payload);
+        app(TelemetryService::class)->record($event, $payload);
     }
 }

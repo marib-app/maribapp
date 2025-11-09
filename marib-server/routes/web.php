@@ -29,6 +29,7 @@ use App\Http\Controllers\SeoSettingController;
 use App\Http\Controllers\OrderPaymentGroupController;
 use App\Http\Controllers\MetalRateController;
 use App\Http\Controllers\StoreDashboardController;
+use App\Http\Controllers\MerchantStoreController;
 use App\Http\Controllers\Store\StoreManualPaymentController;
 use App\Http\Controllers\Store\StoreOrderController;
 use App\Http\Controllers\Store\StoreSettingsController as MerchantStoreSettingsController;
@@ -72,6 +73,10 @@ use App\Http\Controllers\ServiceRequestController;
 use App\Http\Controllers\DelegateController;
 use App\Http\Controllers\DepartmentAdvertiserController;
 use App\Http\Controllers\DepartmentSettingsController;
+use App\Http\Controllers\Wifi\AdminModerationController;
+use App\Http\Controllers\Wifi\OwnerBatchController as WifiOwnerBatchController;
+use App\Http\Controllers\Wifi\OwnerNetworkController as WifiOwnerNetworkController;
+use App\Http\Controllers\Wifi\OwnerPlanController as WifiOwnerPlanController;
 use App\Http\Controllers\WifiCabinController;
 
 /*
@@ -212,6 +217,29 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
 
 
 
+    });
+
+    Route::group([
+        'prefix' => 'wifi-cabin/api',
+        'as' => 'wifi.api.',
+        'middleware' => ['auth', 'permission:wifi-cabin-manage'],
+    ], static function () {
+        Route::get('networks', [AdminModerationController::class, 'networks']);
+        Route::patch('networks/{network}/status', [AdminModerationController::class, 'updateNetworkStatus'])->whereNumber('network');
+
+        Route::get('reports', [AdminModerationController::class, 'reports']);
+        Route::patch('reports/{report}', [AdminModerationController::class, 'updateReport'])->whereNumber('report');
+
+        Route::prefix('owner')->group(function (): void {
+            Route::get('networks/{network}', [WifiOwnerNetworkController::class, 'show'])->whereNumber('network');
+            Route::patch('networks/{network}/commission', [WifiOwnerNetworkController::class, 'setCommission'])->whereNumber('network');
+            Route::get('networks/{network}/stats', [WifiOwnerNetworkController::class, 'stats'])->whereNumber('network');
+
+            Route::get('networks/{network}/plans', [WifiOwnerPlanController::class, 'index'])->whereNumber('network');
+            Route::get('plans/{plan}', [WifiOwnerPlanController::class, 'show'])->whereNumber('plan');
+
+            Route::patch('batches/{batch}/status', [WifiOwnerBatchController::class, 'updateStatus'])->whereNumber('batch');
+        });
     });
 
 
@@ -720,6 +748,16 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
         Route::delete('/gateways/{storeGateway}', [StoreSettingsController::class, 'destroyGateway'])->name('gateways.destroy');
         Route::patch('/gateways/{storeGateway}/toggle', [StoreSettingsController::class, 'toggleGateway'])->name('gateways.toggle');
         Route::patch('/gateway-accounts/{storeGatewayAccount}/toggle', [StoreSettingsController::class, 'toggleGatewayAccount'])->name('gateway-accounts.toggle');
+    });
+
+    Route::group([
+        'prefix' => 'merchant-stores',
+        'as' => 'merchant-stores.',
+        'middleware' => ['permission:seller-store-settings-manage'],
+    ], static function () {
+        Route::get('/', [MerchantStoreController::class, 'index'])->name('index');
+        Route::get('/{store}', [MerchantStoreController::class, 'show'])->name('show');
+        Route::post('/{store}/status', [MerchantStoreController::class, 'updateStatus'])->name('status');
     });
 
     Route::group([

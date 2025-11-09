@@ -6,6 +6,7 @@ use App\Enums\Wifi\WifiCodeBatchStatus;
 use App\Enums\Wifi\WifiCodeStatus;
 use App\Enums\Wifi\WifiNetworkStatus;
 use App\Enums\Wifi\WifiPlanStatus;
+use App\Http\Requests\Wifi\UpdateWifiCodeBatchStatusRequest;
 use App\Models\Wifi\WifiCode;
 use App\Models\Wifi\WifiCodeBatch;
 use App\Models\Wifi\WifiNetwork;
@@ -15,6 +16,7 @@ use App\Services\Wifi\WifiCodeBatchProcessor;
 use App\Services\Wifi\WifiOperationalService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Contracts\View\View as ViewContract;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -151,7 +153,8 @@ class WifiCabinController extends Controller
             'stats' => $stats,
             'alertsConfig' => $alertsConfig,
             'search' => $search,
-            'adminApiBaseUrl' => url('/api/wifi/admin'),
+            'adminApiBaseUrl' => url('/wifi-cabin/api'),
+            'ownerApiBaseUrl' => url('/wifi-cabin/api/owner'),
         ]);
     }
 
@@ -389,4 +392,5 @@ class WifiCabinController extends Controller
             $plan->save();
         }
     }
+
 }

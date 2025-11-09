@@ -1,4 +1,4 @@
-import { $, axios, config, toasts } from './core';
+import { $, axios, config, ensureSanctumCsrfCookie, toasts } from './core';
 import { parseErrorMessage } from './utils';
 
 function refreshNetworkBatches(networkId) {
@@ -9,7 +9,8 @@ function refreshNetworkBatches(networkId) {
 
     table.bootstrapTable('removeAll');
 
-    axios.get(`${config.ownerBaseUrl}/networks/${networkId}`)
+    ensureSanctumCsrfCookie()
+        .then(() => axios.get(`${config.ownerBaseUrl}/networks/${networkId}`))
         .then((response) => {
             const resource = response.data?.data ?? response.data;
             const batches = (resource?.plans ?? []).flatMap((plan) => {
@@ -34,7 +35,8 @@ function hydrateBatchesTable() {
         return;
     }
 
-    axios.get(`${config.baseUrl}/reports`, { params: { per_page: 5 } })
+    ensureSanctumCsrfCookie()
+        .then(() => axios.get(`${config.baseUrl}/reports`, { params: { per_page: 5 } }))
         .then(() => {
             // Placeholder request so axios permissions stay active until dedicated batches API is ready.
         })

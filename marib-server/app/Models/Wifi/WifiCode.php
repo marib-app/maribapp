@@ -21,6 +21,7 @@ class WifiCode extends Model
      */
     protected $fillable = [
         'wifi_plan_id',
+        'wifi_network_id',
         'wifi_code_batch_id',
         'status',
         'code_encrypted',
@@ -58,6 +59,11 @@ class WifiCode extends Model
     public function plan(): BelongsTo
     {
         return $this->belongsTo(WifiPlan::class, 'wifi_plan_id');
+    }
+
+    public function network(): BelongsTo
+    {
+        return $this->belongsTo(WifiNetwork::class, 'wifi_network_id');
     }
 
     public function batch(): BelongsTo
@@ -140,3 +146,11 @@ class WifiCode extends Model
         );
     }
 }
+
+
+
+
+
+
+
+

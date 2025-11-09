@@ -6,6 +6,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:marib/data/model/wifi/wifi_network.dart';
 import 'package:marib/data/wifi/wifi_repository.dart';
 import 'package:marib/utils/api.dart';
 import 'package:marib/ui/theme/theme.dart';
@@ -225,7 +226,7 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
       type: FileType.custom,
       withData: true,
       allowMultiple: false,
-      allowedExtensions: const <String>['csv', 'xls', 'xlsx'],
+      allowedExtensions: const <String>['csv', 'txt', 'xls', 'xlsx'],
     );
     if (result == null || result.files.isEmpty) {
       return;
@@ -284,6 +285,75 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
     throw StateError('ملف غير صالح، يرجى إعادة رفعه.');
   }
 
+  String _formatApiHttpError(ApiHttpException error) {
+    final dynamic payload = error.payload;
+    final String baseMessage = (payload?['message'] ??
+            error.errorMessage ??
+            error.toString())
+        .toString();
+    final dynamic errors = payload?['errors'];
+    if (errors is Map) {
+      final List<String> details = [];
+      errors.forEach((_, value) {
+        if (value is Iterable) {
+          details.addAll(value.map((item) => item?.toString() ?? ''));
+        } else if (value != null) {
+          details.add(value.toString());
+        }
+      });
+      final String detailMessage = details
+          .map((entry) => entry.trim())
+          .where((entry) => entry.isNotEmpty)
+          .toSet()
+          .join('\n');
+      if (detailMessage.isNotEmpty) {
+        return '$baseMessage\n$detailMessage';
+      }
+    }
+    return baseMessage;
+  }
+
+  Future<void> _rollbackIncompleteSubmission({
+    WifiNetwork? network,
+    List<int> planIds = const <int>[],
+  }) async {
+    if (network == null) {
+      return;
+    }
+    try {
+      await _repository.deleteOwnerNetwork(network.id);
+      _log('Rolled back network ${network.id} after submission failure.');
+      return;
+    } catch (error) {
+      _log('Failed to delete network ${network.id}: $error');
+    }
+
+    final Set<int> uniquePlanIds = planIds.where((id) => id > 0).toSet();
+    for (final int planId in uniquePlanIds) {
+      try {
+        await _repository.deleteNetworkPlan(planId);
+        _log('Deleted plan $planId during rollback.');
+      } catch (planError) {
+        _log('Failed to delete plan $planId: $planError');
+      }
+    }
+  }
+
+  String _buildBatchLabel(_PlanFormData plan, int index) {
+    final String planName =
+        plan.name.isNotEmpty ? plan.name : 'Plan ${index + 1}';
+    final String fallbackBatch = 'Batch ${index + 1}';
+    final String? rawFileName = plan.voucherFile?.name;
+    final String fileName = rawFileName?.trim() ?? '';
+    final String composedLabel = fileName.isEmpty
+        ? '$planName - $fallbackBatch'
+        : '$planName - $fileName';
+    if (composedLabel.length <= 255) {
+      return composedLabel;
+    }
+    return composedLabel.substring(0, 255);
+  }
+
   Future<void> _submitRequest() async {
     if (!_validateAllSteps()) {
       _log('Submission blocked because validation failed.');
@@ -313,6 +383,9 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
       _isSubmitting = true;
     });
 
+    WifiNetwork? createdNetwork;
+    final List<int> createdPlanIds = <int>[];
+
     try {
       final MultipartFile? logo =
           _logoFile != null ? await _multipartFromXFile(_logoFile!) : null;
@@ -320,7 +393,7 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
           ? await _multipartFromXFile(_loginScreenshotFile!)
           : null;
 
-      final network = await _repository.submitOwnerNetworkRequest(
+      final WifiNetwork network = await _repository.submitOwnerNetworkRequest(
         name: _nameController.text.trim(),
         slug: _slugController.text.trim(),
         description: _descriptionController.text.trim().isEmpty
@@ -333,19 +406,21 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
         logo: logo,
         loginScreenshot: loginScreenshot,
       );
+      createdNetwork = network;
 
-      for (final _PlanFormData plan in _plans) {
-        final int durationDays =
+      for (int index = 0; index < _plans.length; index++) {
+        final _PlanFormData plan = _plans[index];
+        final int parsedDuration =
             int.tryParse(plan.durationController.text.trim()) ?? 1;
-        final int durationMinutes = durationDays * 24 * 60;
+        final int durationDays = parsedDuration.clamp(1, 365).toInt();
 
         final double? dataValue =
             double.tryParse(plan.dataController.text.trim());
-        int? dataAllowanceMb;
+        double? dataCapGb;
         if (dataValue != null) {
-          dataAllowanceMb = plan.dataUnit == _DataUnit.gb
-              ? (dataValue * 1024).round()
-              : dataValue.round();
+          final double normalized =
+              plan.dataUnit == _DataUnit.gb ? dataValue : (dataValue / 1024);
+          dataCapGb = double.parse(normalized.toStringAsFixed(4));
         }
 
         final num price = num.tryParse(plan.priceController.text.trim()) ?? 0;
@@ -355,20 +430,29 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
           networkId: network.id,
           name: plan.name,
           description: plan.description,
-          durationMinutes: durationMinutes,
+          durationDays: durationDays,
           price: price,
           currency: 'YER',
-          dataAllowanceMb: dataAllowanceMb,
-          validityDays: durationDays,
+          dataCapGb: dataCapGb,
           speedMbps: speed,
           isActive: false,
+          meta: <String, dynamic>{
+            'source': 'mobile_app',
+            'form_step': 'wifi_cabin_onboarding',
+          },
         );
+        createdPlanIds.add(createdPlan.id);
 
         final MultipartFile batchFile =
             await _multipartFromPlatformFile(plan.voucherFile!);
         await _repository.createPlanBatch(
           planId: createdPlan.id,
-          file: batchFile,
+          sourceFile: batchFile,
+          label: _buildBatchLabel(plan, index),
+          meta: <String, dynamic>{
+            'source': 'mobile_app',
+            'origin_file': plan.voucherFile?.name,
+          },
         );
       }
       _log(
@@ -401,13 +485,14 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
       }
       _log('اكتملت العملية وتمت العودة لقائمة الشبكات.');
       Navigator.pop(context, true);
-    } catch (error) {
+    } catch (error, _) {
+      await _rollbackIncompleteSubmission(
+        network: createdNetwork,
+        planIds: createdPlanIds,
+      );
       if (!mounted) return;
       if (error is ApiHttpException) {
-        final String serverMessage = (error.payload?['message'] ??
-                error.errorMessage ??
-                error.toString())
-            .toString();
+        final String serverMessage = _formatApiHttpError(error);
         final dynamic serverErrors = error.payload?['errors'];
         _log(
           'فشل إرسال الطلب [${error.statusCode}] $serverMessage '
@@ -415,7 +500,7 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
         );
         _showMessage(serverMessage);
       } else {
-        _log('فشل إرسال الطلب: ${error.toString()}');
+        _log('Failed to submit request: ${error.toString()}');
         _showMessage(ErrorFilter.check(error).error.toString());
       }
     } finally {

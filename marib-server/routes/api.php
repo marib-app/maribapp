@@ -88,6 +88,7 @@ Route::group(['middleware' => ['auth:sanctum']], static function () {
         Route::post('networks', [OwnerNetworkController::class, 'store']);
         Route::get('networks/{network}', [OwnerNetworkController::class, 'show'])->whereNumber('network');
         Route::match(['put', 'patch'], 'networks/{network}', [OwnerNetworkController::class, 'update'])->whereNumber('network');
+        Route::delete('networks/{network}', [OwnerNetworkController::class, 'destroy'])->whereNumber('network');
         Route::patch('networks/{network}/commission', [OwnerNetworkController::class, 'setCommission'])->whereNumber('network');
         Route::patch('networks/{network}/availability', [OwnerNetworkController::class, 'toggleAvailability'])->whereNumber('network');
         Route::get('networks/{network}/stats', [OwnerNetworkController::class, 'stats'])->whereNumber('network');
@@ -106,7 +107,7 @@ Route::group(['middleware' => ['auth:sanctum']], static function () {
         Route::delete('batches/{batch}', [OwnerBatchController::class, 'destroy'])->whereNumber('batch');
     });
 
-    Route::middleware('permission:wifi.admin')
+    Route::middleware('permission:wifi.admin|wifi-cabin-manage')
         ->prefix('wifi/admin')
         ->group(function (): void {
             Route::get('networks', [AdminModerationController::class, 'networks']);

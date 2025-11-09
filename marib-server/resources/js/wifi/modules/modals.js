@@ -1,5 +1,20 @@
-import { axios, batchStatusLabels, bootstrap, config, statusLabels, toasts } from './core';
+﻿import { axios, batchStatusLabels, bootstrap, config, state, statusLabels, toasts } from './core';
 import { formatDateValue, formatNumber, parseErrorMessage } from './utils';
+
+const CONTACT_TYPE_LABELS = {
+    owner: 'مالك الشبكة',
+    manager: 'المسؤول',
+    phone: 'الهاتف',
+    whatsapp: 'واتساب',
+    email: 'البريد الإلكتروني',
+    support: 'قناة الدعم',
+};
+
+const LOADING_TEXT = 'جارٍ تحميل البيانات...';
+const NO_CONTACTS_TEXT = 'لا تتوفر بيانات اتصال.';
+const NO_DETAILS_TEXT = 'لا توجد تفاصيل إضافية.';
+const NO_PLANS_TEXT = 'لا توجد خطط بعد.';
+const NO_BATCHES_TEXT = 'لا توجد دفعات مرتبطة.';
 
 function openModal(element) {
     if (!element) {
@@ -18,42 +33,36 @@ function closeModal(element) {
     modalInstance?.hide();
 }
 
+function setText(modal, selector, value, formatter = (val) => (val ?? '—')) {
+    const element = modal.querySelector(selector);
+    if (element) {
+        element.textContent = formatter(value);
+    }
+}
+
 function updateNetworkModalDetails(row) {
     const modal = document.querySelector('[data-wifi-network-modal]');
     if (!modal || !row) {
         return;
     }
 
-    const setText = (selector, value) => {
-        const element = modal.querySelector(selector);
-        if (!element) {
-            return;
-        }
-        element.textContent = value ?? '—';
-    };
-
-    setText('[data-network-name]', row.name ?? '—');
-    const subtitleMessage = 'عرض تفاصيل الشبكة والعملاء المتاحة.';
-    setText('[data-network-subtitle]', row.slug ? `#${row.slug}` : subtitleMessage);
-    setText('[data-network-status-label]', statusLabels[row.status] ?? row.status ?? '—');
+    setText(modal, '[data-network-name]', row.name);
+    setText(modal, '[data-network-subtitle]', row.slug ? `#${row.slug}` : NO_DETAILS_TEXT);
+    setText(modal, '[data-network-status-label]', statusLabels[row.status] ?? row.status ?? '—');
 
     const commission = row.commission_rate ?? row.settings?.commission_rate ?? row.meta?.commission_rate;
-    setText('[data-network-commission]', commission !== undefined && commission !== null ? `${formatNumber(commission * 100)}%` : '—');
+    setText(modal, '[data-network-commission]', commission, (value) => (
+        value !== undefined && value !== null ? `${formatNumber(value * 100)}%` : '—'
+    ));
 
-    setText('[data-network-address]', row.address ?? row.meta?.address ?? '—');
-    setText('[data-network-owner]', row.owner_name ?? row.meta?.owner?.name ?? '—');
-    setText('[data-network-owner-email]', row.owner_email ?? row.meta?.owner?.email ?? '—');
-    setText('[data-network-owner-phone]', row.owner_phone ?? row.meta?.owner?.mobile ?? '—');
-    setText('[data-network-support-channel]', row.meta?.support_channel ?? '—');
-    setText('[data-network-active-plans]', formatNumber(row.active_plans ?? 0));
-
-    const codes = row.codes_summary ?? {};
-    setText('[data-network-total-codes]', formatNumber(codes.total ?? 0));
-    setText('[data-network-available-codes]', formatNumber(codes.available ?? 0));
-    setText('[data-network-sold-codes]', formatNumber(codes.sold ?? 0));
+    setText(modal, '[data-network-address]', row.address ?? row.meta?.address);
+    setText(modal, '[data-network-owner]', row.owner_name ?? row.meta?.owner?.name);
+    setText(modal, '[data-network-owner-email]', row.owner_email ?? row.meta?.owner?.email);
+    setText(modal, '[data-network-owner-phone]', row.owner_phone ?? row.meta?.owner?.mobile);
+    setText(modal, '[data-network-support-channel]', row.meta?.support_channel);
 
     const updatedAt = row.updated_at ?? row.created_at;
-    setText('[data-network-updated-at]', formatDateValue(updatedAt));
+    setText(modal, '[data-network-updated-at]', formatDateValue(updatedAt));
 
     const logo = modal.querySelector('[data-network-logo]');
     if (logo) {
@@ -61,34 +70,51 @@ function updateNetworkModalDetails(row) {
         logo.setAttribute('src', row.icon_path ?? row.meta?.icon_path ?? fallback);
     }
 
-    const mapWrapper = modal.querySelector('[data-network-map]');
-    if (mapWrapper) {
-        mapWrapper.innerHTML = '';
-        const latitude = row.location?.latitude ?? row.meta?.location?.latitude;
-        const longitude = row.location?.longitude ?? row.meta?.location?.longitude;
-        if (latitude !== undefined && latitude !== null && longitude !== undefined && longitude !== null) {
-            const iframe = document.createElement('iframe');
-            const encoded = encodeURIComponent(`${latitude},${longitude}`);
-            iframe.src = `https://maps.google.com/maps?q=${encoded}&z=14&output=embed`;
-            iframe.loading = 'lazy';
-            mapWrapper.appendChild(iframe);
-        } else {
-            const placeholder = document.createElement('div');
-            placeholder.className = 'wifi-network-map__placeholder';
-            placeholder.innerHTML = '<i class="bi bi-geo-alt-fill"></i><span>لم يتم توفير موقع جغرافي بعد.</span>';
-            mapWrapper.appendChild(placeholder);
-        }
-    }
+    applyNetworkStats(modal, row.statistics, row);
+    renderContactList(modal, row.contacts);
 
     const plansContainer = modal.querySelector('[data-network-plans-container]');
     if (plansContainer) {
-        plansContainer.innerHTML = '<p class="text-muted mb-0">يتم تحميل البيانات...</p>';
+        plansContainer.innerHTML = `<p class="text-muted mb-0">${LOADING_TEXT}</p>`;
     }
 
     const batchesContainer = modal.querySelector('[data-network-batches-container]');
     if (batchesContainer) {
-        batchesContainer.innerHTML = '<p class="text-muted mb-0">يتم تحميل البيانات...</p>';
+        batchesContainer.innerHTML = `<p class="text-muted mb-0">${LOADING_TEXT}</p>`;
     }
+}
+
+function applyNetworkStats(modal, statistics = {}, fallbackRow = {}) {
+    const plansStats = statistics.plans ?? {};
+    const codesStats = statistics.codes ?? fallbackRow.codes_summary ?? {};
+
+    setText(modal, '[data-network-active-plans]', plansStats.active ?? fallbackRow.active_plans_count ?? 0, formatNumber);
+    setText(modal, '[data-network-total-codes]', codesStats.total ?? 0, formatNumber);
+    setText(modal, '[data-network-available-codes]', codesStats.available ?? 0, formatNumber);
+    setText(modal, '[data-network-sold-codes]', codesStats.sold ?? 0, formatNumber);
+}
+
+function renderContactList(modal, contacts) {
+    const list = modal.querySelector('[data-network-contacts]');
+    if (!list) {
+        return;
+    }
+
+    const contactItems = Array.isArray(contacts) ? contacts : [];
+    if (contactItems.length === 0) {
+        list.innerHTML = `<li class="wifi-network-info__item text-muted">${NO_CONTACTS_TEXT}</li>`;
+        return;
+    }
+
+    list.innerHTML = '';
+    contactItems.forEach((contact) => {
+        const item = document.createElement('li');
+        item.className = 'wifi-network-info__item';
+        const label = CONTACT_TYPE_LABELS[contact.type] ?? contact.type ?? '—';
+        const value = contact.value ?? '—';
+        item.innerHTML = `<span>${label}</span><span>${value}</span>`;
+        list.appendChild(item);
+    });
 }
 
 async function loadNetworkAssociations(networkId) {
@@ -105,10 +131,13 @@ async function loadNetworkAssociations(networkId) {
     try {
         const response = await axios.get(`${config.ownerBaseUrl}/networks/${networkId}`);
         const resource = response.data?.data ?? response.data;
-        const plans = resource?.plans ?? [];
+        const merged = { ...state.selectedNetwork, ...resource };
+        state.selectedNetwork = merged;
+        updateNetworkModalDetails(merged);
 
+        const plans = resource?.plans ?? [];
         if (plansContainer) {
-            if (Array.isArray(plans) && plans.length > 0) {
+            if (plans.length > 0) {
                 plansContainer.innerHTML = '';
                 plans.forEach((plan) => {
                     const item = document.createElement('div');
@@ -126,15 +155,15 @@ async function loadNetworkAssociations(networkId) {
                     plansContainer.appendChild(item);
                 });
             } else {
-                plansContainer.innerHTML = '<p class="text-muted mb-0">لا توجد خطط متاحة لهذه الشبكة.</p>';
+                plansContainer.innerHTML = `<p class="text-muted mb-0">${NO_PLANS_TEXT}</p>`;
             }
         }
 
         if (plansCountBadge) {
-            plansCountBadge.textContent = String(plans?.length ?? 0);
+            plansCountBadge.textContent = String(plans.length);
         }
 
-        const batches = plans?.flatMap((plan) => plan.code_batches ?? []) ?? [];
+        const batches = plans.flatMap((plan) => plan.code_batches ?? []);
         if (batchesContainer) {
             if (batches.length > 0) {
                 batchesContainer.innerHTML = '';
@@ -154,16 +183,42 @@ async function loadNetworkAssociations(networkId) {
                     batchesContainer.appendChild(item);
                 });
             } else {
-                batchesContainer.innerHTML = '<p class="text-muted mb-0">لا توجد دفعات مرتبطة بالشبكة.</p>';
+                batchesContainer.innerHTML = `<p class="text-muted mb-0">${NO_BATCHES_TEXT}</p>`;
             }
         }
 
         if (batchesCountBadge) {
             batchesCountBadge.textContent = String(batches.length);
         }
+
+        const statistics = buildStatisticsFromPlans(plans, batches);
+        applyNetworkStats(modal, statistics, merged);
+        renderContactList(modal, resource.contacts ?? merged.contacts);
     } catch (error) {
         toasts.error(parseErrorMessage(error));
     }
+}
+
+function buildStatisticsFromPlans(plans, batches) {
+    const activePlans = plans.filter((plan) => (plan.status ?? '').toLowerCase() === 'active').length;
+    const totalPlans = plans.length;
+
+    const codes = batches.reduce((acc, batch) => {
+        const total = Number(batch.total_codes ?? 0);
+        const available = Number(batch.available_codes ?? 0);
+        acc.total += total;
+        acc.available += available;
+        acc.sold += Math.max(total - available, 0);
+        return acc;
+    }, { total: 0, available: 0, sold: 0 });
+
+    return {
+        plans: {
+            active: activePlans,
+            total: totalPlans,
+        },
+        codes,
+    };
 }
 
 export { closeModal, loadNetworkAssociations, openModal, updateNetworkModalDetails };

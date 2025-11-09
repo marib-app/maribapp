@@ -37,4 +37,9 @@ class HiveKeys {
 
   static String themeBox = "themeBox";
   static String currentTheme = "currentTheme";
+
+  static const String merchantOnboardingInProgress =
+      "merchantOnboardingInProgress";
+  static const String merchantOnboardingDraft = "merchantOnboardingDraft";
+  static const String merchantOnboardingStep = "merchantOnboardingStep";
 }

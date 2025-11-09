@@ -29,6 +29,8 @@ class StoreWifiNetworkRequest extends FormRequest
             'login_screenshot_path' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'notes' => ['nullable', 'string'],
+            'logo' => ['nullable', 'image', 'max:5120'],
+            'login_screenshot' => ['nullable', 'image', 'max:5120'],
             'currencies' => ['nullable', 'array'],
             'currencies.*' => ['string', 'size:3'],
             'contacts' => ['nullable', 'array'],
@@ -50,6 +52,13 @@ class StoreWifiNetworkRequest extends FormRequest
                     ->values()
                     ->all(),
             ]);
+        }
+
+        if (is_string($this->input('meta'))) {
+            $decodedMeta = json_decode($this->input('meta'), true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decodedMeta)) {
+                $this->merge(['meta' => $decodedMeta]);
+            }
         }
     }
 }

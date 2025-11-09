@@ -261,6 +261,25 @@ class SplashController extends ChangeNotifier {
     }
 
     if (HiveUtils.isUserAuthenticated()) {
+      if (HiveUtils.isMerchantOnboardingInProgress()) {
+        final Map<String, dynamic>? draft =
+            HiveUtils.getMerchantOnboardingDraft();
+        final int resumeStep = HiveUtils.getMerchantOnboardingStep();
+        final Map<String, dynamic> args = {
+          'resumeFromStep': resumeStep,
+        };
+        if (draft != null && draft.isNotEmpty) {
+          args['signupDraft'] = draft;
+        }
+        _go(() {
+          Navigator.of(context).pushReplacementNamed(
+            Routes.merchantOnboarding,
+            arguments: args,
+          );
+        });
+        return;
+      }
+
       final user = HiveUtils.getUserDetails();
       final missingName = (user.name == null || user.name == "");
       final missingEmail = (user.email == null || user.email == "");

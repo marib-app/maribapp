@@ -9,6 +9,28 @@ const config = {
     csrf: document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '',
 };
 
+axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+axios.defaults.withCredentials = true;
+if (config.csrf) {
+    axios.defaults.headers.common['X-CSRF-TOKEN'] = config.csrf;
+}
+
+let sanctumCsrfCookiePromise = null;
+
+function ensureSanctumCsrfCookie() {
+    if (sanctumCsrfCookiePromise) {
+        return sanctumCsrfCookiePromise;
+    }
+    sanctumCsrfCookiePromise = axios.get('/sanctum/csrf-cookie', {
+        withCredentials: true,
+    }).catch((error) => {
+        console.error('Failed to initialize Sanctum CSRF cookie', error);
+        sanctumCsrfCookiePromise = null;
+        throw error;
+    });
+    return sanctumCsrfCookiePromise;
+}
+
 const state = {
     filters: {
         networkSearch: '',
@@ -91,4 +113,5 @@ export {
     statusBadgeClasses,
     statusLabels,
     toasts,
+    ensureSanctumCsrfCookie,
 };

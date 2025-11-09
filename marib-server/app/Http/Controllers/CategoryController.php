@@ -325,6 +325,23 @@ class CategoryController extends Controller {
                 if ($subcategory->subcategories_count > 1) {
                     $operate .= BootstrapTableService::button('fa fa-list-ol',route('sub.category.order.change',$subcategory->id),['btn-secondary']);
                 }
+
+                if (Auth::user()->can('category-create')) {
+                    $operate .= BootstrapTableService::button(
+                        'fas fa-clone',
+                        '#',
+                        ['btn-outline-primary', 'js-open-clone-category'],
+                        [
+                            'title' => __('نسخ الفئة'),
+                            'data-category-id' => $subcategory->id,
+                            'data-category-name' => $subcategory->name,
+                            'data-options-url' => route('category.clone-targets', $subcategory->id),
+                            'data-action-url' => route('category.clone', $subcategory->id),
+                        ],
+                        __('نسخ')
+                    );
+                }
+
                 $subcategory->operate = $operate;
                 return $subcategory;
             });

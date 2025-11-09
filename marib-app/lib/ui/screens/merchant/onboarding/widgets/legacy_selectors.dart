@@ -18,9 +18,7 @@ Future<Set<int>?> showLegacyCategoriesPalette({
   required List<CategoryModel> categories,
   required Set<int> initialSelection,
 }) {
-  final valid = categories
-      .where((e) => e.id != null && (e.name?.trim().isNotEmpty ?? false))
-      .toList()
+  final List<CategoryModel> valid = categories
     ..sort((a, b) => (a.name ?? '').compareTo(b.name ?? ''));
 
   return showModalBottomSheet<Set<int>>(
@@ -29,178 +27,190 @@ Future<Set<int>?> showLegacyCategoriesPalette({
     backgroundColor: Colors.transparent,
     builder: (_) {
       final Set<int> localSelection = {...initialSelection};
+
       return StatefulBuilder(
         builder: (context, modalSetState) {
           return DraggableScrollableSheet(
             expand: false,
             initialChildSize: 0.9,
             builder: (_, scrollController) {
-          return Container(
-            decoration: BoxDecoration(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            child: SafeArea(
-              top: false,
-              child: Column(
-                children: [
-                  const SizedBox(height: 12),
-                  Container(
-                    width: 48,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).dividerColor,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
+              return Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(20),
                   ),
-                  const SizedBox(height: 12),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'حدد الأقسام المناسبة لنشاطك التجاري',
-                          style: TextStyle(
-                            fontSize: context.font.large,
-                            fontWeight: FontWeight.w700,
-                          ),
+                ),
+                child: SafeArea(
+                  top: false,
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 12),
+                      Container(
+                        width: 48,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).dividerColor,
+                          borderRadius: BorderRadius.circular(4),
                         ),
-                        const SizedBox(height: 6),
-                        Text(
-                          'يمكنك اختيار أكثر من قسم، وسيُستخدم ذلك لعرض منتجات متجرك للمستخدمين.',
-                          style: TextStyle(
-                            fontSize: context.font.small,
-                            color: Theme.of(context).textTheme.bodySmall?.color,
-                          ),
+                      ),
+                      const SizedBox(height: 12),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'حدد الأقسام المناسبة لنشاطك التجاري',
+                              style: TextStyle(
+                                fontSize: context.font.large,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'يمكنك اختيار أكثر من قسم وسيُستخدم ذلك لعرض متجرك للمستخدمين بدقة.',
+                              style: TextStyle(
+                                fontSize: context.font.small,
+                                color: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.color,
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Expanded(
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        final crossAxisCount =
-                            constraints.maxWidth > 520 ? 3 : 2;
-                        return GridView.builder(
-                          controller: scrollController,
-                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
-                          gridDelegate:
-                              SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: crossAxisCount,
-                            crossAxisSpacing: 12,
-                            mainAxisSpacing: 12,
-                            childAspectRatio: 2.4,
-                          ),
-                          itemCount: valid.length,
-                          itemBuilder: (_, index) {
-                            final category = valid[index];
-                            final id = category.id!;
-                            final bool selected =
-                                localSelection.contains(id);
-                            final Color accent =
-                                Theme.of(context).colorScheme.primary;
-                            final Color borderColor = selected
-                                ? accent
-                                : Theme.of(context).dividerColor;
-                            final Color fillColor = selected
-                                ? accent.withOpacity(0.12)
-                                : Theme.of(context).cardColor;
-                            return Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(16),
-                                onTap: () {
-                                  modalSetState(() {
-                                    if (selected) {
-                                      localSelection.remove(id);
-                                    } else {
-                                      localSelection.add(id);
-                                    }
-                                  });
-                                },
-                                child: AnimatedContainer(
-                                  duration:
-                                      const Duration(milliseconds: 200),
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
+                      ),
+                      const SizedBox(height: 12),
+                      Expanded(
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            final crossAxisCount =
+                                constraints.maxWidth > 520 ? 3 : 2;
+                            return GridView.builder(
+                              controller: scrollController,
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 20),
+                              gridDelegate:
+                                  SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: crossAxisCount,
+                                crossAxisSpacing: 12,
+                                mainAxisSpacing: 12,
+                                childAspectRatio: 2.4,
+                              ),
+                              itemCount: valid.length,
+                              itemBuilder: (_, index) {
+                                final category = valid[index];
+                                final int id = category.id!;
+                                final bool selected =
+                                    localSelection.contains(id);
+                                final Color accent =
+                                    Theme.of(context).colorScheme.primary;
+                                final Color borderColor = selected
+                                    ? accent
+                                    : Theme.of(context).dividerColor;
+                                final Color fillColor = selected
+                                    ? accent.withOpacity(0.12)
+                                    : Theme.of(context).cardColor;
+
+                                return Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
                                     borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(color: borderColor),
-                                    color: fillColor,
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Icon(
-                                        selected
-                                            ? Icons.check_circle_rounded
-                                            : Icons.category_outlined,
-                                        color: selected
-                                            ? accent
-                                            : Theme.of(context)
-                                                .textTheme
-                                                .bodyMedium
-                                                ?.color,
+                                    onTap: () {
+                                      modalSetState(() {
+                                        if (selected) {
+                                          localSelection.remove(id);
+                                        } else {
+                                          localSelection.add(id);
+                                        }
+                                      });
+                                    },
+                                    child: AnimatedContainer(
+                                      duration:
+                                          const Duration(milliseconds: 200),
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(16),
+                                        border: Border.all(color: borderColor),
+                                        color: fillColor,
                                       ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        category.name ?? 'بدون اسم',
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                          color: Theme.of(context)
-                                              .textTheme
-                                              .bodyLarge
-                                              ?.color,
-                                        ),
-                                      ),
-                                      if ((category.subcategoriesCount ??
-                                              0) >
-                                          0)
-                                        Padding(
-                                          padding:
-                                              const EdgeInsets.only(top: 4),
-                                          child: Text(
-                                            '${category.subcategoriesCount} فئات فرعية',
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Icon(
+                                            selected
+                                                ? Icons.check_circle_rounded
+                                                : Icons.category_outlined,
+                                            color: selected
+                                                ? accent
+                                                : Theme.of(context)
+                                                    .textTheme
+                                                    .bodyMedium
+                                                    ?.color,
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            category.name ?? 'بدون اسم',
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
                                             style: TextStyle(
-                                              fontSize:
-                                                  context.font.smaller,
+                                              fontWeight: FontWeight.w600,
                                               color: Theme.of(context)
                                                   .textTheme
-                                                  .bodySmall
+                                                  .bodyLarge
                                                   ?.color,
                                             ),
                                           ),
-                                        ),
-                                    ],
+                                          if ((category
+                                                      .subcategoriesCount ??
+                                                  0) >
+                                              0)
+                                            Padding(
+                                              padding: const EdgeInsets.only(
+                                                  top: 4),
+                                              child: Text(
+                                                '${category.subcategoriesCount} فئات فرعية',
+                                                style: TextStyle(
+                                                  fontSize:
+                                                      context.font.smaller,
+                                                  color: Theme.of(context)
+                                                      .textTheme
+                                                      .bodySmall
+                                                      ?.color,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ),
+                                );
+                              },
                             );
                           },
-                        );
-                      },
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: () => Navigator.pop(context, localSelection),
-                        icon: const Icon(Icons.check),
-                        label:
-                            Text('اعتماد الاختيارات • ${localSelection.length}'),
+                        ),
                       ),
-                    ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () =>
+                                Navigator.pop(context, localSelection),
+                            icon: const Icon(Icons.check),
+                            label: Text(
+                              'اعتماد الاختيارات • ${localSelection.length}',
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           );
         },
       );
@@ -212,12 +222,12 @@ Future<Map<int, LegacyDayHours>?> showLegacyWorkingHoursSheet({
   required BuildContext context,
   required Map<int, LegacyDayHours> initialDays,
 }) {
-  final data = {
+  final Map<int, LegacyDayHours> data = {
     for (final entry in initialDays.entries) entry.key: entry.value.copy(),
   };
 
-  TimeOfDay? _defaultFrom;
-  TimeOfDay? _defaultTo;
+  TimeOfDay? defaultFrom;
+  TimeOfDay? defaultTo;
 
   return showModalBottomSheet<Map<int, LegacyDayHours>>(
     context: context,
@@ -234,20 +244,21 @@ Future<Map<int, LegacyDayHours>?> showLegacyWorkingHoursSheet({
           child: StatefulBuilder(
             builder: (context, setState) {
               Future<void> pickDayTime(int index, bool isFrom) async {
-                final current = isFrom ? data[index]!.from : data[index]!.to;
+                final TimeOfDay? current =
+                    isFrom ? data[index]!.from : data[index]!.to;
                 final TimeOfDay? picked = await _pickTime(
                   context,
-                  current ?? (isFrom ? _defaultFrom : _defaultTo),
+                  current ?? (isFrom ? defaultFrom : defaultTo),
                   isOpening: isFrom,
                 );
                 if (picked != null) {
                   setState(() {
                     if (isFrom) {
                       data[index]!.from = picked;
-                      _defaultFrom ??= picked;
+                      defaultFrom ??= picked;
                     } else {
                       data[index]!.to = picked;
-                      _defaultTo ??= picked;
+                      defaultTo ??= picked;
                     }
                   });
                 }
@@ -315,7 +326,8 @@ Future<Map<int, LegacyDayHours>?> showLegacyWorkingHoursSheet({
                                         ? () => pickDayTime(index, true)
                                         : null,
                                     child: Text(
-                                        entry.from?.format(context) ?? '--:--'),
+                                      entry.from?.format(context) ?? '--:--',
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(width: 12),
@@ -325,7 +337,8 @@ Future<Map<int, LegacyDayHours>?> showLegacyWorkingHoursSheet({
                                         ? () => pickDayTime(index, false)
                                         : null,
                                     child: Text(
-                                        entry.to?.format(context) ?? '--:--'),
+                                      entry.to?.format(context) ?? '--:--',
+                                    ),
                                   ),
                                 ),
                               ],

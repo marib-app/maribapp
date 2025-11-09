@@ -87,6 +87,30 @@ class LoginScreenState extends State<SignUpMainScreen> {
   bool isFromGoogleLogin = false;
   Map<String, dynamic>? googleData;
   bool _isSubmitting = false;
+
+  Map<String, dynamic> _buildMerchantDraft(Map<String, dynamic> payload) {
+    final draft = Map<String, dynamic>.from(payload);
+    draft.remove('password');
+    return draft;
+  }
+
+  Future<void> _startMerchantOnboarding(Map<String, dynamic> draft) async {
+    await HiveUtils.beginMerchantOnboardingSession(
+      initialStep: 0,
+      draft: draft,
+    );
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!context.mounted) return;
+      Navigator.of(context, rootNavigator: true).pushNamed(
+        Routes.merchantOnboarding,
+        arguments: {
+          'signupDraft': draft,
+          'resumeFromStep': 0,
+        },
+      );
+    });
+  }
   StreamSubscription<AuthenticationState>? _authenticationSubscription;
   VoidCallback? _loginStateListenerDisposer;
 
@@ -346,6 +370,11 @@ class LoginScreenState extends State<SignUpMainScreen> {
 
 
         }
+        if (selectedAccountType == "3") {
+          final draft = _buildMerchantDraft(payload);
+          await _startMerchantOnboarding(draft);
+          return;
+        }
       } else {
         HelperUtils.showSnackBarMessage(
             context,
@@ -589,6 +618,12 @@ class LoginScreenState extends State<SignUpMainScreen> {
 
         context.read<UserDetailsCubit>().fill(HiveUtils.getUserDetails());
 
+        if (selectedAccountType == "3") {
+          final draft = _buildMerchantDraft(basePayload);
+          await _startMerchantOnboarding(draft);
+          return;
+        }
+
         Navigator.pushNamed(
           context,
           Routes.otp,
@@ -768,4 +803,5 @@ class LoginScreenState extends State<SignUpMainScreen> {
       ),
     );
   }
+
 }

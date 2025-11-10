@@ -135,9 +135,9 @@
 
                             <!-- Icon -->
                             <div class="col-md-12">
-                                <div class="col-md-12 form-group mandatory">
-                                    <label for="image" class="form-label">{{ __('Icon ') }}</label>
-                                    <input type="file" name="image" id="image" class="form-control" data-parsley-required="true" accept=".jpg, .jpeg, .png, .svg">
+                                <div class="col-md-12 form-group">
+                                    <label for="image" class="form-label">{{ __('Icon') }}</label>
+                                    <input type="file" name="image" id="image" class="form-control" accept=".jpg, .jpeg, .png, .svg, .webp">
                                     {{ __("(use 256 x 256 size for better view)") }}
                                     <div class="img_error" style="color:#DC3545;"></div>
                                 </div>

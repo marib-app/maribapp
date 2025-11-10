@@ -116,7 +116,7 @@ class CustomFieldController extends Controller {
         $validator = Validator::make($request->all(), [
             'name'       => 'required',
             'type'       => 'required|in:number,textbox,fileinput,radio,dropdown,checkbox,color',
-            'image'      => 'required',
+            'image'      => 'nullable|image|mimes:jpg,jpeg,png,svg,webp|max:2048',
             'required'   => 'required',
             'status'     => 'required',
             'values'     => [Rule::requiredIf(in_array($type, $optionTypes, true)), 'nullable', 'array'],
@@ -141,9 +141,13 @@ class CustomFieldController extends Controller {
 
         try {
             DB::beginTransaction();
+            $imagePath = null;
+            if ($request->hasFile('image')) {
+                $imagePath = FileService::compressAndUpload($request->file('image'), $this->uploadFolder);
+            }
             $data = [
-                ...$request->all(),
-                'image' => $request->hasFile('image') ? FileService::compressAndUpload($request->file('image'), $this->uploadFolder) : '',
+                ...$request->except('image'),
+                'image' => $imagePath,
             ];
 
             // للأنواع القائمة على خيارات فقط نخزّن values كـ JSON
@@ -256,7 +260,7 @@ class CustomFieldController extends Controller {
         $validator = Validator::make($request->all(), [
             'name'         => 'required',
             'type'         => 'required|in:number,textbox,fileinput,radio,dropdown,checkbox,color',
-            'image'        => 'nullable',
+            'image'        => 'nullable|image|mimes:jpg,jpeg,png,svg,webp|max:2048',
             'required'     => 'required',
             'status'       => 'required',
             'values'       => [Rule::requiredIf(in_array($type, $optionTypes, true)), 'nullable', 'array'],
@@ -280,7 +284,7 @@ class CustomFieldController extends Controller {
         try {
             DB::beginTransaction();
             $custom_fields = CustomField::with('custom_field_category')->findOrFail($id);
-            $data = $request->all();
+            $data = $request->except('image');
 
             if ($request->hasFile('image')) {
                 $data['image'] = FileService::compressAndReplace($request->file('image'), $this->uploadFolder, $custom_fields->getRawOriginal('image'));

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:marib/app/routes.dart';
 import 'package:marib/data/cubits/system/fetch_system_settings_cubit.dart';
@@ -450,7 +451,16 @@ class _MerchantOnboardingScreenState extends State<MerchantOnboardingScreen> {
   }
 
   String _mapSubmissionError(Object error) {
+    if (kDebugMode) {
+      debugPrint('Store onboarding submission failed: $error');
+    }
+
     if (error is ApiHttpException) {
+      if (kDebugMode) {
+        debugPrint(
+          'Status: ${error.statusCode} payload: ${jsonEncode(error.payload)}',
+        );
+      }
       if (error.statusCode == 401) {
         return 'انتهت جلسة الدخول الخاصة بك، يرجى إعادة تسجيل الدخول ثم المحاولة مرة أخرى.';
       }

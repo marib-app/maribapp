@@ -143,7 +143,7 @@
                             <div class="col-md-12">
                                 <div class="col-md-12 form-group">
                                     <label for="image" class="form-label">{{ __('Image') }}</label>
-                                    <input type="file" name="image" id="image" class="form-control" accept=".jpg, .jpeg, .png, .svg">
+                                    <input type="file" name="image" id="image" class="form-control" accept=".jpg, .jpeg, .png, .svg, .webp">
                                     <small>{{ __("(use 256 x 256 size for better view)") }}</small>
                                 </div>
                                 <div class="field_img mt-2">

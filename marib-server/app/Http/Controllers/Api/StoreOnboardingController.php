@@ -9,6 +9,7 @@ use App\Services\ResponseService;
 use App\Services\Store\StoreRegistrationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 class StoreOnboardingController extends Controller
@@ -39,6 +40,11 @@ class StoreOnboardingController extends Controller
 
     public function store(StoreOnboardingRequest $request): JsonResponse
     {
+        \Log::info('store_onboarding.request', [
+            'user_id' => $request->user()?->id,
+            'payload' => $request->all(),
+        ]);
+
         try {
             $store = $this->storeRegistrationService->register(
                 $request->user(),
@@ -49,6 +55,14 @@ class StoreOnboardingController extends Controller
                 'message' => __('تم حفظ بيانات المتجر بنجاح.'),
                 'data' => new StoreResource($store),
             ], 201);
+        } catch (ValidationException $exception) {
+            \Log::warning('store_onboarding.validation_failed', [
+                'user_id' => $request->user()?->id,
+                'errors' => $exception->errors(),
+                'payload' => $request->all(),
+            ]);
+
+            throw $exception;
         } catch (Throwable $throwable) {
             ResponseService::logErrorResponse($throwable, 'StoreOnboardingController -> store');
 

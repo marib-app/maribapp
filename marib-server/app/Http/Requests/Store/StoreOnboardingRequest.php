@@ -25,6 +25,11 @@ class StoreOnboardingRequest extends FormRequest
      */
     public function rules(): array
     {
+        Log::info('store_onboarding.request_payload', [
+            'user_id' => $this->user()?->id,
+            'payload' => $this->all(),
+        ]);
+
         $store = $this->user()?->stores()->latest()->first();
 
         return [

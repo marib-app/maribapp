@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:developer' as developer;
 
 import 'package:dio/dio.dart';
@@ -287,10 +287,9 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
 
   String _formatApiHttpError(ApiHttpException error) {
     final dynamic payload = error.payload;
-    final String baseMessage = (payload?['message'] ??
-            error.errorMessage ??
-            error.toString())
-        .toString();
+    final String baseMessage =
+        (payload?['message'] ?? error.errorMessage ?? error.toString())
+            .toString();
     final dynamic errors = payload?['errors'];
     if (errors is Map) {
       final List<String> details = [];
@@ -540,6 +539,13 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
     });
   }
 
+  void _regenerateSlug() {
+    setState(() {
+      _slugManuallyEdited = false;
+      _handleNameChanged();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -569,14 +575,15 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
                     children: [
                       if (_currentStep > 0)
                         Expanded(
-                          child: OutlinedButton(
+                          child: OutlinedButton.icon(
                             onPressed: () => _switchStep(_currentStep - 1),
-                            child: const Text('السابق'),
+                            icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                            label: const Text('السابق'),
                           ),
                         ),
                       if (_currentStep > 0) const SizedBox(width: 12),
                       Expanded(
-                        child: ElevatedButton(
+                        child: FilledButton.icon(
                           onPressed: () {
                             if (_currentStep == 0) {
                               final valid = _validateNetworkStep();
@@ -590,7 +597,10 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
                               }
                             }
                           },
-                          child: Text(
+                          icon: Icon(_currentStep == 0
+                              ? Icons.arrow_forward_ios_rounded
+                              : Icons.send_rounded),
+                          label: Text(
                             _currentStep == 0 ? 'التالي' : 'إرسال الطلب',
                           ),
                         ),
@@ -618,6 +628,7 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
   }
 
   Widget _buildNetworkForm(BuildContext context) {
+    final colors = context.color;
     final textTheme = Theme.of(context).textTheme;
 
     return Form(
@@ -625,120 +636,195 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'بيانات الشبكة',
-            style: textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 12),
-          _LabeledField(
-            label: 'اسم الشبكة',
-            child: TextFormField(
-              controller: _nameController,
-              textInputAction: TextInputAction.next,
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'يرجى إدخال اسم الشبكة';
-                }
-                return null;
-              },
-            ),
-          ),
-          const SizedBox(height: 12),
-          const SizedBox(height: 12),
-          _FilePickerTile(
-            title: 'شعار الشبكة',
-            description: 'يظهر داخل التطبيق واللوحة.',
-            fileName: _logoFile != null ? p.basename(_logoFile!.path) : null,
-            onPick: _pickLogo,
-          ),
-          const SizedBox(height: 12),
-          _FilePickerTile(
-            title: 'صورة شاشة تسجيل الدخول',
-            description: 'لمساعدة فريق المراجعة على ضبط معلومات الشبكة.',
-            fileName: _loginScreenshotFile != null
-                ? p.basename(_loginScreenshotFile!.path)
-                : null,
-            onPick: _pickLoginScreenshot,
-          ),
-          const SizedBox(height: 16),
-          TextFormField(
-            controller: _descriptionController,
-            decoration: const InputDecoration(
-              labelText: 'وصف الشبكة (اختياري)',
-            ),
-            maxLines: 3,
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _notesController,
-            decoration: const InputDecoration(
-              labelText: 'ملاحظات إضافية (اختياري)',
-            ),
-            maxLines: 3,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'أرقام التواصل',
-            style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 8),
-          Column(
-            children: _contactFields.asMap().entries.map((entry) {
-              final index = entry.key;
-              final _ContactFieldData contact = entry.value;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: 2,
-                      child: DropdownButtonFormField<ContactType>(
-                        value: contact.type,
-                        decoration: const InputDecoration(labelText: 'النوع'),
-                        items: ContactType.values
-                            .map(
-                              (type) => DropdownMenuItem<ContactType>(
-                                value: type,
-                                child: Text(type.label),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (value) {
-                          if (value != null) {
-                            setState(() => contact.type = value);
-                          }
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      flex: 4,
-                      child: TextFormField(
-                        controller: contact.controller,
-                        decoration: const InputDecoration(
-                          labelText: 'رقم الهاتف / واتساب',
-                        ),
-                        keyboardType: TextInputType.phone,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      onPressed: () => _removeContactField(index),
-                      icon: const Icon(Icons.remove_circle_outline),
-                    ),
-                  ],
+          _SectionCard(
+            icon: Icons.wifi_tethering_rounded,
+            title: 'تعريف الشبكة',
+            subtitle:
+                'املأ الحقول التالية كما تظهر للمستخدمين داخل التطبيق ولوحة wifi Cabin.',
+            child: Column(
+              children: [
+                TextFormField(
+                  controller: _nameController,
+                  textInputAction: TextInputAction.next,
+                  decoration: _wifiInputDecoration(
+                    context,
+                    'اسم الشبكة',
+                    hint: 'مثال: شبكة النور',
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'يرجى إدخال اسم الشبكة';
+                    }
+                    return null;
+                  },
                 ),
-              );
-            }).toList(),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _slugController,
+                  textDirection: TextDirection.ltr,
+                  decoration: _wifiInputDecoration(
+                    context,
+                    'معرّف الشبكة (Slug)',
+                    hint: 'alnoor-network',
+                    helper:
+                        'يظهر في الروابط داخل اللوحة ويمكنك تعديله متى شئت.',
+                    suffixIcon: IconButton(
+                      onPressed: _regenerateSlug,
+                      tooltip: 'توليد تلقائي من الاسم',
+                      icon: const Icon(Icons.refresh_rounded),
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'يرجى إدخال معرف صالح';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                _FilePickerTile(
+                  title: 'شعار الشبكة',
+                  description: 'يظهر داخل التطبيق واللوحة.',
+                  fileName:
+                      _logoFile != null ? p.basename(_logoFile!.path) : null,
+                  onPick: _pickLogo,
+                ),
+                const SizedBox(height: 12),
+                _FilePickerTile(
+                  title: 'صورة شاشة تسجيل الدخول',
+                  description:
+                      'تساعد فريق المراجعة على مطابقة البيانات والتأكد من الهوية.',
+                  fileName: _loginScreenshotFile != null
+                      ? p.basename(_loginScreenshotFile!.path)
+                      : null,
+                  onPick: _pickLoginScreenshot,
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _descriptionController,
+                  minLines: 3,
+                  maxLines: 4,
+                  decoration: _wifiInputDecoration(
+                    context,
+                    'وصف الشبكة (اختياري)',
+                    hint: 'نبذة قصيرة عن التغطية، نوع العميل، أو مزايا الشبكة.',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _notesController,
+                  minLines: 2,
+                  maxLines: 4,
+                  decoration: _wifiInputDecoration(
+                    context,
+                    'ملاحظات إضافية لفريق Marib (اختياري)',
+                  ),
+                ),
+              ],
+            ),
           ),
-          Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: TextButton.icon(
-              onPressed: _addContactField,
-              icon: const Icon(Icons.add),
-              label: const Text('إضافة رقم آخر'),
+          const SizedBox(height: 18),
+          _SectionCard(
+            icon: Icons.support_agent_rounded,
+            title: 'قنوات التواصل',
+            subtitle:
+                'أضف أرقام الهاتف أو واتساب التي ينبغي التواصل معها أثناء المراجعة والتشغيل.',
+            child: Column(
+              children: [
+                ..._contactFields.asMap().entries.map((entry) {
+                  final int index = entry.key;
+                  final _ContactFieldData contact = entry.value;
+                  final bool canRemove = _contactFields.length > 1;
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(18),
+                      color: colors.secondaryColor,
+                      border:
+                          Border.all(color: colors.borderColor.withOpacity(.3)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              'قناة تواصل ${index + 1}',
+                              style: textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const Spacer(),
+                            if (canRemove)
+                              IconButton(
+                                tooltip: 'إزالة هذه القناة',
+                                onPressed: () => _removeContactField(index),
+                                icon: Icon(
+                                  Icons.close_rounded,
+                                  color: colors.error,
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        DropdownButtonFormField<ContactType>(
+                          value: contact.type,
+                          decoration: _wifiInputDecoration(
+                            context,
+                            'النوع',
+                          ),
+                          items: ContactType.values
+                              .map(
+                                (type) => DropdownMenuItem<ContactType>(
+                                  value: type,
+                                  child: Text(type.label),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (value) {
+                            if (value != null) {
+                              setState(() => contact.type = value);
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: contact.controller,
+                          decoration: _wifiInputDecoration(
+                            context,
+                            'رقم الهاتف / واتساب',
+                            hint: '7xxxxxxxx',
+                          ),
+                          keyboardType: TextInputType.phone,
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: OutlinedButton.icon(
+                    onPressed: _addContactField,
+                    icon: const Icon(Icons.add_rounded),
+                    label: const Text('إضافة قناة جديدة'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          _SectionCard(
+            icon: Icons.info_rounded,
+            title: 'تلميح سريع',
+            subtitle:
+                'سيتم مراجعة الطلب خلال 24 ساعة عمل وسيتم التواصل معك عبر القنوات المضافة.',
+            child: Text(
+              'احرص على أن تكون الملفات واضحة وحديثة وأن تحتوي حقول التواصل على أرقام نشطة لإتمام الربط بسرعة.',
+              style: textTheme.bodyMedium?.copyWith(
+                color: colors.textLightColor,
+                height: 1.5,
+              ),
             ),
           ),
         ],
@@ -747,6 +833,7 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
   }
 
   Widget _buildPlansForm(BuildContext context) {
+    final colors = context.color;
     final textTheme = Theme.of(context).textTheme;
 
     return Form(
@@ -754,15 +841,34 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'فئات الكروت',
-            style: textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
+          _SectionCard(
+            icon: Icons.layers_rounded,
+            title: 'فئات الأكواد',
+            subtitle:
+                'أضف كل فئة مع سعرها وسعتها ثم أرفق ملف الأكواد المخصص لها.',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'يمكنك إنشاء عدة فئات (يومي، أسبوعي، شهري...) وسيتم مراجعتها وترتيبها تلقائياً.',
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: colors.textLightColor,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'يجب أن تكون الملفات بصيغة CSV أو XLSX وتحتوي على الأكواد الخاصة بالفئة فقط.',
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colors.textLightColor,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 18),
           ..._plans.asMap().entries.map((entry) {
-            final index = entry.key;
+            final int index = entry.key;
             final _PlanFormData data = entry.value;
             return _PlanCard(
               plan: data,
@@ -773,10 +879,38 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
           }),
           Align(
             alignment: AlignmentDirectional.centerStart,
-            child: TextButton.icon(
+            child: OutlinedButton.icon(
               onPressed: _addPlan,
-              icon: const Icon(Icons.add_circle_outline),
-              label: const Text('إضافة فئة أخرى'),
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('إضافة فئة جديدة'),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              color: colors.secondaryColor,
+              border: Border.all(color: colors.borderColor.withOpacity(.3)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.lightbulb_rounded,
+                    color: colors.territoryColor.withOpacity(.9)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'في حال اختلاف السعر أو مدة الصلاحية، قم بإنشاء فئة مستقلة. '
+                    'يساعد ذلك المستخدمين على اختيار الخطة المناسبة بسهولة.',
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: colors.textLightColor,
+                      height: 1.5,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -797,69 +931,178 @@ class _StepHeader extends StatelessWidget {
 
     const steps = ['بيانات الشبكة', 'فئات الكروت'];
 
-    return Row(
-      children: List.generate(steps.length, (index) {
-        final bool isActive = index == currentStep;
-        return Expanded(
-          child: Column(
-            children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: isActive
-                    ? colors.territoryColor
-                    : colors.borderColor.withOpacity(.4),
-                child: Text(
-                  '${index + 1}',
-                  style: TextStyle(
-                    color: isActive ? Colors.white : colors.textDefaultColor,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                steps[index],
-                style: textTheme.bodyMedium?.copyWith(
-                  fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        );
-      }),
-    );
-  }
-}
-
-class _LabeledField extends StatelessWidget {
-  const _LabeledField({
-    required this.label,
-    required this.child,
-    this.helper,
-  });
-
-  final String label;
-  final String? helper;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          label,
-          style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+          'تقدم الطلب',
+          style: textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+            color: colors.textDefaultColor,
+          ),
         ),
-        if (helper != null) ...[
-          const SizedBox(height: 4),
-          Text(helper!, style: textTheme.bodySmall),
-        ],
         const SizedBox(height: 8),
-        child,
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            color: colors.secondaryColor,
+            border: Border.all(color: colors.borderColor.withOpacity(.4)),
+          ),
+          child: Row(
+            children: List.generate(steps.length, (index) {
+              final bool isActive = index == currentStep;
+              final bool isCompleted = index < currentStep;
+              final Color stepColor = isActive || isCompleted
+                  ? colors.territoryColor
+                  : colors.borderColor.withOpacity(.5);
+              return Expanded(
+                child: Column(
+                  children: [
+                    SizedBox(
+                      height: 28,
+                      child: Row(
+                        children: [
+                          if (index != 0)
+                            Expanded(
+                              child: Container(
+                                height: 2,
+                                color: index <= currentStep
+                                    ? colors.territoryColor
+                                    : colors.borderColor.withOpacity(.3),
+                              ),
+                            ),
+                          CircleAvatar(
+                            radius: 16,
+                            backgroundColor: stepColor,
+                            child: isCompleted
+                                ? const Icon(
+                                    Icons.check_rounded,
+                                    color: Colors.white,
+                                    size: 18,
+                                  )
+                                : Text(
+                                    '${index + 1}',
+                                    style: TextStyle(
+                                      color: isActive
+                                          ? Colors.white
+                                          : colors.textDefaultColor,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                          ),
+                          if (index != steps.length - 1)
+                            Expanded(
+                              child: Container(
+                                height: 2,
+                                color: index < currentStep
+                                    ? colors.territoryColor
+                                    : colors.borderColor.withOpacity(.3),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      steps[index],
+                      textAlign: TextAlign.center,
+                      style: textTheme.bodyMedium?.copyWith(
+                        fontWeight:
+                            isActive ? FontWeight.w700 : FontWeight.w500,
+                        color: isActive
+                            ? colors.textDefaultColor
+                            : colors.textLightColor,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ),
+        ),
       ],
+    );
+  }
+}
+
+class _SectionCard extends StatelessWidget {
+  const _SectionCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.child,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.color;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        color: colors.secondaryColor,
+        border: Border.all(color: colors.borderColor.withOpacity(.35)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(.02),
+            blurRadius: 20,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                height: 46,
+                width: 46,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: colors.territoryColor.withOpacity(.12),
+                ),
+                child: Icon(icon, color: colors.territoryColor),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: colors.textDefaultColor,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: colors.textLightColor,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          child,
+        ],
+      ),
     );
   }
 }
@@ -884,35 +1127,49 @@ class _PlanCard extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: colors.borderColor.withOpacity(.3)),
+        borderRadius: BorderRadius.circular(22),
+        color: colors.secondaryColor,
+        border: Border.all(color: colors.borderColor.withOpacity(.35)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Expanded(
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(40),
+                  color: colors.territoryColor.withOpacity(.12),
+                ),
                 child: Text(
                   'فئة ${index + 1}',
-                  style: textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+                  style: textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: colors.territoryColor,
                   ),
                 ),
               ),
+              const Spacer(),
               if (onRemove != null)
                 IconButton(
                   onPressed: onRemove,
+                  tooltip: 'حذف الفئة',
                   icon: Icon(Icons.delete_outline, color: colors.error),
                 ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           TextFormField(
             controller: plan.nameController,
-            decoration: const InputDecoration(labelText: 'اسم الفئة'),
+            decoration: _wifiInputDecoration(
+              context,
+              'اسم الفئة',
+              hint: 'مثال: باقة يومية أو باقة 5 جيجا',
+            ),
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
                 return 'أدخل اسم الفئة';
@@ -923,8 +1180,10 @@ class _PlanCard extends StatelessWidget {
           const SizedBox(height: 12),
           TextFormField(
             controller: plan.priceController,
-            decoration: const InputDecoration(
-              labelText: 'السعر (ريال يمني)',
+            decoration: _wifiInputDecoration(
+              context,
+              'السعر',
+              hint: 'بالريال اليمني',
             ),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             validator: (value) {
@@ -941,8 +1200,10 @@ class _PlanCard extends StatelessWidget {
               Expanded(
                 child: TextFormField(
                   controller: plan.durationController,
-                  decoration:
-                      const InputDecoration(labelText: 'مدة الصلاحية (أيام)'),
+                  decoration: _wifiInputDecoration(
+                    context,
+                    'مدة الصلاحية (أيام)',
+                  ),
                   keyboardType: TextInputType.number,
                   validator: (value) {
                     final int? parsed = int.tryParse(value ?? '');
@@ -957,8 +1218,9 @@ class _PlanCard extends StatelessWidget {
               Expanded(
                 child: TextFormField(
                   controller: plan.speedController,
-                  decoration: const InputDecoration(
-                    labelText: 'السرعة (Mbps) - اختياري',
+                  decoration: _wifiInputDecoration(
+                    context,
+                    'السرعة (Mbps) - اختياري',
                   ),
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
@@ -972,8 +1234,9 @@ class _PlanCard extends StatelessWidget {
               Expanded(
                 child: TextFormField(
                   controller: plan.dataController,
-                  decoration: const InputDecoration(
-                    labelText: 'سعة البيانات',
+                  decoration: _wifiInputDecoration(
+                    context,
+                    'سعة البيانات',
                   ),
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
@@ -983,7 +1246,7 @@ class _PlanCard extends StatelessWidget {
               Expanded(
                 child: DropdownButtonFormField<_DataUnit>(
                   value: plan.dataUnit,
-                  decoration: const InputDecoration(labelText: 'الوحدة'),
+                  decoration: _wifiInputDecoration(context, 'الوحدة'),
                   onChanged: (value) {
                     if (value != null) {
                       plan.dataUnit = value;
@@ -1004,10 +1267,13 @@ class _PlanCard extends StatelessWidget {
           const SizedBox(height: 12),
           TextFormField(
             controller: plan.descriptionController,
-            decoration: const InputDecoration(
-              labelText: 'وصف الفئة (اختياري)',
+            minLines: 2,
+            maxLines: 3,
+            decoration: _wifiInputDecoration(
+              context,
+              'وصف الفئة (اختياري)',
+              hint: 'اكتب تفاصيل إضافية تساعد المستخدم على اختيار الخطة.',
             ),
-            maxLines: 2,
           ),
           const SizedBox(height: 12),
           FormField<PlatformFile?>(
@@ -1021,15 +1287,14 @@ class _PlanCard extends StatelessWidget {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  OutlinedButton.icon(
-                    onPressed: () async {
+                  _FilePickerTile(
+                    title: 'ملف الأكواد',
+                    description: 'CSV أو XLSX يحتوي على الأكواد لهذه الفئة.',
+                    fileName: plan.voucherFile?.name,
+                    onPick: () async {
                       await Future<void>.sync(onPickFile);
                       state.didChange(plan.voucherFile);
                     },
-                    icon: const Icon(Icons.upload_file_rounded),
-                    label: Text(
-                      plan.voucherFile?.name ?? 'رفع ملف الأكواد (CSV / XLSX)',
-                    ),
                   ),
                   if (state.hasError)
                     Padding(
@@ -1053,8 +1318,9 @@ class _PlanCard extends StatelessWidget {
 }
 
 class _ContactFieldData {
-  _ContactFieldData({this.type = ContactType.phone})
-      : controller = TextEditingController();
+  _ContactFieldData({ContactType initialType = ContactType.phone})
+      : controller = TextEditingController(),
+        type = initialType;
 
   final TextEditingController controller;
   ContactType type;
@@ -1154,15 +1420,31 @@ class _FilePickerTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.color;
     final textTheme = Theme.of(context).textTheme;
+    final bool hasFile = fileName != null && fileName!.isNotEmpty;
 
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
+        color: colors.secondaryColor,
         border: Border.all(color: colors.borderColor.withOpacity(.35)),
       ),
       child: Row(
         children: [
+          Container(
+            height: 52,
+            width: 52,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: colors.territoryColor.withOpacity(.12),
+            ),
+            child: Icon(
+              hasFile ? Icons.file_present_rounded : Icons.cloud_upload_rounded,
+              color: colors.territoryColor,
+            ),
+          ),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1171,15 +1453,15 @@ class _FilePickerTile extends StatelessWidget {
                   title,
                   style: textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w700,
+                    color: colors.textDefaultColor,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  fileName ?? description,
+                  hasFile ? fileName! : description,
                   style: textTheme.bodySmall?.copyWith(
-                    color: fileName == null
-                        ? colors.textLightColor
-                        : colors.territoryColor,
+                    color:
+                        hasFile ? colors.territoryColor : colors.textLightColor,
                   ),
                 ),
               ],
@@ -1187,11 +1469,47 @@ class _FilePickerTile extends StatelessWidget {
           ),
           TextButton.icon(
             onPressed: onPick,
-            icon: const Icon(Icons.attach_file),
-            label: Text(fileName == null ? 'اختيار' : 'تغيير'),
+            icon: Icon(
+              hasFile ? Icons.edit_outlined : Icons.upload_file_rounded,
+            ),
+            label: Text(hasFile ? 'تغيير' : 'اختيار'),
+            style: TextButton.styleFrom(
+              foregroundColor: colors.territoryColor,
+            ),
           ),
         ],
       ),
     );
   }
+}
+
+InputDecoration _wifiInputDecoration(
+  BuildContext context,
+  String label, {
+  String? hint,
+  String? helper,
+  Widget? prefixIcon,
+  Widget? suffixIcon,
+}) {
+  final colors = context.color;
+  final OutlineInputBorder baseBorder = OutlineInputBorder(
+    borderRadius: BorderRadius.circular(18),
+    borderSide: BorderSide(color: colors.borderColor.withOpacity(.4)),
+  );
+
+  return InputDecoration(
+    labelText: label,
+    hintText: hint,
+    helperText: helper,
+    prefixIcon: prefixIcon,
+    suffixIcon: suffixIcon,
+    filled: true,
+    fillColor: colors.secondaryColor,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    border: baseBorder,
+    enabledBorder: baseBorder,
+    focusedBorder: baseBorder.copyWith(
+      borderSide: BorderSide(color: colors.territoryColor, width: 1.6),
+    ),
+  );
 }

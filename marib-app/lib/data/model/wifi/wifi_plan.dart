@@ -11,6 +11,8 @@ class WifiPlan extends Equatable {
     this.durationDays,
     this.isUnlimited = false,
     this.codeBatches = const <WifiCodeBatchSummary>[],
+    this.benefits = const <String>[],
+    this.meta,
   });
 
   final int id;
@@ -22,6 +24,8 @@ class WifiPlan extends Equatable {
   final int? durationDays;
   final bool isUnlimited;
   final List<WifiCodeBatchSummary> codeBatches;
+  final List<String> benefits;
+  final Map<String, dynamic>? meta;
 
   factory WifiPlan.fromJson(Map<String, dynamic> json) {
     num? parseNum(dynamic value) {
@@ -48,7 +52,6 @@ class WifiPlan extends Equatable {
       return int.tryParse(value.toString());
     }
 
-
     num? resolveDataCapGb(Map<String, dynamic> source) {
       num? dataCap = parseNum(
         source['data_cap_gb'] ??
@@ -64,12 +67,12 @@ class WifiPlan extends Equatable {
       }
 
       if (dataCap == null) {
-        final dynamic labelCandidate = source['data_allowance_label'] ??
-            source['data_cap_label'];
+        final dynamic labelCandidate =
+            source['data_allowance_label'] ?? source['data_cap_label'];
         if (labelCandidate != null) {
           final String label = labelCandidate.toString();
           final RegExpMatch? match =
-          RegExp(r'(\d+[\.,]?\d*)').firstMatch(label);
+              RegExp(r'(\d+[\.,]?\d*)').firstMatch(label);
           if (match != null) {
             final String numeric = match.group(1)!.replaceAll(',', '.');
             final num? parsed = num.tryParse(numeric);
@@ -115,30 +118,60 @@ class WifiPlan extends Equatable {
       return null;
     }
 
+    List<String> parseBenefits(dynamic value) {
+      if (value == null) {
+        return const <String>[];
+      }
+      if (value is List) {
+        return value
+            .map((dynamic element) => element?.toString())
+            .whereType<String>()
+            .map((String element) => element.trim())
+            .where((String element) => element.isNotEmpty)
+            .toList();
+      }
+      final String normalized = value.toString().trim();
+      if (normalized.isEmpty) {
+        return const <String>[];
+      }
+      return <String>[normalized];
+    }
+
     final num? dataCapGb = resolveDataCapGb(json);
-    final bool unlimitedFlag = parseBool(json['is_unlimited'] ?? json['unlimited']);
+    final bool unlimitedFlag =
+        parseBool(json['is_unlimited'] ?? json['unlimited']);
     final bool labelUnlimited =
-    (json['data_allowance_label'] ?? json['data_cap_label'] ?? '')
-        .toString()
-        .toLowerCase()
-        .contains('unlimit');
+        (json['data_allowance_label'] ?? json['data_cap_label'] ?? '')
+            .toString()
+            .toLowerCase()
+            .contains('unlimit');
     final bool resolvedUnlimited = unlimitedFlag || labelUnlimited;
 
+    final List<WifiCodeBatchSummary> codeBatches =
+        (json['code_batches'] as List?)
+                ?.map((dynamic element) {
+                  if (element is Map<String, dynamic>) {
+                    return WifiCodeBatchSummary.fromJson(element);
+                  }
+                  if (element is Map) {
+                    return WifiCodeBatchSummary.fromJson(
+                        Map<String, dynamic>.from(element as Map));
+                  }
+                  return null;
+                })
+                .whereType<WifiCodeBatchSummary>()
+                .toList() ??
+            const <WifiCodeBatchSummary>[];
 
-    final List<WifiCodeBatchSummary> codeBatches = (json['code_batches'] as List?)
-            ?.map((dynamic element) {
-              if (element is Map<String, dynamic>) {
-                return WifiCodeBatchSummary.fromJson(element);
-              }
-              if (element is Map) {
-                return WifiCodeBatchSummary.fromJson(
-                    Map<String, dynamic>.from(element as Map));
-              }
-              return null;
-            })
-            .whereType<WifiCodeBatchSummary>()
-            .toList() ??
-        const <WifiCodeBatchSummary>[];
+    Map<String, dynamic>? parseMap(dynamic value) {
+      if (value is Map<String, dynamic>) {
+        return value;
+      }
+      if (value is Map) {
+        return Map<String, dynamic>.from(value as Map);
+      }
+      return null;
+    }
 
     return WifiPlan(
       id: parseInt(json['id']) ?? 0,
@@ -150,6 +183,8 @@ class WifiPlan extends Equatable {
       durationDays: resolveDurationDays(json),
       isUnlimited: resolvedUnlimited,
       codeBatches: codeBatches,
+      benefits: parseBenefits(json['benefits']),
+      meta: parseMap(json['meta']),
     );
   }
 
@@ -163,6 +198,8 @@ class WifiPlan extends Equatable {
     int? durationDays,
     bool? isUnlimited,
     List<WifiCodeBatchSummary>? codeBatches,
+    List<String>? benefits,
+    Map<String, dynamic>? meta,
   }) {
     return WifiPlan(
       id: id ?? this.id,
@@ -174,6 +211,8 @@ class WifiPlan extends Equatable {
       durationDays: durationDays ?? this.durationDays,
       isUnlimited: isUnlimited ?? this.isUnlimited,
       codeBatches: codeBatches ?? this.codeBatches,
+      benefits: benefits ?? this.benefits,
+      meta: meta ?? this.meta,
     );
   }
 
@@ -189,21 +228,25 @@ class WifiPlan extends Equatable {
       'is_unlimited': isUnlimited,
       if (codeBatches.isNotEmpty)
         'code_batches': codeBatches.map((batch) => batch.toJson()).toList(),
+      if (benefits.isNotEmpty) 'benefits': benefits,
+      if (meta != null) 'meta': meta,
     };
   }
 
   @override
   List<Object?> get props => [
-    id,
-    name,
-    price,
-    description,
-    currency,
-    dataCapGb,
-    durationDays,
-    isUnlimited,
-    codeBatches,
-  ];
+        id,
+        name,
+        price,
+        description,
+        currency,
+        dataCapGb,
+        durationDays,
+        isUnlimited,
+        codeBatches,
+        benefits,
+        meta,
+      ];
 }
 
 class WifiCodeBatchSummary extends Equatable {

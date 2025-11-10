@@ -256,6 +256,11 @@ class SplashController extends ChangeNotifier {
   void _tryNavigate() {
     if (!isTimerCompleted || !isSettingsLoaded || !isLanguageLoaded) return;
 
+    final Map<String, dynamic>? merchantStore =
+        HiveUtils.getMerchantStoreRaw();
+    final bool hasMerchantStore =
+        merchantStore != null && merchantStore.isNotEmpty;
+
     final maintenance = context
             .read<FetchSystemSettingsCubit>()
             .getSetting(SystemSetting.maintenanceMode) ==
@@ -273,7 +278,13 @@ class SplashController extends ChangeNotifier {
     }
 
     if (HiveUtils.isMerchantOnboardingInProgress()) {
-      unawaited(_restartAbortedOnboardingSession());
+      if (hasMerchantStore) {
+        unawaited(_resumeMerchantExperience(
+          source: 'merchant_onboarding_completed',
+        ));
+      } else {
+        unawaited(_restartAbortedOnboardingSession());
+      }
       return;
     }
 
@@ -298,6 +309,11 @@ class SplashController extends ChangeNotifier {
     }
 
     if (HiveUtils.isUserBasicallyAuthenticated()) {
+      if (hasMerchantStore) {
+        _go(() => Navigator.of(context)
+            .pushReplacementNamed(Routes.main, arguments: {'from': "main"}));
+        return;
+      }
       try {
         final u = HiveUtils.getUserDetails();
         if (u.userType == null || u.userType == 0) {
@@ -347,6 +363,36 @@ class SplashController extends ChangeNotifier {
   /// زر إعادة المحاولة من شاشة عدم الاتصال
   void retry() {
     _startProcessesOnce();
+  }
+
+  Future<void> _resumeMerchantExperience({String source = 'merchant_resume'}) async {
+    if (_handlingAbortedOnboarding) {
+      return;
+    }
+    _handlingAbortedOnboarding = true;
+    try {
+      await HiveUtils.clearMerchantOnboardingProgress();
+      if (_isDisposed) {
+        return;
+      }
+      _go(() {
+        if (_isDisposed) {
+          return;
+        }
+        Navigator.of(context).pushReplacementNamed(
+          Routes.main,
+          arguments: {'from': source},
+        );
+      });
+    } catch (error, stackTrace) {
+      log(
+        'SplashController: failed to resume merchant onboarding session',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    } finally {
+      _handlingAbortedOnboarding = false;
+    }
   }
 
   Future<void> _restartAbortedOnboardingSession() async {

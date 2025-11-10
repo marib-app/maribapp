@@ -528,11 +528,17 @@ class HiveUtils {
   // ظ‡ظ„ ط§ظ„ظ…ط³طھط®ط¯ظ… ظ…ظˆط«ظ‘ظ‚ (Authenticated) ظˆط¨ط§ظ„ط¥ط¶ط§ظپط© ظ„ط°ظ„ظƒ "ظ…ظڈطھط­ظ‚ظ‘ظژظ‚" (ظ…ط«ظ„ط§ظ‹ OTP/طھظˆط«ظٹظ‚ ط§ظ„ط­ط³ط§ط¨)
 
   static bool isUserAuthenticated() {
-    final isAuth =
+    final bool isAuth =
         Hive.box(HiveKeys.authBox).get(HiveKeys.isAuthenticated) ?? false;
-    if (!isAuth) return false;
-    if (!isUserVerified()) return false;
-    return true;
+    if (!isAuth) {
+      return false;
+    }
+    try {
+      final UserModel user = getUserDetails();
+      return user.id != null;
+    } catch (_) {
+      return false;
+    }
   }
 
   /// طھط­ظ‚ظ‘ظ‚ ط¥ط¶ط§ظپظٹ (ظ…ط«ظ„ط§ظ‹ ط­ظ‚ظ„ isVerified ط¯ط§ط®ظ„ UserModel)

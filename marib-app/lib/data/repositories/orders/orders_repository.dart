@@ -103,9 +103,14 @@ class OrdersRepository {
       throw const FormatException('Unexpected invoice response format.');
     } on DioException catch (error) {
       final int? statusCode = error.response?.statusCode;
-      if (statusCode == 401 || statusCode == 302 || statusCode == 307) {
-        Api.userExpired();
-        if (statusCode != 401) {
+      if (statusCode == 401 ||
+          statusCode == 403 ||
+          statusCode == 302 ||
+          statusCode == 307) {
+        if (Api.shouldForceLogoutFor401Payload(error.response?.data)) {
+          Api.userExpired();
+        }
+        if (statusCode == 302 || statusCode == 307) {
           throw ApiHttpException(
             errorMessage: 'unauthenticated',
             statusCode: 401,

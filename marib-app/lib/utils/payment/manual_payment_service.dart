@@ -1861,8 +1861,9 @@ class ManualPaymentService {
         if (responseMap['error'] == true) {
           final dynamic codeValue = responseMap['code'];
           final int? errorCode =
-          codeValue is int ? codeValue : int.tryParse('$codeValue');
-          if (errorCode == 401) {
+              codeValue is int ? codeValue : int.tryParse('$codeValue');
+          if (errorCode == 401 &&
+              Api.shouldForceLogoutFor401Payload(responseMap)) {
             Api.userExpired();
           }
           final String message =
@@ -1961,7 +1962,9 @@ class ManualPaymentService {
       return deduped;
     } on DioException catch (error) {
       if (error.response?.statusCode == 401) {
-        Api.userExpired();
+        if (Api.shouldForceLogoutFor401Payload(error.response?.data)) {
+          Api.userExpired();
+        }
         throw ApiException('Unauthenticated.');
       }
 

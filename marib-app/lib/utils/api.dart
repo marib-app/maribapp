@@ -2075,6 +2075,11 @@ class Api {
     'الغاء تنشيط الحساب',
   ];
 
+  /// Public helper for callers outside this class that only have the raw payload.
+  static bool shouldForceLogoutFor401Payload(dynamic payload) {
+    return _shouldForceLogoutOn401(_normalizePayload(payload));
+  }
+
   static String generateIdempotencyKey() {
     final String timestamp = DateTime.now().toUtc().toIso8601String();
     final String randomSuffix =

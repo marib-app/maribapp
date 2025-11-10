@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:marib/app/routes.dart';
 import 'package:marib/data/model/wifi/wifi_network.dart';
 import 'package:marib/data/model/wifi/wifi_plan.dart';
 import 'package:marib/data/wifi/wifi_repository.dart';
@@ -6,17 +7,17 @@ import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/errorFilter.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 
-
 class WifiNetworkDetailsScreen extends StatefulWidget {
   const WifiNetworkDetailsScreen({super.key, required this.network});
 
   final WifiNetwork network;
 
-  static Route route(WifiNetwork network) =>
-      MaterialPageRoute(builder: (_) => WifiNetworkDetailsScreen(network: network));
+  static Route route(WifiNetwork network) => MaterialPageRoute(
+      builder: (_) => WifiNetworkDetailsScreen(network: network));
 
   @override
-  State<WifiNetworkDetailsScreen> createState() => _WifiNetworkDetailsScreenState();
+  State<WifiNetworkDetailsScreen> createState() =>
+      _WifiNetworkDetailsScreenState();
 }
 
 class _WifiNetworkDetailsScreenState extends State<WifiNetworkDetailsScreen> {
@@ -103,7 +104,10 @@ class _WifiNetworkDetailsScreenState extends State<WifiNetworkDetailsScreen> {
                   itemCount: plans.length,
                   itemBuilder: (context, index) {
                     final plan = plans[index];
-                    return _PlanCategoryCard(plan: plan);
+                    return _PlanCategoryCard(
+                      plan: plan,
+                      onTap: () => _openPlanDetails(plan),
+                    );
                   },
                 );
               },
@@ -111,6 +115,47 @@ class _WifiNetworkDetailsScreenState extends State<WifiNetworkDetailsScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  void _openPlanDetails(WifiPlan plan) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _PlanDetailSheet(
+        plan: plan,
+        networkName: widget.network.name,
+        onPurchase: () async {
+          Navigator.of(context).pop();
+          await _navigateToPayment(plan);
+        },
+      ),
+    );
+  }
+
+  Future<void> _navigateToPayment(WifiPlan plan) async {
+    final double amount = plan.price.toDouble();
+    final String? currency = plan.currency;
+
+    if (currency == null || currency.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('لا يمكن متابعة الدفع لهذه الخطة حالياً.')),
+      );
+      return;
+    }
+
+    await Navigator.of(context).pushNamed(
+      Routes.servicePaymentPage,
+      arguments: {
+        'serviceId': plan.id,
+        'serviceTitle': '${plan.name} - ${widget.network.name}',
+        'amount': amount,
+        'currency': currency,
+        'note':
+            plan.description ?? 'خطة ${plan.name} لشبكة ${widget.network.name}',
+      },
     );
   }
 }
@@ -274,9 +319,10 @@ class _NetworkSummaryCard extends StatelessWidget {
 }
 
 class _PlanCategoryCard extends StatelessWidget {
-  const _PlanCategoryCard({required this.plan});
+  const _PlanCategoryCard({required this.plan, required this.onTap});
 
   final WifiPlan plan;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -291,7 +337,7 @@ class _PlanCategoryCard extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
-        onTap: () {},
+        onTap: onTap,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
@@ -308,17 +354,25 @@ class _PlanCategoryCard extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      '${availableCodes.toString().padLeft(2, '0')}/${totalCodes.toString().padLeft(2, '0')}',
-                      style: textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: colors.territoryColor,
+                      plan.price.toStringAsFixed(2),
+                      style: textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: colors.textDefaultColor,
                       ),
+                      textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 8),
                     Text(
                       plan.currency ?? '',
                       style: textTheme.bodySmall?.copyWith(
                         color: colors.textLightColor,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '${availableCodes.toString().padLeft(2, '0')}/${totalCodes.toString().padLeft(2, '0')}',
+                      style: textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: colors.territoryColor,
                       ),
                     ),
                   ],
@@ -338,6 +392,434 @@ class _PlanCategoryCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _PlanDetailSheet extends StatelessWidget {
+  const _PlanDetailSheet({
+    required this.plan,
+    required this.networkName,
+    required this.onPurchase,
+  });
+
+  final WifiPlan plan;
+  final String networkName;
+  final VoidCallback onPurchase;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.color;
+    final textTheme = Theme.of(context).textTheme;
+    final Map<String, dynamic> meta = plan.meta ?? const <String, dynamic>{};
+    final int totalCodes =
+        plan.codeBatches.fold(0, (sum, batch) => sum + batch.totalCodes);
+    final int availableCodes =
+        plan.codeBatches.fold(0, (sum, batch) => sum + batch.availableCodes);
+
+    final String? speedLabel = _resolveSpeed(meta);
+    final String? quotaLabel = _resolveQuota(plan, meta);
+    final String? validityLabel = _resolveValidity(plan, meta);
+
+    final List<_PlanSpec> specs = <_PlanSpec>[
+      if (speedLabel != null)
+        _PlanSpec(
+          icon: Icons.speed_rounded,
+          title: 'سرعة الكرت',
+          value: speedLabel,
+        ),
+      if (quotaLabel != null)
+        _PlanSpec(
+          icon: Icons.data_usage_rounded,
+          title: 'السعة المتاحة',
+          value: quotaLabel,
+        ),
+      if (validityLabel != null)
+        _PlanSpec(
+          icon: Icons.schedule_rounded,
+          title: 'مدة الصلاحية',
+          value: validityLabel,
+        ),
+      if (totalCodes > 0)
+        _PlanSpec(
+          icon: Icons.qr_code_2_rounded,
+          title: 'الأكواد المتوفرة',
+          value: '$availableCodes / $totalCodes',
+        ),
+    ];
+
+    final List<String> benefits = plan.benefits;
+    final String? description =
+        plan.description != null && plan.description!.trim().isNotEmpty
+            ? plan.description!.trim()
+            : null;
+
+    final bool canPurchase = availableCodes > 0;
+
+    return SafeArea(
+      child: Container(
+        decoration: BoxDecoration(
+          color: colors.backgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        ),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  height: 4,
+                  width: 48,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: colors.borderColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+              Text(
+                plan.name,
+                style: textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: colors.textDefaultColor,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                networkName,
+                style: textTheme.bodyMedium?.copyWith(
+                  color: colors.textLightColor,
+                ),
+              ),
+              const SizedBox(height: 16),
+              _PriceCard(
+                plan: plan,
+                availableCodes: availableCodes,
+                totalCodes: totalCodes,
+              ),
+              const SizedBox(height: 20),
+              if (specs.isNotEmpty) ...[
+                Text(
+                  'تفاصيل الخطة',
+                  style: textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: colors.textDefaultColor,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: specs.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 2.9,
+                  ),
+                  itemBuilder: (context, index) =>
+                      _PlanSpecTile(spec: specs[index]),
+                ),
+                const SizedBox(height: 20),
+              ],
+              if (description != null) ...[
+                Text(
+                  'نبذة عن الفئة',
+                  style: textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: colors.textDefaultColor,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  description,
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: colors.textLightColor,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
+              if (benefits.isNotEmpty) ...[
+                Text(
+                  'المزايا',
+                  style: textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: colors.textDefaultColor,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Column(
+                  children: benefits
+                      .map(
+                        (benefit) => Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                Icons.check_circle_rounded,
+                                size: 18,
+                                color: colors.territoryColor,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  benefit,
+                                  style: textTheme.bodyMedium?.copyWith(
+                                    color: colors.textDefaultColor,
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                      .toList(),
+                ),
+                const SizedBox(height: 20),
+              ],
+              FilledButton(
+                onPressed: canPurchase ? onPurchase : null,
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(52),
+                  backgroundColor: colors.territoryColor,
+                  disabledBackgroundColor: colors.borderColor.withOpacity(.4),
+                ),
+                child: Text(
+                  canPurchase ? 'شراء الآن' : 'نفدت الأكواد مؤقتاً',
+                  style: textTheme.titleMedium?.copyWith(
+                    color: colors.secondaryColor,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              if (!canPurchase)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    'عند إضافة دفعة أكواد جديدة سنقوم بتنشيط هذا الخيار تلقائياً.',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: colors.textLightColor,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String? _resolveSpeed(Map<String, dynamic> meta) {
+    final dynamic label =
+        meta['speed_label'] ?? meta['speed_text'] ?? meta['speed'];
+    if (label != null && label.toString().trim().isNotEmpty) {
+      return label.toString().trim();
+    }
+
+    final num? speed =
+        _asNum(meta['speed_mbps'] ?? meta['speedMbps'] ?? meta['speedMb']);
+    if (speed != null && speed > 0) {
+      final bool isInt = speed % 1 == 0;
+      final String value =
+          isInt ? speed.toInt().toString() : speed.toStringAsFixed(1);
+      return '$value ميجابت/ث';
+    }
+
+    return null;
+  }
+
+  String? _resolveQuota(WifiPlan plan, Map<String, dynamic> meta) {
+    if (plan.isUnlimited) {
+      return 'استخدام غير محدود';
+    }
+
+    if (plan.dataCapGb != null) {
+      final num cap = plan.dataCapGb!;
+      final bool isInt = cap % 1 == 0;
+      final String formatted =
+          isInt ? cap.toInt().toString() : cap.toStringAsFixed(1);
+      return '$formatted جيجابايت';
+    }
+
+    final dynamic label =
+        meta['data_allowance_label'] ?? meta['data_cap_label'] ?? meta['quota'];
+    if (label != null && label.toString().trim().isNotEmpty) {
+      return label.toString();
+    }
+
+    final num? allowanceMb = _asNum(meta['data_allowance_mb']);
+    if (allowanceMb != null) {
+      final double gb = allowanceMb / 1024;
+      return gb >= 1
+          ? '${gb.toStringAsFixed(1)} جيجابايت'
+          : '$allowanceMb ميجابايت';
+    }
+
+    return null;
+  }
+
+  String? _resolveValidity(WifiPlan plan, Map<String, dynamic> meta) {
+    if (plan.durationDays != null && plan.durationDays! > 0) {
+      final int days = plan.durationDays!;
+      return days == 1 ? 'يوم واحد' : '$days يوم';
+    }
+
+    final dynamic label =
+        meta['validity_label'] ?? meta['duration_label'] ?? meta['duration'];
+    if (label != null && label.toString().trim().isNotEmpty) {
+      return label.toString();
+    }
+
+    final num? durationHours = _asNum(meta['duration_hours']);
+    if (durationHours != null && durationHours > 0) {
+      if (durationHours >= 24) {
+        final double days = durationHours / 24;
+        final int rounded = days.ceil();
+        return rounded == 1 ? 'يوم واحد' : '$rounded يوم';
+      }
+      return '${durationHours.toStringAsFixed(0)} ساعة';
+    }
+
+    return null;
+  }
+
+  num? _asNum(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+    if (value is num) {
+      return value;
+    }
+    return num.tryParse(value.toString());
+  }
+}
+
+class _PlanSpec {
+  const _PlanSpec({
+    required this.icon,
+    required this.title,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String title;
+  final String value;
+}
+
+class _PlanSpecTile extends StatelessWidget {
+  const _PlanSpecTile({required this.spec});
+
+  final _PlanSpec spec;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.color;
+    final textTheme = Theme.of(context).textTheme;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: colors.secondaryColor,
+        border: Border.all(color: colors.borderColor.withOpacity(.4)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(spec.icon, size: 20, color: colors.territoryColor),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  spec.title,
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colors.textLightColor,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  spec.value,
+                  style: textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: colors.textDefaultColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PriceCard extends StatelessWidget {
+  const _PriceCard({
+    required this.plan,
+    required this.availableCodes,
+    required this.totalCodes,
+  });
+
+  final WifiPlan plan;
+  final int availableCodes;
+  final int totalCodes;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.color;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: colors.secondaryColor,
+        border: Border.all(color: colors.borderColor.withOpacity(.45)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: colors.territoryColor.withOpacity(.15),
+            ),
+            child: Icon(Icons.sell_outlined, color: colors.territoryColor),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${plan.price.toStringAsFixed(2)} ${plan.currency ?? ''}',
+                  style: textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: colors.textDefaultColor,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  totalCodes > 0
+                      ? 'الأكواد المتاحة: $availableCodes من $totalCodes'
+                      : 'سيتم إرسال الكود عبر التطبيق بعد الدفع',
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colors.textLightColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

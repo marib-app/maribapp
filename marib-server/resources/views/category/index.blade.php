@@ -166,6 +166,7 @@
                     dropdownParent: $modalElement,
                     width: '100%'
                 });
+                updateSubmitButtonState();
             };
 
 
@@ -192,6 +193,35 @@
                 submitButton.disabled = targetSelectElement.disabled || targetSelectElement.value === '';
             };
 
+            const dispatchNativeChange = () => {
+                try {
+                    const changeEvent = new Event('change', { bubbles: true });
+                    targetSelectElement.dispatchEvent(changeEvent);
+                } catch (error) {
+                    // Some environments may not support the Event constructor; fall back if needed.
+                    if (typeof document.createEvent === 'function') {
+                        const legacyChangeEvent = document.createEvent('Event');
+                        legacyChangeEvent.initEvent('change', true, true);
+                        targetSelectElement.dispatchEvent(legacyChangeEvent);
+                    }
+                }
+            };
+
+            const syncSelectionState = (selectedValue = '') => {
+                if (selectedValue !== '') {
+                    const normalizedValue = String(selectedValue);
+                    $targetSelect.val(normalizedValue);
+                    targetSelectElement.value = normalizedValue;
+                } else {
+                    $targetSelect.val('');
+                    targetSelectElement.value = '';
+                }
+
+                $targetSelect.trigger('change.select2');
+                dispatchNativeChange();
+                updateSubmitButtonState();
+            };
+
 
             const populateOptions = (options) => {
                 destroySelect2();
@@ -210,18 +240,22 @@
                     $targetSelect.prop('disabled', true);
                     targetSelectElement.disabled = true;
                     initializeSelect2();
-                    $targetSelect.trigger('change.select2');
-                    updateSubmitButtonState();
+                    syncSelectionState('');
+
                     return;
                 }
 
+                const isUsableOption = function (option) {
+                    return option && option.id !== undefined && option.id !== null && option.id !== '';
+                };
+
                 let selectedValue = '';
+                const hasSingleUsableOption = options.length === 1 && isUsableOption(options[0]);
 
 
-                if (options.length === 1) {
-                    const singleOption = options[0] || {};
-                    const hasValidId = singleOption.id !== undefined && singleOption.id !== null && singleOption.id !== '';
-                    selectedValue = hasValidId ? String(singleOption.id) : '';
+                if (hasSingleUsableOption) {
+                    const singleOption = options[0];
+                    selectedValue = String(singleOption.id);
                     const optionElement = document.createElement('option');
                     optionElement.value = selectedValue;
                     optionElement.textContent = singleOption.label;
@@ -253,19 +287,8 @@
                 $targetSelect.prop('disabled', false);
                 targetSelectElement.disabled = false;
                 initializeSelect2();
+                syncSelectionState(selectedValue);
 
-
-                if (selectedValue !== '') {
-                    $targetSelect.val(selectedValue);
-                    targetSelectElement.value = selectedValue;
-                }
-                if (selectedValue !== '') {
-                    $targetSelect.val(selectedValue);
-                    targetSelectElement.value = selectedValue;
-                }
-
-                $targetSelect.trigger('change.select2');
-                updateSubmitButtonState();
             };
 
             function handleModalHidden() {

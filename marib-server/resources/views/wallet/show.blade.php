@@ -4,6 +4,139 @@
     {{ __('Wallet for :name', ['name' => $user->name]) }}
 @endsection
 
+@push('modals')
+    <div class="modal fade" id="manualCreditModal" tabindex="-1" aria-labelledby="manualCreditModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="manualCreditModalLabel">{{ __('Manual Deposit') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __('Close') }}"></button>
+                </div>
+                <div class="modal-body">
+                    <ul class="nav nav-tabs mb-3" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="manual-credit-form-tab" data-bs-toggle="tab"
+                                    data-bs-target="#manual-credit-form" type="button" role="tab">
+                                <i class="bi bi-plus-circle me-1"></i>{{ __('New Deposit') }}
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="manual-credit-history-tab" data-bs-toggle="tab"
+                                    data-bs-target="#manual-credit-history" type="button" role="tab">
+                                <i class="bi bi-clock-history me-1"></i>{{ __('History') }}
+                            </button>
+                        </li>
+                    </ul>
+                    <div class="tab-content">
+                        <div class="tab-pane fade show active" id="manual-credit-form" role="tabpanel"
+                             aria-labelledby="manual-credit-form-tab">
+                            <form method="post" action="{{ route('wallet.credit', $user) }}" class="needs-validation" novalidate>
+                                @csrf
+                                <div class="mb-3">
+                                    <label for="modal_amount" class="form-label">{{ __('Amount') }}</label>
+                                    <div class="input-group">
+                                        <input type="number" step="0.01" min="0.01" class="form-control" id="modal_amount" name="amount"
+                                               value="{{ old('amount') }}" required placeholder="0.00">
+                                        <span class="input-group-text">{{ $currency }}</span>
+                                    </div>
+                                    @error('amount')
+                                    <div class="text-danger small mt-1">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="mb-3">
+                                    <label for="modal_operation_reference" class="form-label">{{ __('Operation reference') }}</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="modal_operation_reference" name="operation_reference"
+                                               value="{{ old('operation_reference', $manualCreditReference) }}" readonly>
+                                        <span class="input-group-text"><i class="bi bi-shield-lock"></i></span>
+                                    </div>
+                                    <div class="form-text">{{ __('Reference numbers are generated sequentially to avoid duplication.') }}</div>
+                                    @error('operation_reference')
+                                    <div class="text-danger small mt-1">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="mb-3">
+                                    <label for="modal_notes" class="form-label">{{ __('Administrative notes') }}</label>
+                                    <textarea class="form-control" id="modal_notes" name="notes" rows="3" maxlength="500"
+                                              placeholder="{{ __('Optional internal notes for reference.') }}">{{ old('notes') }}</textarea>
+                                    @error('notes')
+                                    <div class="text-danger small mt-1">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-plus-circle me-1"></i>{{ __('Credit Wallet') }}
+                                </button>
+                            </form>
+                        </div>
+                        <div class="tab-pane fade" id="manual-credit-history" role="tabpanel"
+                             aria-labelledby="manual-credit-history-tab">
+                            @if($manualCreditEntries->isEmpty())
+                                <p class="text-muted mb-0">{{ __('No manual deposits have been recorded yet.') }}</p>
+                            @else
+                                <div class="table-responsive">
+                                    <table class="table table-sm align-middle">
+                                        <thead>
+                                        <tr>
+                                            <th>{{ __('Reference') }}</th>
+                                            <th class="text-end">{{ __('Amount') }}</th>
+                                            <th>{{ __('Created At') }}</th>
+                                            <th>{{ __('Notes') }}</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        @foreach($manualCreditEntries as $entry)
+                                            <tr>
+                                                <td>{{ data_get($entry->meta, 'operation_reference') ?? $entry->getKey() }}</td>
+                                                <td class="text-end text-success">+{{ number_format((float) $entry->amount, 2) }} {{ $currency }}</td>
+                                                <td>
+                                                    <div>{{ optional($entry->created_at)->format('Y-m-d H:i') }}</div>
+                                                    <small class="text-muted">{{ optional($entry->created_at)->diffForHumans() }}</small>
+                                                </td>
+                                                <td>
+                                                    {{ data_get($entry->meta, 'notes') ?? '—' }}
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+@endpush
+
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('[data-bs-tab-target]').forEach(function (trigger) {
+                trigger.addEventListener('click', function () {
+                    var targetSelector = this.getAttribute('data-bs-tab-target');
+                    if (!targetSelector) {
+                        return;
+                    }
+                    var tabTrigger = document.querySelector('[data-bs-toggle="tab"][data-bs-target=\"' + targetSelector + '\"]');
+                    if (tabTrigger) {
+                        var tabInstance = bootstrap.Tab.getOrCreateInstance(tabTrigger);
+                        tabInstance.show();
+                    }
+                });
+            });
+        @if ($errors->has('amount') || $errors->has('operation_reference') || $errors->has('notes'))
+            var modalElement = document.getElementById('manualCreditModal');
+            if (modalElement) {
+                var modal = new bootstrap.Modal(modalElement);
+                modal.show();
+            }
+        @endif
+        });
+    </script>
+@endpush
+
 @section('page-title')
     <div class="page-title">
         <div class="row align-items-center">
@@ -56,46 +189,99 @@
                     </div>
                 </div>
 
+                <div class="card shadow-sm border-0 mb-3">
+                    <div class="card-body">
+                        <div class="d-flex flex-column flex-md-row justify-content-between gap-3">
+                            <div>
+                                <h5 class="card-title mb-1">{{ __('Manual Deposits') }}</h5>
+                                <p class="text-muted small mb-0">
+                                    {{ __('Credit this wallet instantly with full audit trail and sequential references.') }}
+                                </p>
+                            </div>
+                            <div class="d-flex gap-2 flex-wrap justify-content-end">
+                                <button type="button"
+                                        class="btn btn-outline-secondary d-flex align-items-center gap-2"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#manualCreditModal"
+                                        data-bs-tab-target="#manual-credit-form">
+                                    <i class="bi bi-journal-plus"></i>
+                                    <span>{{ __('New Deposit') }}</span>
+                                </button>
+                                <a href="{{ route('wallet.index') }}"
+                                   class="btn btn-outline-primary d-flex align-items-center gap-2">
+                                    <i class="bi bi-bar-chart"></i>
+                                    <span>{{ __('Wallet Overview') }}</span>
+                                </a>
+                            </div>
+                        </div>
+                        <div class="row text-center mt-4 pt-3 border-top">
+                            <div class="col-12 col-sm-4">
+                                <p class="text-muted small mb-1">{{ __('Total manual deposits') }}</p>
+                                <h4 class="fw-bold mb-0">{{ number_format($manualCreditStats['count'] ?? 0) }}</h4>
+                            </div>
+                            <div class="col-12 col-sm-4">
+                                <p class="text-muted small mb-1">{{ __('Deposited volume') }}</p>
+                                <h4 class="fw-bold mb-0">
+                                    {{ number_format((float) ($manualCreditStats['total'] ?? 0), 2) }} {{ $currency }}
+                                </h4>
+                            </div>
+                            <div class="col-12 col-sm-4">
+                                <p class="text-muted small mb-1">{{ __('Last reference') }}</p>
+                                <h6 class="mb-0">
+                                    {{ $manualCreditStats['last_reference'] ?? __('Not available') }}
+                                </h6>
+                                <small class="text-muted">
+                                    {{ optional($manualCreditStats['last_date'])->diffForHumans() ?? '—' }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="card shadow-sm border-0">
-                    <div class="card-header bg-white border-0">
-                        <h5 class="card-title mb-0">{{ __('Manual Credit') }}</h5>
+                    <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">{{ __('Recent manual deposits') }}</h6>
+                        <button type="button"
+                                class="btn btn-sm btn-outline-secondary"
+                                data-bs-toggle="modal"
+                                data-bs-target="#manualCreditModal"
+                                data-bs-tab-target="#manual-credit-history">
+                            <i class="bi bi-clock-history me-1"></i>{{ __('History') }}
+                        </button>
                     </div>
                     <div class="card-body">
-                        <form method="post" action="{{ route('wallet.credit', $user) }}" class="needs-validation" novalidate>
-                            @csrf
-                            <div class="mb-3">
-                                <label for="amount" class="form-label">{{ __('Amount') }}</label>
-                                <div class="input-group">
-                                    <input type="number" step="0.01" min="0.01" class="form-control" id="amount" name="amount"
-                                           value="{{ old('amount') }}" required placeholder="0.00">
-                                    <span class="input-group-text">{{ $currency }}</span>
-                                </div>
-                                @error('amount')
-                                <div class="text-danger small mt-1">{{ $message }}</div>
-                                @enderror
+                        @if($manualCreditEntries->isEmpty())
+                            <p class="text-muted small mb-0">{{ __('No manual deposits have been recorded yet.') }}</p>
+                        @else
+                            <div class="list-group list-group-flush">
+                                @foreach($manualCreditEntries as $entry)
+                                    @php
+                                        $ref = data_get($entry->meta, 'operation_reference');
+                                    @endphp
+                                    <div class="list-group-item px-0">
+                                        <div class="d-flex justify-content-between flex-wrap gap-2">
+                                            <div>
+                                                <div class="fw-semibold">{{ $ref ?? __('Reference #:id', ['id' => $entry->getKey()]) }}</div>
+                                                <small class="text-muted">
+                                                    {{ optional($entry->created_at)->format('Y-m-d H:i') }}
+                                                    · {{ optional($entry->created_at)->diffForHumans() }}
+                                                </small>
+                                            </div>
+                                            <div class="text-end">
+                                                <div class="fw-bold text-success">
+                                                    +{{ number_format((float) $entry->amount, 2) }} {{ $currency }}
+                                                </div>
+                                                @if($entry->balance_after)
+                                                    <small class="text-muted">{{ __('Balance') }}:
+                                                        {{ number_format((float) $entry->balance_after, 2) }}
+                                                    </small>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endforeach
                             </div>
-                            <div class="mb-3">
-                                <label for="operation_reference" class="form-label">{{ __('Operation reference') }}</label>
-                                <input type="text" class="form-control" id="operation_reference" name="operation_reference"
-                                       value="{{ old('operation_reference') }}" required maxlength="191"
-                                       placeholder="{{ __('e.g. REF-2024-001') }}">
-                                <div class="form-text">{{ __('Use a unique administrative reference to avoid duplicate credits.') }}</div>
-                                @error('operation_reference')
-                                <div class="text-danger small mt-1">{{ $message }}</div>
-                                @enderror
-                            </div>
-                            <div class="mb-3">
-                                <label for="notes" class="form-label">{{ __('Administrative notes') }}</label>
-                                <textarea class="form-control" id="notes" name="notes" rows="3" maxlength="500"
-                                          placeholder="{{ __('Explain the reason for this manual credit (optional).') }}">{{ old('notes') }}</textarea>
-                                @error('notes')
-                                <div class="text-danger small mt-1">{{ $message }}</div>
-                                @enderror
-                            </div>
-                            <button type="submit" class="btn btn-primary w-100">
-                                <i class="bi bi-plus-circle me-1"></i>{{ __('Credit Wallet') }}
-                            </button>
-                        </form>
+                        @endif
                     </div>
                 </div>
             </div>

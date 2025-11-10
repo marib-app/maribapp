@@ -1,17 +1,26 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:marib/app/routes.dart';
+import 'package:marib/data/cubits/system/fetch_system_settings_cubit.dart';
+import 'package:marib/data/cubits/system/user_details.dart';
+import 'package:marib/ui/theme/theme.dart';
+import 'package:marib/utils/api.dart';
+import 'package:marib/utils/extensions/extensions.dart';
+import 'package:marib/utils/helper_utils.dart';
+import 'package:marib/utils/hive_utils.dart';
+import 'package:marib/utils/notification/notification_service.dart';
+import 'package:marib/utils/ui_utils.dart';
+
 import 'phase1_activity_info.dart';
 import 'phase2_categories_hours.dart';
 import 'phase3_store_policy.dart';
 import 'phase4_payment_methods.dart';
 import 'phase5_store_credentials.dart';
 import 'phase6_final_submission.dart';
-import 'phase5_store_credentials.dart';
-import 'package:marib/ui/theme/theme.dart';
-import 'package:marib/utils/extensions/extensions.dart';
-import 'package:marib/utils/hive_utils.dart';
-import 'package:marib/utils/ui_utils.dart';
 
 class MerchantOnboardingScreen extends StatefulWidget {
   final Map<String, dynamic>? signupDraft;
@@ -56,6 +65,11 @@ class _MerchantOnboardingScreenState extends State<MerchantOnboardingScreen> {
   late int _currentPage;
   final int _totalPages = 6;
   final ValueNotifier<int> _pageVisibilityNotifier = ValueNotifier<int>(0);
+  ActivityInfoData? _activityInfo;
+  Phase2Data? _categoriesHoursData;
+  StorePolicyData? _policyData;
+  PaymentOptionsData? _paymentOptions;
+  StoreCredentialsData? _credentialsData;
 
   @override
   void initState() {
@@ -92,43 +106,68 @@ class _MerchantOnboardingScreenState extends State<MerchantOnboardingScreen> {
   }
 
   void _onPhase1Next(ActivityInfoData data) {
+    _activityInfo = data;
     _goToPage(1);
     UiUtils.showSoftSnackBar(context,
         message: 'dataSavedStage'.translate(context));
   }
 
   void _onPhase2Next(Phase2Data data) {
+    _categoriesHoursData = data;
     _goToPage(2);
     UiUtils.showSoftSnackBar(context,
         message: 'dataSavedStage'.translate(context));
   }
 
   void _onPhase3Next(StorePolicyData data) {
+    _policyData = data;
     _goToPage(3);
     UiUtils.showSoftSnackBar(context,
         message: 'dataSavedStage'.translate(context));
   }
 
   void _onPhase4Next(PaymentOptionsData data) {
+    _paymentOptions = data;
     _goToPage(4);
     UiUtils.showSoftSnackBar(context,
         message: 'dataSavedStage'.translate(context));
   }
 
   void _onPhase5Next(StoreCredentialsData data) {
+    _credentialsData = data;
     _goToPage(5);
     UiUtils.showSoftSnackBar(context,
         message: 'dataSavedStage'.translate(context));
   }
 
   Future<void> _onPhase6Submit() async {
-    await Future<void>.delayed(const Duration(milliseconds: 300));
-    await HiveUtils.clearMerchantOnboardingProgress();
-    if (!mounted) return;
-    UiUtils.showSoftSnackBar(
-      context,
-      message: 'submittedSuccess'.translate(context),
-    );
+    if (!_ensurePhaseData()) {
+      return;
+    }
+    try {
+      final Map<String, dynamic> payload = await _buildOnboardingPayload();
+      await Api.post(url: Api.storeOnboardingApi, parameter: payload);
+      await _syncManualGatewayAccounts(_paymentOptions?.manualDrafts ?? const []);
+      await HiveUtils.clearMerchantOnboardingProgress();
+      await NotificationService.resendPendingTokenIfNeeded();
+      await FetchSystemSettingsCubit.refreshPermissionsForCurrentUser(
+        context,
+        clearCacheBeforeFetch: true,
+      );
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute<void>(
+          builder: (_) => const MerchantOnboardingSuccessScreen(),
+        ),
+        (route) => false,
+      );
+    } catch (error) {
+      UiUtils.showSnackBarMessage(
+        context,
+        _mapSubmissionError(error),
+        messageDuration: 4,
+      );
+    }
   }
 
   void _handleBackPressed() {

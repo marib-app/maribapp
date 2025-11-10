@@ -107,6 +107,21 @@ class WalletAdminController extends Controller
             ->latest('created_at')
             ->first();
 
+        $manualCreditReference = $this->generateOperationReference();
+
+        $manualCreditQuery = WalletTransaction::query()
+            ->where('wallet_account_id', $walletAccount->getKey())
+            ->where('meta->reason', 'admin_manual_credit');
+
+        $manualCreditEntries = (clone $manualCreditQuery)
+            ->latest('created_at')
+            ->take(10)
+            ->get();
+
+        $manualCreditCount = (clone $manualCreditQuery)->count();
+        $manualCreditTotal = (clone $manualCreditQuery)->sum('amount');
+        $manualCreditLatest = (clone $manualCreditQuery)->latest('created_at')->first();
+
         return view('wallet.show', [
             'user' => $user,
             'walletAccount' => $walletAccount->fresh(),
@@ -115,6 +130,14 @@ class WalletAdminController extends Controller
             'filters' => self::FILTERS,
             'appliedFilter' => $filter,
             'currency' => strtoupper(config('app.currency', 'SAR')),
+            'manualCreditReference' => $manualCreditReference,
+            'manualCreditEntries' => $manualCreditEntries,
+            'manualCreditStats' => [
+                'count' => $manualCreditCount,
+                'total' => $manualCreditTotal,
+                'last_reference' => data_get($manualCreditLatest?->meta, 'operation_reference'),
+                'last_date' => $manualCreditLatest?->created_at,
+            ],
         ]);
     }
 
@@ -124,7 +147,7 @@ class WalletAdminController extends Controller
 
         $validator = Validator::make($request->all(), [
             'amount' => ['required', 'numeric', 'min:0.01', 'max:1000000'],
-            'operation_reference' => ['required', 'string', 'max:191'],
+            'operation_reference' => ['nullable', 'string', 'max:191'],
             'notes' => ['nullable', 'string', 'max:500'],
         ], [], [
             'operation_reference' => __('Operation reference'),
@@ -140,7 +163,10 @@ class WalletAdminController extends Controller
 
         $validated = $validator->validated();
 
-        $operationReference = trim((string) $validated['operation_reference']);
+        $operationReference = trim((string) ($validated['operation_reference'] ?? ''));
+        if ($operationReference === '') {
+            $operationReference = $this->generateOperationReference();
+        }
         $amount = (float) $validated['amount'];
 
         $idempotencyKey = sprintf(
@@ -230,5 +256,11 @@ class WalletAdminController extends Controller
             default:
                 break;
         }
+    }
+
+    private function generateOperationReference(): string
+    {
+        $nextId = (int) WalletTransaction::max('id') + 1;
+        return 'WDEP-' . str_pad((string) $nextId, 6, '0', STR_PAD_LEFT);
     }
 }

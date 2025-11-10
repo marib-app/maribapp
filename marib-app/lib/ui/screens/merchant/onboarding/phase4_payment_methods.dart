@@ -67,6 +67,11 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
   final List<StoreManualBankAccount> _existingManualAccounts =
       <StoreManualBankAccount>[];
   final List<StoreGatewayOption> _storeGateways = <StoreGatewayOption>[];
+  final Set<int> _selectedGatewayIds = <int>{};
+  final Map<int, TextEditingController> _beneficiaryControllers =
+      <int, TextEditingController>{};
+  final Map<int, TextEditingController> _accountControllers =
+      <int, TextEditingController>{};
 
   EastYemenBankConfig? _eastConfig;
 
@@ -75,6 +80,8 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
   bool _submitting = false;
   bool _manualLoading = true;
   String? _manualError;
+  bool _storeGatewaysLoading = true;
+  String? _storeGatewaysError;
   bool _refreshQueued = false;
 
   late final TabController _tabController =
@@ -136,7 +143,7 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
 
     if (mounted) {
       setState(() {
-        _manualGateways
+        _existingManualAccounts
           ..clear()
           ..addAll(aggregated);
         _manualError = aggregated.isEmpty ? failure?.toString() : null;
@@ -147,6 +154,10 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
 
   Future<void> _loadStoreGateways() async {
     if (!mounted) return;
+    setState(() {
+      _storeGatewaysLoading = true;
+      _storeGatewaysError = null;
+    });
     await _loadManualGateways();
     try {
       final Map<String, dynamic> response =
@@ -161,14 +172,94 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
           .map((dynamic map) => StoreGatewayOption.fromJson(
               Map<String, dynamic>.from(map as Map<dynamic, dynamic>)))
           .toList();
-      if (mounted) {
-        setState(() {
-          _storeGateways
-            ..clear()
-            ..addAll(parsed.where((gateway) => gateway.isActive));
-        });
+      if (!mounted) return;
+      final Set<int> availableIds = parsed
+          .where((gateway) => gateway.isActive && gateway.id > 0)
+          .map((gateway) => gateway.id)
+          .toSet();
+      _selectedGatewayIds.removeWhere(
+        (int id) => !availableIds.contains(id),
+      );
+      _cleanupGatewayControllers();
+      setState(() {
+        _storeGateways
+          ..clear()
+          ..addAll(parsed.where((gateway) => gateway.isActive));
+        _storeGatewaysLoading = false;
+      });
+      for (final int id in _selectedGatewayIds) {
+        _ensureGatewayControllers(id);
       }
-    } catch (_) {}
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _storeGatewaysError = error.toString();
+        _storeGatewaysLoading = false;
+      });
+    }
+  }
+
+  void _ensureGatewayControllers(int gatewayId) {
+    _beneficiaryControllers.putIfAbsent(
+      gatewayId,
+      () => TextEditingController(),
+    );
+    _accountControllers.putIfAbsent(
+      gatewayId,
+      () => TextEditingController(),
+    );
+  }
+
+  void _cleanupGatewayControllers() {
+    final List<int> removable = _beneficiaryControllers.keys
+        .where((int id) => !_selectedGatewayIds.contains(id))
+        .toList();
+    for (final int id in removable) {
+      _beneficiaryControllers.remove(id)?.dispose();
+      _accountControllers.remove(id)?.dispose();
+    }
+    final List<int> removableAccounts = _accountControllers.keys
+        .where((int id) => !_selectedGatewayIds.contains(id))
+        .toList();
+    for (final int id in removableAccounts) {
+      _accountControllers.remove(id)?.dispose();
+    }
+  }
+
+  void _toggleGatewaySelection(int gatewayId, bool isSelected) {
+    setState(() {
+      if (isSelected) {
+        if (_selectedGatewayIds.add(gatewayId)) {
+          _ensureGatewayControllers(gatewayId);
+        }
+      } else {
+        if (_selectedGatewayIds.remove(gatewayId)) {
+          _beneficiaryControllers.remove(gatewayId)?.dispose();
+          _accountControllers.remove(gatewayId)?.dispose();
+        }
+      }
+    });
+  }
+
+  List<StoreGatewayAccountDraft> _collectGatewayDrafts() {
+    final List<StoreGatewayAccountDraft> drafts = <StoreGatewayAccountDraft>[];
+    for (final int gatewayId in _selectedGatewayIds) {
+      final String beneficiary =
+          _beneficiaryControllers[gatewayId]?.text.trim() ?? '';
+      final String accountNumber =
+          _accountControllers[gatewayId]?.text.trim() ?? '';
+      if (beneficiary.isEmpty || accountNumber.isEmpty) {
+        continue;
+      }
+      drafts.add(
+        StoreGatewayAccountDraft(
+          gatewayId: gatewayId,
+          beneficiaryName: beneficiary,
+          accountNumber: accountNumber,
+        ),
+      );
+    }
+    return drafts;
   }
 
   Future<List<StoreManualBankAccount>> _fetchStoreGatewayAccounts() async {
@@ -422,20 +513,42 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
   void dispose() {
     widget.visibilityNotifier.removeListener(_visibilityListener);
     _smartAccountCtrl.dispose();
+    for (final controller in _beneficiaryControllers.values) {
+      controller.dispose();
+    }
+    for (final controller in _accountControllers.values) {
+      controller.dispose();
+    }
     _tabController.dispose();
     super.dispose();
   }
 
   Future<void> _handleNext() async {
     if (_submitting) return;
+    final String smartAccount = _smartAccountCtrl.text.trim();
+    if (_smartEnabled && smartAccount.isEmpty) {
+      HelperUtils.showSnackBarMessage(
+        context,
+        'يرجى إدخال رقم الحساب المرتبط ببنك الشرق.',
+      );
+      return;
+    }
+    final List<StoreGatewayAccountDraft> drafts = _collectGatewayDrafts();
+    if (_selectedGatewayIds.isNotEmpty &&
+        drafts.length != _selectedGatewayIds.length) {
+      HelperUtils.showSnackBarMessage(
+        context,
+        'أكمل بيانات كل بوابة تم اختيارها قبل المتابعة.',
+      );
+      return;
+    }
     setState(() => _submitting = true);
     await Future<void>.delayed(const Duration(milliseconds: 150));
     widget.onNext(
       PaymentOptionsData(
         smartEnabled: _smartEnabled,
-        smartAccountNumber:
-            _smartEnabled ? _smartAccountCtrl.text.trim() : null,
-        manualGateways: List<StoreManualBankAccount>.from(_manualGateways),
+        smartAccountNumber: _smartEnabled ? smartAccount : null,
+        manualDrafts: drafts,
       ),
     );
     if (mounted) setState(() => _submitting = false);
@@ -532,75 +645,229 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
 
   Widget _buildManualPaymentTab() {
     final theme = context.color;
-    if (_manualLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
 
-    if (_manualError != null && _manualGateways.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'تعذر تحميل بوابات الدفع اليدوية.',
-                style: TextStyle(color: theme.textColorDark),
-              ),
-              const SizedBox(height: 12),
-              OutlinedButton(
-                onPressed: _loadManualGateways,
-                child: const Text('إعادة المحاولة'),
-              ),
-            ],
-          ),
+    Widget buildSelectionCard() {
+      if (_storeGatewaysLoading) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      if (_storeGatewaysError != null) {
+        return _InformativeCard(
+          message: 'تعذر تحميل قائمة بوابات الدفع. حاول مرة أخرى.',
+          buttonLabel: 'إعادة المحاولة',
+          onPressed: _loadStoreGateways,
+        );
+      }
+      if (_storeGateways.isEmpty) {
+        return _InformativeCard(
+          message: 'لا تتوفر بوابات دفع يدوي لربطها حالياً.',
+          icon: Icons.info_outline,
+        );
+      }
+
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: theme.secondaryColor,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: theme.borderColor),
         ),
-      );
-    }
-
-    if (_manualGateways.isEmpty) {
-      return Center(
-        child: Text(
-          'لا توجد بوابات دفع يدوية مفعلة حالياً.',
-          style: TextStyle(color: theme.textColorDark.withOpacity(0.7)),
-        ),
-      );
-    }
-
-    return ListView.separated(
-      padding: const EdgeInsets.only(top: 24),
-      itemCount: _manualGateways.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (_, index) {
-        final account = _manualGateways[index];
-        return Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: theme.secondaryColor,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: theme.borderColor),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                account.gatewayName ?? account.displayLabel,
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: context.font.normal,
-                  color: theme.textColorDark,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'اختر بوابات الدفع اليدوي',
+              style: TextStyle(
+                fontSize: context.font.large,
+                fontWeight: FontWeight.w600,
+                color: theme.textColorDark,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'يمكنك إضافة أكثر من بوابة، وسيتم عرض هذه البيانات للعملاء في شاشة الدفع.',
+              style: TextStyle(
+                fontSize: context.font.small,
+                color: theme.textColorDark.withOpacity(0.7),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ..._storeGateways.map(_buildGatewayTile),
+            if (_selectedGatewayIds.isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  'يمكنك استكمال هذه الخطوة لاحقاً من إعدادات المتجر.',
+                  style: TextStyle(
+                    fontSize: context.font.small,
+                    color: theme.textColorDark.withOpacity(0.6),
+                  ),
                 ),
               ),
-              if (account.beneficiaryName != null)
-                Text('المستفيد: ${account.beneficiaryName}'),
-              if (account.accountNumber != null)
-                Text('رقم الحساب: ${account.accountNumber}'),
-              if (account.iban != null) Text('IBAN: ${account.iban}'),
-              if (account.branch != null) Text('الفرع: ${account.branch}'),
+          ],
+        ),
+      );
+    }
+
+    Widget? buildExistingAccounts() {
+      if (_manualLoading) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      if (_manualError != null && _existingManualAccounts.isEmpty) {
+        return _InformativeCard(
+          message: 'تعذر تحميل الحسابات المرتبطة بمتجرك.',
+          buttonLabel: 'إعادة المحاولة',
+          onPressed: _loadManualGateways,
+        );
+      }
+      if (_existingManualAccounts.isEmpty) {
+        return null;
+      }
+      return Container(
+        margin: const EdgeInsets.only(top: 24),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: theme.secondaryColor,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: theme.borderColor),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'الحسابات المرتبطة حالياً',
+              style: TextStyle(
+                fontSize: context.font.large,
+                fontWeight: FontWeight.w600,
+                color: theme.textColorDark,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ..._existingManualAccounts.map(
+              (account) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      account.gatewayName ?? account.displayLabel,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: context.font.normal,
+                        color: theme.textColorDark,
+                      ),
+                    ),
+                    if (account.beneficiaryName != null)
+                      Text('المستفيد: ${account.beneficiaryName}'),
+                    if (account.accountNumber != null)
+                      Text('رقم الحساب: ${account.accountNumber}'),
+                    if (account.iban != null) Text('IBAN: ${account.iban}'),
+                    if (account.branch != null) Text('الفرع: ${account.branch}'),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView(
+      padding: const EdgeInsets.only(top: 24, bottom: 24),
+      children: [
+        buildSelectionCard(),
+        if (buildExistingAccounts() != null) buildExistingAccounts()!,
+      ],
+    );
+  }
+
+  Widget _buildGatewayTile(StoreGatewayOption gateway) {
+    final theme = context.color;
+    final bool isSelected = _selectedGatewayIds.contains(gateway.id);
+    if (isSelected) {
+      _ensureGatewayControllers(gateway.id);
+    }
+    final TextEditingController? beneficiaryCtrl =
+        _beneficiaryControllers[gateway.id];
+    final TextEditingController? accountCtrl =
+        _accountControllers[gateway.id];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        CheckboxListTile(
+          value: isSelected,
+          onChanged: (value) =>
+              _toggleGatewaySelection(gateway.id, value ?? false),
+          contentPadding: EdgeInsets.zero,
+          controlAffinity: ListTileControlAffinity.leading,
+          title: Row(
+            children: [
+              if (gateway.logoUrl != null)
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(end: 12),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      gateway.logoUrl!,
+                      width: 44,
+                      height: 44,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => const SizedBox(
+                        width: 44,
+                        height: 44,
+                      ),
+                    ),
+                  ),
+                )
+              else
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(end: 12),
+                  child: Icon(
+                    Icons.account_balance,
+                    color: theme.primaryColor,
+                  ),
+                ),
+              Expanded(
+                child: Text(
+                  gateway.name,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: theme.textColorDark,
+                  ),
+                ),
+              ),
             ],
           ),
-        );
-      },
+        ),
+        if (isSelected) ...[
+          const SizedBox(height: 8),
+          TextField(
+            controller: beneficiaryCtrl,
+            decoration: InputDecoration(
+              labelText: 'اسم المستفيد',
+              hintText: 'مثال: مؤسسة متجري التجارية',
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            textInputAction: TextInputAction.next,
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: accountCtrl,
+            keyboardType: TextInputType.text,
+            decoration: InputDecoration(
+              labelText: 'رقم الحساب/الآيبان',
+              hintText: 'أدخل رقم الحساب أو الآيبان المرتبط بالبوابة',
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9\\- ]')),
+            ],
+          ),
+          const SizedBox(height: 20),
+        ],
+      ],
     );
   }
 
@@ -682,4 +949,59 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
 
   @override
   bool get wantKeepAlive => true;
+}
+
+class _InformativeCard extends StatelessWidget {
+  final String message;
+  final IconData? icon;
+  final String? buttonLabel;
+  final VoidCallback? onPressed;
+
+  const _InformativeCard({
+    required this.message,
+    this.icon,
+    this.buttonLabel,
+    this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.color;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.secondaryColor,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: theme.borderColor),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(
+              icon,
+              color: theme.territoryColor,
+            ),
+            const SizedBox(height: 8),
+          ],
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: theme.textColorDark,
+              fontSize: context.font.normal,
+            ),
+          ),
+          if (buttonLabel != null && onPressed != null) ...[
+            const SizedBox(height: 12),
+            OutlinedButton(
+              onPressed: onPressed,
+              child: Text(buttonLabel!),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 }

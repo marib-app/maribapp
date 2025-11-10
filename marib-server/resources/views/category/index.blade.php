@@ -228,9 +228,13 @@
                 targetSelectElement.innerHTML = '';
 
                 const fragment = document.createDocumentFragment();
+                const hasArrayOptions = Array.isArray(options);
+                const isUsableOption = function (option) {
+                    return option && option.id !== undefined && option.id !== null && option.id !== '';
+                };
+                const usableOptions = hasArrayOptions ? options.filter(isUsableOption) : [];
 
-
-                if (!Array.isArray(options) || options.length === 0) {
+                if (!hasArrayOptions || usableOptions.length === 0) {
                     const emptyOption = document.createElement('option');
                     emptyOption.value = '';
                     emptyOption.textContent = '{{ __('لا توجد أقسام متاحة للنسخ إليها.') }}';
@@ -245,16 +249,14 @@
                     return;
                 }
 
-                const isUsableOption = function (option) {
-                    return option && option.id !== undefined && option.id !== null && option.id !== '';
-                };
+
 
                 let selectedValue = '';
-                const hasSingleUsableOption = options.length === 1 && isUsableOption(options[0]);
+                const hasSingleUsableOption = usableOptions.length === 1;
 
 
                 if (hasSingleUsableOption) {
-                    const singleOption = options[0];
+                    const singleOption = usableOptions[0];
                     selectedValue = String(singleOption.id);
                     const optionElement = document.createElement('option');
                     optionElement.value = selectedValue;
@@ -262,7 +264,14 @@
                     optionElement.selected = true;
                     fragment.appendChild(optionElement);
 
-
+                    targetSelectElement.appendChild(fragment);
+                    $targetSelect.prop('disabled', false);
+                    targetSelectElement.disabled = false;
+                    targetSelectElement.value = selectedValue;
+                    initializeSelect2();
+                    submitButton.disabled = false;
+                    syncSelectionState(selectedValue);
+                    return;
                 } else {
                     const placeholderOption = document.createElement('option');
                     placeholderOption.value = '';
@@ -271,7 +280,7 @@
                     placeholderOption.selected = true;
                     fragment.appendChild(placeholderOption);
 
-                    options.forEach(function (option) {
+                    usableOptions.forEach(function (option) {
                         const optionElement = document.createElement('option');
                         optionElement.value = option.id;
                         optionElement.textContent = option.label;

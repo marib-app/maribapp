@@ -245,7 +245,6 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
   }
 
   Widget _buildHeader(BuildContext context) {
-    final colors = context.color;
     final textTheme = Theme.of(context).textTheme;
 
     return Padding(
@@ -346,7 +345,6 @@ class _DashboardHintCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.color;
-    final textTheme = Theme.of(context).textTheme;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -650,38 +648,6 @@ class _NetworkChip extends StatelessWidget {
   }
 }
 
-class _InfoPill extends StatelessWidget {
-  const _InfoPill({required this.label, required this.icon});
-
-  final String label;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(40),
-        color: context.color.territoryColor.withOpacity(.12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: context.color.territoryColor),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: context.color.territoryColor,
-                  fontWeight: FontWeight.w600,
-                ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _InfoChip extends StatelessWidget {
   const _InfoChip({required this.icon, required this.label});
 
@@ -928,6 +894,45 @@ class _WifiNetworkDetailsSheetState extends State<_WifiNetworkDetailsSheet> {
       ),
     );
   }
+
+  void _openPlanCheckout(WifiPlan plan) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => _PlanCheckoutSheet(
+        plan: plan,
+        network: widget.network,
+        onProceed: () async {
+          Navigator.of(sheetContext).pop();
+          await _navigateToPayment(plan);
+        },
+      ),
+    );
+  }
+
+  Future<void> _navigateToPayment(WifiPlan plan) async {
+    final double amount = plan.price.toDouble();
+    final String? currency = plan.currency;
+
+    if (currency == null || currency.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('لا يمكن متابعة الدفع لهذه الخطة حالياً.')),
+      );
+      return;
+    }
+
+    await Navigator.of(context).pushNamed(
+      Routes.servicePaymentPage,
+      arguments: {
+        'serviceId': plan.id,
+        'serviceTitle': '${plan.name} - ${widget.network.name}',
+        'amount': amount,
+        'currency': currency,
+        'note':
+            plan.description ?? 'خطة ${plan.name} لشبكة ${widget.network.name}',
+      },
+    );
+  }
 }
 
 class _NetworkInfoBlock extends StatelessWidget {
@@ -981,44 +986,6 @@ class _NetworkInfoBlock extends StatelessWidget {
             ),
         ],
       ),
-    );
-  }
-  void _openPlanCheckout(WifiPlan plan) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (sheetContext) => _PlanCheckoutSheet(
-        plan: plan,
-        network: widget.network,
-        onProceed: () async {
-          Navigator.of(sheetContext).pop();
-          await _navigateToPayment(plan);
-        },
-      ),
-    );
-  }
-
-  Future<void> _navigateToPayment(WifiPlan plan) async {
-    final double? amount = plan.price;
-    final String? currency = plan.currency;
-
-    if (amount == null || currency == null || currency.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('لا يمكن متابعة الدفع لهذه الخطة حالياً.')),
-      );
-      return;
-    }
-
-    await Navigator.of(context).pushNamed(
-      Routes.servicePaymentPage,
-      arguments: {
-        'serviceId': plan.id,
-        'serviceTitle': '${plan.name} - ${widget.network.name}',
-        'amount': amount,
-        'currency': currency,
-        'note': plan.description ??
-            'خطة ${plan.name} لشبكة ${widget.network.name}',
-      },
     );
   }
 }

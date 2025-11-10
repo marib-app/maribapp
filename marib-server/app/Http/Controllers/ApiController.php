@@ -755,7 +755,7 @@ class ApiController extends Controller {
             if ($request->type == 'google') {
                 $validationRules['mobile'] = 'nullable'; // جعل الهاتف اختياري للـ Google
             } elseif ($request->type == 'phone') {
-                $validationRules['mobile'] = 'required';
+                $validationRules['mobile'] = 'required|unique:users,mobile';
             } elseif ($request->type == 'email') {
                 $validationRules['email'] = 'required|email';
             }
@@ -770,6 +770,7 @@ class ApiController extends Controller {
             // رسائل خطأ مخصصة
             $customMessages = [
                 'mobile.required' => 'رقم الهاتف مطلوب.',
+                'mobile.unique'   => 'هذا الرقم مستخدم لحساب آخر.',
                 'email.required' => 'الإيميل مطلوب.',
                 'email.email' => 'يرجى إدخال إيميل صحيح.',
                 'code.exists' => 'كود الإحالة غير صحيح.'

@@ -38,10 +38,7 @@ class ManageItemCubit extends Cubit<ManageItemState> {
       emit(ManageItemInProgress());
 
 
-      final List<File>? galleryImages =
-          otherImage == null || otherImage.isEmpty
-              ? null
-              : List<File>.from(otherImage);
+      final List<File>? galleryImages = _prepareGalleryImages(otherImage);
 
       if (type == ManageItemType.add) {
         if (mainImage == null) {
@@ -65,5 +62,14 @@ class ManageItemCubit extends Cubit<ManageItemState> {
     } catch (e) {
       emit(ManageItemFail(e));
     }
+  }
+
+  /// Normalizes optional gallery images so we never force unwrap a null list.
+  List<File>? _prepareGalleryImages(List<File>? images) {
+    if (images == null) {
+      return null;
+    }
+    final List<File> normalized = List<File>.from(images);
+    return normalized.isEmpty ? null : normalized;
   }
 }

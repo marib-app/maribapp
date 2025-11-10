@@ -43,11 +43,13 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
   String? _errorMessage;
   String _searchQuery = '';
   List<WifiNetwork> _networks = const <WifiNetwork>[];
+  bool _hasApprovedOwnerNetwork = false;
 
   @override
   void initState() {
     super.initState();
     _loadNetworks();
+    _refreshOwnerNetworkStatus();
   }
 
   @override
@@ -71,7 +73,7 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
     }
 
     try {
-      final List<WifiNetwork> result = await _repository.fetchOwnerNetworks(
+      final List<WifiNetwork> result = await _repository.fetchNetworks(
         query: _searchQuery.trim().isEmpty ? null : _searchQuery.trim(),
         perPage: 60,
       );
@@ -88,6 +90,24 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _refreshOwnerNetworkStatus() async {
+    try {
+      final List<WifiNetwork> owned =
+          await _repository.fetchOwnerNetworks(perPage: 20);
+      if (!mounted) return;
+      final bool hasActive = owned.any((network) =>
+          (network.status ?? '').toLowerCase().trim() == 'active');
+      setState(() {
+        _hasApprovedOwnerNetwork = hasActive;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _hasApprovedOwnerNetwork = false;
       });
     }
   }
@@ -130,6 +150,7 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
     );
     if (created == true) {
       _loadNetworks();
+      _refreshOwnerNetworkStatus();
     }
   }
 
@@ -229,10 +250,13 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
                 borderRadius: BorderRadius.circular(18),
               ),
             ),
-            onPressed: _openAddNetworkFlow,
-            icon: const Icon(Icons.add_circle_outline_rounded),
+            onPressed:
+                _hasApprovedOwnerNetwork ? _openDashboard : _openAddNetworkFlow,
+            icon: Icon(_hasApprovedOwnerNetwork
+                ? Icons.dashboard_customize_rounded
+                : Icons.add_circle_outline_rounded),
             label: Text(
-              'إضافة شبكة جديدة',
+              _hasApprovedOwnerNetwork ? 'إدارة شبكتك' : 'إضافة شبكة جديدة',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,

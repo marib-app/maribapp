@@ -215,6 +215,30 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
           (getCloudData("with_more_details") as Map<String, dynamic>?) ??
               <String, dynamic>{};
 
+      void _ensureField({
+        required String targetKey,
+        String? fallbackKey,
+      }) {
+        final String? target = _clean(cloudData[targetKey] as String?);
+        if (target != null && target.isNotEmpty) {
+          cloudData[targetKey] = target;
+          return;
+        }
+        if (fallbackKey == null) {
+          cloudData.remove(targetKey);
+          return;
+        }
+        final String? fallbackValue = _clean(cloudData[fallbackKey] as String?);
+        if (fallbackValue != null && fallbackValue.isNotEmpty) {
+          cloudData[targetKey] = fallbackValue;
+        } else {
+          cloudData.remove(targetKey);
+        }
+      }
+
+      _ensureField(targetKey: 'name', fallbackKey: 'title');
+      _ensureField(targetKey: 'title', fallbackKey: 'name');
+
 
       String? _existingValue(String key) {
         final value = cloudData[key];
@@ -298,10 +322,35 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
       // احذف القيم الفارغة حفاظًا على نظافة الطلب
       cloudData.removeWhere((k, v) => v == null || (v is String && v.trim().isEmpty));
 
+      if (cloudData.containsKey('custom_fields')) {
+        final dynamic rawCustomFields = cloudData['custom_fields'];
+        try {
+          final dynamic decoded = json.decode(rawCustomFields.toString());
+          if (decoded is Map) {
+            debugPrint(
+                "[ConfirmLocation] custom_fields keys: ${decoded.keys.join(', ')}");
+          } else {
+            debugPrint(
+                "[ConfirmLocation] custom_fields value (non-map): $rawCustomFields");
+          }
+        } catch (e) {
+          debugPrint(
+              "[ConfirmLocation] failed to decode custom_fields: $rawCustomFields ($e)");
+        }
+      } else {
+        debugPrint("[ConfirmLocation] custom_fields not present in payload");
+      }
+
+      final dynamic activeIdsRaw = getCloudData('active_custom_field_ids');
+      if (activeIdsRaw != null) {
+        debugPrint("[ConfirmLocation] active_custom_field_ids: $activeIdsRaw");
+      }
+
       // ===== Submit =====
       final manage = context.read<ManageItemCubit>();
       if (widget.isEdit == true) {
         _dismissKeyboard();
+        debugPrint('[ConfirmLocation] submit edit payload: $cloudData');
         manage.manage(
           ManageItemType.edit,
           cloudData,
@@ -316,6 +365,7 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
           return;
         }
         _dismissKeyboard();
+        debugPrint('[ConfirmLocation] submit add payload: $cloudData');
         manage.manage(
           ManageItemType.add,
           cloudData,
@@ -411,13 +461,161 @@ extension _ConfirmLocationUI on _ConfirmLocationScreenState {
       });
     }
     if (state is ManageItemFail) {
-      final filteredError = ErrorFilter.check(state.error).error;
-      final message =
-      filteredError is String ? filteredError : filteredError.toString();
-      HelperUtils.showSnackBarMessage(context, message);
-
+      debugPrint(
+        '[ConfirmLocation] ManageItemFail: ${state.error} '
+        '(${state.error.runtimeType})',
+      );
+      HelperUtils.showSnackBarMessage(
+        context,
+        _resolveManageItemError(state.error),
+      );
       Widgets.hideLoder(context);
     }
+  }
+
+  String _resolveManageItemError(dynamic error) {
+    final dynamic filteredError = ErrorFilter.check(error).error;
+    final String? extracted = _extractErrorMessage(filteredError ?? error);
+    debugPrint('[ConfirmLocation] extracted error message: $extracted');
+    if (extracted == null || _shouldFallbackErrorMessage(extracted)) {
+      return "somethingWentWrong".translate(context);
+    }
+    return extracted.trim();
+  }
+
+  bool _shouldFallbackErrorMessage(String message) {
+    final String normalized = message.trim();
+    if (normalized.isEmpty) {
+      return true;
+    }
+    final String lower = normalized.toLowerCase();
+    return lower == 'null' ||
+        lower == 'undefined' ||
+        lower == 'request-failed' ||
+        lower == 'manage-item-fail' ||
+        lower.startsWith('instance of');
+  }
+
+  String? _extractErrorMessage(dynamic error) {
+    if (error == null) {
+      return null;
+    }
+
+    if (error is bool) {
+      return null;
+    }
+
+    if (error is String) {
+      final String trimmed = error.trim();
+      return trimmed.isEmpty ? null : trimmed;
+    }
+
+    if (error is ApiHttpException) {
+      final String? payloadMessage = _messageFromPayload(error.payload);
+      if (payloadMessage != null) {
+        return payloadMessage;
+      }
+      return _extractErrorMessage(error.errorMessage);
+    }
+
+    if (error is ApiException) {
+      return _extractErrorMessage(error.errorMessage);
+    }
+
+    if (error is DioException) {
+      final String? payloadMessage = _messageFromPayload(error.response?.data);
+      if (payloadMessage != null) {
+        return payloadMessage;
+      }
+      final String? dioMessage = error.message;
+      if (dioMessage != null && dioMessage.trim().isNotEmpty) {
+        return dioMessage.trim();
+      }
+    }
+
+    if (error is Map) {
+      return _messageFromPayload(error);
+    }
+
+    if (error is Iterable) {
+      for (final dynamic entry in error) {
+        final String? candidate = _extractErrorMessage(entry);
+        if (candidate != null) {
+          return candidate;
+        }
+      }
+      return null;
+    }
+
+    final String fallback = error.toString().trim();
+    return fallback.isEmpty ? null : fallback;
+  }
+
+  String? _messageFromPayload(dynamic payload) {
+    if (payload == null) {
+      return null;
+    }
+
+    if (payload is String) {
+      final String trimmed = payload.trim();
+      return trimmed.isEmpty ? null : trimmed;
+    }
+
+    if (payload is Map) {
+      const List<String> prioritizedKeys = <String>[
+        'message',
+        'error',
+        'detail',
+        'title',
+        'description',
+        'reason',
+      ];
+
+      for (final String key in prioritizedKeys) {
+        if (payload.containsKey(key)) {
+          final String? candidate = _extractErrorMessage(payload[key]);
+          if (candidate != null) {
+            return candidate;
+          }
+        }
+      }
+
+      if (payload.containsKey('errors')) {
+        final String? candidate = _extractErrorMessage(payload['errors']);
+        if (candidate != null) {
+          return candidate;
+        }
+      }
+
+      if (payload.containsKey('data')) {
+        final String? candidate = _extractErrorMessage(payload['data']);
+        if (candidate != null) {
+          return candidate;
+        }
+      }
+
+      for (final dynamic entry in payload.values) {
+        final String? candidate = _extractErrorMessage(entry);
+        if (candidate != null) {
+          return candidate;
+        }
+      }
+
+      return null;
+    }
+
+    if (payload is Iterable) {
+      for (final dynamic entry in payload) {
+        final String? candidate = _extractErrorMessage(entry);
+        if (candidate != null) {
+          return candidate;
+        }
+      }
+      return null;
+    }
+
+    final String fallback = payload.toString().trim();
+    return fallback.isEmpty ? null : fallback;
   }
 
 

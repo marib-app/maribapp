@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -159,8 +160,27 @@ class AddItemDetailsSubmissionService {
         (_state.getCloudData('with_more_details') as Map<String, dynamic>?) ??
             <String, dynamic>{};
 
-    if (!stored.containsKey('title')) {
-      stored['title'] = model.adTitleController.text.trim();
+    String _normalizedTitle(dynamic value) {
+      if (value == null) return '';
+      if (value is String) {
+        return value.trim();
+      }
+      return value.toString().trim();
+    }
+
+    final String currentTitle = model.adTitleController.text.trim();
+
+    final bool hasStoredTitle =
+        _normalizedTitle(stored['title']).isNotEmpty;
+    if (!hasStoredTitle) {
+      stored['title'] = currentTitle;
+    }
+
+    final bool hasStoredName = _normalizedTitle(stored['name']).isNotEmpty;
+    if (!hasStoredName) {
+      stored['name'] = hasStoredTitle
+          ? _normalizedTitle(stored['title'])
+          : currentTitle;
     }
     if (!stored.containsKey('description')) {
       stored['description'] = model.adDescriptionController.text.trim();
@@ -329,8 +349,11 @@ class AddItemDetailsSubmissionService {
     onSheinCategoryChanged(categoryIds, notify: false);
     final bool disableLocation = GeoRules.isDisabled(categoryIds: categoryIds);
 
+    final String normalizedTitle = model.adTitleController.text.trim();
+
     final Map<String, dynamic> data = <String, dynamic>{
-      'title': model.adTitleController.text.trim(),
+      'name': normalizedTitle,
+      'title': normalizedTitle,
       'description': model.adDescriptionController.text.trim(),
       'price': model.adPriceController.text.trim(),
       'currency': model.selectedCurrency,
@@ -576,6 +599,14 @@ class AddItemDetailsSubmissionService {
         return;
       }
 
+      if (key == 'custom_fields') {
+        final String? normalized = _sanitizeCustomFieldsValue(value);
+        if (normalized != null && normalized.isNotEmpty) {
+          sanitized[key] = normalized;
+        }
+        return;
+      }
+
       if (value is String) {
         final String trimmed = value.trim();
         if (trimmed.isEmpty || trimmed == '{}' || trimmed == '[]') {
@@ -605,6 +636,153 @@ class AddItemDetailsSubmissionService {
     });
 
     return sanitized;
+  }
+
+  String? _sanitizeCustomFieldsValue(dynamic raw) {
+    if (raw == null) {
+      return null;
+    }
+
+    Map<String, dynamic>? decoded;
+
+    if (raw is String) {
+      final String trimmed = raw.trim();
+      if (trimmed.isEmpty || trimmed == '{}' || trimmed == '[]') {
+        return null;
+      }
+      try {
+        final dynamic jsonValue = json.decode(trimmed);
+        if (jsonValue is Map) {
+          decoded = Map<String, dynamic>.from(jsonValue);
+        } else {
+          // Not a map; keep the trimmed string as-is.
+          return trimmed;
+        }
+      } catch (_) {
+        // Invalid JSON, fall back to original string.
+        return trimmed;
+      }
+    } else if (raw is Map) {
+      decoded = Map<String, dynamic>.from(raw);
+    } else {
+      return raw.toString();
+    }
+
+    if (decoded == null || decoded.isEmpty) {
+      return null;
+    }
+
+    final Map<String, dynamic> filtered = <String, dynamic>{};
+    decoded.forEach((dynamic key, dynamic value) {
+      final String normalizedKey = key?.toString().trim() ?? '';
+      if (normalizedKey.isEmpty) {
+        return;
+      }
+      final dynamic cleanedValue = _pruneCustomFieldValue(value);
+      if (cleanedValue == null) {
+        return;
+      }
+      filtered[normalizedKey] = cleanedValue;
+    });
+
+    if (filtered.isEmpty) {
+      return null;
+    }
+
+    final Set<String>? allowedIds = _activeCustomFieldIds();
+    if (allowedIds != null && allowedIds.isNotEmpty) {
+      final List<String> originalKeys = List<String>.from(filtered.keys);
+      filtered.removeWhere(
+        (String key, dynamic _) => !allowedIds.contains(key),
+      );
+      debugPrint(
+        '[AddItemSubmission] custom_fields filtered from '
+        '${originalKeys.join(',')} to ${filtered.keys.join(',')} '
+        'allowed=$allowedIds',
+      );
+      if (filtered.isEmpty) {
+        return null;
+      }
+    } else {
+      debugPrint(
+        '[AddItemSubmission] custom_fields retained keys ${filtered.keys.join(',')} '
+        '(no active filter)',
+      );
+    }
+
+    return json.encode(filtered);
+  }
+
+  dynamic _pruneCustomFieldValue(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+
+    if (value is String) {
+      final String trimmed = value.trim();
+      return trimmed.isEmpty ? null : trimmed;
+    }
+
+    if (value is Iterable) {
+      final List<dynamic> cleaned = value
+          .map(_pruneCustomFieldValue)
+          .where((dynamic entry) => entry != null)
+          .toList();
+      if (cleaned.isEmpty) {
+        return null;
+      }
+      return cleaned;
+    }
+
+    if (value is Map) {
+      final Map<String, dynamic> cleaned = <String, dynamic>{};
+      value.forEach((dynamic key, dynamic nestedValue) {
+        final String normalizedKey = key?.toString().trim() ?? '';
+        if (normalizedKey.isEmpty) {
+          return;
+        }
+        final dynamic nestedCleaned = _pruneCustomFieldValue(nestedValue);
+        if (nestedCleaned == null) {
+          return;
+        }
+        cleaned[normalizedKey] = nestedCleaned;
+      });
+      if (cleaned.isEmpty) {
+        return null;
+      }
+      return cleaned;
+    }
+
+    return value;
+  }
+
+  Set<String>? _activeCustomFieldIds() {
+    final dynamic raw = _state.getCloudData('active_custom_field_ids');
+    if (raw == null) {
+      return null;
+    }
+
+    Iterable<dynamic> source;
+    if (raw is Iterable) {
+      source = raw;
+    } else if (raw is String) {
+      source = raw.split(',');
+    } else {
+      source = <dynamic>[raw];
+    }
+
+    final Set<String> normalized = <String>{};
+    for (final dynamic entry in source) {
+      final String value = entry?.toString().trim() ?? '';
+      if (value.isNotEmpty) {
+        normalized.add(value);
+      }
+    }
+
+    if (normalized.isEmpty) {
+      return null;
+    }
+    return normalized;
   }
 
   PendingItemDraft? _preparePendingDraftWithoutLocation({
@@ -711,8 +889,11 @@ class AddItemDetailsSubmissionService {
     }
 
     final ItemModel source = model.item ?? ItemModel();
+    final String? payloadNameRaw =
+        (payload['name'] ?? payload['title'])?.toString();
+
     final ItemModel draftItem = source.copyWith(
-      name: payload['title']?.toString(),
+      name: payloadNameRaw,
       description: payload['description']?.toString(),
       price: _parsePrice(payload['price']),
       currency: payload['currency']?.toString(),

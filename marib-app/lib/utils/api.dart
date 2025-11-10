@@ -1141,7 +1141,17 @@ class Api {
         );
       }
       if (resp['error'] == true) {
-        throw ApiException(resp['message'].toString());
+        final dynamic respCode = resp['code'];
+        final int derivedStatus = respCode is int && respCode > 0
+            ? respCode
+            : (statusCode == 0 ? 422 : statusCode);
+        final String message =
+            (resp['message'] ?? 'request-failed').toString();
+        throw ApiHttpException(
+          errorMessage: message,
+          statusCode: derivedStatus,
+          payload: resp,
+        );
       }
 
       return resp;

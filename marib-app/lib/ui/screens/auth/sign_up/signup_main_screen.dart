@@ -2,9 +2,6 @@
 // File: lib/ui/screens/auth/signup/sign_up_main_screen.dart
 // Purpose: Logic/State holder. Delegates all UI to SignUpMainUI in sign_up_main_ui.dart
 // ================================
-import 'package:flutter_linkify/flutter_linkify.dart';
-import 'package:url_launcher/url_launcher.dart';
-
 import 'dart:async';
 import 'dart:io';
 
@@ -13,14 +10,10 @@ import 'package:device_region/device_region.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_svg/svg.dart';
-
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 
-import 'package:marib/app/app_theme.dart';
 import 'package:marib/app/routes.dart';
 import 'package:marib/data/cubits/auth/authentication_cubit.dart';
-import 'package:marib/data/cubits/system/app_theme_cubit.dart';
 import 'package:marib/data/cubits/system/fetch_system_settings_cubit.dart';
 import 'package:marib/data/cubits/system/user_details.dart';
 import 'package:marib/data/helper/widgets.dart';
@@ -28,7 +21,6 @@ import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/api.dart';
-import 'package:marib/utils/app_icon.dart';
 import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/hive_utils.dart';
@@ -36,13 +28,11 @@ import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/login/lib/login_status.dart';
 import 'package:marib/utils/login/lib/payloads.dart';
 import 'package:marib/utils/ui_utils.dart';
+import 'package:marib/utils/notification/notification_service.dart';
 import 'package:marib/ui/screens/auth/sign_up/sign_up_main_ui.dart';
 import 'package:marib/ui/screens/auth/widgets/auth_status_bar.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
-
-
-
 
 class SignUpMainScreen extends StatefulWidget {
   final Map<String, dynamic>? arguments;
@@ -94,6 +84,19 @@ class LoginScreenState extends State<SignUpMainScreen> {
     return draft;
   }
 
+  Future<void> _switchToUser(Map<String, dynamic> apiResponse) async {
+    await HiveUtils.logoutUser(context, onLogout: () {});
+    HiveUtils.setJWT(apiResponse['token']);
+    HiveUtils.setUserData(apiResponse['data']);
+    HiveUtils.setUserIsAuthenticated(true);
+    context.read<UserDetailsCubit>().fill(HiveUtils.getUserDetails());
+    await NotificationService.resendPendingTokenIfNeeded();
+    await FetchSystemSettingsCubit.refreshPermissionsForCurrentUser(
+      context,
+      clearCacheBeforeFetch: true,
+    );
+  }
+
   Future<void> _startMerchantOnboarding(Map<String, dynamic> draft) async {
     await HiveUtils.beginMerchantOnboardingSession(
       initialStep: 0,
@@ -111,6 +114,7 @@ class LoginScreenState extends State<SignUpMainScreen> {
       );
     });
   }
+
   StreamSubscription<AuthenticationState>? _authenticationSubscription;
   VoidCallback? _loginStateListenerDisposer;
 
@@ -120,9 +124,7 @@ class LoginScreenState extends State<SignUpMainScreen> {
     final authCubit = context.read<AuthenticationCubit>();
     authCubit.init();
 
-
     _authenticationSubscription = authCubit.stream.listen((state) {
-
       if (!mounted) return;
       if (state is AuthenticationSuccess) {
         if (state.type == AuthenticationType.google ||
@@ -139,7 +141,6 @@ class LoginScreenState extends State<SignUpMainScreen> {
 
     _loginStateListenerDisposer?.call();
     _loginStateListenerDisposer = authCubit.listen((MLoginState state) {
-
       if (!mounted) return;
       if (state is MOtpSendInProgress) Widgets.showLoader(context);
       if (state is MVerificationPending) {
@@ -171,7 +172,6 @@ class LoginScreenState extends State<SignUpMainScreen> {
       setState(() {});
     });
   }
-
 
   @override
   void initState() {
@@ -219,10 +219,10 @@ class LoginScreenState extends State<SignUpMainScreen> {
     } catch (_) {}
 
     Country simCountry = countryList.firstWhere(
-          (element) {
+      (element) {
         if (Constant.isDemoModeOn) {
           return countryList.any(
-                (e) => e.phoneCode == Constant.defaultCountryCode,
+            (e) => e.phoneCode == Constant.defaultCountryCode,
           );
         } else {
           return element.phoneCode == simCountryCode;
@@ -236,17 +236,13 @@ class LoginScreenState extends State<SignUpMainScreen> {
     );
 
     if (Constant.isDemoModeOn) {
-      simCountry =
-          countryList
-              .where((e) => e.phoneCode == Constant.demoCountryCode)
-              .first;
+      simCountry = countryList
+          .where((e) => e.phoneCode == Constant.demoCountryCode)
+          .first;
     }
 
     return simCountry;
   }
-
-
-
 
   Future<bool> _ensureSystemSettingsAvailable() async {
     final cubit = context.read<FetchSystemSettingsCubit>();
@@ -260,8 +256,8 @@ class LoginScreenState extends State<SignUpMainScreen> {
     try {
       if (currentState is FetchSystemSettingsInProgress) {
         resolvedState = await cubit.stream.firstWhere(
-              (state) =>
-          state is FetchSystemSettingsSuccess ||
+          (state) =>
+              state is FetchSystemSettingsSuccess ||
               state is FetchSystemSettingsFailure,
         );
       } else {
@@ -305,11 +301,6 @@ class LoginScreenState extends State<SignUpMainScreen> {
     );
   }
 
-
-
-
-
-
   // ====== Social login handler: send to backend, route appropriately ======
   Future<void> _handleSocialLogin(AuthenticationSuccess state) async {
     try {
@@ -336,9 +327,7 @@ class LoginScreenState extends State<SignUpMainScreen> {
             userData['account_type'] != null && userData['account_type'] != 0;
         final bool isEmailVerified = userData['email_verified_at'] != null;
         final bool hasCompleteName =
-            userData['name'] != null && userData['name']
-                .toString()
-                .isNotEmpty;
+            userData['name'] != null && userData['name'].toString().isNotEmpty;
 
         context.read<UserDetailsCubit>().fill(HiveUtils.getUserDetails());
 
@@ -367,8 +356,6 @@ class LoginScreenState extends State<SignUpMainScreen> {
             usernameCtrl.text = incomingGoogleData['name'] ?? '';
             emailCtrl.text = incomingGoogleData['email'] ?? '';
           });
-
-
         }
         if (selectedAccountType == "3") {
           final draft = _buildMerchantDraft(payload);
@@ -376,8 +363,7 @@ class LoginScreenState extends State<SignUpMainScreen> {
           return;
         }
       } else {
-        HelperUtils.showSnackBarMessage(
-            context,
+        HelperUtils.showSnackBarMessage(context,
             response['message'] ?? "registrationError".translate(context));
       }
     } catch (e) {
@@ -420,8 +406,8 @@ class LoginScreenState extends State<SignUpMainScreen> {
       context: context,
       showWorldWide: true,
       showPhoneCode: true,
-      countryListTheme: CountryListThemeData(
-          borderRadius: BorderRadius.circular(11)),
+      countryListTheme:
+          CountryListThemeData(borderRadius: BorderRadius.circular(11)),
       onSelect: (Country value) {
         flagEmoji = value.flagEmoji;
         if (!mounted) return;
@@ -430,8 +416,6 @@ class LoginScreenState extends State<SignUpMainScreen> {
       },
     );
   }
-
-
 
   Future<Map<String, dynamic>?> _prepareLocationPayload() async {
     try {
@@ -472,7 +456,9 @@ class LoginScreenState extends State<SignUpMainScreen> {
       }
 
       final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
       );
 
       String? adminArea;
@@ -495,8 +481,8 @@ class LoginScreenState extends State<SignUpMainScreen> {
             'street': placemark.street,
           };
           possibleMeta.removeWhere(
-                (key, value) =>
-            value == null || (value is String && value.trim().isEmpty),
+            (key, value) =>
+                value == null || (value is String && value.trim().isEmpty),
           );
           if (possibleMeta.isNotEmpty) {
             meta = possibleMeta;
@@ -530,9 +516,6 @@ class LoginScreenState extends State<SignUpMainScreen> {
     }
   }
 
-
-
-
   // Submit action for primary button
   Future<void> onSubmit() async {
     final form = formKey.currentState;
@@ -543,7 +526,6 @@ class LoginScreenState extends State<SignUpMainScreen> {
     if (_isSubmitting) {
       return;
     }
-
 
     if (!agreed) {
       HelperUtils.showSnackBarMessage(
@@ -564,7 +546,6 @@ class LoginScreenState extends State<SignUpMainScreen> {
       return;
     }
 
-
     _isSubmitting = true;
     Widgets.showLoader(context);
 
@@ -576,7 +557,6 @@ class LoginScreenState extends State<SignUpMainScreen> {
     }
 
     try {
-
       final basePayload = <String, dynamic>{
         "name": usernameCtrl.text,
         "mobile": mobileCtrl.text,
@@ -595,17 +575,13 @@ class LoginScreenState extends State<SignUpMainScreen> {
         basePayload["code"] = referralCode;
       }
 
-
-
       Map<String, dynamic> payload;
 
       if (isFromGoogleLogin && googleData != null) {
         // Complete profile for social login
         payload = {
           ...basePayload,
-
           "type": "google",
-
           "firebase_id": googleData!['firebase_id'],
           "profile": googleData!['profile'] ?? "",
         };
@@ -617,14 +593,12 @@ class LoginScreenState extends State<SignUpMainScreen> {
           firebaseId = currentUser.uid;
         } else {
           firebaseId =
-          "user_${countryCode}${mobileCtrl.text}"; // temporary fallback
+              "user_${countryCode}${mobileCtrl.text}"; // temporary fallback
         }
 
         payload = {
           ...basePayload,
-
           "type": "phone",
-
           "firebase_id": firebaseId,
         };
       }
@@ -632,11 +606,7 @@ class LoginScreenState extends State<SignUpMainScreen> {
       final response = await Api.post(url: "user-signup", parameter: payload);
 
       if (response['error'] == false) {
-        HiveUtils.setJWT(response['token']);
-        HiveUtils.setUserData(response['data']);
-        HiveUtils.setUserIsAuthenticated(true);
-
-        context.read<UserDetailsCubit>().fill(HiveUtils.getUserDetails());
+        await _switchToUser(response);
 
         if (selectedAccountType == "3") {
           final draft = _buildMerchantDraft(basePayload);
@@ -665,9 +635,8 @@ class LoginScreenState extends State<SignUpMainScreen> {
         );
       }
     } catch (e) {
-      HelperUtils.showSnackBarMessage(
-          context, e.toString(), messageDuration: 3);
-
+      HelperUtils.showSnackBarMessage(context, e.toString(),
+          messageDuration: 3);
     } finally {
       Widgets.hideLoder(context);
       _isSubmitting = false;
@@ -677,19 +646,16 @@ class LoginScreenState extends State<SignUpMainScreen> {
   @override
   Widget build(BuildContext context) {
     // معرفة حجم الشاشة
-    size = MediaQuery
-        .of(context)
-        .size;
+    size = MediaQuery.of(context).size;
     final Color statusBarBase = LoginStatusBar.resolveBaseColor(
       context,
       override: context.color.backgroundColor,
     );
 
-
     final settingsState = context.watch<FetchSystemSettingsCubit>().state;
     final bool isSettingsReady = settingsState is FetchSystemSettingsSuccess;
-    final bool isSettingsLoading = settingsState is FetchSystemSettingsInProgress;
-
+    final bool isSettingsLoading =
+        settingsState is FetchSystemSettingsInProgress;
 
     // تهيئة الـ ViewModel (البيانات الخاصة بشاشة التسجيل)
     final vm = SignUpVM(
@@ -709,7 +675,6 @@ class LoginScreenState extends State<SignUpMainScreen> {
       selectedAccountType: selectedAccountType,
       isSystemSettingsReady: isSettingsReady,
       isSystemSettingsLoading: isSettingsLoading,
-
     );
 
     // تعريف الكولباكات (Callbacks) للأحداث المختلفة
@@ -735,10 +700,8 @@ class LoginScreenState extends State<SignUpMainScreen> {
             // المحتوى من السيرفر مترجم، يمكن أن يحتوي نص طويل
             content: ConstrainedBox(
               constraints: BoxConstraints(
-                maxHeight: MediaQuery
-                    .of(context)
-                    .size
-                    .height * 0.6, // أقصى 60% من ارتفاع الشاشة
+                maxHeight: MediaQuery.of(context).size.height *
+                    0.6, // أقصى 60% من ارتفاع الشاشة
               ),
               child: SingleChildScrollView(
                 child: Text(
@@ -766,7 +729,6 @@ class LoginScreenState extends State<SignUpMainScreen> {
       onSubmit: onSubmit,
       onNavigateToLogin: () => Navigator.pushNamed(context, Routes.login),
 
-
       onOpenStaticContent: ({required String title, required String param}) {
         return _openStaticContent(title: title, param: param);
       },
@@ -774,18 +736,18 @@ class LoginScreenState extends State<SignUpMainScreen> {
       // مصادقة Google
       onGoogleAuth: () {
         context.read<AuthenticationCubit>().setData(
-          payload: GoogleLoginPayload(),
-          type: AuthenticationType.google,
-        );
+              payload: GoogleLoginPayload(),
+              type: AuthenticationType.google,
+            );
         context.read<AuthenticationCubit>().authenticate();
       },
 
       // مصادقة Apple
       onAppleAuth: () {
         context.read<AuthenticationCubit>().setData(
-          payload: AppleLoginPayload(),
-          type: AuthenticationType.apple,
-        );
+              payload: AppleLoginPayload(),
+              type: AuthenticationType.apple,
+            );
         context.read<AuthenticationCubit>().authenticate();
       },
     );
@@ -804,7 +766,8 @@ class LoginScreenState extends State<SignUpMainScreen> {
           // إخفاء الكيبورد عند الضغط خارج الحقول
           child: PopScope(
             canPop: isBack,
-            onPopInvoked: (didPop) => setState(() => isBack = true),
+            onPopInvokedWithResult: (didPop, __) =>
+                setState(() => isBack = true),
             child: AnnotatedRegion<SystemUiOverlayStyle>(
               value: SystemUiOverlayStyle.light.copyWith(
                 statusBarColor: Colors.transparent,
@@ -813,7 +776,8 @@ class LoginScreenState extends State<SignUpMainScreen> {
                 backgroundColor: context.color.backgroundColor,
                 body: SignUpMainUI(
                   vm: vm,
-                  callbacks: callbacks, // تمرير البيانات والأحداث للـ UI الرئيسي
+                  callbacks:
+                      callbacks, // تمرير البيانات والأحداث للـ UI الرئيسي
                   statusBarBase: statusBarBase,
                 ),
               ),
@@ -823,5 +787,4 @@ class LoginScreenState extends State<SignUpMainScreen> {
       ),
     );
   }
-
 }

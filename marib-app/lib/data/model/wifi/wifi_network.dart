@@ -10,6 +10,7 @@ class WifiNetwork extends Equatable {
     this.latitude,
     this.longitude,
     this.description,
+    this.status,
     this.iconUrl,
     this.coverageKm,
     this.loginScreenshotUrl,
@@ -28,6 +29,7 @@ class WifiNetwork extends Equatable {
   final double? latitude;
   final double? longitude;
   final String? description;
+  final String? status;
   final String? iconUrl;
   final double? coverageKm;
   final String? loginScreenshotUrl;
@@ -146,6 +148,7 @@ class WifiNetwork extends Equatable {
       longitude: parseDouble(json['longitude']),
       description: json['description']?.toString(),
       iconUrl: resolveIconUrl(json),
+      status: json['status']?.toString(),
       loginScreenshotUrl: json['login_screenshot_url']?.toString(),
       coverageKm: coverage,
       address: json['address']?.toString() ?? json['location_name']?.toString(),
@@ -165,6 +168,7 @@ class WifiNetwork extends Equatable {
     double? latitude,
     double? longitude,
     String? description,
+    String? status,
     String? iconUrl,
     double? coverageKm,
     String? loginScreenshotUrl,
@@ -184,6 +188,7 @@ class WifiNetwork extends Equatable {
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       description: description ?? this.description,
+      status: status ?? this.status,
       iconUrl: iconUrl ?? this.iconUrl,
       coverageKm: coverageKm ?? this.coverageKm,
       planCount: planCount ?? this.planCount,
@@ -204,6 +209,7 @@ class WifiNetwork extends Equatable {
       if (latitude != null) 'latitude': latitude,
       if (longitude != null) 'longitude': longitude,
       if (description != null) 'description': description,
+      if (status != null) 'status': status,
       if (iconUrl != null) 'icon_url': iconUrl,
       if (coverageKm != null) 'radius_km': coverageKm,
       if (coverageKm != null) 'coverage_radius_km': coverageKm,
@@ -228,6 +234,7 @@ class WifiNetwork extends Equatable {
     latitude,
     longitude,
     description,
+    status,
     iconUrl,
     coverageKm,
     loginScreenshotUrl,

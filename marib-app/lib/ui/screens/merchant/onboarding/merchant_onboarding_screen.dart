@@ -143,7 +143,7 @@ class _MerchantOnboardingScreenState extends State<MerchantOnboardingScreen> {
     }
     try {
       final Map<String, dynamic> payload = await _buildOnboardingPayload();
-      await Api.post(url: Api.storeOnboardingApi, parameter: payload);
+      await Api.postJson(url: Api.storeOnboardingApi, data: payload);
       await _syncManualGatewayAccounts(
           _paymentOptions?.manualDrafts ?? const []);
       await HiveUtils.clearMerchantOnboardingProgress();

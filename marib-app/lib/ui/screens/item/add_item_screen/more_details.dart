@@ -428,6 +428,8 @@ class _AddMoreDetailsScreenState extends CloudState<AddMoreDetailsScreen> {
   void _buildFieldsFrom(List<CustomFieldModel> fields) {
     if (_fieldsBuiltOnce) return;
 
+    final Set<String> activeFieldIds = <String>{};
+
     final Map? args = ModalRoute.of(context)?.settings.arguments as Map?;
     final ItemModel? item = (getCloudData('edit_request') as ItemModel?) ??
         (args?['model'] as ItemModel?) ??
@@ -459,6 +461,9 @@ class _AddMoreDetailsScreenState extends CloudState<AddMoreDetailsScreen> {
       }
 
       final String fid = _idStr(field.id);
+      if (fid.isNotEmpty) {
+        activeFieldIds.add(fid);
+      }
 
       // ✅ حقل اللون: ثبّت key=id إن لم يأتِ من السيرفر
       if (type == 'color') {
@@ -487,6 +492,11 @@ class _AddMoreDetailsScreenState extends CloudState<AddMoreDetailsScreen> {
 
     moreDetailDynamicFields = built;
     _fieldsBuiltOnce = true;
+    if (activeFieldIds.isNotEmpty) {
+      addCloudData('active_custom_field_ids', activeFieldIds.toList());
+    } else {
+      clearCloudData('active_custom_field_ids');
+    }
   }
 
   void _throttledParentSetState([dynamic _]) {
@@ -524,6 +534,7 @@ class _AddMoreDetailsScreenState extends CloudState<AddMoreDetailsScreen> {
       listener: (context, state) {
         if (state is FetchCustomFieldSuccess) {
           if (state.fields.isEmpty) {
+            clearCloudData('active_custom_field_ids');
             // إعادة محاولة IDs بديلة في التعديل
             if (widget.isEdit == true) {
               final ItemModel? item =

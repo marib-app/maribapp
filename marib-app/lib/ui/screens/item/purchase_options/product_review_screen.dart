@@ -226,9 +226,22 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
       }
 
       final int itemId = _item.id!;
-      final String status = (_item.status ?? '').toLowerCase();
+      final bool skipStatusGuards = _pendingDraft != null;
+      String status = (_item.status ?? '').toLowerCase();
 
-      if (status == 'review') {
+      if (!skipStatusGuards) {
+        try {
+          final ItemModel? refreshed = await _reloadItem(itemId);
+          if (refreshed != null) {
+            _item = refreshed;
+            status = (_item.status ?? '').toLowerCase();
+          }
+        } catch (_) {
+          // ignore refresh errors; fall back to current status
+        }
+      }
+
+      if (!skipStatusGuards && status == 'review') {
         HelperUtils.showSnackBarMessage(
           context,
           'Listing is already under review.',
@@ -244,7 +257,7 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
         'published',
         'enabled',
       };
-      if (alreadyPublished.contains(status)) {
+      if (!skipStatusGuards && alreadyPublished.contains(status)) {
         HelperUtils.showSnackBarMessage(
           context,
           'Listing is already published.',
@@ -254,7 +267,7 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
         return;
       }
 
-      if (status == 'rejected') {
+      if (!skipStatusGuards && status == 'rejected') {
         HelperUtils.showSnackBarMessage(
           context,
           'Cannot publish a rejected listing. Update the details and try again.',
@@ -280,6 +293,7 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
       if (refreshed != null) {
         _item = refreshed;
       }
+      _pendingDraft = null;
 
       HelperUtils.showSnackBarMessage(
         context,
@@ -392,6 +406,9 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
 
   Widget _buildBody() {
     if (_options == null) {
+      if (_pendingDraft != null) {
+        return _buildPendingDraftPreview();
+      }
       if (_isFetching) {
         return const Center(child: CircularProgressIndicator());
       }
@@ -509,6 +526,55 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
     );
   }
 
+  Widget _buildPendingDraftPreview() {
+    final List<_SummaryRow> rows = _buildDraftSummaryRows();
+    final PendingItemDraft draft = _pendingDraft!;
+    final int galleryCount = draft.galleryImages.length;
+    final bool hasCover = draft.mainImage != null;
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 140),
+      children: [
+        _SectionCard(
+          title: 'ملخص البيانات',
+          child: rows.isEmpty
+              ? const _EmptyState('لا تتوفر بيانات للمراجعة بعد.')
+              : _buildSummaryRowsColumn(rows),
+        ),
+        const SizedBox(height: 16),
+        _SectionCard(
+          title: 'الصور والوسائط',
+          child: Text(
+            hasCover || galleryCount > 0
+                ? 'تم تجهيز ${hasCover ? 'صورة رئيسية' : '—'} '
+                    'وعدد $galleryCount صورة في المعرض.'
+                : 'لم يتم إرفاق صور إضافية بعد. يمكنك الرجوع للتعديل لإضافة صور.',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ),
+        const SizedBox(height: 16),
+        _SectionCard(
+          title: 'خيارات الشراء',
+          child: Text(
+            'ستظهر تفاصيل خيارات الشراء هنا بعد حفظ إعدادات المنتج. '
+            'يمكنك النشر الآن أو الرجوع للتعديل إذا احتجت ذلك.',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ),
+        const SizedBox(height: 24),
+        OutlinedButton.icon(
+          onPressed: _publishing ? null : () => Navigator.of(context).maybePop(),
+          icon: const Icon(Icons.edit_outlined),
+          label: const Text('الرجوع للتعديل'),
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            side: BorderSide(color: context.color.borderColor.withOpacity(0.7)),
+          ),
+        ),
+      ],
+    );
+  }
+
   String _resolveDisabledButtonTitle(String status) {
     switch (status) {
       case 'review':
@@ -558,15 +624,7 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
 
     return _SectionCard(
       title: 'ملخص الأسعار',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: rows
-            .map((_SummaryRow row) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: _buildKeyValueRow(theme, row.label, row.value),
-                ))
-            .toList(growable: false),
-      ),
+      child: _buildSummaryRowsColumn(rows),
     );
   }
 
@@ -888,6 +946,89 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
       ],
     );
   }
+
+  Widget _buildSummaryRowsColumn(List<_SummaryRow> rows) {
+    final ThemeData theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: rows
+          .map((_SummaryRow row) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: _buildKeyValueRow(theme, row.label, row.value),
+              ))
+          .toList(growable: false),
+    );
+  }
+
+  List<_SummaryRow> _buildDraftSummaryRows() {
+    final PendingItemDraft? draft = _pendingDraft;
+    final Map<String, dynamic> payload =
+        draft != null ? Map<String, dynamic>.from(draft.payload) : <String, dynamic>{};
+    final List<_SummaryRow> rows = <_SummaryRow>[];
+
+    void addRow(String label, String? raw) {
+      final String? text = raw?.trim();
+      if (text == null || text.isEmpty) {
+        return;
+      }
+      rows.add(_SummaryRow(label, text));
+    }
+
+    addRow('عنوان الإعلان', _item.name ?? _asDraftString(payload['title']));
+
+    addRow(
+      'السعر التقديري',
+      _formatDraftPrice(
+        payload['price'] ?? _item.price,
+        payload['currency'] ?? _item.currency,
+      ),
+    );
+
+    addRow('الوصف', _item.description ?? _asDraftString(payload['description']));
+    addRow('رقم التواصل', _item.contact ?? _asDraftString(payload['contact']));
+    addRow('المدينة', _item.city ?? _asDraftString(payload['city']));
+    addRow('المحافظة / الولاية', _item.state ?? _asDraftString(payload['state']));
+    addRow('الدولة', _item.country ?? _asDraftString(payload['country']));
+    if (_item.category?.name != null &&
+        _item.category!.name!.trim().isNotEmpty) {
+      addRow('التصنيف', _item.category!.name);
+    }
+
+    return rows;
+  }
+
+  String? _asDraftString(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+    final String text = value.toString().trim();
+    return text.isEmpty ? null : text;
+  }
+
+  String? _formatDraftPrice(dynamic rawPrice, dynamic rawCurrency) {
+    double? parsedPrice;
+    if (rawPrice is num) {
+      parsedPrice = rawPrice.toDouble();
+    } else {
+      parsedPrice = double.tryParse(rawPrice?.toString() ?? '');
+    }
+    if (parsedPrice == null) {
+      return null;
+    }
+    final String currency = _asDraftString(rawCurrency) ?? 'YER';
+    final NumberFormat formatter = NumberFormat('#,##0.##', 'ar');
+    final String formatted = formatter.format(parsedPrice);
+    return '$formatted $currency';
+  }
+    if (parsedPrice == null) {
+      return null;
+    }
+    final String currency = _asDraftString(rawCurrency) ?? 'YER';
+    final NumberFormat formatter = NumberFormat('#,##0.##', 'ar');
+    final String formatted = formatter.format(parsedPrice);
+    return '$formatted $currency';
+  }
+
 
   Widget _buildFlagChip(String label, Color color) {
     final Color background = color.withOpacity(0.85);

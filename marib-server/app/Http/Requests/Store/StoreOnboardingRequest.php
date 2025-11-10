@@ -23,8 +23,15 @@ class StoreOnboardingRequest extends FormRequest
      */
     public function rules(): array
     {
+        $store = $this->user()?->stores()->latest()->first();
+
         return [
-            'name' => ['required', 'string', 'max:255'],
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('stores', 'name')->ignore(optional($store)->id),
+            ],
             'description' => ['nullable', 'string'],
             'slug' => ['nullable', 'string', 'max:255'],
             'contact_email' => ['nullable', 'email'],
@@ -82,6 +89,13 @@ class StoreOnboardingRequest extends FormRequest
             'meta.categories.*' => ['integer'],
             'meta.payment_methods' => ['nullable', 'array'],
             'meta.payment_methods.*' => ['string'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'name.unique' => 'اسم المتجر مستخدم بالفعل، يرجى اختيار اسم مختلف.',
         ];
     }
 }

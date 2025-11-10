@@ -16,6 +16,7 @@ import 'package:marib/data/model/wallet/wallet_summary.dart';
 import 'package:marib/data/model/wallet/wallet_transaction.dart';
 import 'package:marib/data/model/wallet/wallet_withdrawal.dart';
 import 'package:marib/ui/screens/wallet/wallet_withdrawal_sheet.dart';
+import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/api.dart';
 import 'package:marib/utils/currency_utils.dart';
@@ -665,7 +666,9 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
     }
 
     final summary = _activeSummary();
-    final result = await _presentTransferBottomSheet(summary);
+    final transfersCubit = context.read<WalletTransfersCubit>();
+    final result =
+        await _presentTransferBottomSheet(summary, transfersCubit);
     if (result == null || !mounted) {
       return;
     }
@@ -889,7 +892,9 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
   }
 
   Future<Map<String, dynamic>?> _presentTransferBottomSheet(
-      WalletSummary? summary) async {
+    WalletSummary? summary,
+    WalletTransfersCubit transfersCubit,
+  ) async {
     final options = _resolveTransferOptions(summary);
     final double availableBalance = _currentBalance() ?? 0;
 
@@ -924,33 +929,37 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
               final EdgeInsets viewInsets =
                   MediaQuery.of(sheetContext).viewInsets;
 
-              return Container(
-                margin:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                padding: EdgeInsets.only(
-                  left: 18,
-                  right: 18,
-                  top: 14,
-                  bottom: 18 + viewInsets.bottom,
-                ),
-                decoration: BoxDecoration(
-                  color: colors.secondaryColor,
-                  borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(28)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: colors.textDefaultColor.withOpacity(0.08),
-                      blurRadius: 24,
-                      offset: const Offset(0, -4),
+              return Align(
+                alignment: Alignment.bottomCenter,
+                child: Material(
+                  color: Colors.transparent,
+                  child: Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.only(
+                      left: 20,
+                      right: 20,
+                      top: 18,
+                      bottom: 24 + viewInsets.bottom,
                     ),
-                  ],
-                ),
-                child: Form(
-                  key: formKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
+                    decoration: BoxDecoration(
+                      color: colors.secondaryColor,
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(32),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: colors.textDefaultColor.withOpacity(0.14),
+                          blurRadius: 28,
+                          offset: const Offset(0, -8),
+                        ),
+                      ],
+                    ),
+                    child: Form(
+                      key: formKey,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
                       Center(
                         child: Container(
                           width: 48,
@@ -1089,8 +1098,7 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
 
                           WalletRecipient recipient;
                           try {
-                            recipient = await context
-                                .read<WalletTransfersCubit>()
+                            recipient = await transfersCubit
                                 .fetchRecipientByMobile(normalizedPhone);
                           } catch (error) {
                             if (!mounted) return;
@@ -1126,9 +1134,8 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
                           };
 
                           try {
-                            final cubit = context.read<WalletTransfersCubit>();
                             final response =
-                                await cubit.submitTransfer(payload);
+                                await transfersCubit.submitTransfer(payload);
                             if (!mounted) return;
                             Navigator.of(sheetContext).pop(
                               {
@@ -1160,8 +1167,10 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
                         showProgressTitle: true,
                         height: 48,
                         radius: 12,
+                        ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               );
@@ -1177,46 +1186,25 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
     required String phone,
   }) async {
     final String formattedAmount = _formatAmount(amount, _summaryCurrency());
-    final bool? confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text(
-            'تأكيد التحويل',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'هل أنت متأكد من تحويل $formattedAmount إلى مالك الرقم "$phone"؟',
-              )
-                  .size(context.font.normal)
-                  .color(context.color.textDefaultColor),
-              const SizedBox(height: 8),
-              Text('لا يمكن التراجع عن هذه العملية بعد تأكيدها.')
-                  .size(context.font.smaller)
-                  .color(context.color.textLightColor),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('إلغاء'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('تأكيد التحويل'),
-            ),
-          ],
-        );
-      },
+    final bool? confirmed = await UiUtils.showBlurredDialoge(
+      context,
+      dialoge: BlurredDialogBox(
+        title: 'تأكيد التحويل',
+        content: Text(
+          'هل أنت متأكد من تحويل $formattedAmount إلى مالك الرقم "$phone"؟\n\n'
+          'لا يمكن التراجع عن هذه العملية بعد التأكيد.',
+        )
+            .size(context.font.normal)
+            .color(context.color.textDefaultColor),
+        acceptButtonName: 'تأكيد التحويل',
+        cancelButtonName: 'إلغاء',
+        onAccept: () async {},
+        onCancel: () {},
+        barrierDismissable: false,
+      ),
     );
 
-    return confirmed ?? false;
+    return confirmed == true;
   }
 }
 

@@ -323,6 +323,8 @@
     "onboarding_2_des": "أدخل وصفًا وسعرًا وفئة إعلانك.",
     "onboarding_3_title": "احصل على المال",
     "onboarding_3_des": "استرخ الآن واستمتع بالأموال التي جمعتها على المنتج الذي تتخلى عنه.",
+    "merchantOnboarding": "تهيئة حساب التاجر",
+    "validation.boolean": "يجب أن تكون القيمة إما نعم أو لا.",
     "signIn": "تسجيل الدخول",
     "welcomeback": "مرحبًا بعودتك",
     "loginToeClassify": "تسجيل الدخول",

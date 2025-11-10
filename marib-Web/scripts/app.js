@@ -499,10 +499,16 @@
   }
 
   async function fetchDataset() {
-    const endpoint =
+    const params = new URLSearchParams(window.location.search);
+    const overrideParam = params.get('api') ?? params.get('apiBase');
+
+    let endpoint =
+      overrideParam ||
       document.documentElement.dataset.apiEndpoint ||
       window.MARIB_API_ENDPOINT ||
       '/api/web/experience';
+
+    endpoint = normalizeEndpoint(endpoint);
 
     const response = await fetch(endpoint, {
       headers: { Accept: 'application/json' },
@@ -535,6 +541,18 @@
       div.className = 'data-error';
       div.textContent = fallbackMessage;
       refs.features.appendChild(div);
+    }
+  }
+
+  function normalizeEndpoint(endpoint) {
+    if (/^https?:\/\//i.test(endpoint)) {
+      return endpoint;
+    }
+
+    try {
+      return new URL(endpoint, window.location.origin).toString();
+    } catch (_) {
+      return `${window.location.origin}/api/web/experience`;
     }
   }
 })();

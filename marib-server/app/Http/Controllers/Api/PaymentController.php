@@ -11,12 +11,14 @@ use App\Models\Order;
 use App\Models\PaymentTransaction;
 use App\Models\Service;
 use App\Models\ServiceRequest;
+use App\Models\Wifi\WifiPlan;
 use App\Services\Logging\PaymentTrace;
 use App\Services\LegalNumberingService;
 use App\Services\Payments\OrderPaymentService;
 use App\Services\OrderCheckoutService;
 use App\Services\PaymentFulfillmentService;
 use App\Services\Payments\ServicePaymentService;
+use App\Services\Payments\WifiPlanPaymentService;
 use App\Support\Payments\PaymentGatewayCurrencyPolicy;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -30,6 +32,7 @@ class PaymentController extends Controller
     public function __construct(
         private readonly ServicePaymentService $servicePaymentService,
         private readonly OrderPaymentService $orderPaymentService,
+        private readonly WifiPlanPaymentService $wifiPlanPaymentService,
         private readonly PaymentFulfillmentService $paymentFulfillmentService,
         private readonly LegalNumberingService $legalNumberingService
     ) {
@@ -44,16 +47,23 @@ class PaymentController extends Controller
         }
 
         $purpose = strtolower($request->input('purpose', 'service'));
+        $supportedPurposes = ['service', 'order', 'wifi_plan'];
 
-        if (! in_array($purpose, ['service', 'order'], true)) {
+        if (! in_array($purpose, $supportedPurposes, true)) {
             throw ValidationException::withMessages([
                 'purpose' => __('Unsupported payment purpose.'),
             ]);
         }
 
-        return $purpose === 'service'
-            ? $this->initiateServicePayment($request, $user->getKey())
-            : $this->initiateOrderPayment($request, $user->getKey());
+        if ($purpose === 'service') {
+            return $this->initiateServicePayment($request, $user->getKey());
+        }
+
+        if ($purpose === 'wifi_plan') {
+            return $this->initiateWifiPlanPayment($request, $user->getKey());
+        }
+
+        return $this->initiateOrderPayment($request, $user->getKey());
     }
 
     public function confirm(Request $request): JsonResponse
@@ -65,16 +75,23 @@ class PaymentController extends Controller
         }
 
         $purpose = strtolower($request->input('purpose', 'service'));
+        $supportedPurposes = ['service', 'order', 'wifi_plan'];
 
-        if (! in_array($purpose, ['service', 'order'], true)) {
+        if (! in_array($purpose, $supportedPurposes, true)) {
             throw ValidationException::withMessages([
                 'purpose' => __('Unsupported payment purpose.'),
             ]);
         }
 
-        return $purpose === 'service'
-            ? $this->confirmServicePayment($request, $user->getKey())
-            : $this->confirmOrderPayment($request, $user->getKey());
+        if ($purpose === 'service') {
+            return $this->confirmServicePayment($request, $user->getKey());
+        }
+
+        if ($purpose === 'wifi_plan') {
+            return $this->confirmWifiPlanPayment($request, $user->getKey());
+        }
+
+        return $this->confirmOrderPayment($request, $user->getKey());
     }
 
     private function initiateServicePayment(Request $request, int $userId): JsonResponse
@@ -267,6 +284,113 @@ class PaymentController extends Controller
         return $this->buildServiceResponse($existing, $serviceRequest, $statusCode, $availableGateways);
     }
 
+    private function initiateWifiPlanPayment(Request $request, int $userId): JsonResponse
+    {
+        $validated = $request->validate([
+            'payment_method' => ['required', 'string', 'max:191'],
+            'currency' => ['required', 'string', 'size:3'],
+            'wifi_plan_id' => ['required', 'integer', 'exists:wifi_plans,id'],
+            'amount' => ['nullable', 'numeric', 'min:0'],
+            'metadata' => ['nullable', 'array'],
+        ]);
+
+        $plan = WifiPlan::query()
+            ->with('network')
+            ->findOrFail($validated['wifi_plan_id']);
+
+        $method = $this->normalizePaymentMethodForPurpose($validated['payment_method'], 'wifi_plan');
+        $currency = strtoupper(trim($validated['currency']));
+
+        if (! PaymentGatewayCurrencyPolicy::supports($method, $currency)) {
+            throw ValidationException::withMessages([
+                'currency' => __('gateway_currency_unsupported'),
+            ]);
+        }
+
+        if (is_string($plan->currency) && $plan->currency !== '') {
+            $planCurrency = strtoupper(trim($plan->currency));
+            if ($planCurrency !== '' && $planCurrency !== $currency) {
+                throw ValidationException::withMessages([
+                    'currency' => __('gateway_currency_unsupported'),
+                ]);
+            }
+        }
+
+        $requestUser = $request->user() ?? Auth::user();
+
+        if (! $requestUser) {
+            return response()->json(['message' => __('Unauthenticated.')], 401);
+        }
+
+        $requestedIdempotencyKey = $this->resolveIdempotencyKey($request, [
+            'purpose' => 'wifi_plan',
+            'user' => $userId,
+            'wifi_plan' => $plan->getKey(),
+            'method' => $method,
+            'currency' => $currency,
+            'amount' => $validated['amount'] ?? $plan->price ?? '',
+        ]);
+
+        $idempotencyKey = $requestedIdempotencyKey;
+
+        $existing = PaymentTransaction::query()
+            ->where('user_id', $userId)
+            ->where('idempotency_key', $idempotencyKey)
+            ->first();
+
+        if (! $existing) {
+            $payload = [
+                'amount' => $validated['amount'] ?? null,
+                'currency' => $currency,
+                'metadata' => $validated['metadata'] ?? null,
+            ];
+
+            $transaction = $this->wifiPlanPaymentService->initiate(
+                $requestUser,
+                $plan,
+                $method,
+                $idempotencyKey,
+                $payload
+            );
+
+            $existing = $transaction->fresh();
+        }
+
+        if (
+            $existing->payment_gateway === 'wallet'
+            && strtolower((string) $existing->payment_status) !== 'succeed'
+        ) {
+            $confirmation = $this->wifiPlanPaymentService->confirm(
+                $requestUser,
+                $existing,
+                $existing->idempotency_key ?? $idempotencyKey,
+                [
+                    'currency' => $currency,
+                    'amount' => $validated['amount'] ?? null,
+                    'metadata' => $validated['metadata'] ?? null,
+                ]
+            );
+
+            $confirmedTransaction = $confirmation['transaction'] ?? $existing;
+            $existing = $confirmedTransaction->fresh();
+        }
+
+        $statusCode = $this->inferStatusCode($existing);
+        $availableGateways = WifiPlanPaymentService::supportedMethods();
+
+        PaymentTrace::trace('payment.initiate.wifi_plan', [
+            'user_id' => $userId,
+            'payable_type' => WifiPlan::class,
+            'payable_id' => $plan->getKey(),
+            'payment_transaction_id' => $existing->getKey(),
+            'idempotency_key' => $existing->idempotency_key,
+            'requested_idempotency_key' => $requestedIdempotencyKey,
+            'status_code' => $statusCode,
+        ], $request);
+
+        return $this->buildWifiPlanResponse($existing, $plan, $statusCode, $availableGateways);
+    }
+
     private function initiateOrderPayment(Request $request, int $userId): JsonResponse
     {
         $validated = $request->validate([
@@ -371,12 +495,7 @@ class PaymentController extends Controller
             $transaction->refresh();
         }
 
-        $confirmationPayload = [];
-        $explicitMethod = $request->input('payment_method');
-
-        if (is_string($explicitMethod) && $explicitMethod !== '') {
-            $confirmationPayload['payment_method'] = $explicitMethod;
-        }
+        $confirmationPayload = $this->buildPaymentConfirmationPayload($request, $transaction, 'service');
 
         $freshTransaction = $this->servicePaymentService->confirm(
             $request->user(),
@@ -402,12 +521,90 @@ class PaymentController extends Controller
         return $this->buildServiceResponse($freshTransaction, $serviceRequest, $statusCode);
     }
 
+    private function confirmWifiPlanPayment(Request $request, int $userId): JsonResponse
+    {
+        $validated = $request->validate([
+            'transaction_id' => ['nullable', 'integer'],
+            'idempotency_key' => ['nullable', 'string', 'max:64'],
+            'wifi_plan_id' => ['nullable', 'integer', 'exists:wifi_plans,id'],
+        ]);
+
+        if (empty($validated['transaction_id']) && empty($validated['idempotency_key'])) {
+            throw ValidationException::withMessages([
+                'transaction_id' => __('A transaction reference is required.'),
+            ]);
+        }
+
+        $transaction = $this->resolveTransactionReference(
+            $userId,
+            $validated['transaction_id'] ?? null,
+            $validated['idempotency_key'] ?? null
+        );
+
+        $planId = $validated['wifi_plan_id']
+            ?? ($transaction->payable_type === WifiPlan::class ? (int) $transaction->payable_id : null);
+
+        if (! $planId) {
+            throw ValidationException::withMessages([
+                'wifi_plan_id' => __('WiFi plan is required for this payment.'),
+            ]);
+        }
+
+        $plan = WifiPlan::query()
+            ->with('network')
+            ->findOrFail($planId);
+
+        if ($transaction->payable_type !== WifiPlan::class || (int) $transaction->payable_id !== (int) $plan->getKey()) {
+            throw ValidationException::withMessages([
+                'transaction_id' => __('Payment transaction does not belong to the selected WiFi plan.'),
+            ]);
+        }
+
+        $idempotencyKey = $validated['idempotency_key']
+            ?? $transaction->idempotency_key
+            ?? Str::orderedUuid()->toString();
+
+        if (! $transaction->idempotency_key) {
+            $transaction->idempotency_key = $idempotencyKey;
+            $transaction->save();
+            $transaction->refresh();
+        }
+
+        $payload = $this->buildPaymentConfirmationPayload($request, $transaction, 'wifi_plan');
+
+        $confirmation = $this->wifiPlanPaymentService->confirm(
+            $request->user(),
+            $transaction,
+            $idempotencyKey,
+            $payload
+        );
+
+        $freshTransaction = ($confirmation['transaction'] ?? $transaction)->fresh();
+
+        $statusCode = $this->inferStatusCode($freshTransaction);
+
+        PaymentTrace::trace('payment.confirm.wifi_plan', [
+            'user_id' => $userId,
+            'payable_type' => WifiPlan::class,
+            'payable_id' => $plan->getKey(),
+            'payment_transaction_id' => $freshTransaction->getKey(),
+            'idempotency_key' => $freshTransaction->idempotency_key,
+            'status_code' => $statusCode,
+        ], $request);
+
+        return $this->buildWifiPlanResponse($freshTransaction, $plan, $statusCode);
+    }
+
 
 
     /**
      * @return array<string, mixed>
      */
-    private function buildServicePaymentConfirmationPayload(Request $request, PaymentTransaction $transaction): array
+    private function buildPaymentConfirmationPayload(
+        Request $request,
+        PaymentTransaction $transaction,
+        string $purpose
+    ): array
     {
         $input = $request->all();
         $payload = [];
@@ -475,7 +672,7 @@ class PaymentController extends Controller
             $payload['amount'] = $transaction->amount;
         }
 
-        $methodHint = $this->resolveServicePaymentMethodHint($request, $transaction, $payload);
+        $methodHint = $this->resolvePaymentMethodHint($request, $transaction, $payload, $purpose);
 
         if ($methodHint === null) {
             throw ValidationException::withMessages([
@@ -493,10 +690,11 @@ class PaymentController extends Controller
     /**
      * @param array<string, mixed> $payload
      */
-    private function resolveServicePaymentMethodHint(
+    private function resolvePaymentMethodHint(
         Request $request,
         PaymentTransaction $transaction,
-        array $payload
+        array $payload,
+        string $purpose
     ): ?string {
         $candidates = [];
 
@@ -546,7 +744,7 @@ class PaymentController extends Controller
             }
 
             try {
-                return $this->normalizePaymentMethodForPurpose($normalized, 'service');
+                return $this->normalizePaymentMethodForPurpose($normalized, $purpose);
             } catch (ValidationException $exception) {
                 // Ignore invalid hints and continue searching other candidates.
             }
@@ -648,6 +846,56 @@ class PaymentController extends Controller
                 : null,
             'subject' => SubjectResource::make($serviceRequest)->resolve(),
             'next' => $this->buildNextNavigation($transaction, 'service', $serviceRequest->getKey()),
+            'payment_transaction_id' => $transaction->getKey(),
+            'payment_intent_id' => $transaction->idempotency_key,
+        ];
+
+        if (is_array($availableGateways)) {
+            $normalizedGateways = array_values(array_unique(array_filter(
+                $availableGateways,
+                static fn ($value) => is_string($value) && $value !== ''
+            )));
+
+            $response['available_gateways'] = $normalizedGateways;
+            $response['allowed_gateways'] = $normalizedGateways;
+        }
+
+        return response()->json($response, $statusCode);
+    }
+
+    private function buildWifiPlanResponse(
+        PaymentTransaction $transaction,
+        WifiPlan $plan,
+        int $statusCode,
+        ?array $availableGateways = null
+    ): JsonResponse {
+        $transaction->loadMissing([
+            'manualPaymentRequest.manualBank',
+            'manualPaymentRequest.paymentTransaction.order',
+            'manualPaymentRequest.paymentTransaction.walletTransaction',
+        ]);
+
+        if ($transaction->manual_payment_request_id === null
+            || strtolower((string) $transaction->payment_gateway) === 'wallet') {
+            $transaction->setRelation('manualPaymentRequest', null);
+        }
+
+        $manualRequest = $transaction->manualPaymentRequest instanceof ManualPaymentRequest
+            ? $transaction->manualPaymentRequest
+            : null;
+
+        $response = [
+            'transaction' => PaymentTransactionResource::make($transaction)->resolve(),
+            'manual_payment_request' => $manualRequest
+                ? ManualPaymentRequestResource::make($manualRequest)->resolve()
+                : null,
+            'subject' => SubjectResource::make([
+                'type' => 'wifi_plan',
+                'id' => $plan->getKey(),
+                'number' => $plan->name,
+                'status' => $plan->status,
+            ])->resolve(),
+            'next' => $this->buildNextNavigation($transaction, 'wifi_plan', $plan->getKey()),
             'payment_transaction_id' => $transaction->getKey(),
             'payment_intent_id' => $transaction->idempotency_key,
         ];
@@ -781,6 +1029,16 @@ class PaymentController extends Controller
             ];
         }
 
+        if ($context === 'wifi_plan') {
+            return [
+                'resource' => 'wifi_plans',
+                'route' => 'wifi.plans.show',
+                'show_url' => url(sprintf('/api/wifi/plans/%d', $subjectId)),
+                'transaction_id' => (string) $transaction->getKey(),
+                'dismiss' => true,
+            ];
+        }
+
         return [
             'resource' => 'service_requests',
             'route' => 'service_requests.show',
@@ -814,9 +1072,11 @@ class PaymentController extends Controller
             default => $token,
         };
 
-        $allowed = $purpose === 'service'
-            ? ServicePaymentService::SUPPORTED_METHODS
-            : OrderPaymentService::supportedMethods();
+        $allowed = match ($purpose) {
+            'service' => ServicePaymentService::SUPPORTED_METHODS,
+            'wifi_plan' => WifiPlanPaymentService::supportedMethods(),
+            default => OrderPaymentService::supportedMethods(),
+        };
 
         if (! in_array($token, $allowed, true)) {
             throw ValidationException::withMessages([

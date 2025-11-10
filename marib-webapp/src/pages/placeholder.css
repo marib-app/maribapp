@@ -1,0 +1,8 @@
+.placeholder-card ul {
+  margin-top: 1rem;
+  padding-inline-start: 1.2rem;
+  color: var(--color-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}

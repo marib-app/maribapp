@@ -19,6 +19,13 @@
     {{-- ---------- قائمة السايدبار ---------- --}}
     <div class="sidebar-menu" style="direction: rtl; text-align: right;">
       <ul class="menu">
+        @if(auth()->check() && auth()->user()->account_type === \App\Models\User::ACCOUNT_TYPE_SELLER)
+          <style>
+            #sidebar .menu > li:first-child {
+              display: none;
+            }
+          </style>
+        @endif
 
         {{-- لوحة التحكم --}}
         <li class="sidebar-item">

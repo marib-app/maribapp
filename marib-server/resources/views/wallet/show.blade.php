@@ -1,5 +1,28 @@
 @extends('layouts.main')
 
+@push('styles')
+    <style>
+        .wallet-pagination .pagination {
+            flex-wrap: wrap;
+            gap: 0.25rem;
+        }
+
+        .wallet-pagination .page-item .page-link {
+            padding: 0.35rem 0.75rem;
+            font-size: .875rem;
+            border-radius: 0.75rem;
+            min-width: 2.25rem;
+            text-align: center;
+        }
+
+        .wallet-pagination .page-item .page-link svg,
+        .wallet-pagination .page-item .page-link .fi {
+            width: 1rem;
+            height: 1rem;
+        }
+    </style>
+@endpush
+
 @section('title')
     {{ __('Wallet for :name', ['name' => $user->name]) }}
 @endsection
@@ -158,37 +181,88 @@
 
 @section('content')
     <section class="section">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+            <div class="d-flex flex-column">
+                <span class="text-muted small">{{ __('Manual Deposits') }}</span>
+                <h5 class="mb-0">{{ __('Wallet Overview') }}</h5>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <button type="button"
+                        class="btn btn-primary d-flex align-items-center gap-2"
+                        data-bs-toggle="modal"
+                        data-bs-target="#manualCreditModal"
+                        data-bs-tab-target="#manual-credit-form">
+                    <i class="bi bi-cash-stack"></i>
+                    <span>{{ __('New Deposit') }}</span>
+                </button>
+                <button type="button"
+                        class="btn btn-outline-secondary d-flex align-items-center gap-2"
+                        data-bs-toggle="modal"
+                        data-bs-target="#manualCreditModal"
+                        data-bs-tab-target="#manual-credit-history">
+                    <i class="bi bi-clock-history"></i>
+                    <span>{{ __('History') }}</span>
+                </button>
+            </div>
+        </div>
         <div class="row g-3">
-            <div class="col-lg-4">
+            <div class="col-12">
                 <div class="card shadow-sm border-0 mb-3">
                     <div class="card-body">
-                        <div class="d-flex align-items-center mb-3">
-                            <span class="avatar avatar-xl bg-warning-subtle text-warning rounded-circle d-flex align-items-center justify-content-center me-3">
-                                <i class="bi bi-wallet2 fs-3"></i>
-                            </span>
-                            <div>
-                                <h5 class="mb-0">{{ $user->name }}</h5>
-                                <small class="text-muted">{{ $user->email }}</small>
+                        <div class="row g-3 align-items-center">
+                            <div class="col-lg-6 d-flex align-items-center gap-3">
+                                <span class="avatar avatar-xl bg-warning-subtle text-warning rounded-circle d-flex align-items-center justify-content-center">
+                                    <i class="bi bi-wallet2 fs-3"></i>
+                                </span>
+                                <div>
+                                    <p class="text-muted mb-1">{{ __('محفظة المستخدم') }}</p>
+                                    <h4 class="mb-0">{{ $user->name }}</h4>
+                                    <small class="text-muted">{{ $user->email }}</small>
+                                </div>
+                            </div>
+                            <div class="col-lg-6 text-lg-end">
+                                <p class="text-muted mb-1">{{ __('الرصيد الحالي') }}</p>
+                                <h2 class="fw-bold mb-2">{{ number_format((float) $walletAccount->balance, 2) }} {{ $currency }}</h2>
+                                <span class="badge bg-primary-subtle text-primary">{{ __('محدّث حتى') }} {{ now()->format('Y-m-d H:i') }}</span>
                             </div>
                         </div>
-                        <div class="border rounded-3 p-3 bg-light-subtle">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="text-muted fw-semibold">{{ __('Current Balance') }}</span>
-                                <span class="badge bg-primary-subtle text-primary">{{ $currency }}</span>
+                        <div class="row g-3 mt-4">
+                            <div class="col-6 col-md-3">
+                                <div class="p-3 rounded-3 bg-light-subtle border text-center">
+                                    <p class="text-muted small mb-1">{{ __('إجمالي الحركات') }}</p>
+                                    <h5 class="fw-bold mb-0">{{ number_format($walletMetrics['total_transactions']) }}</h5>
+                                </div>
                             </div>
-                            <h2 class="fw-bold mb-3">{{ number_format((float) $walletAccount->balance, 2) }}</h2>
-                            <dl class="row mb-0 small text-muted">
-                                <dt class="col-6">{{ __('Account ID') }}</dt>
-                                <dd class="col-6 text-end">{{ $walletAccount->getKey() }}</dd>
-                                <dt class="col-6">{{ __('Last Transaction') }}</dt>
-                                <dd class="col-6 text-end">{{ optional($latestTransaction?->created_at)->diffForHumans() ?? __('No transactions yet') }}</dd>
-                                <dt class="col-6">{{ __('Total Movements') }}</dt>
-                                <dd class="col-6 text-end">{{ number_format($transactions->total()) }}</dd>
-                            </dl>
+                            <div class="col-6 col-md-3">
+                                <div class="p-3 rounded-3 bg-success-subtle border text-center">
+                                    <p class="text-muted small mb-1">{{ __('إجمالي الإيداعات') }}</p>
+                                    <h5 class="fw-bold mb-0 text-success">
+                                        {{ number_format((float) $walletMetrics['total_credits'], 2) }} {{ $currency }}
+                                    </h5>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="p-3 rounded-3 bg-danger-subtle border text-center">
+                                    <p class="text-muted small mb-1">{{ __('إجمالي الخصومات') }}</p>
+                                    <h5 class="fw-bold mb-0 text-danger">
+                                        {{ number_format((float) $walletMetrics['total_debits'], 2) }} {{ $currency }}
+                                    </h5>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="p-3 rounded-3 bg-warning-subtle border text-center">
+                                    <p class="text-muted small mb-1">{{ __('آخر عملية') }}</p>
+                                    <h6 class="fw-bold mb-0">
+                                        {{ optional($walletMetrics['last_activity'])->diffForHumans() ?? __('لا يوجد سجل بعد') }}
+                                    </h6>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
+            </div>
 
+            <div class="col-lg-4">
                 <div class="card shadow-sm border-0 mb-3">
                     <div class="card-body">
                         <div class="d-flex flex-column flex-md-row justify-content-between gap-3">
@@ -199,16 +273,8 @@
                                 </p>
                             </div>
                             <div class="d-flex gap-2 flex-wrap justify-content-end">
-                                <button type="button"
-                                        class="btn btn-outline-secondary d-flex align-items-center gap-2"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#manualCreditModal"
-                                        data-bs-tab-target="#manual-credit-form">
-                                    <i class="bi bi-journal-plus"></i>
-                                    <span>{{ __('New Deposit') }}</span>
-                                </button>
                                 <a href="{{ route('wallet.index') }}"
-                                   class="btn btn-outline-primary d-flex align-items-center gap-2">
+                                    class="btn btn-outline-primary d-flex align-items-center gap-2">
                                     <i class="bi bi-bar-chart"></i>
                                     <span>{{ __('Wallet Overview') }}</span>
                                 </a>
@@ -289,14 +355,15 @@
             <div class="col-lg-8">
                 <div class="card shadow-sm border-0 mb-3">
                     <div class="card-header bg-white border-0">
-                        <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-3">
+                        <div class="d-flex flex-column gap-3">
+                            <div class="d-flex flex-column flex-xl-row justify-content-between align-items-start align-items-xl-center gap-3">
                             <div>
-                                <h5 class="card-title mb-1">{{ __('Wallet Movements') }}</h5>
-                                <p class="text-muted small mb-0">{{ __('Filter transactions similar to the mobile wallet view.') }}</p>
+                                <h5 class="card-title mb-1">{{ __('سجل الحركات المالية') }}</h5>
+                                <p class="text-muted small mb-0">{{ __('يمكنك فلترة العمليات بحسب نوعها ومراجعة التفاصيل الدقيقة لكل عملية.') }}</p>
                             </div>
                             <form method="get" class="row g-2 align-items-end">
                                 <div class="col-auto">
-                                    <label for="filter" class="form-label mb-0">{{ __('Filter') }}</label>
+                                    <label for="filter" class="form-label mb-0">{{ __('نوع الحركة') }}</label>
                                 </div>
                                 <div class="col-auto">
                                     <select id="filter" name="filter" class="form-select" onchange="this.form.submit()">
@@ -316,26 +383,36 @@
                         </div>
                     </div>
                     <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-hover mb-0">
+                        <div class="tab-content">
+                            <div class="tab-pane fade show active" id="wallet-ledger-transactions" role="tabpanel"
+                                 aria-labelledby="wallet-ledger-transactions-tab">
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0">
                                 <thead class="table-light">
                                 <tr>
-                                    <th>{{ __('Reference') }}</th>
-                                    <th>{{ __('Type') }}</th>
-                                    <th class="text-end">{{ __('Amount') }}</th>
-                                    <th class="text-end">{{ __('Balance After') }}</th>
-                                    <th>{{ __('Details') }}</th>
-                                    <th>{{ __('Created At') }}</th>
+                                    <th class="text-center">#</th>
+                                    <th>{{ __('المرجع') }}</th>
+                                    <th>{{ __('نوع الحركة') }}</th>
+                                    <th class="text-end">{{ __('المبلغ') }}</th>
+                                    <th class="text-end">{{ __('الرصيد بعد العملية') }}</th>
+                                    <th>{{ __('تفاصيل إضافية') }}</th>
+                                    <th>{{ __('تاريخ التنفيذ') }}</th>
                                 </tr>
                                 </thead>
                                 <tbody>
+                                @php
+                                    $rowNumber = ($transactions->currentPage() - 1) * $transactions->perPage();
+                                @endphp
                                 @forelse($transactions as $transaction)
                                     @php
                                         $metaReason = data_get($transaction->meta, 'reason');
                                         $operationReference = data_get($transaction->meta, 'operation_reference');
                                         $notes = data_get($transaction->meta, 'notes');
+                                        $typeLabel = $transaction->type === 'credit' ? __('إيداع') : __('خصم');
+                                        $typeBadgeClass = $transaction->type === 'credit' ? 'bg-success' : 'bg-danger';
                                     @endphp
                                     <tr>
+                                        <td class="text-center fw-semibold">{{ ++$rowNumber }}</td>
                                         <td>
                                             <div class="fw-semibold">#{{ $transaction->getKey() }}</div>
                                             @if($operationReference)
@@ -343,18 +420,18 @@
                                             @endif
                                         </td>
                                         <td>
-                                            <span class="badge {{ $transaction->type === 'credit' ? 'bg-success' : 'bg-danger' }}">
-                                                {{ ucfirst($transaction->type) }}
+                                            <span class="badge {{ $typeBadgeClass }}">
+                                                {{ $typeLabel }}
                                             </span>
                                         </td>
                                         <td class="text-end">
                                             <span class="fw-semibold {{ $transaction->type === 'credit' ? 'text-success' : 'text-danger' }}">
-                                                {{ number_format((float) $transaction->amount, 2) }}
+                                                {{ number_format((float) $transaction->amount, 2) }} {{ $currency }}
                                             </span>
                                         </td>
-                                        <td class="text-end">{{ number_format((float) $transaction->balance_after, 2) }}</td>
+                                        <td class="text-end">{{ number_format((float) $transaction->balance_after, 2) }} {{ $currency }}</td>
                                         <td>
-                                            <div class="small text-muted">
+                                            <div class="small text-muted d-flex flex-column gap-1">
                                                 @if($transaction->manualPaymentRequest)
                                                     @php
                                                         $mprRef = \App\Support\Payments\ReferencePresenter::forManualRequest(
@@ -362,19 +439,31 @@
                                                             $transaction->paymentTransaction ?? null
                                                         );
                                                     @endphp
-                                                    <div>{{ __('Manual payment request') }}: {{ $mprRef ?? $transaction->manualPaymentRequest->getKey() }}</div>
+                                                    <div>
+                                                        <i class="bi bi-file-earmark-text me-1"></i>
+                                                        {{ __('طلب دفع يدوي') }}: {{ $mprRef ?? $transaction->manualPaymentRequest->getKey() }}
+                                                    </div>
                                                 @endif
                                                 @if($transaction->paymentTransaction)
                                                     @php
                                                         $txRef = \App\Support\Payments\ReferencePresenter::forTransaction($transaction->paymentTransaction);
                                                     @endphp
-                                                    <div>{{ __('Payment transaction') }}: {{ $txRef ?? $transaction->paymentTransaction->getKey() }}</div>
+                                                    <div>
+                                                        <i class="bi bi-credit-card me-1"></i>
+                                                        {{ __('عملية دفع') }}: {{ $txRef ?? $transaction->paymentTransaction->getKey() }}
+                                                    </div>
                                                 @endif
                                                 @if($metaReason)
-                                                    <div>{{ __('Reason') }}: {{ \Illuminate\Support\Str::headline($metaReason) }}</div>
+                                                    <div>
+                                                        <i class="bi bi-info-circle me-1"></i>
+                                                        {{ __('السبب') }}: {{ \Illuminate\Support\Str::headline($metaReason) }}
+                                                    </div>
                                                 @endif
                                                 @if($notes)
-                                                    <div>{{ __('Notes') }}: {{ $notes }}</div>
+                                                    <div>
+                                                        <i class="bi bi-chat-text me-1"></i>
+                                                        {{ __('ملاحظات') }}: {{ $notes }}
+                                                    </div>
                                                 @endif
                                             </div>
                                         </td>
@@ -385,9 +474,49 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="6" class="text-center py-4 text-muted">
-                                            <i class="bi bi-arrow-repeat display-6 d-block mb-2"></i>
-                                            {{ __('No transactions found for the selected filter.') }}
+                                        <td colspan="7" class="text-center py-4 text-muted">
+                                            <i class="bi bi-inboxes display-6 d-block mb-2"></i>
+                                            {{ __('لا توجد حركات مطابقة للفلتر الحالي.') }}
+                                        </td>
+                                    </tr>
+                                @endforelse
+                                </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                    <div class="tab-pane fade" id="wallet-ledger-manual" role="tabpanel"
+                         aria-labelledby="wallet-ledger-manual-tab">
+                        <div class="table-responsive">
+                            <table class="table table-striped mb-0">
+                                <thead class="table-light">
+                                <tr>
+                                    <th class="text-center">#</th>
+                                    <th>{{ __('Reference') }}</th>
+                                    <th class="text-end">{{ __('Amount') }}</th>
+                                    <th>{{ __('Created At') }}</th>
+                                    <th>{{ __('Notes') }}</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                @php
+                                    $manualRow = 0;
+                                @endphp
+                                @forelse($manualCreditEntries as $entry)
+                                    <tr>
+                                        <td class="text-center fw-semibold">{{ ++$manualRow }}</td>
+                                        <td>{{ data_get($entry->meta, 'operation_reference') ?? $entry->getKey() }}</td>
+                                        <td class="text-end text-success">+{{ number_format((float) $entry->amount, 2) }} {{ $currency }}</td>
+                                        <td>
+                                            <div>{{ optional($entry->created_at)->format('Y-m-d H:i') }}</div>
+                                            <small class="text-muted">{{ optional($entry->created_at)->diffForHumans() }}</small>
+                                        </td>
+                                        <td>{{ data_get($entry->meta, 'notes') ?? __('Not available') }}</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="5" class="text-center py-4 text-muted">
+                                            <i class="bi bi-journal-x display-6 d-block mb-2"></i>
+                                            {{ __('No manual deposits have been recorded yet.') }}
                                         </td>
                                     </tr>
                                 @endforelse
@@ -395,9 +524,11 @@
                             </table>
                         </div>
                     </div>
+                </div>
+            </div>
                     @if($transactions->hasPages())
-                        <div class="card-footer bg-white border-0">
-                            {{ $transactions->links() }}
+                        <div class="card-footer bg-white border-0 wallet-pagination">
+                            {{ $transactions->onEachSide(1)->links('pagination::bootstrap-5') }}
                         </div>
                     @endif
                 </div>
@@ -405,3 +536,5 @@
         </div>
     </section>
 @endsection
+
+

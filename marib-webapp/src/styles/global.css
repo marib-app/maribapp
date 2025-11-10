@@ -1,0 +1,76 @@
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  color-scheme: light;
+  font-family: 'Cairo', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  line-height: 1.6;
+  font-weight: 400;
+  --color-bg: #f7f7f8;
+  --color-surface: #ffffff;
+  --color-text: #161616;
+  --color-muted: #5f6b7c;
+  --color-primary: #eb5924;
+  --color-primary-strong: #d94e1f;
+  --color-border: #e2e3e7;
+  --radius-l: 24px;
+  --radius-m: 16px;
+  --radius-s: 10px;
+  --shadow-card: 0 20px 40px rgb(16 25 40 / 8%);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: radial-gradient(circle at 10% 10%, rgb(235 89 36 / 8%), transparent 50%),
+    radial-gradient(circle at 90% 0%, rgb(79 165 186 / 15%), transparent 40%), var(--color-bg);
+  color: var(--color-text);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5 {
+  font-family: 'Cairo', 'Inter', sans-serif;
+  line-height: 1.3;
+  margin: 0;
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-content {
+  flex: 1;
+  padding: clamp(1rem, 3vw, 2.5rem);
+}
+
+.card {
+  background: var(--color-surface);
+  border-radius: var(--radius-l);
+  border: 1px solid rgb(226 227 231 / 80%);
+  box-shadow: var(--shadow-card);
+  padding: clamp(1.25rem, 3vw, 2rem);
+}

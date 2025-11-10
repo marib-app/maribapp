@@ -11,6 +11,7 @@ use App\Observers\Wifi\WifiReportObserver;
 use App\Services\CacheMetricsRecorder;
 use App\Services\Payments\GatewayLabelService;
 use Illuminate\Filesystem\Filesystem;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -38,6 +39,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot()
     {
+        Paginator::useBootstrapFive();
 
         $this->registerEnumTypeMapping();
 

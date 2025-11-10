@@ -65,7 +65,8 @@ Route::get('products/{item}/purchase-options', [ProductPurchaseOptionsController
     ->whereNumber('item');
 Route::get('metal-rates', [PublicMetalRateController::class, 'index']);
 Route::get('get-featured-section', [ApiController::class, 'getFeaturedSections']);
-Route::get('web/experience', WebExperienceController::class);
+Route::get('web/experience', WebExperienceController::class)
+    ->middleware('web-experience.cors');
 
     
 

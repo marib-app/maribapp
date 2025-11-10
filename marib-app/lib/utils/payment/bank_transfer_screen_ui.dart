@@ -99,9 +99,9 @@ extension _BankTransferScreenUi on _BankTransferScreenState {
     required String? instructionsText,
     required String? instructionsTitle,
   }) {
-    final bool hideWalletOption =
+    final bool hideWalletOption = !_walletGatewayAllowed ||
         _isWalletTopUpPurpose(widget.args.normalizedPurpose) ||
-            _isWalletTopUpPurpose(_resolvedPurpose());
+        _isWalletTopUpPurpose(_resolvedPurpose());
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
@@ -131,11 +131,12 @@ extension _BankTransferScreenUi on _BankTransferScreenState {
           _walletPaymentCard(),
           const SizedBox(height: 12),
         ],
-        ...List.generate(_banks.length, (i) {
-          final b = _banks[i];
-          final selected =
-              _selectedMethod == _BankTransferScreenState._manualBankMethod &&
-                  _selectedBankId == b.id;
+        if (_manualGatewayAllowed) ...[
+          ...List.generate(_banks.length, (i) {
+            final b = _banks[i];
+            final selected =
+                _selectedMethod == _BankTransferScreenState._manualBankMethod &&
+                    _selectedBankId == b.id;
 
           final pressed = _pressedBankId == b.id;
 
@@ -370,6 +371,7 @@ extension _BankTransferScreenUi on _BankTransferScreenState {
             ),
           );
         }),
+        ],
         const SizedBox(height: 12),
         if (instructionsText != null)
           _bankNoteCard(

@@ -44,7 +44,7 @@
                                         value="{{ old('min_order_amount', $settings->min_order_amount) }}"
                                     >
                                     @error('min_order_amount')
-                                        <div class="invalid-feedback">{{ $message }}</div>
+                                        <div class="invalid-feedback">{{ $errors->first('min_order_amount') }}</div>
                                     @enderror
                                 </div>
                                 <div class="col-md-6">
@@ -61,7 +61,7 @@
                                         </option>
                                     </select>
                                     @error('closure_mode')
-                                        <div class="invalid-feedback">{{ $message }}</div>
+                                        <div class="invalid-feedback">{{ $errors->first('closure_mode') }}</div>
                                     @enderror
                                 </div>
                                 <div class="col-md-4">
@@ -135,7 +135,7 @@
                                         max="1440"
                                     >
                                     @error('order_acceptance_buffer_minutes')
-                                        <div class="invalid-feedback">{{ $message }}</div>
+                                        <div class="invalid-feedback">{{ $errors->first('order_acceptance_buffer_minutes') }}</div>
                                     @enderror
                                 </div>
                                 <div class="col-md-6">
@@ -149,7 +149,7 @@
                                         value="{{ old('delivery_radius_km', $settings->delivery_radius_km) }}"
                                     >
                                     @error('delivery_radius_km')
-                                        <div class="invalid-feedback">{{ $message }}</div>
+                                        <div class="invalid-feedback">{{ $errors->first('delivery_radius_km') }}</div>
                                     @enderror
                                 </div>
                                 <div class="col-12">
@@ -170,7 +170,7 @@
                                         rows="2"
                                     >{{ old('manual_closure_reason', $settings->manual_closure_reason) }}</textarea>
                                     @error('manual_closure_reason')
-                                        <div class="invalid-feedback">{{ $message }}</div>
+                                        <div class="invalid-feedback">{{ $errors->first('manual_closure_reason') }}</div>
                                     @enderror
                                 </div>
                                 <div class="col-md-6">
@@ -182,7 +182,7 @@
                                         value="{{ old('manual_closure_expires_at', optional($settings->manual_closure_expires_at)->format('Y-m-d\TH:i')) }}"
                                     >
                                     @error('manual_closure_expires_at')
-                                        <div class="invalid-feedback">{{ $message }}</div>
+                                        <div class="invalid-feedback">{{ $errors->first('manual_closure_expires_at') }}</div>
                                     @enderror
                                 </div>
                                 <div class="col-12">
@@ -193,7 +193,7 @@
                                         class="form-control @error('checkout_notice') is-invalid @enderror"
                                     >{{ old('checkout_notice', $settings->checkout_notice) }}</textarea>
                                     @error('checkout_notice')
-                                        <div class="invalid-feedback">{{ $message }}</div>
+                                        <div class="invalid-feedback">{{ $errors->first('checkout_notice') }}</div>
                                     @enderror
                                 </div>
                             </div>
@@ -254,7 +254,7 @@
                                                         value="{{ old("hours.$day.opens_at", $hour['opens_at']) }}"
                                                     >
                                                     @error("hours.$day.opens_at")
-                                                        <div class="invalid-feedback">{{ $message }}</div>
+                                                        <div class="invalid-feedback">{{ $errors->first("hours.$day.opens_at") }}</div>
                                                     @enderror
                                                 </td>
                                                 <td style="max-width: 140px;">
@@ -265,7 +265,7 @@
                                                         value="{{ old("hours.$day.closes_at", $hour['closes_at']) }}"
                                                     >
                                                     @error("hours.$day.closes_at")
-                                                        <div class="invalid-feedback">{{ $message }}</div>
+                                                        <div class="invalid-feedback">{{ $errors->first("hours.$day.closes_at") }}</div>
                                                     @enderror
                                                 </td>
                                             </tr>
@@ -298,7 +298,7 @@
                                     class="form-control @error('return_policy') is-invalid @enderror"
                                 >{{ old('return_policy', optional($policies['return'])->content) }}</textarea>
                                 @error('return_policy')
-                                    <div class="invalid-feedback">{{ $message }}</div>
+                                <div class="invalid-feedback">{{ $errors->first('return_policy') }}</div>
                                 @enderror
                             </div>
                             <div class="mb-3">
@@ -309,7 +309,7 @@
                                     class="form-control @error('exchange_policy') is-invalid @enderror"
                                 >{{ old('exchange_policy', optional($policies['exchange'])->content) }}</textarea>
                                 @error('exchange_policy')
-                                    <div class="invalid-feedback">{{ $message }}</div>
+                                <div class="invalid-feedback">{{ $errors->first('exchange_policy') }}</div>
                                 @enderror
                             </div>
                             <div class="d-flex justify-content-end">
@@ -357,7 +357,7 @@
                                     >
                                     <span class="input-group-text">@maribsrv.com</span>
                                     @error('staff_prefix')
-                                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                                        <div class="invalid-feedback d-block">{{ $errors->first('staff_prefix') }}</div>
                                     @enderror
                                 </div>
                                 <small class="text-muted">

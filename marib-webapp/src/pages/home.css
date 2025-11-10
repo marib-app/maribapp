@@ -1,0 +1,98 @@
+.home-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.75rem;
+}
+
+.hero-card {
+  grid-column: 1 / -1;
+  background: linear-gradient(135deg, rgb(255 255 255 / 85%), rgb(247 247 248 / 95%));
+}
+
+.eyebrow {
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.lede {
+  color: var(--color-muted);
+  font-size: 1.05rem;
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.btn-primary,
+.btn-ghost {
+  padding: 0.65rem 1.6rem;
+  border-radius: 999px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #eb5924, #fa6e53);
+  color: #fff;
+  box-shadow: var(--shadow-card);
+}
+
+.btn-ghost {
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+
+.list {
+  padding-left: 1rem;
+  color: var(--color-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.roadmap {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.roadmap article {
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-m);
+  padding: 1rem;
+  background: rgb(255 255 255 / 0.9);
+}
+
+.badge {
+  display: inline-flex;
+  padding: 0.2rem 0.8rem;
+  border-radius: 999px;
+  background: rgb(235 89 36 / 0.15);
+  color: var(--color-primary-strong);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem;
+  color: var(--color-muted);
+}
+
+.status-grid strong {
+  display: inline-flex;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgb(16 25 40 / 0.08);
+  align-items: center;
+  justify-content: center;
+  margin-inline-end: 0.5rem;
+}

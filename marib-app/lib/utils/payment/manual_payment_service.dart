@@ -694,6 +694,7 @@ class ManualPaymentService {
     int? orderId,
     int? serviceId,
     int? serviceRequestId,
+    int? wifiPlanId,
   }) {
     final String purposeValue = purpose.trim();
     final String methodValue = paymentMethod.trim();
@@ -726,6 +727,8 @@ class ManualPaymentService {
       if (serviceRequestId != null) {
         payload['service_request_id'] = serviceRequestId;
       }
+    } else if (normalizedPurpose == 'wifi_plan' && wifiPlanId != null) {
+      payload['wifi_plan_id'] = wifiPlanId;
     }
 
     return payload;

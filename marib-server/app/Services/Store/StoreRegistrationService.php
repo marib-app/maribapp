@@ -14,10 +14,14 @@ use App\Services\FileService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use RuntimeException;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 class StoreRegistrationService
 {
@@ -61,7 +65,7 @@ class StoreRegistrationService
             $this->syncWorkingHours($store, $payload['working_hours'] ?? []);
             $this->syncPolicies($store, $payload['policies'] ?? []);
             $this->ensureOwnerStaffRecord($store, $user);
-            $this->syncStaffInvites($store, $user, $payload['staff'] ?? []);
+            $this->provisionStoreCredentials($store, $user, $payload);
 
             return $store->load([
                 'settings',
@@ -245,38 +249,169 @@ class StoreRegistrationService
                 'accepted_at' => now(),
             ]
         );
+
+        $this->assignStoreRole($user, $store);
+    }
+
+    private function provisionStoreCredentials(Store $store, User $owner, array $payload): void
+    {
+        $credentials = $this->extractCredentialsPayload($payload);
+        $email = $credentials['email'];
+        $password = $credentials['password'];
+
+        if ($email === null || $password === null) {
+            return;
+        }
+
+        if ($owner->email && strcasecmp($email, (string) $owner->email) === 0) {
+            throw ValidationException::withMessages([
+                'credentials.handle' => 'Handle cannot match your personal login email.',
+            ]);
+        }
+
+        $this->assertStaffEmailAvailable($email, $store, 'credentials.handle');
+
+        $staffUser = $this->upsertStoreStaffUser($email, $password, $store, $owner);
+
+        StoreStaff::updateOrCreate(
+            [
+                'store_id' => $store->id,
+                'email' => $email,
+            ],
+            [
+                'user_id' => $staffUser->id,
+                'role' => 'store_owner',
+                'status' => 'active',
+                'permissions' => ['full_access' => true],
+                'invited_by' => $owner->id,
+                'accepted_at' => now(),
+                'invitation_token' => null,
+                'revoked_at' => null,
+            ]
+        );
+
+        $this->assignStoreRole($staffUser, $store);
     }
 
     /**
-     * @param  array<string, mixed>  $staffPayload
+     * @param  array<string, mixed>  $payload
+     * @return array{email: ?string, password: ?string}
      */
-    private function syncStaffInvites(Store $store, User $owner, array $staffPayload): void
+    private function extractCredentialsPayload(array $payload): array
     {
-        $email = $this->normalizeStaffEmail($staffPayload['invited_email'] ?? $staffPayload['email'] ?? null);
+        $handleSource = Arr::get($payload, 'credentials.handle')
+            ?? Arr::get($payload, 'staff.invited_email');
 
-        if ($email === null || strcasecmp($email, (string) $owner->email) === 0) {
-            return;
+        $passwordSource = Arr::get($payload, 'credentials.password')
+            ?? Arr::get($payload, 'staff.password');
+
+        $email = $this->normalizeStaffEmail($handleSource);
+        $password = is_string($passwordSource) ? trim($passwordSource) : null;
+
+        if ($password === '') {
+            $password = null;
         }
 
-        $existingForStore = $store->staff()
-            ->where('email', $email)
-            ->whereNull('revoked_at')
-            ->exists();
-
-        if ($existingForStore) {
-            return;
-        }
-
-        $this->assertStaffEmailAvailable($email, $store);
-
-        StoreStaff::create([
-            'store_id' => $store->id,
+        return [
             'email' => $email,
-            'role' => 'admin',
-            'status' => 'pending',
-            'invitation_token' => Str::uuid()->toString(),
-            'invited_by' => $owner->id,
-        ]);
+            'password' => $password,
+        ];
+    }
+
+    private function upsertStoreStaffUser(string $email, string $password, Store $store, User $owner): User
+    {
+        $user = User::firstOrNew(['email' => $email]);
+
+        if (! $user->exists) {
+            $user->type = 'email';
+            $user->fcm_id = 'store-panel';
+            $user->notification = true;
+        }
+
+        $user->name = $store->name ?? $owner->name ?? 'Store Owner';
+        $user->password = Hash::make($password);
+        $user->account_type = User::ACCOUNT_TYPE_SELLER;
+        $user->terms_and_policy_accepted = true;
+        $user->show_personal_details = $user->show_personal_details ?? false;
+        $user->email_verified_at = $user->email_verified_at ?? now();
+        $user->is_verified = 1;
+        $user->country_code = $user->country_code ?? $owner->country_code ?? 'YE';
+        $user->mobile = $user->mobile ?? $owner->mobile;
+        $user->notification = true;
+
+        if (empty($user->fcm_id)) {
+            $user->fcm_id = (string) Str::uuid();
+        }
+
+        $user->save();
+
+        return $user;
+    }
+
+    private function assignStoreRole(User $user, Store $store): void
+    {
+        $role = $this->determineStoreRole($store);
+
+        if (! $user->hasRole($role->name)) {
+            $user->assignRole($role);
+        }
+
+        if ($user->account_type !== User::ACCOUNT_TYPE_SELLER) {
+            $user->account_type = User::ACCOUNT_TYPE_SELLER;
+        }
+
+        if (! $user->terms_and_policy_accepted) {
+            $user->terms_and_policy_accepted = true;
+        }
+
+        if (! $user->email_verified_at) {
+            $user->email_verified_at = now();
+        }
+
+        if ($user->isDirty()) {
+            $user->save();
+        }
+    }
+
+    private function determineStoreRole(Store $store): Role
+    {
+        $roleName = sprintf('store-owner-%s', $store->id);
+
+        $role = Role::firstOrCreate(
+            ['name' => $roleName, 'guard_name' => 'web'],
+            ['name' => $roleName, 'guard_name' => 'web']
+        );
+
+        if ($role->wasRecentlyCreated) {
+            $this->refreshPermissionCache();
+        }
+
+        $permission = $this->ensureMerchantPortalPermission();
+        if (! $role->hasPermissionTo($permission)) {
+            $role->givePermissionTo($permission);
+            $this->refreshPermissionCache();
+        }
+
+        return $role;
+    }
+
+    private function ensureMerchantPortalPermission(): Permission
+    {
+        $permission = Permission::firstOrCreate(
+            ['name' => 'merchant-portal-access', 'guard_name' => 'web'],
+            ['name' => 'merchant-portal-access', 'guard_name' => 'web']
+        );
+
+        if ($permission->wasRecentlyCreated) {
+            $this->refreshPermissionCache();
+        }
+
+        return $permission;
+    }
+
+    private function refreshPermissionCache(): void
+    {
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
     private function normalizeStaffEmail(mixed $raw): ?string
@@ -290,6 +425,7 @@ class StoreRegistrationService
             return null;
         }
 
+        $attribute = 'credentials.handle';
         $domain = strtolower(config('store.staff_email_domain', 'maribsrv.com'));
         $localPart = $candidate;
 
@@ -297,7 +433,7 @@ class StoreRegistrationService
             [$localPart, $incomingDomain] = explode('@', strtolower($candidate), 2);
             if ($incomingDomain !== $domain) {
                 throw ValidationException::withMessages([
-                    'staff.invited_email' => 'يجب أن ينتهي البريد بـ @' . $domain,
+                    $attribute => 'Handle must belong to the ' . $domain . ' domain.',
                 ]);
             }
         }
@@ -308,20 +444,20 @@ class StoreRegistrationService
 
         if ($normalizedLocal === '' || strlen($normalizedLocal) < $min || strlen($normalizedLocal) > $max) {
             throw ValidationException::withMessages([
-                'staff.invited_email' => "اسم المستخدم يجب أن يتكون من {$min} إلى {$max} أحرف/أرقام.",
+                $attribute => "Handle must be between {$min} and {$max} characters.",
             ]);
         }
 
         if (! preg_match('/^[a-z0-9._-]+$/', $normalizedLocal)) {
             throw ValidationException::withMessages([
-                'staff.invited_email' => 'اسم المستخدم يسمح بحروف إنجليزية، أرقام، ونقاط/شرطات فقط.',
+                $attribute => 'Handle may only contain letters, numbers, dots, underscores, or dashes.',
             ]);
         }
 
         return $normalizedLocal . '@' . $domain;
     }
 
-    private function assertStaffEmailAvailable(string $email, Store $store): void
+    private function assertStaffEmailAvailable(string $email, Store $store, string $attribute = 'staff.invited_email'): void
     {
         $existsElsewhere = StoreStaff::query()
             ->where('email', $email)
@@ -331,7 +467,22 @@ class StoreRegistrationService
 
         if ($existsElsewhere) {
             throw ValidationException::withMessages([
-                'staff.invited_email' => 'هذا البريد مستخدم بالفعل، يرجى اختيار اسم مختلف.',
+                $attribute => 'This store handle is already linked to another merchant.',
+            ]);
+        }
+
+        $emailLower = strtolower($email);
+
+        $userConflict = User::query()
+            ->whereRaw('LOWER(email) = ?', [$emailLower])
+            ->whereDoesntHave('storeStaffAssignments', static function ($query) use ($store) {
+                $query->where('store_id', $store->id);
+            })
+            ->exists();
+
+        if ($userConflict) {
+            throw ValidationException::withMessages([
+                $attribute => 'This store handle is already linked to another merchant.',
             ]);
         }
     }

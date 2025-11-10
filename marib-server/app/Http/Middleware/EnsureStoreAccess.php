@@ -19,7 +19,7 @@ class EnsureStoreAccess
     {
         $user = $request->user();
 
-        if (! $user || ! $user->isSeller()) {
+        if (! $user) {
             abort(403, __('غير مصرح لك بالدخول إلى لوحة التاجر.'));
         }
 
@@ -30,6 +30,22 @@ class EnsureStoreAccess
             ->first();
 
         if (! $store) {
+            $store = Store::query()
+                ->with('settings')
+                ->whereHas('staff', static function ($query) use ($user) {
+                    $query->where('user_id', $user->id)
+                        ->whereNull('revoked_at')
+                        ->where('status', 'active');
+                })
+                ->latest('stores.id')
+                ->first();
+        }
+
+        if (! $store) {
+            if (! $user->isSeller()) {
+                abort(403, __('غير مصرح لك بالدخول إلى لوحة التاجر.'));
+            }
+
             return redirect()->route('seller-store-settings.index')
                 ->withErrors([
                     'message' => __('الرجاء استكمال بيانات المتجر أولاً.'),

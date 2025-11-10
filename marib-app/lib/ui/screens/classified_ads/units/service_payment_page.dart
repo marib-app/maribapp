@@ -42,6 +42,8 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
   late final double? _amount;
   late final String? _currency;
   late final String? _note;
+  late final String? _paymentContext;
+  late final bool _restrictToWalletAndEast;
 
   bool _submitting = false;
 
@@ -97,6 +99,9 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
     _note = parseString(
       data['note'] ?? data['price_note'] ?? data['payment_note'],
     );
+    _paymentContext =
+        parseString(data['paymentContext'] ?? data['payment_context']);
+    _restrictToWalletAndEast = (_paymentContext?.toLowerCase() == 'wifi_cabin');
   }
 
   @override
@@ -250,11 +255,16 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
       serviceTitle: _serviceTitle,
       priceNote: _note,
       serviceRequestId: serviceRequestId,
+      allowedGateways: _restrictToWalletAndEast
+          ? const [
+              BankTransferGateway.wallet,
+              BankTransferGateway.eastYemenBank,
+            ]
+          : null,
     );
 
     final NavigatorState rootNavigator =
-    Navigator.of(context, rootNavigator: true);
-
+        Navigator.of(context, rootNavigator: true);
 
     final dynamic result = await BankTransferScreen.show(context, args);
 
@@ -462,8 +472,10 @@ class _ServicePaymentPageState extends State<ServicePaymentPage> {
       return null;
     }
 
-    final dynamic candidate =
-        next['route'] ?? next['redirect_route'] ?? next['redirect'] ?? next['screen'];
+    final dynamic candidate = next['route'] ??
+        next['redirect_route'] ??
+        next['redirect'] ??
+        next['screen'];
 
     if (candidate is String) {
       final String trimmed = candidate.trim();

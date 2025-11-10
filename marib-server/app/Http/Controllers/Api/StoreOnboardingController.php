@@ -40,9 +40,17 @@ class StoreOnboardingController extends Controller
 
     public function store(StoreOnboardingRequest $request): JsonResponse
     {
+        $logPayload = $request->all();
+        if (isset($logPayload['credentials']['password'])) {
+            $logPayload['credentials']['password'] = '[hidden]';
+        }
+        if (isset($logPayload['staff']['password'])) {
+            $logPayload['staff']['password'] = '[hidden]';
+        }
+
         \Log::info('store_onboarding.request', [
             'user_id' => $request->user()?->id,
-            'payload' => $request->all(),
+            'payload' => $logPayload,
         ]);
 
         try {
@@ -56,10 +64,18 @@ class StoreOnboardingController extends Controller
                 'data' => new StoreResource($store),
             ], 201);
         } catch (ValidationException $exception) {
+            $failedPayload = $request->all();
+            if (isset($failedPayload['credentials']['password'])) {
+                $failedPayload['credentials']['password'] = '[hidden]';
+            }
+            if (isset($failedPayload['staff']['password'])) {
+                $failedPayload['staff']['password'] = '[hidden]';
+            }
+
             \Log::warning('store_onboarding.validation_failed', [
                 'user_id' => $request->user()?->id,
                 'errors' => $exception->errors(),
-                'payload' => $request->all(),
+                'payload' => $failedPayload,
             ]);
 
             throw $exception;

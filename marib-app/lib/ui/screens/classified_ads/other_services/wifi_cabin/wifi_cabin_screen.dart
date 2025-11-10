@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:marib/app/app_scroll_behavior.dart';
 import 'package:marib/app/navigation/app_page_route.dart';
 import 'package:marib/app/navigation/motion/route_motion.dart';
-import 'package:marib/app/routes.dart';
 import 'package:marib/data/model/wifi/wifi_network.dart';
 import 'package:marib/data/model/wifi/wifi_plan.dart';
 import 'package:marib/data/wifi/wifi_repository.dart';
@@ -16,6 +15,9 @@ import 'package:marib/ui/widgets/icons/wifi_cabin_glyph.dart';
 import 'package:marib/utils/errorFilter.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/helper_utils.dart';
+import 'package:marib/utils/hive_utils.dart';
+import 'package:marib/utils/payment/bank_transfer_args.dart';
+import 'package:marib/utils/payment/bank_transfer_screen.dart';
 import 'package:marib/utils/ui_utils.dart';
 
 class WifiCabinScreen extends StatefulWidget {
@@ -700,25 +702,43 @@ class _WifiNetworkDetailsSheetState extends State<_WifiNetworkDetailsSheet> {
     final double amount = plan.price.toDouble();
     final String? currency = plan.currency;
 
-    if (currency == null || currency.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('لا يمكن متابعة الدفع لهذه الخطة حالياً.')),
+    if (currency == null || currency.isEmpty || amount <= 0) {
+      HelperUtils.showSnackBarMessage(
+        context,
+        'لا يمكن متابعة الدفع لهذه الخطة حالياً.',
       );
       return;
     }
 
-    await Navigator.of(context).pushNamed(
-      Routes.servicePaymentPage,
-      arguments: {
-        'serviceId': plan.id,
-        'serviceTitle': '${plan.name} - ${widget.network.name}',
-        'amount': amount,
-        'currency': currency,
-        'note':
-            plan.description ?? 'خطة ${plan.name} لشبكة ${widget.network.name}',
-      },
+    final String token = HiveUtils.getJWT();
+    if (token.trim().isEmpty) {
+      HelperUtils.showSnackBarMessage(
+        context,
+        'الرجاء تسجيل الدخول لمتابعة الدفع.',
+      );
+      return;
+    }
+
+    final BankTransferArgs args = BankTransferArgs(
+      token: token,
+      packageId: plan.id,
+      amount: amount,
+      currency: currency,
+      packageType: 'wifi_plan',
+      itemId: plan.id,
+      purpose: 'wifi_plan',
+      wifiPlanId: plan.id,
+      serviceTitle: '${plan.name} - ${widget.network.name}',
+      priceNote:
+          plan.description ?? 'خطة ${plan.name} لشبكة ${widget.network.name}',
+      allowedGateways: const [
+        BankTransferGateway.wallet,
+        BankTransferGateway.eastYemenBank,
+      ],
+      initialGateway: BankTransferGateway.wallet,
     );
+
+    await BankTransferScreen.show(context, args);
   }
 }
 

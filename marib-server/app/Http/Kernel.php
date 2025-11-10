@@ -87,6 +87,7 @@ class Kernel extends HttpKernel {
         
         'category.manager' => \App\Http\Middleware\EnsureCategoryManager::class,
         'store.access'    => \App\Http\Middleware\EnsureStoreAccess::class,
+        'web-experience.cors' => \App\Http\Middleware\AllowWebExperienceCors::class,
 
 
 

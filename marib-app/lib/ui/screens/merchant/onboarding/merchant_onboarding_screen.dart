@@ -313,7 +313,12 @@ class _MerchantOnboardingScreenState extends State<MerchantOnboardingScreen> {
     }
 
     final String staffHandle = _normalizeStaffHandle(credentials.username);
+    final String staffPassword = credentials.password.trim();
     if (staffHandle.isNotEmpty) {
+      payload['credentials'] = <String, dynamic>{
+        'handle': staffHandle,
+        'password': staffPassword,
+      };
       payload['staff'] = <String, dynamic>{
         'invited_email': staffHandle,
       };

@@ -7,6 +7,7 @@ use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 
 class StoreOnboardingRequest extends FormRequest
 {
@@ -25,12 +26,24 @@ class StoreOnboardingRequest extends FormRequest
      */
     public function rules(): array
     {
+        $payloadForLog = $this->all();
+        if (isset($payloadForLog['credentials']['password'])) {
+            $payloadForLog['credentials']['password'] = '[hidden]';
+        }
+        if (isset($payloadForLog['staff']['password'])) {
+            $payloadForLog['staff']['password'] = '[hidden]';
+        }
+
         Log::info('store_onboarding.request_payload', [
             'user_id' => $this->user()?->id,
-            'payload' => $this->all(),
+            'payload' => $payloadForLog,
         ]);
 
         $store = $this->user()?->stores()->latest()->first();
+
+        $passwordRule = Password::min(8)
+            ->letters()
+            ->numbers();
 
         return [
             'name' => [
@@ -84,8 +97,33 @@ class StoreOnboardingRequest extends FormRequest
             'policies.*.is_active' => ['nullable', 'boolean'],
             'policies.*.display_order' => ['nullable', 'integer'],
 
+            'credentials' => ['required_without:staff', 'array'],
+            'credentials.handle' => [
+                'required_without:staff.invited_email',
+                'string',
+                'min:' . (int) config('store.staff_email_min_length', 3),
+                'max:' . (int) config('store.staff_email_max_length', 48),
+                'regex:/^[A-Za-z0-9._-]+$/',
+            ],
+            'credentials.password' => [
+                'required_without:staff.password',
+                'string',
+                $passwordRule,
+            ],
+
             'staff' => ['nullable', 'array'],
-            'staff.invited_email' => ['nullable', 'string', 'max:' . (int) config('store.staff_email_max_length', 48), 'regex:/^[A-Za-z0-9._-]+$/'],
+            'staff.invited_email' => [
+                'required_without:credentials.handle',
+                'string',
+                'min:' . (int) config('store.staff_email_min_length', 3),
+                'max:' . (int) config('store.staff_email_max_length', 48),
+                'regex:/^[A-Za-z0-9._-]+$/',
+            ],
+            'staff.password' => [
+                'required_without:credentials.password',
+                'string',
+                $passwordRule,
+            ],
 
             'financial' => ['nullable', 'array'],
             'financial.policy_type' => ['nullable', 'string', 'max:32'],
@@ -111,10 +149,18 @@ class StoreOnboardingRequest extends FormRequest
      */
     protected function failedValidation(Validator $validator)
     {
+        $logPayload = $this->all();
+        if (isset($logPayload['credentials']['password'])) {
+            $logPayload['credentials']['password'] = '[hidden]';
+        }
+        if (isset($logPayload['staff']['password'])) {
+            $logPayload['staff']['password'] = '[hidden]';
+        }
+
         Log::warning('store_onboarding.validation_failed', [
             'user_id' => $this->user()?->id,
             'errors' => $validator->errors()->toArray(),
-            'payload' => $this->all(),
+            'payload' => $logPayload,
         ]);
 
         parent::failedValidation($validator);

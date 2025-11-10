@@ -1616,6 +1616,18 @@ class _MetricSummaryCard extends StatelessWidget {
   }
 }
 
+class _MetricCardData {
+  const _MetricCardData({
+    required this.titleKey,
+    required this.snapshot,
+    required this.color,
+  });
+
+  final String titleKey;
+  final MerchantMetricSnapshot snapshot;
+  final Color color;
+}
+
 class _RevenueHighlight extends StatelessWidget {
   const _RevenueHighlight({required this.value, required this.accent});
 

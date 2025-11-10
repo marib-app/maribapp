@@ -107,6 +107,18 @@ class WalletAdminController extends Controller
             ->latest('created_at')
             ->first();
 
+        $transactionsBase = WalletTransaction::query()
+            ->where('wallet_account_id', $walletAccount->getKey());
+
+        $lastActivityValue = (clone $transactionsBase)->latest('created_at')->value('created_at');
+
+        $walletMetrics = [
+            'total_transactions' => (clone $transactionsBase)->count(),
+            'total_credits' => (clone $transactionsBase)->where('type', 'credit')->sum('amount'),
+            'total_debits' => (clone $transactionsBase)->where('type', 'debit')->sum('amount'),
+            'last_activity' => $lastActivityValue ? Carbon::parse($lastActivityValue) : null,
+        ];
+
         $manualCreditReference = $this->generateOperationReference();
 
         $manualCreditQuery = WalletTransaction::query()
@@ -130,6 +142,7 @@ class WalletAdminController extends Controller
             'filters' => self::FILTERS,
             'appliedFilter' => $filter,
             'currency' => strtoupper(config('app.currency', 'SAR')),
+            'walletMetrics' => $walletMetrics,
             'manualCreditReference' => $manualCreditReference,
             'manualCreditEntries' => $manualCreditEntries,
             'manualCreditStats' => [

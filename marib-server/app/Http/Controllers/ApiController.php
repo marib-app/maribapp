@@ -3696,11 +3696,10 @@ class ApiController extends Controller {
         try {
             $transactions = PaymentTransaction::with([
                 'manualPaymentRequest.manualBank',
+                'walletTransaction',
                 'order' => static function ($query) {
                     $query->select('id', 'order_number', 'payment_status', 'department');
                 },
-
-
             ])->where('user_id', Auth::id())
                 ->latest()
                 ->get();

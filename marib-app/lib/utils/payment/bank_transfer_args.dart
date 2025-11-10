@@ -11,6 +11,8 @@ class BankTransferArgs {
   final String? serviceTitle;
   final String? priceNote;
   final int? serviceRequestId;
+  final int? wifiPlanId;
+  final List<String>? allowedGateways;
 
   const BankTransferArgs({
     required this.token,
@@ -25,16 +27,24 @@ class BankTransferArgs {
     this.serviceTitle,
     this.priceNote,
     this.serviceRequestId,
+    this.wifiPlanId,
+    this.allowedGateways,
   });
 }
 
-// اترك تعريف BankTransferArgs لديك كما هو، وأضف الامتداد التالي:
+class BankTransferGateway {
+  static const String manualBank = 'manual_bank';
+  static const String eastYemenBank = 'east_yemen_bank';
+  static const String wallet = 'wallet';
+}
+
 extension BankTransferArgsX on BankTransferArgs {
   Map<String, dynamic> toContext() => {
         if (packageId > 0) 'package_id': packageId,
         'package_type': packageType,
         if (itemId != null) 'item_id': itemId,
         if (serviceId != null) 'service_id': serviceId,
+        if (wifiPlanId != null) 'wifi_plan_id': wifiPlanId,
         if (serviceRequestId != null) 'service_request_id': serviceRequestId,
       };
 
@@ -47,6 +57,9 @@ extension BankTransferArgsX on BankTransferArgs {
       }
       if (normalized.contains('order')) {
         return 'order';
+      }
+      if (normalized.contains('wifi')) {
+        return 'wifi_plan';
       }
       if (normalized.contains('service')) {
         return 'service';
@@ -62,6 +75,10 @@ extension BankTransferArgsX on BankTransferArgs {
 
     if (rawType.contains('service') || serviceId != null) {
       return 'service';
+    }
+
+    if (rawType.contains('wifi') || wifiPlanId != null) {
+      return 'wifi_plan';
     }
 
     if (rawType.contains('wallet')) {
@@ -93,5 +110,19 @@ extension BankTransferArgsX on BankTransferArgs {
       return null;
     }
     return gateway.toLowerCase();
+  }
+
+  List<String>? get normalizedAllowedGateways {
+    if (allowedGateways == null) {
+      return null;
+    }
+    final List<String> normalized = allowedGateways!
+        .map((gateway) => gateway.trim().toLowerCase())
+        .where((gateway) => gateway.isNotEmpty)
+        .toList();
+    if (normalized.isEmpty) {
+      return null;
+    }
+    return normalized;
   }
 }

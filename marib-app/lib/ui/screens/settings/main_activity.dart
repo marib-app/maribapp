@@ -1,4 +1,4 @@
-// ignore_for_file: invalid_use_of_protected_member
+﻿// ignore_for_file: invalid_use_of_protected_member
 
 import 'dart:async';
 import 'dart:io';
@@ -19,6 +19,8 @@ import 'package:marib/data/cubits/system/fetch_system_settings_cubit.dart';
 import 'package:marib/data/model/item/item_model.dart';
 import 'package:marib/data/model/system_settings_model.dart';
 import 'package:marib/data/cubits/system/user_details.dart';
+import 'package:marib/data/model/merchant/merchant_store_snapshot.dart';
+import 'package:marib/data/repositories/merchant_repository.dart';
 
 import 'package:marib/ui/screens/Transaction_screen.dart';
 import 'package:marib/ui/screens/chat/chat_list_screen.dart';
@@ -41,6 +43,7 @@ import 'package:marib/utils/responsiveSize.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/svg/svg_edit.dart';
 import 'package:marib/utils/hive_utils.dart';
+import 'package:marib/ui/widgets/dialogs/store_review_dialogs.dart';
 
 // الواجهة (ملف منفصل للعرض فقط)
 import 'main_activity_ui.dart' show MainActivityUI, MainTab;
@@ -103,6 +106,7 @@ class MainActivityState extends State<MainActivity> with TickerProviderStateMixi
   bool _pendingListingNavigation = false; // تتبع مصدر طلب الحصة
 
   final List<Widget?> _pages = List<Widget?>.filled(4, null, growable: false);
+  final MerchantRepository _merchantRepository = const MerchantRepository();
 
 
   @override
@@ -111,6 +115,8 @@ class MainActivityState extends State<MainActivity> with TickerProviderStateMixi
     initAppLinks();
 
     _pages[0] = HomeScreen(from: widget.from);
+
+    _maybeBootstrapMerchantStoreStatus();
 
     // تحميل SVG لزر الإضافة مرة واحدة
     rootBundle.loadString(AppIcons.plusIcon).then((value) {
@@ -325,9 +331,21 @@ class MainActivityState extends State<MainActivity> with TickerProviderStateMixi
   }
 
 
-
-
   // تنقّلات مخصّصة حسب نوع الحساب
+
+  void _maybeBootstrapMerchantStoreStatus() {
+    final int? accountType = HiveUtils.getUserDetails().userType;
+    if (accountType != 3) {
+      return;
+    }
+    final String? cachedStatus = HiveUtils.getMerchantStoreStatus();
+    if (cachedStatus != null && cachedStatus.trim().isNotEmpty) {
+      return;
+    }
+    _merchantRepository.fetchStoreProfile().then((snapshot) async {
+      await HiveUtils.setMerchantStoreRaw(snapshot?.toMap());
+    }).catchError((_) {});
+  }
 
   void _refreshListingLimit() {
     if (!mounted) return;
@@ -338,11 +356,44 @@ class MainActivityState extends State<MainActivity> with TickerProviderStateMixi
         .fetchUserPackageLimit(packageType: "item_listing");
   }
 
+  Future<bool> _ensureStoreCanPublish() async {
+    final int? accountType = HiveUtils.getUserDetails().userType;
+    if (accountType != 3) {
+      return true;
+    }
+    final String? cachedStatus = HiveUtils.getMerchantStoreStatus();
+    if (_isStoreStatusApproved(cachedStatus)) {
+      return true;
+    }
+    try {
+      final MerchantStoreSnapshot? snapshot =
+          await _merchantRepository.fetchStoreProfile();
+      await HiveUtils.setMerchantStoreRaw(snapshot?.toMap());
+      return snapshot?.isApproved ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  bool _isStoreStatusApproved(String? status) {
+    final String normalized = (status ?? '').trim().toLowerCase();
+    return normalized == 'approved';
+  }
+
 
 
 
   Future<void> _handleAdCreationNavigation() async {
     if (!mounted) return;
+
+    final bool canPublish = await _ensureStoreCanPublish();
+    if (!canPublish) {
+      await showStoreReviewDialog(
+        context,
+        variant: StoreReviewDialogVariant.publishing,
+      );
+      return;
+    }
 
 
     try {

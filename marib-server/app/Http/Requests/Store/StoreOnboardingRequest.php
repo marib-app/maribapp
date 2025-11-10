@@ -3,7 +3,9 @@
 namespace App\Http\Requests\Store;
 
 use App\Enums\StoreClosureMode;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
 class StoreOnboardingRequest extends FormRequest
@@ -97,5 +99,19 @@ class StoreOnboardingRequest extends FormRequest
         return [
             'name.unique' => 'اسم المتجر مستخدم بالفعل، يرجى اختيار اسم مختلف.',
         ];
+    }
+
+    /**
+     * Log validation errors so we can debug failing submissions easily.
+     */
+    protected function failedValidation(Validator $validator)
+    {
+        Log::warning('store_onboarding.validation_failed', [
+            'user_id' => $this->user()?->id,
+            'errors' => $validator->errors()->toArray(),
+            'payload' => $this->all(),
+        ]);
+
+        parent::failedValidation($validator);
     }
 }

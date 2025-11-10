@@ -1,4 +1,4 @@
-import 'package:marib/app/app_theme.dart';
+﻿import 'package:marib/app/app_theme.dart';
 import 'package:marib/app/routes.dart';
 import 'package:marib/utils/constant.dart';
 import 'package:flutter/foundation.dart';
@@ -17,9 +17,9 @@ import 'dart:convert';
 import 'package:marib/utils/api.dart';
 import 'package:marib/utils/notification/notification_service.dart';
 
-// أداة مساعدة للتعامل مع التخزين المحلي عبر Hive
-// - تُجمّع كل عمليات القراءة/الكتابة على صناديق Hive
-// - تُقدّم دوال عالية المستوى لاستخدام موحّد داخل المشروع
+// ط£ط¯ط§ط© ظ…ط³ط§ط¹ط¯ط© ظ„ظ„طھط¹ط§ظ…ظ„ ظ…ط¹ ط§ظ„طھط®ط²ظٹظ† ط§ظ„ظ…ط­ظ„ظٹ ط¹ط¨ط± Hive
+// - طھظڈط¬ظ…ظ‘ط¹ ظƒظ„ ط¹ظ…ظ„ظٹط§طھ ط§ظ„ظ‚ط±ط§ط،ط©/ط§ظ„ظƒطھط§ط¨ط© ط¹ظ„ظ‰ طµظ†ط§ط¯ظٹظ‚ Hive
+// - طھظڈظ‚ط¯ظ‘ظ… ط¯ظˆط§ظ„ ط¹ط§ظ„ظٹط© ط§ظ„ظ…ط³طھظˆظ‰ ظ„ط§ط³طھط®ط¯ط§ظ… ظ…ظˆط­ظ‘ط¯ ط¯ط§ط®ظ„ ط§ظ„ظ…ط´ط±ظˆط¹
 
 class HiveUtils {
   HiveUtils._();
@@ -171,17 +171,17 @@ class HiveUtils {
   }
 
   // ---------------------------------------------------------------------------
-  //                         مفاتيح/مساعدات عامة
+  //                         ظ…ظپط§طھظٹط­/ظ…ط³ط§ط¹ط¯ط§طھ ط¹ط§ظ…ط©
   // ---------------------------------------------------------------------------
 
-  /// قراءة قيمة مفردة (Generic) من صندوق تفاصيل المستخدم
-  // مثال: `HiveUtils.getUserDetail<String>(key: 'accountType')`
+  /// ظ‚ط±ط§ط،ط© ظ‚ظٹظ…ط© ظ…ظپط±ط¯ط© (Generic) ظ…ظ† طµظ†ط¯ظˆظ‚ طھظپط§طµظٹظ„ ط§ظ„ظ…ط³طھط®ط¯ظ…
+  // ظ…ط«ط§ظ„: `HiveUtils.getUserDetail<String>(key: 'accountType')`
 
   static T? getUserDetail<T>({required String key}) {
     return _userDetailsBox.get(key) as T?;
   }
 
-  // كتابة قيمة مفردة في صندوق تفاصيل المستخدم
+  // ظƒطھط§ط¨ط© ظ‚ظٹظ…ط© ظ…ظپط±ط¯ط© ظپظٹ طµظ†ط¯ظˆظ‚ طھظپط§طµظٹظ„ ط§ظ„ظ…ط³طھط®ط¯ظ…
 
   static Future<void> setUserDetail({
     required String key,
@@ -240,7 +240,7 @@ class HiveUtils {
     return buffer.toString();
   }
 
-  /// قسم السلة الحالي (لمنع دمج أقسام مختلفة بين الجلسات)
+  /// ظ‚ط³ظ… ط§ظ„ط³ظ„ط© ط§ظ„ط­ط§ظ„ظٹ (ظ„ظ…ظ†ط¹ ط¯ظ…ط¬ ط£ظ‚ط³ط§ظ… ظ…ط®طھظ„ظپط© ط¨ظٹظ† ط§ظ„ط¬ظ„ط³ط§طھ)
   static Future<void> setCartSection(String? section) async {
     final box = _userDetailsBox;
     if (section == null || section.isEmpty) {
@@ -261,14 +261,14 @@ class HiveUtils {
     return value.toString();
   }
 
-  // إرجاع نوع الحساب كما هو مخزّن (من UserModel أو مباشرة من الـBox)
-  // قد يعيد: 'real_estate' | 'individual' | 'business' (أو سلسلة فارغة إن لم يُحدّد)
+  // ط¥ط±ط¬ط§ط¹ ظ†ظˆط¹ ط§ظ„ط­ط³ط§ط¨ ظƒظ…ط§ ظ‡ظˆ ظ…ط®ط²ظ‘ظ† (ظ…ظ† UserModel ط£ظˆ ظ…ط¨ط§ط´ط±ط© ظ…ظ† ط§ظ„ظ€Box)
+  // ظ‚ط¯ ظٹط¹ظٹط¯: 'real_estate' | 'individual' | 'business' (ط£ظˆ ط³ظ„ط³ظ„ط© ظپط§ط±ط؛ط© ط¥ظ† ظ„ظ… ظٹظڈط­ط¯ظ‘ط¯)
 
   static String getAccountTypeRaw() {
     return (_userDetailsBox.get('accountType') ?? '').toString();
   }
 
-  // نوع الحساب بصيغة lower-case لتسهيل المقارنة
+  // ظ†ظˆط¹ ط§ظ„ط­ط³ط§ط¨ ط¨طµظٹط؛ط© lower-case ظ„طھط³ظ‡ظٹظ„ ط§ظ„ظ…ظ‚ط§ط±ظ†ط©
 
   static String getAccountTypeLower() => getAccountTypeRaw().toLowerCase();
 
@@ -350,7 +350,7 @@ class HiveUtils {
       return true;
     }
 
-    // في حالة عدم وجود أقسام مسموح بها صراحةً نعتبر الوصول متاحًا ما لم يتم حظره
+    // ظپظٹ ط­ط§ظ„ط© ط¹ط¯ظ… ظˆط¬ظˆط¯ ط£ظ‚ط³ط§ظ… ظ…ط³ظ…ظˆط­ ط¨ظ‡ط§ طµط±ط§ط­ط©ظ‹ ظ†ط¹طھط¨ط± ط§ظ„ظˆطµظˆظ„ ظ…طھط§ط­ظ‹ط§ ظ…ط§ ظ„ظ… ظٹطھظ… ط­ط¸ط±ظ‡
     if (!hasDelegateAssignments) {
       return true;
     }
@@ -509,15 +509,15 @@ class HiveUtils {
   }
 
   // ---------------------------------------------------------------------------
-  //                             مصادقة/هوية
+  //                             ظ…طµط§ط¯ظ‚ط©/ظ‡ظˆظٹط©
   // ---------------------------------------------------------------------------
 
-  /// إرجاع الـJWT (لو غير موجود يرجّع سلسلة فارغة لتجنّب null)
+  /// ط¥ط±ط¬ط§ط¹ ط§ظ„ظ€JWT (ظ„ظˆ ط؛ظٹط± ظ…ظˆط¬ظˆط¯ ظٹط±ط¬ظ‘ط¹ ط³ظ„ط³ظ„ط© ظپط§ط±ط؛ط© ظ„طھط¬ظ†ظ‘ط¨ null)
   static String getJWT() {
     return (_userDetailsBox.get(HiveKeys.jwtToken) ?? '').toString();
   }
 
-  /// تعيين JWT
+  /// طھط¹ظٹظٹظ† JWT
   static void setJWT(String token) async {
     await _userDetailsBox.put(HiveKeys.jwtToken, token);
     if (_cachedUserDetailsMap != null) {
@@ -525,7 +525,7 @@ class HiveUtils {
     }
   }
 
-  // هل المستخدم موثّق (Authenticated) وبالإضافة لذلك "مُتحقَّق" (مثلاً OTP/توثيق الحساب)
+  // ظ‡ظ„ ط§ظ„ظ…ط³طھط®ط¯ظ… ظ…ظˆط«ظ‘ظ‚ (Authenticated) ظˆط¨ط§ظ„ط¥ط¶ط§ظپط© ظ„ط°ظ„ظƒ "ظ…ظڈطھط­ظ‚ظ‘ظژظ‚" (ظ…ط«ظ„ط§ظ‹ OTP/طھظˆط«ظٹظ‚ ط§ظ„ط­ط³ط§ط¨)
 
   static bool isUserAuthenticated() {
     final isAuth =
@@ -535,7 +535,7 @@ class HiveUtils {
     return true;
   }
 
-  /// تحقّق إضافي (مثلاً حقل isVerified داخل UserModel)
+  /// طھط­ظ‚ظ‘ظ‚ ط¥ط¶ط§ظپظٹ (ظ…ط«ظ„ط§ظ‹ ط­ظ‚ظ„ isVerified ط¯ط§ط®ظ„ UserModel)
   static bool isUserVerified() {
     try {
       final user = getUserDetails();
@@ -545,45 +545,45 @@ class HiveUtils {
     }
   }
 
-  /// تحقّق أساسي فقط (بدون شرط isVerified)
+  /// طھط­ظ‚ظ‘ظ‚ ط£ط³ط§ط³ظٹ ظپظ‚ط· (ط¨ط¯ظˆظ† ط´ط±ط· isVerified)
   static bool isUserBasicallyAuthenticated() {
     return Hive.box(HiveKeys.authBox).get(HiveKeys.isAuthenticated) ?? false;
   }
 
-  /// وضع المستخدم كـمُوثّق
+  /// ظˆط¶ط¹ ط§ظ„ظ…ط³طھط®ط¯ظ… ظƒظ€ظ…ظڈظˆط«ظ‘ظ‚
   static void setUserIsAuthenticated(bool value) {
     Hive.box(HiveKeys.authBox).put(HiveKeys.isAuthenticated, value);
   }
 
-  /// أول استخدام للتطبيق؟
+  /// ط£ظˆظ„ ط§ط³طھط®ط¯ط§ظ… ظ„ظ„طھط·ط¨ظٹظ‚طں
   static bool isUserFirstTime() {
     return Hive.box(HiveKeys.authBox).get(HiveKeys.isUserFirstTime) ?? true;
   }
 
-  /// تخطّى المقدّمة/التسجيل؟
+  /// طھط®ط·ظ‘ظ‰ ط§ظ„ظ…ظ‚ط¯ظ‘ظ…ط©/ط§ظ„طھط³ط¬ظٹظ„طں
   static bool isUserSkip() {
     return Hive.box(HiveKeys.authBox).get(HiveKeys.isUserSkip) ?? false;
   }
 
-  /// تمييز أن المستخدم لم يعد جديدًا (يُنصح استدعاؤها بعد أول تشغيل)
+  /// طھظ…ظٹظٹط² ط£ظ† ط§ظ„ظ…ط³طھط®ط¯ظ… ظ„ظ… ظٹط¹ط¯ ط¬ط¯ظٹط¯ظ‹ط§ (ظٹظڈظ†طµط­ ط§ط³طھط¯ط¹ط§ط¤ظ‡ط§ ط¨ط¹ط¯ ط£ظˆظ„ طھط´ط؛ظٹظ„)
   static Future<void> setUserIsNotNew() {
     return Hive.box(HiveKeys.authBox).put(HiveKeys.isUserFirstTime, false);
   }
 
-  /// (للاختبارات فقط) تفعيل حالة "مستخدم جديد"
+  /// (ظ„ظ„ط§ط®طھط¨ط§ط±ط§طھ ظپظ‚ط·) طھظپط¹ظٹظ„ ط­ط§ظ„ط© "ظ…ط³طھط®ط¯ظ… ط¬ط¯ظٹط¯"
   @visibleForTesting
   static Future<void> setUserIsNew() {
     Hive.box(HiveKeys.authBox).put(HiveKeys.isAuthenticated, false);
     return Hive.box(HiveKeys.authBox).put(HiveKeys.isUserFirstTime, true);
   }
 
-  /// جلب معرف المستخدم (قد تكون null إذا لم تُحفظ)
+  /// ط¬ظ„ط¨ ظ…ط¹ط±ظپ ط§ظ„ظ…ط³طھط®ط¯ظ… (ظ‚ط¯ طھظƒظˆظ† null ط¥ط°ط§ ظ„ظ… طھظڈط­ظپط¸)
   static String? getUserId() {
     final v = _userDetailsBox.get("id");
     return v == null ? null : v.toString();
   }
 
-  /// حفظ بيانات مستخدم (دفعة واحدة)
+  /// ط­ظپط¸ ط¨ظٹط§ظ†ط§طھ ظ…ط³طھط®ط¯ظ… (ط¯ظپط¹ط© ظˆط§ط­ط¯ط©)
   static void setUserData(Map data) async {
     final String? previousId = _userDetailsBox.get('id')?.toString();
     final String? incomingId = data['id']?.toString();
@@ -607,7 +607,7 @@ class HiveUtils {
     }
   }
 
-  /// إعادة تمهيد/تصفير كل الصناديق الأساسية (تسجيل خروج قوي)
+  /// ط¥ط¹ط§ط¯ط© طھظ…ظ‡ظٹط¯/طھطµظپظٹط± ظƒظ„ ط§ظ„طµظ†ط§ط¯ظٹظ‚ ط§ظ„ط£ط³ط§ط³ظٹط© (طھط³ط¬ظٹظ„ ط®ط±ظˆط¬ ظ‚ظˆظٹ)
   static void clear() async {
     Api.handleAccountChange();
     await _userDetailsBox.clear();
@@ -621,37 +621,37 @@ class HiveUtils {
     _runLogoutHooks();
   }
 
-  /// تسجيل الخروج + تنظيف + إعادة التوجيه (إن لزم)
+  /// طھط³ط¬ظٹظ„ ط§ظ„ط®ط±ظˆط¬ + طھظ†ط¸ظٹظپ + ط¥ط¹ط§ط¯ط© ط§ظ„طھظˆط¬ظٹظ‡ (ط¥ظ† ظ„ط²ظ…)
   static logoutUser(
     context, {
     required VoidCallback onLogout,
     bool? isRedirect,
   }) async {
     Api.handleAccountChange();
-    // 1) تسجيل خروج من Firebase
+    // 1) طھط³ط¬ظٹظ„ ط®ط±ظˆط¬ ظ…ظ† Firebase
     try {
       await FirebaseAuth.instance.signOut();
     } catch (_) {}
 
-    // 2) تسجيل خروج من Google
+    // 2) طھط³ط¬ظٹظ„ ط®ط±ظˆط¬ ظ…ظ† Google
     try {
       final googleSignIn = GoogleSignIn();
       await googleSignIn.signOut();
     } catch (_) {}
 
-    // 3) تنظيف مخازن المشروع
+    // 3) طھظ†ط¸ظٹظپ ظ…ط®ط§ط²ظ† ط§ظ„ظ…ط´ط±ظˆط¹
     await _userDetailsBox.clear();
     _invalidateUserDetailsCache();
 
     HiveUtils.setUserIsAuthenticated(false);
 
-    // 4) نداء الـcallback (لو فيه إجراءات إضافية)
+    // 4) ظ†ط¯ط§ط، ط§ظ„ظ€callback (ظ„ظˆ ظپظٹظ‡ ط¥ط¬ط±ط§ط،ط§طھ ط¥ط¶ط§ظپظٹط©)
     onLogout.call();
     NotificationService.disposeListeners();
     NotificationService.clearParticipantsCache();
     _runLogoutHooks();
 
-    // 5) إعادة التوجيه (افتراضيًا: إلى صفحة الدخول)
+    // 5) ط¥ط¹ط§ط¯ط© ط§ظ„طھظˆط¬ظٹظ‡ (ط§ظپطھط±ط§ط¶ظٹظ‹ط§: ط¥ظ„ظ‰ طµظپط­ط© ط§ظ„ط¯ط®ظˆظ„)
     Future.delayed(
       Duration.zero,
       () {
@@ -663,10 +663,10 @@ class HiveUtils {
   }
 
   // ---------------------------------------------------------------------------
-  //                                 اللغة/الثيم
+  //                                 ط§ظ„ظ„ط؛ط©/ط§ظ„ط«ظٹظ…
   // ---------------------------------------------------------------------------
 
-  // الثيم الحالي (light/dark) — افتراضي Light
+  // ط§ظ„ط«ظٹظ… ط§ظ„ط­ط§ظ„ظٹ (light/dark) â€” ط§ظپطھط±ط§ط¶ظٹ Light
   static AppTheme getCurrentTheme() {
     final current = Hive.box(HiveKeys.themeBox).get(HiveKeys.currentTheme);
     if (current == null) return AppTheme.light;
@@ -675,25 +675,25 @@ class HiveUtils {
     return AppTheme.light;
   }
 
-  // تعيين الثيم
+  // طھط¹ظٹظٹظ† ط§ظ„ط«ظٹظ…
   static setCurrentTheme(AppTheme theme) {
     final newTheme = theme == AppTheme.light ? "light" : "dark";
     Hive.box(HiveKeys.themeBox).put(HiveKeys.currentTheme, newTheme);
   }
 
-  // تخزين اللغة المختارة
+  // طھط®ط²ظٹظ† ط§ظ„ظ„ط؛ط© ط§ظ„ظ…ط®طھط§ط±ط©
   static Future<bool> storeLanguage(dynamic data) async {
     Hive.box(HiveKeys.languageBox).put(HiveKeys.currentLanguageKey, data);
     return true;
   }
 
-  // جلب اللغة المختارة
+  // ط¬ظ„ط¨ ط§ظ„ظ„ط؛ط© ط§ظ„ظ…ط®طھط§ط±ط©
   static dynamic getLanguage() {
     return Hive.box(HiveKeys.languageBox).get(HiveKeys.currentLanguageKey);
   }
 
   // ---------------------------------------------------------------------------
-  //                            الموقع/المناطق/نصف القطر
+  //                            ط§ظ„ظ…ظˆظ‚ط¹/ط§ظ„ظ…ظ†ط§ط·ظ‚/ظ†طµظپ ط§ظ„ظ‚ط·ط±
   // ---------------------------------------------------------------------------
 
   static bool isLocationFilled() {
@@ -703,8 +703,8 @@ class HiveUtils {
     return !(city == null && state == null && country == null);
   }
 
-  /// تعيين الموقع (لملف المستخدم)
-  /// في وضع الديمو تُحفظ قيم ثابتة، وإلا تُحفظ القيم الممرّرة (قد تكون null)
+  /// طھط¹ظٹظٹظ† ط§ظ„ظ…ظˆظ‚ط¹ (ظ„ظ…ظ„ظپ ط§ظ„ظ…ط³طھط®ط¯ظ…)
+  /// ظپظٹ ظˆط¶ط¹ ط§ظ„ط¯ظٹظ…ظˆ طھظڈط­ظپط¸ ظ‚ظٹظ… ط«ط§ط¨طھط©طŒ ظˆط¥ظ„ط§ طھظڈط­ظپط¸ ط§ظ„ظ‚ظٹظ… ط§ظ„ظ…ظ…ط±ظ‘ط±ط© (ظ‚ط¯ طھظƒظˆظ† null)
   static void setLocation({
     String? city,
     String? state,
@@ -745,7 +745,7 @@ class HiveUtils {
     }
   }
 
-  /// تعيين الموقع الحالي (Current Location) — يُستخدم عادةً لخدمة "بالقرب مني"
+  /// طھط¹ظٹظٹظ† ط§ظ„ظ…ظˆظ‚ط¹ ط§ظ„ط­ط§ظ„ظٹ (Current Location) â€” ظٹظڈط³طھط®ط¯ظ… ط¹ط§ط¯ط©ظ‹ ظ„ط®ط¯ظ…ط© "ط¨ط§ظ„ظ‚ط±ط¨ ظ…ظ†ظٹ"
   static void setCurrentLocation({
     required String city,
     required String state,
@@ -783,7 +783,7 @@ class HiveUtils {
     }
   }
 
-  /// مسح حقول الموقع (الأساسية)
+  /// ظ…ط³ط­ ط­ظ‚ظˆظ„ ط§ظ„ظ…ظˆظ‚ط¹ (ط§ظ„ط£ط³ط§ط³ظٹط©)
   static void clearLocation() async {
     final updates = {
       HiveKeys.city: null,
@@ -796,7 +796,7 @@ class HiveUtils {
     }
   }
 
-  // تعيين نصف قطر البحث القريب
+  // طھط¹ظٹظٹظ† ظ†طµظپ ظ‚ط·ط± ط§ظ„ط¨ط­ط« ط§ظ„ظ‚ط±ظٹط¨
   static void setNearbyRadius(int radius) async {
     await _userDetailsBox.put(HiveKeys.nearbyRadius, radius);
     if (_cachedUserDetailsMap != null) {
@@ -804,12 +804,12 @@ class HiveUtils {
     }
   }
 
-  // جلب نصف قطر البحث القريب
+  // ط¬ظ„ط¨ ظ†طµظپ ظ‚ط·ط± ط§ظ„ط¨ط­ط« ط§ظ„ظ‚ط±ظٹط¨
   static dynamic getNearbyRadius() {
     return _userDetailsBox.get(HiveKeys.nearbyRadius);
   }
 
-  // قراءات شائعة (Getters) — تُبقي الاستدعاءات موحّدة
+  // ظ‚ط±ط§ط،ط§طھ ط´ط§ط¦ط¹ط© (Getters) â€” طھظڈط¨ظ‚ظٹ ط§ظ„ط§ط³طھط¯ط¹ط§ط،ط§طھ ظ…ظˆط­ظ‘ط¯ط©
   static dynamic getCityName() => _userDetailsBox.get(HiveKeys.city);
 
   static dynamic getAreaName() => _userDetailsBox.get(HiveKeys.area);
@@ -843,10 +843,10 @@ class HiveUtils {
   static dynamic getLongitude() => _userDetailsBox.get(HiveKeys.longitudeKey);
 
   // ---------------------------------------------------------------------------
-  //                         سلوك واجهة: نوافذ/إشعارات صغيرة
+  //                         ط³ظ„ظˆظƒ ظˆط§ط¬ظ‡ط©: ظ†ظˆط§ظپط°/ط¥ط´ط¹ط§ط±ط§طھ طµط؛ظٹط±ط©
   // ---------------------------------------------------------------------------
 
-  // لا تُظهر نافذة "اختيار الموقع" مرة أخرى
+  // ظ„ط§ طھظڈط¸ظ‡ط± ظ†ط§ظپط°ط© "ط§ط®طھظٹط§ط± ط§ظ„ظ…ظˆظ‚ط¹" ظ…ط±ط© ط£ط®ط±ظ‰
   static void dontShowChooseLocationDialoge() {
     _userDetailsBox.put("showChooseLocationDialoge", false);
     if (_cachedUserDetailsMap != null) {
@@ -854,22 +854,22 @@ class HiveUtils {
     }
   }
 
-  // هل ينبغي إظهار نافذة اختيار الموقع؟
-  // تُعيد true إذا لم تُضبط من قبل (القيمة غير موجودة)
+  // ظ‡ظ„ ظٹظ†ط¨ط؛ظٹ ط¥ط¸ظ‡ط§ط± ظ†ط§ظپط°ط© ط§ط®طھظٹط§ط± ط§ظ„ظ…ظˆظ‚ط¹طں
+  // طھظڈط¹ظٹط¯ true ط¥ط°ط§ ظ„ظ… طھظڈط¶ط¨ط· ظ…ظ† ظ‚ط¨ظ„ (ط§ظ„ظ‚ظٹظ…ط© ط؛ظٹط± ظ…ظˆط¬ظˆط¯ط©)
   static bool isShowChooseLocationDialoge() {
     final value = _userDetailsBox.get("showChooseLocationDialoge");
     return value == null;
   }
 
   // ---------------------------------------------------------------------------
-  //                         تفاصيل المستخدم/الدولة/الثيم
+  //                         طھظپط§طµظٹظ„ ط§ظ„ظ…ط³طھط®ط¯ظ…/ط§ظ„ط¯ظˆظ„ط©/ط§ظ„ط«ظٹظ…
   // ---------------------------------------------------------------------------
 
   static String? getCountryCode() {
     return _userDetailsBox.get("country_code");
   }
 
-  /// وضع علامة أن "الملف لم يكتمل" — قد تُستخدم لفرض إكمال الملف
+  /// ظˆط¶ط¹ ط¹ظ„ط§ظ…ط© ط£ظ† "ط§ظ„ظ…ظ„ظپ ظ„ظ… ظٹظƒطھظ…ظ„" â€” ظ‚ط¯ طھظڈط³طھط®ط¯ظ… ظ„ظپط±ط¶ ط¥ظƒظ…ط§ظ„ ط§ظ„ظ…ظ„ظپ
   static void setProfileNotCompleted() async {
     await _userDetailsBox.put(HiveKeys.isProfileCompleted, false);
     if (_cachedUserDetailsMap != null) {
@@ -877,7 +877,7 @@ class HiveUtils {
     }
   }
 
-  /// جلب نموذج المستخدم كاملًا من الصندوق (UserModel)
+  /// ط¬ظ„ط¨ ظ†ظ…ظˆط°ط¬ ط§ظ„ظ…ط³طھط®ط¯ظ… ظƒط§ظ…ظ„ظ‹ط§ ظ…ظ† ط§ظ„طµظ†ط¯ظˆظ‚ (UserModel)
   static UserModel getUserDetails() {
     if (_cachedUserDetails != null) {
       return _cachedUserDetails!;
@@ -886,7 +886,7 @@ class HiveUtils {
     return _cachedUserDetails ?? UserModel.fromJson(<String, dynamic>{});
   }
 
-  /// تعيين أنّ المستخدم "تجاوز" شاشة ما (مثل Onboarding)
+  /// طھط¹ظٹظٹظ† ط£ظ†ظ‘ ط§ظ„ظ…ط³طھط®ط¯ظ… "طھط¬ط§ظˆط²" ط´ط§ط´ط© ظ…ط§ (ظ…ط«ظ„ Onboarding)
   static Future<void> setUserSkip() {
     return Hive.box(HiveKeys.authBox).put(HiveKeys.isUserSkip, true);
   }
@@ -955,8 +955,47 @@ class HiveUtils {
     await _userDetailsBox.delete(HiveKeys.merchantOnboardingDraft);
   }
 
+  static Map<String, dynamic>? getMerchantStoreRaw() {
+    final dynamic raw = _userDetailsBox.get('store');
+    if (raw is Map<String, dynamic>) {
+      return Map<String, dynamic>.from(raw);
+    }
+    if (raw is Map) {
+      return raw.map(
+        (dynamic key, dynamic value) => MapEntry(
+          key.toString(),
+          value,
+        ),
+      );
+    }
+    return null;
+  }
+
+  static Future<void> setMerchantStoreRaw(
+      Map<String, dynamic>? store) async {
+    if (store == null) {
+      await _userDetailsBox.delete('store');
+      _removeFromCache(<dynamic>['store']);
+      return;
+    }
+    final Map<String, dynamic> sanitized = Map<String, dynamic>.from(store);
+    await _userDetailsBox.put('store', sanitized);
+    if (_cachedUserDetailsMap != null) {
+      _applyCacheUpdates(<dynamic, dynamic>{'store': sanitized});
+    }
+  }
+
+  static String? getMerchantStoreStatus() {
+    final Map<String, dynamic>? store = getMerchantStoreRaw();
+    final dynamic rawStatus = store?['status'];
+    if (rawStatus == null) {
+      return null;
+    }
+    final String status = rawStatus.toString().trim();
+    return status.isEmpty ? null : status;
+  }
   static String getAccountTypeCode() {
-    // يتوقع: "1" (فردي) | "2" (عقاري) | "3" (تجاري)
+    // ظٹطھظˆظ‚ط¹: "1" (ظپط±ط¯ظٹ) | "2" (ط¹ظ‚ط§ط±ظٹ) | "3" (طھط¬ط§ط±ظٹ)
     final v = _userDetailsBox.get('accountType');
 
     return (v ?? '').toString().trim();

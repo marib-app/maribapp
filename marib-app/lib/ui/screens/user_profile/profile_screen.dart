@@ -25,12 +25,14 @@ import 'package:marib/data/cubits/chat/blocked_users_list_cubit.dart';
 import 'package:marib/data/cubits/chat/get_buyer_chat_users_cubit.dart';
 import 'package:marib/data/cubits/favorite/favorite_cubit.dart';
 import 'package:marib/data/cubits/profile/profile_stats_cubit.dart';
+import 'package:marib/data/cubits/merchant/merchant_store_cubit.dart';
 import 'package:marib/data/cubits/report/update_report_items_list_cubit.dart';
 import 'package:marib/data/cubits/seller/fetch_verification_request_cubit.dart';
 import 'package:marib/data/cubits/system/app_theme_cubit.dart';
 import 'package:marib/data/cubits/system/fetch_system_settings_cubit.dart';
 import 'package:marib/data/cubits/system/user_details.dart';
 import 'package:marib/data/model/system_settings_model.dart';
+import 'package:marib/data/model/merchant/merchant_store_snapshot.dart';
 
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/constant.dart';
@@ -42,6 +44,7 @@ import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/responsiveSize.dart';
 import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart';
 import 'package:marib/utils/app_icon.dart';
+import 'package:marib/ui/widgets/dialogs/store_review_dialogs.dart';
 
 import 'package:flutter/cupertino.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -298,7 +301,6 @@ mixin ProfileScreenLogic<T extends StatefulWidget> on State<T> {
   Color getAccountTypeBadgeColor(BuildContext context) => _getAccountTypeBadgeColor(context);
   String getAccountTypeText() => _getAccountTypeText();
 }
-
 
 
 

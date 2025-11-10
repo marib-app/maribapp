@@ -85,7 +85,11 @@ class LoginScreenState extends State<SignUpMainScreen> {
   }
 
   Future<void> _switchToUser(Map<String, dynamic> apiResponse) async {
-    await HiveUtils.logoutUser(context, onLogout: () {});
+    await HiveUtils.logoutUser(
+      context,
+      onLogout: () {},
+      isRedirect: false,
+    );
     HiveUtils.setJWT(apiResponse['token']);
     HiveUtils.setUserData(apiResponse['data']);
     HiveUtils.setUserIsAuthenticated(true);

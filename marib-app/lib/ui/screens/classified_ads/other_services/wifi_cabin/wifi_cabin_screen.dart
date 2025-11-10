@@ -44,12 +44,10 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
   String _searchQuery = '';
   List<WifiNetwork> _networks = const <WifiNetwork>[];
   bool _hasApprovedOwnerNetwork = false;
-
   @override
   void initState() {
     super.initState();
     _loadNetworks();
-    _refreshOwnerNetworkStatus();
   }
 
   @override
@@ -72,44 +70,53 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
       });
     }
 
+    final String? normalizedQuery =
+        _searchQuery.trim().isEmpty ? null : _searchQuery.trim();
+
+    List<WifiNetwork> publicNetworks = const <WifiNetwork>[];
+    List<WifiNetwork> ownerNetworks = const <WifiNetwork>[];
+    String? fetchError;
+
     try {
-      final List<WifiNetwork> result = await _repository.fetchNetworks(
-        query: _searchQuery.trim().isEmpty ? null : _searchQuery.trim(),
+      publicNetworks = await _repository.fetchNetworks(
+        query: normalizedQuery,
         perPage: 60,
       );
-      if (!mounted) return;
-      setState(() {
-        _networks = result;
-      });
     } catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _errorMessage = ErrorFilter.check(error).error;
-      });
-    } finally {
-      if (!mounted) return;
-      setState(() {
-        _isLoading = false;
-      });
+      fetchError = ErrorFilter.check(error).error;
     }
-  }
 
-  Future<void> _refreshOwnerNetworkStatus() async {
     try {
-      final List<WifiNetwork> owned =
-          await _repository.fetchOwnerNetworks(perPage: 20);
-      if (!mounted) return;
-      final bool hasActive = owned.any((network) =>
-          (network.status ?? '').toLowerCase().trim() == 'active');
-      setState(() {
-        _hasApprovedOwnerNetwork = hasActive;
-      });
+      ownerNetworks = await _repository.fetchOwnerNetworks(
+        query: normalizedQuery,
+        perPage: 60,
+      );
     } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _hasApprovedOwnerNetwork = false;
-      });
+      // لا نريد تعطيل تجربة المستخدم إذا فشل استعلام المالكين
     }
+
+    if (!mounted) return;
+    setState(() {
+      final Map<int, WifiNetwork> merged = <int, WifiNetwork>{};
+      for (final network in publicNetworks) {
+        merged[network.id] = network;
+      }
+      for (final network in ownerNetworks) {
+        merged[network.id] = network;
+      }
+
+      _networks = merged.values.toList();
+      _hasApprovedOwnerNetwork = ownerNetworks.any(
+        (network) =>
+            (network.status ?? '').toLowerCase().trim() == 'active' ||
+            (network.meta?['status'] ?? '')
+                .toString()
+                .toLowerCase()
+                .contains('active'),
+      );
+      _errorMessage = fetchError;
+      _isLoading = false;
+    });
   }
 
   void _onSearchChanged(String value) {
@@ -150,7 +157,6 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
     );
     if (created == true) {
       _loadNetworks();
-      _refreshOwnerNetworkStatus();
     }
   }
 
@@ -196,7 +202,7 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
                     icon: Icons.travel_explore_rounded,
                     title: 'لا توجد شبكات متاحة حاليًا',
                     subtitle:
-                        'بمجرد ربط شبكتك في اللوحة ستظهر هنا مع تفاصيل الخطط والتحويلات.',
+                        'لا توجد شبكات مطابقة لبحثك في الوقت الحالي. حاول تغيير كلمات البحث أو العودة لاحقًا.',
                   ),
                 )
               else
@@ -256,7 +262,7 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
                 ? Icons.dashboard_customize_rounded
                 : Icons.add_circle_outline_rounded),
             label: Text(
-              _hasApprovedOwnerNetwork ? 'إدارة شبكتك' : 'إضافة شبكة جديدة',
+              _hasApprovedOwnerNetwork ? 'إدارة شبكتك' : 'أضف شبكتك الآن',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -269,43 +275,17 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
   }
 
   Widget _buildHeader(BuildContext context) {
-    final colors = context.color;
-    final textTheme = Theme.of(context).textTheme;
-
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'شبكاتك المرتبطة بلوحة Marib',
-            style: textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: colors.textDefaultColor,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'يمكنك مراقبة الشبكات، الاطلاع على الخطط، والانتقال مباشرة إلى اللوحة لإدارة الأكواد والدفعات.',
-            style: textTheme.bodyMedium?.copyWith(
-              color: colors.textLightColor,
-              height: 1.5,
-            ),
-          ),
-          const SizedBox(height: 16),
-          _SearchField(
-            controller: _searchController,
-            focusNode: _searchFocusNode,
-            onChanged: _onSearchChanged,
-            onClear: () {
-              _searchController.clear();
-              _searchQuery = '';
-              _loadNetworks();
-            },
-          ),
-          const SizedBox(height: 16),
-          _DashboardHintCard(onOpenDashboard: _openDashboard),
-        ],
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+      child: _SearchField(
+        controller: _searchController,
+        focusNode: _searchFocusNode,
+        onChanged: _onSearchChanged,
+        onClear: () {
+          _searchController.clear();
+          _searchQuery = '';
+          _loadNetworks();
+        },
       ),
     );
   }
@@ -355,87 +335,9 @@ class _SearchField extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
               borderSide: BorderSide(color: colors.territoryColor),
             ),
-          ),
+          ), 
         );
       },
-    );
-  }
-}
-
-class _DashboardHintCard extends StatelessWidget {
-  const _DashboardHintCard({required this.onOpenDashboard});
-
-  final VoidCallback onOpenDashboard;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.color;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: colors.borderColor.withOpacity(.4)),
-        color: colors.secondaryColor,
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            height: 46,
-            width: 46,
-            decoration: BoxDecoration(
-              color: colors.territoryColor.withOpacity(.12),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(
-              Icons.wifi_tethering,
-              color: colors.territoryColor,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'إدارة متقدمة من خلال اللوحة',
-                  style: textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: colors.textDefaultColor,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'لرفع دفعات الأكواد أو تحديث الخطط، استخدم لوحة wifi-cabin وستظهر التغييرات هنا تلقائيًا.',
-                  style: textTheme.bodyMedium?.copyWith(
-                    color: colors.textLightColor,
-                    height: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextButton.icon(
-                  onPressed: onOpenDashboard,
-                  icon: Icon(Icons.open_in_new_rounded,
-                      color: colors.territoryColor, size: 18),
-                  label: Text(
-                    'فتح اللوحة',
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: colors.territoryColor,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  style: TextButton.styleFrom(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  ),
-                ),
-              ],
-            ),
-          )
-        ],
-      ),
     );
   }
 }

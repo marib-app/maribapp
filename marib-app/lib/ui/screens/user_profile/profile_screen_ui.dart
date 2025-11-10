@@ -1,4 +1,4 @@
-part of 'profile_screen.dart';
+﻿part of 'profile_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -54,7 +54,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     final int? userType = HiveUtils.getUserDetails().userType;
     final bool isCommercial = userType == 3; // احتياطي لو احتجته لاحقًا
 
-    return AnnotatedRegion(
+    final Widget view = AnnotatedRegion(
       value: UiUtils.getSystemUiOverlayStyle(
         context: context,
         statusBarColor: context.color.secondaryColor,
@@ -96,7 +96,14 @@ class _ProfileScreenState extends State<ProfileScreen>
                   final double shift = (y * 0.06).clamp(0, 24);
                   return Transform.translate(
                     offset: Offset(0, -shift),
-                    child: _ProfileGlassCard(isDark: _isDark.value),
+                    child: isCommercial
+                        ? BlocBuilder<MerchantStoreCubit, MerchantStoreState>(
+                            builder: (_, state) => _ProfileGlassCard(
+                              isDark: _isDark.value,
+                              storeSnapshot: state.snapshot,
+                            ),
+                          )
+                        : _ProfileGlassCard(isDark: _isDark.value),
                   );
                 },
               ),
@@ -130,7 +137,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                       },
                     ),
                     const SizedBox(height: 10),
-
                     // تقييمي
                     _ServiceItemTile(
                       title: "تقييماتي",
@@ -191,15 +197,45 @@ class _ProfileScreenState extends State<ProfileScreen>
                     const SizedBox(height: 10),
 
                     if (isCommercial) ...[
-                      _ServiceItemTile(
-                        title: "لوحة المتجر",
-                        svg: AppIcons.home,
-                        onTap: () {
-                          UiUtils.checkUser(
-                            onNotGuest: () => Navigator.pushNamed(
-                                context, Routes.merchantDashboard),
-                            context: context,
+                      BlocBuilder<MerchantStoreCubit, MerchantStoreState>(
+                        builder: (_, state) {
+                          final bool allowAccess =
+                              state.snapshot?.isApproved ?? false;
+                          Widget tile = _ServiceItemTile(
+                            title: "لوحة المتجر",
+                            svg: AppIcons.home,
+                            onTap: () {
+                              UiUtils.checkUser(
+                                onNotGuest: () {
+                                  if (!allowAccess) {
+                                    showStoreReviewDialog(
+                                      context,
+                                      variant:
+                                          StoreReviewDialogVariant.management,
+                                    );
+                                    return;
+                                  }
+                                  Navigator.pushNamed(
+                                      context, Routes.merchantDashboard);
+                                },
+                                context: context,
+                              );
+                            },
                           );
+                          if (!allowAccess) {
+                            tile = Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                tile,
+                                Positioned(
+                                  top: 8,
+                                  left: 20,
+                                  child: _StoreReviewBadge(compact: true),
+                                ),
+                              ],
+                            );
+                          }
+                          return tile;
                         },
                       ),
                       const SizedBox(height: 10),
@@ -336,6 +372,15 @@ class _ProfileScreenState extends State<ProfileScreen>
         ),
       ),
     );
+
+    if (!isCommercial) {
+      return view;
+    }
+
+    return BlocProvider<MerchantStoreCubit>(
+      create: (_) => MerchantStoreCubit()..load(),
+      child: view,
+    );
   }
 }
 
@@ -345,8 +390,12 @@ class _ProfileScreenState extends State<ProfileScreen>
 
 class _ProfileGlassCard extends StatelessWidget {
   final bool isDark;
+  final MerchantStoreSnapshot? storeSnapshot;
 
-  const _ProfileGlassCard({required this.isDark});
+  const _ProfileGlassCard({
+    required this.isDark,
+    this.storeSnapshot,
+  });
 
   String _formatJoined(String? raw) {
     if (raw == null || raw.trim().isEmpty) return '';
@@ -377,6 +426,7 @@ class _ProfileGlassCard extends StatelessWidget {
     final int? type = user.userType; // 1 فردي، 2 عقاري، 3 تجاري
     final _AccountStyle style = _AccountStyle.fromType(context, type);
     final String joined = _formatJoined(user.createdAt);
+    final bool showPendingBadge = storeSnapshot?.isPendingReview ?? false;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(10, 18, 10, 0),
@@ -424,6 +474,10 @@ class _ProfileGlassCard extends StatelessWidget {
                         .size(context.font.large + 1)
                         .color(context.color.textColorDark),
                     const SizedBox(height: 10),
+                    if (showPendingBadge) ...[
+                      _StoreReviewBadge(compact: false),
+                      const SizedBox(height: 8),
+                    ],
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 5),
@@ -492,6 +546,51 @@ class _AccountStyle {
       default:
         return 'notSpecified'.translate(context);
     }
+  }
+}
+
+class _StoreReviewBadge extends StatelessWidget {
+  const _StoreReviewBadge({this.compact = false});
+
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color accent = context.color.territoryColor;
+    final Color background = accent.withOpacity(0.12);
+    final double fontSize =
+        compact ? context.font.small : context.font.small + 0.5;
+
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 10 : 12,
+        vertical: compact ? 4 : 6,
+      ),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: accent.withOpacity(0.35)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.hourglass_bottom,
+            size: compact ? 14 : 16,
+            color: accent,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            'storePendingBadge'.translate(context),
+            style: TextStyle(
+              fontSize: fontSize,
+              fontWeight: FontWeight.w600,
+              color: accent,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

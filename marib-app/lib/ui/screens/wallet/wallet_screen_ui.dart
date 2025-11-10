@@ -929,40 +929,39 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
               final EdgeInsets viewInsets =
                   MediaQuery.of(sheetContext).viewInsets;
 
-              return Align(
-                alignment: Alignment.bottomCenter,
-                child: Material(
-                  color: Colors.transparent,
-                  child: Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.only(
-                      left: 20,
-                      right: 20,
-                      top: 18,
-                      bottom: 24 + viewInsets.bottom,
-                    ),
-                    decoration: BoxDecoration(
-                      color: colors.secondaryColor,
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(32),
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: colors.textDefaultColor.withOpacity(0.14),
-                          blurRadius: 28,
-                          offset: const Offset(0, -8),
+              return AnimatedPadding(
+                duration: const Duration(milliseconds: 200),
+                padding: EdgeInsets.only(bottom: viewInsets.bottom),
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Material(
+                    color: Colors.transparent,
+                    child: Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: colors.secondaryColor,
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(32),
                         ),
-                      ],
-                    ),
-                    child: Form(
-                      key: formKey,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                      Center(
-                        child: Container(
-                          width: 48,
+                        boxShadow: [
+                          BoxShadow(
+                            color: colors.textDefaultColor.withOpacity(0.14),
+                            blurRadius: 28,
+                            offset: const Offset(0, -8),
+                          ),
+                        ],
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(22, 20, 22, 26),
+                        child: Form(
+                          key: formKey,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Center(
+                                child: Container(
+                                  width: 48,
                           height: 4,
                           decoration: BoxDecoration(
                             color: colors.borderColor.withOpacity(0.6),
@@ -1168,7 +1167,9 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
                         height: 48,
                         radius: 12,
                         ),
-                        ],
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ),

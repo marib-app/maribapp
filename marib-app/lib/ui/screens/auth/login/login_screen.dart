@@ -88,6 +88,10 @@ class LoginScreenState extends State<LoginScreen> {
   void initState() {
     super.initState();
 
+    if (_redirectIfMerchantOnboardingPending()) {
+      return;
+    }
+
     if (Constant.isMobileAuthEnabled && Constant.isDemoModeOn) {
       isMobileNumberField = true;
       numberOrEmail = Constant.demoMobileNumber;
@@ -95,6 +99,28 @@ class LoginScreenState extends State<LoginScreen> {
 
     _initPlatform();
     _listenAuth();
+  }
+
+  bool _redirectIfMerchantOnboardingPending() {
+    if (!HiveUtils.isMerchantOnboardingInProgress()) {
+      return false;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final Map<String, dynamic> args = {
+        'resumeFromStep': HiveUtils.getMerchantOnboardingStep(),
+      };
+      final Map<String, dynamic>? draft =
+          HiveUtils.getMerchantOnboardingDraft();
+      if (draft != null && draft.isNotEmpty) {
+        args['signupDraft'] = draft;
+      }
+      Navigator.of(context).pushReplacementNamed(
+        Routes.merchantOnboarding,
+        arguments: args,
+      );
+    });
+    return true;
   }
 
   Future<void> _initPlatform() async {

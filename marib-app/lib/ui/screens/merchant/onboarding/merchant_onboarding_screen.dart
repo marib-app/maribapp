@@ -143,9 +143,13 @@ class _MerchantOnboardingScreenState extends State<MerchantOnboardingScreen> {
     }
     try {
       final Map<String, dynamic> payload = await _buildOnboardingPayload();
-      await Api.postJson(url: Api.storeOnboardingApi, data: payload);
+      final Map<String, dynamic> response =
+          await Api.postJson(url: Api.storeOnboardingApi, data: payload);
       await _syncManualGatewayAccounts(
           _paymentOptions?.manualDrafts ?? const []);
+      await HiveUtils.setMerchantStoreRaw(
+        _extractStoreSnapshot(response),
+      );
       await HiveUtils.clearMerchantOnboardingProgress();
       await NotificationService.resendPendingTokenIfNeeded();
       await FetchSystemSettingsCubit.refreshPermissionsForCurrentUser(
@@ -210,6 +214,23 @@ class _MerchantOnboardingScreenState extends State<MerchantOnboardingScreen> {
       return false;
     }
     return true;
+  }
+
+  Map<String, dynamic>? _extractStoreSnapshot(
+      Map<String, dynamic> response) {
+    final dynamic rawStore = response['data'];
+    if (rawStore is Map<String, dynamic>) {
+      return Map<String, dynamic>.from(rawStore);
+    }
+    if (rawStore is Map) {
+      return rawStore.map(
+        (dynamic key, dynamic value) => MapEntry(
+          key.toString(),
+          value,
+        ),
+      );
+    }
+    return null;
   }
 
   Future<Map<String, dynamic>> _buildOnboardingPayload() async {

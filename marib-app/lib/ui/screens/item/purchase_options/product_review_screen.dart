@@ -975,7 +975,6 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
     }
 
     addRow('عنوان الإعلان', _item.name ?? _asDraftString(payload['title']));
-
     addRow(
       'السعر التقديري',
       _formatDraftPrice(
@@ -983,7 +982,6 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
         payload['currency'] ?? _item.currency,
       ),
     );
-
     addRow('الوصف', _item.description ?? _asDraftString(payload['description']));
     addRow('رقم التواصل', _item.contact ?? _asDraftString(payload['contact']));
     addRow('المدينة', _item.city ?? _asDraftString(payload['city']));
@@ -1012,14 +1010,6 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
     } else {
       parsedPrice = double.tryParse(rawPrice?.toString() ?? '');
     }
-    if (parsedPrice == null) {
-      return null;
-    }
-    final String currency = _asDraftString(rawCurrency) ?? 'YER';
-    final NumberFormat formatter = NumberFormat('#,##0.##', 'ar');
-    final String formatted = formatter.format(parsedPrice);
-    return '$formatted $currency';
-  }
     if (parsedPrice == null) {
       return null;
     }
@@ -1171,5 +1161,8 @@ class _ErrorView extends StatelessWidget {
     );
   }
 }
+
+
+
 
 

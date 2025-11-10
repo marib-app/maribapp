@@ -16,6 +16,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Throwable;
 
 class CustomFieldController extends Controller {
@@ -92,18 +93,46 @@ class CustomFieldController extends Controller {
 
     public function store(Request $request) {
         ResponseService::noPermissionThenSendJson('custom-field-create');
+
+        $type = (string) $request->input('type', '');
+        $optionTypes = ['radio', 'dropdown', 'checkbox'];
+        $rangeTypes = ['number', 'textbox', 'color'];
+
+        // نظّف البيانات قبل التحقق حتى لا تفشل القواعد مع الحقول الفارغة
+        if (! in_array($type, $optionTypes, true)) {
+            $request->merge(['values' => null]);
+        }
+
+        $request->merge([
+            'min_length' => in_array($type, $rangeTypes, true) && $request->filled('min_length')
+                ? $request->input('min_length')
+                : null,
+            'max_length' => in_array($type, $rangeTypes, true) && $request->filled('max_length')
+                ? $request->input('max_length')
+                : null,
+        ]);
+
+
         $validator = Validator::make($request->all(), [
             'name'       => 'required',
             'type'       => 'required|in:number,textbox,fileinput,radio,dropdown,checkbox,color',
             'image'      => 'required',
             'required'   => 'required',
             'status'     => 'required',
-            // القيم مطلوبة فقط للأنواع القائمة على خيارات
-            'values'     => 'required_if:type,radio,dropdown,checkbox|array',
-            // ✅ لا نستخدم color_values نهائيًا
-            // min/max تُطبّق على number/textbox/color
-            'min_length' => 'required_if:type,number|required_if:type,textbox|required_if:type,color',
-            'max_length' => 'required_if:type,number|required_if:type,textbox|required_if:type,color',
+            'values'     => [Rule::requiredIf(in_array($type, $optionTypes, true)), 'nullable', 'array'],
+            'min_length' => ['nullable', 'integer', 'min:0'],
+            'max_length' => [
+                'nullable',
+                'integer',
+                'min:0',
+                function ($attribute, $value, $fail) use ($request) {
+                    if ($value !== null && $request->filled('min_length') && (int) $value < (int) $request->input('min_length')) {
+                        $fail(__('يجب أن يكون الحد الأقصى أكبر من أو يساوي الحد الأدنى.'));
+                    }
+                },
+            ],
+        ], [
+            'values.required_if' => __('يرجى إدخال خيارات صالحة لهذا الحقل.'),
         ]);
 
         if ($validator->fails()) {
@@ -205,18 +234,45 @@ class CustomFieldController extends Controller {
 
     public function update(Request $request, $id) {
         ResponseService::noPermissionThenSendJson('custom-field-update');
+        $type = (string) $request->input('type', '');
+        $optionTypes = ['radio', 'dropdown', 'checkbox'];
+        $rangeTypes = ['number', 'textbox', 'color'];
+
+        if (! in_array($type, $optionTypes, true)) {
+            $request->merge(['values' => null]);
+        }
+
+        $request->merge([
+            'min_length' => in_array($type, $rangeTypes, true) && $request->filled('min_length')
+                ? $request->input('min_length')
+                : null,
+            'max_length' => in_array($type, $rangeTypes, true) && $request->filled('max_length')
+                ? $request->input('max_length')
+                : null,
+        ]);
+
+
+
         $validator = Validator::make($request->all(), [
             'name'         => 'required',
             'type'         => 'required|in:number,textbox,fileinput,radio,dropdown,checkbox,color',
             'image'        => 'nullable',
             'required'     => 'required',
             'status'       => 'required',
-            // القيم مطلوبة فقط للأنواع القائمة على خيارات
-            'values'       => 'required_if:type,radio,dropdown,checkbox|array',
-            // ✅ لا color_values
-            // min/max تُطبّق على number/textbox/color
-            'min_length'   => 'required_if:type,number|required_if:type,textbox|required_if:type,color',
-            'max_length'   => 'required_if:type,number|required_if:type,textbox|required_if:type,color',
+            'values'       => [Rule::requiredIf(in_array($type, $optionTypes, true)), 'nullable', 'array'],
+            'min_length'   => ['nullable', 'integer', 'min:0'],
+            'max_length'   => [
+                'nullable',
+                'integer',
+                'min:0',
+                function ($attribute, $value, $fail) use ($request) {
+                    if ($value !== null && $request->filled('min_length') && (int) $value < (int) $request->input('min_length')) {
+                        $fail(__('يجب أن يكون الحد الأقصى أكبر من أو يساوي الحد الأدنى.'));
+                    }
+                },
+            ],
+        ], [
+            'values.required_if' => __('يرجى إدخال خيارات صالحة لهذا الحقل.'),
         ]);
         if ($validator->fails()) {
             ResponseService::validationError($validator->errors()->first());

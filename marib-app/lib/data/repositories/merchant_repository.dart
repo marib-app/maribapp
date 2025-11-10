@@ -1,6 +1,7 @@
 import 'package:marib/data/model/merchant/merchant_dashboard_summary.dart';
 import 'package:marib/data/model/merchant/merchant_manual_payment.dart';
 import 'package:marib/data/model/merchant/merchant_order.dart';
+import 'package:marib/data/model/merchant/merchant_store_snapshot.dart';
 import 'package:marib/data/model/merchant/paginated_result.dart';
 import 'package:marib/utils/api.dart';
 
@@ -66,5 +67,25 @@ class MerchantRepository {
         'notify_customer': notifyCustomer ? 1 : 0,
       },
     );
+  }
+
+  Future<MerchantStoreSnapshot?> fetchStoreProfile() async {
+    final Map<String, dynamic> response =
+        await Api.get(url: Api.storeOnboardingApi);
+    final dynamic rawStore = response['data'];
+    if (rawStore is Map<String, dynamic>) {
+      return MerchantStoreSnapshot.fromMap(rawStore);
+    }
+    if (rawStore is Map) {
+      return MerchantStoreSnapshot.fromMap(
+        rawStore.map(
+          (dynamic key, dynamic value) => MapEntry(
+            key.toString(),
+            value,
+          ),
+        ),
+      );
+    }
+    return null;
   }
 }

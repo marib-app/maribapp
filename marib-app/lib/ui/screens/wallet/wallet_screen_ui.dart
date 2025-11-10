@@ -377,27 +377,29 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
           final childCount = transactions.length + (hasLoader ? 1 : 0);
           return SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            sliver: SliverList.builder(
-              itemCount: childCount,
-              itemBuilder: (context, index) {
-                if (index >= transactions.length) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    child: Center(
-                      child: SizedBox(
-                        width: 28,
-                        height: 28,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.4,
-                          color: context.color.territoryColor,
+            sliver: SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  if (index >= transactions.length) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      child: Center(
+                        child: SizedBox(
+                          width: 28,
+                          height: 28,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.4,
+                            color: context.color.territoryColor,
+                          ),
                         ),
                       ),
-                    ),
-                  );
-                }
-                final tx = transactions[index];
-                return _buildTransactionTile(context, tx);
-              },
+                    );
+                  }
+                  final tx = transactions[index];
+                  return _buildTransactionTile(context, tx);
+                },
+                childCount: childCount,
+              ),
             ),
           );
         }
@@ -554,18 +556,21 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
   Widget _buildLoadingSliver(BuildContext context) {
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      sliver: SliverList.builder(
-        itemCount: 3,
-        itemBuilder: (context, index) {
-          return Container(
-            margin: const EdgeInsets.symmetric(vertical: 8),
-            height: 90,
-            decoration: BoxDecoration(
-              color: context.color.secondaryColor,
-              borderRadius: BorderRadius.circular(16),
-            ),
-          );
-        },
+      sliver: SliverList(
+        delegate: SliverChildBuilderDelegate(
+          (context, index) {
+            if (index >= 3) return null;
+            return Container(
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              height: 90,
+              decoration: BoxDecoration(
+                color: context.color.secondaryColor,
+                borderRadius: BorderRadius.circular(16),
+              ),
+            );
+          },
+          childCount: 3,
+        ),
       ),
     );
   }
@@ -783,41 +788,11 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
   }
 
   WalletOperationOptions _resolveTransferOptions(WalletSummary? summary) {
-    final metaOptions =
-        WalletOperationOptions.fromSummary(summary?.raw ?? const {});
-    final cubit = context.read<WalletTransfersCubit>();
-    final transferOptions = cubit.state is WalletTransfersReady
-        ? (cubit.state as WalletTransfersReady).options
-        : null;
-    if (transferOptions == null) {
-      return metaOptions;
-    }
-    return transferOptions.copyWith(
-      minimumAmount: transferOptions.minimumAmount ?? metaOptions.minimumAmount,
-      maximumAmount: transferOptions.maximumAmount ?? metaOptions.maximumAmount,
-      metadata: {...metaOptions.metadata, ...transferOptions.metadata},
-      raw: {...metaOptions.raw, ...transferOptions.raw},
-    );
+    return WalletOperationOptions.fromSummary(summary?.raw ?? const {});
   }
 
   WalletOperationOptions _resolveWithdrawalOptions(WalletSummary? summary) {
-    final metaOptions =
-        WalletOperationOptions.fromSummary(summary?.raw ?? const {});
-    final cubit = context.read<WalletWithdrawalsCubit>();
-    final withdrawalOptions = cubit.state is WalletWithdrawalsLoaded
-        ? (cubit.state as WalletWithdrawalsLoaded).options
-        : null;
-    if (withdrawalOptions == null) {
-      return metaOptions;
-    }
-    return withdrawalOptions.copyWith(
-      minimumAmount:
-          withdrawalOptions.minimumAmount ?? metaOptions.minimumAmount,
-      maximumAmount:
-          withdrawalOptions.maximumAmount ?? metaOptions.maximumAmount,
-      metadata: {...metaOptions.metadata, ...withdrawalOptions.metadata},
-      raw: {...metaOptions.raw, ...withdrawalOptions.raw},
-    );
+    return WalletOperationOptions.fromSummary(summary?.raw ?? const {});
   }
 }
 

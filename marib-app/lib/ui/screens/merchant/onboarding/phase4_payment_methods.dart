@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:marib/settings.dart' as app_settings;
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
@@ -13,13 +14,33 @@ import 'package:marib/utils/ui_utils.dart';
 class PaymentOptionsData {
   final bool smartEnabled;
   final String? smartAccountNumber;
-  final List<StoreManualBankAccount> manualGateways;
+  final List<StoreGatewayAccountDraft> manualDrafts;
 
-  PaymentOptionsData({
+  const PaymentOptionsData({
     required this.smartEnabled,
-    required this.smartAccountNumber,
-    required this.manualGateways,
+    this.smartAccountNumber,
+    required this.manualDrafts,
   });
+}
+
+class StoreGatewayAccountDraft {
+  const StoreGatewayAccountDraft({
+    required this.gatewayId,
+    required this.beneficiaryName,
+    required this.accountNumber,
+  });
+
+  final int gatewayId;
+  final String beneficiaryName;
+  final String accountNumber;
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'store_gateway_id': gatewayId,
+      'beneficiary_name': beneficiaryName,
+      'account_number': accountNumber,
+    };
+  }
 }
 
 class Phase4PaymentMethods extends StatefulWidget {
@@ -43,7 +64,7 @@ class Phase4PaymentMethods extends StatefulWidget {
 class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
     with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   final _smartAccountCtrl = TextEditingController();
-  final List<StoreManualBankAccount> _manualGateways =
+  final List<StoreManualBankAccount> _existingManualAccounts =
       <StoreManualBankAccount>[];
   final List<StoreGatewayOption> _storeGateways = <StoreGatewayOption>[];
 

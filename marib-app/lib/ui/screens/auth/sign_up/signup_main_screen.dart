@@ -395,6 +395,26 @@ class LoginScreenState extends State<SignUpMainScreen> {
   void onAccountTypeChanged(String? v) =>
       setState(() => selectedAccountType = v);
 
+  String _accountTypeAlertKey(String? value) {
+    if (value == null) {
+      return "chooseaccountAlertcontentDefault";
+    }
+    final String normalized = value.trim().toLowerCase();
+    const Map<String, String> mapping = {
+      "1": "1",
+      "2": "2",
+      "3": "3",
+      "individual": "1",
+      "realestate": "2",
+      "commercial": "3",
+    };
+    final String? resolved = mapping[normalized];
+    if (resolved == null || resolved.isEmpty) {
+      return "chooseaccountAlertcontentDefault";
+    }
+    return "chooseaccountAlertcontent$resolved";
+  }
+
   void onShowCountryPicker() {
     showCountryPicker(
       context: context,
@@ -722,7 +742,7 @@ class LoginScreenState extends State<SignUpMainScreen> {
               ),
               child: SingleChildScrollView(
                 child: Text(
-                  "chooseaccountAlertcontent ${v ?? ''}".translate(context),
+                  _accountTypeAlertKey(v).translate(context),
                   style: TextStyle(
                     fontSize: context.font.small,
                     color: context.color.textDefaultColor,

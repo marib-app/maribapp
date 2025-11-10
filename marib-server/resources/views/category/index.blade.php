@@ -188,6 +188,10 @@
                 loadingIndicator.classList.remove('d-none');
             };
 
+            const updateSubmitButtonState = () => {
+                submitButton.disabled = targetSelectElement.disabled || targetSelectElement.value === '';
+            };
+
 
             const populateOptions = (options) => {
                 destroySelect2();
@@ -207,23 +211,40 @@
                     targetSelectElement.disabled = true;
                     initializeSelect2();
                     $targetSelect.trigger('change.select2');
-                    submitButton.disabled = true;
+                    updateSubmitButtonState();
                     return;
                 }
 
-                const placeholderOption = document.createElement('option');
-                placeholderOption.value = '';
-                placeholderOption.textContent = '{{ __('اختر القسم الهدف') }}';
-                placeholderOption.disabled = true;
-                placeholderOption.selected = true;
-                fragment.appendChild(placeholderOption);
+                let selectedValue = '';
 
-                options.forEach(function (option) {
+
+                if (options.length === 1) {
+                    const singleOption = options[0] || {};
+                    const hasValidId = singleOption.id !== undefined && singleOption.id !== null && singleOption.id !== '';
+                    selectedValue = hasValidId ? String(singleOption.id) : '';
                     const optionElement = document.createElement('option');
-                    optionElement.value = option.id;
-                    optionElement.textContent = option.label;
+                    optionElement.value = selectedValue;
+                    optionElement.textContent = singleOption.label;
+                    optionElement.selected = true;
                     fragment.appendChild(optionElement);
-                });
+
+
+                } else {
+                    const placeholderOption = document.createElement('option');
+                    placeholderOption.value = '';
+                    placeholderOption.textContent = '{{ __('اختر القسم الهدف') }}';
+                    placeholderOption.disabled = true;
+                    placeholderOption.selected = true;
+                    fragment.appendChild(placeholderOption);
+
+                    options.forEach(function (option) {
+                        const optionElement = document.createElement('option');
+                        optionElement.value = option.id;
+                        optionElement.textContent = option.label;
+                        fragment.appendChild(optionElement);
+                    });
+                }
+
 
            
 
@@ -232,8 +253,19 @@
                 $targetSelect.prop('disabled', false);
                 targetSelectElement.disabled = false;
                 initializeSelect2();
+
+
+                if (selectedValue !== '') {
+                    $targetSelect.val(selectedValue);
+                    targetSelectElement.value = selectedValue;
+                }
+                if (selectedValue !== '') {
+                    $targetSelect.val(selectedValue);
+                    targetSelectElement.value = selectedValue;
+                }
+
                 $targetSelect.trigger('change.select2');
-                submitButton.disabled = true;
+                updateSubmitButtonState();
             };
 
             function handleModalHidden() {
@@ -333,7 +365,7 @@
             });
 
             $targetSelect.on('change.select2', function () {
-                submitButton.disabled = $targetSelect.val() === '';
+                updateSubmitButtonState();
             });
 
             initializeSelect2();

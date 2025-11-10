@@ -1941,7 +1941,11 @@ class NotificationService {
         '';
     final int? itemOfferId =
         _tryParseInt(data['item_offer_id'] ?? data['itemOfferId']);
-    final String? userId = _resolvePresenceUserId(data);
+    String? userId = _resolvePresenceUserId(data);
+    userId ??= _resolveUserIdFromCache(
+      conversationId: conversationId,
+      itemOfferId: itemOfferId,
+    );
 
     _updatePresenceCaches(
       conversationId: conversationId,
@@ -2232,6 +2236,11 @@ class NotificationService {
       'user_id',
       'sender_id',
       'from_user_id',
+      'receiver_id',
+      'userId',
+      'senderId',
+      'fromUserId',
+      'receiverId',
       'participant_id',
       'participantId',
     ];
@@ -2242,6 +2251,27 @@ class NotificationService {
       }
       final String candidate = value.toString();
       if (candidate.isNotEmpty) {
+        return candidate;
+      }
+    }
+    return null;
+  }
+
+  static String? _resolveUserIdFromCache({
+    required String conversationId,
+    int? itemOfferId,
+  }) {
+    final List<ChatParticipant>? participants = getCachedParticipants(
+      conversationId,
+      itemOfferId: itemOfferId,
+    );
+    if (participants == null || participants.isEmpty) {
+      return null;
+    }
+    final String currentUserId = HiveUtils.getUserId() ?? '';
+    for (final ChatParticipant participant in participants) {
+      final String candidate = participant.userId?.toString() ?? '';
+      if (candidate.isNotEmpty && candidate != currentUserId) {
         return candidate;
       }
     }

@@ -1,0 +1,670 @@
+{
+  "،": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1658"
+  ],
+  "8 رموز على الأقل.": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase5_store_credentials.dart:452"
+  ],
+  "آخر 30 يوماً": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1057"
+  ],
+  "آخر 7 أيام": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1052"
+  ],
+  "اختر اسماً احترافياً سيظهر في جميع شاشات المستخدمين": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase1_activity_info.dart:441"
+  ],
+  "اختر الأقسام التي تمثل نشاط متجرك، ثم قم بضبط ساعات الدوام الأسبوعية لضمان إظهار حالة المتجر بدقة للمستخدمين.": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase2_categories_hours.dart:568"
+  ],
+  "اختيار الأقسام": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase2_categories_hours.dart:321"
+  ],
+  "اختيار الأقسام • $selectedCount": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase2_categories_hours.dart:356"
+  ],
+  "اختيار الموقع الدقيق يساعدنا على تقدير تكاليف التوصيل بشكل عادل لعملائك.": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase1_activity_info.dart:397"
+  ],
+  "أداء المتجر": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1067"
+  ],
+  "إدارة ساعات العمل": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase2_categories_hours.dart:475"
+  ],
+  "أدخل رقم الحساب أو معرف العميل": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase4_payment_methods.dart:652"
+  ],
+  "ارفع شعار متجرك": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase1_activity_info.dart:326"
+  ],
+  "ارفع شعار متجرك للمتابعة": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase1_activity_info.dart:200"
+  ],
+  "استخدم هذا البريد لتسجيل الدخول إلى لوحة التحكم المخصصة للمتجر ومتابعة الطلبات.": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1436"
+  ],
+  "اسم البنك": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:576"
+  ],
+  "اسم المستفيد": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:577"
+  ],
+  "اسم المودع": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:550"
+  ],
+  "اشرح الخطوات، المدد الزمنية والشروط الخاصة بمتجرك. هذه السياسة تظهر للعميل قبل الدفع.": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase3_store_policy.dart:159"
+  ],
+  "اشرح تخصص متجرك وما يميّزه ليستعد فريق المراجعة": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase1_activity_info.dart:466"
+  ],
+  "إشعار العميل بالتحديث": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:464"
+  ],
+  "إعادة المحاولة": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1475",
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase4_payment_methods.dart:532",
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase6_final_submission.dart:299"
+  ],
+  "إغلاق": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\widgets\\legacy_selectors.dart:310"
+  ],
+  "أقر بأن هذه السياسة أصلية وتعبّر عن التزامات متجري.": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase3_store_policy.dart:192"
+  ],
+  "أقرّ بأنني قرأت جميع الشروط وأوافق على الالتزام بها، وأتحمل مسؤولية صحة البيانات التي قمت بتعبئتها.": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase6_final_submission.dart:134"
+  ],
+  "اكتب أي ملاحظة إضافية لموقعك (اختياري)": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase1_activity_info.dart:523"
+  ],
+  "اكتب سبب الرفض أو أي ملاحظات إضافية": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:456"
+  ],
+  "اكتب سياسة الاسترجاع والتبديل الخاصة بمتجرك. سيشاهدها العملاء قبل الدفع لزيادة الثقة.": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase3_store_policy.dart:142"
+  ],
+  "الإثنين": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1310",
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase2_categories_hours.dart:499"
+  ],
+  "الاثنين": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\widgets\\legacy_selectors.dart:607"
+  ],
+  "الأحد": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1309",
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase2_categories_hours.dart:498",
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\widgets\\legacy_selectors.dart:606"
+  ],
+  "الأربعاء": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1312",
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase2_categories_hours.dart:501",
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\widgets\\legacy_selectors.dart:609"
+  ],
+  "الاستلام": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1240"
+  ],
+  "الإيراد": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1133"
+  ],
+  "البنك المرسل": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:586"
+  ],
+  "البنك: ${payment.manualBankName}": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:411"
+  ],
+  "التاريخ: $createdAt": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:766"
+  ],
+  "التوصيل": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1236"
+  ],
+  "الثلاثاء": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1311",
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase2_categories_hours.dart:500",
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\widgets\\legacy_selectors.dart:608"
+  ],
+  "الجمعة": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1314",
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase2_categories_hours.dart:503",
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\widgets\\legacy_selectors.dart:611"
+  ],
+  "الحالة: ${staff!.status}": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1429"
+  ],
+  "الحوالات": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:46"
+  ],
+  "الخميس": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1313",
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase2_categories_hours.dart:502",
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\widgets\\legacy_selectors.dart:610"
+  ],
+  "الدفع الذكي": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase4_payment_methods.dart:479"
+  ],
+  "الدفع اليدوي": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase4_payment_methods.dart:478"
+  ],
+  "الدفع بالمحفظة": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1248"
+  ],
+  "الدفع عند الاستلام": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1252"
+  ],
+  "الرابط غير صالح.": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:640"
+  ],
+  "الرابط غير متاح.": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:634"
+  ],
+  "الرئيسية": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:44"
+  ],
+  "الرقم المرجعي": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:535"
+  ],
+  "الزيارات": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1136"
+  ],
+  "السبت": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1315",
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase2_categories_hours.dart:504",
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\widgets\\legacy_selectors.dart:605"
+  ],
+  "السياسات": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1380"
+  ],
+  "الطلبات": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:45",
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1131"
+  ],
+  "العملة": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:549"
+  ],
+  "إلغاء": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\widgets\\legacy_selectors.dart:624"
+  ],
+  "الفئات وساعات العمل": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase2_categories_hours.dart:567"
+  ],
+  "الفرع: ${account.branch}": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase4_payment_methods.dart:578"
+  ],
+  "الكل": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1485",
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1499"
+  ],
+  "المبلغ المحول": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:399"
+  ],
+  "المبلغ من التحويل": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:544"
+  ],
+  "المبلغ: $amountText": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:761"
+  ],
+  "المتجر مغلق حالياً": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1206"
+  ],
+  "المتجر مفتوح": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1206"
+  ],
+  "المجموع: $totalText": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:814"
+  ],
+  "المراجعة النهائية والإرسال": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase6_final_submission.dart:110"
+  ],
+  "المرفقات": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:434"
+  ],
+  "المستفيد: ${account.beneficiaryName}": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase4_payment_methods.dart:574"
+  ],
+  "المعرف متاح، وسيُنشأ البريد ${handle}@${Constant.storeStaffEmailDomain}.": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase5_store_credentials.dart:127"
+  ],
+  "المعرف مستخدم بالفعل، جرّب اسماً مختلفاً.": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase5_store_credentials.dart:126"
+  ],
+  "المعلومات التالية تُعرض للعملاء أثناء الدفع ويمكن تعديلها لاحقاً من الإعدادات.": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase4_payment_methods.dart:466"
+  ],
+  "اليوم": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1047"
+  ],
+  "املأ هذه المعلومات الأساسية ليظهر متجرك بشكل احترافي ويستفيد فريق المراجعة.": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase1_activity_info.dart:432"
+  ],
+  "بانتظار الدفع": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1486",
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1507",
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1524",
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1525"
+  ],
+  "بانتظار المراجعة": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1500",
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1535"
+  ],
+  "بريد لوحة المتجر": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1407"
+  ],
+  "بيانات الحساب البنكي": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:424"
+  ],
+  "بيانات النشاط التجاري": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase1_activity_info.dart:430"
+  ],
+  "تأكيد": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\widgets\\legacy_selectors.dart:625"
+  ],
+  "تأكيد الحوالة": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:489"
+  ],
+  "تأكيد العنوان": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\merchant_location_picker_screen.dart:177"
+  ],
+  "تأكيد كلمة المرور": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase5_store_credentials.dart:430"
+  ],
+  "تحت المعالجة": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1511"
+  ],
+  "تحتوي على حرف واحد على الأقل.": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase5_store_credentials.dart:456"
+  ],
+  "تحتوي على رقم واحد على الأقل.": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase5_store_credentials.dart:460"
+  ],
+  "تحديد موقع المتجر": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\merchant_location_picker_screen.dart:106",
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\merchant_location_picker_screen.dart:113"
+  ],
+  "تحقق من المعرّف وكلمة المرور قبل المتابعة.": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase5_store_credentials.dart:160"
+  ],
+  "تسوية نهائية": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1516"
+  ],
+  "تصفح فقط": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1226"
+  ],
+  "تطابق بين الحقلين.": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase5_store_credentials.dart:464"
+  ],
+  "تعذر تحميل الشروط": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase6_final_submission.dart:281"
+  ],
+  "تعذر تحميل الفئات، حاول مجدداً.": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase2_categories_hours.dart:160"
+  ],
+  "تعذر تحميل بوابات الدفع اليدوية.": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase4_payment_methods.dart:526"
+  ],
+  "تعذر تحميل بيانات المتجر": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1463"
+  ],
+  "تعذر رفع الشعار، حاول مجدداً": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase1_activity_info.dart:137"
+  ],
+  "تعذر فتح الرابط.": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:646"
+  ],
+  "تعيين كلمة المرور": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase5_store_credentials.dart:398"
+  ],
+  "تفاصيل الحوالة": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:420"
+  ],
+  "تفعيل بوابة بنك الشرق": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase4_payment_methods.dart:640"
+  ],
+  "تم • ${_localSelected.length}": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\widgets\\legacy_selectors.dart:280"
+  ],
+  "تم اتخاذ قرار بخصوص هذه الحوالة.": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:513"
+  ],
+  "تم الاسترداد": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1529"
+  ],
+  "تم التأكيد": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1528"
+  ],
+  "تم التسليم": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1493",
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1515"
+  ],
+  "تم القبول": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1502"
+  ],
+  "تم تجهيز الشعار": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase1_activity_info.dart:366"
+  ],
+  "تم تحديد الموقع": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase1_activity_info.dart:497"
+  ],
+  "تم رفض الحوالة.": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:681"
+  ],
+  "تم قبول الحوالة بنجاح.": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:681"
+  ],
+  "جار التحضير": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1490",
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1512"
+  ],
+  "جاري تحديث العنوان...": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\merchant_location_picker_screen.dart:168"
+  ],
+  "جاهز للتسليم": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1491",
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1513"
+  ],
+  "حالة الحوالة": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:539"
+  ],
+  "حالة الدفع": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:540"
+  ],
+  "حالة النظام": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1225"
+  ],
+  "حد الطلب": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1229"
+  ],
+  "حدد موقع المتجر على الخريطة": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase1_activity_info.dart:545"
+  ],
+  "حدد موقع متجرك على الخريطة أولاً": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase1_activity_info.dart:192"
+  ],
+  "حدد نوع نشاطك التجاري": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\widgets\\legacy_selectors.dart:162"
+  ],
+  "حرك الخريطة حتى يكون المؤشر في وسط موقع متجرك": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\merchant_location_picker_screen.dart:141"
+  ],
+  "حفظ": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\widgets\\legacy_selectors.dart:590"
+  ],
+  "حوالات يدوية": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1244"
+  ],
+  "حوالة بنكية": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:735"
+  ],
+  "دفعة مقدمة": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1487",
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1508"
+  ],
+  "ر.ي": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1134",
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1231",
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1563"
+  ],
+  "راجع شروط الانضمام وأكّد موافقتك قبل إرسال طلبك لمراجعة الفريق. يمكنك الرجوع للخطوات السابقة إذا رغبت بتعديل أي معلومة.": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase6_final_submission.dart:119"
+  ],
+  "رفض الحوالة": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:505"
+  ],
+  "رقم الآيبان": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:579"
+  ],
+  "رقم الحساب": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:578"
+  ],
+  "رقم الحساب المحول منه": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:592"
+  ],
+  "رقم الحساب: ${account.accountNumber}": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase4_payment_methods.dart:576"
+  ],
+  "رقم الطلب": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:534"
+  ],
+  "رقم العملية": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:552"
+  ],
+  "رقم حسابك في بنك الشرق": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase4_payment_methods.dart:651"
+  ],
+  "ساعات العمل": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1331",
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase2_categories_hours.dart:449"
+  ],
+  "سبب الإغلاق: ${status.closureReason}": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1260"
+  ],
+  "سياسات المتجر": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase3_store_policy.dart:133"
+  ],
+  "سياسة الاسترجاع والتبديل": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase3_store_policy.dart:150"
+  ],
+  "سيُستخدم هذا الحساب للدخول إلى لوحة التاجر على الويب. اختر معرفاً فريداً وكلمة مرور قوية.": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase5_store_credentials.dart:218"
+  ],
+  "ضبط ساعات العمل": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\widgets\\legacy_selectors.dart:499"
+  ],
+  "طرق الدفع في متجرك": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase4_payment_methods.dart:457"
+  ],
+  "طلب #${payment.id}": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:366",
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:727"
+  ],
+  "عرض إيصال التحويل": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:623"
+  ],
+  "على الأقل 8 رموز مع أرقام وحروف": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase5_store_credentials.dart:414"
+  ],
+  "عند التفعيل يتمكن عملاؤك من الدفع عبر بنك الشرق مباشرة.": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase4_payment_methods.dart:643"
+  ],
+  "غير متاح": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1575"
+  ],
+  "غير محدد": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1233",
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1543",
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1550",
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1557"
+  ],
+  "فئة بدون اسم": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase2_categories_hours.dart:421"
+  ],
+  "فشل": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1517",
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1530"
+  ],
+  "قيد التحقق": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1501"
+  ],
+  "قيد التحليل": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1536"
+  ],
+  "قيد التوصيل": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1492",
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1514"
+  ],
+  "قيد المراجعة": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1488",
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1509",
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1526"
+  ],
+  "كامل": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1226"
+  ],
+  "كلمة المرور": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase5_store_credentials.dart:413"
+  ],
+  "لا تتوفر شروط حالياً. يرجى المحاولة لاحقاً.": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase6_final_submission.dart:197"
+  ],
+  "لا توجد أقسام متاحة حالياً": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase2_categories_hours.dart:235"
+  ],
+  "لا توجد أقسام متاحة حالياً.": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\widgets\\legacy_selectors.dart:34"
+  ],
+  "لا توجد بوابات دفع يدوية مفعلة حالياً.": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase4_payment_methods.dart:543"
+  ],
+  "لا توجد حوالات حالياً.": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:272"
+  ],
+  "لا توجد طلبات حالياً.": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:180"
+  ],
+  "لم يتم اختيار أي قسم بعد.": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase2_categories_hours.dart:376"
+  ],
+  "لم يتم تحديد العنوان بعد": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\merchant_location_picker_screen.dart:169"
+  ],
+  "لم يتم حجز بريد بعد. يمكنك إنشاؤه من إعدادات المتجر.": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1413"
+  ],
+  "لم يتم ربط بوابة بنك الشرق حتى الآن. تواصل مع فريق الدعم للتفعيل.": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase4_payment_methods.dart:593"
+  ],
+  "لوحة المتجر": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:41"
+  ],
+  "مؤكد": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1489",
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1510"
+  ],
+  "مثال: يمكن الاسترجاع خلال 7 أيام مع إبراز الفاتورة الأصلية...": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase3_store_policy.dart:172"
+  ],
+  "مدفوع": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1527"
+  ],
+  "مرفق": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:612"
+  ],
+  "مرفوض": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1503",
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1538"
+  ],
+  "مسترد": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1495",
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1520"
+  ],
+  "مسموح": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1245",
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1249",
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1253"
+  ],
+  "مشاهدات المنتجات": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1138"
+  ],
+  "معرف المتجر وكلمة المرور": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase5_store_credentials.dart:209"
+  ],
+  "معلق": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1519"
+  ],
+  "مغلق": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1337",
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase2_categories_hours.dart:513"
+  ],
+  "مفعل": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1237",
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1241"
+  ],
+  "مقبول": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1537"
+  ],
+  "ملاحظات": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:580"
+  ],
+  "ملاحظة التاجر": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:447"
+  ],
+  "ملاحظة العميل": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:428"
+  ],
+  "ملاحظة سابقة": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:430"
+  ],
+  "ملاحظة: اختر الأقسام التي تمثل نشاط متجرك ليتم تفعيل واجهات النشر المناسبة لها.": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\widgets\\legacy_selectors.dart:196"
+  ],
+  "ملغي": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1494",
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1518",
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1531"
+  ],
+  "موقوف": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1237",
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1241",
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1245",
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1249",
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1253"
+  ],
+  "هذه الملاحظة تُرسل مع الطلبات لتوضيح مكان التسليم للسائقين": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase1_activity_info.dart:525"
+  ],
+  "هكذا سيبدو متجرك للزبائن": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase1_activity_info.dart:335"
+  ],
+  "وقت البداية": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\widgets\\legacy_selectors.dart:623"
+  ],
+  "وقت الطلب": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:537"
+  ],
+  "وقت النهاية": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\widgets\\legacy_selectors.dart:623"
+  ],
+  "يرجى تحديد ساعات يوم ${_weekdays[entry.key]}": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\widgets\\legacy_selectors.dart:582"
+  ],
+  "يرجى كتابة سبب الرفض.": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:658"
+  ],
+  "يرجى كتابة سياسة أوضح (30 حرفاً على الأقل).": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase3_store_policy.dart:182"
+  ],
+  "يفتح في: ${status.nextOpenAt}": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1215"
+  ],
+  "يُفضل أن لا تقل السياسة عن 30 كلمة.": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase3_store_policy.dart:177"
+  ],
+  "يمكنك تعديل هذه الأقسام لاحقاً من إعدادات المتجر في أي وقت.": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase2_categories_hours.dart:333"
+  ],
+  "يمكنك ضبط ساعات الدوام لكل يوم وإبقاء حالة المتجر دقيقة أمام المستخدمين. احرص على تحديد أوقات الفتح والإغلاق بدقة.": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase2_categories_hours.dart:461"
+  ],
+  "dd MMM yyyy، hh:mm a": [
+    "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart:1577"
+  ],
+  "��� �� ���� ������ ��� ${Constant.storeStaffEmailMinLength} � ${Constant.storeStaffEmailMaxLength} ����� (���� �������ɡ ����� - . _).": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase5_store_credentials.dart:335"
+  ],
+  "���� ������": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase5_store_credentials.dart:302"
+  ],
+  "����: marib.store": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase5_store_credentials.dart:303"
+  ],
+  "������ ���� ���� ������": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase5_store_credentials.dart:288"
+  ],
+  "������ ���� �������� �� ���� �����": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase5_store_credentials.dart:357"
+  ],
+  "������ ������ ������ ��� ��� ������ ��� ��������.": [
+    "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase5_store_credentials.dart:374"
+  ]
+}

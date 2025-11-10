@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -30,8 +30,7 @@ class Phase5StoreCredentials extends StatefulWidget {
   });
 
   @override
-  State<Phase5StoreCredentials> createState() =>
-      _Phase5StoreCredentialsState();
+  State<Phase5StoreCredentials> createState() => _Phase5StoreCredentialsState();
 }
 
 class _Phase5StoreCredentialsState extends State<Phase5StoreCredentials>
@@ -124,8 +123,8 @@ class _Phase5StoreCredentialsState extends State<Phase5StoreCredentials>
       _handleChecked = true;
       _handleAvailable = !taken;
       _handleMessage = taken
-          ? 'ط§ظ„ظ…ط¹ط±ظپ ظ…ط³طھط®ط¯ظ… ط¨ط§ظ„ظپط¹ظ„طŒ ط¬ط±ظ‘ط¨ ط§ط³ظ…ط§ظ‹ ظ…ط®طھظ„ظپط§ظ‹.'
-          : 'ط§ظ„ظ…ط¹ط±ظپ ظ…طھط§ط­طŒ ظˆط³ظٹظڈظ†ط´ط£ ط§ظ„ط¨ط±ظٹط¯ ${handle}@${Constant.storeStaffEmailDomain}.';
+          ? 'المعرف مستخدم بالفعل، جرّب اسماً مختلفاً.'
+          : 'المعرف متاح، وسيُنشأ البريد ${handle}@${Constant.storeStaffEmailDomain}.';
     });
   }
 
@@ -144,8 +143,7 @@ class _Phase5StoreCredentialsState extends State<Phase5StoreCredentials>
   }
 
   bool get _passwordsMatch =>
-      _passwordCtrl.text.isNotEmpty &&
-      _passwordCtrl.text == _confirmCtrl.text;
+      _passwordCtrl.text.isNotEmpty && _passwordCtrl.text == _confirmCtrl.text;
 
   bool get _canProceed =>
       _isHandleFormatValid(_handleCtrl.text.trim()) &&
@@ -159,7 +157,7 @@ class _Phase5StoreCredentialsState extends State<Phase5StoreCredentials>
     if (!_canProceed) {
       HelperUtils.showSnackBarMessage(
         context,
-        'طھط­ظ‚ظ‚ ظ…ظ† ط§ظ„ظ…ط¹ط±ظ‘ظپ ظˆظƒظ„ظ…ط© ط§ظ„ظ…ط±ظˆط± ظ‚ط¨ظ„ ط§ظ„ظ…طھط§ط¨ط¹ط©.',
+        'تحقق من المعرّف وكلمة المرور قبل المتابعة.',
       );
       return;
     }
@@ -208,7 +206,7 @@ class _Phase5StoreCredentialsState extends State<Phase5StoreCredentials>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'ظ…ط¹ط±ظپ ط§ظ„ظ…طھط¬ط± ظˆظƒظ„ظ…ط© ط§ظ„ظ…ط±ظˆط±',
+                  'معرف المتجر وكلمة المرور',
                   style: TextStyle(
                     fontSize: context.font.extraLarge,
                     fontWeight: FontWeight.w700,
@@ -217,10 +215,10 @@ class _Phase5StoreCredentialsState extends State<Phase5StoreCredentials>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'ط³ظٹظڈط³طھط®ط¯ظ… ظ‡ط°ط§ ط§ظ„ط­ط³ط§ط¨ ظ„ظ„ط¯ط®ظˆظ„ ط¥ظ„ظ‰ ظ„ظˆط­ط© ط§ظ„طھط§ط¬ط± ط¹ظ„ظ‰ ط§ظ„ظˆظٹط¨. ط§ط®طھط± ظ…ط¹ط±ظپط§ظ‹ ظپط±ظٹط¯ط§ظ‹ ظˆظƒظ„ظ…ط© ظ…ط±ظˆط± ظ‚ظˆظٹط©.',
+                  'سيُستخدم هذا الحساب للدخول إلى لوحة التاجر على الويب. اختر معرفاً فريداً وكلمة مرور قوية.',
                   style: TextStyle(
                     fontSize: context.font.normal,
-                    color: colors.textColorDark.withOpacity(0.75),
+                    color: colors.textColorDark.withValues(alpha: 0.75),
                     height: 1.4,
                   ),
                 ),
@@ -232,10 +230,10 @@ class _Phase5StoreCredentialsState extends State<Phase5StoreCredentials>
             ),
           );
 
-    return WillPopScope(
-      onWillPop: () async {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (_, __) {
         widget.onBack();
-        return false;
       },
       child: Scaffold(
         body: SafeArea(
@@ -263,11 +261,12 @@ class _Phase5StoreCredentialsState extends State<Phase5StoreCredentials>
       ),
     );
   }
+
   Widget _buildHandleSection() {
     final theme = context.color;
-    final String loginPreview = _handleCtrl.text.trim().isEmpty
-        ? 'store@'
-        : '@';
+    final String handle = _handleCtrl.text.trim();
+    final String loginPreview =
+        '${handle.isEmpty ? 'yourstore' : handle}@${Constant.storeStaffEmailDomain}';
 
     final Color availabilityColor;
     if (_handleAvailable == true) {
@@ -275,7 +274,7 @@ class _Phase5StoreCredentialsState extends State<Phase5StoreCredentials>
     } else if (_handleAvailable == false) {
       availabilityColor = Colors.red.shade600;
     } else {
-      availabilityColor = theme.textColorDark.withOpacity(0.7);
+      availabilityColor = theme.textColorDark.withValues(alpha: 0.7);
     }
 
     return Column(
@@ -287,7 +286,7 @@ class _Phase5StoreCredentialsState extends State<Phase5StoreCredentials>
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                'اختيار معرف لوحة التاجر',
+                'اختيار معرف المتجر',
                 style: TextStyle(
                   fontSize: context.font.large,
                   fontWeight: FontWeight.w600,
@@ -303,7 +302,7 @@ class _Phase5StoreCredentialsState extends State<Phase5StoreCredentials>
           decoration: InputDecoration(
             labelText: 'معرف المتجر',
             hintText: 'مثال: marib.store',
-            suffixText: '@',
+            suffixText: '@${Constant.storeStaffEmailDomain}',
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
           ),
           textInputAction: TextInputAction.next,
@@ -334,7 +333,7 @@ class _Phase5StoreCredentialsState extends State<Phase5StoreCredentials>
             Expanded(
               child: Text(
                 _handleMessage ??
-                    'يجب أن يكون المعرف بين ${Constant.storeStaffEmailMinLength} و ${Constant.storeStaffEmailMaxLength} رمزاً (أحرف إنجليزية، أرقام، - . _).',
+                    'يجب أن يتراوح طول المعرف بين ${Constant.storeStaffEmailMinLength} و ${Constant.storeStaffEmailMaxLength} رمزاً (أحرف إنجليزية، أرقام أو الرموز - . _).',
                 style: TextStyle(
                   fontSize: context.font.small,
                   color: availabilityColor,
@@ -356,7 +355,7 @@ class _Phase5StoreCredentialsState extends State<Phase5StoreCredentials>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'البريد الذي سيُستخدم في لوحة الويب',
+                'تفاصيل تسجيل الدخول عبر الويب',
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
                   color: theme.textColorDark,
@@ -373,10 +372,10 @@ class _Phase5StoreCredentialsState extends State<Phase5StoreCredentials>
               ),
               const SizedBox(height: 6),
               Text(
-                'ستستلم اعتماد القبول على هذا البريد عند الموافقة.',
+                'سيُستخدم هذا البريد للدخول إلى لوحة التاجر، احفظه في مكان آمن.',
                 style: TextStyle(
                   fontSize: context.font.small,
-                  color: theme.textColorDark.withOpacity(0.7),
+                  color: theme.textColorDark.withValues(alpha: 0.7),
                 ),
               ),
             ],
@@ -385,6 +384,7 @@ class _Phase5StoreCredentialsState extends State<Phase5StoreCredentials>
       ],
     );
   }
+
   Widget _buildPasswordSection() {
     final theme = context.color;
     return Column(
@@ -396,7 +396,7 @@ class _Phase5StoreCredentialsState extends State<Phase5StoreCredentials>
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                'طھط¹ظٹظٹظ† ظƒظ„ظ…ط© ط§ظ„ظ…ط±ظˆط±',
+                'تعيين كلمة المرور',
                 style: TextStyle(
                   fontSize: context.font.large,
                   fontWeight: FontWeight.w600,
@@ -411,10 +411,9 @@ class _Phase5StoreCredentialsState extends State<Phase5StoreCredentials>
           controller: _passwordCtrl,
           obscureText: _obscurePassword,
           decoration: InputDecoration(
-            labelText: 'ظƒظ„ظ…ط© ط§ظ„ظ…ط±ظˆط±',
-            hintText: 'ط¹ظ„ظ‰ ط§ظ„ط£ظ‚ظ„ 8 ط±ظ…ظˆط² ظ…ط¹ ط£ط±ظ‚ط§ظ… ظˆط­ط±ظˆظپ',
-            border:
-                OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+            labelText: 'كلمة المرور',
+            hintText: 'على الأقل 8 رموز مع أرقام وحروف',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
             suffixIcon: IconButton(
               icon: Icon(
                 _obscurePassword ? Icons.visibility_off : Icons.visibility,
@@ -429,9 +428,8 @@ class _Phase5StoreCredentialsState extends State<Phase5StoreCredentials>
           controller: _confirmCtrl,
           obscureText: _obscureConfirm,
           decoration: InputDecoration(
-            labelText: 'طھط£ظƒظٹط¯ ظƒظ„ظ…ط© ط§ظ„ظ…ط±ظˆط±',
-            border:
-                OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+            labelText: 'تأكيد كلمة المرور',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
             suffixIcon: IconButton(
               icon: Icon(
                 _obscureConfirm ? Icons.visibility_off : Icons.visibility,
@@ -452,19 +450,19 @@ class _Phase5StoreCredentialsState extends State<Phase5StoreCredentials>
     final List<_ChecklistItem> items = [
       _ChecklistItem(
         fulfilled: _passwordCtrl.text.length >= 8,
-        label: '8 ط±ظ…ظˆط² ط¹ظ„ظ‰ ط§ظ„ط£ظ‚ظ„.',
+        label: '8 رموز على الأقل.',
       ),
       _ChecklistItem(
         fulfilled: _letters.hasMatch(_passwordCtrl.text),
-        label: 'طھط­طھظˆظٹ ط¹ظ„ظ‰ ط­ط±ظپ ظˆط§ط­ط¯ ط¹ظ„ظ‰ ط§ظ„ط£ظ‚ظ„.',
+        label: 'تحتوي على حرف واحد على الأقل.',
       ),
       _ChecklistItem(
         fulfilled: _numbers.hasMatch(_passwordCtrl.text),
-        label: 'طھط­طھظˆظٹ ط¹ظ„ظ‰ ط±ظ‚ظ… ظˆط§ط­ط¯ ط¹ظ„ظ‰ ط§ظ„ط£ظ‚ظ„.',
+        label: 'تحتوي على رقم واحد على الأقل.',
       ),
       _ChecklistItem(
         fulfilled: _passwordsMatch && _confirmCtrl.text.isNotEmpty,
-        label: 'طھط·ط§ط¨ظ‚ ط¨ظٹظ† ط§ظ„ط­ظ‚ظ„ظٹظ†.',
+        label: 'تطابق بين الحقلين.',
       ),
     ];
 
@@ -476,22 +474,26 @@ class _Phase5StoreCredentialsState extends State<Phase5StoreCredentials>
           child: Row(
             children: [
               Icon(
-                item.fulfilled ? Icons.check_circle : Icons.radio_button_unchecked,
+                item.fulfilled
+                    ? Icons.check_circle
+                    : Icons.radio_button_unchecked,
                 color: item.fulfilled
                     ? Colors.green.shade600
-                    : theme.textColorDark.withOpacity(0.4),
+                    : theme.textColorDark.withValues(alpha: 0.4),
                 size: 18,
               ),
               const SizedBox(width: 8),
-              Text(
-                item.label,
-                style: TextStyle(
-                  fontSize: context.font.small,
-                  color: item.fulfilled
-                      ? theme.textColorDark
-                      : theme.textColorDark.withOpacity(0.6),
+              Expanded(
+                child: Text(
+                  item.label,
+                  style: TextStyle(
+                    fontSize: context.font.small,
+                    color: item.fulfilled
+                        ? theme.textColorDark
+                        : theme.textColorDark.withValues(alpha: 0.6),
+                  ),
                 ),
-              ),
+              )
             ],
           ),
         );
@@ -512,5 +514,3 @@ class _ChecklistItem {
     required this.label,
   });
 }
-
-

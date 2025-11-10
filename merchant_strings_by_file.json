@@ -1,0 +1,38 @@
+[
+  {
+    "file": "marib-app\\lib\\ui\\screens\\merchant\\merchant_dashboard_screen.dart",
+    "count": 148
+  },
+  {
+    "file": "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase2_categories_hours.dart",
+    "count": 20
+  },
+  {
+    "file": "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase5_store_credentials.dart",
+    "count": 19
+  },
+  {
+    "file": "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\widgets\\legacy_selectors.dart",
+    "count": 19
+  },
+  {
+    "file": "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase1_activity_info.dart",
+    "count": 15
+  },
+  {
+    "file": "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase4_payment_methods.dart",
+    "count": 15
+  },
+  {
+    "file": "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase3_store_policy.dart",
+    "count": 8
+  },
+  {
+    "file": "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\phase6_final_submission.dart",
+    "count": 6
+  },
+  {
+    "file": "marib-app\\lib\\ui\\screens\\merchant\\onboarding\\merchant_location_picker_screen.dart",
+    "count": 6
+  }
+]

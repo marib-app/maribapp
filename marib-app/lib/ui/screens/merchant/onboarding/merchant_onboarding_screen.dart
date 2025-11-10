@@ -3,10 +3,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:marib/app/routes.dart';
 import 'package:marib/data/cubits/system/fetch_system_settings_cubit.dart';
-import 'package:marib/data/cubits/system/user_details.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/api.dart';
 import 'package:marib/utils/extensions/extensions.dart';
@@ -15,12 +13,12 @@ import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/utils/notification/notification_service.dart';
 import 'package:marib/utils/ui_utils.dart';
 
-import 'phase1_activity_info.dart';
-import 'phase2_categories_hours.dart';
-import 'phase3_store_policy.dart';
-import 'phase4_payment_methods.dart';
-import 'phase5_store_credentials.dart';
-import 'phase6_final_submission.dart';
+import 'package:marib/ui/screens/merchant/onboarding/phase1_activity_info.dart';
+import 'package:marib/ui/screens/merchant/onboarding/phase2_categories_hours.dart';
+import 'package:marib/ui/screens/merchant/onboarding/phase3_store_policy.dart';
+import 'package:marib/ui/screens/merchant/onboarding/phase4_payment_methods.dart';
+import 'package:marib/ui/screens/merchant/onboarding/phase5_store_credentials.dart';
+import 'package:marib/ui/screens/merchant/onboarding/phase6_final_submission.dart';
 
 class MerchantOnboardingScreen extends StatefulWidget {
   final Map<String, dynamic>? signupDraft;
@@ -162,7 +160,7 @@ class _MerchantOnboardingScreenState extends State<MerchantOnboardingScreen> {
         (route) => false,
       );
     } catch (error) {
-      UiUtils.showSnackBarMessage(
+      HelperUtils.showSnackBarMessage(
         context,
         _mapSubmissionError(error),
         messageDuration: 4,
@@ -172,7 +170,7 @@ class _MerchantOnboardingScreenState extends State<MerchantOnboardingScreen> {
 
   bool _ensurePhaseData() {
     if (_activityInfo == null) {
-      UiUtils.showSnackBarMessage(
+      HelperUtils.showSnackBarMessage(
         context,
         'أكمل بيانات النشاط التجاري أولاً.',
       );
@@ -180,7 +178,7 @@ class _MerchantOnboardingScreenState extends State<MerchantOnboardingScreen> {
       return false;
     }
     if (_categoriesHoursData == null) {
-      UiUtils.showSnackBarMessage(
+      HelperUtils.showSnackBarMessage(
         context,
         'حدد الأقسام وساعات العمل قبل المتابعة.',
       );
@@ -188,7 +186,7 @@ class _MerchantOnboardingScreenState extends State<MerchantOnboardingScreen> {
       return false;
     }
     if (_policyData == null) {
-      UiUtils.showSnackBarMessage(
+      HelperUtils.showSnackBarMessage(
         context,
         'أدخل سياسة الاسترجاع والتبديل قبل الإرسال.',
       );
@@ -196,7 +194,7 @@ class _MerchantOnboardingScreenState extends State<MerchantOnboardingScreen> {
       return false;
     }
     if (_paymentOptions == null) {
-      UiUtils.showSnackBarMessage(
+      HelperUtils.showSnackBarMessage(
         context,
         'اختر طرق الدفع الخاصة بمتجرك.',
       );
@@ -204,7 +202,7 @@ class _MerchantOnboardingScreenState extends State<MerchantOnboardingScreen> {
       return false;
     }
     if (_credentialsData == null) {
-      UiUtils.showSnackBarMessage(
+      HelperUtils.showSnackBarMessage(
         context,
         'حدد معرف المتجر وكلمة المرور قبل الإرسال.',
       );
@@ -558,7 +556,7 @@ class MerchantOnboardingSuccessScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: context.font.normal,
-                  color: theme.textColorDark.withOpacity(0.7),
+                  color: theme.textColorDark.withValues(alpha: 0.7),
                   height: 1.5,
                 ),
               ),

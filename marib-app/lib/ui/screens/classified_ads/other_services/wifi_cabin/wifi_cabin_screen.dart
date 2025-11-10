@@ -424,7 +424,6 @@ class _WifiNetworkCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.color;
     final textTheme = Theme.of(context).textTheme;
     final Color accent = _resolveAccentColor(context);
     final Color accentDark = Color.lerp(accent, Colors.black, 0.18)!;
@@ -1051,8 +1050,9 @@ class _WifiPlanCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.color;
     final textTheme = Theme.of(context).textTheme;
-    final bool hasPrice =
-        plan.price != null && (plan.currency?.trim().isNotEmpty ?? false);
+    final bool hasCurrency = plan.currency?.trim().isNotEmpty ?? false;
+    final String priceLabel =
+        '${plan.price.toStringAsFixed(2)} ${plan.currency ?? ''}'.trim();
 
     return Material(
       color: Colors.transparent,
@@ -1095,14 +1095,22 @@ class _WifiPlanCard extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                hasPrice
-                    ? '${plan.price!.toStringAsFixed(2)} ${plan.currency ?? ''}'
-                    : 'السعر متغير',
+                priceLabel,
                 style: textTheme.titleMedium?.copyWith(
                   color: colors.territoryColor,
                   fontWeight: FontWeight.bold,
                 ),
               ),
+              if (!hasCurrency)
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text(
+                    'العملة غير محددة بعد',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: colors.textLightColor,
+                    ),
+                  ),
+                ),
               const SizedBox(height: 8),
               Wrap(
                 spacing: 8,
@@ -1160,16 +1168,14 @@ class _PlanCheckoutSheet extends StatelessWidget {
   final WifiNetwork network;
   final VoidCallback onProceed;
 
-  bool get _canProceed =>
-      plan.price != null && (plan.currency?.trim().isNotEmpty ?? false);
+  bool get _canProceed => plan.currency?.trim().isNotEmpty ?? false;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.color;
     final textTheme = Theme.of(context).textTheme;
-    final String priceLabel = plan.price != null
-        ? '${plan.price!.toStringAsFixed(2)} ${plan.currency ?? ''}'
-        : '—';
+    final String priceLabel =
+        '${plan.price.toStringAsFixed(2)} ${plan.currency ?? ''}'.trim();
 
     return SingleChildScrollView(
       padding: EdgeInsets.only(

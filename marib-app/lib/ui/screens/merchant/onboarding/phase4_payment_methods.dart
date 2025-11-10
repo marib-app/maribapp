@@ -170,8 +170,8 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
               : const <dynamic>[]);
       final List<StoreGatewayOption> parsed = rawList
           .whereType<Map>()
-          .map((dynamic map) => StoreGatewayOption.fromJson(
-              Map<String, dynamic>.from(map as Map)))
+          .map((dynamic map) =>
+              StoreGatewayOption.fromJson(Map<String, dynamic>.from(map)))
           .toList();
       if (!mounted) return;
       final Set<int> availableIds = parsed
@@ -316,9 +316,8 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
     if (rootData is List) {
       candidates = List<dynamic>.from(rootData);
     } else {
-      final Map<String, dynamic> root = rootData is Map<String, dynamic>
-          ? rootData as Map<String, dynamic>
-          : payload;
+      final Map<String, dynamic> root =
+          rootData is Map<String, dynamic> ? rootData : payload;
 
       candidates = _resolveCandidateList(root, const <String>[
         'store_gateway_accounts',
@@ -340,7 +339,7 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
     for (final dynamic candidate in candidates) {
       if (candidate is Map) {
         final Map<String, dynamic> normalized =
-            Map<String, dynamic>.from(candidate as Map);
+            Map<String, dynamic>.from(candidate);
 
         final dynamic accounts = normalized['accounts'];
         final List<dynamic>? accountList = _unwrapCollection(accounts);
@@ -348,7 +347,7 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
           for (final dynamic account in accountList) {
             if (account is Map) {
               final Map<String, dynamic> accountMap =
-                  Map<String, dynamic>.from(account as Map);
+                  Map<String, dynamic>.from(account);
               accountMap['gateway'] ??= <String, dynamic>{
                 'name': normalized['name'],
                 'logo_url': normalized['logo_url'],
@@ -463,51 +462,6 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
         .toList();
   }
 
-  List<StoreManualBankAccount> _collectManualAccounts(dynamic source) {
-    final List<StoreManualBankAccount> result = <StoreManualBankAccount>[];
-
-    void collect(dynamic node) {
-      if (node == null) return;
-      if (node is List) {
-        for (final dynamic element in node) {
-          collect(element);
-        }
-        return;
-      }
-      if (node is Map<String, dynamic>) {
-        if (_looksLikeGatewayAccount(node)) {
-          result.add(StoreManualBankAccount.fromMap(node));
-        }
-        for (final dynamic value in node.values) {
-          collect(value);
-        }
-        return;
-      }
-      if (node is Map) {
-        collect(Map<String, dynamic>.from(
-          node.map(
-              (dynamic key, dynamic value) => MapEntry(key.toString(), value)),
-        ));
-      }
-    }
-
-    collect(source);
-
-    if (result.isEmpty) {
-      return _fallbackManualGateways();
-    }
-
-    return result;
-  }
-
-  bool _looksLikeGatewayAccount(Map<String, dynamic> map) {
-    return map.containsKey('store_gateway_account_id') ||
-        map.containsKey('store_gateway_id') ||
-        map.containsKey('beneficiary_name') ||
-        map.containsKey('account_number') ||
-        map.containsKey('store_gateway');
-  }
-
   @override
   void dispose() {
     widget.visibilityNotifier.removeListener(_visibilityListener);
@@ -599,7 +553,7 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
                 'المعلومات التالية تُعرض للعملاء أثناء الدفع ويمكن تعديلها لاحقاً من الإعدادات.',
                 style: TextStyle(
                   fontSize: context.font.normal,
-                  color: theme.textColorDark.withOpacity(0.75),
+                  color: theme.textColorDark.withValues(alpha: 0.75),
                 ),
               ),
               const SizedBox(height: 24),
@@ -686,7 +640,7 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
               'يمكنك إضافة أكثر من بوابة، وسيتم عرض هذه البيانات للعملاء في شاشة الدفع.',
               style: TextStyle(
                 fontSize: context.font.small,
-                color: theme.textColorDark.withOpacity(0.7),
+                color: theme.textColorDark.withValues(alpha: 0.7),
               ),
             ),
             const SizedBox(height: 16),
@@ -698,7 +652,7 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
                   'يمكنك استكمال هذه الخطوة لاحقاً من إعدادات المتجر.',
                   style: TextStyle(
                     fontSize: context.font.small,
-                    color: theme.textColorDark.withOpacity(0.6),
+                    color: theme.textColorDark.withValues(alpha: 0.6),
                   ),
                 ),
               ),
@@ -879,7 +833,9 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
           child: Text(
             'لم يتم ربط بوابة بنك الشرق حتى الآن. تواصل مع فريق الدعم للتفعيل.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: theme.textColorDark.withOpacity(0.7)),
+            style: TextStyle(
+              color: theme.textColorDark.withValues(alpha: 0.7),
+            ),
           ),
         ),
       );

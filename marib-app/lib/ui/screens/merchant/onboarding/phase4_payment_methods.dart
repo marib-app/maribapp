@@ -107,7 +107,8 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
     if (oldWidget.visibilityNotifier != widget.visibilityNotifier) {
       oldWidget.visibilityNotifier.removeListener(_visibilityListener);
       widget.visibilityNotifier.addListener(_visibilityListener);
-      WidgetsBinding.instance.addPostFrameCallback((_) => _handleVisibilityChanged());
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => _handleVisibilityChanged());
     }
   }
 
@@ -161,7 +162,7 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
     await _loadManualGateways();
     try {
       final Map<String, dynamic> response =
-      await Api.get(url: Api.storeGatewaysCatalogApi());
+          await Api.get(url: Api.storeGatewaysCatalogApi());
       final List<dynamic> rawList = response['data'] is List
           ? response['data'] as List<dynamic>
           : (response['storeGateways'] is List
@@ -170,7 +171,7 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
       final List<StoreGatewayOption> parsed = rawList
           .whereType<Map>()
           .map((dynamic map) => StoreGatewayOption.fromJson(
-              Map<String, dynamic>.from(map as Map<dynamic, dynamic>)))
+              Map<String, dynamic>.from(map as Map)))
           .toList();
       if (!mounted) return;
       final Set<int> availableIds = parsed
@@ -286,7 +287,7 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
 
     try {
       final Map<String, dynamic> gateways =
-      await Api.get(url: Api.storeGatewaysCatalogApi());
+          await Api.get(url: Api.storeGatewaysCatalogApi());
       merge(_extractGatewayAccounts(gateways));
     } catch (_) {}
 
@@ -339,7 +340,7 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
     for (final dynamic candidate in candidates) {
       if (candidate is Map) {
         final Map<String, dynamic> normalized =
-            Map<String, dynamic>.from(candidate as Map<dynamic, dynamic>);
+            Map<String, dynamic>.from(candidate as Map);
 
         final dynamic accounts = normalized['accounts'];
         final List<dynamic>? accountList = _unwrapCollection(accounts);
@@ -347,7 +348,7 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
           for (final dynamic account in accountList) {
             if (account is Map) {
               final Map<String, dynamic> accountMap =
-                  Map<String, dynamic>.from(account as Map<dynamic, dynamic>);
+                  Map<String, dynamic>.from(account as Map);
               accountMap['gateway'] ??= <String, dynamic>{
                 'name': normalized['name'],
                 'logo_url': normalized['logo_url'],
@@ -371,7 +372,6 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
 
   List<dynamic> _resolveCandidateList(
       Map<String, dynamic> map, List<String> keys) {
-
     for (final String key in keys) {
       final dynamic candidate = map[key];
       final List<dynamic>? list = _unwrapCollection(candidate);
@@ -402,7 +402,6 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
     return fallback;
   }
 
-
   List<dynamic>? _unwrapCollection(dynamic value) {
     if (value == null) return null;
     if (value is List<dynamic>) {
@@ -427,7 +426,7 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
     if (value is Map) {
       return _unwrapCollection(Map<String, dynamic>.from(
         value.map(
-              (dynamic key, dynamic val) => MapEntry(key.toString(), val),
+          (dynamic key, dynamic val) => MapEntry(key.toString(), val),
         ),
       ));
     }
@@ -631,9 +630,9 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
           child: UiUtils.buildButton(
-           context,
-           onPressed: _handleNext,
-           buttonTitle: 'nextStage'.translate(context),
+            context,
+            onPressed: _handleNext,
+            buttonTitle: 'nextStage'.translate(context),
             isInProgress: _submitting,
             autoManageState: false,
             autoDisableWhenInvalid: false,
@@ -761,7 +760,8 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
                     if (account.accountNumber != null)
                       Text('رقم الحساب: ${account.accountNumber}'),
                     if (account.iban != null) Text('IBAN: ${account.iban}'),
-                    if (account.branch != null) Text('الفرع: ${account.branch}'),
+                    if (account.branch != null)
+                      Text('الفرع: ${account.branch}'),
                   ],
                 ),
               ),
@@ -788,8 +788,7 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
     }
     final TextEditingController? beneficiaryCtrl =
         _beneficiaryControllers[gateway.id];
-    final TextEditingController? accountCtrl =
-        _accountControllers[gateway.id];
+    final TextEditingController? accountCtrl = _accountControllers[gateway.id];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

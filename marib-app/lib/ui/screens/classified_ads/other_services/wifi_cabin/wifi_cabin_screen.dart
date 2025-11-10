@@ -245,6 +245,7 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
   }
 
   Widget _buildHeader(BuildContext context) {
+    final colors = context.color;
     final textTheme = Theme.of(context).textTheme;
 
     return Padding(
@@ -345,6 +346,7 @@ class _DashboardHintCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.color;
+    final textTheme = Theme.of(context).textTheme;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -943,7 +945,6 @@ class _NetworkInfoBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.color;
-    final textTheme = Theme.of(context).textTheme;
 
     return Container(
       padding: const EdgeInsets.all(16),

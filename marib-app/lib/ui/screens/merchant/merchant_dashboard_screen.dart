@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:marib/app/navigation/app_page_route.dart';
 import 'package:marib/app/navigation/motion/route_motion.dart';
+import 'package:marib/app/routes.dart';
 import 'package:marib/data/cubits/merchant/merchant_dashboard_cubit.dart';
 import 'package:marib/data/cubits/merchant/merchant_manual_payments_cubit.dart';
 import 'package:marib/data/cubits/merchant/merchant_orders_cubit.dart';
@@ -35,7 +36,7 @@ class MerchantDashboardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Scaffold(
         appBar: AppBar(
           title: Text('merchant_store_panel'.translate(context)),
@@ -44,6 +45,7 @@ class MerchantDashboardScreen extends StatelessWidget {
               Tab(text: 'merchant_home'.translate(context)),
               Tab(text: 'merchant_requests'.translate(context)),
               Tab(text: 'merchant_remittances'.translate(context)),
+              Tab(text: 'merchant_settings'.translate(context)),
             ],
           ),
         ),
@@ -52,6 +54,7 @@ class MerchantDashboardScreen extends StatelessWidget {
             _MerchantOverviewTab(),
             _MerchantOrdersTab(),
             _MerchantManualPaymentsTab(),
+            _MerchantSettingsTab(),
           ],
         ),
       ),
@@ -393,7 +396,8 @@ class _ManualPaymentDetailSheetState extends State<_ManualPaymentDetailSheet> {
               const SizedBox(height: 16),
               Card(
                 elevation: 0,
-                color: context.color.territoryColor.withOpacity(0.1),
+                color:
+                    context.color.territoryColor.withValues(alpha: 0.1),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
@@ -696,6 +700,403 @@ class _ManualPaymentDetailSheetState extends State<_ManualPaymentDetailSheet> {
   }
 }
 
+class _MerchantSettingsTab extends StatelessWidget {
+  const _MerchantSettingsTab();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<MerchantDashboardCubit, MerchantDashboardState>(
+      builder: (context, state) {
+        if (state is MerchantDashboardLoading ||
+            state is MerchantDashboardInitial) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (state is MerchantDashboardFailure) {
+          return _ErrorView(
+            error: state.error,
+            onRetry: () => context.read<MerchantDashboardCubit>().load(),
+          );
+        }
+
+        final summary = (state as MerchantDashboardSuccess).summary;
+        final cards = <Widget>[
+          _SettingsCard(
+            title: 'بيانات المتجر',
+            actions: [
+              TextButton(
+                onPressed: () =>
+                    _openOnboarding(context, source: 'store_info', step: 0),
+                child: const Text('تحديث البيانات'),
+              ),
+            ],
+            child: _StoreIdentitySection(
+              store: summary.store,
+              status: summary.status,
+            ),
+          ),
+          const SizedBox(height: 16),
+          _SettingsCard(
+            title: 'ساعات العمل',
+            actions: [
+              TextButton(
+                onPressed: () =>
+                    _openOnboarding(context, source: 'working_hours', step: 1),
+                child: const Text('تعديل الأوقات'),
+              ),
+            ],
+            child: _WorkingHoursSection(hours: summary.workingHours),
+          ),
+          const SizedBox(height: 16),
+          _SettingsCard(
+            title: 'طرق الدفع والحد الأدنى',
+            actions: [
+              TextButton(
+                onPressed: () =>
+                    _openOnboarding(context, source: 'payments', step: 3),
+                child: const Text('إدارة طرق الدفع'),
+              ),
+            ],
+            child: _PaymentOptionsSection(status: summary.status),
+          ),
+          const SizedBox(height: 16),
+          _SettingsCard(
+            title: 'سياسات المتجر',
+            actions: [
+              TextButton(
+                onPressed: () =>
+                    _openOnboarding(context, source: 'policies', step: 2),
+                child: const Text('تعديل السياسات'),
+              ),
+            ],
+            child: _PoliciesSection(policies: summary.policies),
+          ),
+        ];
+
+        return RefreshIndicator(
+          color: context.color.territoryColor,
+          onRefresh: () => context.read<MerchantDashboardCubit>().refresh(),
+          child: ListView.builder(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+            itemCount: cards.length,
+            itemBuilder: (context, index) => cards[index],
+          ),
+        );
+      },
+    );
+  }
+
+  static void _openOnboarding(
+    BuildContext context, {
+    required String source,
+    required int step,
+  }) {
+    Navigator.pushNamed(
+      context,
+      Routes.merchantOnboarding,
+      arguments: {
+        'resumeFromStep': step,
+        'from': 'merchant_settings_$source',
+      },
+    );
+  }
+}
+
+class _SettingsCard extends StatelessWidget {
+  const _SettingsCard({
+    required this.title,
+    required this.child,
+    this.actions,
+  });
+
+  final String title;
+  final Widget child;
+  final List<Widget>? actions;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.color;
+    return Card(
+      elevation: 0.5,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: context.font.large,
+                      fontWeight: FontWeight.w700,
+                      color: theme.textColorDark,
+                    ),
+                  ),
+                ),
+                if (actions != null && actions!.isNotEmpty)
+                  Wrap(
+                    spacing: 8,
+                    children: actions!,
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            child,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StoreIdentitySection extends StatelessWidget {
+  const _StoreIdentitySection({
+    required this.store,
+    required this.status,
+  });
+
+  final MerchantStoreInfo store;
+  final MerchantStoreStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.color;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            CircleAvatar(
+              radius: 26,
+              backgroundImage: store.logoUrl != null && store.logoUrl!.isNotEmpty
+                  ? NetworkImage(store.logoUrl!)
+                  : null,
+              child: store.logoUrl == null || store.logoUrl!.isEmpty
+                  ? const Icon(Icons.storefront_outlined)
+                  : null,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    store.name.isNotEmpty ? store.name : 'متجر بدون اسم',
+                    style: TextStyle(
+                      fontSize: context.font.large,
+                      fontWeight: FontWeight.bold,
+                      color: theme.textColorDark,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'الحالة الحالية: ${_orderStatusLabel(store.status)}',
+                    style: TextStyle(
+                        color: theme.textColorDark.withValues(alpha: 0.75)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        _KeyValueRow(
+          label: 'رقم المتجر',
+          value: store.id != 0 ? store.id.toString() : 'غير متاح',
+        ),
+        _KeyValueRow(label: 'المنطقة الزمنية', value: store.timezone ?? '-'),
+        if (status.closureReason != null &&
+            status.closureReason!.trim().isNotEmpty)
+          _KeyValueRow(label: 'سبب الإغلاق', value: status.closureReason!),
+      ],
+    );
+  }
+}
+ 
+class _WorkingHoursSection extends StatelessWidget {
+  const _WorkingHoursSection({required this.hours});
+
+  final List<MerchantWorkingHour> hours;
+
+  static const List<String> _weekdayLabels = <String>[
+    'الأحد',
+    'الإثنين',
+    'الثلاثاء',
+    'الأربعاء',
+    'الخميس',
+    'الجمعة',
+    'السبت',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    if (hours.isEmpty) {
+      return const Text('لم يتم تعيين ساعات العمل بعد.');
+    }
+
+    return Column(
+      children: hours.map((hour) {
+        final String dayLabel = hour.weekday >= 0 && hour.weekday <= 6
+            ? _weekdayLabels[hour.weekday]
+            : 'اليوم ${hour.weekday}';
+        final String value = hour.isOpen
+            ? '${hour.opensAt ?? '--'} - ${hour.closesAt ?? '--'}'
+            : 'مغلق';
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: _KeyValueRow(label: dayLabel, value: value),
+        );
+      }).toList(),
+    );
+  }
+}
+
+class _PaymentOptionsSection extends StatelessWidget {
+  const _PaymentOptionsSection({required this.status});
+
+  final MerchantStoreStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final chips = <Widget>[
+      _PaymentFlag(label: 'التوصيل', value: status.allowDelivery),
+      _PaymentFlag(label: 'الاستلام', value: status.allowPickup),
+      _PaymentFlag(label: 'حوالات يدوية', value: status.allowManualPayments),
+      _PaymentFlag(label: 'المحفظة', value: status.allowWallet),
+      _PaymentFlag(label: 'الدفع عند الاستلام', value: status.allowCod),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(spacing: 8, runSpacing: 8, children: chips),
+        const SizedBox(height: 16),
+        _KeyValueRow(
+          label: 'الحد الأدنى للطلب',
+          value: status.minOrderAmount != null
+              ? NumberFormat.currency(symbol: 'ر.ي')
+                  .format(status.minOrderAmount)
+              : 'غير محدد',
+        ),
+      ],
+    );
+  }
+}
+
+class _PoliciesSection extends StatelessWidget {
+  const _PoliciesSection({required this.policies});
+
+  final List<MerchantPolicy> policies;
+
+  @override
+  Widget build(BuildContext context) {
+    if (policies.isEmpty) {
+      return const Text('لم تتم إضافة سياسات حتى الآن.');
+    }
+
+    return Column(
+      children: policies
+          .map(
+            (policy) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    policy.title ?? 'سياسة بدون عنوان',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: context.color.textColorDark,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    policy.content.isNotEmpty
+                        ? policy.content
+                        : 'لا يوجد محتوى متاح.',
+                    style: TextStyle(
+                      color: context.color.textColorDark.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+          .toList(),
+    );
+  }
+}
+
+class _KeyValueRow extends StatelessWidget {
+  const _KeyValueRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.color;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: theme.textColorDark,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            style: TextStyle(
+              color: theme.textColorDark.withValues(alpha: 0.85),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PaymentFlag extends StatelessWidget {
+  const _PaymentFlag({required this.label, required this.value});
+
+  final String label;
+  final bool value;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color color = value ? Colors.green : Colors.redAccent;
+    final Color bg = color.withValues(alpha: 0.12);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(value ? Icons.check_circle : Icons.block, size: 16, color: color),
+          const SizedBox(width: 6),
+          Text(label, style: TextStyle(color: color)),
+        ],
+      ),
+    );
+  }
+}
+
 class _ManualPaymentTile extends StatelessWidget {
   const _ManualPaymentTile({
     required this.payment,
@@ -851,9 +1252,9 @@ class _StatusTag extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+                color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withOpacity(0.4)),
+                border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
       child: Text(
         label,
@@ -1050,17 +1451,18 @@ class _MetricsGrid extends StatelessWidget {
       _MetricCardData(
         titleKey: 'merchant_today',
         snapshot: summary.overview.today,
-        color: context.color.territoryColor.withOpacity(0.14),
+        color:
+            context.color.territoryColor.withValues(alpha: 0.14),
       ),
       _MetricCardData(
         titleKey: 'merchant_last_7_days',
         snapshot: summary.overview.week,
-        color: Colors.indigo.withOpacity(0.1),
+        color: Colors.indigo.withValues(alpha: 0.1),
       ),
       _MetricCardData(
         titleKey: 'merchant_last_30_days',
         snapshot: summary.overview.month,
-        color: Colors.teal.withOpacity(0.1),
+        color: Colors.teal.withValues(alpha: 0.1),
       ),
     ];
 
@@ -1283,7 +1685,8 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: context.color.secondaryColor.withOpacity(0.15),
+        color:
+            context.color.secondaryColor.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -1667,7 +2070,3 @@ String? _stringify(dynamic value) {
   final text = value.toString().trim();
   return text.isEmpty ? null : text;
 }
-
-
-
-

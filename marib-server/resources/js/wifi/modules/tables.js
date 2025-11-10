@@ -78,6 +78,11 @@ function registerTables() {
 
     globalTables.networkActionEvents = {
         'click [data-action="view-network"]'(event, value, row) {
+            if (config.detailUrlTemplate) {
+                const target = config.detailUrlTemplate.replace('__NETWORK__', row.id);
+                window.location.href = target;
+                return;
+            }
             state.selectedNetwork = row;
             updateNetworkModalDetails(row);
             openModal(document.querySelector('[data-wifi-network-modal]'));

@@ -7,6 +7,7 @@ const config = {
     baseUrl: '/api/wifi/admin',
     ownerBaseUrl: '/api/wifi/owner',
     csrf: document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '',
+    detailUrlTemplate: '',
 };
 
 axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';

@@ -15,6 +15,7 @@ function initWifiAdmin() {
     root.dataset.initialized = 'true';
     config.baseUrl = root.dataset.baseUrl || config.baseUrl;
     config.ownerBaseUrl = root.dataset.ownerBaseUrl || config.ownerBaseUrl;
+    config.detailUrlTemplate = root.dataset.detailUrl || config.detailUrlTemplate;
 
     state.tables.networks = $('#wifi-networks-table');
     state.tables.reports = $('#wifi-reports-table');

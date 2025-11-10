@@ -40,7 +40,7 @@
 @endsection
 
 @section('content')
-    <section class="section wifi-admin" data-wifi-admin-root data-base-url="{{ $adminApiBaseUrl }}" data-owner-base-url="{{ $ownerApiBaseUrl ?? url('/wifi-cabin/api/owner') }}">
+    <section class="section wifi-admin" data-wifi-admin-root data-base-url="{{ $adminApiBaseUrl }}" data-owner-base-url="{{ $ownerApiBaseUrl ?? url('/wifi-cabin/api/owner') }}" data-detail-url="{{ route('wifi.show', ['network' => '__NETWORK__']) }}">
         <div class="row g-3 mb-3">
             <div class="col-12">
                 @if (session('status'))

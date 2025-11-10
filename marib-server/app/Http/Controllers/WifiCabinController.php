@@ -175,6 +175,62 @@ class WifiCabinController extends Controller
         ]);
     }
 
+    public function show(WifiNetwork $network): View
+    {
+        $network->load([
+            'owner',
+            'plans' => static function ($query): void {
+                $query->with(['codeBatches' => static function ($batchQuery): void {
+                    $batchQuery->orderByDesc('created_at');
+                }])->orderByDesc('created_at');
+            },
+        ]);
+
+        $media = [
+            'logo' => $network->icon_path ? Storage::url($network->icon_path) : null,
+            'login_screenshot' => $network->login_screenshot_path
+                ? Storage::url($network->login_screenshot_path)
+                : null,
+        ];
+
+        $contacts = collect($network->contacts ?? [])
+            ->map(static function ($contact) {
+                if (is_string($contact)) {
+                    return [
+                        'type' => 'other',
+                        'value' => $contact,
+                    ];
+                }
+
+                if (is_array($contact)) {
+                    return [
+                        'type' => $contact['type'] ?? 'other',
+                        'label' => $contact['label'] ?? null,
+                        'value' => $contact['value'] ?? null,
+                    ];
+                }
+
+                return null;
+            })
+            ->filter(static fn ($contact) => filled($contact['value'] ?? null))
+            ->values();
+
+        $commissionRate = data_get($network->settings, 'commission_rate');
+        if ($commissionRate === null) {
+            $commissionRate = data_get($network->meta, 'commission_rate');
+        }
+
+        $statistics = $this->buildNetworkStatistics($network);
+
+        return view('wifi.show', [
+            'network' => $network,
+            'statistics' => $statistics,
+            'media' => $media,
+            'contacts' => $contacts,
+            'commissionRate' => $commissionRate,
+        ]);
+    }
+
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
@@ -391,6 +447,41 @@ class WifiCabinController extends Controller
             $plan->meta = $updatedMeta;
             $plan->save();
         }
+    }
+
+    private function buildNetworkStatistics(WifiNetwork $network): array
+    {
+        $plans = $network->plans ?? collect();
+
+        $activePlans = $plans->filter(static function ($plan) {
+            return ($plan->status ?? null) === WifiPlanStatus::ACTIVE->value;
+        })->count();
+
+        $codes = [
+            'total' => 0,
+            'available' => 0,
+            'sold' => 0,
+        ];
+
+        foreach ($plans as $plan) {
+            $batches = $plan->codeBatches ?? collect();
+            foreach ($batches as $batch) {
+                $total = (int) ($batch->total_codes ?? 0);
+                $available = (int) ($batch->available_codes ?? 0);
+                $codes['total'] += $total;
+                $codes['available'] += $available;
+                $codes['sold'] += max($total - $available, 0);
+            }
+        }
+
+        return [
+            'plans' => [
+                'total' => $plans->count(),
+                'active' => $activePlans,
+                'inactive' => max($plans->count() - $activePlans, 0),
+            ],
+            'codes' => $codes,
+        ];
     }
 
 }

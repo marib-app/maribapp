@@ -1440,88 +1440,127 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-class _MetricsGrid extends StatelessWidget {
+class _MetricsGrid extends StatefulWidget {
   const _MetricsGrid({required this.summary});
 
   final MerchantDashboardSummary summary;
 
   @override
-  Widget build(BuildContext context) {
-    final cards = <_MetricCardData>[
+  State<_MetricsGrid> createState() => _MetricsGridState();
+}
+
+class _MetricsGridState extends State<_MetricsGrid> {
+  late final List<_MetricCardData> _periods;
+  late _MetricCardData _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    _periods = <_MetricCardData>[
       _MetricCardData(
         titleKey: 'merchant_today',
-        snapshot: summary.overview.today,
-        color:
-            context.color.territoryColor.withValues(alpha: 0.14),
+        snapshot: widget.summary.overview.today,
+        color: context.color.territoryColor,
       ),
       _MetricCardData(
         titleKey: 'merchant_last_7_days',
-        snapshot: summary.overview.week,
-        color: Colors.indigo.withValues(alpha: 0.1),
+        snapshot: widget.summary.overview.week,
+        color: Colors.indigo,
       ),
       _MetricCardData(
         titleKey: 'merchant_last_30_days',
-        snapshot: summary.overview.month,
-        color: Colors.teal.withValues(alpha: 0.1),
+        snapshot: widget.summary.overview.month,
+        color: Colors.teal,
       ),
     ];
+    _selected = _periods.first;
+  }
 
+  @override
+  Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'أداء المتجر',
+          'merchant_overview_stats'.translate(context),
           style: Theme.of(context).textTheme.titleMedium,
         ),
         const SizedBox(height: 12),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final isWide = constraints.maxWidth > 680;
-            final crossAxisCount = isWide ? 3 : 1;
-            return GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: crossAxisCount,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: isWide ? 1.4 : 1.2,
-              ),
-              itemCount: cards.length,
-              itemBuilder: (_, index) => _MetricCard(data: cards[index]),
-            );
-          },
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: _periods.map((period) {
+              final bool isSelected = identical(period, _selected);
+              return Padding(
+                padding: const EdgeInsetsDirectional.only(end: 8),
+                child: ChoiceChip(
+                  elevation: isSelected ? 1 : 0,
+                  label: Text(period.titleKey.translate(context)),
+                  selected: isSelected,
+                  selectedColor: period.color.withValues(alpha: 0.15),
+                  avatar: isSelected
+                      ? Icon(Icons.check, size: 16, color: period.color)
+                      : null,
+                  onSelected: (_) => setState(() => _selected = period),
+                ),
+              );
+            }).toList(),
+          ),
         ),
+        const SizedBox(height: 16),
+        _MetricSummaryCard(data: _selected),
       ],
     );
   }
 }
-
-class _MetricCardData {
-  const _MetricCardData({
-    required this.titleKey,
-    required this.snapshot,
-    required this.color,
-  });
-
-  final String titleKey;
-  final MerchantMetricSnapshot snapshot;
-  final Color color;
-}
-
-class _MetricCard extends StatelessWidget {
-  const _MetricCard({required this.data});
+class _MetricSummaryCard extends StatelessWidget {
+  const _MetricSummaryCard({required this.data});
 
   final _MetricCardData data;
 
   @override
   Widget build(BuildContext context) {
+    final snapshot = data.snapshot;
+    final accent = data.color;
+    final NumberFormat compact = NumberFormat.compact(locale: 'ar');
+    final NumberFormat currency = NumberFormat.compactCurrency(
+      locale: 'ar',
+      symbol: 'ر.ي',
+      decimalDigits: snapshot.revenue % 1 == 0 ? 0 : 2,
+    );
+
+    final stats = <_MetricStatTile>[
+      _MetricStatTile(
+        icon: Icons.shopping_bag_outlined,
+        label: 'merchant_metric_orders'.translate(context),
+        value: compact.format(snapshot.orders),
+        color: Colors.indigo,
+      ),
+      _MetricStatTile(
+        icon: Icons.visibility_outlined,
+        label: 'merchant_metric_visits'.translate(context),
+        value: compact.format(snapshot.visits),
+        color: Colors.orange,
+      ),
+      _MetricStatTile(
+        icon: Icons.remove_red_eye_outlined,
+        label: 'merchant_metric_product_views'.translate(context),
+        value: compact.format(snapshot.productViews),
+        color: Colors.teal,
+      ),
+      _MetricStatTile(
+        icon: Icons.add_shopping_cart_outlined,
+        label: 'merchant_metric_add_to_cart'.translate(context),
+        value: compact.format(snapshot.addToCart),
+        color: Colors.pinkAccent,
+      ),
+    ];
+
     return Card(
-      color: data.color,
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 0.6,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1529,60 +1568,160 @@ class _MetricCard extends StatelessWidget {
               data.titleKey.translate(context),
               style: Theme.of(context).textTheme.titleMedium,
             ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 12,
-              runSpacing: 8,
-              children: [
-                _MetricValue(label: 'الطلبات', value: data.snapshot.orders),
-                _MetricValue(
-                    label: 'الإيراد',
-                    valueText: NumberFormat.currency(symbol: 'ر.ي')
-                        .format(data.snapshot.revenue)),
-                _MetricValue(label: 'الزيارات', value: data.snapshot.visits),
-                _MetricValue(
-                    label: 'مشاهدات المنتجات',
-                    value: data.snapshot.productViews),
-              ],
+            const SizedBox(height: 4),
+            Text(
+              '${'merchant_metric_range'.translate(context)}: ${_formatRange(data.snapshot)}',
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: Colors.grey.shade600),
+            ),
+            const SizedBox(height: 16),
+            _RevenueHighlight(
+              value: currency.format(snapshot.revenue),
+              accent: accent,
+            ),
+            const SizedBox(height: 20),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final isWide = constraints.maxWidth > 520;
+                final tileWidth =
+                    isWide ? (constraints.maxWidth - 12) / 2 : constraints.maxWidth;
+                return Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: stats
+                      .map((tile) => SizedBox(width: tileWidth, child: tile))
+                      .toList(),
+                );
+              },
             ),
           ],
         ),
       ),
     );
   }
+
+  String _formatRange(MerchantMetricSnapshot snapshot) {
+    final DateTime? start = DateTime.tryParse(snapshot.from);
+    final DateTime? end = DateTime.tryParse(snapshot.to);
+    if (start == null || end == null) {
+      if (snapshot.from.isEmpty && snapshot.to.isEmpty) {
+        return 'غير متاح';
+      }
+      return '${snapshot.from} - ${snapshot.to}';
+    }
+    final formatter = DateFormat('dd MMM', 'ar');
+    return '${formatter.format(start.toLocal())} - ${formatter.format(end.toLocal())}';
+  }
 }
 
-class _MetricValue extends StatelessWidget {
-  const _MetricValue({
-    required this.label,
-    this.value,
-    this.valueText,
-  }) : assert(valueText != null || value != null);
+class _RevenueHighlight extends StatelessWidget {
+  const _RevenueHighlight({required this.value, required this.accent});
 
-  final String label;
-  final int? value;
-  final String? valueText;
+  final String value;
+  final Color accent;
 
   @override
   Widget build(BuildContext context) {
-    final displayValue = valueText ?? NumberFormat.compact().format(value ?? 0);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          displayValue,
-          style: Theme.of(context)
-              .textTheme
-              .titleLarge
-              ?.copyWith(fontWeight: FontWeight.w600),
-        ),
-        Text(label, style: Theme.of(context).textTheme.bodySmall),
-      ],
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: accent.withValues(alpha: 0.15),
+            foregroundColor: accent,
+            child: const Icon(Icons.payments_outlined),
+          ),
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'merchant_metric_revenue'.translate(context),
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: Colors.grey.shade600),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                value,
+                style: Theme.of(context)
+                    .textTheme
+                    .headlineSmall
+                    ?.copyWith(fontWeight: FontWeight.w700, color: accent),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
 
+class _MetricStatTile extends StatelessWidget {
+  const _MetricStatTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: color.withValues(alpha: 0.1),
+            foregroundColor: color,
+            child: Icon(icon, size: 18),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: Colors.grey.shade600),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 class _StatusCard extends StatelessWidget {
   const _StatusCard({required this.status});
 
@@ -2070,3 +2209,5 @@ String? _stringify(dynamic value) {
   final text = value.toString().trim();
   return text.isEmpty ? null : text;
 }
+
+

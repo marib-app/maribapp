@@ -33,6 +33,7 @@ use App\Http\Controllers\Wifi\OwnerBatchController;
 use App\Http\Controllers\Wifi\OwnerNetworkController;
 use App\Http\Controllers\Wifi\OwnerPlanController;
 use App\Http\Controllers\Wifi\PublicDiscoveryController;
+use App\Http\Controllers\Api\WebExperienceController;
 
 
 Route::get('diag', fn() => response('ok', 200));
@@ -64,6 +65,7 @@ Route::get('products/{item}/purchase-options', [ProductPurchaseOptionsController
     ->whereNumber('item');
 Route::get('metal-rates', [PublicMetalRateController::class, 'index']);
 Route::get('get-featured-section', [ApiController::class, 'getFeaturedSections']);
+Route::get('web/experience', WebExperienceController::class);
 
     
 

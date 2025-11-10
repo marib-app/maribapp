@@ -28,6 +28,11 @@
     "src": "resources/js/items/index.scss",
     "isEntry": true
   },
+  "resources/js/wifi/show.scss": {
+    "file": "assets/show.13f155ae.css",
+    "src": "resources/js/wifi/show.scss",
+    "isEntry": true
+  },
   "resources/js/wifi/index.scss": {
     "file": "assets/index.198f9f1d.css",
     "src": "resources/js/wifi/index.scss",

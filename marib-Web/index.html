@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="light" data-api-endpoint="/api/web/experience">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>منصة مأرب | تجربة ويب تحاكي التطبيق</title>
+    <meta
+      name="description"
+      content="مأرب تجمع المتاجر، الاكتشاف، والدعم في تجربة واحدة متوافقة مع هوية التطبيق."
+    />
+    <meta property="og:title" content="منصة مأرب | تجربة ويب تحاكي التطبيق" />
+    <meta
+      property="og:description"
+      content="واجهة ويب احترافية تعكس هوية تطبيق مأرب وتبرز الخدمات الذكية للمتاجر والمستخدمين."
+    />
+    <meta property="og:image" content="assets/img/app-frame.svg" />
+    <meta name="theme-color" content="#EB5924" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Inter:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles/main.css" />
+    <script defer src="scripts/app.js"></script>
+  </head>
+  <body>
+    <div class="texture texture--grid" aria-hidden="true"></div>
+    <div class="texture texture--glow" aria-hidden="true"></div>
+    <a class="skip-link" href="#main">تخطي إلى المحتوى</a>
+
+    <header class="site-header" data-component="header">
+      <div class="site-header__inner">
+        <a class="brand" href="#home" aria-label="عودة إلى الرئيسية">
+          <img src="assets/icons/logo.svg" alt="شعار مأرب" />
+          <div class="brand__copy">
+            <span class="brand__name" data-i18n="brand.name">مأرب</span>
+            <span class="brand__tagline" data-i18n="brand.tagline"
+              >حياة أسهل لكل متجر</span
+            >
+          </div>
+        </a>
+
+        <button
+          class="nav-toggle"
+          type="button"
+          aria-label="إظهار القائمة"
+          aria-expanded="false"
+        >
+          <span></span><span></span><span></span>
+        </button>
+
+        <nav class="site-nav" data-state="closed">
+          <a href="#home" data-i18n="nav.home">الرئيسية</a>
+          <a href="#services" data-i18n="nav.services">الخدمات</a>
+          <a href="#solutions" data-i18n="nav.solutions">الحلول</a>
+          <a href="#stories" data-i18n="nav.stories">قصص النجاح</a>
+          <a href="#contact" data-i18n="nav.contact">تواصل معنا</a>
+          <div class="nav__actions">
+            <div class="lang-switch" role="group" aria-label="تبديل اللغة">
+              <button type="button" data-lang="ar" class="is-active">AR</button>
+              <button type="button" data-lang="en">EN</button>
+            </div>
+            <a
+              class="btn btn--ghost"
+              href="https://merchant.marib.app"
+              target="_blank"
+              rel="noreferrer"
+              data-i18n="nav.partners"
+              >مركز الشركاء</a
+            >
+            <a
+              class="btn btn--primary"
+              href="https://merchant.marib.app/login"
+              target="_blank"
+              rel="noreferrer"
+              data-i18n="nav.login"
+              >تسجيل الدخول</a
+            >
+          </div>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="hero" id="home">
+        <div class="hero__content">
+          <p class="eyebrow" data-i18n="hero.eyebrow">منصة مأرب الموحدة</p>
+          <h1 data-i18n="hero.title">
+            تجربة رقمية كاملة تربط المتاجر بالمجتمع في لحظة واحدة
+          </h1>
+          <p class="lede" data-i18n="hero.subtitle">
+            من الاكتشاف إلى الإدارة إلى خدمة ما بعد البيع، يقدم مأرب تطبيقاً
+            عربي الهوية لكل متجر يبحث عن نمو واستدامة.
+          </p>
+          <div class="hero__actions">
+            <a
+              class="btn btn--primary"
+              href="https://play.google.com/store/apps/details?id=com.marib.app"
+              target="_blank"
+              rel="noreferrer"
+              data-i18n="hero.btnPrimary"
+              >حمّل التطبيق الآن</a
+            >
+            <button class="btn btn--ghost" data-scroll="#solutions">
+              <span data-i18n="hero.btnSecondary">استكشف المزايا</span>
+            </button>
+          </div>
+          <ul class="hero__stats" id="hero-stats" aria-live="polite"></ul>
+        </div>
+        <div class="hero__visual" aria-hidden="true">
+          <div class="device-shell">
+            <img src="assets/img/app-frame.svg" alt="" />
+            <div class="device-shell__badge">
+              <span class="device-shell__badge-label" data-i18n="hero.badge"
+                >خدمات المدن الذكية</span
+              >
+              <span class="device-shell__badge-meta" id="badge-meta"
+                >+125 متجر جديد هذا الأسبوع</span
+              >
+            </div>
+          </div>
+          <div class="hero__floating-card">
+            <p data-i18n="hero.floatingTitle">مؤشرات حية</p>
+            <div class="hero__floating-metric">
+              <span id="live-orders">0</span>
+              <small data-i18n="hero.floatingCaption">طلبات نشطة</small>
+            </div>
+            <div class="hero__floating-metric">
+              <span id="live-support">0</span>
+              <small data-i18n="hero.floatingCaption2">جلسات دعم</small>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="solutions">
+        <div class="section__header">
+          <p class="eyebrow" data-i18n="solutions.eyebrow">حلول ذكية</p>
+          <h2 data-i18n="solutions.title">
+            كل ما تحتاجه لإدارة متجرك في منصة واحدة
+          </h2>
+          <p data-i18n="solutions.subtitle">
+            واجهات تشبه التطبيق، مع تجربة ويب خفيفة وسلسة ومهيأة للعرض العربي.
+          </p>
+        </div>
+        <div class="grid" data-component="features"></div>
+      </section>
+
+      <section class="section section--alt" id="services">
+        <div class="section__header">
+          <p class="eyebrow" data-i18n="services.eyebrow">قيمة مضافة</p>
+          <h2 data-i18n="services.title">
+            خدمات ميدانية وسحابية تدعم تشغيلك اليومي
+          </h2>
+          <p data-i18n="services.subtitle">
+            تعمل مأرب مع شركاء محليين لتوفير سلسلة خدمات متكاملة من التحقق وحتى
+            التحليلات.
+          </p>
+        </div>
+        <div class="carousel" data-component="services">
+          <button
+            class="carousel__control"
+            data-direction="prev"
+            aria-label="الخدمة السابقة"
+          >
+            ‹
+          </button>
+          <div class="carousel__viewport">
+            <div class="carousel__track" id="service-track"></div>
+          </div>
+          <button
+            class="carousel__control"
+            data-direction="next"
+            aria-label="الخدمة التالية"
+          >
+            ›
+          </button>
+        </div>
+      </section>
+
+      <section class="section" id="stories">
+        <div class="section__header">
+          <p class="eyebrow" data-i18n="stories.eyebrow">قصص حقيقية</p>
+          <h2 data-i18n="stories.title">أصوات من المجتمع التجاري</h2>
+          <p data-i18n="stories.subtitle">
+            اقتباسات قصيرة ذات مصداقية توضح كيف غيّر مأرب طريقة عمل المتاجر.
+          </p>
+        </div>
+        <div class="testimonials" data-component="testimonials"></div>
+      </section>
+
+      <section class="section section--grid" id="insights">
+        <div class="insights__panel">
+          <p class="eyebrow" data-i18n="insights.eyebrow">رؤى مجتمعية</p>
+          <h3 data-i18n="insights.title">
+            نبض المنصة يعرض تفاعلات ومبيعات حية
+          </h3>
+          <ul class="list" id="insight-list"></ul>
+        </div>
+        <div class="timeline" data-component="timeline">
+          <h3 data-i18n="timeline.title">رحلة التاجر مع مأرب</h3>
+          <div class="timeline__track" id="timeline-track"></div>
+        </div>
+      </section>
+
+      <section class="section section--alt" id="faq">
+        <div class="section__header">
+          <p class="eyebrow" data-i18n="faq.eyebrow">أجوبة سريعة</p>
+          <h2 data-i18n="faq.title">أسئلة نسمعها يومياً</h2>
+          <p data-i18n="faq.subtitle">
+            دعم التطبيق نفسه متاح هنا عبر نفس الهوية والتجربة.
+          </p>
+        </div>
+        <div class="faq" data-component="faq"></div>
+      </section>
+
+      <section class="section section--cta" id="contact">
+        <div class="cta-card">
+          <div class="cta-card__copy">
+            <p class="eyebrow" data-i18n="cta.eyebrow">تواصل مباشر</p>
+            <h2 data-i18n="cta.title">
+              لنصنع تجربة تطبيقك الويب بنفس الهوية
+            </h2>
+            <p data-i18n="cta.subtitle">
+              أرسل لنا بيانات بسيطة وسيعاودك فريق نجاح الشركاء خلال 24 ساعة.
+            </p>
+            <ul class="contact-pills">
+              <li>
+                <span>support@marib.app</span>
+                <small data-i18n="cta.mail">دعم فني</small>
+              </li>
+              <li>
+                <span>+967 777 555 210</span>
+                <small data-i18n="cta.phone">خط المبيعات</small>
+              </li>
+            </ul>
+          </div>
+          <form class="contact-form" id="contact-form" novalidate>
+            <label>
+              <span data-i18n="form.nameLabel">اسم المتجر</span>
+              <input
+                type="text"
+                name="store"
+                autocomplete="organization"
+                required
+                placeholder="متجر النخبة"
+                data-i18n-placeholder="form.namePlaceholder"
+              />
+            </label>
+            <label>
+              <span data-i18n="form.personLabel">الشخص المسؤول</span>
+              <input
+                type="text"
+                name="person"
+                autocomplete="name"
+                required
+                placeholder="ليان السالمي"
+                data-i18n-placeholder="form.personPlaceholder"
+              />
+            </label>
+            <label>
+              <span data-i18n="form.channelLabel">قناة التواصل المفضلة</span>
+              <input
+                type="tel"
+                name="contact"
+                autocomplete="tel"
+                required
+                placeholder="770 123 456"
+                data-i18n-placeholder="form.channelPlaceholder"
+              />
+            </label>
+            <label>
+              <span data-i18n="form.needLabel">ما الذي تحتاجه؟</span>
+              <textarea
+                name="notes"
+                rows="3"
+                placeholder="أرغب في ربط فروعنا بخدمة الاكتشاف."
+                data-i18n-placeholder="form.needPlaceholder"
+              ></textarea>
+            </label>
+            <button class="btn btn--primary" type="submit" data-i18n="form.cta">
+              أرسل الطلب
+            </button>
+            <p class="form-message" id="form-message" role="status"></p>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <img
+        class="site-footer__logo"
+        src="assets/icons/logo.svg"
+        alt="شعار منصة مأرب"
+      />
+      <div class="site-footer__info">
+        <p data-i18n="footer.company">
+          منصة مأرب - حلول التجارة والخدمات الذكية
+        </p>
+        <p data-i18n="footer.rights">جميع الحقوق محفوظة © 2025</p>
+      </div>
+      <ul class="site-footer__links">
+        <li><a href="https://marib.app" target="_blank" rel="noreferrer" data-i18n="footer.mainApp">تطبيق مأرب</a></li>
+        <li><a href="https://marib.app/privacy" target="_blank" rel="noreferrer" data-i18n="footer.privacy">الخصوصية</a></li>
+        <li><a href="https://marib.app/terms" target="_blank" rel="noreferrer" data-i18n="footer.terms">الشروط</a></li>
+      </ul>
+    </footer>
+
+    <noscript>
+      <div class="noscript">
+        هذه الصفحة تحتاج إلى تفعيل JavaScript لعرض البيانات التفاعلية. يمكنك
+        الوصول إلى الأقسام الأساسية ومعرفة الخدمات حتى بدون ذلك.
+      </div>
+    </noscript>
+  </body>
+</html>

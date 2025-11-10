@@ -11,6 +11,7 @@ use App\Models\Wifi\WifiCode;
 use App\Models\Wifi\WifiCodeBatch;
 use App\Models\Wifi\WifiNetwork;
 use App\Models\Wifi\WifiPlan;
+use App\Models\Wifi\WifiSale;
 use App\Services\Audit\AuditLogger;
 use App\Services\Wifi\WifiCodeBatchProcessor;
 use App\Services\Wifi\WifiOperationalService;
@@ -24,6 +25,8 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use Carbon\Carbon;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
 
 
@@ -175,7 +178,7 @@ class WifiCabinController extends Controller
         ]);
     }
 
-    public function show(WifiNetwork $network): View
+    public function show(Request $request, WifiNetwork $network): View
     {
         $network->load([
             'owner',
@@ -221,6 +224,8 @@ class WifiCabinController extends Controller
         }
 
         $statistics = $this->buildNetworkStatistics($network);
+        $financialFilters = $this->resolveFinancialFilters($request);
+        $financials = $this->buildFinancialSummary($network, $financialFilters['from'], $financialFilters['to']);
 
         return view('wifi.show', [
             'network' => $network,
@@ -228,7 +233,67 @@ class WifiCabinController extends Controller
             'media' => $media,
             'contacts' => $contacts,
             'commissionRate' => $commissionRate,
+            'financialFilters' => $financialFilters,
+            'financialTotals' => $financials['totals'],
+            'recentSales' => $financials['sales'],
         ]);
+    }
+
+    public function exportSalesReport(Request $request, WifiNetwork $network): StreamedResponse
+    {
+        $filters = $this->resolveFinancialFilters($request);
+        $filename = sprintf(
+            'wifi-sales-%s-%s-%s.csv',
+            $network->getKey(),
+            $filters['from']->format('Ymd'),
+            $filters['to']->format('Ymd')
+        );
+
+        $query = WifiSale::query()
+            ->with(['plan:id,name', 'user:id,name'])
+            ->where('wifi_network_id', $network->getKey())
+            ->whereBetween('paid_at', [$filters['from'], $filters['to']])
+            ->orderByDesc('paid_at');
+
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ];
+
+        $callback = static function () use ($query): void {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, [
+                'التاريخ',
+                'الخطة',
+                'المستخدم',
+                'المبلغ الإجمالي',
+                'العملة',
+                'نسبة العمولة',
+                'مبلغ العمولة',
+                'حصة المالك',
+                'مرجع الدفع',
+            ]);
+
+            $query->chunk(500, static function ($sales) use ($handle): void {
+                foreach ($sales as $sale) {
+                    fputcsv($handle, [
+                        optional($sale->paid_at ?? $sale->created_at)->format('Y-m-d H:i'),
+                        $sale->plan->name ?? '—',
+                        $sale->user->name ?? '—',
+                        number_format((float) $sale->amount_gross, 2, '.', ''),
+                        $sale->currency ?? '—',
+                        sprintf('%0.2f%%', (float) $sale->commission_rate * 100),
+                        number_format((float) $sale->commission_amount, 2, '.', ''),
+                        number_format((float) $sale->owner_share_amount, 2, '.', ''),
+                        $sale->payment_reference ?? '—',
+                    ]);
+                }
+            });
+
+            fclose($handle);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 
     public function store(Request $request): RedirectResponse
@@ -447,6 +512,67 @@ class WifiCabinController extends Controller
             $plan->meta = $updatedMeta;
             $plan->save();
         }
+    }
+
+    /**
+     * @return array{from: Carbon, to: Carbon}
+     */
+    private function resolveFinancialFilters(Request $request): array
+    {
+        $defaultTo = Carbon::now()->endOfDay();
+        $defaultFrom = Carbon::now()->subDays(30)->startOfDay();
+
+        $fromInput = $request->query('from');
+        $toInput = $request->query('to');
+
+        try {
+            $from = $fromInput ? Carbon::parse($fromInput)->startOfDay() : $defaultFrom;
+        } catch (\Exception) {
+            $from = $defaultFrom;
+        }
+
+        try {
+            $to = $toInput ? Carbon::parse($toInput)->endOfDay() : $defaultTo;
+        } catch (\Exception) {
+            $to = $defaultTo;
+        }
+
+        if ($to->lt($from)) {
+            $to = $from->copy()->endOfDay();
+        }
+
+        return [
+            'from' => $from,
+            'to' => $to,
+        ];
+    }
+
+    private function buildFinancialSummary(WifiNetwork $network, Carbon $from, Carbon $to): array
+    {
+        $baseQuery = WifiSale::query()
+            ->where('wifi_network_id', $network->getKey())
+            ->whereBetween('paid_at', [$from, $to]);
+
+        $totalsRow = (clone $baseQuery)
+            ->selectRaw('COALESCE(SUM(amount_gross), 0) as gross')
+            ->selectRaw('COALESCE(SUM(commission_amount), 0) as commission')
+            ->selectRaw('COALESCE(SUM(owner_share_amount), 0) as owner_share')
+            ->first();
+
+        $recentSales = (clone $baseQuery)
+            ->with(['plan:id,name', 'user:id,name'])
+            ->orderByDesc('paid_at')
+            ->limit(10)
+            ->get();
+
+        return [
+            'totals' => [
+                'gross' => (float) ($totalsRow->gross ?? 0),
+                'commission' => (float) ($totalsRow->commission ?? 0),
+                'owner_share' => (float) ($totalsRow->owner_share ?? 0),
+            ],
+            'sales' => $recentSales,
+        ];
     }
 
     private function buildNetworkStatistics(WifiNetwork $network): array

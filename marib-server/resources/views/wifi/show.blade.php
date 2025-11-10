@@ -58,6 +58,8 @@
         $commissionRate = isset($commissionRate)
             ? number_format($commissionRate * 100, 2) . '%'
             : '—';
+        $financialFrom = $financialFilters['from'];
+        $financialTo = $financialFilters['to'];
     @endphp
 
     <section class="section wifi-network-show">
@@ -188,6 +190,92 @@
                     </div>
                 </div>
 
+                <div class="card shadow-sm border-0 mb-3">
+                    <div class="card-header bg-white border-0">
+                        <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+                            <div>
+                                <h6 class="mb-0">{{ __('الملخص المالي') }}</h6>
+                                <small class="text-muted">{{ __('الفترة: من :from إلى :to', ['from' => $financialFrom->format('Y-m-d'), 'to' => $financialTo->format('Y-m-d')]) }}</small>
+                            </div>
+                            <div class="ms-auto">
+                                <form method="get" class="row g-2 align-items-end">
+                                    <div class="col">
+                                        <label class="form-label form-label-sm">{{ __('من') }}</label>
+                                        <input type="date" name="from" value="{{ $financialFrom->format('Y-m-d') }}" class="form-control form-control-sm">
+                                    </div>
+                                    <div class="col">
+                                        <label class="form-label form-label-sm">{{ __('إلى') }}</label>
+                                        <input type="date" name="to" value="{{ $financialTo->format('Y-m-d') }}" class="form-control form-control-sm">
+                                    </div>
+                                    <div class="col-auto d-flex gap-2">
+                                        <button type="submit" class="btn btn-primary btn-sm">{{ __('تحديث') }}</button>
+                                        <a href="{{ route('wifi.financials.export', ['network' => $network, 'from' => $financialFrom->format('Y-m-d'), 'to' => $financialTo->format('Y-m-d')]) }}" class="btn btn-outline-secondary btn-sm">
+                                            <i class="bi bi-download"></i>
+                                            {{ __('تحميل كشف') }}
+                                        </a>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <div class="wifi-stat-card shadow-sm">
+                                    <span class="text-muted">{{ __('إجمالي المبيعات') }}</span>
+                                    <strong>{{ number_format($financialTotals['gross'], 2) }}</strong>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="wifi-stat-card shadow-sm">
+                                    <span class="text-muted">{{ __('حصة المالك') }}</span>
+                                    <strong>{{ number_format($financialTotals['owner_share'], 2) }}</strong>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="wifi-stat-card shadow-sm">
+                                    <span class="text-muted">{{ __('إجمالي العمولة') }}</span>
+                                    <strong>{{ number_format($financialTotals['commission'], 2) }}</strong>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>{{ __('التاريخ') }}</th>
+                                        <th>{{ __('الخطة') }}</th>
+                                        <th>{{ __('المستخدم') }}</th>
+                                        <th>{{ __('المبلغ') }}</th>
+                                        <th>{{ __('عملة') }}</th>
+                                        <th>{{ __('عمولتنا') }}</th>
+                                        <th>{{ __('حصة المالك') }}</th>
+                                        <th>{{ __('المرجع') }}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($recentSales as $sale)
+                                        <tr>
+                                            <td>{{ optional($sale->paid_at ?? $sale->created_at)->format('Y-m-d H:i') ?? '—' }}</td>
+                                            <td>{{ $sale->plan->name ?? '—' }}</td>
+                                            <td>{{ $sale->user->name ?? '—' }}</td>
+                                            <td>{{ number_format($sale->amount_gross, 2) }}</td>
+                                            <td>{{ $sale->currency ?? '—' }}</td>
+                                            <td>{{ number_format($sale->commission_amount, 2) }}</td>
+                                            <td>{{ number_format($sale->owner_share_amount, 2) }}</td>
+                                            <td>{{ $sale->payment_reference ?? '—' }}</td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="8" class="text-center text-muted">{{ __('لا توجد عمليات بيع في الفترة المحددة.') }}</td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="card shadow-sm border-0">
                     <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
                         <h6 class="mb-0">{{ __('خطط الشبكة') }}</h6>
@@ -204,8 +292,13 @@
                                 <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
                                     <div>
                                         <h5 class="mb-1">{{ $plan->name }}</h5>
+                                        @php
+                                            $planStatusKey = $plan->status instanceof \App\Enums\Wifi\WifiPlanStatus
+                                                ? $plan->status->value
+                                                : $plan->status;
+                                        @endphp
                                         <span class="badge bg-light text-dark">
-                                            {{ $planStatusLabels[$plan->status] ?? $plan->status ?? '—' }}
+                                            {{ $planStatusLabels[$planStatusKey] ?? $planStatusKey ?? '—' }}
                                         </span>
                                     </div>
                                     <div class="text-md-end">
@@ -248,8 +341,13 @@
                                                 <tr>
                                                     <td>{{ $batch->label ?? '—' }}</td>
                                                     <td>
+                                            @php
+                                                $batchStatusKey = $batch->status instanceof \App\Enums\Wifi\WifiCodeBatchStatus
+                                                    ? $batch->status->value
+                                                    : $batch->status;
+                                            @endphp
                                                         <span class="badge bg-secondary-subtle text-dark">
-                                                            {{ $batchStatusLabels[$batch->status] ?? $batch->status ?? '—' }}
+                                                            {{ $batchStatusLabels[$batchStatusKey] ?? $batchStatusKey ?? '—' }}
                                                         </span>
                                                     </td>
                                                     <td>{{ number_format($batch->available_codes ?? 0) }} / {{ number_format($batch->total_codes ?? 0) }}</td>

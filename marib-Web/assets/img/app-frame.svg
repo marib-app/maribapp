@@ -1,0 +1,24 @@
+<svg width="360" height="720" viewBox="0 0 360 720" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="App preview frame">
+  <defs>
+    <linearGradient id="frameGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#F7F7F8"/>
+      <stop offset="100%" stop-color="#E2E3E7"/>
+    </linearGradient>
+    <linearGradient id="panelGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#EB5924"/>
+      <stop offset="100%" stop-color="#FA6E53"/>
+    </linearGradient>
+  </defs>
+  <rect x="10" y="10" width="340" height="700" rx="50" fill="url(#frameGradient)" stroke="#FFFFFF" stroke-width="4"/>
+  <rect x="40" y="70" width="280" height="580" rx="32" fill="#ffffff" stroke="#E2E3E7" stroke-width="2"/>
+  <rect x="120" y="40" width="120" height="12" rx="6" fill="#D6D7DB"/>
+  <circle cx="180" cy="680" r="20" fill="#D6D7DB"/>
+  <g opacity="0.85">
+    <rect x="70" y="110" width="220" height="120" rx="24" fill="url(#panelGradient)"/>
+    <rect x="70" y="250" width="220" height="70" rx="14" fill="#F4F5F7"/>
+    <rect x="70" y="330" width="220" height="70" rx="14" fill="#F4F5F7"/>
+    <rect x="70" y="410" width="220" height="70" rx="14" fill="#F4F5F7"/>
+    <rect x="70" y="510" width="140" height="40" rx="12" fill="#4FA5BA"/>
+    <rect x="220" y="510" width="70" height="40" rx="12" fill="#E2E3E7"/>
+  </g>
+</svg>

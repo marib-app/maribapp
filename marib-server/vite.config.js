@@ -13,6 +13,7 @@ export default defineConfig({
                 'resources/js/items/index.scss',
                 'resources/js/items/index.js',
                 'resources/js/wifi/index.scss',
+                'resources/js/wifi/show.scss',
                 'resources/js/wifi/index.js',
                 'resources/js/app.js',
             ],

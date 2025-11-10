@@ -911,5 +911,12 @@
     "eventsOffers": "فعاليات وعروض",
     "maribLost": "مفقودات مأرب",
     "maribGuide": "دليل مأرب",
-    "merchant_settings": "إعدادات المتجر"
+    "merchant_settings": "إعدادات المتجر",
+    "merchant_overview_stats": "إحصائيات المتجر",
+    "merchant_metric_revenue": "الإيراد",
+    "merchant_metric_orders": "الطلبات",
+    "merchant_metric_visits": "الزيارات",
+    "merchant_metric_product_views": "مشاهدات المنتجات",
+    "merchant_metric_add_to_cart": "الإضافات إلى السلة",
+    "merchant_metric_range": "الفترة"
 }

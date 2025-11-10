@@ -281,6 +281,9 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
         Route::get('/', [WifiCabinController::class, 'index'])->name('index');
         Route::get('/create', [WifiCabinController::class, 'create'])->name('create');
         Route::get('/networks/{network}', [WifiCabinController::class, 'show'])->name('show')->whereNumber('network');
+        Route::get('/networks/{network}/financials/export', [WifiCabinController::class, 'exportSalesReport'])
+            ->name('financials.export')
+            ->whereNumber('network');
         Route::post('/batches', [WifiCabinController::class, 'store'])->name('voucher-batches.store');
         Route::get('/{network}/edit', [WifiCabinController::class, 'edit'])->name('edit');
 

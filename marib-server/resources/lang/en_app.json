@@ -890,5 +890,12 @@
     "eventsOffers": "Events & offers",
     "maribLost": "Marib Lost & Found",
     "maribGuide": "Marib guide",
-    "merchant_settings": "Store settings"
+    "merchant_settings": "Store settings",
+    "merchant_overview_stats": "Store statistics",
+    "merchant_metric_revenue": "Revenue",
+    "merchant_metric_orders": "Orders",
+    "merchant_metric_visits": "Visits",
+    "merchant_metric_product_views": "Product views",
+    "merchant_metric_add_to_cart": "Add to cart",
+    "merchant_metric_range": "Range"
 }

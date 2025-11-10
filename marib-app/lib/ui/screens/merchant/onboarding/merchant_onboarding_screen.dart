@@ -430,6 +430,20 @@ class _MerchantOnboardingScreenState extends State<MerchantOnboardingScreen> {
 
   String _mapSubmissionError(Object error) {
     if (error is ApiHttpException) {
+      if (error.statusCode == 401) {
+        return 'انتهت جلسة الدخول الخاصة بك، يرجى إعادة تسجيل الدخول ثم المحاولة مرة أخرى.';
+      }
+      final dynamic errors = error.payload?['errors'];
+      if (errors is Map) {
+        for (final dynamic value in errors.values) {
+          if (value is List && value.isNotEmpty) {
+            final dynamic first = value.first;
+            if (first is String && first.trim().isNotEmpty) {
+              return first;
+            }
+          }
+        }
+      }
       final dynamic message = error.payload?['message'];
       if (message is String && message.trim().isNotEmpty) {
         return message;

@@ -54,6 +54,10 @@ class WalletTransfersCubit extends Cubit<WalletTransfersState> {
     return _repository.fetchTransferRecipient(recipientId: recipientId);
   }
 
+  Future<WalletRecipient> fetchRecipientByMobile(String mobile) {
+    return _repository.fetchTransferRecipientByMobile(mobile: mobile);
+  }
+
 
   void refresh() {
     emit(WalletTransfersInitial());

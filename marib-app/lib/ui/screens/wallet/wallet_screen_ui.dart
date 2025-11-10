@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:marib/data/cubits/wallet/manual_payment_requests_cubit.dart';
@@ -10,10 +11,10 @@ import 'package:marib/data/cubits/wallet/wallet_transfers_cubit.dart';
 import 'package:marib/data/cubits/wallet/wallet_withdrawals_cubit.dart';
 import 'package:marib/data/model/wallet/wallet_filter.dart';
 import 'package:marib/data/model/wallet/wallet_operation_options.dart';
+import 'package:marib/data/model/wallet/wallet_recipient.dart';
 import 'package:marib/data/model/wallet/wallet_summary.dart';
 import 'package:marib/data/model/wallet/wallet_transaction.dart';
 import 'package:marib/data/model/wallet/wallet_withdrawal.dart';
-import 'package:marib/ui/screens/wallet/wallet_transfer_sheet.dart';
 import 'package:marib/ui/screens/wallet/wallet_withdrawal_sheet.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/api.dart';
@@ -658,38 +659,36 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
   }
 
   Future<void> _showTransferSheet() async {
-    final summary = _activeSummary();
-    final options = _resolveTransferOptions(summary);
-    final transfersCubit = context.read<WalletTransfersCubit>();
-    final withdrawalsCubit = context.read<WalletWithdrawalsCubit>();
-
-    final WalletOperationOptions resolvedOptions;
-    final String? existingTag = options.clientTag?.trim();
-    if (existingTag == null || existingTag.isEmpty) {
-      resolvedOptions = options.copyWith(
-        clientTag: Api.generateIdempotencyKey(),
-      );
-    } else {
-      resolvedOptions = options;
+    if (!HiveUtils.isUserAuthenticated()) {
+      UiUtils.checkUser(onNotGuest: () {}, context: context);
+      return;
     }
 
-    final response = await showModalBottomSheet<Map<String, dynamic>>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => WalletTransferSheet(
-        options: resolvedOptions,
-        balance: _currentBalance(),
-        currency: _summaryCurrency(),
-      ),
-    );
+    final summary = _activeSummary();
+    final result = await _presentTransferBottomSheet(summary);
+    if (result == null || !mounted) {
+      return;
+    }
 
-    if (response != null && mounted) {
-      await Future.wait([
-        context.read<WalletSummaryCubit>().refresh(),
-        context.read<WalletTransactionsCubit>().refresh(),
-        withdrawalsCubit.refresh(),
-      ]);
-      transfersCubit.refresh();
+    final double amount = result['amount'] as double;
+    final String phone = result['phone'] as String;
+
+    await Future.wait([
+      context.read<WalletSummaryCubit>().refresh(),
+      context.read<WalletTransactionsCubit>().refresh(),
+    ]);
+    context.read<WalletTransfersCubit>().refresh();
+
+    final remainingBalance = _currentBalance();
+    HelperUtils.showSnackBarMessage(
+      context,
+      'تم خصم ${_formatAmount(amount, _summaryCurrency())} وإرساله إلى $phone',
+    );
+    if (remainingBalance != null) {
+      HelperUtils.showSnackBarMessage(
+        context,
+        'رصيدك المتبقي الآن ${_formatAmount(remainingBalance, _summaryCurrency())}',
+      );
     }
   }
 
@@ -887,6 +886,337 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
 
   Map<String, dynamic> _normalizeMap(Map<dynamic, dynamic> value) {
     return value.map((key, val) => MapEntry(key.toString(), val));
+  }
+
+  Future<Map<String, dynamic>?> _presentTransferBottomSheet(
+      WalletSummary? summary) async {
+    final options = _resolveTransferOptions(summary);
+    final double availableBalance = _currentBalance() ?? 0;
+
+    final amountController = TextEditingController();
+    final phoneController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    double enteredAmount = 0;
+    bool isSubmitting = false;
+
+    double? parseAmount(String? value) {
+      if (value == null) return null;
+      final normalized =
+          value.replaceAll(RegExp(r'[^0-9.,-]'), '').replaceAll(',', '.');
+      return double.tryParse(normalized);
+    }
+
+    return showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        final colors = context.color;
+        final theme = Theme.of(context);
+        final Color warningColor = theme.colorScheme.error;
+        final Color successColor = Colors.green;
+        return SafeArea(
+          child: StatefulBuilder(
+            builder: (context, setModalState) {
+              final double remainingBalance = availableBalance - enteredAmount;
+              final bool exceedsBalance = remainingBalance < 0;
+              final EdgeInsets viewInsets =
+                  MediaQuery.of(sheetContext).viewInsets;
+
+              return Container(
+                margin:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: EdgeInsets.only(
+                  left: 18,
+                  right: 18,
+                  top: 14,
+                  bottom: 18 + viewInsets.bottom,
+                ),
+                decoration: BoxDecoration(
+                  color: colors.secondaryColor,
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(28)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: colors.textDefaultColor.withOpacity(0.08),
+                      blurRadius: 24,
+                      offset: const Offset(0, -4),
+                    ),
+                  ],
+                ),
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 48,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: colors.borderColor.withOpacity(0.6),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text('الرصيد المتاح')
+                          .size(context.font.smaller)
+                          .color(colors.textLightColor),
+                      const SizedBox(height: 4),
+                      Text(
+                        _formatAmount(availableBalance, _summaryCurrency()),
+                      )
+                          .bold()
+                          .size(context.font.extraLarge)
+                          .color(colors.textDefaultColor),
+                      const SizedBox(height: 18),
+                      TextFormField(
+                        controller: amountController,
+                        keyboardType:
+                            const TextInputType.numberWithOptions(decimal: true),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+                        ],
+                        decoration: InputDecoration(
+                          labelText: 'المبلغ المراد تحويله',
+                          suffixText: _summaryCurrency(),
+                        ),
+                        onChanged: (value) {
+                          setModalState(() {
+                            enteredAmount = parseAmount(value) ?? 0;
+                          });
+                        },
+                        validator: (value) {
+                          final amount = parseAmount(value);
+                          if (amount == null || amount <= 0) {
+                            return 'يرجى إدخال مبلغ صالح';
+                          }
+                          if (options.minimumAmount != null &&
+                              amount < options.minimumAmount!) {
+                            return 'الحد الأدنى للتحويل هو ${options.minimumAmount}';
+                          }
+                          if (options.maximumAmount != null &&
+                              amount > options.maximumAmount!) {
+                            return 'الحد الأعلى للتحويل هو ${options.maximumAmount}';
+                          }
+                          if (amount > availableBalance) {
+                            return 'المبلغ يتجاوز الرصيد المتاح';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(
+                            exceedsBalance
+                                ? Icons.warning_amber_rounded
+                                : Icons.check_circle,
+                            color:
+                                exceedsBalance ? warningColor : successColor,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                              child: Text(
+                                exceedsBalance
+                                    ? 'المبلغ يتجاوز الرصيد المتاح'
+                                    : 'الرصيد بعد التحويل: ${_formatAmount(remainingBalance, _summaryCurrency())}',
+                              )
+                                  .size(context.font.smaller)
+                                  .color(exceedsBalance
+                                      ? warningColor
+                                      : colors.textLightColor),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+                      TextFormField(
+                        controller: phoneController,
+                        keyboardType: TextInputType.phone,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(
+                            RegExp(r'[0-9+ ]'),
+                          ),
+                        ],
+                        decoration: const InputDecoration(
+                          labelText: 'رقم هاتف المستفيد',
+                          hintText: '77XXXXXXX',
+                        ),
+                        validator: (value) {
+                          final trimmed = value
+                                  ?.replaceAll(RegExp(r'[^0-9+]'), '')
+                                  .trim() ??
+                              '';
+                          if (trimmed.isEmpty) {
+                            return 'يرجى إدخال رقم الهاتف';
+                          }
+                          if (trimmed.length < 6) {
+                            return 'رقم الهاتف غير مكتمل';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'سنتحقق من صحة الرقم قبل تنفيذ التحويل.',
+                      )
+                          .size(context.font.smaller)
+                          .color(colors.textLightColor),
+                      const SizedBox(height: 20),
+                      UiUtils.buildButton(
+                        context,
+                        onPressed: () async {
+                          if (isSubmitting) {
+                            return;
+                          }
+                          FocusScope.of(sheetContext).unfocus();
+                          if (!formKey.currentState!.validate()) {
+                            return;
+                          }
+                          final double amount =
+                              parseAmount(amountController.text.trim()) ?? 0;
+                          final String phone = phoneController.text.trim();
+                          final String normalizedPhone =
+                              phone.replaceAll(RegExp(r'[^0-9+]'), '');
+
+                          setModalState(() {
+                            isSubmitting = true;
+                          });
+
+                          WalletRecipient recipient;
+                          try {
+                            recipient = await context
+                                .read<WalletTransfersCubit>()
+                                .fetchRecipientByMobile(normalizedPhone);
+                          } catch (error) {
+                            if (!mounted) return;
+                            HelperUtils.showSnackBarMessage(
+                              context,
+                              error.toString(),
+                            );
+                            setModalState(() {
+                              isSubmitting = false;
+                            });
+                            return;
+                          }
+
+                          final bool confirmed =
+                              await _showTransferConfirmationDialog(
+                            amount: amount,
+                            phone: phone,
+                          );
+
+                          if (!confirmed) {
+                            if (!mounted) return;
+                            setModalState(() {
+                              isSubmitting = false;
+                            });
+                            return;
+                          }
+
+                          final payload = <String, dynamic>{
+                            'recipient_id': recipient.id,
+                            'amount': amount,
+                            'client_tag': Api.generateIdempotencyKey(),
+                            'recipient_mobile': normalizedPhone,
+                          };
+
+                          try {
+                            final cubit = context.read<WalletTransfersCubit>();
+                            final response =
+                                await cubit.submitTransfer(payload);
+                            if (!mounted) return;
+                            Navigator.of(sheetContext).pop(
+                              {
+                                'amount': amount,
+                                'phone': phone,
+                                'response': response,
+                              },
+                            );
+                            final message = response['message']?.toString() ??
+                                'تم إرسال التحويل بنجاح';
+                            HelperUtils.showSnackBarMessage(
+                              context,
+                              message,
+                            );
+                          } catch (error) {
+                            if (!mounted) return;
+                            HelperUtils.showSnackBarMessage(
+                              context,
+                              error.toString(),
+                            );
+                            setModalState(() {
+                              isSubmitting = false;
+                            });
+                          }
+                        },
+                        buttonTitle: 'تحويل',
+                        titleWhenProgress: 'جاري التحويل...',
+                        isInProgress: isSubmitting,
+                        showProgressTitle: true,
+                        height: 48,
+                        radius: 12,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Future<bool> _showTransferConfirmationDialog({
+    required double amount,
+    required String phone,
+  }) async {
+    final String formattedAmount = _formatAmount(amount, _summaryCurrency());
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(
+            'تأكيد التحويل',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'هل أنت متأكد من تحويل $formattedAmount إلى مالك الرقم "$phone"؟',
+              )
+                  .size(context.font.normal)
+                  .color(context.color.textDefaultColor),
+              const SizedBox(height: 8),
+              Text('لا يمكن التراجع عن هذه العملية بعد تأكيدها.')
+                  .size(context.font.smaller)
+                  .color(context.color.textLightColor),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('إلغاء'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('تأكيد التحويل'),
+            ),
+          ],
+        );
+      },
+    );
+
+    return confirmed ?? false;
   }
 }
 

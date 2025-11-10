@@ -181,6 +181,7 @@ Route::group(['middleware' => ['auth:sanctum']], static function () {
 
 
     Route::post('wallet/transfers', [ApiController::class, 'transferRequest']);
+    Route::get('wallet/recipients/lookup', [ApiController::class, 'walletRecipientLookup']);
     Route::get('wallet/recipients/{recipient}', [ApiController::class, 'walletRecipient'])
         ->whereNumber('recipient');
     Route::get('store-gateways', [StoreGatewayController::class, 'index']);

@@ -4121,6 +4121,48 @@ class ApiController extends Controller {
         }
     }
 
+    public function walletRecipientLookup(Request $request): void
+    {
+        try {
+            $mobileInput = trim((string) $request->get('mobile', ''));
+            $normalizedMobile = preg_replace('/\D+/', '', $mobileInput);
+
+            if ($normalizedMobile === '') {
+                ResponseService::validationError(__('Please provide a valid mobile number.'));
+            }
+
+            $recipient = User::query()
+                ->where(function (Builder $query) use ($mobileInput, $normalizedMobile) {
+                    $query->where('mobile', $mobileInput)
+                        ->orWhere('mobile', $normalizedMobile)
+                        ->orWhere('mobile', 'like', "{$mobileInput}%")
+                        ->orWhere('mobile', 'like', "%{$mobileInput}")
+                        ->orWhere('mobile', 'like', "%{$normalizedMobile}");
+                })
+                ->first();
+
+            if (!$recipient) {
+                ResponseService::validationError(__('No matching wallet account was found for this mobile number.'));
+            }
+
+            $user = Auth::user();
+            if ($user && $user->id === $recipient->id) {
+                ResponseService::validationError(__('Cannot transfer funds to the same account.'));
+            }
+
+            $maskedMobile = $this->maskMobileNumber($recipient->mobile);
+
+            ResponseService::successResponse('Wallet recipient fetched successfully', [
+                'id' => $recipient->id,
+                'name' => $recipient->name,
+                'mobile' => $maskedMobile,
+            ]);
+        } catch (Throwable $throwable) {
+            ResponseService::logErrorResponse($throwable, 'API Controller -> walletRecipientLookup');
+            ResponseService::errorResponse('Failed to lookup wallet recipient');
+        }
+    }
+
 
 
 

@@ -146,7 +146,28 @@ class WalletOperationsRepository {
     required int recipientId,
   }) async {
     final response = await Api.get(
-      url: '${Api.walletRecipientLookupApi}/$recipientId',
+      url: '${Api.walletRecipientsApi}/$recipientId',
+    );
+
+    final dynamic data = response['data'] ?? response['recipient'];
+    if (data is Map<String, dynamic>) {
+      return WalletRecipient.fromMap(data);
+    }
+    if (data is Map) {
+      return WalletRecipient.fromMap(
+        data.map((key, value) => MapEntry(key.toString(), value)),
+      );
+    }
+
+    throw ApiException('تعذر العثور على بيانات المستلم');
+  }
+
+  Future<WalletRecipient> fetchTransferRecipientByMobile({
+    required String mobile,
+  }) async {
+    final response = await Api.get(
+      url: Api.walletRecipientLookupApi,
+      queryParameters: {'mobile': mobile},
     );
 
     final dynamic data = response['data'] ?? response['recipient'];

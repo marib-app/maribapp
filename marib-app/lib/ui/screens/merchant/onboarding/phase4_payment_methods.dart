@@ -147,7 +147,8 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
         _existingManualAccounts
           ..clear()
           ..addAll(aggregated);
-        _manualError = aggregated.isEmpty ? failure?.toString() : null;
+        _manualError =
+            aggregated.isEmpty ? _resolveErrorMessage(failure) : null;
         _manualLoading = false;
       });
     }
@@ -815,7 +816,9 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
                   OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
             inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9\\- ]')),
+              FilteringTextInputFormatter.allow(
+                RegExp(r'[A-Za-z0-9 ._\-]'),
+              ),
             ],
           ),
           const SizedBox(height: 20),
@@ -959,4 +962,24 @@ class _InformativeCard extends StatelessWidget {
       ),
     );
   }
+}
+
+String? _resolveErrorMessage(Object? error) {
+  if (error == null) {
+    return null;
+  }
+  if (error is ApiHttpException) {
+    if (error.statusCode == 401) {
+      return 'انتهت صلاحية الجلسة، يرجى تسجيل الدخول ثم المحاولة مجدداً.';
+    }
+    final dynamic message = error.payload?['message'];
+    if (message is String && message.trim().isNotEmpty) {
+      return message.trim();
+    }
+    return error.errorMessage?.toString();
+  }
+  if (error is ApiException) {
+    return error.errorMessage?.toString();
+  }
+  return error.toString();
 }

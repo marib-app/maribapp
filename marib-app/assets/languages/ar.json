@@ -1,4 +1,8 @@
 {
+  "report": "الإبلاغ",
+  "reportThisService": "أبلغ عن هذه الخدمة",
+  "rating": "التقييم",
+  "views": "المشاهدات",
   "notifications.currency.created.title": "تمت إضافة عملة جديدة",
   "notifications.currency.created.body": "عملة جديدة (:currency) أصبحت متاحة الآن.",
   "notifications.currency.created.default_governorate": "المحافظة الافتراضية: :governorate.",
@@ -78,5 +82,7 @@
   "مميز": "مميز",
   "هذه الباقة مجانية حالياً": "هذه الباقة مجانية حالياً",
   "يتطلب تسجيل الدخول لإتمام الشراء": "يتطلب تسجيل الدخول لإتمام الشراء",
-  "يرجى الانتظار ..": "يرجى الانتظار .."
+  "يرجى الانتظار ..": "يرجى الانتظار ..",
+  "serviceIdUnavailable": "لا يوجد معرّف خدمة صالح.",
+  "serviceSelectionFailed": "تعذّر تحديد الخدمة لعرض التقييمات."
 }

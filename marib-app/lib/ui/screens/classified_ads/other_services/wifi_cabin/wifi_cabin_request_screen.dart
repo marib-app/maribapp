@@ -30,7 +30,6 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
   final GlobalKey<FormState> _plansFormKey = GlobalKey<FormState>();
 
   final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _slugController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
 
@@ -47,24 +46,15 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
 
   bool _isSubmitting = false;
   int _currentStep = 0;
-  bool _slugManuallyEdited = false;
-  bool _isUpdatingSlug = false;
 
   @override
   void initState() {
     super.initState();
-    _nameController.addListener(_handleNameChanged);
-    _slugController.addListener(_handleSlugEdited);
   }
 
   @override
   void dispose() {
-    _nameController
-      ..removeListener(_handleNameChanged)
-      ..dispose();
-    _slugController
-      ..removeListener(_handleSlugEdited)
-      ..dispose();
+    _nameController..dispose();
     _descriptionController.dispose();
     _notesController.dispose();
     for (final _ContactFieldData contact in _contactFields) {
@@ -74,102 +64,6 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
       plan.dispose();
     }
     super.dispose();
-  }
-
-  void _handleNameChanged() {
-    if (_slugManuallyEdited) {
-      return;
-    }
-    _isUpdatingSlug = true;
-    final String slug = _generateSlug(_nameController.text);
-    _slugController.text = slug;
-    _slugController.selection = TextSelection.fromPosition(
-      TextPosition(offset: slug.length),
-    );
-    _isUpdatingSlug = false;
-  }
-
-  void _handleSlugEdited() {
-    if (_isUpdatingSlug) {
-      return;
-    }
-    _slugManuallyEdited = true;
-  }
-
-  String _generateSlug(String value) {
-    final String trimmed = value.trim().toLowerCase();
-    if (trimmed.isEmpty) {
-      return '';
-    }
-    final String transliterated = _transliterate(trimmed);
-    final String sanitized = transliterated
-        .replaceAll(RegExp(r'[^a-z0-9\s-]'), '')
-        .replaceAll(RegExp(r'\s+'), '-')
-        .replaceAll(RegExp('-+'), '-')
-        .trim();
-    if (sanitized.isNotEmpty) {
-      return sanitized;
-    }
-    final int timestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    return 'network-$timestamp';
-  }
-
-  String _transliterate(String input) {
-    const Map<String, String> replacements = {
-      'أ': 'a',
-      'إ': 'i',
-      'آ': 'a',
-      'ا': 'a',
-      'ب': 'b',
-      'ت': 't',
-      'ث': 'th',
-      'ج': 'j',
-      'ح': 'h',
-      'خ': 'kh',
-      'د': 'd',
-      'ذ': 'th',
-      'ر': 'r',
-      'ز': 'z',
-      'س': 's',
-      'ش': 'sh',
-      'ص': 's',
-      'ض': 'd',
-      'ط': 't',
-      'ظ': 'th',
-      'ع': 'a',
-      'غ': 'gh',
-      'ف': 'f',
-      'ق': 'q',
-      'ك': 'k',
-      'ل': 'l',
-      'م': 'm',
-      'ن': 'n',
-      'ه': 'h',
-      'و': 'w',
-      'ي': 'y',
-      'ى': 'a',
-      'ئ': 'y',
-      'ؤ': 'w',
-      'ة': 'h',
-      'ء': '',
-      '٠': '0',
-      '١': '1',
-      '٢': '2',
-      '٣': '3',
-      '٤': '4',
-      '٥': '5',
-      '٦': '6',
-      '٧': '7',
-      '٨': '8',
-      '٩': '9',
-    };
-
-    final StringBuffer buffer = StringBuffer();
-    for (int i = 0; i < input.length; i++) {
-      final String char = input[i];
-      buffer.write(replacements[char] ?? char);
-    }
-    return buffer.toString();
   }
 
   void _switchStep(int target) {
@@ -394,7 +288,6 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
 
       final WifiNetwork network = await _repository.submitOwnerNetworkRequest(
         name: _nameController.text.trim(),
-        slug: _slugController.text.trim(),
         description: _descriptionController.text.trim().isEmpty
             ? null
             : _descriptionController.text.trim(),
@@ -539,13 +432,6 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
     });
   }
 
-  void _regenerateSlug() {
-    setState(() {
-      _slugManuallyEdited = false;
-      _handleNameChanged();
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -636,195 +522,167 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _SectionCard(
-            icon: Icons.wifi_tethering_rounded,
-            title: 'تعريف الشبكة',
-            subtitle:
-                'املأ الحقول التالية كما تظهر للمستخدمين داخل التطبيق ولوحة wifi Cabin.',
-            child: Column(
-              children: [
-                TextFormField(
-                  controller: _nameController,
-                  textInputAction: TextInputAction.next,
-                  decoration: _wifiInputDecoration(
-                    context,
-                    'اسم الشبكة',
-                    hint: 'مثال: شبكة النور',
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'يرجى إدخال اسم الشبكة';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _slugController,
-                  textDirection: TextDirection.ltr,
-                  decoration: _wifiInputDecoration(
-                    context,
-                    'معرّف الشبكة (Slug)',
-                    hint: 'alnoor-network',
-                    helper:
-                        'يظهر في الروابط داخل اللوحة ويمكنك تعديله متى شئت.',
-                    suffixIcon: IconButton(
-                      onPressed: _regenerateSlug,
-                      tooltip: 'توليد تلقائي من الاسم',
-                      icon: const Icon(Icons.refresh_rounded),
-                    ),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'يرجى إدخال معرف صالح';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                _FilePickerTile(
-                  title: 'شعار الشبكة',
-                  description: 'يظهر داخل التطبيق واللوحة.',
-                  fileName:
-                      _logoFile != null ? p.basename(_logoFile!.path) : null,
-                  onPick: _pickLogo,
-                ),
-                const SizedBox(height: 12),
-                _FilePickerTile(
-                  title: 'صورة شاشة تسجيل الدخول',
-                  description:
-                      'تساعد فريق المراجعة على مطابقة البيانات والتأكد من الهوية.',
-                  fileName: _loginScreenshotFile != null
-                      ? p.basename(_loginScreenshotFile!.path)
-                      : null,
-                  onPick: _pickLoginScreenshot,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _descriptionController,
-                  minLines: 3,
-                  maxLines: 4,
-                  decoration: _wifiInputDecoration(
-                    context,
-                    'وصف الشبكة (اختياري)',
-                    hint: 'نبذة قصيرة عن التغطية، نوع العميل، أو مزايا الشبكة.',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _notesController,
-                  minLines: 2,
-                  maxLines: 4,
-                  decoration: _wifiInputDecoration(
-                    context,
-                    'ملاحظات إضافية لفريق Marib (اختياري)',
-                  ),
-                ),
-              ],
+          Text(
+            'بيانات الشبكة',
+            style: textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: 18),
-          _SectionCard(
-            icon: Icons.support_agent_rounded,
-            title: 'قنوات التواصل',
-            subtitle:
-                'أضف أرقام الهاتف أو واتساب التي ينبغي التواصل معها أثناء المراجعة والتشغيل.',
-            child: Column(
-              children: [
-                ..._contactFields.asMap().entries.map((entry) {
-                  final int index = entry.key;
-                  final _ContactFieldData contact = entry.value;
-                  final bool canRemove = _contactFields.length > 1;
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(18),
-                      color: colors.secondaryColor,
-                      border:
-                          Border.all(color: colors.borderColor.withOpacity(.3)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Text(
-                              'قناة تواصل ${index + 1}',
-                              style: textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const Spacer(),
-                            if (canRemove)
-                              IconButton(
-                                tooltip: 'إزالة هذه القناة',
-                                onPressed: () => _removeContactField(index),
-                                icon: Icon(
-                                  Icons.close_rounded,
-                                  color: colors.error,
-                                ),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        DropdownButtonFormField<ContactType>(
-                          value: contact.type,
-                          decoration: _wifiInputDecoration(
-                            context,
-                            'النوع',
-                          ),
-                          items: ContactType.values
-                              .map(
-                                (type) => DropdownMenuItem<ContactType>(
-                                  value: type,
-                                  child: Text(type.label),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: (value) {
-                            if (value != null) {
-                              setState(() => contact.type = value);
-                            }
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: contact.controller,
-                          decoration: _wifiInputDecoration(
-                            context,
-                            'رقم الهاتف / واتساب',
-                            hint: '7xxxxxxxx',
-                          ),
-                          keyboardType: TextInputType.phone,
-                        ),
-                      ],
-                    ),
-                  );
-                }),
-                Align(
-                  alignment: AlignmentDirectional.centerStart,
-                  child: OutlinedButton.icon(
-                    onPressed: _addContactField,
-                    icon: const Icon(Icons.add_rounded),
-                    label: const Text('إضافة قناة جديدة'),
-                  ),
-                ),
-              ],
+          const SizedBox(height: 8),
+          Text(
+            'املأ التفاصيل كما سترغب في ظهورها للمستخدمين داخل التطبيق ولوحة الواي فاي.',
+            style: textTheme.bodyMedium?.copyWith(
+              color: colors.textLightColor,
             ),
           ),
-          const SizedBox(height: 18),
-          _SectionCard(
-            icon: Icons.info_rounded,
-            title: 'تلميح سريع',
-            subtitle:
-                'سيتم مراجعة الطلب خلال 24 ساعة عمل وسيتم التواصل معك عبر القنوات المضافة.',
-            child: Text(
-              'احرص على أن تكون الملفات واضحة وحديثة وأن تحتوي حقول التواصل على أرقام نشطة لإتمام الربط بسرعة.',
-              style: textTheme.bodyMedium?.copyWith(
-                color: colors.textLightColor,
-                height: 1.5,
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _nameController,
+            textInputAction: TextInputAction.next,
+            decoration: _wifiInputDecoration(
+              context,
+              'اسم الشبكة',
+              hint: 'مثال: شبكة النور',
+            ),
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'يرجى إدخال اسم الشبكة';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _descriptionController,
+            minLines: 3,
+            maxLines: 4,
+            decoration: _wifiInputDecoration(
+              context,
+              'وصف الشبكة (اختياري)',
+              hint: 'نبذة عن التغطية، نوع العملاء أو المزايا.',
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _notesController,
+            minLines: 2,
+            maxLines: 4,
+            decoration: _wifiInputDecoration(
+              context,
+              'ملاحظات داخلية لفريق Marib (اختياري)',
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'الملفات المطلوبة',
+            style: textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          _FilePickerTile(
+            title: 'شعار الشبكة',
+            description: 'يظهر داخل التطبيق واللوحة.',
+            fileName: _logoFile != null ? p.basename(_logoFile!.path) : null,
+            onPick: _pickLogo,
+          ),
+          const SizedBox(height: 12),
+          _FilePickerTile(
+            title: 'صورة شاشة تسجيل الدخول',
+            description: 'تساعد فريق المراجعة على مطابقة بيانات الشبكة.',
+            fileName: _loginScreenshotFile != null
+                ? p.basename(_loginScreenshotFile!.path)
+                : null,
+            onPick: _pickLoginScreenshot,
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'قنوات التواصل',
+            style: textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'أضف أرقام الهاتف أو واتساب التي ينبغي التواصل معها أثناء المراجعة والتشغيل.',
+            style: textTheme.bodyMedium?.copyWith(
+              color: colors.textLightColor,
+            ),
+          ),
+          const SizedBox(height: 12),
+          ..._contactFields.asMap().entries.map((entry) {
+            final int index = entry.key;
+            final _ContactFieldData contact = entry.value;
+            final bool canRemove = _contactFields.length > 1;
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: index == _contactFields.length - 1 ? 0 : 16,
               ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        'قناة تواصل ${index + 1}',
+                        style: textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const Spacer(),
+                      if (canRemove)
+                        IconButton(
+                          onPressed: () => _removeContactField(index),
+                          icon: Icon(Icons.close_rounded, color: colors.error),
+                          tooltip: 'إزالة هذه القناة',
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<ContactType>(
+                    value: contact.type,
+                    decoration: _wifiInputDecoration(context, 'النوع'),
+                    items: ContactType.values
+                        .map(
+                          (type) => DropdownMenuItem<ContactType>(
+                            value: type,
+                            child: Text(type.label),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() => contact.type = value);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: contact.controller,
+                    decoration: _wifiInputDecoration(
+                      context,
+                      'رقم الهاتف / واتساب',
+                      hint: '7xxxxxxxx',
+                    ),
+                    keyboardType: TextInputType.phone,
+                  ),
+                ],
+              ),
+            );
+          }),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: TextButton.icon(
+              onPressed: _addContactField,
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('إضافة قناة جديدة'),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'ملاحظة: تأكد أن القنوات المضافة نشطة حتى يتم قبول الطلب بسرعة.',
+            style: textTheme.bodySmall?.copyWith(
+              color: colors.textLightColor,
             ),
           ),
         ],
@@ -841,40 +699,28 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _SectionCard(
-            icon: Icons.layers_rounded,
-            title: 'فئات الأكواد',
-            subtitle:
-                'أضف كل فئة مع سعرها وسعتها ثم أرفق ملف الأكواد المخصص لها.',
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'يمكنك إنشاء عدة فئات (يومي، أسبوعي، شهري...) وسيتم مراجعتها وترتيبها تلقائياً.',
-                  style: textTheme.bodyMedium?.copyWith(
-                    color: colors.textLightColor,
-                    height: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'يجب أن تكون الملفات بصيغة CSV أو XLSX وتحتوي على الأكواد الخاصة بالفئة فقط.',
-                  style: textTheme.bodySmall?.copyWith(
-                    color: colors.textLightColor,
-                  ),
-                ),
-              ],
+          Text(
+            'فئات الأكواد',
+            style: textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 8),
+          Text(
+            'أضف كل فئة مع سعرها وسعتها ثم أرفق ملف الأكواد الخاص بها.',
+            style: textTheme.bodyMedium?.copyWith(
+              color: colors.textLightColor,
+            ),
+          ),
+          const SizedBox(height: 16),
           ..._plans.asMap().entries.map((entry) {
             final int index = entry.key;
-            final _PlanFormData data = entry.value;
+            final _PlanFormData plan = entry.value;
             return _PlanCard(
-              plan: data,
+              plan: plan,
               index: index,
-              onPickFile: () => _pickVoucherFile(data),
-              onRemove: _plans.length == 1 ? null : () => _removePlan(index),
+              onPickFile: () => _pickVoucherFile(plan),
+              onRemove: _plans.length > 1 ? () => _removePlan(index) : null,
             );
           }),
           Align(
@@ -885,32 +731,11 @@ class _WifiCabinRequestScreenState extends State<WifiCabinRequestScreen> {
               label: const Text('إضافة فئة جديدة'),
             ),
           ),
-          const SizedBox(height: 16),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
-              color: colors.secondaryColor,
-              border: Border.all(color: colors.borderColor.withOpacity(.3)),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Icons.lightbulb_rounded,
-                    color: colors.territoryColor.withOpacity(.9)),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'في حال اختلاف السعر أو مدة الصلاحية، قم بإنشاء فئة مستقلة. '
-                    'يساعد ذلك المستخدمين على اختيار الخطة المناسبة بسهولة.',
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: colors.textLightColor,
-                      height: 1.5,
-                    ),
-                  ),
-                ),
-              ],
+          const SizedBox(height: 12),
+          Text(
+            'إذا اختلف السعر أو مدة الصلاحية فقم بإنشاء فئة مستقلة لضمان وضوح الخيارات.',
+            style: textTheme.bodySmall?.copyWith(
+              color: colors.textLightColor,
             ),
           ),
         ],
@@ -1026,87 +851,6 @@ class _StepHeader extends StatelessWidget {
   }
 }
 
-class _SectionCard extends StatelessWidget {
-  const _SectionCard({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.child,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.color;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        color: colors.secondaryColor,
-        border: Border.all(color: colors.borderColor.withOpacity(.35)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(.02),
-            blurRadius: 20,
-            offset: const Offset(0, 12),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                height: 46,
-                width: 46,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: colors.territoryColor.withOpacity(.12),
-                ),
-                child: Icon(icon, color: colors.territoryColor),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: colors.textDefaultColor,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: colors.textLightColor,
-                        height: 1.4,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          child,
-        ],
-      ),
-    );
-  }
-}
-
 class _PlanCard extends StatelessWidget {
   const _PlanCard({
     required this.plan,
@@ -1125,194 +869,177 @@ class _PlanCard extends StatelessWidget {
     final colors = context.color;
     final textTheme = Theme.of(context).textTheme;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22),
-        color: colors.secondaryColor,
-        border: Border.all(color: colors.borderColor.withOpacity(.35)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(40),
-                  color: colors.territoryColor.withOpacity(.12),
-                ),
-                child: Text(
-                  'فئة ${index + 1}',
-                  style: textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: colors.territoryColor,
-                  ),
-                ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (index != 0) const Divider(height: 32),
+        Row(
+          children: [
+            Text(
+              'فئة ${index + 1}',
+              style: textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
               ),
-              const Spacer(),
-              if (onRemove != null)
-                IconButton(
-                  onPressed: onRemove,
-                  tooltip: 'حذف الفئة',
-                  icon: Icon(Icons.delete_outline, color: colors.error),
+            ),
+            const Spacer(),
+            if (onRemove != null)
+              IconButton(
+                onPressed: onRemove,
+                tooltip: 'حذف الفئة',
+                icon: Icon(Icons.delete_outline, color: colors.error),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: plan.nameController,
+          decoration: _wifiInputDecoration(
+            context,
+            'اسم الفئة',
+            hint: 'مثال: باقة يومية أو باقة 5 جيجا',
+          ),
+          validator: (value) {
+            if (value == null || value.trim().isEmpty) {
+              return 'أدخل اسم الفئة';
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: plan.priceController,
+          decoration: _wifiInputDecoration(
+            context,
+            'السعر',
+            hint: 'بالريال اليمني',
+          ),
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          validator: (value) {
+            final num? parsed = num.tryParse(value ?? '');
+            if (parsed == null || parsed <= 0) {
+              return 'أدخل سعرًا صالحًا';
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: plan.durationController,
+                decoration: _wifiInputDecoration(
+                  context,
+                  'مدة الصلاحية (أيام)',
                 ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          TextFormField(
-            controller: plan.nameController,
-            decoration: _wifiInputDecoration(
-              context,
-              'اسم الفئة',
-              hint: 'مثال: باقة يومية أو باقة 5 جيجا',
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  final int? parsed = int.tryParse(value ?? '');
+                  if (parsed == null || parsed <= 0) {
+                    return 'أدخل عدد الأيام';
+                  }
+                  return null;
+                },
+              ),
             ),
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'أدخل اسم الفئة';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: plan.priceController,
-            decoration: _wifiInputDecoration(
-              context,
-              'السعر',
-              hint: 'بالريال اليمني',
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextFormField(
+                controller: plan.speedController,
+                decoration: _wifiInputDecoration(
+                  context,
+                  'السرعة (Mbps) - اختياري',
+                ),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+              ),
             ),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            validator: (value) {
-              final num? parsed = num.tryParse(value ?? '');
-              if (parsed == null || parsed <= 0) {
-                return 'أدخل سعرًا صالحًا';
-              }
-              return null;
-            },
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: plan.dataController,
+                decoration: _wifiInputDecoration(
+                  context,
+                  'سعة البيانات',
+                ),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: DropdownButtonFormField<_DataUnit>(
+                value: plan.dataUnit,
+                decoration: _wifiInputDecoration(context, 'الوحدة'),
+                onChanged: (value) {
+                  if (value != null) {
+                    plan.dataUnit = value;
+                  }
+                },
+                items: _DataUnit.values
+                    .map(
+                      (unit) => DropdownMenuItem<_DataUnit>(
+                        value: unit,
+                        child: Text(unit.label),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: plan.descriptionController,
+          minLines: 2,
+          maxLines: 3,
+          decoration: _wifiInputDecoration(
+            context,
+            'وصف الفئة (اختياري)',
+            hint: 'اكتب تفاصيل إضافية تساعد المستخدم على اختيار الخطة.',
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  controller: plan.durationController,
-                  decoration: _wifiInputDecoration(
-                    context,
-                    'مدة الصلاحية (أيام)',
-                  ),
-                  keyboardType: TextInputType.number,
-                  validator: (value) {
-                    final int? parsed = int.tryParse(value ?? '');
-                    if (parsed == null || parsed <= 0) {
-                      return 'أدخل عدد الأيام';
-                    }
-                    return null;
+        ),
+        const SizedBox(height: 12),
+        FormField<PlatformFile?>(
+          validator: (_) {
+            if (plan.voucherFile == null) {
+              return 'يرجى رفع ملف الأكواد';
+            }
+            return null;
+          },
+          builder: (state) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _FilePickerTile(
+                  title: 'ملف الأكواد',
+                  description: 'CSV أو XLSX يحتوي على الأكواد لهذه الفئة.',
+                  fileName: plan.voucherFile?.name,
+                  onPick: () async {
+                    await Future<void>.sync(onPickFile);
+                    state.didChange(plan.voucherFile);
                   },
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextFormField(
-                  controller: plan.speedController,
-                  decoration: _wifiInputDecoration(
-                    context,
-                    'السرعة (Mbps) - اختياري',
-                  ),
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  controller: plan.dataController,
-                  decoration: _wifiInputDecoration(
-                    context,
-                    'سعة البيانات',
-                  ),
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: DropdownButtonFormField<_DataUnit>(
-                  value: plan.dataUnit,
-                  decoration: _wifiInputDecoration(context, 'الوحدة'),
-                  onChanged: (value) {
-                    if (value != null) {
-                      plan.dataUnit = value;
-                    }
-                  },
-                  items: _DataUnit.values
-                      .map(
-                        (unit) => DropdownMenuItem<_DataUnit>(
-                          value: unit,
-                          child: Text(unit.label),
-                        ),
-                      )
-                      .toList(),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: plan.descriptionController,
-            minLines: 2,
-            maxLines: 3,
-            decoration: _wifiInputDecoration(
-              context,
-              'وصف الفئة (اختياري)',
-              hint: 'اكتب تفاصيل إضافية تساعد المستخدم على اختيار الخطة.',
-            ),
-          ),
-          const SizedBox(height: 12),
-          FormField<PlatformFile?>(
-            validator: (_) {
-              if (plan.voucherFile == null) {
-                return 'يرجى رفع ملف الأكواد';
-              }
-              return null;
-            },
-            builder: (state) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _FilePickerTile(
-                    title: 'ملف الأكواد',
-                    description: 'CSV أو XLSX يحتوي على الأكواد لهذه الفئة.',
-                    fileName: plan.voucherFile?.name,
-                    onPick: () async {
-                      await Future<void>.sync(onPickFile);
-                      state.didChange(plan.voucherFile);
-                    },
-                  ),
-                  if (state.hasError)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        state.errorText!,
-                        style: TextStyle(
-                          color: colors.error,
-                          fontSize: 12,
-                        ),
+                if (state.hasError)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      state.errorText!,
+                      style: TextStyle(
+                        color: colors.error,
+                        fontSize: 12,
                       ),
                     ),
-                ],
-              );
-            },
-          ),
-        ],
-      ),
+                  ),
+              ],
+            );
+          },
+        ),
+      ],
     );
   }
 }
@@ -1422,63 +1149,38 @@ class _FilePickerTile extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final bool hasFile = fileName != null && fileName!.isNotEmpty;
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        color: colors.secondaryColor,
-        border: Border.all(color: colors.borderColor.withOpacity(.35)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            height: 52,
-            width: 52,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: colors.territoryColor.withOpacity(.12),
-            ),
-            child: Icon(
-              hasFile ? Icons.file_present_rounded : Icons.cloud_upload_rounded,
-              color: colors.territoryColor,
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+            color: colors.textDefaultColor,
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: colors.textDefaultColor,
-                  ),
+        ),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                hasFile ? fileName! : description,
+                style: textTheme.bodySmall?.copyWith(
+                  color:
+                      hasFile ? colors.territoryColor : colors.textLightColor,
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  hasFile ? fileName! : description,
-                  style: textTheme.bodySmall?.copyWith(
-                    color:
-                        hasFile ? colors.territoryColor : colors.textLightColor,
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
-          TextButton.icon(
-            onPressed: onPick,
-            icon: Icon(
-              hasFile ? Icons.edit_outlined : Icons.upload_file_rounded,
+            TextButton.icon(
+              onPressed: onPick,
+              icon: Icon(
+                hasFile ? Icons.edit_outlined : Icons.upload_file_rounded,
+              ),
+              label: Text(hasFile ? 'تغيير' : 'اختيار'),
             ),
-            label: Text(hasFile ? 'تغيير' : 'اختيار'),
-            style: TextButton.styleFrom(
-              foregroundColor: colors.territoryColor,
-            ),
-          ),
-        ],
-      ),
+          ],
+        ),
+      ],
     );
   }
 }

@@ -573,13 +573,13 @@ class SplashScreenState extends State<SplashScreen>
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  'جميع الحقوق محفوظة 2026 C',
+                                  'جميع الحقوق محفوظة © 2026',
                                   textAlign: TextAlign.center,
                                   style: footerStyle,
                                 ),
                                 SizedBox(height: footerSpacing),
                                 Text(
-                                  'مأرب بين يديك للخدمات الألكترونية',
+                                  'مأرب بين يديك للخدمات الإلكترونية',
                                   textAlign: TextAlign.center,
                                   style: footerStyle.copyWith(
                                     fontWeight: FontWeight.w300,

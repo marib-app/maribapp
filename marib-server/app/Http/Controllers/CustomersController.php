@@ -69,15 +69,25 @@ class CustomersController extends Controller {
             if (!empty($request->search)) {
                 $sql = $sql->search($request->search);
             }
-            if ($request->filled('account_type')) {
-                $sql->where('account_type', $request->account_type);
+            $requestedAccountType = $request->filled('account_type')
+                ? (int) $request->account_type
+                : null;
+
+            if ($requestedAccountType !== null) {
+                $sql->where('account_type', $requestedAccountType);
             }
             
-            // استبعاد الحسابات غير المحققة (email_verified_at = null و is_verified = 0)
-            $sql->where(function($query) {
-                $query->whereNotNull('email_verified_at')
-                      ->orWhere('is_verified', 1);
-            });
+            // لا نستبعد الحسابات التجارية قيد المراجعة من لوحة العملاء
+            $shouldEnforceVerificationFilter = $requestedAccountType === null
+                || $requestedAccountType === User::ACCOUNT_TYPE_CUSTOMER
+                || $requestedAccountType === User::ACCOUNT_TYPE_REAL_ESTATE;
+
+            if ($shouldEnforceVerificationFilter) {
+                $sql->where(function($query) {
+                    $query->whereNotNull('email_verified_at')
+                          ->orWhere('is_verified', 1);
+                });
+            }
 
             if ($request->filled('email_verified_at')) {
                 if ($request->email_verified_at == '1') {

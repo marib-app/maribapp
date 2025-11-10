@@ -4,6 +4,7 @@ namespace App\Http\Resources\Wifi;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 /** @mixin \App\Models\Wifi\WifiNetwork */
 class WifiNetworkResource extends JsonResource
@@ -16,6 +17,11 @@ class WifiNetworkResource extends JsonResource
     public function toArray(Request $request): array
     {
         $canManage = $request->user()?->can('update', $this->resource) ?? false;
+
+        $iconUrl = $this->icon_path ? Storage::url($this->icon_path) : null;
+        $loginScreenshotUrl = $this->login_screenshot_path
+            ? Storage::url($this->login_screenshot_path)
+            : null;
 
         return [
             'id' => $this->id,
@@ -31,6 +37,8 @@ class WifiNetworkResource extends JsonResource
             ],
             'coverage_radius_km' => $this->coverage_radius_km,
             'address' => $this->address,
+            'icon_url' => $iconUrl,
+            'login_screenshot_url' => $loginScreenshotUrl,
             'icon_path' => $this->when($canManage, $this->icon_path),
             'login_screenshot_path' => $this->when($canManage, $this->login_screenshot_path),
             'description' => $this->description,

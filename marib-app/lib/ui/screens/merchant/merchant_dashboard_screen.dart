@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:marib/app/navigation/app_page_route.dart';
@@ -367,7 +367,7 @@ class _ManualPaymentDetailSheetState extends State<_ManualPaymentDetailSheet> {
               ),
               const SizedBox(height: 16),
               Text(
-                payment.orderNumber ?? 'ط·ظ„ط¨ #${payment.id}',
+                payment.orderNumber ?? 'طلب #${payment.id}',
                 style: theme.textTheme.titleMedium
                     ?.copyWith(fontWeight: FontWeight.w700),
               ),
@@ -400,7 +400,7 @@ class _ManualPaymentDetailSheetState extends State<_ManualPaymentDetailSheet> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'ط§ظ„ظ…ط¨ظ„ط؛ ط§ظ„ظ…ط­ظˆظ„',
+                        'المبلغ المحول',
                         style: theme.textTheme.bodySmall,
                       ),
                       const SizedBox(height: 6),
@@ -412,7 +412,7 @@ class _ManualPaymentDetailSheetState extends State<_ManualPaymentDetailSheet> {
                       if (payment.manualBankName != null) ...[
                         const SizedBox(height: 8),
                         Text(
-                          'ط§ظ„ط¨ظ†ظƒ: ${payment.manualBankName}',
+                          'البنك: ${payment.manualBankName}',
                           style: theme.textTheme.bodyMedium,
                         ),
                       ],
@@ -421,21 +421,21 @@ class _ManualPaymentDetailSheetState extends State<_ManualPaymentDetailSheet> {
                 ),
               ),
               _DetailSection(
-                title: 'طھظپط§طµظٹظ„ ط§ظ„ط­ظˆط§ظ„ط©',
+                title: 'تفاصيل الحوالة',
                 rows: paymentDetails,
               ),
               _DetailSection(
-                title: 'ط¨ظٹط§ظ†ط§طھ ط§ظ„ط­ط³ط§ط¨ ط§ظ„ط¨ظ†ظƒظٹ',
+                title: 'بيانات الحساب البنكي',
                 rows: bankDetails,
               ),
               if (userNote != null && userNote.trim().isNotEmpty)
-                _NoteCard(title: 'ظ…ظ„ط§ط­ط¸ط© ط§ظ„ط¹ظ…ظٹظ„', note: userNote.trim()),
+                _NoteCard(title: 'ملاحظة العميل', note: userNote.trim()),
               if (adminNote != null && adminNote.trim().isNotEmpty)
-                _NoteCard(title: 'ظ…ظ„ط§ط­ط¸ط© ط³ط§ط¨ظ‚ط©', note: adminNote.trim()),
+                _NoteCard(title: 'ملاحظة سابقة', note: adminNote.trim()),
               if (attachmentButtons.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 Text(
-                  'ط§ظ„ظ…ط±ظپظ‚ط§طھ',
+                  'المرفقات',
                   style: theme.textTheme.titleMedium,
                 ),
                 const SizedBox(height: 8),
@@ -448,7 +448,7 @@ class _ManualPaymentDetailSheetState extends State<_ManualPaymentDetailSheet> {
               if (_canDecide) ...[
                 const SizedBox(height: 16),
                 Text(
-                  'ظ…ظ„ط§ط­ط¸ط© ط§ظ„طھط§ط¬ط±',
+                  'ملاحظة التاجر',
                   style: theme.textTheme.titleMedium,
                 ),
                 const SizedBox(height: 8),
@@ -457,7 +457,7 @@ class _ManualPaymentDetailSheetState extends State<_ManualPaymentDetailSheet> {
                   minLines: 3,
                   maxLines: 5,
                   decoration: const InputDecoration(
-                    hintText: 'ط§ظƒطھط¨ ط³ط¨ط¨ ط§ظ„ط±ظپط¶ ط£ظˆ ط£ظٹ ظ…ظ„ط§ط­ط¸ط§طھ ط¥ط¶ط§ظپظٹط©',
+                    hintText: 'اكتب سبب الرفض أو أي ملاحظات إضافية',
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -465,7 +465,7 @@ class _ManualPaymentDetailSheetState extends State<_ManualPaymentDetailSheet> {
                   value: _notifyCustomer,
                   onChanged: (value) => setState(() => _notifyCustomer = value),
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('ط¥ط´ط¹ط§ط± ط§ظ„ط¹ظ…ظٹظ„ ط¨ط§ظ„طھط­ط¯ظٹط«'),
+                  title: const Text('إشعار العميل بالتحديث'),
                 ),
               ],
               if (_submitting) ...[
@@ -490,7 +490,7 @@ class _ManualPaymentDetailSheetState extends State<_ManualPaymentDetailSheet> {
                                 ),
                               )
                             : const Icon(Icons.check_circle_outline),
-                        label: const Text('طھط£ظƒظٹط¯ ط§ظ„ط­ظˆط§ظ„ط©'),
+                        label: const Text('تأكيد الحوالة'),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -506,7 +506,7 @@ class _ManualPaymentDetailSheetState extends State<_ManualPaymentDetailSheet> {
                                     CircularProgressIndicator(strokeWidth: 2),
                               )
                             : const Icon(Icons.clear_outlined),
-                        label: const Text('ط±ظپط¶ ط§ظ„ط­ظˆط§ظ„ط©'),
+                        label: const Text('رفض الحوالة'),
                       ),
                     ),
                   ],
@@ -514,7 +514,7 @@ class _ManualPaymentDetailSheetState extends State<_ManualPaymentDetailSheet> {
               else
                 Center(
                   child: Text(
-                    'طھظ… ط§طھط®ط§ط° ظ‚ط±ط§ط± ط¨ط®طµظˆطµ ظ‡ط°ظ‡ ط§ظ„ط­ظˆط§ظ„ط©.',
+                    'تم اتخاذ قرار بخصوص هذه الحوالة.',
                     style: theme.textTheme.bodySmall,
                   ),
                 ),
@@ -535,25 +535,25 @@ class _ManualPaymentDetailSheetState extends State<_ManualPaymentDetailSheet> {
       rows.add(_DetailRowData(label, normalized));
     }
 
-    add('ط±ظ‚ظ… ط§ظ„ط·ظ„ط¨', payment.orderNumber);
-    add('ط§ظ„ط±ظ‚ظ… ط§ظ„ظ…ط±ط¬ط¹ظٹ', payment.reference);
+    add('رقم الطلب', payment.orderNumber);
+    add('الرقم المرجعي', payment.reference);
     if (payment.createdAt != null) {
-      add('ظˆظ‚طھ ط§ظ„ط·ظ„ط¨', _formatDate(payment.createdAt));
+      add('وقت الطلب', _formatDate(payment.createdAt));
     }
-    add('ط­ط§ظ„ط© ط§ظ„ط­ظˆط§ظ„ط©', _manualPaymentStatusLabel(payment.status));
-    add('ط­ط§ظ„ط© ط§ظ„ط¯ظپط¹', _paymentStatusLabel(payment.paymentStatus));
+    add('حالة الحوالة', _manualPaymentStatusLabel(payment.status));
+    add('حالة الدفع', _paymentStatusLabel(payment.paymentStatus));
     final transfer = payment.transferDetails;
     if (transfer != null) {
       add(
-          'ط§ظ„ظ…ط¨ظ„ط؛ ظ…ظ† ط§ظ„طھط­ظˆظٹظ„',
+          'المبلغ من التحويل',
           _detailValue(transfer, [
             'amount_formatted',
             'amount',
           ]));
-      add('ط§ظ„ط¹ظ…ظ„ط©', _detailValue(transfer, ['currency']));
-      add('ط§ط³ظ… ط§ظ„ظ…ظˆط¯ط¹', _detailValue(transfer, ['sender_name', 'payer_name']));
+      add('العملة', _detailValue(transfer, ['currency']));
+      add('اسم المودع', _detailValue(transfer, ['sender_name', 'payer_name']));
       add(
-          'ط±ظ‚ظ… ط§ظ„ط¹ظ…ظ„ظٹط©',
+          'رقم العملية',
           _detailValue(transfer, [
             'reference',
             'manual_reference',
@@ -577,23 +577,23 @@ class _ManualPaymentDetailSheetState extends State<_ManualPaymentDetailSheet> {
     final bank = payment.manualBank;
 
     if (bank != null) {
-      add('ط§ط³ظ… ط§ظ„ط¨ظ†ظƒ', bank.bankName ?? bank.name);
-      add('ط§ط³ظ… ط§ظ„ظ…ط³طھظپظٹط¯', bank.beneficiaryName ?? bank.accountName);
-      add('ط±ظ‚ظ… ط§ظ„ط­ط³ط§ط¨', bank.accountNumber);
-      add('ط±ظ‚ظ… ط§ظ„ط¢ظٹط¨ط§ظ†', bank.iban);
-      add('ظ…ظ„ط§ط­ط¸ط§طھ', bank.note);
+      add('اسم البنك', bank.bankName ?? bank.name);
+      add('اسم المستفيد', bank.beneficiaryName ?? bank.accountName);
+      add('رقم الحساب', bank.accountNumber);
+      add('رقم الآيبان', bank.iban);
+      add('ملاحظات', bank.note);
     }
 
     final transfer = payment.transferDetails;
     if (transfer != null) {
       add(
-          'ط§ظ„ط¨ظ†ظƒ ط§ظ„ظ…ط±ط³ظ„',
+          'البنك المرسل',
           _detailValue(transfer, [
             'bank_name',
             'manual_bank_name',
           ]));
       add(
-          'ط±ظ‚ظ… ط§ظ„ط­ط³ط§ط¨ ط§ظ„ظ…ط­ظˆظ„ ظ…ظ†ظ‡',
+          'رقم الحساب المحول منه',
           _detailValue(transfer, [
             'from_account',
             'source_account',
@@ -613,7 +613,7 @@ class _ManualPaymentDetailSheetState extends State<_ManualPaymentDetailSheet> {
         OutlinedButton.icon(
           onPressed: () => _openUrl(url),
           icon: const Icon(Icons.attach_file),
-          label: Text(attachment.name ?? 'ظ…ط±ظپظ‚'),
+          label: Text(attachment.name ?? 'مرفق'),
         ),
       );
     }
@@ -624,7 +624,7 @@ class _ManualPaymentDetailSheetState extends State<_ManualPaymentDetailSheet> {
         OutlinedButton.icon(
           onPressed: () => _openUrl(receiptUrl),
           icon: const Icon(Icons.receipt_long_outlined),
-          label: const Text('ط¹ط±ط¶ ط¥ظٹطµط§ظ„ ط§ظ„طھط­ظˆظٹظ„'),
+          label: const Text('عرض إيصال التحويل'),
         ),
       );
     }
@@ -635,19 +635,19 @@ class _ManualPaymentDetailSheetState extends State<_ManualPaymentDetailSheet> {
   Future<void> _openUrl(String? url) async {
     final trimmed = (url ?? '').trim();
     if (trimmed.isEmpty) {
-      HelperUtils.showSnackBarMessage(context, 'ط§ظ„ط±ط§ط¨ط· ط؛ظٹط± ظ…طھط§ط­.');
+      HelperUtils.showSnackBarMessage(context, 'الرابط غير متاح.');
       return;
     }
 
     final uri = Uri.tryParse(trimmed);
     if (uri == null) {
-      HelperUtils.showSnackBarMessage(context, 'ط§ظ„ط±ط§ط¨ط· ط؛ظٹط± طµط§ظ„ط­.');
+      HelperUtils.showSnackBarMessage(context, 'الرابط غير صالح.');
       return;
     }
 
     final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!opened && mounted) {
-      HelperUtils.showSnackBarMessage(context, 'طھط¹ط°ط± ظپطھط­ ط§ظ„ط±ط§ط¨ط·.');
+      HelperUtils.showSnackBarMessage(context, 'تعذر فتح الرابط.');
     }
   }
 
@@ -659,7 +659,7 @@ class _ManualPaymentDetailSheetState extends State<_ManualPaymentDetailSheet> {
     final note = _noteController.text.trim();
 
     if (decision == 'rejected' && note.isEmpty) {
-      HelperUtils.showSnackBarMessage(context, 'ظٹط±ط¬ظ‰ ظƒطھط§ط¨ط© ط³ط¨ط¨ ط§ظ„ط±ظپط¶.');
+      HelperUtils.showSnackBarMessage(context, 'يرجى كتابة سبب الرفض.');
       return;
     }
 
@@ -682,7 +682,7 @@ class _ManualPaymentDetailSheetState extends State<_ManualPaymentDetailSheet> {
       Navigator.of(context).maybePop();
       HelperUtils.showSnackBarMessage(
         context,
-        decision == 'approved' ? 'طھظ… ظ‚ط¨ظˆظ„ ط§ظ„ط­ظˆط§ظ„ط© ط¨ظ†ط¬ط§ط­.' : 'طھظ… ط±ظپط¶ ط§ظ„ط­ظˆط§ظ„ط©.',
+        decision == 'approved' ? 'تم قبول الحوالة بنجاح.' : 'تم رفض الحوالة.',
         type: MessageType.success,
       );
     } catch (error) {
@@ -728,7 +728,7 @@ class _ManualPaymentTile extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          payment.orderNumber ?? 'ط·ظ„ط¨ #${payment.id}',
+                          payment.orderNumber ?? 'طلب #${payment.id}',
                           style: Theme.of(context)
                               .textTheme
                               .titleMedium
@@ -736,7 +736,7 @@ class _ManualPaymentTile extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          payment.manualBankName ?? 'ط­ظˆط§ظ„ط© ط¨ظ†ظƒظٹط©',
+                          payment.manualBankName ?? 'حوالة بنكية',
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ],
@@ -762,12 +762,12 @@ class _ManualPaymentTile extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                'ط§ظ„ظ…ط¨ظ„ط؛: $amountText',
+                'المبلغ: $amountText',
                 style: Theme.of(context).textTheme.titleSmall,
               ),
               const SizedBox(height: 4),
               Text(
-                'ط§ظ„طھط§ط±ظٹط®: $createdAt',
+                'التاريخ: $createdAt',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
@@ -815,7 +815,7 @@ class _OrderListTile extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'ط§ظ„ظ…ط¬ظ…ظˆط¹: $totalText',
+              'المجموع: $totalText',
               style: Theme.of(context).textTheme.titleSmall,
             ),
             const SizedBox(height: 12),
@@ -1068,7 +1068,7 @@ class _MetricsGrid extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'ط£ط¯ط§ط، ط§ظ„ظ…طھط¬ط±',
+          'أداء المتجر',
           style: Theme.of(context).textTheme.titleMedium,
         ),
         const SizedBox(height: 12),
@@ -1132,14 +1132,14 @@ class _MetricCard extends StatelessWidget {
               spacing: 12,
               runSpacing: 8,
               children: [
-                _MetricValue(label: 'ط§ظ„ط·ظ„ط¨ط§طھ', value: data.snapshot.orders),
+                _MetricValue(label: 'الطلبات', value: data.snapshot.orders),
                 _MetricValue(
-                    label: 'ط§ظ„ط¥ظٹط±ط§ط¯',
-                    valueText: NumberFormat.currency(symbol: 'ط±.ظٹ')
+                    label: 'الإيراد',
+                    valueText: NumberFormat.currency(symbol: 'ر.ي')
                         .format(data.snapshot.revenue)),
-                _MetricValue(label: 'ط§ظ„ط²ظٹط§ط±ط§طھ', value: data.snapshot.visits),
+                _MetricValue(label: 'الزيارات', value: data.snapshot.visits),
                 _MetricValue(
-                    label: 'ظ…ط´ط§ظ‡ط¯ط§طھ ط§ظ„ظ…ظ†طھط¬ط§طھ',
+                    label: 'مشاهدات المنتجات',
                     value: data.snapshot.productViews),
               ],
             ),
@@ -1207,7 +1207,7 @@ class _StatusCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  status.isOpenNow ? 'ط§ظ„ظ…طھط¬ط± ظ…ظپطھظˆط­' : 'ط§ظ„ظ…طھط¬ط± ظ…ط؛ظ„ظ‚ ط­ط§ظ„ظٹط§ظ‹',
+                  status.isOpenNow ? 'المتجر مفتوح' : 'المتجر مغلق حالياً',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ],
@@ -1216,7 +1216,7 @@ class _StatusCard extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(top: 4.0),
                 child: Text(
-                  'ظٹظپطھط­ ظپظٹ: ${status.nextOpenAt}',
+                  'يفتح في: ${status.nextOpenAt}',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ),
@@ -1226,42 +1226,42 @@ class _StatusCard extends StatelessWidget {
               runSpacing: 12,
               children: [
                 _StatusBadge(
-                  label: 'ط­ط§ظ„ط© ط§ظ„ظ†ط¸ط§ظ…',
-                  value: browseOnly ? 'طھطµظپط­ ظپظ‚ط·' : 'ظƒط§ظ…ظ„',
+                  label: 'حالة النظام',
+                  value: browseOnly ? 'تصفح فقط' : 'كامل',
                 ),
                 _StatusBadge(
-                  label: 'ط­ط¯ ط§ظ„ط·ظ„ط¨',
+                  label: 'حد الطلب',
                   value: status.minOrderAmount != null
-                      ? NumberFormat.currency(symbol: 'ط±.ظٹ')
+                      ? NumberFormat.currency(symbol: 'ر.ي')
                           .format(status.minOrderAmount)
-                      : 'ط؛ظٹط± ظ…ط­ط¯ط¯',
+                      : 'غير محدد',
                 ),
                 _StatusBadge(
-                  label: 'ط§ظ„طھظˆطµظٹظ„',
-                  value: status.allowDelivery ? 'ظ…ظپط¹ظ„' : 'ظ…ظˆظ‚ظˆظپ',
+                  label: 'التوصيل',
+                  value: status.allowDelivery ? 'مفعل' : 'موقوف',
                 ),
                 _StatusBadge(
-                  label: 'ط§ظ„ط§ط³طھظ„ط§ظ…',
-                  value: status.allowPickup ? 'ظ…ظپط¹ظ„' : 'ظ…ظˆظ‚ظˆظپ',
+                  label: 'الاستلام',
+                  value: status.allowPickup ? 'مفعل' : 'موقوف',
                 ),
                 _StatusBadge(
-                  label: 'ط­ظˆط§ظ„ط§طھ ظٹط¯ظˆظٹط©',
-                  value: status.allowManualPayments ? 'ظ…ط³ظ…ظˆط­' : 'ظ…ظˆظ‚ظˆظپ',
+                  label: 'حوالات يدوية',
+                  value: status.allowManualPayments ? 'مسموح' : 'موقوف',
                 ),
                 _StatusBadge(
-                  label: 'ط§ظ„ط¯ظپط¹ ط¨ط§ظ„ظ…ط­ظپط¸ط©',
-                  value: status.allowWallet ? 'ظ…ط³ظ…ظˆط­' : 'ظ…ظˆظ‚ظˆظپ',
+                  label: 'الدفع بالمحفظة',
+                  value: status.allowWallet ? 'مسموح' : 'موقوف',
                 ),
                 _StatusBadge(
-                  label: 'ط§ظ„ط¯ظپط¹ ط¹ظ†ط¯ ط§ظ„ط§ط³طھظ„ط§ظ…',
-                  value: status.allowCod ? 'ظ…ط³ظ…ظˆط­' : 'ظ…ظˆظ‚ظˆظپ',
+                  label: 'الدفع عند الاستلام',
+                  value: status.allowCod ? 'مسموح' : 'موقوف',
                 ),
               ],
             ),
             if (isClosed && status.closureReason != null) ...[
               const SizedBox(height: 12),
               Text(
-                'ط³ط¨ط¨ ط§ظ„ط¥ط؛ظ„ط§ظ‚: ${status.closureReason}',
+                'سبب الإغلاق: ${status.closureReason}',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
@@ -1310,13 +1310,13 @@ class _WorkingHoursCard extends StatelessWidget {
   final List<MerchantWorkingHour> hours;
 
   static const List<String> weekdayLabels = <String>[
-    'ط§ظ„ط£ط­ط¯',
-    'ط§ظ„ط¥ط«ظ†ظٹظ†',
-    'ط§ظ„ط«ظ„ط§ط«ط§ط،',
-    'ط§ظ„ط£ط±ط¨ط¹ط§ط،',
-    'ط§ظ„ط®ظ…ظٹط³',
-    'ط§ظ„ط¬ظ…ط¹ط©',
-    'ط§ظ„ط³ط¨طھ',
+    'الأحد',
+    'الإثنين',
+    'الثلاثاء',
+    'الأربعاء',
+    'الخميس',
+    'الجمعة',
+    'السبت',
   ];
 
   @override
@@ -1328,17 +1328,17 @@ class _WorkingHoursCard extends StatelessWidget {
       elevation: 0,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
+        child: Column( 
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'ط³ط§ط¹ط§طھ ط§ظ„ط¹ظ…ظ„',
+              'ساعات العمل',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 12),
             ...sortedHours.map((hour) {
               final label = weekdayLabels[hour.weekday.clamp(0, 6)];
-              String range = 'ظ…ط؛ظ„ظ‚';
+              String range = 'مغلق';
               if (hour.isOpen &&
                   hour.opensAt != null &&
                   hour.closesAt != null) {
@@ -1381,7 +1381,7 @@ class _PoliciesCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'ط§ظ„ط³ظٹط§ط³ط§طھ',
+              'السياسات',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 12),
@@ -1408,13 +1408,13 @@ class _StaffCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'ط¨ط±ظٹط¯ ظ„ظˆط­ط© ط§ظ„ظ…طھط¬ط±',
+              'بريد لوحة المتجر',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
             if (staff == null)
               Text(
-                'ظ„ظ… ظٹطھظ… ط­ط¬ط² ط¨ط±ظٹط¯ ط¨ط¹ط¯. ظٹظ…ظƒظ†ظƒ ط¥ظ†ط´ط§ط¤ظ‡ ظ…ظ† ط¥ط¹ط¯ط§ط¯ط§طھ ط§ظ„ظ…طھط¬ط±.',
+                'لم يتم حجز بريد بعد. يمكنك إنشاؤه من إعدادات المتجر.',
                 style: Theme.of(context).textTheme.bodySmall,
               )
             else
@@ -1430,14 +1430,14 @@ class _StaffCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'ط§ظ„ط­ط§ظ„ط©: ${staff!.status}',
+                    'الحالة: ${staff!.status}',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
               ),
             const SizedBox(height: 8),
             Text(
-              'ط§ط³طھط®ط¯ظ… ظ‡ط°ط§ ط§ظ„ط¨ط±ظٹط¯ ظ„طھط³ط¬ظٹظ„ ط§ظ„ط¯ط®ظˆظ„ ط¥ظ„ظ‰ ظ„ظˆط­ط© ط§ظ„طھط­ظƒظ… ط§ظ„ظ…ط®طµطµط© ظ„ظ„ظ…طھط¬ط± ظˆظ…طھط§ط¨ط¹ط© ط§ظ„ط·ظ„ط¨ط§طھ.',
+              'استخدم هذا البريد لتسجيل الدخول إلى لوحة التحكم المخصصة للمتجر ومتابعة الطلبات.',
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
@@ -1464,7 +1464,7 @@ class _ErrorView extends StatelessWidget {
             const Icon(Icons.error_outline, size: 42, color: Colors.redAccent),
             const SizedBox(height: 12),
             Text(
-              'طھط¹ط°ط± طھط­ظ…ظٹظ„ ط¨ظٹط§ظ†ط§طھ ط§ظ„ظ…طھط¬ط±',
+              'تعذر تحميل بيانات المتجر',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
@@ -1476,7 +1476,7 @@ class _ErrorView extends StatelessWidget {
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: onRetry,
-              child: const Text('ط¥ط¹ط§ط¯ط© ط§ظ„ظ…ط­ط§ظˆظ„ط©'),
+              child: const Text('إعادة المحاولة'),
             ),
           ],
         ),
@@ -1486,85 +1486,87 @@ class _ErrorView extends StatelessWidget {
 }
 
 const List<_StatusFilter> _orderStatusFilters = [
-  _StatusFilter(label: 'ط§ظ„ظƒظ„', value: ''),
-  _StatusFilter(label: 'ط¨ط§ظ†طھط¸ط§ط± ط§ظ„ط¯ظپط¹', value: 'pending'),
-  _StatusFilter(label: 'ط¯ظپط¹ط© ظ…ظ‚ط¯ظ…ط©', value: 'deposit_paid'),
-  _StatusFilter(label: 'ظ‚ظٹط¯ ط§ظ„ظ…ط±ط§ط¬ط¹ط©', value: 'under_review'),
-  _StatusFilter(label: 'ظ…ط¤ظƒط¯', value: 'confirmed'),
-  _StatusFilter(label: 'ط¬ط§ط± ط§ظ„طھط­ط¶ظٹط±', value: 'preparing'),
-  _StatusFilter(label: 'ط¬ط§ظ‡ط² ظ„ظ„طھط³ظ„ظٹظ…', value: 'ready_for_delivery'),
-  _StatusFilter(label: 'ظ‚ظٹط¯ ط§ظ„طھظˆطµظٹظ„', value: 'out_for_delivery'),
-  _StatusFilter(label: 'طھظ… ط§ظ„طھط³ظ„ظٹظ…', value: 'delivered'),
-  _StatusFilter(label: 'ظ…ظ„ط؛ظٹ', value: 'canceled'),
-  _StatusFilter(label: 'ظ…ط³طھط±ط¯', value: 'returned'),
+  _StatusFilter(label: 'الكل', value: ''),
+  _StatusFilter(label: 'بانتظار الدفع', value: 'pending'),
+  _StatusFilter(label: 'دفعة مقدمة', value: 'deposit_paid'),
+  _StatusFilter(label: 'قيد المراجعة', value: 'under_review'),
+  _StatusFilter(label: 'مؤكد', value: 'confirmed'),
+  _StatusFilter(label: 'جار التحضير', value: 'preparing'),
+  _StatusFilter(label: 'جار المعالجة', value: 'processing'),
+  _StatusFilter(label: 'جاهز للتسليم', value: 'ready_for_delivery'),
+  _StatusFilter(label: 'قيد التوصيل', value: 'out_for_delivery'),
+  _StatusFilter(label: 'تم التسليم', value: 'delivered'),
+  _StatusFilter(label: 'تسوية نهائية', value: 'final_settlement'),
+  _StatusFilter(label: 'ملغي', value: 'canceled'),
+  _StatusFilter(label: 'مسترد', value: 'returned'),
 ];
 
 const List<_StatusFilter> _manualPaymentStatusFilters = [
-  _StatusFilter(label: 'ط§ظ„ظƒظ„', value: ''),
-  _StatusFilter(label: 'ط¨ط§ظ†طھط¸ط§ط± ط§ظ„ظ…ط±ط§ط¬ط¹ط©', value: 'pending'),
-  _StatusFilter(label: 'ظ‚ظٹط¯ ط§ظ„طھط­ظ‚ظ‚', value: 'under_review'),
-  _StatusFilter(label: 'طھظ… ط§ظ„ظ‚ط¨ظˆظ„', value: 'approved'),
-  _StatusFilter(label: 'ظ…ط±ظپظˆط¶', value: 'rejected'),
+  _StatusFilter(label: 'الكل', value: ''),
+  _StatusFilter(label: 'بانتظار المراجعة', value: 'pending'),
+  _StatusFilter(label: 'قيد المراجعة', value: 'under_review'),
+  _StatusFilter(label: 'تم القبول', value: 'approved'),
+  _StatusFilter(label: 'مرفوض', value: 'rejected'),
 ];
 
 const Map<String, String> _orderStatusLabelMap = {
-  'pending': 'ط¨ط§ظ†طھط¸ط§ط± ط§ظ„ط¯ظپط¹',
-  'deposit_paid': 'ط¯ظپط¹ط© ظ…ظ‚ط¯ظ…ط©',
-  'under_review': 'ظ‚ظٹط¯ ط§ظ„ظ…ط±ط§ط¬ط¹ط©',
-  'confirmed': 'ظ…ط¤ظƒط¯',
-  'processing': 'طھط­طھ ط§ظ„ظ…ط¹ط§ظ„ط¬ط©',
-  'preparing': 'ط¬ط§ط± ط§ظ„طھط­ط¶ظٹط±',
-  'ready_for_delivery': 'ط¬ط§ظ‡ط² ظ„ظ„طھط³ظ„ظٹظ…',
-  'out_for_delivery': 'ظ‚ظٹط¯ ط§ظ„طھظˆطµظٹظ„',
-  'delivered': 'طھظ… ط§ظ„طھط³ظ„ظٹظ…',
-  'final_settlement': 'طھط³ظˆظٹط© ظ†ظ‡ط§ط¦ظٹط©',
-  'failed': 'ظپط´ظ„',
-  'canceled': 'ظ…ظ„ط؛ظٹ',
-  'on_hold': 'ظ…ط¹ظ„ظ‚',
-  'returned': 'ظ…ط³طھط±ط¯',
+  'pending': 'بانتظار الدفع',
+  'deposit_paid': 'دفعة مقدمة',
+  'under_review': 'قيد المراجعة',
+  'confirmed': 'مؤكد',
+  'processing': 'جار المعالجة',
+  'preparing': 'جار التحضير',
+  'ready_for_delivery': 'جاهز للتسليم',
+  'out_for_delivery': 'قيد التوصيل',
+  'delivered': 'تم التسليم',
+  'final_settlement': 'تسوية نهائية',
+  'failed': 'فشل',
+  'canceled': 'ملغي',
+  'on_hold': 'معلق',
+  'returned': 'مسترد',
 };
 
 const Map<String, String> _paymentStatusLabelMap = {
-  'pending': 'ط¨ط§ظ†طھط¸ط§ط± ط§ظ„ط¯ظپط¹',
-  'awaiting_payment': 'ط¨ط§ظ†طھط¸ط§ط± ط§ظ„ط¯ظپط¹',
-  'under_review': 'ظ‚ظٹط¯ ط§ظ„ظ…ط±ط§ط¬ط¹ط©',
-  'paid': 'ظ…ط¯ظپظˆط¹',
-  'confirmed': 'طھظ… ط§ظ„طھط£ظƒظٹط¯',
-  'refunded': 'طھظ… ط§ظ„ط§ط³طھط±ط¯ط§ط¯',
-  'failed': 'ظپط´ظ„',
-  'canceled': 'ظ…ظ„ط؛ظٹ',
+  'pending': 'بانتظار الدفع',
+  'awaiting_payment': 'بانتظار الدفع',
+  'under_review': 'قيد المراجعة',
+  'paid': 'مدفوع',
+  'confirmed': 'تم التأكيد',
+  'refunded': 'تم الاسترداد',
+  'failed': 'فشل',
+  'canceled': 'ملغي',
 };
 
 const Map<String, String> _manualPaymentStatusLabelMap = {
-  'pending': 'ط¨ط§ظ†طھط¸ط§ط± ط§ظ„ظ…ط±ط§ط¬ط¹ط©',
-  'under_review': 'ظ‚ظٹط¯ ط§ظ„طھط­ظ„ظٹظ„',
-  'approved': 'ظ…ظ‚ط¨ظˆظ„',
-  'rejected': 'ظ…ط±ظپظˆط¶',
+  'pending': 'بانتظار المراجعة',
+  'under_review': 'قيد المراجعة',
+  'approved': 'مقبول',
+  'rejected': 'مرفوض',
 };
 
 String _orderStatusLabel(String? status) {
   if (status == null || status.isEmpty) {
-    return 'ط؛ظٹط± ظ…ط­ط¯ط¯';
+    return 'غير محدد';
   }
   return _orderStatusLabelMap[status] ?? status;
 }
 
 String _paymentStatusLabel(String? status) {
   if (status == null || status.isEmpty) {
-    return 'ط؛ظٹط± ظ…ط­ط¯ط¯';
+    return 'غير محدد';
   }
   return _paymentStatusLabelMap[status] ?? status;
 }
 
 String _manualPaymentStatusLabel(String? status) {
   if (status == null || status.isEmpty) {
-    return 'ط؛ظٹط± ظ…ط­ط¯ط¯';
+    return 'غير محدد';
   }
   return _manualPaymentStatusLabelMap[status] ?? status;
 }
 
 String _formatCurrency(double amount, String currency) {
-  final normalizedCurrency = currency.trim().isEmpty ? 'ط±.ظٹ' : currency;
+  final normalizedCurrency = currency.trim().isEmpty ? 'ر.ي' : currency;
   final decimals = amount % 1 == 0 ? 0 : 2;
   final formatter = NumberFormat.currency(
     locale: 'ar',
@@ -1576,9 +1578,9 @@ String _formatCurrency(double amount, String currency) {
 
 String _formatDate(DateTime? dateTime) {
   if (dateTime == null) {
-    return 'ط؛ظٹط± ظ…طھط§ط­';
+    return 'غير متاح';
   }
-  return DateFormat('dd MMM yyyyطŒ hh:mm a', 'ar').format(dateTime.toLocal());
+  return DateFormat('dd MMM yyyy، hh:mm a', 'ar').format(dateTime.toLocal());
 }
 
 Color _statusColor(String? status, BuildContext context) {
@@ -1659,10 +1661,13 @@ String? _stringify(dynamic value) {
         .map(_stringify)
         .whereType<String>()
         .where((element) => element.isNotEmpty)
-        .join('طŒ ');
+        .join('، ');
     return joined.isEmpty ? null : joined;
   }
   final text = value.toString().trim();
   return text.isEmpty ? null : text;
 }
+
+
+
 

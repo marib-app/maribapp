@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:marib/app/app_scroll_behavior.dart';
@@ -320,7 +320,7 @@ class _SearchField extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
               borderSide: BorderSide(color: colors.territoryColor),
             ),
-          ), 
+          ),
         );
       },
     );
@@ -337,7 +337,8 @@ class _WifiNetworkCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.color;
     final textTheme = Theme.of(context).textTheme;
-    final bool hasLogo = network.iconUrl?.isNotEmpty == true;
+    final String logoUrl = HelperUtils.absoluteImage(network.iconUrl);
+    final bool hasLogo = logoUrl.isNotEmpty;
 
     return Material(
       color: Colors.transparent,
@@ -354,14 +355,15 @@ class _WifiNetworkCard extends StatelessWidget {
                   child: Container(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: colors.borderColor.withOpacity(.4)),
+                      border:
+                          Border.all(color: colors.borderColor.withOpacity(.4)),
                       color: colors.secondaryColor,
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(18),
                       child: hasLogo
                           ? Image.network(
-                              network.iconUrl!,
+                              logoUrl,
                               fit: BoxFit.cover,
                               errorBuilder: (_, __, ___) => const Center(
                                 child: WifiCabinGlyph(size: 34),
@@ -465,7 +467,6 @@ class _InfoChip extends StatelessWidget {
     );
   }
 }
-
 
 class _WifiPageLoader extends StatelessWidget {
   const _WifiPageLoader();
@@ -701,7 +702,8 @@ class _WifiNetworkDetailsSheetState extends State<_WifiNetworkDetailsSheet> {
 
     if (currency == null || currency.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('لا يمكن متابعة الدفع لهذه الخطة حالياً.')),
+        const SnackBar(
+            content: Text('لا يمكن متابعة الدفع لهذه الخطة حالياً.')),
       );
       return;
     }
@@ -857,7 +859,8 @@ class _WifiPlanCard extends StatelessWidget {
                 child: Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: colors.borderColor.withOpacity(.4)),
+                    border:
+                        Border.all(color: colors.borderColor.withOpacity(.4)),
                     color: colors.secondaryColor,
                   ),
                   padding: const EdgeInsets.all(12),

@@ -201,7 +201,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                         builder: (_, state) {
                           final bool allowAccess =
                               state.snapshot?.isApproved ?? false;
-                          Widget tile = _ServiceItemTile(
+                          final Widget tile = _ServiceItemTile(
                             title: "لوحة المتجر",
                             svg: AppIcons.home,
                             onTap: () {
@@ -222,19 +222,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                               );
                             },
                           );
-                          if (!allowAccess) {
-                            tile = Stack(
-                              clipBehavior: Clip.none,
-                              children: [
-                                tile,
-                                Positioned(
-                                  top: 8,
-                                  left: 20,
-                                  child: _StoreReviewBadge(compact: true),
-                                ),
-                              ],
-                            );
-                          }
                           return tile;
                         },
                       ),

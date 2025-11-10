@@ -10,6 +10,7 @@ import 'package:marib/data/model/wifi/wifi_plan.dart';
 import 'package:marib/data/wifi/wifi_repository.dart';
 import 'package:marib/settings.dart';
 import 'package:marib/ui/theme/theme.dart';
+import 'package:marib/ui/screens/classified_ads/other_services/wifi_cabin/network_details_screen.dart';
 import 'package:marib/ui/screens/classified_ads/other_services/wifi_cabin/wifi_cabin_intro_screen.dart';
 import 'package:marib/ui/widgets/icons/wifi_cabin_glyph.dart';
 import 'package:marib/utils/errorFilter.dart';
@@ -134,19 +135,8 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
   }
 
   Future<void> _openNetworkDetails(WifiNetwork network) async {
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) {
-        return _WifiNetworkDetailsSheet(
-          network: network,
-          repository: _repository,
-        );
-      },
+    await Navigator.of(context).push(
+      WifiNetworkDetailsScreen.route(network),
     );
   }
 
@@ -211,18 +201,13 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
                   sliver: SliverLayoutBuilder(
                     builder: (context, constraints) {
                       final double width = constraints.crossAxisExtent;
-                      int crossAxisCount = 1;
-                      if (width >= 1100) {
-                        crossAxisCount = 3;
-                      } else if (width >= 700) {
-                        crossAxisCount = 2;
-                      }
+                      int crossAxisCount = width >= 320 ? 3 : 2;
                       return SliverGrid(
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: crossAxisCount,
                           mainAxisSpacing: 16,
                           crossAxisSpacing: 16,
-                          childAspectRatio: 0.92,
+                          childAspectRatio: 0.78,
                         ),
                         delegate: SliverChildBuilderDelegate(
                           (context, index) {
@@ -350,164 +335,68 @@ class _WifiNetworkCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.color;
     final textTheme = Theme.of(context).textTheme;
-    final Color accent = _resolveAccentColor(context);
-    final Color accentDark = Color.lerp(accent, Colors.black, 0.18)!;
     final bool hasLogo = network.iconUrl?.isNotEmpty == true;
-    final String? subtitle = network.address?.isNotEmpty == true
-        ? network.address
-        : (network.currencies.isNotEmpty
-            ? network.currencies.join(' • ')
-            : null);
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
+        borderRadius: BorderRadius.circular(18),
         onTap: onTap,
-        borderRadius: BorderRadius.circular(26),
-        child: Ink(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(26),
-            gradient: LinearGradient(
-              colors: [accent, accentDark],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: accentDark.withOpacity(.28),
-                blurRadius: 18,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Stack(
               children: [
-                Align(
-                  alignment: AlignmentDirectional.topEnd,
-                  child: _NetworkBadge(
-                    label: '${network.planCount} خطة',
-                  ),
-                ),
-                const SizedBox(height: 10),
-                _NetworkAvatar(
-                  hasLogo: hasLogo,
-                  imageUrl: network.iconUrl,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  network.name,
-                  maxLines: 2,
-                  textAlign: TextAlign.center,
-                  overflow: TextOverflow.ellipsis,
-                  style: textTheme.titleMedium?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                if (subtitle != null) ...[
-                  const SizedBox(height: 6),
-                  Text(
-                    subtitle,
-                    maxLines: 2,
-                    textAlign: TextAlign.center,
-                    style: textTheme.bodySmall?.copyWith(
-                      color: Colors.white.withOpacity(.8),
-                      height: 1.3,
+                AspectRatio(
+                  aspectRatio: 1,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: colors.borderColor.withOpacity(.4)),
+                      color: colors.secondaryColor,
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(18),
+                      child: hasLogo
+                          ? Image.network(
+                              network.iconUrl!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Center(
+                                child: WifiCabinGlyph(size: 34),
+                              ),
+                            )
+                          : const Center(
+                              child: WifiCabinGlyph(
+                                size: 34,
+                                color: Colors.white70,
+                              ),
+                            ),
                     ),
                   ),
-                ],
-                const SizedBox(height: 12),
-                Wrap(
-                  alignment: WrapAlignment.center,
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    if (network.coverageKm != null)
-                      _NetworkChip(
-                        icon: Icons.radar_rounded,
-                        label: '${network.coverageKm!.toStringAsFixed(1)} كم مدى',
-                      ),
-                    if (network.contacts.isNotEmpty)
-                      _NetworkChip(
-                        icon: Icons.phone_in_talk_rounded,
-                        label: network.contacts.first,
-                      ),
-                  ],
                 ),
-                const Spacer(),
-                SizedBox(
-                  width: double.infinity,
-                  child: TextButton(
-                    onPressed: onTap,
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      backgroundColor: Colors.white.withOpacity(.15),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                    ),
-                    child: const Text('عرض الباقات'),
-                  ),
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: _NetworkBadge(label: '${network.planCount}'),
                 ),
               ],
             ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Color _resolveAccentColor(BuildContext context) {
-    final palette = <Color>[
-      context.color.territoryColor,
-      context.color.forthColor,
-      Theme.of(context).colorScheme.primary,
-      Colors.indigo,
-      Colors.teal,
-    ];
-    final int index = network.id % palette.length;
-    return palette[index];
-  }
-}
-
-class _NetworkAvatar extends StatelessWidget {
-  const _NetworkAvatar({required this.hasLogo, this.imageUrl});
-
-  final bool hasLogo;
-  final String? imageUrl;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 78,
-      width: 78,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: Colors.white.withOpacity(.15),
-        border: Border.all(color: Colors.white.withOpacity(.35), width: 2),
-      ),
-      child: hasLogo
-          ? ClipOval(
-              child: Image.network(
-                imageUrl!,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const WifiCabinGlyph(
-                  size: 36,
-                  color: Colors.white,
-                ),
-              ),
-            )
-          : const Center(
-              child: WifiCabinGlyph(
-                size: 36,
-                color: Colors.white,
+            const SizedBox(height: 8),
+            Text(
+              network.name,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: colors.textDefaultColor,
               ),
             ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -520,53 +409,21 @@ class _NetworkBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: Colors.white.withOpacity(.18),
+        borderRadius: BorderRadius.circular(12),
+        color: Colors.black.withOpacity(.55),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.layers_rounded, size: 16, color: Colors.white),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _NetworkChip extends StatelessWidget {
-  const _NetworkChip({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        color: Colors.white.withOpacity(.15),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: Colors.white),
+          const Icon(Icons.layers_rounded, size: 14, color: Colors.white),
           const SizedBox(width: 4),
           Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            '$label خطة',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   color: Colors.white,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w600,
                 ),
           ),
         ],
@@ -608,6 +465,7 @@ class _InfoChip extends StatelessWidget {
     );
   }
 }
+
 
 class _WifiPageLoader extends StatelessWidget {
   const _WifiPageLoader();
@@ -790,9 +648,9 @@ class _WifiNetworkDetailsSheetState extends State<_WifiNetworkDetailsSheet> {
                 }
                 return LayoutBuilder(
                   builder: (context, constraints) {
-                    final bool wide = constraints.maxWidth >= 520;
-                    final int crossAxisCount = wide ? 2 : 1;
-                    final double aspectRatio = wide ? 1.1 : 1.5;
+                    final double width = constraints.maxWidth;
+                    final int crossAxisCount = width >= 360 ? 3 : 2;
+                    final double aspectRatio = 0.85;
 
                     return GridView.builder(
                       shrinkWrap: true,
@@ -991,89 +849,54 @@ class _WifiPlanCard extends StatelessWidget {
             border: Border.all(color: colors.borderColor.withOpacity(.35)),
             color: colors.secondaryColor,
           ),
-          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                height: 56,
-                width: 56,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  color: colors.territoryColor.withOpacity(.12),
-                ),
-                child: Center(
-                  child: WifiCabinGlyph(
-                    size: 30,
-                    color: colors.territoryColor,
+              AspectRatio(
+                aspectRatio: 1,
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: colors.borderColor.withOpacity(.4)),
+                    color: colors.secondaryColor,
+                  ),
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      WifiCabinGlyph(
+                        size: 32,
+                        color: colors.territoryColor,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        priceLabel,
+                        style: textTheme.bodyLarge?.copyWith(
+                          color: colors.territoryColor,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      if (!hasCurrency)
+                        Text(
+                          '—',
+                          style: textTheme.bodySmall
+                              ?.copyWith(color: colors.textLightColor),
+                        ),
+                    ],
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               Text(
                 plan.name,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: textTheme.titleMedium?.copyWith(
+                textAlign: TextAlign.center,
+                style: textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
                   color: colors.textDefaultColor,
-                  fontWeight: FontWeight.w700,
                 ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                priceLabel,
-                style: textTheme.titleMedium?.copyWith(
-                  color: colors.territoryColor,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              if (!hasCurrency)
-                Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: Text(
-                    'العملة غير محددة بعد',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: colors.textLightColor,
-                    ),
-                  ),
-                ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  if (plan.durationDays != null)
-                    _InfoChip(
-                      icon: Icons.schedule_rounded,
-                      label: '${plan.durationDays} يوم',
-                    ),
-                  if (!plan.isUnlimited && plan.dataCapGb != null)
-                    _InfoChip(
-                      icon: Icons.data_usage_rounded,
-                      label: '${plan.dataCapGb!.toStringAsFixed(1)} جيجا',
-                    ),
-                  if (plan.isUnlimited)
-                    _InfoChip(
-                      icon: Icons.all_inclusive_rounded,
-                      label: 'إنترنت غير محدود',
-                    ),
-                ],
-              ),
-              const Spacer(),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'اضغط لمتابعة الدفع',
-                      style: textTheme.bodySmall?.copyWith(
-                        color: colors.textLightColor,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  Icon(Icons.arrow_outward_rounded,
-                      color: colors.textLightColor),
-                ],
               ),
             ],
           ),

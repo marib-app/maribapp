@@ -69,6 +69,7 @@ class _MerchantOnboardingScreenState extends State<MerchantOnboardingScreen> {
   StorePolicyData? _policyData;
   PaymentOptionsData? _paymentOptions;
   StoreCredentialsData? _credentialsData;
+  bool _isEndingFlow = false;
 
   @override
   void initState() {
@@ -490,14 +491,55 @@ class _MerchantOnboardingScreenState extends State<MerchantOnboardingScreen> {
   }
 
   Future<void> _handleBackPressed() async {
+    if (_isEndingFlow) {
+      return;
+    }
     if (_currentPage > 0) {
       _goToPage(_currentPage - 1);
       return;
     }
     final bool shouldExit = await _confirmExit();
     if (shouldExit && mounted) {
-      Navigator.of(context).maybePop();
+      await _abortOnboardingAndLogout();
     }
+  }
+
+  Future<void> _abortOnboardingAndLogout() async {
+    if (_isEndingFlow) {
+      return;
+    }
+    _isEndingFlow = true;
+    await HiveUtils.clearMerchantOnboardingProgress();
+    _activityInfo = null;
+    _categoriesHoursData = null;
+    _policyData = null;
+    _paymentOptions = null;
+    _credentialsData = null;
+
+    if (!mounted) return;
+
+    await HiveUtils.logoutUser(
+      context,
+      onLogout: () async {
+        await FetchSystemSettingsCubit.resetDelegateSectionsFor(
+          context,
+          clearCachedSections: true,
+        );
+      },
+      isRedirect: false,
+    );
+
+    if (!mounted) {
+      _isEndingFlow = false;
+      return;
+    }
+
+    Navigator.of(context).pushNamedAndRemoveUntil(
+      Routes.login,
+      (route) => false,
+      arguments: const {'from': 'merchant_onboarding_abort'},
+    );
+    _isEndingFlow = false;
   }
 
   Future<bool> _confirmExit() async {

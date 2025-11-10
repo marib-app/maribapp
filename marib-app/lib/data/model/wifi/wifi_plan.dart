@@ -10,6 +10,7 @@ class WifiPlan extends Equatable {
     this.dataCapGb,
     this.durationDays,
     this.isUnlimited = false,
+    this.codeBatches = const <WifiCodeBatchSummary>[],
   });
 
   final int id;
@@ -20,6 +21,7 @@ class WifiPlan extends Equatable {
   final num? dataCapGb;
   final int? durationDays;
   final bool isUnlimited;
+  final List<WifiCodeBatchSummary> codeBatches;
 
   factory WifiPlan.fromJson(Map<String, dynamic> json) {
     num? parseNum(dynamic value) {
@@ -123,6 +125,21 @@ class WifiPlan extends Equatable {
     final bool resolvedUnlimited = unlimitedFlag || labelUnlimited;
 
 
+    final List<WifiCodeBatchSummary> codeBatches = (json['code_batches'] as List?)
+            ?.map((dynamic element) {
+              if (element is Map<String, dynamic>) {
+                return WifiCodeBatchSummary.fromJson(element);
+              }
+              if (element is Map) {
+                return WifiCodeBatchSummary.fromJson(
+                    Map<String, dynamic>.from(element as Map));
+              }
+              return null;
+            })
+            .whereType<WifiCodeBatchSummary>()
+            .toList() ??
+        const <WifiCodeBatchSummary>[];
+
     return WifiPlan(
       id: parseInt(json['id']) ?? 0,
       name: json['name']?.toString() ?? '',
@@ -132,6 +149,7 @@ class WifiPlan extends Equatable {
       dataCapGb: dataCapGb,
       durationDays: resolveDurationDays(json),
       isUnlimited: resolvedUnlimited,
+      codeBatches: codeBatches,
     );
   }
 
@@ -144,6 +162,7 @@ class WifiPlan extends Equatable {
     num? dataCapGb,
     int? durationDays,
     bool? isUnlimited,
+    List<WifiCodeBatchSummary>? codeBatches,
   }) {
     return WifiPlan(
       id: id ?? this.id,
@@ -154,6 +173,7 @@ class WifiPlan extends Equatable {
       dataCapGb: dataCapGb ?? this.dataCapGb,
       durationDays: durationDays ?? this.durationDays,
       isUnlimited: isUnlimited ?? this.isUnlimited,
+      codeBatches: codeBatches ?? this.codeBatches,
     );
   }
 
@@ -167,6 +187,8 @@ class WifiPlan extends Equatable {
       if (dataCapGb != null) 'data_cap_gb': dataCapGb,
       if (durationDays != null) 'duration_days': durationDays,
       'is_unlimited': isUnlimited,
+      if (codeBatches.isNotEmpty)
+        'code_batches': codeBatches.map((batch) => batch.toJson()).toList(),
     };
   }
 
@@ -180,5 +202,41 @@ class WifiPlan extends Equatable {
     dataCapGb,
     durationDays,
     isUnlimited,
+    codeBatches,
   ];
+}
+
+class WifiCodeBatchSummary extends Equatable {
+  const WifiCodeBatchSummary({
+    required this.totalCodes,
+    required this.availableCodes,
+    this.status,
+  });
+
+  final int totalCodes;
+  final int availableCodes;
+  final String? status;
+
+  factory WifiCodeBatchSummary.fromJson(Map<String, dynamic> json) {
+    int parseInt(dynamic value) {
+      if (value is int) return value;
+      if (value is num) return value.toInt();
+      return int.tryParse(value?.toString() ?? '') ?? 0;
+    }
+
+    return WifiCodeBatchSummary(
+      totalCodes: parseInt(json['total_codes']),
+      availableCodes: parseInt(json['available_codes']),
+      status: json['status']?.toString(),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'total_codes': totalCodes,
+        'available_codes': availableCodes,
+        if (status != null) 'status': status,
+      };
+
+  @override
+  List<Object?> get props => [totalCodes, availableCodes, status];
 }

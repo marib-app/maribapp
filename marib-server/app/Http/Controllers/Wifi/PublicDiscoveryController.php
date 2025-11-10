@@ -12,6 +12,7 @@ use App\Http\Resources\Wifi\WifiPlanResource;
 use App\Models\Wifi\WifiNetwork;
 use App\Models\Wifi\WifiPlan;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 
 class PublicDiscoveryController extends Controller
 {
@@ -53,11 +54,15 @@ class PublicDiscoveryController extends Controller
 
         if (! empty($validated['with_plans'])) {
             $query->with(['plans' => function (Builder $planQuery): void {
-                $planQuery->where('status', WifiPlanStatus::ACTIVE->value)->orderBy('sort_order');
+                $planQuery->where('status', WifiPlanStatus::ACTIVE->value)
+                    ->orderBy('sort_order')
+                    ->with('codeBatches:id,wifi_plan_id,total_codes,available_codes,status');
             }]);
         }
 
-        $networks = $query->orderByDesc('plan_count')->paginate($perPage)->appends($request->query());
+        $networks = $query->orderByDesc('plans_count')
+            ->paginate($perPage)
+            ->appends($request->query());
 
         return WifiNetworkResource::collection($networks);
     }
@@ -69,7 +74,10 @@ class PublicDiscoveryController extends Controller
 
         $query = WifiPlan::query()
             ->whereIn('status', [WifiPlanStatus::ACTIVE->value, WifiPlanStatus::VALIDATED->value])
-            ->with('network:id,name,slug,status,user_id');
+            ->with([
+                'network:id,name,slug,status,user_id',
+                'codeBatches:id,wifi_plan_id,total_codes,available_codes,status',
+            ]);
 
         if (! empty($validated['q'])) {
             $term = strtolower($validated['q']);

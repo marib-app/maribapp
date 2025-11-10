@@ -22,14 +22,16 @@ import 'package:marib/utils/screen_scaler.dart';
 import 'package:marib/utils/ui_utils.dart';
 
 ///==============================
-/// ط§ظ„ظ…ظ†ط·ظ‚: SplashController
+/// المنطق: SplashController
 ///==============================
 class SplashController extends ChangeNotifier {
   SplashController(this.context);
 
   final BuildContext context;
+  bool _handlingAbortedOnboarding = false;
+  bool _isDisposed = false;
 
-  // ط§ظ„ط­ط§ظ„ط© ط§ظ„ط¯ط§ط®ظ„ظٹط©
+  // الحالة الداخلية
   bool hasInternet = true;
   bool isTimerCompleted = false;
   bool isSettingsLoaded = false;
@@ -43,14 +45,14 @@ class SplashController extends ChangeNotifier {
   Timer? _timer;
   Timer? _fallbackTimer;
 
-  /// ط¨ط¯ط، ط§ظ„ط¹ظ…ظ„
+  /// بدء العمل
   void init() {
     _bindCubitStreams();
     _setupFallbackTimeout();
     _subscribeConnectivity();
   }
 
-  /// ط¥ظ„ط؛ط§ط، ط§ظ„ط§ط´طھط±ط§ظƒط§طھ
+  /// إلغاء الاشتراكات
   @override
   void dispose() {
     _connSub?.cancel();
@@ -58,10 +60,11 @@ class SplashController extends ChangeNotifier {
     _settingsSub?.cancel();
     _timer?.cancel();
     _fallbackTimer?.cancel();
+    _isDisposed = true;
     super.dispose();
   }
 
-  /// ط±ط¨ط· ط³طھط±ظٹظ…ط§طھ ط§ظ„ظ€ Cubits ظ„ط³ظ…ط§ط¹ ط§ظ„ظ†ط¬ط§ط­/ط§ظ„ظپط´ظ„ ط¨ط¯ظˆظ† ظ…ظ†ط·ظ‚ ط¯ط§ط®ظ„ ط§ظ„ظˆط§ط¬ظ‡ط©
+  /// ربط ستريمات الـ Cubits لسماع النجاح/الفشل بدون منطق داخل الواجهة
   void _bindCubitStreams() {
     _langSub = context.read<FetchLanguageCubit>().stream.listen((state) {
       if (state is FetchLanguageSuccess) {
@@ -77,7 +80,7 @@ class SplashController extends ChangeNotifier {
         notifyListeners();
         _tryNavigate();
       } else if (state is FetchLanguageFailure) {
-        isLanguageLoaded = true; // ط§ط³طھط®ط¯ظ… ط§ظ„ط§ظپطھط±ط§ط¶ظٹ
+        isLanguageLoaded = true; // استخدم الافتراضي
         notifyListeners();
         _tryNavigate();
       }
@@ -98,14 +101,14 @@ class SplashController extends ChangeNotifier {
       } else if (state is FetchSystemSettingsFailure) {
         _completeDefaultLanguageWaiters();
 
-        isSettingsLoaded = true; // ط§ط³طھط®ط¯ظ… ط§ظ„ط§ظپطھط±ط§ط¶ظٹ
+        isSettingsLoaded = true; // استخدم الافتراضي
         notifyListeners();
         _tryNavigate();
       }
     });
   }
 
-  /// ط§ط´طھط±ط§ظƒ ط­ط§ظ„ط© ط§ظ„ط¥ظ†طھط±ظ†طھ
+  /// اشتراك حالة الإنترنت
   void _subscribeConnectivity() {
     _connSub = Connectivity().onConnectivityChanged.listen((results) {
       final online = !results.contains(ConnectivityResult.none);
@@ -119,7 +122,7 @@ class SplashController extends ChangeNotifier {
       }
     });
 
-    // ظ…ط­ط§ظˆظ„ط© ط£ظˆظ„ظٹط© (ط¨ط¹ط¶ ط§ظ„ط£ط¬ظ‡ط²ط© ظ„ط§ طھط±ط³ظ„ ط£ظˆظ„ ط­ط¯ط« ط¨ط³ط±ط¹ط©)
+    // محاولة أولية (بعض الأجهزة لا ترسل أول حدث بسرعة)
     Connectivity().checkConnectivity().then((results) {
       final online = !results.contains(ConnectivityResult.none);
       hasInternet = online;
@@ -139,7 +142,7 @@ class SplashController extends ChangeNotifier {
     _startTimer();
   }
 
-  /// طھط­ظ…ظٹظ„ ط§ظ„ظ„ط؛ط© ط§ظ„ط§ظپطھط±ط§ط¶ظٹط© (ظ†ط³طھط®ط¯ظ… ط§ظ„ط¹ط±ط¨ظٹط© ظƒط§ظپطھط±ط§ط¶ظٹ)
+  /// تحميل اللغة الافتراضية (نستخدم العربية كافتراضي)
   Future<void> _getDefaultLanguage() async {
     final dynamic stored = HiveUtils.getLanguage();
     final bool hasCachedTranslations = stored is Map &&
@@ -168,7 +171,7 @@ class SplashController extends ChangeNotifier {
         return;
       }
 
-      // ط¬ط±ظ‘ط¨ ط§ظ„ط¹ط±ط¨ظٹط© ظ…ط¨ط§ط´ط±ط©
+      // جرّب العربية مباشرة
       try {
         context.read<FetchLanguageCubit>().getLanguage("ar");
       } catch (_) {
@@ -179,7 +182,7 @@ class SplashController extends ChangeNotifier {
     }
   }
 
-  /// طھط­ظ…ظٹظ„ ط§ظ„ط¥ط¹ط¯ط§ط¯ط§طھ
+  /// تحميل الإعدادات
   void _fetchSystemSettings() {
     context.read<FetchSystemSettingsCubit>().fetchSettings(forceRefresh: true);
   }
@@ -226,7 +229,7 @@ class SplashController extends ChangeNotifier {
     }
   }
 
-  /// ظ…ط¤ظ‚طھ ط¨ط³ظٹط· ظ„ط¹ط±ط¶ ط§ظ„ط³ط¨ظ„ظ‘ط§ط´
+  /// مؤقت بسيط لعرض السبلّاش
   void _startTimer() {
     _timer?.cancel();
     _timer = Timer(const Duration(seconds: 5), () {
@@ -236,7 +239,7 @@ class SplashController extends ChangeNotifier {
     });
   }
 
-  /// ط®ط·ط© ط·ظˆط§ط±ط¦: ظ„ط§ طھظ†طھط¸ط± ط£ظƒط«ط± ظ…ظ† 10 ط«ظˆط§ظ†
+  /// خطة طوارئ: لا تنتظر أكثر من 10 ثوان
   void _setupFallbackTimeout() {
     _fallbackTimer?.cancel();
     _fallbackTimer = Timer(const Duration(seconds: 10), () {
@@ -249,7 +252,7 @@ class SplashController extends ChangeNotifier {
     });
   }
 
-  /// ظ…ط­ط§ظˆظ„ط© ط§ظ„طھظ†ظ‚ظ„ ط¹ظ†ط¯ظ…ط§ طھظƒطھظ…ظ„ ط§ظ„ط´ط±ظˆط·
+  /// محاولة التنقل عندما تكتمل الشروط
   void _tryNavigate() {
     if (!isTimerCompleted || !isSettingsLoaded || !isLanguageLoaded) return;
 
@@ -269,25 +272,12 @@ class SplashController extends ChangeNotifier {
       return;
     }
 
+    if (HiveUtils.isMerchantOnboardingInProgress()) {
+      unawaited(_restartAbortedOnboardingSession());
+      return;
+    }
+
     if (HiveUtils.isUserAuthenticated()) {
-      if (HiveUtils.isMerchantOnboardingInProgress()) {
-        final Map<String, dynamic>? draft =
-            HiveUtils.getMerchantOnboardingDraft();
-        final int resumeStep = HiveUtils.getMerchantOnboardingStep();
-        final Map<String, dynamic> args = {
-          'resumeFromStep': resumeStep,
-        };
-        if (draft != null && draft.isNotEmpty) {
-          args['signupDraft'] = draft;
-        }
-        _go(() {
-          Navigator.of(context).pushReplacementNamed(
-            Routes.merchantOnboarding,
-            arguments: args,
-          );
-        });
-        return;
-      }
 
       final user = HiveUtils.getUserDetails();
       final missingName = (user.name == null || user.name == "");
@@ -330,7 +320,7 @@ class SplashController extends ChangeNotifier {
       return;
     }
 
-    // ط¶ظٹظپ/طھط®ط·ظٹ
+    // ضيف/تخطي
     _go(() {
       if (HiveUtils.isUserSkip() == true) {
         Navigator.of(context)
@@ -341,21 +331,68 @@ class SplashController extends ChangeNotifier {
     });
   }
 
-  /// طھظ†ظپظٹط° ط¢ظ…ظ† ط¨ط¹ط¯ ط¥ط·ط§ط± ط§ظ„ط±ط³ظ…
+  /// تنفيذ آمن بعد إطار الرسم
   void _go(VoidCallback nav) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (Navigator.of(context).mounted) nav();
+      if (_isDisposed) {
+        return;
+      }
+      final navigator = Navigator.of(context);
+      if (navigator.mounted) {
+        nav();
+      }
     });
   }
 
-  /// ط²ط± ط¥ط¹ط§ط¯ط© ط§ظ„ظ…ط­ط§ظˆظ„ط© ظ…ظ† ط´ط§ط´ط© ط¹ط¯ظ… ط§ظ„ط§طھطµط§ظ„
+  /// زر إعادة المحاولة من شاشة عدم الاتصال
   void retry() {
     _startProcessesOnce();
+  }
+
+  Future<void> _restartAbortedOnboardingSession() async {
+    if (_handlingAbortedOnboarding) {
+      return;
+    }
+    _handlingAbortedOnboarding = true;
+
+    try {
+      await HiveUtils.clearMerchantOnboardingProgress();
+      await HiveUtils.logoutUser(
+        context,
+        onLogout: () async {
+          await FetchSystemSettingsCubit.resetDelegateSectionsFor(
+            context,
+            clearCachedSections: true,
+          );
+        },
+        isRedirect: false,
+      );
+      if (_isDisposed) {
+        return;
+      }
+      _go(() {
+        if (_isDisposed) {
+          return;
+        }
+        Navigator.of(context).pushReplacementNamed(
+          Routes.login,
+          arguments: const {'from': 'merchant_onboarding_abort'},
+        );
+      });
+    } catch (error, stackTrace) {
+      log(
+        'SplashController: failed to reset merchant onboarding session',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    } finally {
+      _handlingAbortedOnboarding = false;
+    }
   }
 }
 
 ///==============================
-/// ط§ظ„ظˆط§ط¬ظ‡ط©: SplashScreen
+/// الواجهة: SplashScreen
 ///==============================
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -398,7 +435,7 @@ class SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
-    ScreenScaler.init(context); // ظ…ظ‡ظ…
+    ScreenScaler.init(context); // مهم
 
     return AnimatedBuilder(
       animation: _controller,
@@ -490,13 +527,13 @@ class SplashScreenState extends State<SplashScreen>
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  'ط¬ظ…ظٹط¹ ط§ظ„ط­ظ‚ظˆظ‚ ظ…ط­ظپظˆط¸ط© 2026 C',
+                                  'جميع الحقوق محفوظة 2026 C',
                                   textAlign: TextAlign.center,
                                   style: footerStyle,
                                 ),
                                 SizedBox(height: footerSpacing),
                                 Text(
-                                  'ظ…ط£ط±ط¨ ط¨ظٹظ† ظٹط¯ظٹظƒ ظ„ظ„ط®ط¯ظ…ط§طھ ط§ظ„ط£ظ„ظƒطھط±ظˆظ†ظٹط©',
+                                  'مأرب بين يديك للخدمات الألكترونية',
                                   textAlign: TextAlign.center,
                                   style: footerStyle.copyWith(
                                     fontWeight: FontWeight.w300,
@@ -552,7 +589,7 @@ class _IntroContent extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              'ظ…ط±ط­ط¨ط§ظ‹ ط¨ظƒ',
+              'مرحباً بك',
               textAlign: TextAlign.center,
               style: baseStyle,
             ),

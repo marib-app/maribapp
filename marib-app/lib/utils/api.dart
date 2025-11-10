@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/widgets.dart';
 import 'package:dio/dio.dart';
 import 'package:marib/data/cubits/system/user_details.dart';
 import 'package:marib/utils/constant.dart';
@@ -195,6 +196,7 @@ class _ApiResponseCache {
 }
 
 class Api {
+  static bool _userLogoutInProgress = false;
   static bool get networkLoggingEnabled =>
       !kReleaseMode && AppSettings.isNetworkLoggingEnabled;
 
@@ -279,16 +281,25 @@ class Api {
       headers["Content-Language"] = languageCode;
     }
 
-    if (!HiveUtils.isUserAuthenticated()) {
-      _ensureSliderSessionHeaders(headers);
+    final bool hasAuthSession = HiveUtils.isUserAuthenticated() ||
+        HiveUtils.isUserBasicallyAuthenticated();
 
+    if (!hasAuthSession) {
+      _ensureSliderSessionHeaders(headers);
       return headers;
     }
 
     String? jwtToken = HiveUtils.getJWT();
 
+    if (jwtToken == null || jwtToken.trim().isEmpty) {
+      _ensureSliderSessionHeaders(headers);
+      return headers;
+    }
+
+    jwtToken = jwtToken.trim();
+
     // تنظيف أي شوائب محتملة داخل التوكن (حماية من قيم مخلوطة)
-    if (jwtToken != null && jwtToken.isNotEmpty) {
+    if (jwtToken.isNotEmpty) {
       if (jwtToken.contains('DEMO_MODE') ||
           jwtToken.contains('=false') ||
           jwtToken.contains('=true')) {
@@ -1133,7 +1144,12 @@ class Api {
               ? rawBody.map((key, value) => MapEntry(key.toString(), value))
               : <String, dynamic>{'data': rawBody};
 
+      final bool shouldForceLogout = _shouldForceLogoutOn401(resp);
+
       if (statusCode >= 400) {
+        if ((statusCode == 401 || statusCode == 403) && shouldForceLogout) {
+          userExpired();
+        }
         throw ApiHttpException(
           errorMessage: resp['message']?.toString() ?? 'request-failed',
           statusCode: statusCode,
@@ -1147,6 +1163,10 @@ class Api {
             : (statusCode == 0 ? 422 : statusCode);
         final String message =
             (resp['message'] ?? 'request-failed').toString();
+        if ((derivedStatus == 401 || derivedStatus == 403) &&
+            shouldForceLogout) {
+          userExpired();
+        }
         throw ApiHttpException(
           errorMessage: message,
           statusCode: derivedStatus,
@@ -1157,15 +1177,28 @@ class Api {
       return resp;
     } on DioException catch (e) {
       final statusCode = e.response?.statusCode;
+      final dynamic rawPayload = e.response?.data;
+      final Map<String, dynamic>? payload = _normalizePayload(rawPayload);
       if (statusCode == 401) {
-        userExpired();
+        if (_shouldForceLogoutOn401(payload)) {
+          userExpired();
+        }
+        throw ApiHttpException(
+          errorMessage:
+              _extractMessageFromPayload(payload) ?? 'unauthenticated',
+          statusCode: 401,
+          payload: payload,
+          cause: e,
+        );
       }
       if (statusCode == 302 || statusCode == 307) {
-        userExpired();
+        if (_shouldForceLogoutOn401(payload)) {
+          userExpired();
+        }
         throw ApiHttpException(
           errorMessage: 'unauthenticated',
           statusCode: 401,
-          payload: e.response?.data,
+          payload: payload,
           cause: e,
         );
       }
@@ -1179,7 +1212,7 @@ class Api {
             ? "no-internet"
             : "Something went wrong with error ${e.response?.statusCode}",
         statusCode: statusCode,
-        payload: e.response?.data,
+        payload: payload,
         cause: e,
       );
     } on ApiException {
@@ -1191,34 +1224,55 @@ class Api {
 
   /// معالجة انتهاء صلاحية جلسة المستخدم
   static void userExpired() {
-    HelperUtils.showSnackBarMessage(Constant.navigatorKey.currentContext!,
-        "userIsDeactivated".translate(Constant.navigatorKey.currentContext!),
-        messageDuration: 3);
-    Future.delayed(const Duration(seconds: 2), () {
-      clearCache();
+    final BuildContext? ctx =
+        Constant.navigatorKey.currentContext ?? Constant.navigatorKey.currentState?.context;
 
+    if (ctx == null) {
+      debugPrint(
+          'userExpired: navigatorKey.currentContext is null, skipping forced logout UI flow.');
+      _userLogoutInProgress = false;
+      return;
+    }
+
+    if (_userLogoutInProgress) {
+      return;
+    }
+    _userLogoutInProgress = true;
+
+    HelperUtils.showSnackBarMessage(
+      ctx,
+      "userIsDeactivated".translate(ctx),
+      messageDuration: 3,
+    );
+
+    Future.delayed(const Duration(seconds: 2), () async {
+      clearCache();
       HiveUtils.clear();
       Constant.favoriteItemList.clear();
-      Constant.navigatorKey.currentContext!.read<UserDetailsCubit>().clear();
-      Constant.navigatorKey.currentContext!.read<FavoriteCubit>().resetState();
-      Constant.navigatorKey.currentContext!
-          .read<UpdatedReportItemCubit>()
-          .clearItem();
-      Constant.navigatorKey.currentContext!
-          .read<GetBuyerChatListCubit>()
-          .resetState();
-      Constant.navigatorKey.currentContext!
-          .read<BlockedUsersListCubit>()
-          .resetState();
-      HiveUtils.logoutUser(
-        Constant.navigatorKey.currentContext!,
+
+      final BuildContext? safeContext =
+          Constant.navigatorKey.currentContext ?? ctx;
+      if (safeContext == null) {
+        _userLogoutInProgress = false;
+        return;
+      }
+
+      safeContext.read<UserDetailsCubit>().clear();
+      safeContext.read<FavoriteCubit>().resetState();
+      safeContext.read<UpdatedReportItemCubit>().clearItem();
+      safeContext.read<GetBuyerChatListCubit>().resetState();
+      safeContext.read<BlockedUsersListCubit>().resetState();
+
+      await HiveUtils.logoutUser(
+        safeContext,
         onLogout: () async {
           await FetchSystemSettingsCubit.resetDelegateSectionsFor(
-            Constant.navigatorKey.currentContext!,
+            safeContext,
             clearCachedSections: true,
           );
         },
       );
+      _userLogoutInProgress = false;
     });
   }
 
@@ -1251,16 +1305,28 @@ class Api {
       }
       return Map.from(response.data);
     } on DioException catch (e) {
-      final statusCode = e.response?.statusCode;
-      if (statusCode == 401) {
-        userExpired();
+      final int? statusCode = e.response?.statusCode;
+      final Map<String, dynamic>? payload = _normalizePayload(e.response?.data);
+      if (statusCode == 401 || statusCode == 403) {
+        if (_shouldForceLogoutOn401(payload)) {
+          userExpired();
+        }
+        throw ApiHttpException(
+          errorMessage:
+              _extractMessageFromPayload(payload) ?? 'unauthenticated',
+          statusCode: statusCode,
+          payload: payload,
+          cause: e,
+        );
       }
       if (statusCode == 302 || statusCode == 307) {
-        userExpired();
+        if (_shouldForceLogoutOn401(payload)) {
+          userExpired();
+        }
         throw ApiHttpException(
           errorMessage: 'unauthenticated',
           statusCode: 401,
-          payload: e.response?.data,
+          payload: payload,
           cause: e,
         );
       }
@@ -1273,7 +1339,7 @@ class Api {
             ? "no-internet"
             : "Something went wrong with error ${e.response?.statusCode}",
         statusCode: statusCode,
-        payload: e.response?.data,
+        payload: payload ?? e.response?.data,
         cause: e,
       );
     } on ApiException {
@@ -1348,27 +1414,8 @@ class Api {
       );
 
       String? extractMessage(dynamic payload) {
-        if (payload is Map<String, dynamic>) {
-          for (final String key in const <String>['message', 'error']) {
-            final dynamic candidate = payload[key];
-            if (candidate is String) {
-              final String trimmed = candidate.trim();
-              if (trimmed.isNotEmpty) {
-                return trimmed;
-              }
-            }
-          }
-        } else if (payload is Map) {
-          final Map<String, dynamic> converted =
-              Map<String, dynamic>.from(payload as Map);
-          return extractMessage(converted);
-        } else if (payload is String) {
-          final String trimmed = payload.trim();
-          if (trimmed.isNotEmpty) {
-            return trimmed;
-          }
-        }
-        return null;
+        final Map<String, dynamic>? normalized = _normalizePayload(payload);
+        return _extractMessageFromPayload(normalized);
       }
 
       Map<String, dynamic>? asMap(dynamic payload) {
@@ -1390,6 +1437,8 @@ class Api {
       final int statusCode = response.statusCode ?? 0;
       final dynamic rawPayload = response.data;
       final Map<String, dynamic>? payloadMap = asMap(rawPayload);
+      final Map<String, dynamic>? normalizedPayload =
+          payloadMap ?? _normalizePayload(rawPayload);
 
       final bool redirectedToLogin = statusCode == 302 || statusCode == 307;
       final int normalizedStatus = redirectedToLogin ? 401 : statusCode;
@@ -1397,7 +1446,9 @@ class Api {
       if (redirectedToLogin ||
           normalizedStatus == 401 ||
           normalizedStatus == 403) {
-        userExpired();
+        if (_shouldForceLogoutOn401(normalizedPayload)) {
+          userExpired();
+        }
       }
       if (normalizedStatus == 503) {
         throw "server-not-available";
@@ -1406,9 +1457,10 @@ class Api {
       if (normalizedStatus < 200 || normalizedStatus >= 300) {
         final dynamic errorPayload = payloadMap != null
             ? Map<String, dynamic>.from(payloadMap)
-            : rawPayload;
+            : (normalizedPayload ?? rawPayload);
         throw ApiHttpException(
-          errorMessage: extractMessage(errorPayload) ?? 'request-failed',
+          errorMessage:
+              extractMessage(errorPayload) ?? 'request-failed',
           statusCode: normalizedStatus,
           payload: errorPayload,
         );
@@ -1422,16 +1474,28 @@ class Api {
       }
       return <String, dynamic>{'data': rawPayload};
     } on DioException catch (e) {
-      final statusCode = e.response?.statusCode;
+      final int? statusCode = e.response?.statusCode;
+      final Map<String, dynamic>? payload = _normalizePayload(e.response?.data);
       if (statusCode == 401 || statusCode == 403) {
-        userExpired();
+        if (_shouldForceLogoutOn401(payload)) {
+          userExpired();
+        }
+        throw ApiHttpException(
+          errorMessage:
+              _extractMessageFromPayload(payload) ?? 'unauthenticated',
+          statusCode: statusCode,
+          payload: payload,
+          cause: e,
+        );
       }
       if (statusCode == 302 || statusCode == 307) {
-        userExpired();
+        if (_shouldForceLogoutOn401(payload)) {
+          userExpired();
+        }
         throw ApiHttpException(
           errorMessage: 'unauthenticated',
           statusCode: 401,
-          payload: e.response?.data,
+          payload: payload,
           cause: e,
         );
       }
@@ -1444,7 +1508,7 @@ class Api {
             ? "no-internet"
             : "Something went wrong with error ${e.response?.statusCode}",
         statusCode: statusCode,
-        payload: e.response?.data,
+        payload: payload ?? e.response?.data,
         cause: e,
       );
     } on ApiException {
@@ -1539,16 +1603,28 @@ class Api {
       }
       return responseMap;
     } on DioException catch (e) {
-      final statusCode = e.response?.statusCode;
-      if (statusCode == 401) {
-        userExpired();
+      final int? statusCode = e.response?.statusCode;
+      final Map<String, dynamic>? payload = _normalizePayload(e.response?.data);
+      if (statusCode == 401 || statusCode == 403) {
+        if (_shouldForceLogoutOn401(payload)) {
+          userExpired();
+        }
+        throw ApiHttpException(
+          errorMessage:
+              _extractMessageFromPayload(payload) ?? 'unauthenticated',
+          statusCode: statusCode,
+          payload: payload,
+          cause: e,
+        );
       }
       if (statusCode == 302 || statusCode == 307) {
-        userExpired();
+        if (_shouldForceLogoutOn401(payload)) {
+          userExpired();
+        }
         throw ApiHttpException(
           errorMessage: 'unauthenticated',
           statusCode: 401,
-          payload: e.response?.data,
+          payload: payload,
           cause: e,
         );
       }
@@ -1561,7 +1637,7 @@ class Api {
             ? "no-internet"
             : "Something went wrong with error ${e.response?.statusCode}",
         statusCode: statusCode,
-        payload: e.response?.data,
+        payload: payload ?? e.response?.data,
         cause: e,
       );
     } on ApiException {
@@ -1851,6 +1927,153 @@ class Api {
 
     return Map<String, dynamic>.from(res);
   }
+
+  static Map<String, dynamic>? _normalizePayload(dynamic payload) {
+    if (payload == null) {
+      return null;
+    }
+
+    if (payload is Map<String, dynamic>) {
+      return Map<String, dynamic>.from(payload);
+    }
+
+    if (payload is Map) {
+      final map = <String, dynamic>{};
+      payload.forEach((key, value) {
+        if (key == null) {
+          return;
+        }
+        map[key.toString()] = value;
+      });
+      return map;
+    }
+
+    if (payload is String) {
+      final String trimmed = payload.trim();
+      if (trimmed.isEmpty) {
+        return null;
+      }
+      try {
+        final dynamic decoded = json.decode(trimmed);
+        return _normalizePayload(decoded);
+      } on FormatException {
+        return <String, dynamic>{'message': trimmed};
+      }
+    }
+
+    if (payload is Iterable) {
+      return <String, dynamic>{'data': payload.toList()};
+    }
+
+    return null;
+  }
+
+  static String? _extractMessageFromPayload(Map<String, dynamic>? payload) {
+    if (payload == null || payload.isEmpty) {
+      return null;
+    }
+
+    for (final key in const <String>[
+      'message',
+      'error_description',
+      'error',
+    ]) {
+      final String? candidate = _firstNonEmptyString(payload[key]);
+      if (candidate != null) {
+        return candidate;
+      }
+    }
+
+    final String? errorsMessage = _firstNonEmptyString(payload['errors']);
+    if (errorsMessage != null) {
+      return errorsMessage;
+    }
+
+    final dynamic meta = payload['meta'];
+    if (meta is Map<String, dynamic> || meta is Map) {
+      final Map<String, dynamic>? normalizedMeta = _normalizePayload(meta);
+      final String? metaMessage =
+          _firstNonEmptyString(normalizedMeta?['message']);
+      if (metaMessage != null) {
+        return metaMessage;
+      }
+    }
+
+    return null;
+  }
+
+  static String? _firstNonEmptyString(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+
+    if (value is String) {
+      final String trimmed = value.trim();
+      return trimmed.isEmpty ? null : trimmed;
+    }
+
+    if (value is Iterable) {
+      for (final element in value) {
+        final String? resolved = _firstNonEmptyString(element);
+        if (resolved != null) {
+          return resolved;
+        }
+      }
+      return null;
+    }
+
+    if (value is Map) {
+      for (final entry in value.entries) {
+        final String? resolved = _firstNonEmptyString(entry.value);
+        if (resolved != null) {
+          return resolved;
+        }
+      }
+      return null;
+    }
+
+    return null;
+  }
+
+  static bool _shouldForceLogoutOn401(Map<String, dynamic>? payload) {
+    if (payload == null || payload.isEmpty) {
+      return false;
+    }
+
+    final String? message =
+        _extractMessageFromPayload(payload)?.toLowerCase();
+    if (message != null) {
+      for (final marker in _deactivationMessageMarkers) {
+        if (message.contains(marker)) {
+          return true;
+        }
+      }
+    }
+
+    for (final dynamic candidate in <dynamic>[
+      payload['code'],
+      payload['status'],
+      payload['error_code'],
+    ]) {
+      if (candidate is String &&
+          candidate.toLowerCase().contains('deactivat')) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  static const List<String> _deactivationMessageMarkers = <String>[
+    'user is deactivated',
+    'account is deactivated',
+    'deactivated. please contact',
+    'deactivated please contact',
+    'تم الغاء التنشيط',
+    'تم إلغاء تنشيط',
+    'يتم الغاء التنشيط',
+    'الغاء تنشيط الحساب',
+  ];
 
   static String generateIdempotencyKey() {
     final String timestamp = DateTime.now().toUtc().toIso8601String();

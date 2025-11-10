@@ -722,10 +722,18 @@ class UiUtils {
     FontWeight fontWeight = FontWeight.w500,
     VoidCallback? onClosed,
   }) {
-    final overlay = Overlay.of(context);
-    if (overlay == null) return;
+    OverlayState? overlayState =
+        Overlay.maybeOf(context, rootOverlay: true) ??
+            Navigator.of(context, rootNavigator: true).overlay;
 
-    final OverlayState overlayState = overlay;
+    if (overlayState == null) {
+      if (kDebugMode) {
+        debugPrint(
+          'UiUtils.showSoftSnackBar: no Overlay found for context $context',
+        );
+      }
+      return;
+    }
 
     final ThemeData theme = Theme.of(context);
 
@@ -2728,7 +2736,6 @@ class _AppBarBottomSection extends StatelessWidget {
     );
   }
 }
-
 
 
 

@@ -71,7 +71,7 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
     }
 
     try {
-      final List<WifiNetwork> result = await _repository.fetchNetworks(
+      final List<WifiNetwork> result = await _repository.fetchOwnerNetworks(
         query: _searchQuery.trim().isEmpty ? null : _searchQuery.trim(),
         perPage: 60,
       );

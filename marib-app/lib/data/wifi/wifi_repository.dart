@@ -63,6 +63,50 @@ class WifiRepository {
     return int.tryParse(value.toString());
   }
 
+  Future<List<WifiNetwork>> fetchOwnerNetworks({
+    String? query,
+    int perPage = 60,
+  }) async {
+    final int normalizedPerPage = perPage.clamp(1, 100).toInt();
+    final String normalizedQuery = query?.trim() ?? '';
+
+    final response = await Api.get(
+      url: Api.ownerWifiNetworksApi,
+      queryParameters: <String, dynamic>{'per_page': normalizedPerPage},
+    );
+
+    final List<dynamic> rawList = _extractNetworksList(response);
+
+    final List<WifiNetwork> networks = rawList
+        .map((dynamic element) {
+          if (element is Map<String, dynamic>) {
+            return WifiNetwork.fromJson(element);
+          }
+          if (element is Map) {
+            return WifiNetwork.fromJson(
+              Map<String, dynamic>.from(element as Map),
+            );
+          }
+          return null;
+        })
+        .whereType<WifiNetwork>()
+        .toList();
+
+    if (normalizedQuery.isEmpty) {
+      return networks;
+    }
+
+    final String needle = normalizedQuery.toLowerCase();
+    return networks.where((network) {
+      final String haystack = <String?>[
+        network.name,
+        network.slug,
+        network.address,
+      ].whereType<String>().map((value) => value.toLowerCase()).join(' ');
+      return haystack.contains(needle);
+    }).toList();
+  }
+
   Future<List<WifiNetwork>> fetchNetworks({
     String? query,
     int perPage = 30,

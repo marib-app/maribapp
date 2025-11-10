@@ -22,6 +22,12 @@ npx next dev -H 0.0.0.0 -p 3000
 
 Get-Content .\storage\logs\laravel.log -Tail 100 
 
+
+Get-Content .\storage\logs\laravel.log -Tail 100 | Select-String "ERROR"
+
+
+
+
 git status; git add -A; git commit -m "msg"; git push
 
 

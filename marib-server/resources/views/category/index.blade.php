@@ -101,28 +101,28 @@
                     @csrf
                     <input type="hidden" name="source_category_id" value="">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="cloneCategoryModalLabel">{{ __('نسخ الفئة الحالية إلى قسم آخر') }}</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __('إغلاق') }}"></button>
+                        <h5 class="modal-title" id="cloneCategoryModalLabel">{{ __('CloneCategoryModalTitle') }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ __('CloneCategoryCancel') }}"></button>
                     </div>
                     <div class="modal-body">
-                        <p class="mb-3">{{ __('سيتم نسخ جميع الفئات الفرعية والحقول المخصصة ضمن الفئة:') }} <strong id="cloneSourceName">—</strong></p>
+                        <p class="mb-3">{!! __('CloneCategoryModalDescription', ['category' => '<strong id="cloneSourceName">&mdash;</strong>']) !!}</p>
                         <div id="cloneCategoryFeedback" class="alert alert-danger d-none" role="alert"></div>
                         <div class="mb-3">
-                            <label for="cloneTargetSelect" class="form-label">{{ __('اختر القسم الهدف') }}</label>
+                            <label for="cloneTargetSelect" class="form-label">{{ __('CloneCategoryTargetLabel') }}</label>
                             <select class="form-select select2 select2-full-width" id="cloneTargetSelect" name="target_parent_category_id" required disabled style="width: 100%;">
-                                <option value="">{{ __('جارٍ تحميل الأقسام المتاحة...') }}</option>
+                                <option value="">{{ __('CloneCategoryLoadingOption') }}</option>
                             </select>
                         </div>
                         <div id="cloneCategoryLoadingIndicator" class="d-flex align-items-center">
                             <div class="spinner-border spinner-border-sm text-primary me-2" role="status">
-                                <span class="visually-hidden">{{ __('جارٍ التحميل...') }}</span>
+                                <span class="visually-hidden">{{ __('CloneCategoryLoadingOption') }}</span>
                             </div>
-                            <span>{{ __('يرجى الانتظار بينما نقوم بتحميل الأقسام المتاحة.') }}</span>
+                            <span>{{ __('CloneCategoryLoadingHint') }}</span>
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('إلغاء') }}</button>
-                        <button type="submit" class="btn btn-primary" id="cloneCategorySubmit" disabled>{{ __('نسخ') }}</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('CloneCategoryCancel') }}</button>
+                        <button type="submit" class="btn btn-primary" id="cloneCategorySubmit" disabled>{{ __('CloneCategorySubmit') }}</button>
                     </div>
                 </form>
             </div>
@@ -172,11 +172,11 @@
 
             const resetModalState = () => {
                 feedback.classList.add('d-none');
-                feedback.textContent = '';
+                feedback.innerHTML = '';
                 destroySelect2();
                 const loadingOption = document.createElement('option');
                 loadingOption.value = '';
-                loadingOption.textContent = '{{ __('جارٍ تحميل الأقسام المتاحة...') }}';
+                loadingOption.textContent = '{{ __('CloneCategoryLoadingOption') }}';
 
                 targetSelectElement.innerHTML = '';
                 targetSelectElement.appendChild(loadingOption);
@@ -237,7 +237,7 @@
                 if (!hasArrayOptions || usableOptions.length === 0) {
                     const emptyOption = document.createElement('option');
                     emptyOption.value = '';
-                    emptyOption.textContent = '{{ __('لا توجد أقسام متاحة للنسخ إليها.') }}';
+                    emptyOption.textContent = '{{ __('CloneCategoryNoTargets') }}';
                     fragment.appendChild(emptyOption);
 
                     targetSelectElement.appendChild(fragment);
@@ -275,7 +275,7 @@
                 } else {
                     const placeholderOption = document.createElement('option');
                     placeholderOption.value = '';
-                    placeholderOption.textContent = '{{ __('اختر القسم الهدف') }}';
+                    placeholderOption.textContent = '{{ __('CloneCategoryPlaceholder') }}';
                     placeholderOption.disabled = true;
                     placeholderOption.selected = true;
                     fragment.appendChild(placeholderOption);
@@ -298,6 +298,61 @@
                 initializeSelect2();
                 syncSelectionState(selectedValue);
 
+            };
+
+            const renderFetchError = (optionsUrl) => {
+                loadingIndicator.classList.add('d-none');
+                feedback.innerHTML = `<div class="d-flex flex-column flex-md-row align-items-start align-items-md-center gap-2">
+                        <span>{{ __('CloneCategoryError') }}</span>
+                        <button type="button" class="btn btn-sm btn-outline-light" data-action="clone-category-retry">
+                            {{ __('CloneCategoryRetry') }}
+                        </button>
+                    </div>`;
+                feedback.classList.remove('d-none');
+                destroySelect2();
+                targetSelectElement.innerHTML = '';
+                const errorOption = document.createElement('option');
+                errorOption.value = '';
+                errorOption.textContent = '{{ __('CloneCategoryErrorOption') }}';
+                targetSelectElement.appendChild(errorOption);
+                $targetSelect.prop('disabled', true);
+                targetSelectElement.disabled = true;
+                initializeSelect2();
+                $targetSelect.trigger('change.select2');
+                submitButton.disabled = true;
+
+                const retryTrigger = feedback.querySelector('[data-action="clone-category-retry"]');
+                if (retryTrigger) {
+                    const handleRetry = () => {
+                        retryTrigger.removeEventListener('click', handleRetry);
+                        resetModalState();
+                        loadCloneTargets(optionsUrl);
+                    };
+                    retryTrigger.addEventListener('click', handleRetry, { once: true });
+                }
+            };
+
+            const loadCloneTargets = (optionsUrl) => {
+                fetch(optionsUrl, {
+                    credentials: 'same-origin',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    }
+                })
+                    .then(function (response) {
+                        if (!response.ok) {
+                            throw new Error('Request failed');
+                        }
+                        return response.json();
+                    })
+                    .then(function (data) {
+                        loadingIndicator.classList.add('d-none');
+                        populateOptions(data.options || []);
+                    })
+                    .catch(function () {
+                        renderFetchError(optionsUrl);
+                    });
             };
 
             function handleModalHidden() {
@@ -358,37 +413,7 @@
                 sourceInput.value = categoryId;
                 sourceNameLabel.textContent = categoryName || '#';
 
-                fetch(optionsUrl, {
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                })
-                    .then(function (response) {
-                        if (!response.ok) {
-                            throw new Error('Request failed');
-                        }
-                        return response.json();
-                    })
-                    .then(function (data) {
-                        loadingIndicator.classList.add('d-none');
-                        populateOptions(data.options || []);
-                    })
-                    .catch(function () {
-                        loadingIndicator.classList.add('d-none');
-                        feedback.textContent = '{{ __('تعذر تحميل الأقسام المتاحة. يرجى المحاولة مرة أخرى.') }}';
-                        feedback.classList.remove('d-none');
-                        destroySelect2();
-                        targetSelectElement.innerHTML = '';
-                        const errorOption = document.createElement('option');
-                        errorOption.value = '';
-                        errorOption.textContent = '{{ __('حدث خطأ أثناء تحميل البيانات.') }}';
-                        targetSelectElement.appendChild(errorOption);
-                        $targetSelect.prop('disabled', true);
-                        targetSelectElement.disabled = true;
-                        initializeSelect2();
-                        $targetSelect.trigger('change.select2');
-                        submitButton.disabled = true;
-                    });
+                loadCloneTargets(optionsUrl);
 
 
                 if (typeof showModal === 'function') {

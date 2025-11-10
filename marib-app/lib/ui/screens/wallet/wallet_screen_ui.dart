@@ -508,7 +508,7 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
     );
   }
 
-  Widget _buildSkeletonCard(AppColorScheme colors) {
+  Widget _buildSkeletonCard(ColorScheme colors) {
     return Container(
       height: 150,
       decoration: BoxDecoration(
@@ -788,11 +788,105 @@ class _WalletScreenUIState extends State<WalletScreenUI> {
   }
 
   WalletOperationOptions _resolveTransferOptions(WalletSummary? summary) {
-    return WalletOperationOptions.fromSummary(summary?.raw ?? const {});
+    return _resolveOperationOptions(
+      summary,
+      hints: const [
+        'transfer_options',
+        'transferOption',
+        'transfer',
+      ],
+    );
   }
 
   WalletOperationOptions _resolveWithdrawalOptions(WalletSummary? summary) {
-    return WalletOperationOptions.fromSummary(summary?.raw ?? const {});
+    return _resolveOperationOptions(
+      summary,
+      hints: const [
+        'withdrawal_options',
+        'withdrawalOption',
+        'withdrawal',
+        'payout',
+      ],
+    );
+  }
+
+  WalletOperationOptions _resolveOperationOptions(
+    WalletSummary? summary, {
+    required List<String> hints,
+  }) {
+    final raw = summary?.raw;
+    if (raw != null && raw.isNotEmpty) {
+      final map = _findOptionsMap(raw, hints.map((e) => e.toLowerCase()).toList());
+      if (map != null && map.isNotEmpty) {
+        return WalletOperationOptions.fromMap(map);
+      }
+    }
+
+    return WalletOperationOptions(
+      balance: summary?.balance,
+      currency: summary?.currencyCode ?? summary?.currency,
+      raw: summary?.raw ?? const {},
+    );
+  }
+
+  Map<String, dynamic>? _findOptionsMap(
+    dynamic source,
+    List<String> hints,
+  ) {
+    if (source is Map<String, dynamic>) {
+      for (final entry in source.entries) {
+        final keyLower = entry.key.toLowerCase();
+        final value = entry.value;
+        if (value is Map) {
+          if (_matchKey(keyLower, hints) && _looksLikeOptionsMap(value)) {
+            return _normalizeMap(value);
+          }
+          final nested = _findOptionsMap(value, hints);
+          if (nested != null) return nested;
+        } else if (value is List) {
+          final nested = _findOptionsMap(value, hints);
+          if (nested != null) return nested;
+        }
+      }
+    } else if (source is Map) {
+      return _findOptionsMap(_normalizeMap(source), hints);
+    } else if (source is List) {
+      for (final item in source) {
+        final nested = _findOptionsMap(item, hints);
+        if (nested != null) return nested;
+      }
+    }
+    return null;
+  }
+
+  bool _matchKey(String key, List<String> hints) {
+    return hints.any((hint) => key.contains(hint));
+  }
+
+  bool _looksLikeOptionsMap(Map<dynamic, dynamic> value) {
+    if (value.isEmpty) return false;
+    const indicators = {
+      'fields',
+      'inputs',
+      'form',
+      'schema',
+      'options',
+      'metadata',
+      'meta',
+      'config',
+      'settings',
+    };
+    for (final key in value.keys) {
+      final keyLower = key.toString().toLowerCase();
+      if (indicators.any(keyLower.contains)) {
+        return true;
+      }
+    }
+    return true;
+  }
+
+  Map<String, dynamic> _normalizeMap(Map<dynamic, dynamic> value) {
+    return value.map((key, val) => MapEntry(key.toString(), val));
   }
 }
 

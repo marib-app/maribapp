@@ -129,8 +129,8 @@ class CategoryController extends Controller {
                         'title' => __('نسخ الفئة'),
                         'data-category-id' => $row->id,
                         'data-category-name' => $row->name,
-                        'data-options-url' => route('category.clone-targets', $row->id),
-                        'data-action-url' => route('category.clone', $row->id),
+                        'data-options-url' => route('category.clone-targets', ['category' => $row->id], false),
+                        'data-action-url' => route('category.clone', ['category' => $row->id], false),
                     ],
                     __('نسخ')
                 );
@@ -152,7 +152,7 @@ class CategoryController extends Controller {
 
     public function cloneTargets(Category $category)
     {
-        ResponseService::noPermissionThenSendJson('category-list');
+        ResponseService::noPermissionThenSendJson('category-create');
 
         $excludedCategoryIds = HelperService::collectDescendantIds($category);
         $excludedCategoryIds[] = $category->id;
@@ -177,7 +177,7 @@ class CategoryController extends Controller {
             'source_category_id' => ['required', 'integer'],
             'target_parent_category_id' => ['required', 'integer', 'exists:categories,id'],
         ], [], [
-            'target_parent_category_id' => __('الفئة الهدف'),
+            'target_parent_category_id' => __('CloneCategoryTargetLabel'),
         ]);
 
         if ($validator->fails()) {
@@ -186,7 +186,7 @@ class CategoryController extends Controller {
 
         if ((int) $request->input('source_category_id') !== $category->id) {
             return redirect()->back()->withErrors([
-                'source_category_id' => __('تم تغيير بيانات الفئة أثناء الإرسال. يرجى المحاولة مجدداً.'),
+                'source_category_id' => __('CloneCategorySourceMismatch'),
             ])->withInput();
         }
 
@@ -197,14 +197,14 @@ class CategoryController extends Controller {
 
         if (in_array($targetParentId, $descendantIds, true)) {
             return redirect()->back()->withErrors([
-                'target_parent_category_id' => __('لا يمكن نسخ الفئة داخل نفس التسلسل الهرمي.'),
+                'target_parent_category_id' => __('CloneCategoryCircularError'),
             ])->withInput();
         }
 
         try {
             $result = $this->categoryCloneService->cloneCategoryTree($category->id, $targetParentId);
 
-            $message = __('تم نسخ الفئة بنجاح (:categories فئة جديدة، :fields حقل جديد، :attached ارتباطات).', [
+            $message = __('CloneCategorySuccess', [
                 'categories' => $result['created_categories'],
                 'fields' => $result['created_fields'],
                 'attached' => $result['attached_fields'],
@@ -214,7 +214,7 @@ class CategoryController extends Controller {
         } catch (Throwable $th) {
             ResponseService::logErrorRedirect($th, 'CategoryController -> cloneCategory');
 
-            return redirect()->back()->with('errors', __('تعذر نسخ الفئة. يرجى المحاولة مرة أخرى لاحقاً.'));
+            return redirect()->back()->with('errors', __('CloneCategoryUnexpectedError'));
         }
     }
 
@@ -337,8 +337,8 @@ class CategoryController extends Controller {
                             'title' => __('نسخ الفئة'),
                             'data-category-id' => $subcategory->id,
                             'data-category-name' => $subcategory->name,
-                            'data-options-url' => route('category.clone-targets', $subcategory->id),
-                            'data-action-url' => route('category.clone', $subcategory->id),
+                            'data-options-url' => route('category.clone-targets', ['category' => $subcategory->id], false),
+                            'data-action-url' => route('category.clone', ['category' => $subcategory->id], false),
                         ],
                         __('نسخ')
                     );

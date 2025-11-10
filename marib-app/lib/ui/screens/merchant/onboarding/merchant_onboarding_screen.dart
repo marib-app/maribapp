@@ -444,12 +444,100 @@ class _MerchantOnboardingScreenState extends State<MerchantOnboardingScreen> {
     return 'تعذر إرسال طلب الانضمام حالياً. حاول مرة أخرى.';
   }
 
-  void _handleBackPressed() {
+  Future<void> _handleBackPressed() async {
     if (_currentPage > 0) {
       _goToPage(_currentPage - 1);
-    } else {
+      return;
+    }
+    final bool shouldExit = await _confirmExit();
+    if (shouldExit && mounted) {
       Navigator.of(context).maybePop();
     }
+  }
+
+  Future<bool> _confirmExit() async {
+    final theme = context.color;
+    return await showModalBottomSheet<bool>(
+          context: context,
+          backgroundColor: Colors.transparent,
+          isScrollControlled: true,
+          builder: (context) {
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                  decoration: BoxDecoration(
+                    color: theme.backgroundColor,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: theme.borderColor),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color:
+                                  theme.territoryColor.withValues(alpha: 0.15),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.info_outline,
+                              color: theme.territoryColor,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'هل تريد العودة الآن؟',
+                              style: TextStyle(
+                                fontSize: context.font.large,
+                                fontWeight: FontWeight.w700,
+                                color: theme.textColorDark,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'لم تكمل كل خطوات تهيئة المتجر بعد. يمكنك الرجوع لاحقاً واستكمال التقدم من حيث توقفت.',
+                        style: TextStyle(
+                          fontSize: context.font.normal,
+                          color: theme.textColorDark.withValues(alpha: 0.75),
+                          height: 1.4,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      UiUtils.buildButton(
+                        context,
+                        onPressed: () => Navigator.of(context).pop(false),
+                        buttonTitle: 'متابعة الإعداد',
+                        buttonColor: theme.territoryColor,
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton(
+                        onPressed: () => Navigator.of(context).pop(true),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: theme.textColorDark,
+                          side: BorderSide(color: theme.borderColor),
+                          minimumSize: const Size.fromHeight(48),
+                        ),
+                        child: const Text('الخروج الآن'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ) ??
+        false;
   }
 
   @override
@@ -462,64 +550,71 @@ class _MerchantOnboardingScreenState extends State<MerchantOnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     final gutters = context.color;
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          color: context.color.textDefaultColor,
-          onPressed: _handleBackPressed,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        _handleBackPressed();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            color: context.color.textDefaultColor,
+            onPressed: () => _handleBackPressed(),
+          ),
+          title: Text('merchantOnboarding'.translate(context)),
+          centerTitle: true,
         ),
-        title: Text('merchantOnboarding'.translate(context)),
-        centerTitle: true,
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            child: LinearProgressIndicator(
-              value: (_currentPage + 1) / _totalPages,
-              color: gutters.territoryColor,
-              backgroundColor: gutters.secondaryColor,
+        body: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              child: LinearProgressIndicator(
+                value: (_currentPage + 1) / _totalPages,
+                color: gutters.territoryColor,
+                backgroundColor: gutters.secondaryColor,
+              ),
             ),
-          ),
-          Expanded(
-            child: PageView(
-              controller: _controller,
-              physics: const NeverScrollableScrollPhysics(),
-              children: [
-                Phase1ActivityInfo(onNext: _onPhase1Next),
-                Phase2CategoriesHours(
-                  onBack: () => _goToPage(0),
-                  onNext: _onPhase2Next,
-                  visibilityNotifier: _pageVisibilityNotifier,
-                  pageIndex: 1,
-                ),
-                Phase3StorePolicy(
-                  onBack: () => _goToPage(1),
-                  onNext: _onPhase3Next,
-                ),
-                Phase4PaymentMethods(
-                  onBack: () => _goToPage(2),
-                  onNext: _onPhase4Next,
-                  visibilityNotifier: _pageVisibilityNotifier,
-                  pageIndex: 3,
-                ),
-                Phase5StoreCredentials(
-                  onBack: () => _goToPage(3),
-                  onNext: _onPhase5Next,
-                ),
-                Phase6FinalSubmission(
-                  onBack: () => _goToPage(4),
-                  onSubmit: _onPhase6Submit,
-                  visibilityNotifier: _pageVisibilityNotifier,
-                  pageIndex: 5,
-                ),
-              ],
+            Expanded(
+              child: PageView(
+                controller: _controller,
+                physics: const NeverScrollableScrollPhysics(),
+                children: [
+                  Phase1ActivityInfo(onNext: _onPhase1Next),
+                  Phase2CategoriesHours(
+                    onBack: () => _goToPage(0),
+                    onNext: _onPhase2Next,
+                    visibilityNotifier: _pageVisibilityNotifier,
+                    pageIndex: 1,
+                  ),
+                  Phase3StorePolicy(
+                    onBack: () => _goToPage(1),
+                    onNext: _onPhase3Next,
+                  ),
+                  Phase4PaymentMethods(
+                    onBack: () => _goToPage(2),
+                    onNext: _onPhase4Next,
+                    visibilityNotifier: _pageVisibilityNotifier,
+                    pageIndex: 3,
+                  ),
+                  Phase5StoreCredentials(
+                    onBack: () => _goToPage(3),
+                    onNext: _onPhase5Next,
+                  ),
+                  Phase6FinalSubmission(
+                    onBack: () => _goToPage(4),
+                    onSubmit: _onPhase6Submit,
+                    visibilityNotifier: _pageVisibilityNotifier,
+                    pageIndex: 5,
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

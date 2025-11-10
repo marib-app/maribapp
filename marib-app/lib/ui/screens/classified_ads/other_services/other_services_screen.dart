@@ -7,6 +7,7 @@ import 'dart:math' as math;
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/app/navigation/app_page_route.dart';
 import 'package:marib/app/navigation/motion/route_motion.dart';
+import 'package:marib/ui/widgets/icons/wifi_cabin_glyph.dart';
 
 class OtherServicesScreen extends StatefulWidget {
   const OtherServicesScreen({super.key});
@@ -27,13 +28,17 @@ class _OtherServicesScreenState extends State<OtherServicesScreen> {
   bool _isLoaded = false;
 
   // عناصر الشبكة (يمكن توسيعها لاحقاً)
-  List<Map<String, dynamic>> get _items => [
-        {
-          'key': 'wifiCabin',
-          'titleKey': 'wifiCabin',
-          'icon': Icons.wifi,
-          'route': Routes.otherServicesWifiCabin,
-        },
+  List<_OtherServiceDescriptor> get _items => [
+        _OtherServiceDescriptor(
+          key: 'wifiCabin',
+          titleKey: 'wifiCabin',
+          route: Routes.otherServicesWifiCabin,
+          iconBuilder: (context) => WifiCabinGlyph(
+            size: 40,
+            color: Colors.white,
+            strokeFactor: 0.08,
+          ),
+        ),
       ];
 
   @override
@@ -93,12 +98,12 @@ class _OtherServicesScreenState extends State<OtherServicesScreen> {
           ),
           itemCount: _items.length,
           itemBuilder: (context, i) {
-            final m = _items[i];
-            final title = (m['titleKey'] as String).translate(context);
+            final descriptor = _items[i];
+            final title = descriptor.titleKey.translate(context);
             return _OtherServiceCard(
               title: title,
-              icon: m['icon'] as IconData,
-              onTap: () => Navigator.pushNamed(context, m['route'] as String),
+              icon: descriptor.iconBuilder(context),
+              onTap: () => Navigator.pushNamed(context, descriptor.route),
             );
           },
         );
@@ -188,7 +193,7 @@ class _OtherServicesScreenState extends State<OtherServicesScreen> {
 
 class _OtherServiceCard extends StatelessWidget {
   final String title;
-  final IconData icon;
+  final Widget icon;
   final VoidCallback onTap;
 
   const _OtherServiceCard({
@@ -245,13 +250,22 @@ class _OtherServiceCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  height: 48,
-                  width: 48,
+                  height: 64,
+                  width: 64,
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.18),
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Icon(icon, size: 26, color: Colors.white),
+                  child: Center(
+                    child: SizedBox(
+                      height: 40,
+                      width: 40,
+                      child: FittedBox(
+                        fit: BoxFit.contain,
+                        child: icon,
+                      ),
+                    ),
+                  ),
                 ),
                 const Spacer(),
                 Text(
@@ -274,4 +288,16 @@ class _OtherServiceCard extends StatelessWidget {
   }
 }
 
+class _OtherServiceDescriptor {
+  const _OtherServiceDescriptor({
+    required this.key,
+    required this.titleKey,
+    required this.route,
+    required this.iconBuilder,
+  });
 
+  final String key;
+  final String titleKey;
+  final String route;
+  final Widget Function(BuildContext) iconBuilder;
+}

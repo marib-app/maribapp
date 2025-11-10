@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:marib/app/routes.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
+import 'package:marib/ui/widgets/icons/wifi_cabin_glyph.dart';
 
 class CategoryWidgetOffline extends StatelessWidget {
   const CategoryWidgetOffline({super.key});
@@ -19,7 +20,14 @@ class CategoryWidgetOffline extends StatelessWidget {
     {"id": 177,"name": "maribGuide",          "url": "assets/category/5.png", 'interfaceType': 'marib_guide'},
 
     // ✅ جديد: خدمات أخرى (أيقونة مؤقتة بدون صورة)
-    {"id": 182, "name": "otherServices", "url": null, "icon": Icons.apps, 'interfaceType': 'other_services'},
+    {
+      "id": 182,
+      "name": "otherServices",
+      "url": null,
+      "icon": null,
+      "customIcon": "wifiCabin",
+      'interfaceType': 'other_services'
+    },
   ];
 
   // تحدد اسم الـ route المطلوب لكل مجموعة
@@ -71,11 +79,14 @@ class CategoryWidgetOffline extends StatelessWidget {
             // ✅ آمن: نتعامل مع url/icon كاختياريين
             final String? url = category['url'] as String?;
             final IconData? icon = category['icon'] as IconData?;
+            final Widget? customIcon =
+                _buildCustomIcon(context, category['customIcon'] as String?);
 
             return CategoryHomeCard(
               title: title,
               url: url,
               icon: icon,
+              customIcon: customIcon,
               onTap: () {
                 // استثناء: العملة
                 if (category['id'] == 0) {
@@ -104,10 +115,22 @@ class CategoryWidgetOffline extends StatelessWidget {
   }
 }
 
+Widget? _buildCustomIcon(BuildContext context, String? key) {
+  if (key == 'wifiCabin') {
+    return WifiCabinGlyph(
+      size: 34,
+      color: context.color.textDefaultColor,
+      strokeFactor: 0.08,
+    );
+  }
+  return null;
+}
+
 class CategoryHomeCard extends StatelessWidget {
   final String title;
-  final String? url;        // اختياري
-  final IconData? icon;     // اختياري (لخدمات أخرى)
+  final String? url; // اختياري
+  final IconData? icon; // اختياري (لخدمات أخرى)
+  final Widget? customIcon;
   final VoidCallback onTap;
 
   const CategoryHomeCard({
@@ -115,16 +138,22 @@ class CategoryHomeCard extends StatelessWidget {
     required this.title,
     this.url,
     this.icon,
+    this.customIcon,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final Widget thumbChild = icon != null
-        ? Icon(icon, size: 36, color: context.color.textDefaultColor) // أيقونة مؤقتة
-        : (url != null
-        ? Image.asset(url!, fit: BoxFit.cover)
-        : Icon(Icons.apps, size: 36, color: context.color.textDefaultColor)); // fallback
+    final Widget thumbChild = customIcon ??
+        (icon != null
+            ? Icon(icon,
+                size: 36, color: context.color.textDefaultColor) // أيقونة مؤقتة
+            : (url != null
+                ? Image.asset(url!, fit: BoxFit.cover)
+                : Icon(Icons.apps,
+                    size: 36,
+                    color:
+                        context.color.textDefaultColor))); // fallback
 
     return SizedBox(
       width: 70,

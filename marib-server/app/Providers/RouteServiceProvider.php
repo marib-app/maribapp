@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\User;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
 use Illuminate\Http\Request;
@@ -17,6 +18,17 @@ class RouteServiceProvider extends ServiceProvider {
      * @var string
      */
     public const HOME = '/home';
+
+    /**
+     * Determine the correct home path for a given user.
+     */
+    public static function resolveHomePath(?User $user): string {
+        if ($user && $user->account_type === User::ACCOUNT_TYPE_SELLER) {
+            return route('merchant.dashboard');
+        }
+
+        return static::HOME;
+    }
 
     /**
      * Define your route model bindings, pattern filters, and other route configuration.
@@ -50,8 +62,22 @@ class RouteServiceProvider extends ServiceProvider {
             return Limit::perMinute(15)->by($request->user()?->id ?: $request->ip());
         });
 
-                RateLimiter::for('payments-initiate', static function (Request $request) {
-            return Limit::perMinute(10)->by($request->user()?->getAuthIdentifier() ?: $request->ip());
+        RateLimiter::for('payments-initiate', static function (Request $request) {
+            $purpose = strtolower((string) $request->input('purpose', 'general'));
+            $subject = $request->input('wifi_plan_id')
+                ?? $request->input('service_request_id')
+                ?? $request->input('service_id')
+                ?? $request->input('order_id')
+                ?? $request->input('package_id')
+                ?? 'general';
+
+            $key = implode('|', [
+                $request->user()?->getAuthIdentifier() ?: $request->ip(),
+                $purpose,
+                $subject,
+            ]);
+
+            return Limit::perMinute(60)->by($key);
         });
     }
 }

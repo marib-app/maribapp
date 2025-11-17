@@ -1,11 +1,11 @@
 {{-- =========================
      Sidebar (RTL)
-     يعرِض تبويبات لوحة التحكم بحسب الصلاحيات (Spatie @can/@canany)
+     Admin navigation powered by Spatie permissions (@can / @canany)
 ========================= --}}
 <div id="sidebar" class="active">
   <div class="sidebar-wrapper active">
 
-    {{-- ---------- الشعار / الهيدر ---------- --}}
+    {{-- ---------- ط·آ·ط¢آ§ط·آ¸أ¢â‚¬â€چط·آ·ط¢آ´ط·آ·ط¢آ¹ط·آ·ط¢آ§ط·آ·ط¢آ± / ط·آ·ط¢آ§ط·آ¸أ¢â‚¬â€چط·آ¸أ¢â‚¬طŒط·آ¸ط¸آ¹ط·آ·ط¢آ¯ط·آ·ط¢آ± ---------- --}}
     <div class="sidebar-header position-relative">
       <div class="d-block">
         <div class="logo text-center">
@@ -16,30 +16,21 @@
       </div>
     </div>
 
-    {{-- ---------- قائمة السايدبار ---------- --}}
+    {{-- ---------- ط·آ¸أ¢â‚¬ع‘ط·آ·ط¢آ§ط·آ·ط¢آ¦ط·آ¸أ¢â‚¬آ¦ط·آ·ط¢آ© ط·آ·ط¢آ§ط·آ¸أ¢â‚¬â€چط·آ·ط¢آ³ط·آ·ط¢آ§ط·آ¸ط¸آ¹ط·آ·ط¢آ¯ط·آ·ط¢آ¨ط·آ·ط¢آ§ط·آ·ط¢آ± ---------- --}}
     <div class="sidebar-menu" style="direction: rtl; text-align: right;">
       <ul class="menu">
-        @if(auth()->check() && auth()->user()->account_type === \App\Models\User::ACCOUNT_TYPE_SELLER)
-          <style>
-            #sidebar .menu > li:first-child {
-              display: none;
-            }
-          </style>
+
+        {{-- ط£آ¯ط·ع؛ط¢آ½?ط£آ¯ط·ع؛ط¢آ½?ط£آ¯ط·ع؛ط¢آ½?ط£آ¯ط·ع؛ط¢آ½? ط£آ¯ط·ع؛ط¢آ½?ط£آ¯ط·ع؛ط¢آ½?ط£آ¯ط·ع؛ط¢آ½?ط£آ¯ط·ع؛ط¢آ½?ط£آ¯ط·ع؛ط¢آ½?ط£آ¯ط·ع؛ط¢آ½? --}}
+        @if(!auth()->check() || auth()->user()->account_type !== \App\Models\User::ACCOUNT_TYPE_SELLER)
+          <li class="sidebar-item">
+            <a href="{{ route('home') }}" class="sidebar-link">
+              <i class="bi bi-house"></i>
+              <span class="menu-item">{{ __('Dashboard') }}</span>
+            </a>
+          </li>
         @endif
 
-        {{-- لوحة التحكم --}}
-        <li class="sidebar-item">
-          <a href="{{ route('home') }}" class="sidebar-link">
-            <i class="bi bi-house"></i>
-            <span class="menu-item">{{ __('Dashboard') }}</span>
-          </a>
-        </li>
 
-
-        {{-- =========================
-             Ads Listing
-             التصنيفات + الحقول المخصصة
-        ========================== --}}
         @canany(['category-list','category-create','category-update','category-delete',
                  'custom-field-list','custom-field-create','custom-field-update','custom-field-delete'])
           <div class="sidebar-new-title">{{ __('Ads Listing') }}</div>
@@ -65,8 +56,7 @@
 
 
         {{-- =========================
-            Items Management
-            العناصر + نصائح (Tips)
+            Items Management (items + tips)
         ========================= --}}
         @canany(['item-list','item-create','item-update','item-delete',
                 'tip-list','tip-create','tip-update','tip-delete'])
@@ -92,8 +82,7 @@
         @endcanany
 
         {{-- =========================
-             Package Management
-             باقات الإدراج + باقات الإعلان + باقات المستخدمين + معاملات الدفع + أسعار العملات
+             Package Management (listing packages & payments)
         ========================== --}}
         @canany(['item-listing-package-list','item-listing-package-create','item-listing-package-update','item-listing-package-delete',
                  'advertisement-package-list','advertisement-package-create','advertisement-package-update','advertisement-package-delete',
@@ -145,7 +134,7 @@
             <li class="sidebar-item">
               <a href="{{ route('payment-requests.index') }}" class="sidebar-link">
                 <i class="bi bi-wallet2"></i>
-                <span class="menu-item">{{ __(' طلبات الدفع ') }}</span>
+                <span class="menu-item">{{ __('sidebar.manual_payment_requests') }}</span>
               </a>
             </li>
           @endcanany
@@ -210,8 +199,7 @@
 
 
         {{-- =========================
-             Seller Management
-             توثيق البائع + تقييمات + تقرير التقييمات + حقول التوثيق
+            Seller Management (verification, reviews, access)
         ========================== --}}
         @canany(['seller-verification-field-list','seller-verification-field-create','seller-verification-field-update','seller-verification-field-delete',
                  'seller-verification-request-list','seller-verification-request-create','seller-verification-request-update','seller-verification-request-delete',
@@ -230,7 +218,7 @@
             </li>
           @endcanany
 
-          {{-- حقول التوثيق (إدارية) --}}
+          {{-- ط·آ·ط¢آ­ط·آ¸أ¢â‚¬ع‘ط·آ¸ط«â€ ط·آ¸أ¢â‚¬â€چ ط·آ·ط¢آ§ط·آ¸أ¢â‚¬â€چط·آ·ط¹آ¾ط·آ¸ط«â€ ط·آ·ط¢آ«ط·آ¸ط¸آ¹ط·آ¸أ¢â‚¬ع‘ (ط·آ·ط¢آ¥ط·آ·ط¢آ¯ط·آ·ط¢آ§ط·آ·ط¢آ±ط·آ¸ط¸آ¹ط·آ·ط¢آ©) --}}
           @canany(['seller-verification-field-list','seller-verification-field-create','seller-verification-field-update','seller-verification-field-delete'])
             <li class="sidebar-item">
               <a href="{{ route('seller-verification.verification-field') }}" class="sidebar-link">
@@ -268,41 +256,53 @@
             </li>
           @endcan
 
+        @endcanany
+
           @if(auth()->check() && auth()->user()->account_type === \App\Models\User::ACCOUNT_TYPE_SELLER)
             <li class="sidebar-item">
               <a href="{{ route('merchant.dashboard') }}" class="sidebar-link">
                 <i class="bi bi-shop"></i>
-                <span class="menu-item">{{ __('لوحة المتجر') }}</span>
+                <span class="menu-item">{{ __('sidebar.store_dashboard') }}</span>
               </a>
             </li>
             <li class="sidebar-item">
               <a href="{{ route('merchant.orders.index') }}" class="sidebar-link">
                 <i class="bi bi-receipt-cutoff"></i>
-                <span class="menu-item">{{ __('طلبات المتجر') }}</span>
+                <span class="menu-item">{{ __('sidebar.store_orders') }}</span>
               </a>
             </li>
             <li class="sidebar-item">
               <a href="{{ route('merchant.manual-payments.index') }}" class="sidebar-link">
                 <i class="bi bi-bank"></i>
-                <span class="menu-item">{{ __('الحوالات اليدوية') }}</span>
+                <span class="menu-item">{{ __('sidebar.store_manual_payments') }}</span>
+              </a>
+            </li>
+            <li class="sidebar-item">
+              <a href="{{ route('merchant.wallet.index') }}" class="sidebar-link">
+                <i class="bi bi-wallet2"></i>
+                <span class="menu-item">{{ __('sidebar.store_wallet') }}</span>
+              </a>
+            </li>
+            <li class="sidebar-item">
+              <a href="{{ route('merchant.products.index') }}" class="sidebar-link">
+                <i class="bi bi-bag-check"></i>
+                <span class="menu-item">{{ __('sidebar.product_management') }}</span>
               </a>
             </li>
             <li class="sidebar-item">
               <a href="{{ route('merchant.settings') }}" class="sidebar-link">
                 <i class="bi bi-gear"></i>
-                <span class="menu-item">{{ __('إعدادات المتجر') }}</span>
+                <span class="menu-item">{{ __('sidebar.store_settings') }}</span>
               </a>
             </li>
           @endif
-
-        @endcanany
 
         @can('seller-store-settings-manage')
           <div class="sidebar-new-title">{{ __('Stores & Merchants') }}</div>
           <li class="sidebar-item">
             <a href="{{ route('merchant-stores.index') }}" class="sidebar-link">
               <i class="bi bi-shop-window"></i>
-              <span class="menu-item">متاجر التجار</span>
+              <span class="menu-item">{{ __('sidebar.merchant_directory') }}</span>
             </a>
           </li>
         @endcan
@@ -310,7 +310,7 @@
 
         {{-- =========================
              Home Screen Management
-             السلايدر + الأقسام المميزة
+             ط·آ·ط¢آ§ط·آ¸أ¢â‚¬â€چط·آ·ط¢آ³ط·آ¸أ¢â‚¬â€چط·آ·ط¢آ§ط·آ¸ط¸آ¹ط·آ·ط¢آ¯ط·آ·ط¢آ± + ط·آ·ط¢آ§ط·آ¸أ¢â‚¬â€چط·آ·ط¢آ£ط·آ¸أ¢â‚¬ع‘ط·آ·ط¢آ³ط·آ·ط¢آ§ط·آ¸أ¢â‚¬آ¦ ط·آ·ط¢آ§ط·آ¸أ¢â‚¬â€چط·آ¸أ¢â‚¬آ¦ط·آ¸أ¢â‚¬آ¦ط·آ¸ط¸آ¹ط·آ·ط¢آ²ط·آ·ط¢آ©
         ========================== --}}
         @canany(['slider-list','slider-create','slider-update','slider-delete'])
           <div class="sidebar-new-title">{{ __('Home Screen Management') }}</div>
@@ -328,7 +328,7 @@
 
         {{-- =========================
              Place/Location Management
-             دول/ولايات/مدن/مناطق
+             ط·آ·ط¢آ¯ط·آ¸ط«â€ ط·آ¸أ¢â‚¬â€چ/ط·آ¸ط«â€ ط·آ¸أ¢â‚¬â€چط·آ·ط¢آ§ط·آ¸ط¸آ¹ط·آ·ط¢آ§ط·آ·ط¹آ¾/ط·آ¸أ¢â‚¬آ¦ط·آ·ط¢آ¯ط·آ¸أ¢â‚¬آ /ط·آ¸أ¢â‚¬آ¦ط·آ¸أ¢â‚¬آ ط·آ·ط¢آ§ط·آ·ط¢آ·ط·آ¸أ¢â‚¬ع‘
         ========================== --}}
         @canany(['country-list','country-create','country-update','country-delete',
                  'state-list','state-create','state-update','state-delete',
@@ -376,7 +376,7 @@
 
         {{-- =========================
              Reports Management
-             أسباب البلاغات + بلاغات المستخدمين
+             ط·آ·ط¢آ£ط·آ·ط¢آ³ط·آ·ط¢آ¨ط·آ·ط¢آ§ط·آ·ط¢آ¨ ط·آ·ط¢آ§ط·آ¸أ¢â‚¬â€چط·آ·ط¢آ¨ط·آ¸أ¢â‚¬â€چط·آ·ط¢آ§ط·آ·ط·â€؛ط·آ·ط¢آ§ط·آ·ط¹آ¾ + ط·آ·ط¢آ¨ط·آ¸أ¢â‚¬â€چط·آ·ط¢آ§ط·آ·ط·â€؛ط·آ·ط¢آ§ط·آ·ط¹آ¾ ط·آ·ط¢آ§ط·آ¸أ¢â‚¬â€چط·آ¸أ¢â‚¬آ¦ط·آ·ط¢آ³ط·آ·ط¹آ¾ط·آ·ط¢آ®ط·آ·ط¢آ¯ط·آ¸أ¢â‚¬آ¦ط·آ¸ط¸آ¹ط·آ¸أ¢â‚¬آ 
         ========================== --}}
         @canany(['report-reason-list','report-reason-create','report-reason-update','report-reason-delete',
                  'user-report-list','user-report-create','user-report-update','user-report-delete'])
@@ -411,7 +411,7 @@
 
 
         {{-- =========================
-             إدارة الكمبيوتر
+             ط·آ·ط¢آ¥ط·آ·ط¢آ¯ط·آ·ط¢آ§ط·آ·ط¢آ±ط·آ·ط¢آ© ط·آ·ط¢آ§ط·آ¸أ¢â‚¬â€چط·آ¸ط¦â€™ط·آ¸أ¢â‚¬آ¦ط·آ·ط¢آ¨ط·آ¸ط¸آ¹ط·آ¸ط«â€ ط·آ·ط¹آ¾ط·آ·ط¢آ±
         ========================== --}}
         @canany([
             'computer-ads-list','computer-ads-create','computer-ads-update','computer-ads-delete',
@@ -419,28 +419,28 @@
             'computer-orders-list','orders-list','staff-list','staff-create','staff-update','staff-delete',
             'reports-orders','reports-sales','reports-customers','reports-statuses','chat-monitor-list'
         ])
-          <div class="sidebar-new-title">{{ __('إدارة الكمبيوتر') }}</div>
+          <div class="sidebar-new-title">{{ __("sidebar.computer_section_title") }}</div>
 
           <li class="sidebar-item">
             <a href="{{ route('item.computer') }}" class="sidebar-link">
               <i class="bi bi-laptop"></i>
-              <span class="menu-item">{{ __('مركز إدارة الكمبيوتر') }}</span>
+               <span class="menu-item">{{ __('sidebar.computer_section_menu') }}</span>
             </a>
           </li>
         @endcanany
 
 
         {{-- =========================
-             إدارة شي إن
+             ط·آ·ط¢آ¥ط·آ·ط¢آ¯ط·آ·ط¢آ§ط·آ·ط¢آ±ط·آ·ط¢آ© ط·آ·ط¢آ´ط·آ¸ط¸آ¹ ط·آ·ط¢آ¥ط·آ¸أ¢â‚¬آ 
         ========================== --}}
         @canany(['shein-products-list','shein-products-create','shein-products-update','shein-products-delete',
                  'shein-orders-list','shein-orders-create','shein-orders-update','shein-orders-delete'])
-          <div class="sidebar-new-title">{{ __('إدارة شي ان') }}</div>
+          <div class="sidebar-new-title">{{ __("sidebar.shein_section_title") }}</div>
 
           <li class="sidebar-item">
             <a href="{{ route('item.shein.index') }}" class="sidebar-link">
               <i class="bi bi-bag-heart"></i>
-              <span class="menu-item">{{ __('مركز إدارة شي ان') }}</span>
+               <span class="menu-item">{{ __('sidebar.shein_section_menu') }}</span>
             </a>
           </li>
         @endcanany
@@ -448,7 +448,7 @@
 
         {{-- =========================
              Promotional Management
-             تحديات + إحالات ونقاط + إرسال إشعار + العملاء
+             ط·آ·ط¹آ¾ط·آ·ط¢آ­ط·آ·ط¢آ¯ط·آ¸ط¸آ¹ط·آ·ط¢آ§ط·آ·ط¹آ¾ + ط·آ·ط¢آ¥ط·آ·ط¢آ­ط·آ·ط¢آ§ط·آ¸أ¢â‚¬â€چط·آ·ط¢آ§ط·آ·ط¹آ¾ ط·آ¸ط«â€ ط·آ¸أ¢â‚¬آ ط·آ¸أ¢â‚¬ع‘ط·آ·ط¢آ§ط·آ·ط¢آ· + ط·آ·ط¢آ¥ط·آ·ط¢آ±ط·آ·ط¢آ³ط·آ·ط¢آ§ط·آ¸أ¢â‚¬â€چ ط·آ·ط¢آ¥ط·آ·ط¢آ´ط·آ·ط¢آ¹ط·آ·ط¢آ§ط·آ·ط¢آ± + ط·آ·ط¢آ§ط·آ¸أ¢â‚¬â€چط·آ·ط¢آ¹ط·آ¸أ¢â‚¬آ¦ط·آ¸أ¢â‚¬â€چط·آ·ط¢آ§ط·آ·ط·إ’
         ========================== --}}
         @canany(['challenge-list','challenge-create','challenge-edit','challenge-delete',
                  'referral-list',
@@ -497,7 +497,7 @@
 
         {{-- =========================
              Staff Management
-             الأدوار + الموظفون
+             ط·آ·ط¢آ§ط·آ¸أ¢â‚¬â€چط·آ·ط¢آ£ط·آ·ط¢آ¯ط·آ¸ط«â€ ط·آ·ط¢آ§ط·آ·ط¢آ± + ط·آ·ط¢آ§ط·آ¸أ¢â‚¬â€چط·آ¸أ¢â‚¬آ¦ط·آ¸ط«â€ ط·آ·ط¢آ¸ط·آ¸ط¸آ¾ط·آ¸ط«â€ ط·آ¸أ¢â‚¬آ 
         ========================== --}}
         @canany(['role-list','role-create','role-update','role-delete',
                  'staff-list','staff-create','staff-update','staff-delete'])
@@ -525,7 +525,7 @@
 
         {{-- =========================
              Services Management
-             الخدمات + طلبات الخدمات
+             ط·آ·ط¢آ§ط·آ¸أ¢â‚¬â€چط·آ·ط¢آ®ط·آ·ط¢آ¯ط·آ¸أ¢â‚¬آ¦ط·آ·ط¢آ§ط·آ·ط¹آ¾ + ط·آ·ط¢آ·ط·آ¸أ¢â‚¬â€چط·آ·ط¢آ¨ط·آ·ط¢آ§ط·آ·ط¹آ¾ ط·آ·ط¢آ§ط·آ¸أ¢â‚¬â€چط·آ·ط¢آ®ط·آ·ط¢آ¯ط·آ¸أ¢â‚¬آ¦ط·آ·ط¢آ§ط·آ·ط¹آ¾
         ========================== --}}
 
 
@@ -536,12 +536,12 @@
 
 
 
-          <div class="sidebar-new-title">{{ __(' ادارة الخدمات ') }}</div>
+          <div class="sidebar-new-title">{{ __("sidebar.services_section_title") }}</div>
 
           <li class="sidebar-item">
             <a href="{{ route('services.index') }}" class="sidebar-link">
               <i class="bi bi-tools"></i>
-              <span class="menu-item">{{ __('الخدمات') }}</span>
+               <span class="menu-item">{{ __('sidebar.services_section_menu') }}</span>
             </a>
           </li>
 
@@ -551,7 +551,7 @@
 
         {{-- =========================
              Travel / Blog
-             (تم تصحيح الصلاحية إلى blog-list)
+             (ط·آ·ط¹آ¾ط·آ¸أ¢â‚¬آ¦ ط·آ·ط¹آ¾ط·آ·ط¢آµط·آ·ط¢آ­ط·آ¸ط¸آ¹ط·آ·ط¢آ­ ط·آ·ط¢آ§ط·آ¸أ¢â‚¬â€چط·آ·ط¢آµط·آ¸أ¢â‚¬â€چط·آ·ط¢آ§ط·آ·ط¢آ­ط·آ¸ط¸آ¹ط·آ·ط¢آ© ط·آ·ط¢آ¥ط·آ¸أ¢â‚¬â€چط·آ¸أ¢â‚¬آ° blog-list)
         ========================== --}}
         @canany(['blog-list','blog-create','blog-update','blog-delete'])
           <div class="sidebar-new-title">{{ __('Travel Management') }}</div>
@@ -565,33 +565,33 @@
 
 
         {{-- =========================
-             مراقبة المحادثات
+             ظ…ط±ط§ظ‚ط¨ط© ط§ظ„ظ…ط­ط§ط¯ط«ط§طھ
         ========================== --}}
         @can('chat-monitor-list')
-          <div class="sidebar-new-title">{{ __('مراقبة المحادثات') }}</div>
+          <div class="sidebar-new-title">{{ __("sidebar.chat_monitor_title") }}</div>
           <li class="sidebar-item">
             <a href="{{ route('chat-monitor.index') }}?locale={{ App::getLocale() }}" class="sidebar-link">
               <i class="bi bi-chat-dots-fill"></i>
-              <span class="menu-item">{{ __('مراقبة المحادثات') }}</span>
+              <span class="menu-item">{{ __('sidebar.chat_monitor_menu') }}</span>
             </a>
           </li>
         @endcan
 
 
         {{-- =========================
-             نظام إدارة الطلبات
-             الطلبات + خدمات التوصيل + التقارير
+             ط·آ¸أ¢â‚¬آ ط·آ·ط¢آ¸ط·آ·ط¢آ§ط·آ¸أ¢â‚¬آ¦ ط·آ·ط¢آ¥ط·آ·ط¢آ¯ط·آ·ط¢آ§ط·آ·ط¢آ±ط·آ·ط¢آ© ط·آ·ط¢آ§ط·آ¸أ¢â‚¬â€چط·آ·ط¢آ·ط·آ¸أ¢â‚¬â€چط·آ·ط¢آ¨ط·آ·ط¢آ§ط·آ·ط¹آ¾
+             ط·آ·ط¢آ§ط·آ¸أ¢â‚¬â€چط·آ·ط¢آ·ط·آ¸أ¢â‚¬â€چط·آ·ط¢آ¨ط·آ·ط¢آ§ط·آ·ط¹آ¾ + ط·آ·ط¢آ®ط·آ·ط¢آ¯ط·آ¸أ¢â‚¬آ¦ط·آ·ط¢آ§ط·آ·ط¹آ¾ ط·آ·ط¢آ§ط·آ¸أ¢â‚¬â€چط·آ·ط¹آ¾ط·آ¸ط«â€ ط·آ·ط¢آµط·آ¸ط¸آ¹ط·آ¸أ¢â‚¬â€چ + ط·آ·ط¢آ§ط·آ¸أ¢â‚¬â€چط·آ·ط¹آ¾ط·آ¸أ¢â‚¬ع‘ط·آ·ط¢آ§ط·آ·ط¢آ±ط·آ¸ط¸آ¹ط·آ·ط¢آ±
         ========================== --}}
         @canany(['orders-list','orders-create','orders-update','orders-delete',
                  'delivery-prices-list','delivery-prices-create','delivery-prices-update','delivery-prices-delete',
                  'reports-orders','reports-sales','reports-customers','reports-statuses'])
-          <div class="sidebar-new-title">{{ __('نظام إدارة الطلبات') }}</div>
+          <div class="sidebar-new-title">{{ __("sidebar.orders_delivery_title") }}</div>
 
           @canany(['orders-list','orders-create','orders-update','orders-delete'])
             <li class="sidebar-item">
               <a href="{{ route('orders.index') }}" class="sidebar-link">
                 <i class="bi bi-cart-fill"></i>
-                <span class="menu-item">{{ __('إدارة الطلبات') }}</span>
+                <span class="menu-item">{{ __('sidebar.platform_orders_menu') }}</span>
               </a>
             </li>
           @endcanany
@@ -600,7 +600,7 @@
             <li class="sidebar-item">
               <a href="{{ route('delivery-prices.index') }}" class="sidebar-link">
                 <i class="bi bi-truck"></i>
-                <span class="menu-item">{{ __('خدمات التوصيل') }}</span>
+                 <span class="menu-item">{{ __('sidebar.delivery_prices_menu') }}</span>
               </a>
             </li>
           @endcanany
@@ -609,13 +609,13 @@
             <li class="sidebar-item">
               <a href="{{ route('delivery.requests.index') }}" class="sidebar-link">
                 <i class="bi bi-send-plus"></i>
-                <span class="menu-item">{{ __('طلبات التوصيل') }}</span>
+                 <span class="menu-item">{{ __('sidebar.delivery_requests_menu') }}</span>
               </a>
             </li>
             <li class="sidebar-item">
               <a href="{{ route('delivery.agents.index') }}" class="sidebar-link">
                 <i class="bi bi-person-lines-fill"></i>
-                <span class="menu-item">{{ __('مندوبو التوصيل') }}</span>
+                 <span class="menu-item">{{ __('sidebar.delivery_agents_menu') }}</span>
               </a>
             </li>
           @endcan
@@ -625,7 +625,7 @@
             <li class="sidebar-item">
               <a href="{{ route('coupons.index') }}" class="sidebar-link">
                 <i class="bi bi-ticket-perforated"></i>
-                <span class="menu-item">{{ __('إدارة القسائم') }}</span>
+                <span class="menu-item">{{ __('sidebar.coupons_menu') }}</span>
               </a>
             </li>
           @endcanany
@@ -634,7 +634,7 @@
             <li class="sidebar-item">
               <a href="{{ route('reports.index') }}" class="sidebar-link">
                 <i class="bi bi-graph-up"></i>
-                <span class="menu-item">{{ __('تقارير الطلبات') }}</span>
+                <span class="menu-item">{{ __('sidebar.orders_reports_menu') }}</span>
               </a>
             </li>
           @endcan
@@ -643,7 +643,7 @@
             <li class="sidebar-item">
               <a href="{{ route('reports.sales') }}" class="sidebar-link">
                 <i class="bi bi-cash-stack"></i>
-                <span class="menu-item">{{ __('تقرير المبيعات') }}</span>
+                <span class="menu-item">{{ __('sidebar.sales_reports_menu') }}</span>
               </a>
             </li>
           @endcan
@@ -652,7 +652,7 @@
             <li class="sidebar-item">
               <a href="{{ route('reports.customers') }}" class="sidebar-link">
                 <i class="bi bi-people-fill"></i>
-                <span class="menu-item">{{ __('تقرير العملاء') }}</span>
+                <span class="menu-item">{{ __('sidebar.customers_reports_menu') }}</span>
               </a>
             </li>
           @endcan
@@ -661,7 +661,7 @@
             <li class="sidebar-item">
               <a href="{{ route('reports.statuses') }}" class="sidebar-link">
                 <i class="bi bi-pie-chart-fill"></i>
-                <span class="menu-item">{{ __('تقرير حالات الطلبات') }}</span>
+                <span class="menu-item">{{ __('sidebar.statuses_reports_menu') }}</span>
               </a>
             </li>
           @endcan
@@ -669,7 +669,7 @@
 
 
         {{-- =========================
-             FAQ + استفسارات المستخدم
+             FAQ & Contact
         ========================== --}}
         @canany(['faq-create','faq-list','faq-update','faq-delete','contact-us-list','contact-us-update','contact-us-delete'])
           <div class="sidebar-new-title">{{ __('FAQ') }}</div>
@@ -725,3 +725,11 @@
     </div>
   </div>
 </div>
+
+
+
+
+
+
+
+

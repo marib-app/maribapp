@@ -1459,23 +1459,28 @@ class ApiController extends Controller {
         $productLink = null;
         $reviewLink = null;
 
+        $storePolicyText = null;
+
         if ($request->filled('item_id')) {
-            $item = Item::select([
+            $item = Item::with([
+                'store.policies' => static function ($query) {
+                    $query->where('is_active', true);
+                },
+            ])->select([
                 'id',
                 'product_link',
                 'review_link',
                 'interface_type',
                 'category_id',
                 'all_category_ids',
-
-
+                'store_id',
             ])->find($request->integer('item_id'));
 
             if ($item !== null) {
                 $itemDepartment = $departmentResolver->resolveDepartmentForItem($item);
                 $productLink = $item->product_link;
                 $reviewLink = $item->review_link;
-
+                $storePolicyText = $this->buildStorePolicySummary($item->store);
             }
         }
 
@@ -1556,6 +1561,10 @@ class ApiController extends Controller {
             ])); 
         }
 
+        if ($storePolicyText !== null && ! isset($response['return_policy_text'])) {
+            $response['return_policy_text'] = $storePolicyText;
+        }
+
 
         $response['item_department'] = $itemDepartment;
 
@@ -1584,6 +1593,40 @@ class ApiController extends Controller {
 
 
         return ResponseService::successResponse('Tips fetched successfully.', $response);
+     }
+     
+     private function buildStorePolicySummary($store): ?string
+     {
+        if ($store === null) {
+            return null;
+        }
+
+        $policies = $store->relationLoaded('policies')
+            ? $store->policies
+            : $store->policies()->where('is_active', true)->get();
+
+        if ($policies === null) {
+            return null;
+        }
+
+        $lines = $policies->filter(static function ($policy) {
+            return (bool) $policy->is_active && trim((string) $policy->content) !== '';
+        })->sortBy(static function ($policy) {
+            return $policy->display_order ?? 0;
+        })->map(static function ($policy) {
+            $title = trim((string) ($policy->title ?? ''));
+            $content = trim((string) $policy->content);
+            if ($content === '') {
+                return null;
+            }
+            return $title !== '' ? "{$title}: {$content}" : $content;
+        })->filter()->values();
+
+        if ($lines->isEmpty()) {
+            return null;
+        }
+
+        return $lines->map(static fn ($line) => '• ' . $line)->implode("\n");
      }
 
 
@@ -1730,6 +1773,9 @@ class ApiController extends Controller {
                 $slug = HelperService::generateRandomSlug();
             }
             $uniqueSlug = HelperService::generateUniqueSlug(new Item(), $slug);
+            if ($uniqueSlug === '') {
+                $uniqueSlug = Str::lower(Str::random(12));
+            }
             $status = $this->shouldAutoApproveSection($section) ? 'approved' : 'review';
 
             $data = Arr::only($request->all(), [
@@ -2044,6 +2090,8 @@ class ApiController extends Controller {
                 'favourites',
                 'item_custom_field_values.custom_field',
                 'area:id,name',
+                'store:id,name,slug',
+                'store.policies:id,store_id,policy_type,title,content,is_required,is_active,display_order',
             ];
 
             if ($isDetailView) {

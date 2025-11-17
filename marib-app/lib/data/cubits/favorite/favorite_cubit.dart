@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:marib/data/model/item/item_model.dart';
 import 'package:marib/data/repositories/favourites_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -135,48 +137,62 @@ class FavoriteCubit extends Cubit<FavoriteState> {
     }
   }
 
-  void addFavoriteitem(ItemModel model) {
-    if (state is FavoriteFetchSuccess) {
-      List<ItemModel> favoriteList = [];
+  Future<void> addFavoriteitem(ItemModel model) async {
+    await _updateFavorite(model, shouldBeFavorite: true);
+  }
 
-      model.totalLikes = (model.totalLikes ?? 0) + 1;
+  Future<void> removeFavoriteItem(ItemModel model) async {
+    await _updateFavorite(model, shouldBeFavorite: false);
+  }
 
-      favoriteList.insert(0, model);
-      favoriteList.addAll((state as FavoriteFetchSuccess).favorite);
+  Future<void> _updateFavorite(
+      ItemModel model, {
+      required bool shouldBeFavorite,
+    }) async {
+    if (model.id == null) {
+      return;
+    }
 
-      emit(FavoriteFetchSuccess(
-          isLoadingMore: false,
-          favorite: List.from(favoriteList),
-          hasMoreFetchError: true,
-          page: (state as FavoriteFetchSuccess).page,
-          totalFavoriteCount:
-              (state as FavoriteFetchSuccess).totalFavoriteCount,
-          hasMore: (state as FavoriteFetchSuccess).hasMore));
+    if (shouldBeFavorite == isItemFavorite(model.id!)) {
+      return;
+    }
+
+    try {
+      await favoriteRepository.manageFavorites(model.id!);
+      if (state is FavoriteFetchSuccess) {
+        if (shouldBeFavorite) {
+          _addFavoriteToState(model);
+        } else {
+          _removeFavoriteFromState(model);
+        }
+      }
+    } catch (error) {
+      print('❌ خطأ في تحديث المفضلة: $error');
     }
   }
 
-  void removeFavoriteItem(ItemModel model) {
-    if (state is FavoriteFetchSuccess) {
-      final favorite = (state as FavoriteFetchSuccess).favorite;
+  void _addFavoriteToState(ItemModel model) {
+    final currentState = state;
+    if (currentState is FavoriteFetchSuccess) {
+      final updatedFavorites = <ItemModel>[
+        model,
+        ...currentState.favorite,
+      ];
+      emit(currentState.copyWith(favorite: List.unmodifiable(updatedFavorites)));
+    }
+  }
 
-      // Find the index of the item to be removed
-      int indexToRemove =
-          favorite.indexWhere((element) => element.id == model.id);
-      if (indexToRemove != -1) {
-        // Decrement totalLikes of the item being removed
-        ItemModel removedItem = favorite[indexToRemove];
-        removedItem.totalLikes = (removedItem.totalLikes ?? 0) - 1;
-        favorite.removeAt(indexToRemove);
-
-        emit(FavoriteFetchSuccess(
-          isLoadingMore: false,
-          favorite: List.from(favorite),
-          hasMoreFetchError: true,
-          page: (state as FavoriteFetchSuccess).page,
-          totalFavoriteCount:
-              (state as FavoriteFetchSuccess).totalFavoriteCount,
-          hasMore: (state as FavoriteFetchSuccess).hasMore,
-        ));
+  void _removeFavoriteFromState(ItemModel model) {
+    final currentState = state;
+    if (currentState is FavoriteFetchSuccess) {
+      final updatedFavorites = List<ItemModel>.from(currentState.favorite);
+      final indexToRemove =
+          updatedFavorites.indexWhere((entry) => entry.id == model.id);
+      if (indexToRemove >= 0) {
+        final ItemModel removedItem = updatedFavorites[indexToRemove];
+        removedItem.totalLikes = max(0, (removedItem.totalLikes ?? 1) - 1);
+        updatedFavorites.removeAt(indexToRemove);
+        emit(currentState.copyWith(favorite: List.unmodifiable(updatedFavorites)));
       }
     }
   }

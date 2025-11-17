@@ -59,6 +59,7 @@ class ItemCollection extends ResourceCollection {
 
                 $response[$key]['product_link'] = $collection->product_link;
                 $response[$key]['review_link'] = $collection->review_link;
+                $response[$key]['video_link'] = $collection->video_link;
                 $response[$key]['base_price'] = (float) ($collection->price ?? 0.0);
                 $response[$key]['final_price'] = $collection->calculateDiscountedPrice();
                 $response[$key]['discount'] = $collection->discount_snapshot;
@@ -189,6 +190,18 @@ class ItemCollection extends ResourceCollection {
                         }
 
                         $response[$key]['tips']['return_policy_text'] = $policyText;
+                    }
+                }
+
+                if ($collection->relationLoaded('store')) {
+                    $storePolicyText = $this->buildStorePolicySummary($collection->store);
+                    if ($storePolicyText !== null) {
+                        if (! isset($response[$key]['tips'])) {
+                            $response[$key]['tips'] = [
+                                'actions' => [],
+                            ];
+                        }
+                        $response[$key]['tips']['return_policy_text'] = $storePolicyText;
                     }
                 }
 
@@ -334,5 +347,39 @@ class ItemCollection extends ResourceCollection {
         } catch (Throwable $th) {
             throw $th;
         }
+    }
+
+    private function buildStorePolicySummary($store): ?string
+    {
+        if ($store === null) {
+            return null;
+        }
+
+        $policies = $store->relationLoaded('policies')
+            ? $store->policies
+            : $store->policies()->where('is_active', true)->get();
+
+        if ($policies === null) {
+            return null;
+        }
+
+        $lines = $policies->filter(static function ($policy) {
+            return (bool) $policy->is_active && trim((string) $policy->content) !== '';
+        })->sortBy(static function ($policy) {
+            return $policy->display_order ?? 0;
+        })->map(static function ($policy) {
+            $title = trim((string) ($policy->title ?? ''));
+            $content = trim((string) $policy->content);
+            if ($content === '') {
+                return null;
+            }
+            return $title !== '' ? "{$title}: {$content}" : $content;
+        })->filter()->values();
+
+        if ($lines->isEmpty()) {
+            return null;
+        }
+
+        return $lines->map(static fn ($line) => '• ' . $line)->implode("\n");
     }
 }

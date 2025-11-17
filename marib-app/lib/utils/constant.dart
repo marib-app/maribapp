@@ -5,8 +5,6 @@ import 'package:marib/settings.dart';
 import 'package:marib/ui/screens/filter_screen.dart';
 
 import 'package:flutter/material.dart';
-
-import 'package:marib/ui/screens/filter_screen.dart';
 import 'package:marib/data/model/item_filter_model.dart';
 import 'package:marib/data/model/social_link_model.dart';
 
@@ -23,7 +21,11 @@ class Constant {
   static const double defaultPadding = 16.0;
 
   //backend url
-  static String baseUrl = AppSettings.baseUrl;
+  static List<String> apiBaseUrlCandidates =
+      List<String>.from(AppSettings.apiBaseUrlCandidates);
+  static String baseUrl = apiBaseUrlCandidates.isNotEmpty
+      ? apiBaseUrlCandidates.first
+      : AppSettings.baseUrl;
 
   static String isGoogleBannerAdsEnabled = "";
   static String isGoogleInterstitialAdsEnabled = "";

@@ -4,11 +4,14 @@ namespace App\Http\Controllers\Store;
 
 use App\Http\Controllers\Controller;
 use App\Models\Store;
+use App\Models\StoreGateway;
+use App\Models\StoreGatewayAccount;
 use App\Models\StorePolicy;
 use App\Models\StoreSetting;
 use App\Models\StoreStaff;
 use App\Models\StoreWorkingHour;
 use App\Models\User;
+use App\Services\Store\StoreStatusService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -19,12 +22,12 @@ use Illuminate\View\View;
 
 class StoreSettingsController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request, StoreStatusService $storeStatusService): View
     {
         /** @var Store $store */
         $store = $request->attributes->get('currentStore');
 
-        $store->loadMissing(['settings', 'workingHours', 'policies', 'staff']);
+        $store->loadMissing(['settings', 'workingHours', 'policies', 'staff', 'gatewayAccounts.storeGateway']);
 
         $settings = $store->settings ?? new StoreSetting([
             'closure_mode' => 'full',
@@ -36,6 +39,14 @@ class StoreSettingsController extends Controller
         $workingHours = $this->buildWorkingHoursMatrix($store);
         $policies = $this->buildPolicyMap($store);
         $staff = $store->staff->first();
+        $storeGateways = StoreGateway::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+        $gatewayAccounts = $store->gatewayAccounts()
+            ->with('storeGateway')
+            ->latest()
+            ->get();
 
         $weekdays = [
             0 => __('Sunday'),
@@ -47,13 +58,18 @@ class StoreSettingsController extends Controller
             6 => __('Saturday'),
         ];
 
+        $statusSummary = $storeStatusService->resolve($store);
+
         return view('store.settings.index', [
             'store' => $store,
             'settings' => $settings,
             'workingHours' => $workingHours,
             'policies' => $policies,
             'staff' => $staff,
+            'storeGateways' => $storeGateways,
+            'gatewayAccounts' => $gatewayAccounts,
             'weekdays' => $weekdays,
+            'statusSummary' => $statusSummary,
         ]);
     }
 
@@ -73,14 +89,11 @@ class StoreSettingsController extends Controller
                 'max:500',
             ],
             'manual_closure_expires_at' => ['nullable', 'date'],
-            'allow_delivery' => ['nullable', 'boolean'],
-            'allow_pickup' => ['nullable', 'boolean'],
             'allow_manual_payments' => ['nullable', 'boolean'],
             'allow_wallet' => ['nullable', 'boolean'],
             'allow_cod' => ['nullable', 'boolean'],
             'auto_accept_orders' => ['nullable', 'boolean'],
             'order_acceptance_buffer_minutes' => ['nullable', 'integer', 'min:0', 'max:1440'],
-            'delivery_radius_km' => ['nullable', 'numeric', 'min:0'],
             'checkout_notice' => ['nullable', 'string', 'max:1000'],
         ]);
 
@@ -90,14 +103,11 @@ class StoreSettingsController extends Controller
             'manual_closure_reason' => $validated['manual_closure_reason'] ?? null,
             'manual_closure_expires_at' => $validated['manual_closure_expires_at'] ?? null,
             'min_order_amount' => $validated['min_order_amount'] ?? null,
-            'allow_delivery' => (bool) ($validated['allow_delivery'] ?? false),
-            'allow_pickup' => (bool) ($validated['allow_pickup'] ?? false),
             'allow_manual_payments' => (bool) ($validated['allow_manual_payments'] ?? false),
             'allow_wallet' => (bool) ($validated['allow_wallet'] ?? false),
             'allow_cod' => (bool) ($validated['allow_cod'] ?? false),
             'auto_accept_orders' => (bool) ($validated['auto_accept_orders'] ?? false),
             'order_acceptance_buffer_minutes' => $validated['order_acceptance_buffer_minutes'] ?? null,
-            'delivery_radius_km' => $validated['delivery_radius_km'] ?? null,
             'checkout_notice' => $validated['checkout_notice'] ?? null,
         ];
 
@@ -107,8 +117,82 @@ class StoreSettingsController extends Controller
         );
 
         return redirect()
-            ->back()
+            ->route('merchant.settings', ['tab' => 'general'])
             ->with('success', __('Store preferences updated successfully.'));
+    }
+
+    public function storeGatewayAccount(Request $request): RedirectResponse
+    {
+        /** @var Store $store */
+        $store = $request->attributes->get('currentStore');
+
+        $validated = $request->validate([
+            'store_gateway_id' => [
+                'required',
+                'integer',
+                Rule::exists('store_gateways', 'id')->where('is_active', true),
+            ],
+            'beneficiary_name' => ['required', 'string', 'max:255'],
+            'account_number' => ['required', 'string', 'max:255'],
+            'is_active' => ['nullable', 'boolean'],
+        ]);
+
+        $request->user()
+            ->storeGatewayAccounts()
+            ->create([
+                'store_gateway_id' => $validated['store_gateway_id'],
+                'store_id' => $store->id,
+                'beneficiary_name' => $validated['beneficiary_name'],
+                'account_number' => $validated['account_number'],
+                'is_active' => array_key_exists('is_active', $validated)
+                    ? (bool) $validated['is_active']
+                    : true,
+            ]);
+
+        return redirect()
+            ->route('merchant.settings', ['tab' => 'payments'])
+            ->with('success', __('تم إضافة الحساب البنكي بنجاح.'));
+    }
+
+    public function updateGatewayAccount(Request $request, StoreGatewayAccount $storeGatewayAccount): RedirectResponse
+    {
+        /** @var Store $store */
+        $store = $request->attributes->get('currentStore');
+        abort_unless($storeGatewayAccount->store_id === $store->id, 404);
+
+        $validated = $request->validate([
+            'store_gateway_id' => [
+                'sometimes',
+                'integer',
+                Rule::exists('store_gateways', 'id')->where('is_active', true),
+            ],
+            'beneficiary_name' => ['sometimes', 'string', 'max:255'],
+            'account_number' => ['sometimes', 'string', 'max:255'],
+            'is_active' => ['sometimes', 'boolean'],
+        ]);
+
+        if (array_key_exists('is_active', $validated)) {
+            $validated['is_active'] = (bool) $validated['is_active'];
+        }
+
+        $storeGatewayAccount->update($validated);
+
+        return redirect()
+            ->route('merchant.settings', ['tab' => 'payments'])
+            ->with('success', __('تم تحديث بيانات الحساب البنكي.'));
+    }
+
+    public function destroyGatewayAccount(Request $request, StoreGatewayAccount $storeGatewayAccount): RedirectResponse
+    {
+        /** @var Store $store */
+        $store = $request->attributes->get('currentStore');
+        abort_unless($storeGatewayAccount->store_id === $store->id, 404);
+
+        $storeGatewayAccount->delete();
+
+        return redirect()
+            ->route('merchant.settings', ['tab' => 'payments'])
+            ->with('success', __('تم حذف الحساب البنكي.'));
     }
 
     public function updateHours(Request $request): RedirectResponse
@@ -135,7 +219,7 @@ class StoreSettingsController extends Controller
         });
 
         return redirect()
-            ->back()
+            ->route('merchant.settings', ['tab' => 'hours'])
             ->with('success', __('Working hours updated successfully.'));
     }
 
@@ -145,26 +229,27 @@ class StoreSettingsController extends Controller
         $store = $request->attributes->get('currentStore');
 
         $validated = $request->validate([
-            'return_policy' => ['required', 'string'],
-            'exchange_policy' => ['required', 'string'],
+            'policy_text' => ['required', 'string'],
         ]);
+
+        $policyText = $validated['policy_text'];
 
         $this->persistPolicy(
             $store,
             'return',
-            __('Return Policy'),
-            $validated['return_policy']
+            __('Return / Exchange Policy'),
+            $policyText
         );
 
         $this->persistPolicy(
             $store,
             'exchange',
-            __('Exchange Policy'),
-            $validated['exchange_policy']
+            __('Return / Exchange Policy'),
+            $policyText
         );
 
         return redirect()
-            ->back()
+            ->route('merchant.settings', ['tab' => 'policies'])
             ->with('success', __('Policies saved successfully.'));
     }
 
@@ -191,7 +276,7 @@ class StoreSettingsController extends Controller
         if ($store->staff()->whereRaw('LOWER(email) = ?', [$email])->exists()) {
             // already assigned to this store
             return redirect()
-                ->back()
+                ->route('merchant.settings', ['tab' => 'staff'])
                 ->with('info', __('This staff email is already assigned to your store.'));
         }
 
@@ -202,7 +287,7 @@ class StoreSettingsController extends Controller
 
         if ($conflict || User::query()->whereRaw('LOWER(email) = ?', [$email])->exists()) {
             return redirect()
-                ->back()
+                ->route('merchant.settings', ['tab' => 'staff'])
                 ->withErrors(['staff_prefix' => __('This email is already reserved by another user.')]);
         }
 
@@ -227,7 +312,7 @@ class StoreSettingsController extends Controller
         }
 
         return redirect()
-            ->back()
+            ->route('merchant.settings', ['tab' => 'staff'])
             ->with('success', __('Staff login email reserved successfully.'));
     }
 
@@ -319,4 +404,5 @@ class StoreSettingsController extends Controller
             ]
         );
     }
+
 }

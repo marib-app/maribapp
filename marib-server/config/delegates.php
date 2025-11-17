@@ -16,6 +16,7 @@ return [
     'auto_approve_departments' => [
         DepartmentReportService::DEPARTMENT_SHEIN,
         DepartmentReportService::DEPARTMENT_COMPUTER,
+        DepartmentReportService::DEPARTMENT_STORE,
     ],
 
     'cache_prefix' => 'delegates',

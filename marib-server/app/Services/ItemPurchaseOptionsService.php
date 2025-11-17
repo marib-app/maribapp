@@ -231,6 +231,10 @@ class ItemPurchaseOptionsService
             return '';
         }
 
+        if (! $this->itemHasVariantSpecificStock($item)) {
+            return '';
+        }
+
         $selection = [];
         foreach ($affecting as $definition) {
             $key = $definition['key'];
@@ -327,6 +331,27 @@ class ItemPurchaseOptionsService
 
         return ItemStock::query()
             ->where('item_id', $item->getKey())
+            ->exists();
+    }
+
+    private function itemHasVariantSpecificStock(Item $item): bool
+    {
+        if (! $item->getKey()) {
+            return false;
+        }
+
+        if ($item->relationLoaded('stocks')) {
+            return $item->stocks->contains(static function (ItemStock $stock) {
+                $key = trim((string) ($stock->variant_key ?? ''));
+
+                return $key !== '';
+            });
+        }
+
+        return ItemStock::query()
+            ->where('item_id', $item->getKey())
+            ->whereNotNull('variant_key')
+            ->where('variant_key', '!=', '')
             ->exists();
     }
 

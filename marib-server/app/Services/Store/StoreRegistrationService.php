@@ -64,8 +64,8 @@ class StoreRegistrationService
             $this->syncSettings($store, $payload['settings'] ?? []);
             $this->syncWorkingHours($store, $payload['working_hours'] ?? []);
             $this->syncPolicies($store, $payload['policies'] ?? []);
-            $this->ensureOwnerStaffRecord($store, $user);
-            $this->provisionStoreCredentials($store, $user, $payload);
+            $this->applyOwnerCredentials($store, $user, $payload);
+            $this->ensureOwnerStaffRecord($store, $user->fresh());
 
             return $store->load([
                 'settings',
@@ -234,6 +234,48 @@ class StoreRegistrationService
         }
     }
 
+    private function applyOwnerCredentials(Store $store, User $owner, array $payload): void
+    {
+        $credentials = $this->extractCredentialsPayload($payload);
+        $email = $credentials['email'];
+        $password = $credentials['password'];
+
+        $hasChanges = false;
+
+        if ($email !== null) {
+            $currentEmail = strtolower((string) $owner->email);
+            if ($currentEmail !== strtolower($email)) {
+                $this->assertStaffEmailAvailable($email, $store, 'credentials.handle');
+                $owner->email = $email;
+                $hasChanges = true;
+            }
+        }
+
+        if ($password !== null) {
+            $owner->password = Hash::make($password);
+            $hasChanges = true;
+        }
+
+        if ($owner->account_type !== User::ACCOUNT_TYPE_SELLER) {
+            $owner->account_type = User::ACCOUNT_TYPE_SELLER;
+            $hasChanges = true;
+        }
+
+        if (! $owner->terms_and_policy_accepted) {
+            $owner->terms_and_policy_accepted = true;
+            $hasChanges = true;
+        }
+
+        if (! $owner->email_verified_at) {
+            $owner->email_verified_at = now();
+            $hasChanges = true;
+        }
+
+        if ($hasChanges) {
+            $owner->save();
+        }
+    }
+
     private function ensureOwnerStaffRecord(Store $store, User $user): void
     {
         $store->staff()->updateOrCreate(
@@ -251,46 +293,6 @@ class StoreRegistrationService
         );
 
         $this->assignStoreRole($user, $store);
-    }
-
-    private function provisionStoreCredentials(Store $store, User $owner, array $payload): void
-    {
-        $credentials = $this->extractCredentialsPayload($payload);
-        $email = $credentials['email'];
-        $password = $credentials['password'];
-
-        if ($email === null || $password === null) {
-            return;
-        }
-
-        if ($owner->email && strcasecmp($email, (string) $owner->email) === 0) {
-            throw ValidationException::withMessages([
-                'credentials.handle' => 'Handle cannot match your personal login email.',
-            ]);
-        }
-
-        $this->assertStaffEmailAvailable($email, $store, 'credentials.handle');
-
-        $staffUser = $this->upsertStoreStaffUser($email, $password, $store, $owner);
-
-        StoreStaff::updateOrCreate(
-            [
-                'store_id' => $store->id,
-                'email' => $email,
-            ],
-            [
-                'user_id' => $staffUser->id,
-                'role' => 'store_owner',
-                'status' => 'active',
-                'permissions' => ['full_access' => true],
-                'invited_by' => $owner->id,
-                'accepted_at' => now(),
-                'invitation_token' => null,
-                'revoked_at' => null,
-            ]
-        );
-
-        $this->assignStoreRole($staffUser, $store);
     }
 
     /**
@@ -316,36 +318,6 @@ class StoreRegistrationService
             'email' => $email,
             'password' => $password,
         ];
-    }
-
-    private function upsertStoreStaffUser(string $email, string $password, Store $store, User $owner): User
-    {
-        $user = User::firstOrNew(['email' => $email]);
-
-        if (! $user->exists) {
-            $user->type = 'email';
-            $user->fcm_id = 'store-panel';
-            $user->notification = true;
-        }
-
-        $user->name = $store->name ?? $owner->name ?? 'Store Owner';
-        $user->password = Hash::make($password);
-        $user->account_type = User::ACCOUNT_TYPE_SELLER;
-        $user->terms_and_policy_accepted = true;
-        $user->show_personal_details = $user->show_personal_details ?? false;
-        $user->email_verified_at = $user->email_verified_at ?? now();
-        $user->is_verified = 1;
-        $user->country_code = $user->country_code ?? $owner->country_code ?? 'YE';
-        $user->mobile = $user->mobile ?? $owner->mobile;
-        $user->notification = true;
-
-        if (empty($user->fcm_id)) {
-            $user->fcm_id = (string) Str::uuid();
-        }
-
-        $user->save();
-
-        return $user;
     }
 
     private function assignStoreRole(User $user, Store $store): void

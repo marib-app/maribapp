@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:marib/data/model/wifi/wifi_network.dart';
 import 'package:marib/data/model/wifi/wifi_plan.dart';
+import 'package:marib/data/model/wifi/wifi_purchase.dart';
 import 'package:marib/data/wifi/wifi_repository.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/errorFilter.dart';
@@ -9,6 +11,9 @@ import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/utils/payment/bank_transfer_args.dart';
 import 'package:marib/utils/payment/bank_transfer_screen.dart';
+import 'package:marib/utils/payment/manual_payment_service.dart'
+    show ManualPaymentSubmissionResult;
+import 'package:marib/utils/payment/payment_route_result.dart';
 
 class WifiNetworkDetailsScreen extends StatefulWidget {
   const WifiNetworkDetailsScreen({super.key, required this.network});
@@ -177,7 +182,196 @@ class _WifiNetworkDetailsScreenState extends State<WifiNetworkDetailsScreen> {
       initialGateway: BankTransferGateway.wallet,
     );
 
-    await BankTransferScreen.show(context, args);
+    final Object? result = await BankTransferScreen.show(context, args);
+    if (!mounted) return;
+    await _handlePaymentResult(result, plan);
+  }
+
+  Future<void> _handlePaymentResult(Object? result, WifiPlan plan) async {
+    if (!mounted || result == null || result == false) return;
+
+    final int? transactionId = _extractTransactionId(result);
+    if (transactionId == null || transactionId <= 0) {
+      return;
+    }
+
+    await _revealWifiCodes(transactionId, plan);
+  }
+
+  int? _extractTransactionId(Object result) {
+    if (result is PaymentRouteResult) {
+      if (result.kind == PaymentRouteKind.walletSuccess) {
+        return result.walletTxnId;
+      }
+      return null;
+    }
+
+    if (result is ManualPaymentSubmissionResult) {
+      if (result.requiresConfirmation) {
+        return null;
+      }
+
+      final bool successFlag = result.success ||
+          (result.status != null &&
+              result.status!.toLowerCase() == 'succeed') ||
+          (result.paymentTransaction?['payment_status']
+                  ?.toString()
+                  .toLowerCase() ==
+              'succeed') ||
+          (result.raw['payment_status']?.toString().toLowerCase() ==
+              'succeed');
+
+      if (!successFlag) {
+        return null;
+      }
+
+      final List<dynamic> candidates = <dynamic>[
+        result.paymentTransactionId,
+        result.paymentTransaction?['id'],
+        result.paymentTransaction?['transaction_id'],
+        result.raw['payment_transaction_id'],
+        result.raw['transaction_id'],
+      ];
+
+      for (final dynamic candidate in candidates) {
+        final int? parsed = _parseTransactionId(candidate);
+        if (parsed != null && parsed > 0) {
+          return parsed;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  int? _parseTransactionId(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    final String text = value.toString();
+    if (text.isEmpty) return null;
+    return int.tryParse(text);
+  }
+
+  Future<void> _revealWifiCodes(int transactionId, WifiPlan plan) async {
+    try {
+      final WifiPurchase? purchase =
+          await _repository.revealTransactionCode(transactionId);
+
+      if (!mounted) return;
+
+      if (purchase == null || purchase.codes.isEmpty) {
+        HelperUtils.showSnackBarMessage(
+          context,
+          'تمت عملية الشراء لخطة ${plan.name}، وسيظهر الكرت في سجل المشتريات فور جاهزيته.',
+        );
+        return;
+      }
+
+      await _showWifiCodeDialog(purchase);
+    } catch (error) {
+      if (!mounted) return;
+      HelperUtils.showSnackBarMessage(
+        context,
+        ErrorFilter.check(error).error,
+      );
+    }
+  }
+
+  Future<void> _showWifiCodeDialog(WifiPurchase purchase) async {
+    final parentContext = context;
+    final List<String> codes = purchase.codes
+        .map((code) => code.trim())
+        .where((code) => code.isNotEmpty)
+        .toList();
+
+    if (codes.isEmpty) {
+      HelperUtils.showSnackBarMessage(
+        context,
+        'تم تسجيل العملية، وسيتم إرسال الكروت فور توفرها.',
+      );
+      return;
+    }
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) {
+        final textTheme = Theme.of(dialogContext).textTheme;
+        final colors = dialogContext.color;
+
+        return AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'تم إصدار كرت الإنترنت',
+                style: textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: colors.textDefaultColor,
+                ),
+              ),
+              if ((purchase.networkName ?? '').isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    purchase.networkName!,
+                    style: textTheme.bodySmall?.copyWith(
+                      color: colors.textLightColor,
+                    ),
+                  ),
+                ),
+              if ((purchase.planName ?? '').isNotEmpty)
+                Text(
+                  purchase.planName!,
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colors.textLightColor,
+                  ),
+                ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ...codes.map(
+                  (code) => _WifiCodeTile(
+                    code: code,
+                    onCopy: () {
+                      Clipboard.setData(ClipboardData(text: code));
+                      HelperUtils.showSnackBarMessage(
+                        parentContext,
+                        'تم نسخ الكرت إلى الحافظة',
+                        messageDuration: 2,
+                      );
+                    },
+                  ),
+                ),
+                if (purchase.reference?.isNotEmpty == true)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Text(
+                      'المرجع: ${purchase.reference}',
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colors.textLightColor,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('إغلاق'),
+            ),
+          ],
+        );
+      },
+    );
   }
 }
 
@@ -839,6 +1033,47 @@ class _PriceCard extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WifiCodeTile extends StatelessWidget {
+  const _WifiCodeTile({required this.code, required this.onCopy});
+
+  final String code;
+  final VoidCallback onCopy;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.color;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: colors.secondaryColor,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: colors.borderColor.withOpacity(.5)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: SelectableText(
+              code,
+              style: textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: colors.textDefaultColor,
+              ),
+            ),
+          ),
+          IconButton(
+            tooltip: 'نسخ',
+            onPressed: onCopy,
+            icon: Icon(Icons.copy_rounded, color: colors.territoryColor),
           ),
         ],
       ),

@@ -83,9 +83,9 @@ class WalletWithdrawalRequest extends Model
     public function statusLabel(): string
     {
         return match ($this->status) {
-            self::STATUS_APPROVED => __('Approved'),
-            self::STATUS_REJECTED => __('Rejected'),
-            default => __('Pending'),
+            self::STATUS_APPROVED => __('merchant_wallet.withdrawals.status.approved'),
+            self::STATUS_REJECTED => __('merchant_wallet.withdrawals.status.rejected'),
+            default => __('merchant_wallet.withdrawals.status.pending'),
         };
     }
 

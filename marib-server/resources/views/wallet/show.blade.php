@@ -262,97 +262,7 @@
                 </div>
             </div>
 
-            <div class="col-lg-4">
-                <div class="card shadow-sm border-0 mb-3">
-                    <div class="card-body">
-                        <div class="d-flex flex-column flex-md-row justify-content-between gap-3">
-                            <div>
-                                <h5 class="card-title mb-1">{{ __('Manual Deposits') }}</h5>
-                                <p class="text-muted small mb-0">
-                                    {{ __('Credit this wallet instantly with full audit trail and sequential references.') }}
-                                </p>
-                            </div>
-                            <div class="d-flex gap-2 flex-wrap justify-content-end">
-                                <a href="{{ route('wallet.index') }}"
-                                    class="btn btn-outline-primary d-flex align-items-center gap-2">
-                                    <i class="bi bi-bar-chart"></i>
-                                    <span>{{ __('Wallet Overview') }}</span>
-                                </a>
-                            </div>
-                        </div>
-                        <div class="row text-center mt-4 pt-3 border-top">
-                            <div class="col-12 col-sm-4">
-                                <p class="text-muted small mb-1">{{ __('Total manual deposits') }}</p>
-                                <h4 class="fw-bold mb-0">{{ number_format($manualCreditStats['count'] ?? 0) }}</h4>
-                            </div>
-                            <div class="col-12 col-sm-4">
-                                <p class="text-muted small mb-1">{{ __('Deposited volume') }}</p>
-                                <h4 class="fw-bold mb-0">
-                                    {{ number_format((float) ($manualCreditStats['total'] ?? 0), 2) }} {{ $currency }}
-                                </h4>
-                            </div>
-                            <div class="col-12 col-sm-4">
-                                <p class="text-muted small mb-1">{{ __('Last reference') }}</p>
-                                <h6 class="mb-0">
-                                    {{ $manualCreditStats['last_reference'] ?? __('Not available') }}
-                                </h6>
-                                <small class="text-muted">
-                                    {{ optional($manualCreditStats['last_date'])->diffForHumans() ?? '—' }}
-                                </small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card shadow-sm border-0">
-                    <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
-                        <h6 class="mb-0">{{ __('Recent manual deposits') }}</h6>
-                        <button type="button"
-                                class="btn btn-sm btn-outline-secondary"
-                                data-bs-toggle="modal"
-                                data-bs-target="#manualCreditModal"
-                                data-bs-tab-target="#manual-credit-history">
-                            <i class="bi bi-clock-history me-1"></i>{{ __('History') }}
-                        </button>
-                    </div>
-                    <div class="card-body">
-                        @if($manualCreditEntries->isEmpty())
-                            <p class="text-muted small mb-0">{{ __('No manual deposits have been recorded yet.') }}</p>
-                        @else
-                            <div class="list-group list-group-flush">
-                                @foreach($manualCreditEntries as $entry)
-                                    @php
-                                        $ref = data_get($entry->meta, 'operation_reference');
-                                    @endphp
-                                    <div class="list-group-item px-0">
-                                        <div class="d-flex justify-content-between flex-wrap gap-2">
-                                            <div>
-                                                <div class="fw-semibold">{{ $ref ?? __('Reference #:id', ['id' => $entry->getKey()]) }}</div>
-                                                <small class="text-muted">
-                                                    {{ optional($entry->created_at)->format('Y-m-d H:i') }}
-                                                    · {{ optional($entry->created_at)->diffForHumans() }}
-                                                </small>
-                                            </div>
-                                            <div class="text-end">
-                                                <div class="fw-bold text-success">
-                                                    +{{ number_format((float) $entry->amount, 2) }} {{ $currency }}
-                                                </div>
-                                                @if($entry->balance_after)
-                                                    <small class="text-muted">{{ __('Balance') }}:
-                                                        {{ number_format((float) $entry->balance_after, 2) }}
-                                                    </small>
-                                                @endif
-                                            </div>
-                                        </div>
-                                    </div>
-                                @endforeach
-                            </div>
-                        @endif
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-lg-8">
+            <div class="col-12">
                 <div class="card shadow-sm border-0 mb-3">
                     <div class="card-header bg-white border-0">
                         <div class="d-flex flex-column gap-3">
@@ -536,5 +446,6 @@
         </div>
     </section>
 @endsection
+
 
 

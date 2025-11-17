@@ -23,6 +23,7 @@ class SubscriptionPackagesIndicator extends StatelessWidget {
     }
     final Color inactiveColor =
         color ?? context.color.borderColor.withOpacity(0.45);
+    final Color active = activeColor.withOpacity(0.85);
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(count, (i) {
@@ -31,19 +32,11 @@ class SubscriptionPackagesIndicator extends StatelessWidget {
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOut,
           margin: const EdgeInsets.symmetric(horizontal: 4),
-          height: 8,
-          width: isActive ? 22 : 8,
+          height: 4,
+          width: isActive ? 28 : 12,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            color: isActive ? null : inactiveColor,
-            gradient: isActive
-                ? LinearGradient(
-                    colors: [
-                      activeColor,
-                      activeColor.withOpacity(0.7),
-                    ],
-                  )
-                : null,
+            borderRadius: BorderRadius.circular(8),
+            color: isActive ? active : inactiveColor,
           ),
         );
       }),

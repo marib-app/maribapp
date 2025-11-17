@@ -183,6 +183,9 @@ class HelperService {
     public static function generateUniqueSlug($model, string $slug, int $excludeID = null, int $count = 0): string {
         /*NOTE : This can be improved by directly calling in the UI on type of title via AJAX*/
         $slug = Str::slug($slug);
+        if ($slug === '') {
+            $slug = Str::lower(Str::random(12));
+        }
         $newSlug = $count ? $slug . '-' . $count : $slug;
 
         $data = $model::where('slug', $newSlug);

@@ -11,10 +11,12 @@ defined('business') or define('business', 'sb-uefcv23946367@business.example.com
 $SYSTEM_VERSION = "2.2.0";
 return [
     'RESPONSE_CODE'    => [
-        'LOGIN_SUCCESS'    => 100,
-        'VALIDATION_ERROR' => 102,
-        'EXCEPTION_ERROR'  => 103,
-        'SUCCESS'          => 200,
+        'LOGIN_SUCCESS'       => 100,
+        'VALIDATION_ERROR'    => 102,
+        'EXCEPTION_ERROR'     => 103,
+        'SUCCESS'             => 200,
+        'INVALID_LOGIN'       => 401,
+        'UNAUTHORIZED_ACCESS' => 403,
     ],
     'CACHE'            => [
         'LANGUAGE' => 'languages',

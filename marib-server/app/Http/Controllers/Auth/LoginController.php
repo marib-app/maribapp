@@ -30,6 +30,10 @@ class LoginController extends Controller {
      */
     protected $redirectTo = RouteServiceProvider::HOME;
 
+    protected function redirectTo() {
+        return RouteServiceProvider::resolveHomePath(auth()->user());
+    }
+
     /*Extended Function from AuthenticatesUsers*/
     protected function sendFailedLoginResponse(Request $request) {
         $user = User::where('email', $request->get('email'))->withTrashed()->first();

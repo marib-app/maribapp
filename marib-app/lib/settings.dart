@@ -1,3 +1,7 @@
+import 'dart:collection';
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:marib/utils/payment/bank_account.dart';
@@ -36,8 +40,16 @@ class AppSettings {
   static const String shareAppText = "Share this App";
 
   // static const String hostUrl =  "https://maribsrv.com";
+  static const String hostUrl = "http://192.168.1.4:8000";
 
-  static const String hostUrl = "http://192.168.1.25:8000";
+  static final List<String> _hostUrlCandidates = _buildHostUrlCandidates();
+  static List<String> get hostUrlCandidates => _hostUrlCandidates;
+
+  static final List<String> apiBaseUrlCandidates = _hostUrlCandidates
+      .map((candidate) => "${HelperUtils.checkHost(candidate)}api/")
+      .toList(growable: false);
+
+  static String get baseUrl => apiBaseUrlCandidates.first;
 
   ///API Setting
 
@@ -95,8 +107,12 @@ class AppSettings {
 
 
 
-  static final String baseUrl =
-      "${HelperUtils.checkHost(hostUrl)}api/"; //don't change this
+  static const List<String> _defaultLocalFallbackHosts = <String>[
+    'http://10.0.2.2:8000',
+    'http://10.0.3.2:8000',
+    'http://127.0.0.1:8000',
+    'http://localhost:8000',
+  ];
 
   static const int hiddenAPIProcessDelay = 1;
 
@@ -220,6 +236,95 @@ it will call API in background without showing the process and when data availab
     return paymentGateways
         .where((gateway) => gateway.isEnabled)
         .toList(growable: false);
+  }
+
+  static List<String> _buildHostUrlCandidates() {
+    final LinkedHashSet<String> hosts = LinkedHashSet<String>();
+
+    void addCandidate(String? candidate) {
+      final String? normalized = _normalizeHostCandidate(candidate);
+      if (normalized != null) {
+        hosts.add(normalized);
+      }
+    }
+
+    addCandidate(hostUrl);
+
+    final String? loopbackOverride = _loopbackOverrideForHost(hostUrl);
+    if (loopbackOverride != null) {
+      addCandidate(loopbackOverride);
+    }
+
+    for (final String fallback in _defaultLocalFallbackHosts) {
+      addCandidate(fallback);
+    }
+
+    const String envHosts =
+        String.fromEnvironment('MARIB_LOCAL_HOSTS', defaultValue: '');
+    if (envHosts.isNotEmpty) {
+      for (final String entry in envHosts.split(',')) {
+        addCandidate(entry);
+      }
+    }
+
+    return List<String>.unmodifiable(hosts);
+  }
+
+  static String? _normalizeHostCandidate(String? candidate) {
+    if (candidate == null) {
+      return null;
+    }
+    String value = candidate.trim();
+    if (value.isEmpty) {
+      return null;
+    }
+    if (!value.startsWith('http://') && !value.startsWith('https://')) {
+      value = 'http://$value';
+    }
+    final Uri? uri = Uri.tryParse(value);
+    if (uri == null || !uri.hasAuthority) {
+      return null;
+    }
+    final Uri sanitized =
+        uri.replace(path: '', query: null, fragment: null, userInfo: '');
+    return sanitized.toString().replaceAll(RegExp(r'/+$'), '');
+  }
+
+  static String? _loopbackOverrideForHost(String candidate) {
+    if (kIsWeb) {
+      return null;
+    }
+    if (!(Platform.isAndroid || Platform.isIOS)) {
+      return null;
+    }
+    final String? normalized = _normalizeHostCandidate(candidate);
+    if (normalized == null) {
+      return null;
+    }
+    final Uri? uri = Uri.tryParse(normalized);
+    if (uri == null) {
+      return null;
+    }
+    final String host = uri.host;
+    final int port = uri.hasPort ? uri.port : 80;
+    if (!_isHyperVPrivateAddress(host) &&
+        host != 'localhost' &&
+        host != '127.0.0.1' &&
+        host != '0.0.0.0') {
+      return null;
+    }
+
+    if (Platform.isAndroid) {
+      return 'http://10.0.2.2:$port';
+    }
+    if (Platform.isIOS) {
+      return 'http://127.0.0.1:$port';
+    }
+    return null;
+  }
+
+  static bool _isHyperVPrivateAddress(String host) {
+    return host.startsWith('192.168.32.');
   }
 }
 

@@ -329,7 +329,7 @@ class PaymentController extends Controller
             'method' => $method,
             'currency' => $currency,
             'amount' => $validated['amount'] ?? $plan->price ?? '',
-        ]);
+        ], false);
 
         $idempotencyKey = $requestedIdempotencyKey;
 
@@ -1087,12 +1087,14 @@ class PaymentController extends Controller
         return $token;
     }
 
-    private function resolveIdempotencyKey(Request $request, array $components): string
+    private function resolveIdempotencyKey(Request $request, array $components, bool $allowHeader = true): string
     {
-        $headerKey = $request->header('Idempotency-Key');
+        if ($allowHeader) {
+            $headerKey = $request->header('Idempotency-Key');
 
-        if (is_string($headerKey) && trim($headerKey) !== '') {
-            return Str::limit(trim($headerKey), 64, '');
+            if (is_string($headerKey) && trim($headerKey) !== '') {
+                return Str::limit(trim($headerKey), 64, '');
+            }
         }
 
         $payload = json_encode($components);

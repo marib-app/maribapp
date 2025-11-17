@@ -1015,8 +1015,8 @@ class _PoliciesSection extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    policy.content.isNotEmpty
-                        ? policy.content
+                    (policy.content?.isNotEmpty == true)
+                        ? policy.content!
                         : 'لا يوجد محتوى متاح.',
                     style: TextStyle(
                       color: context.color.textColorDark.withValues(alpha: 0.7),

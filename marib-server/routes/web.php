@@ -32,6 +32,8 @@ use App\Http\Controllers\StoreDashboardController;
 use App\Http\Controllers\MerchantStoreController;
 use App\Http\Controllers\Store\StoreManualPaymentController;
 use App\Http\Controllers\Store\StoreOrderController;
+use App\Http\Controllers\Store\MerchantProductController;
+use App\Http\Controllers\Store\MerchantWalletController;
 use App\Http\Controllers\Store\StoreSettingsController as MerchantStoreSettingsController;
 use App\Http\Controllers\StoreSettingsController;
 
@@ -67,6 +69,7 @@ use App\Http\Controllers\WifiPlanController;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+use App\Providers\RouteServiceProvider;
 use Rap2hpoutre\LaravelLogViewer\LogViewerController;
 use App\Http\Controllers\DeliveryPriceController;
 use App\Http\Controllers\ServiceRequestController;
@@ -92,8 +95,8 @@ use App\Http\Controllers\WifiCabinController;
 Auth::routes();
 
 Route::get('/', static function () {
-    if (Auth::user()) {
-        return redirect('/home');
+    if ($user = Auth::user()) {
+        return redirect(RouteServiceProvider::resolveHomePath($user));
     }
     return view('auth.login');
 });
@@ -787,11 +790,33 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
           Route::post('manual-payments/{manualPaymentRequest}/decide', [StoreManualPaymentController::class, 'decide'])
               ->whereNumber('manualPaymentRequest')
               ->name('manual-payments.decide');
+          Route::get('wallet', [MerchantWalletController::class, 'index'])->name('wallet.index');
+          Route::post('wallet/withdraw', [MerchantWalletController::class, 'submitWithdrawal'])->name('wallet.withdraw');
+          Route::get('products', [MerchantProductController::class, 'index'])->name('products.index');
+          Route::post('products', [MerchantProductController::class, 'store'])->name('products.store');
+          Route::patch('products/{item}/stock', [MerchantProductController::class, 'updateStock'])
+              ->whereNumber('item')
+              ->name('products.stock');
+          Route::patch('products/{item}/status', [MerchantProductController::class, 'updateStatus'])
+              ->whereNumber('item')
+              ->name('products.status');
+          Route::delete('products/{item}', [MerchantProductController::class, 'destroy'])
+              ->whereNumber('item')
+              ->name('products.destroy');
           Route::get('settings', [MerchantStoreSettingsController::class, 'index'])->name('settings');
           Route::post('settings/general', [MerchantStoreSettingsController::class, 'updateGeneral'])->name('settings.general');
           Route::post('settings/hours', [MerchantStoreSettingsController::class, 'updateHours'])->name('settings.hours');
           Route::post('settings/policies', [MerchantStoreSettingsController::class, 'updatePolicies'])->name('settings.policies');
           Route::post('settings/staff', [MerchantStoreSettingsController::class, 'updateStaff'])->name('settings.staff');
+          Route::post('settings/gateway-accounts', [MerchantStoreSettingsController::class, 'storeGatewayAccount'])->name('settings.gateway-accounts.store');
+          Route::match(['put', 'patch'], 'settings/gateway-accounts/{storeGatewayAccount}', [MerchantStoreSettingsController::class, 'updateGatewayAccount'])
+              ->whereNumber('storeGatewayAccount')
+              ->name('settings.gateway-accounts.update');
+          Route::delete('settings/gateway-accounts/{storeGatewayAccount}', [MerchantStoreSettingsController::class, 'destroyGatewayAccount'])
+              ->whereNumber('storeGatewayAccount')
+              ->name('settings.gateway-accounts.destroy');
+          Route::post('settings/wallet/withdraw', [MerchantStoreSettingsController::class, 'submitWalletWithdrawal'])
+              ->name('settings.wallet.withdraw');
       });
 
     /* --------------------------------- الإعدادات Settings --------------------------------- */

@@ -6,6 +6,7 @@ use App\Models\ManualPaymentRequest;
 use App\Models\ManualPaymentRequestHistory;
 use App\Models\Order;
 use App\Models\Store;
+use App\Models\StoreDailyMetric;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -24,12 +25,14 @@ class StoreDashboardController extends Controller
 
         $status = $this->buildStatusCard($store);
         $manualPaymentStats = $this->buildManualPaymentSummary($store);
-        $recentManualPayments = $store->manualPaymentRequests()
+        $recentManualPayments = ManualPaymentRequest::query()
+            ->where('store_id', $store->getKey())
             ->with('user')
             ->latest()
             ->limit(5)
             ->get();
-        $recentOrders = $store->orders()
+        $recentOrders = Order::query()
+            ->where('store_id', $store->getKey())
             ->latest()
             ->limit(5)
             ->get();
@@ -41,7 +44,8 @@ class StoreDashboardController extends Controller
             Order::STATUS_OUT_FOR_DELIVERY,
         ];
 
-        $pendingOrders = $store->orders()
+        $pendingOrders = Order::query()
+            ->where('store_id', $store->getKey())
             ->whereIn('order_status', $pendingOrderStates);
 
         $pendingOrderCount = (clone $pendingOrders)->count();
@@ -77,12 +81,14 @@ class StoreDashboardController extends Controller
      */
     private function buildSummary(Store $store, Carbon $from, Carbon $to): array
     {
-        $metrics = $store->dailyMetrics()
+        $metrics = StoreDailyMetric::query()
+            ->where('store_id', $store->getKey())
             ->whereBetween('metric_date', [$from->toDateString(), $to->toDateString()])
             ->selectRaw('SUM(visits) as visits, SUM(product_views) as product_views, SUM(add_to_cart) as add_to_cart')
             ->first();
 
-        $orders = $store->orders()
+        $orders = Order::query()
+            ->where('store_id', $store->getKey())
             ->whereBetween('created_at', [$from, $to])
             ->selectRaw('COUNT(*) as total_orders, SUM(final_amount) as revenue')
             ->first();
@@ -130,7 +136,8 @@ class StoreDashboardController extends Controller
     {
         $openStatuses = ManualPaymentRequest::OPEN_STATUSES;
 
-        $base = $store->manualPaymentRequests();
+        $base = ManualPaymentRequest::query()
+            ->where('store_id', $store->getKey());
 
         $openQuery = (clone $base)->whereIn('status', $openStatuses);
 
@@ -149,7 +156,7 @@ class StoreDashboardController extends Controller
             'open_amount' => (clone $openQuery)->sum('amount'),
             'approved_today' => $approvedToday,
             'rejected_today' => $rejectedToday,
-            'total_requests' => $store->manualPaymentRequests()->count(),
+            'total_requests' => (clone $base)->count(),
         ];
     }
 

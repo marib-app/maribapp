@@ -1189,6 +1189,7 @@ class ManualPaymentService {
     double? amount,
     int? serviceId,
     int? serviceRequestId,
+    int? wifiPlanId,
   }) async {
     List<BankAccount> banks = <BankAccount>[];
     EastYemenBankConfig? eastYemenBank;
@@ -1237,6 +1238,7 @@ class ManualPaymentService {
         orderId: sanitizedOrderId,
         serviceId: serviceId,
         serviceRequestId: serviceRequestId,
+        wifiPlanId: wifiPlanId,
       );
 
       if (formattedAmount != null) {
@@ -1466,6 +1468,7 @@ class ManualPaymentService {
     int? packageId,
     int? serviceId,
     int? serviceRequestId,
+    int? wifiPlanId,
     String? reference,
     String? userNote,
     required DateTime transferredAt,
@@ -1484,6 +1487,7 @@ class ManualPaymentService {
       packageId: packageId,
       serviceId: serviceId,
       serviceRequestId: serviceRequestId,
+      wifiPlanId: wifiPlanId,
       amount: amount,
       currency: currency,
       reference: reference,
@@ -1508,6 +1512,7 @@ class ManualPaymentService {
     int? packageId,
     int? serviceId,
     int? serviceRequestId,
+    int? wifiPlanId,
     String? reference,
     String? userNote,
     required DateTime transferredAt,
@@ -1533,6 +1538,7 @@ class ManualPaymentService {
       orderId: orderId,
       serviceId: serviceId,
       serviceRequestId: serviceRequestId,
+      wifiPlanId: wifiPlanId,
     );
 
     final Map<String, dynamic>? metadataPayload =
@@ -1552,6 +1558,7 @@ class ManualPaymentService {
       if (transactionId != null && transactionId.isNotEmpty)
         'payment_transaction_id': transactionId,
       if (packageId != null) 'package_id': packageId,
+      if (wifiPlanId != null) 'wifi_plan_id': wifiPlanId,
       'transferred_at': transferredAt.toIso8601String(),
       if (referenceValue != null && referenceValue.isNotEmpty)
         'reference_number': referenceValue,
@@ -1598,6 +1605,7 @@ class ManualPaymentService {
         transactionId: resolvedTransactionId,
         additionalData: {
           if (serviceRequestId != null) 'service_request_id': serviceRequestId,
+          if (wifiPlanId != null) 'wifi_plan_id': wifiPlanId,
           if (referenceValue != null && referenceValue.isNotEmpty)
             'reference': referenceValue,
         },
@@ -1650,6 +1658,7 @@ class ManualPaymentService {
     int? packageId,
     int? serviceId,
     int? serviceRequestId,
+    int? wifiPlanId,
     required double amount,
     required String currency,
     String? reference,
@@ -1674,6 +1683,7 @@ class ManualPaymentService {
       orderId: orderId,
       serviceId: serviceId,
       serviceRequestId: serviceRequestId,
+      wifiPlanId: wifiPlanId,
     );
     final Map<String, dynamic>? metadataPayload =
         _mergeTransferReferenceMetadata(metadata, referenceValue);
@@ -1725,6 +1735,7 @@ class ManualPaymentService {
         transactionId: resolvedTransactionId,
         additionalData: {
           if (serviceRequestId != null) 'service_request_id': serviceRequestId,
+          if (wifiPlanId != null) 'wifi_plan_id': wifiPlanId,
           if (referenceValue != null && referenceValue.isNotEmpty)
             'reference': referenceValue,
         },
@@ -1749,6 +1760,7 @@ class ManualPaymentService {
     Map<String, dynamic>? metadata,
     int? serviceId,
     int? serviceRequestId,
+    int? wifiPlanId,
   }) async {
     final trimmedIntentId = intentId.trim();
     if (trimmedIntentId.isEmpty) {
@@ -1776,6 +1788,7 @@ class ManualPaymentService {
       orderId: orderId,
       serviceId: serviceId,
       serviceRequestId: serviceRequestId,
+      wifiPlanId: wifiPlanId,
     );
 
     final Map<String, dynamic> additionalData = <String, dynamic>{
@@ -1788,6 +1801,7 @@ class ManualPaymentService {
       if (payableTypeValue != null && payableTypeValue.isNotEmpty)
         'payable_type': payableTypeValue,
       if (payableId != null) 'payable_id': payableId,
+      if (wifiPlanId != null) 'wifi_plan_id': wifiPlanId,
     };
 
     final Map<String, dynamic> metadataFields = <String, dynamic>{};

@@ -32,6 +32,7 @@ use App\Http\Controllers\Wifi\AdminModerationController;
 use App\Http\Controllers\Wifi\OwnerBatchController;
 use App\Http\Controllers\Wifi\OwnerNetworkController;
 use App\Http\Controllers\Wifi\OwnerPlanController;
+use App\Http\Controllers\Admin\AdminAuthController;
 use App\Http\Controllers\Wifi\PublicDiscoveryController;
 use App\Http\Controllers\Api\WebExperienceController;
 
@@ -55,6 +56,14 @@ Route::middleware(InitializeApiMetrics::class)
     ->get('ping', fn () => response()->json(['ok' => true]))
     ->name('ping');
     
+Route::prefix('admin')->group(function (): void {
+    Route::post('login', [AdminAuthController::class, 'login'])->name('admin.api.login');
+
+    Route::middleware(['auth:sanctum', 'ability:admin:full'])->group(function (): void {
+        Route::get('me', [AdminAuthController::class, 'me'])->name('admin.api.me');
+        Route::post('logout', [AdminAuthController::class, 'logout'])->name('admin.api.logout');
+    });
+});
 
 Route::prefix('wifi')->group(function (): void {
     Route::get('networks', [PublicDiscoveryController::class, 'networks']);

@@ -196,6 +196,15 @@ class _ApiResponseCache {
 }
 
 class Api {
+  static final List<String> _baseUrlCandidates =
+      Constant.apiBaseUrlCandidates.isNotEmpty
+          ? Constant.apiBaseUrlCandidates
+          : <String>[Constant.baseUrl];
+  static int _activeBaseUrlIndex = 0;
+
+  static String get _activeBaseUrl =>
+      _baseUrlCandidates[_activeBaseUrlIndex];
+
   static bool _userLogoutInProgress = false;
   static bool get networkLoggingEnabled =>
       !kReleaseMode && AppSettings.isNetworkLoggingEnabled;
@@ -1349,6 +1358,60 @@ class Api {
     }
   }
 
+  static bool _moveToNextBaseUrl(String failedBaseUrl) {
+    if (_baseUrlCandidates.length <= 1) {
+      return false;
+    }
+    final int previousIndex = _activeBaseUrlIndex;
+    _activeBaseUrlIndex =
+        (_activeBaseUrlIndex + 1) % _baseUrlCandidates.length;
+    if (_activeBaseUrlIndex == previousIndex) {
+      return false;
+    }
+    Constant.baseUrl = _activeBaseUrl;
+    if (kDebugMode) {
+      debugPrint(
+        '[Api] Switching API base URL from $failedBaseUrl to $_activeBaseUrl',
+      );
+    }
+    return true;
+  }
+
+  static bool _shouldRetryDueToNetwork(DioException exception) {
+    if (exception.error is SocketException) {
+      return true;
+    }
+    switch (exception.type) {
+      case DioExceptionType.connectionTimeout:
+      case DioExceptionType.receiveTimeout:
+      case DioExceptionType.sendTimeout:
+      case DioExceptionType.connectionError:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  static bool _shouldServeCachedResponseOnFailure(DioException exception) {
+    if (exception.response != null) {
+      return false;
+    }
+
+    if (exception.error is SocketException) {
+      return true;
+    }
+
+    switch (exception.type) {
+      case DioExceptionType.connectionTimeout:
+      case DioExceptionType.receiveTimeout:
+      case DioExceptionType.sendTimeout:
+      case DioExceptionType.connectionError:
+        return true;
+      default:
+        return false;
+    }
+  }
+
   static Future<Map<String, dynamic>> requestJson({
     required String url,
     String method = 'POST',
@@ -1542,16 +1605,18 @@ class Api {
     bool? useBaseUrl,
     bool enableEtagCache = false,
   }) async {
-    try {
-      if (_isSliderEndpoint(url)) {
-        await HiveUtils.ensureSliderSessionId();
-      }
-      final Dio dio = _dioForRequest(allowAnyStatus: false);
+    if (_isSliderEndpoint(url)) {
+      await HiveUtils.ensureSliderSessionId();
+    }
+    final Dio dio = _dioForRequest(allowAnyStatus: false);
+    final bool resolvedUseBaseUrl = useBaseUrl ?? true;
+    final int maxAttempts = _baseUrlCandidates.length;
+    int attempt = 0;
 
-      final bool resolvedUseBaseUrl = useBaseUrl ?? true;
+    while (attempt < maxAttempts) {
+      final String baseUrl = _activeBaseUrl;
       final String requestUrl =
-          (resolvedUseBaseUrl ? Constant.baseUrl : "") + url;
-
+          (resolvedUseBaseUrl ? baseUrl : "") + url;
       final Map<String, dynamic> requestHeaders = headers();
       final _CachedApiResponse? cachedResponse = enableEtagCache
           ? _ApiResponseCache.get(requestUrl, queryParameters)
@@ -1567,84 +1632,108 @@ class Api {
         validateStatus: (status) => status != null && status < 400,
       );
 
-      final response = await dio.get(
-        requestUrl,
-        queryParameters: queryParameters,
-        options: requestOptions,
-      );
+      try {
+        final response = await dio.get(
+          requestUrl,
+          queryParameters: queryParameters,
+          options: requestOptions,
+        );
 
-      final int statusCode = response.statusCode ?? 0;
+        final int statusCode = response.statusCode ?? 0;
 
-      if (statusCode == 304) {
-        if (enableEtagCache && cachedResponse != null) {
+        if (statusCode == 304) {
+          if (enableEtagCache && cachedResponse != null) {
+            return Map<String, dynamic>.from(cachedResponse.payload);
+          }
+          return <String, dynamic>{};
+        }
+        final dynamic responseData = response.data;
+        final Map<String, dynamic> responseMap = responseData is Map
+            ? Map<String, dynamic>.from(
+                responseData as Map<dynamic, dynamic>,
+              )
+            : <String, dynamic>{'data': responseData};
+
+        if (enableEtagCache && statusCode >= 200 && statusCode < 300) {
+          final String? eTag = response.headers.value('etag');
+          _ApiResponseCache.store(
+            requestUrl,
+            queryParameters,
+            responseMap,
+            eTag,
+          );
+        }
+
+        if (responseMap['error'] == true) {
+          throw ApiException(responseMap['message'].toString());
+        }
+        return responseMap;
+      } on DioException catch (e) {
+        if (enableEtagCache &&
+            cachedResponse != null &&
+            _shouldServeCachedResponseOnFailure(e)) {
+          debugPrint(
+              '[Api.get] Using cached response for $requestUrl after network failure: ${e.message ?? e.error}');
           return Map<String, dynamic>.from(cachedResponse.payload);
         }
-        return <String, dynamic>{};
-      }
-      final dynamic responseData = response.data;
-      final Map<String, dynamic> responseMap = responseData is Map
-          ? Map<String, dynamic>.from(
-              responseData as Map<dynamic, dynamic>,
-            )
-          : <String, dynamic>{'data': responseData};
 
-      if (enableEtagCache && statusCode >= 200 && statusCode < 300) {
-        final String? eTag = response.headers.value('etag');
-        _ApiResponseCache.store(
-          requestUrl,
-          queryParameters,
-          responseMap,
-          eTag,
-        );
-      }
+        final bool switchedBase =
+            resolvedUseBaseUrl &&
+                _shouldRetryDueToNetwork(e) &&
+                attempt < maxAttempts - 1 &&
+                _moveToNextBaseUrl(baseUrl);
 
-      if (responseMap['error'] == true) {
-        throw ApiException(responseMap['message'].toString());
-      }
-      return responseMap;
-    } on DioException catch (e) {
-      final int? statusCode = e.response?.statusCode;
-      final Map<String, dynamic>? payload = _normalizePayload(e.response?.data);
-      if (statusCode == 401 || statusCode == 403) {
-        if (_shouldForceLogoutOn401(payload)) {
-          userExpired();
+        if (switchedBase) {
+          attempt += 1;
+          continue;
         }
+
+        final int? statusCode = e.response?.statusCode;
+        final Map<String, dynamic>? payload =
+            _normalizePayload(e.response?.data);
+        if (statusCode == 401 || statusCode == 403) {
+          if (_shouldForceLogoutOn401(payload)) {
+            userExpired();
+          }
+          throw ApiHttpException(
+            errorMessage:
+                _extractMessageFromPayload(payload) ?? 'unauthenticated',
+            statusCode: statusCode,
+            payload: payload,
+            cause: e,
+          );
+        }
+        if (statusCode == 302 || statusCode == 307) {
+          if (_shouldForceLogoutOn401(payload)) {
+            userExpired();
+          }
+          throw ApiHttpException(
+            errorMessage: 'unauthenticated',
+            statusCode: 401,
+            payload: payload,
+            cause: e,
+          );
+        }
+        if (statusCode == 503) {
+          throw "server-not-available";
+        }
+
         throw ApiHttpException(
-          errorMessage:
-              _extractMessageFromPayload(payload) ?? 'unauthenticated',
+          errorMessage: e.error is SocketException
+              ? "no-internet"
+              : "Something went wrong with error ${e.response?.statusCode}",
           statusCode: statusCode,
-          payload: payload,
+          payload: payload ?? e.response?.data,
           cause: e,
         );
+      } on ApiException {
+        rethrow;
+      } catch (e, st) {
+        throw ApiException(st.toString());
       }
-      if (statusCode == 302 || statusCode == 307) {
-        if (_shouldForceLogoutOn401(payload)) {
-          userExpired();
-        }
-        throw ApiHttpException(
-          errorMessage: 'unauthenticated',
-          statusCode: 401,
-          payload: payload,
-          cause: e,
-        );
-      }
-      if (statusCode == 503) {
-        throw "server-not-available";
-      }
-
-      throw ApiHttpException(
-        errorMessage: e.error is SocketException
-            ? "no-internet"
-            : "Something went wrong with error ${e.response?.statusCode}",
-        statusCode: statusCode,
-        payload: payload ?? e.response?.data,
-        cause: e,
-      );
-    } on ApiException {
-      rethrow;
-    } catch (e, st) {
-      throw ApiException(st.toString());
     }
+
+    throw ApiException('request-failed');
   }
 
   // =========================================

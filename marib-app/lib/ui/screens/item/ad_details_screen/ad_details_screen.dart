@@ -704,6 +704,17 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     ItemPurchaseOptions options,
     Map<String, String> selections,
   ) {
+    final bool hasVariantSpecificStock = options.variantStocks.any(
+      (ItemVariantStockOption stock) {
+        final String key = (stock.variantKey ?? '').trim();
+        return key.isNotEmpty;
+      },
+    );
+
+    if (!hasVariantSpecificStock) {
+      return null;
+    }
+
     final List<MapEntry<String, String>> affecting =
         <MapEntry<String, String>>[];
 
@@ -736,12 +747,21 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   }
 
   ItemVariantStockOption? _findVariantStock(String? variantKey) {
-    if (variantKey == null || variantKey.isEmpty) {
+    final ItemPurchaseOptions? options = _purchaseOptions;
+    if (options == null) {
       return null;
     }
 
-    final ItemPurchaseOptions? options = _purchaseOptions;
-    if (options == null) {
+    if (variantKey == null || variantKey.isEmpty) {
+      for (final ItemVariantStockOption stock in options.variantStocks) {
+        final String key = (stock.variantKey ?? '').trim();
+        if (key.isEmpty) {
+          return stock;
+        }
+      }
+      if (options.variantStocks.length == 1) {
+        return options.variantStocks.first;
+      }
       return null;
     }
 
@@ -1624,7 +1644,8 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
 
     final videoLink = item.videoLink;
     if (videoLink != null && videoLink.isNotEmpty) {
-      images.add(videoLink);
+      images.removeWhere((source) => source == videoLink);
+      images.insert(0, videoLink);
     }
 
     flickManager?.dispose();

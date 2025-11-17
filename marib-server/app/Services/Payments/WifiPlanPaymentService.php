@@ -359,6 +359,42 @@ class WifiPlanPaymentService
             return $existing;
         }
 
+        $active = PaymentTransaction::query()
+            ->where('user_id', $user->getKey())
+            ->where('payable_type', WifiPlan::class)
+            ->where('payable_id', $plan->getKey())
+            ->where('payment_status', 'pending')
+            ->whereIn('payment_gateway', $this->expandLegacyMethods($method))
+            ->lockForUpdate()
+            ->first();
+
+        if ($active) {
+            $dirty = false;
+
+            if ($active->payment_gateway !== $method) {
+                $active->payment_gateway = $method;
+                $dirty = true;
+            }
+
+            if ($active->idempotency_key !== $idempotencyKey) {
+                $meta = $active->meta ?? [];
+                if ($method === 'wallet') {
+                    $meta['wallet'] = array_replace_recursive($meta['wallet'] ?? [], [
+                        'idempotency_key' => $idempotencyKey,
+                    ]);
+                }
+                $active->idempotency_key = $idempotencyKey;
+                $active->meta = $meta;
+                $dirty = true;
+            }
+
+            if ($dirty) {
+                $active->save();
+            }
+
+            return $active->fresh();
+        }
+
         $amount = $this->resolveAmount($plan, $data);
         $currency = strtoupper((string) ($plan->currency ?? $data['currency'] ?? config('app.currency', 'SAR')));
 

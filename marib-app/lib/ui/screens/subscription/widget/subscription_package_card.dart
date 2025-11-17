@@ -32,11 +32,13 @@ class SubscriptionPackageCard extends StatelessWidget {
     final bool isFree = priceValue <= 0;
     final String priceLabel = isFree
         ? 'free'.translate(context)
-        : '${HelperUtils.formatPrice(priceValue)} ${model.currency ?? ''}'.trim();
+        : '${HelperUtils.formatPrice(priceValue)} ${model.currency ?? ''}'
+            .trim();
     final bool hasDiscount =
         !isFree && (model.discount ?? 0) > 0 && (model.price ?? 0) > priceValue;
     final String? oldPriceLabel = hasDiscount
-        ? '${HelperUtils.formatPrice(model.price)} ${model.currency ?? ''}'.trim()
+        ? '${HelperUtils.formatPrice(model.price)} ${model.currency ?? ''}'
+            .trim()
         : null;
 
     final String? remainingItems = _cleanValue(
@@ -52,59 +54,107 @@ class SubscriptionPackageCard extends StatelessWidget {
     final String durationLabel = _buildDurationLabel(context);
     final String description = _buildDescription(context);
 
+    final Color accent = accentColor.withOpacity(0.9);
+    final Color borderColor =
+        selected ? accent : colors.borderColor.withOpacity(0.65);
+
+    final chips = <Widget>[
+      _InfoChip(
+        icon: Icons.schedule_rounded,
+        label: durationLabel,
+        accentColor: accent,
+      ),
+    ];
+
+    if (limitLabel.isNotEmpty) {
+      chips.add(
+        _InfoChip(
+          icon: Icons.layers_outlined,
+          label: limitLabel,
+          accentColor: accent,
+        ),
+      );
+    }
+    if (remainingItems != null) {
+      chips.add(
+        _InfoChip(
+          icon: Icons.playlist_add_check_rounded,
+          label: 'المتبقي: $remainingItems',
+          accentColor: accent,
+        ),
+      );
+    }
+    if (remainingDays != null) {
+      chips.add(
+        _InfoChip(
+          icon: Icons.timer_rounded,
+          label: 'أيام متبقية: $remainingDays',
+          accentColor: accent,
+        ),
+      );
+    }
+
+    final statusChips = <Widget>[];
+    if (isActive) {
+      statusChips.add(
+        _StatusChip(
+          label: 'activePlanLbl'.translate(context),
+          accentColor: accent,
+          foregroundColor: colors.textDefaultColor,
+        ),
+      );
+    } else if (isFree) {
+      statusChips.add(
+        _StatusChip(
+          label: 'free'.translate(context),
+          accentColor: accent,
+          foregroundColor: accent,
+          softBackground: true,
+        ),
+      );
+    }
+
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 280),
         curve: Curves.easeOutCubic,
-        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+        margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: BorderRadius.circular(26),
+          color: colors.secondaryColor,
           border: Border.all(
-            color:
-                selected ? accentColor : colors.borderColor.withOpacity(0.45),
-            width: selected ? 1.8 : 1,
-          ),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: selected
-                ? [
-                    accentColor.withOpacity(0.18),
-                    colors.secondaryColor,
-                  ]
-                : [
-                    colors.secondaryColor,
-                    colors.secondaryColor,
-                  ],
+            color: borderColor,
+            width: selected ? 1.6 : 1,
           ),
           boxShadow: [
             BoxShadow(
-              color: selected
-                  ? accentColor.withOpacity(0.22)
-                  : Colors.black.withOpacity(0.08),
-              blurRadius: selected ? 30 : 18,
-              offset: const Offset(0, 18),
+              color: Colors.black.withOpacity(selected ? 0.08 : 0.03),
+              blurRadius: selected ? 28 : 16,
+              offset: const Offset(0, 12),
             ),
           ],
         ),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  width: 46,
-                  height: 46,
+                  width: 48,
+                  height: 48,
                   decoration: BoxDecoration(
-                    color: accentColor.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(18),
+                    color: colors.backgroundColor,
+                    border: Border.all(
+                      color: colors.borderColor.withOpacity(0.6),
+                    ),
                   ),
                   child: Icon(
                     icon,
-                    color: accentColor,
+                    color: accent,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -122,7 +172,7 @@ class SubscriptionPackageCard extends StatelessWidget {
                           letterSpacing: 0.2,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 6),
                       Text(
                         model.name?.trim().isNotEmpty == true
                             ? model.name!.trim()
@@ -139,77 +189,15 @@ class SubscriptionPackageCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                _PositionBadge(position: position, accentColor: accentColor),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              description,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: colors.textDefaultColor.withOpacity(0.72),
-                height: 1.45,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 18),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _InfoChip(
-                  icon: Icons.schedule_rounded,
-                  label: durationLabel,
-                  accentColor: accentColor,
-                ),
-                if (limitLabel.isNotEmpty)
-                  _InfoChip(
-                    icon: Icons.layers_outlined,
-                    label: limitLabel,
-                    accentColor: accentColor,
-                  ),
-                if (remainingItems != null)
-                  _InfoChip(
-                    icon: Icons.playlist_add_check_rounded,
-                    label: 'المتبقي: $remainingItems',
-                    accentColor: accentColor,
-                  ),
-                if (remainingDays != null)
-                  _InfoChip(
-                    icon: Icons.timer_rounded,
-                    label:
-                        'أيام متبقية: $remainingDays',
-                    accentColor: accentColor,
-                  ),
-                if (isActive)
-                  _StatusChip(
-                    label: 'activePlanLbl'.translate(context),
-                    accentColor: accentColor,
-                    foregroundColor: colors.secondaryColor,
-                  )
-                else if (isFree)
-                  _StatusChip(
-                    label: 'free'.translate(context),
-                    accentColor: accentColor,
-                    foregroundColor: accentColor,
-                    softBackground: true,
-                  ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
                 Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
                       priceLabel,
                       style: TextStyle(
-                        fontSize: 22,
+                        fontSize: 20,
                         fontWeight: FontWeight.w800,
-                        color: accentColor,
+                        color: colors.textDefaultColor,
                         letterSpacing: 0.2,
                       ),
                     ),
@@ -221,21 +209,50 @@ class SubscriptionPackageCard extends StatelessWidget {
                           color: colors.textLightColor,
                         ),
                       ),
+                    const SizedBox(height: 8),
+                    _PositionBadge(position: position, accentColor: accent),
+                    const SizedBox(height: 8),
+                    Icon(
+                      selected
+                          ? Icons.check_circle_rounded
+                          : Icons.radio_button_unchecked_rounded,
+                      color: selected
+                          ? accent
+                          : colors.borderColor.withOpacity(0.6),
+                    ),
                   ],
                 ),
-                const Spacer(),
-                Container(
-                  decoration: BoxDecoration(
-                    color: accentColor.withOpacity(0.16),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  padding: const EdgeInsets.all(10),
-                  child: Icon(
-                    selected ? Icons.check_rounded : Icons.touch_app_rounded,
-                    color: accentColor,
-                  ),
-                ),
               ],
+            ),
+            const SizedBox(height: 14),
+            Text(
+              description,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: colors.textDefaultColor.withOpacity(0.78),
+                height: 1.45,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            if (statusChips.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: statusChips,
+              ),
+            ],
+            const SizedBox(height: 14),
+            Divider(
+              height: 1,
+              color: colors.borderColor.withOpacity(0.6),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: chips,
             ),
           ],
         ),
@@ -251,9 +268,10 @@ class SubscriptionPackageCard extends StatelessWidget {
     final bool unlimited = raw.toLowerCase() == 'unlimited';
     final String base =
         unlimited ? 'unlimitedLbl'.translate(context) : raw.trim();
-    final String typeLabel = (model.type ?? '').toLowerCase().contains('feature')
-        ? 'featuredAdsLbl'.translate(context)
-        : 'adsListing'.translate(context);
+    final String typeLabel =
+        (model.type ?? '').toLowerCase().contains('feature')
+            ? 'featuredAdsLbl'.translate(context)
+            : 'adsListing'.translate(context);
     return '$base · $typeLabel';
   }
 
@@ -294,17 +312,21 @@ class _PositionBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.color;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        color: accentColor.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(12),
+        color: colors.backgroundColor,
+        border: Border.all(
+          color: accentColor.withOpacity(0.4),
+        ),
       ),
       child: Text(
         '#$position',
         style: TextStyle(
           fontWeight: FontWeight.w700,
-          color: accentColor,
+          color: colors.textDefaultColor.withOpacity(0.8),
         ),
       ),
     );
@@ -326,12 +348,12 @@ class _InfoChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.color;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        color: accentColor.withOpacity(0.08),
+        color: colors.backgroundColor,
         border: Border.all(
-          color: accentColor.withOpacity(0.25),
+          color: colors.borderColor.withOpacity(0.6),
         ),
       ),
       child: Row(
@@ -340,14 +362,14 @@ class _InfoChip extends StatelessWidget {
           Icon(
             icon,
             size: 16,
-            color: accentColor,
+            color: accentColor.withOpacity(0.9),
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 8),
           Flexible(
             child: Text(
               label,
               style: TextStyle(
-                color: colors.textDefaultColor.withOpacity(0.78),
+                color: colors.textDefaultColor.withOpacity(0.82),
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -373,21 +395,23 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color background = softBackground
-        ? accentColor.withOpacity(0.08)
-        : accentColor.withOpacity(0.8);
+    final colors = context.color;
+    final Color background =
+        softBackground ? colors.backgroundColor : accentColor.withOpacity(0.12);
+    final Color border = accentColor.withOpacity(0.35);
+    final Color textColor = softBackground ? accentColor : foregroundColor;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
         color: background,
-        border: Border.all(color: accentColor.withOpacity(0.2)),
+        border: Border.all(color: border),
       ),
       child: Text(
         label,
         style: TextStyle(
-          color: softBackground ? accentColor : foregroundColor,
-          fontWeight: FontWeight.w700,
+          color: textColor,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );

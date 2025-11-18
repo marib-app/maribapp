@@ -8625,6 +8625,7 @@ private function formatServiceFieldValueForApi(ServiceCustomField $field, ?Servi
             $perPage = (int) min($perPage, 50);
 
             $users = User::query()
+                ->with(['store'])
                 ->where('account_type', $accountType)
                 ->orderByDesc('updated_at')
                 ->paginate($perPage);

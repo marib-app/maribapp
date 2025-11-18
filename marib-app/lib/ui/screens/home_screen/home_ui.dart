@@ -5,8 +5,11 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:marib/app/routes.dart';
 import 'package:marib/data/cubits/home/fetch_home_all_items_cubit.dart';
 import 'package:marib/data/model/item/item_model.dart';
+import 'package:marib/data/model/merchant/merchant_store_snapshot.dart';
+import 'package:marib/data/model/user_model.dart';
 import 'package:marib/ui/screens/home/widgets/grid_list_adapter.dart';
 import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
+import 'package:marib/ui/widgets/dialogs/store_review_dialogs.dart';
 
 import 'package:marib/ui/screens/item/cards/horizontal_card.dart';
 import 'package:marib/ui/screens/item/cards/sections_adapter.dart';
@@ -16,6 +19,7 @@ import 'package:marib/ui/screens/widgets/errors/something_went_wrong.dart';
 import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/app_icon.dart';
+import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/api.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/responsiveSize.dart';
@@ -26,6 +30,7 @@ import 'package:marib/utils/hive_keys.dart';
 import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/helper_utils.dart';
+import 'package:marib/utils/merchant_display_helper.dart';
 
 import 'unread_notifications_cubit.dart';
 
@@ -105,24 +110,84 @@ class HomeScreenUI extends StatelessWidget {
         final details = HiveUtils.getUserDetails();
         final bool auth = HiveUtils.isUserAuthenticated();
 
+        final bool merchantAccount = _isMerchant(details);
+        final MerchantStoreSnapshot? storeSnapshot = details.store == null
+            ? null
+            : MerchantStoreSnapshot.fromDynamic(details.store);
+        final bool canAccessMerchantDashboard =
+            storeSnapshot?.isApproved ?? false;
+        final String resolvedMerchantName = MerchantDisplayHelper
+            .resolveDisplayName(
+          isMerchant: merchantAccount,
+          store: details.store,
+          additionalInfo: details.additionalInfo,
+          fallbackName: details.name,
+        );
+
         final String accountName = (() {
-          if (paramName.isEmpty || (idStr.isNotEmpty && paramName == idStr)) {
-            final dn = (details.name ?? '').trim();
-            if (dn.isNotEmpty && dn != idStr) return dn;
+          if (!auth) {
+            if (paramName.isNotEmpty && paramName != idStr) {
+              return paramName;
+            }
             return '  زائر';
           }
-          return paramName;
+
+          final String trimmedMerchant = resolvedMerchantName.trim();
+          if (trimmedMerchant.isNotEmpty && trimmedMerchant != idStr) {
+            return trimmedMerchant;
+          }
+
+          if (paramName.isNotEmpty && paramName != idStr) {
+            return paramName;
+          }
+
+          final String dn = (details.name ?? '').trim();
+          if (dn.isNotEmpty && dn != idStr) {
+            return dn;
+          }
+          return '  زائر';
         })();
 
         final String phone = (mobile?.isNotEmpty == true)
             ? mobile!
             : (details.mobile?.toString() ?? '');
+        final String? merchantAvatar = MerchantDisplayHelper.resolveProfileImage(
+          isMerchant: merchantAccount,
+          store: details.store,
+          fallbackImage: details.profile,
+        );
         final String avatar = (profileUrl?.isNotEmpty == true)
             ? profileUrl!
-            : (details.profile ?? '');
+            : (merchantAvatar ?? '');
         final bool verified = isVerified ?? (details.isVerified == 1);
         final int cart = cartCount ?? 0;
         final int notif = notifCount ?? 0;
+
+        final VoidCallback resolvedAvatarTap = onAvatarTap ??
+            () {
+              UiUtils.checkUser(
+                onNotGuest: () {
+                  if (merchantAccount) {
+                    if (!canAccessMerchantDashboard) {
+                      showStoreReviewDialog(
+                        context,
+                        variant: StoreReviewDialogVariant.management,
+                      );
+                      return;
+                    }
+                    Navigator.pushNamed(context, Routes.merchantDashboard);
+                    return;
+                  }
+                  HelperUtils.goToNextPage(
+                    Routes.showProfile,
+                    context,
+                    false,
+                    args: {"from": "profile"},
+                  );
+                },
+                context: context,
+              );
+            };
 
         return SafeArea(
           child: Scaffold(
@@ -155,7 +220,7 @@ class HomeScreenUI extends StatelessWidget {
                             isVerified: verified,
                             cartCount: cart,
                             notifCount: notif,
-                            onAvatarTap: onAvatarTap ?? () {},
+                            onAvatarTap: resolvedAvatarTap,
                             onCartTap: onCartTap ?? () {},
                             onNotificationTap: onNotificationTap ?? () {},
                             onInfoTap: onInfoTap ?? () {},
@@ -259,6 +324,17 @@ class HomeScreenUI extends StatelessWidget {
       ),
     );
   }
+}
+
+bool _isMerchant(UserModel? details) {
+  if (details == null) {
+    return false;
+  }
+  if (details.userType == Constant.accountTypeSeller) {
+    return true;
+  }
+  final String? normalized = details.type?.trim().toLowerCase();
+  return normalized == 'seller' || normalized == 'commercial';
 }
 
 /// إخفاء/إظهار الفاب أثناء التمرير
@@ -462,19 +538,7 @@ class ProfileHeaderUI extends StatelessWidget {
                   color: Colors.transparent,
                   shape: const CircleBorder(),
                   child: InkWell(
-                    onTap: () {
-                      UiUtils.checkUser(
-                        onNotGuest: () {
-                          HelperUtils.goToNextPage(
-                            Routes.showProfile,
-                            context,
-                            false,
-                            args: {"from": "profile"},
-                          );
-                        },
-                        context: context,
-                      );
-                    }, // ← ينقل للملف الشخصي
+                    onTap: onAvatarTap, // opens the appropriate destination
                     customBorder: const CircleBorder(),
                     child: Container(
                       decoration: BoxDecoration(

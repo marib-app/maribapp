@@ -45,6 +45,7 @@ import 'package:marib/utils/responsiveSize.dart';
 import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart';
 import 'package:marib/utils/app_icon.dart';
 import 'package:marib/ui/widgets/dialogs/store_review_dialogs.dart';
+import 'package:marib/utils/merchant_display_helper.dart';
 
 import 'package:flutter/cupertino.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -301,7 +302,6 @@ mixin ProfileScreenLogic<T extends StatefulWidget> on State<T> {
   Color getAccountTypeBadgeColor(BuildContext context) => _getAccountTypeBadgeColor(context);
   String getAccountTypeText() => _getAccountTypeText();
 }
-
 
 
 

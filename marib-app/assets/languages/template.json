@@ -885,5 +885,12 @@
   "storePendingManagementTitle": "Store review in progress",
   "storePendingManagementBody": "You cannot manage the store yet because the request is still pending review. If approval takes longer than expected, please contact support.",
   "storePendingPublishingTitle": "Publishing locked for now",
-  "storePendingPublishingBody": "Your commercial store account is still under review. You can publish products as soon as the request is approved."
+  "storePendingPublishingBody": "Your commercial store account is still under review. You can publish products as soon as the request is approved.",
+  "merchant_ads_tab_title": "Store ads",
+  "merchant_ads_filter_all": "All ads",
+  "merchant_ads_filter_pending": "Pending review",
+  "merchant_ads_filter_active": "Published",
+  "merchant_ads_filter_rejected": "Rejected",
+  "merchant_ads_filter_sold": "Sold out",
+  "merchant_ads_loading": "Updating ads..."
 }

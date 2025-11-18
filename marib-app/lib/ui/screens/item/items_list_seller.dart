@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:marib/data/cubits/item/fetch_item_from_category_cubit.dart';
 import 'package:marib/ui/screens/sliders/slider_widget.dart';
 import 'package:marib/ui/theme/theme.dart';
+import 'package:intl/intl.dart';
 import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/hive_utils.dart';
 import 'package:flutter/material.dart';
@@ -11,6 +12,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:marib/data/model/item_filter_model.dart';
 import 'package:marib/data/model/item/item_model.dart';
+import 'package:marib/data/model/user_model.dart';
 
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/api.dart';
@@ -324,8 +326,11 @@ class ItemsListListState extends State<ItemsListSeller> {
   }
 
   Widget buildSellerCard(UserModel seller) {
+    final Map<String, dynamic>? additionalInfo =
+        _coerceAdditionalInfo(seller.additionalInfo);
     final Map<String, dynamic>? contactInfo =
-        _contactInfoFromAdditional(seller.additionalInfo);
+        _contactInfoFromAdditional(additionalInfo ?? seller.additionalInfo);
+    final Map<String, dynamic>? storeData = _cloneMap(seller.store);
     String? businessLogo;
     String? businessName = seller.name;
     final seller_category_utils.SellerCategoryIdentifiers sellerCategories =
@@ -353,6 +358,23 @@ class ItemsListListState extends State<ItemsListSeller> {
         }
       }
     }
+
+    if ((businessName?.trim().isNotEmpty ?? false) == false) {
+      businessName = _stringValue(storeData?['name']) ?? businessName;
+    }
+
+    final String? storeImageUrl = _normalizeImageUrl(_resolveStoreImagePath(
+      contactInfo,
+      additionalInfo,
+      businessLogo,
+      seller.profile,
+      storeData,
+    ));
+    final _StoreAvailabilityStatus availability =
+        _resolveStoreAvailabilityStatus(
+      contactInfo: contactInfo,
+      additionalInfo: additionalInfo,
+    );
 
     return GestureDetector(
       onTap: () {
@@ -382,78 +404,85 @@ class ItemsListListState extends State<ItemsListSeller> {
         });
       },
       child: Container(
-        margin: EdgeInsets.all(8.0),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                color: context.color.territoryColor,
-                borderRadius: BorderRadius.circular(12.0),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 8.0,
-                    offset: Offset(0, 4),
-                  ),
-                ],
+        margin: const EdgeInsets.all(8.0),
+        height: 170,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12.0),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 8.0,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12.0),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: Container(color: context.color.territoryColor),
               ),
-              height: 150,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  // عرض اسم المتجر في الأسفل
-                  Container(
-                    width: double.infinity,
-                    padding:
-                        EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.7),
-                      borderRadius: BorderRadius.only(
-                        bottomLeft: Radius.circular(12.0),
-                        bottomRight: Radius.circular(12.0),
-                      ),
+              Positioned.fill(
+                child: _buildStoreImage(storeImageUrl),
+              ),
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.bottomCenter,
+                      end: Alignment.center,
+                      colors: [
+                        Colors.black.withOpacity(0.75),
+                        Colors.transparent,
+                      ],
                     ),
-                    child: Text(
-                      businessName ?? '',
-                      style: TextStyle(
+                  ),
+                ),
+              ),
+              if (availability.primaryLabel != null)
+                Positioned(
+                  top: 10,
+                  left: 10,
+                  child: _buildStatusChip(availability),
+                ),
+              Positioned(
+                left: 12,
+                right: 12,
+                bottom: 12,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      (businessName ?? '').isNotEmpty
+                          ? businessName!
+                          : seller.name ?? '',
+                      style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
                       ),
                       textAlign: TextAlign.center,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                ],
-              ),
-            ),
-            Positioned(
-              top: 8,
-              left: 8,
-              right: 8,
-              bottom: 35,
-              // اترك مساحة لاسم المتجر
-              child: (businessLogo != null && businessLogo.isNotEmpty)
-                  ? Image.network(
-                      "https://marib.app/${businessLogo}",
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) => Image.asset(
-                        'assets/svg/Logo/Logo-13.png',
-                        height: 100,
-                        width: 300,
-                        fit: BoxFit.contain,
+                    if (availability.secondaryLabel != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4.0),
+                        child: Text(
+                          availability.secondaryLabel!,
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.9),
+                            fontSize: 11,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
                       ),
-                    )
-                  : Image.asset(
-                      'assets/svg/Logo/Logo-13.png',
-                      height: 100,
-                      width: 300,
-                      fit: BoxFit.contain,
-                    ),
-            ),
-          ],
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -466,4 +495,216 @@ class ItemsListListState extends State<ItemsListSeller> {
   Map<String, dynamic>? _contactInfoFromAdditional(dynamic raw) {
     return seller_category_utils.extractContactInfo(raw);
   }
+
+  Widget _buildStoreImage(String? imageUrl) {
+    if (imageUrl == null) {
+      return Image.asset(
+        'assets/svg/Logo/Logo-13.png',
+        fit: BoxFit.cover,
+      );
+    }
+
+    return Image.network(
+      imageUrl,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) => Image.asset(
+        'assets/svg/Logo/Logo-13.png',
+        fit: BoxFit.cover,
+      ),
+    );
+  }
+
+  Widget _buildStatusChip(_StoreAvailabilityStatus status) {
+    final Color background =
+        status.statusColor ?? Colors.black.withOpacity(0.7);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Text(
+        status.primaryLabel ?? '',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  String? _resolveStoreImagePath(
+    Map<String, dynamic>? contactInfo,
+    Map<String, dynamic>? additionalInfo,
+    String? businessLogo,
+    String? fallbackProfile,
+    Map<String, dynamic>? storeData,
+  ) {
+    final List<String?> candidates = <String?>[
+      _stringValue(contactInfo?['store_cover']),
+      _stringValue(contactInfo?['store_image']),
+      _stringValue(contactInfo?['store_photo']),
+      _stringValue(contactInfo?['business_cover']),
+      _stringValue(contactInfo?['storefront']),
+      _stringValue(contactInfo?['business_logo']),
+      _stringValue(additionalInfo?['store_cover']),
+      _stringValue(additionalInfo?['business_logo']),
+      _stringValue(storeData?['banner_path']),
+      _stringValue(storeData?['logo_path']),
+      _stringValue(businessLogo),
+      _stringValue(fallbackProfile),
+    ];
+
+    for (final String? candidate in candidates) {
+      if (candidate != null && candidate.trim().isNotEmpty) {
+        return candidate.trim();
+      }
+    }
+
+    return null;
+  }
+
+  String? _normalizeImageUrl(String? path) {
+    if (path == null || path.isEmpty) {
+      return null;
+    }
+    final String trimmed = path.trim();
+    if (trimmed.startsWith('http')) {
+      return trimmed;
+    }
+    final String normalized =
+        trimmed.startsWith('/') ? trimmed.substring(1) : trimmed;
+    return 'https://marib.app/$normalized';
+  }
+
+  String? _stringValue(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+    final String normalized = value.toString().trim();
+    return normalized.isEmpty ? null : normalized;
+  }
+
+  _StoreAvailabilityStatus _resolveStoreAvailabilityStatus({
+    required Map<String, dynamic>? contactInfo,
+    required Map<String, dynamic>? additionalInfo,
+  }) {
+    final String? openingRaw = _stringValue(
+      contactInfo?['opening_time'] ?? additionalInfo?['opening_time'],
+    );
+    final String? closingRaw = _stringValue(
+      contactInfo?['closing_time'] ?? additionalInfo?['closing_time'],
+    );
+
+    if (openingRaw == null || closingRaw == null) {
+      return _StoreAvailabilityStatus(
+        hasSchedule: false,
+        isOpenNow: false,
+        primaryLabel: 'ساعات العمل غير متاحة',
+        secondaryLabel: null,
+        statusColor: Colors.black54,
+      );
+    }
+
+    final List<String> openingParts = openingRaw.split(':');
+    final List<String> closingParts = closingRaw.split(':');
+    if (openingParts.isEmpty || closingParts.isEmpty) {
+      return _StoreAvailabilityStatus(
+        hasSchedule: false,
+        isOpenNow: false,
+        primaryLabel: 'ساعات العمل غير متاحة',
+        statusColor: Colors.black54,
+      );
+    }
+
+    final int? openingHour = int.tryParse(openingParts[0]);
+    final int openingMinute =
+        openingParts.length > 1 ? int.tryParse(openingParts[1]) ?? 0 : 0;
+    final int? closingHour = int.tryParse(closingParts[0]);
+    final int closingMinute =
+        closingParts.length > 1 ? int.tryParse(closingParts[1]) ?? 0 : 0;
+
+    if (openingHour == null || closingHour == null) {
+      return _StoreAvailabilityStatus(
+        hasSchedule: false,
+        isOpenNow: false,
+        primaryLabel: 'ساعات العمل غير متاحة',
+        statusColor: Colors.black54,
+      );
+    }
+
+    final bool open24Hours =
+        openingHour == closingHour && openingMinute == closingMinute;
+    if (open24Hours) {
+      return _StoreAvailabilityStatus(
+        hasSchedule: true,
+        isOpenNow: true,
+        primaryLabel: 'متاح 24 ساعة',
+        secondaryLabel: null,
+        statusColor: Colors.green.shade600,
+      );
+    }
+
+    final DateTime now = DateTime.now();
+    DateTime openingTime =
+        DateTime(now.year, now.month, now.day, openingHour, openingMinute);
+    DateTime closingTime =
+        DateTime(now.year, now.month, now.day, closingHour, closingMinute);
+
+    if (!closingTime.isAfter(openingTime)) {
+      closingTime = closingTime.add(const Duration(days: 1));
+    }
+
+    final bool isOpenNow =
+        !now.isBefore(openingTime) && now.isBefore(closingTime);
+    DateTime nextReference;
+    String secondaryLabel;
+    final DateFormat formatter = DateFormat('h:mm a', 'ar');
+
+    if (isOpenNow) {
+      nextReference = closingTime;
+      secondaryLabel = 'يغلق عند ${formatter.format(nextReference)}';
+    } else {
+      if (now.isBefore(openingTime)) {
+        nextReference = openingTime;
+      } else {
+        openingTime = openingTime.add(const Duration(days: 1));
+        nextReference = openingTime;
+      }
+      secondaryLabel = 'يفتح عند ${formatter.format(nextReference)}';
+    }
+
+    return _StoreAvailabilityStatus(
+      hasSchedule: true,
+      isOpenNow: isOpenNow,
+      primaryLabel: isOpenNow ? 'مفتوح الآن' : 'مغلق حالياً',
+      secondaryLabel: secondaryLabel,
+      statusColor:
+          isOpenNow ? Colors.green.shade600 : Colors.redAccent.shade200,
+    );
+  }
+
+  Map<String, dynamic>? _cloneMap(Map<String, dynamic>? source) {
+    if (source == null) {
+      return null;
+    }
+    return Map<String, dynamic>.from(source);
+  }
+}
+
+class _StoreAvailabilityStatus {
+  const _StoreAvailabilityStatus({
+    required this.hasSchedule,
+    required this.isOpenNow,
+    this.primaryLabel,
+    this.secondaryLabel,
+    this.statusColor,
+  });
+
+  final bool hasSchedule;
+  final bool isOpenNow;
+  final String? primaryLabel;
+  final String? secondaryLabel;
+  final Color? statusColor;
 }

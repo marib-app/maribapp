@@ -965,6 +965,7 @@ class User {
   int? isVerified;
   int? accountType;
   Map<String, dynamic>? additionalInfo;
+  Map<String, dynamic>? store;
 
   User({
     this.id,
@@ -984,6 +985,7 @@ class User {
     this.showPersonalDetails,
     this.accountType,
     this.additionalInfo,
+    this.store,
   });
 
   User.fromJson(Map<String, dynamic> json) {
@@ -1004,6 +1006,7 @@ class User {
     showPersonalDetails = ItemModel._toInt(json['show_personal_details']);
     accountType = ItemModel._toInt(json['account_type']);
     additionalInfo = _normalizeAdditionalInfo(json['additional_info']);
+    store = _normalizeStoreMap(json['store']);
   }
 
   Map<String, dynamic> toJson() {
@@ -1025,6 +1028,9 @@ class User {
     data['show_personal_details'] = showPersonalDetails;
     data['account_type'] = accountType;
     data['additional_info'] = additionalInfo;
+    if (store != null) {
+      data['store'] = Map<String, dynamic>.from(store!);
+    }
     return data;
   }
 
@@ -1058,6 +1064,22 @@ class User {
       } catch (_) {
         return null;
       }
+    }
+
+    return null;
+  }
+
+  static Map<String, dynamic>? _normalizeStoreMap(dynamic raw) {
+    if (raw == null) {
+      return null;
+    }
+
+    if (raw is Map<String, dynamic>) {
+      return Map<String, dynamic>.from(raw);
+    }
+
+    if (raw is Map) {
+      return raw.map((key, value) => MapEntry(key.toString(), value));
     }
 
     return null;

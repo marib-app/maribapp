@@ -175,7 +175,7 @@ class HomeScreenState extends State<HomeScreen>
       isVerified: false,
       cartCount: 0,
       notifCount: 0,
-      onAvatarTap: () {},
+      onAvatarTap: null,
       onCartTap: () {},
       onNotificationTap: () {},
       onInfoTap: () {},

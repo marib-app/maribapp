@@ -1343,10 +1343,15 @@ class Api {
         throw "server-not-available";
       }
 
+      final String fallbackError = e.error is SocketException
+          ? "no-internet"
+          : (statusCode != null
+              ? "Something went wrong with error $statusCode"
+              : "Something went wrong");
+      final String? payloadMessage = _extractMessageFromPayload(payload);
+
       throw ApiHttpException(
-        errorMessage: e.error is SocketException
-            ? "no-internet"
-            : "Something went wrong with error ${e.response?.statusCode}",
+        errorMessage: payloadMessage ?? fallbackError,
         statusCode: statusCode,
         payload: payload ?? e.response?.data,
         cause: e,

@@ -18,6 +18,8 @@ import 'package:marib/ui/screens/widgets/image_cropper.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/app_icon.dart';
 import 'package:marib/utils/extensions/extensions.dart';
+import 'package:marib/utils/constant.dart';
+import 'package:marib/utils/merchant_display_helper.dart';
 
 // التقاط الصور
 import 'package:image_picker/image_picker.dart';
@@ -329,8 +331,15 @@ class UserProfileScreenState extends State<ShowUserProfileScreen>
       // );
     }
 
-    final profile = HiveUtils.getUserDetails().profile ?? "";
-    if (profile.isNotEmpty) {
+    final userDetails = HiveUtils.getUserDetails();
+    final bool isMerchantAccount =
+        userDetails.userType == Constant.accountTypeSeller;
+    final String? profile = MerchantDisplayHelper.resolveProfileImage(
+      isMerchant: isMerchantAccount,
+      store: userDetails.store,
+      fallbackImage: userDetails.profile,
+    );
+    if (profile != null && profile.isNotEmpty) {
       return UiUtils.getImage(profile, fit: BoxFit.cover);
     }
 

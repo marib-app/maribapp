@@ -85,29 +85,17 @@ class CartController extends Controller
         $isStoreItem = $storeId !== null;
 
         if ($isStoreItem) {
+            if ($this->cartHasGeneralItems($user)) {
+                $this->clearGeneralCart($user);
+            }
+
             $existingStoreId = $this->existingCartStoreId($user);
 
             if ($existingStoreId !== null && $existingStoreId !== $storeId) {
-                return $this->validationError(
-                    __('لا يمكن إضافة منتجات من متجر مختلف قبل إكمال الطلب الحالي أو تفريغ السلة.'),
-                    409,
-                    'different_store'
-                );
-            }
-
-            if ($this->cartHasGeneralItems($user)) {
-                return $this->validationError(
-                    __('لا يمكن دمج منتجات المتاجر مع أقسام التطبيق الأخرى في سلة واحدة. يرجى إكمال الطلب أو تفريغ السلة الحالية.'),
-                    409,
-                    'mixed_store_cart'
-                );
+                $this->clearStoreCart($user);
             }
         } elseif ($this->cartHasStoreItems($user)) {
-            return $this->validationError(
-                __('لا يمكن إضافة منتجات الأقسام العامة أثناء وجود منتجات متجر في السلة. يرجى تفريغ السلة أو إكمال الطلب.'),
-                409,
-                'store_cart_only'
-            );
+            $this->clearStoreCart($user);
         }
 
 
@@ -1639,6 +1627,16 @@ class CartController extends Controller
     protected function cartHasStoreItems(User $user): bool
     {
         return $user->cartItems()->whereNotNull('store_id')->exists();
+    }
+
+    protected function clearGeneralCart(User $user): void
+    {
+        $user->cartItems()->whereNull('store_id')->delete();
+    }
+
+    protected function clearStoreCart(User $user): void
+    {
+        $user->cartItems()->whereNotNull('store_id')->delete();
     }
 
     protected function cartHasGeneralItems(User $user): bool

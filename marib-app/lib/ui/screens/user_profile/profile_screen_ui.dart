@@ -52,7 +52,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   Widget build(BuildContext context) {
     super.build(context);
     final int? userType = HiveUtils.getUserDetails().userType;
-    final bool isCommercial = userType == 3; // احتياطي لو احتجته لاحقًا
+    final bool isCommercial = userType == Constant.accountTypeSeller;
 
     final Widget view = AnnotatedRegion(
       value: UiUtils.getSystemUiOverlayStyle(
@@ -118,24 +118,52 @@ class _ProfileScreenState extends State<ProfileScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // الملف الشخصي
-                    _ServiceItemTile(
-                      title: "الملف الشخصي ",
-                      svg: AppIcons.profileNavActive,
-                      onTap: () {
-                        UiUtils.checkUser(
-                          onNotGuest: () {
-                            HelperUtils.goToNextPage(
-                              Routes.showProfile,
-                              context,
-                              false,
-                              args: {"from": "profile"},
-                            );
-                          },
-                          context: context,
-                        );
-                      },
-                    ),
+                    if (isCommercial)
+                      BlocBuilder<MerchantStoreCubit, MerchantStoreState>(
+                        builder: (_, state) {
+                          final bool allowAccess =
+                              state.snapshot?.isApproved ?? false;
+                          return _ServiceItemTile(
+                            title: "لوحة المتجر",
+                            svg: AppIcons.home,
+                            onTap: () {
+                              UiUtils.checkUser(
+                                onNotGuest: () {
+                                  if (!allowAccess) {
+                                    showStoreReviewDialog(
+                                      context,
+                                      variant:
+                                          StoreReviewDialogVariant.management,
+                                    );
+                                    return;
+                                  }
+                                  Navigator.pushNamed(
+                                      context, Routes.merchantDashboard);
+                                },
+                                context: context,
+                              );
+                            },
+                          );
+                        },
+                      )
+                    else
+                      _ServiceItemTile(
+                        title: "الملف الشخصي ",
+                        svg: AppIcons.profileNavActive,
+                        onTap: () {
+                          UiUtils.checkUser(
+                            onNotGuest: () {
+                              HelperUtils.goToNextPage(
+                                Routes.showProfile,
+                                context,
+                                false,
+                                args: {"from": "profile"},
+                              );
+                            },
+                            context: context,
+                          );
+                        },
+                      ),
                     const SizedBox(height: 10),
                     // تقييمي
                     _ServiceItemTile(
@@ -195,38 +223,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                       },
                     ),
                     const SizedBox(height: 10),
-
-                    if (isCommercial) ...[
-                      BlocBuilder<MerchantStoreCubit, MerchantStoreState>(
-                        builder: (_, state) {
-                          final bool allowAccess =
-                              state.snapshot?.isApproved ?? false;
-                          final Widget tile = _ServiceItemTile(
-                            title: "لوحة المتجر",
-                            svg: AppIcons.home,
-                            onTap: () {
-                              UiUtils.checkUser(
-                                onNotGuest: () {
-                                  if (!allowAccess) {
-                                    showStoreReviewDialog(
-                                      context,
-                                      variant:
-                                          StoreReviewDialogVariant.management,
-                                    );
-                                    return;
-                                  }
-                                  Navigator.pushNamed(
-                                      context, Routes.merchantDashboard);
-                                },
-                                context: context,
-                              );
-                            },
-                          );
-                          return tile;
-                        },
-                      ),
-                      const SizedBox(height: 10),
-                    ],
 
                     _ServiceItemTile(
                       title: "طلباتي",
@@ -407,13 +403,29 @@ class _ProfileGlassCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = HiveUtils.getUserDetails();
-    final String name = (user.name ?? "").trim().isEmpty
+    final int? type = user.userType; // 1 فردي، 2 عقاري، 3 تجاري
+    final bool isMerchantAccount = type == Constant.accountTypeSeller;
+    final String resolvedMerchantName =
+        MerchantDisplayHelper.resolveDisplayName(
+      isMerchant: isMerchantAccount,
+      store: user.store,
+      additionalInfo: user.additionalInfo,
+      fallbackName: user.name,
+    );
+    final String fallbackName = (user.name ?? "").trim().isEmpty
         ? "anonymous".translate(context)
         : user.name!;
-    final int? type = user.userType; // 1 فردي، 2 عقاري، 3 تجاري
+    final String name = resolvedMerchantName.trim().isNotEmpty
+        ? resolvedMerchantName.trim()
+        : fallbackName;
     final _AccountStyle style = _AccountStyle.fromType(context, type);
     final String joined = _formatJoined(user.createdAt);
     final bool showPendingBadge = storeSnapshot?.isPendingReview ?? false;
+    final String? profileImage = MerchantDisplayHelper.resolveProfileImage(
+      isMerchant: isMerchantAccount,
+      store: user.store,
+      fallbackImage: user.profile,
+    );
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(10, 18, 10, 0),
@@ -436,7 +448,7 @@ class _ProfileGlassCard extends StatelessWidget {
                       color: context.color.textDefaultColor.withOpacity(0.10)),
                 ),
                 child: ClipOval(
-                  child: (user.profile ?? "").isEmpty
+                  child: (profileImage ?? "").isEmpty
                       ? Container(
                           color: context.color.backgroundColor,
                           alignment: Alignment.center,
@@ -446,7 +458,7 @@ class _ProfileGlassCard extends StatelessWidget {
                       : UiUtils.getImage(
                           height: 70,
                           width: 70,
-                          user.profile!,
+                          profileImage!,
                           fit: BoxFit.cover),
                 ),
               ),

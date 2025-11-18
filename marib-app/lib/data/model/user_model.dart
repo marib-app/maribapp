@@ -23,6 +23,7 @@ class UserModel {
   int? userType;
   dynamic additionalInfo;
   String? emailVerifiedAt;
+  Map<String, dynamic>? store;
 
   UserModel(
       {this.address,
@@ -45,7 +46,8 @@ class UserModel {
       this.isVerified,
       this.userType,
       this.additionalInfo,
-      this.emailVerifiedAt});
+      this.emailVerifiedAt,
+      this.store});
 
   UserModel.fromJson(Map<String, dynamic> json) {
     address = json['address'];
@@ -79,6 +81,14 @@ class UserModel {
     userType = json['account_type'];
     additionalInfo = json['additional_info'];
     emailVerifiedAt = json['email_verified_at'];
+    if (json['store'] is Map<String, dynamic>) {
+      store = Map<String, dynamic>.from(json['store'] as Map<String, dynamic>);
+    } else if (json['store'] is Map) {
+      store = (json['store'] as Map)
+          .map((dynamic key, dynamic value) => MapEntry(key.toString(), value));
+    } else {
+      store = null;
+    }
   }
 
   Map<String, dynamic> toJson() {
@@ -104,6 +114,9 @@ class UserModel {
     data['account_type'] = userType;
     data['additional_info'] = additionalInfo;
     data['email_verified_at'] = emailVerifiedAt;
+    if (store != null) {
+      data['store'] = Map<String, dynamic>.from(store!);
+    }
     return data;
   }
 

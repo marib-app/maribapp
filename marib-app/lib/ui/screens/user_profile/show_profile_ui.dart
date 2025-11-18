@@ -18,6 +18,8 @@ import 'package:marib/data/cubits/item/fetch_my_item_cubit.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/responsiveSize.dart';
+import 'package:marib/utils/constant.dart';
+import 'package:marib/utils/merchant_display_helper.dart';
 import 'package:marib/app/app_scroll_behavior.dart';
 
 /// واجهة شاشة الملف الشخصي (عرض فقط) — تستقبل كل شيء عبر Params.
@@ -200,20 +202,32 @@ class _HeaderSection extends StatelessWidget {
           Expanded(
             child: BlocBuilder<UserDetailsCubit, UserDetailsState>(
               buildWhen: (prev, curr) => prev.user != curr.user,
-              builder: (context, state) {
-                final name = state.user?.name ?? '';
-                return Text(
-                  name,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 20,
-                      ),
-                  overflow: TextOverflow.ellipsis,
-                );
-              },
+                builder: (context, state) {
+                  final user = state.user;
+                  final bool isMerchantAccount =
+                      user?.userType == Constant.accountTypeSeller;
+                  final String resolvedName = user == null
+                      ? ''
+                      : MerchantDisplayHelper.resolveDisplayName(
+                          isMerchant: isMerchantAccount,
+                          store: user.store,
+                          additionalInfo: user.additionalInfo,
+                          fallbackName: user.name,
+                        ).trim();
+                  final String displayName =
+                      resolvedName.isNotEmpty ? resolvedName : (user?.name ?? '');
+                  return Text(
+                    displayName,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 20,
+                        ),
+                    overflow: TextOverflow.ellipsis,
+                  );
+                },
+              ),
             ),
-          ),
-        ],
+          ],
       ),
     );
   }

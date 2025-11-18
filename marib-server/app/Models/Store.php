@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
 
 class Store extends Model
 {
@@ -117,5 +118,31 @@ class Store extends Model
     public function manualPaymentRequests(): HasMany
     {
         return $this->hasMany(ManualPaymentRequest::class);
+    }
+
+    public function getLogoPathAttribute($value): ?string
+    {
+        if (empty($value)) {
+            return null;
+        }
+
+        if (filter_var($value, FILTER_VALIDATE_URL)) {
+            return $value;
+        }
+
+        return url(Storage::url($value));
+    }
+
+    public function getBannerPathAttribute($value): ?string
+    {
+        if (empty($value)) {
+            return null;
+        }
+
+        if (filter_var($value, FILTER_VALIDATE_URL)) {
+            return $value;
+        }
+
+        return url(Storage::url($value));
     }
 }

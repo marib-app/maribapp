@@ -7,12 +7,15 @@ import 'package:marib/app/routes.dart';
 import 'package:marib/data/cubits/merchant/merchant_dashboard_cubit.dart';
 import 'package:marib/data/cubits/merchant/merchant_manual_payments_cubit.dart';
 import 'package:marib/data/cubits/merchant/merchant_orders_cubit.dart';
+import 'package:marib/data/cubits/item/fetch_my_item_cubit.dart';
 import 'package:marib/data/model/merchant/merchant_dashboard_summary.dart';
 import 'package:marib/data/model/merchant/merchant_manual_payment.dart';
 import 'package:marib/data/model/merchant/merchant_order.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/helper_utils.dart';
+import 'package:marib/ui/screens/user_profile/my_item_tab.dart';
+import 'package:marib/utils/ui_utils.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class MerchantDashboardScreen extends StatelessWidget {
@@ -35,23 +38,69 @@ class MerchantDashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = context.color;
+    final bool isDark = theme.brightness == Brightness.dark;
+    final Color border = isDark ? Colors.white12 : Colors.black12;
+    final Color background = isDark ? Colors.black : Colors.white;
+    final Color onBackground = isDark ? Colors.white : Colors.black;
+    final Color brand = colors.territoryColor;
+    final TextStyle base =
+        theme.textTheme.labelLarge ?? const TextStyle(fontSize: 14);
+    final TextStyle selected =
+        base.copyWith(fontWeight: FontWeight.w700, height: 1.1);
+    final TextStyle unselected =
+        base.copyWith(fontWeight: FontWeight.w500, height: 1.1);
+
     return DefaultTabController(
-      length: 4,
+      length: 5,
       child: Scaffold(
-        appBar: AppBar(
-          title: Text('merchant_store_panel'.translate(context)),
-          bottom: TabBar(
-            tabs: [
-              Tab(text: 'merchant_home'.translate(context)),
-              Tab(text: 'merchant_requests'.translate(context)),
-              Tab(text: 'merchant_remittances'.translate(context)),
-              Tab(text: 'merchant_settings'.translate(context)),
-            ],
-          ),
+        appBar: UiUtils.buildAppBar(
+          context,
+          showBackButton: true,
+          title: 'merchant_store_panel'.translate(context),
+          bottomHeight: 90,
+          bottom: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: background,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: border),
+                ),
+                child: TabBar(
+                  tabs: [
+                    Tab(text: 'merchant_home'.translate(context)),
+                    Tab(text: 'merchant_ads_tab_title'.translate(context)),
+                    Tab(text: 'merchant_requests'.translate(context)),
+                    Tab(text: 'merchant_remittances'.translate(context)),
+                    Tab(text: 'merchant_settings'.translate(context)),
+                  ],
+                  indicator: UnderlineTabIndicator(
+                    borderSide: BorderSide(color: brand, width: 3),
+                    insets: const EdgeInsets.symmetric(horizontal: 24),
+                  ),
+                  labelStyle: selected,
+                  unselectedLabelStyle: unselected,
+                  labelColor: onBackground,
+                  unselectedLabelColor: onBackground.withOpacity(0.5),
+                  overlayColor: MaterialStateProperty.all(Colors.transparent),
+                ),
+              ),
+            ),
+            Divider(
+              height: 0,
+              thickness: 0.5,
+              color: colors.textDefaultColor.withOpacity(0.2),
+            ),
+          ],
         ),
         body: const TabBarView(
           children: [
             _MerchantOverviewTab(),
+            _MerchantAdsTab(),
             _MerchantOrdersTab(),
             _MerchantManualPaymentsTab(),
             _MerchantSettingsTab(),
@@ -109,6 +158,173 @@ class _MerchantOverviewTab extends StatelessWidget {
       },
     );
   }
+}
+
+class _MerchantAdsTab extends StatefulWidget {
+  const _MerchantAdsTab();
+
+  @override
+  State<_MerchantAdsTab> createState() => _MerchantAdsTabState();
+}
+
+class _MerchantAdsTabState extends State<_MerchantAdsTab>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+  final ValueNotifier<bool> _isLoading = ValueNotifier<bool>(false);
+
+  static const List<_MerchantAdsFilter> _filters = [
+    _MerchantAdsFilter(labelKey: 'merchant_ads_filter_all', status: null),
+    _MerchantAdsFilter(labelKey: 'merchant_ads_filter_pending', status: 'review'),
+    _MerchantAdsFilter(labelKey: 'merchant_ads_filter_active', status: 'approved'),
+    _MerchantAdsFilter(labelKey: 'merchant_ads_filter_rejected', status: 'rejected'),
+    _MerchantAdsFilter(labelKey: 'merchant_ads_filter_sold', status: 'sold out'),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: _filters.length, vsync: this);
+    _tabController.addListener(_handleTabChange);
+  }
+
+  @override
+  void dispose() {
+    _tabController.removeListener(_handleTabChange);
+    _tabController.dispose();
+    _isLoading.dispose();
+    super.dispose();
+  }
+
+  void _handleTabChange() {
+    if (_tabController.indexIsChanging) return;
+    final String activeKey = _filters[_tabController.index].statusKey;
+    final cubit = myAdsCubitReference[activeKey];
+    final bool activeLoading =
+        cubit != null && cubit.state is FetchMyItemsInProgress;
+    _isLoading.value = activeLoading;
+  }
+
+  void _handleLoadingChanged(String statusKey, bool isLoading) {
+    final String activeKey = _filters[_tabController.index].statusKey;
+    if (statusKey == activeKey) {
+      _isLoading.value = isLoading;
+    } else if (!isLoading && _isLoading.value) {
+      final cubit = myAdsCubitReference[activeKey];
+      final bool stillLoading =
+          cubit != null && cubit.state is FetchMyItemsInProgress;
+      if (!stillLoading) {
+        _isLoading.value = false;
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = context.color;
+    final bool isDark = theme.brightness == Brightness.dark;
+    final Color border = isDark ? Colors.white12 : Colors.black12;
+    final Color background = isDark ? Colors.black : Colors.white;
+    final Color onBackground = isDark ? Colors.white : Colors.black;
+    final Color brand = colors.territoryColor;
+
+    final TextStyle base =
+        theme.textTheme.labelLarge ?? const TextStyle(fontSize: 14);
+    final TextStyle selected =
+        base.copyWith(fontWeight: FontWeight.w700, height: 1.1);
+    final TextStyle unselected =
+        base.copyWith(fontWeight: FontWeight.w500, height: 1.1);
+
+    return Column(
+      children: [
+        const SizedBox(height: 12),
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: background,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: border),
+          ),
+          child: TabBar(
+            controller: _tabController,
+            tabs: _filters
+                .map((filter) => Tab(text: filter.labelKey.translate(context)))
+                .toList(),
+            indicator: UnderlineTabIndicator(
+              borderSide: BorderSide(color: brand, width: 3),
+              insets: const EdgeInsets.symmetric(horizontal: 24),
+            ),
+            labelStyle: selected,
+            unselectedLabelStyle: unselected,
+            labelColor: onBackground,
+            unselectedLabelColor: onBackground.withOpacity(0.5),
+            overlayColor: MaterialStateProperty.all(Colors.transparent),
+          ),
+        ),
+        ValueListenableBuilder<bool>(
+          valueListenable: _isLoading,
+          builder: (context, isLoading, _) {
+            return AnimatedOpacity(
+              opacity: isLoading ? 1 : 0,
+              duration: const Duration(milliseconds: 200),
+              child: isLoading
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          LinearProgressIndicator(
+                            minHeight: 2,
+                            color: brand,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'merchant_ads_loading'.translate(context),
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: onBackground.withOpacity(0.6),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : const SizedBox(height: 2),
+            );
+          },
+        ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: _filters
+                .map(
+                  (filter) => Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 0),
+                    child: MyItemTab(
+                      getItemsWithStatus: filter.status,
+                      onLoadingChanged: _handleLoadingChanged,
+                      onFullRefreshRequested: () {
+                        _isLoading.value = true;
+                      },
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MerchantAdsFilter {
+  final String labelKey;
+  final String? status;
+
+  const _MerchantAdsFilter({required this.labelKey, this.status});
+
+  String get statusKey =>
+      (status == null || status!.isEmpty) ? 'all' : status!;
 }
 
 class _MerchantOrdersTab extends StatefulWidget {
@@ -1450,67 +1666,87 @@ class _MetricsGrid extends StatefulWidget {
 }
 
 class _MetricsGridState extends State<_MetricsGrid> {
-  late final List<_MetricCardData> _periods;
-  late _MetricCardData _selected;
+  late List<_MetricCardData> _periods;
+  late String _selectedKey;
+  bool _initialized = false;
 
   @override
   void initState() {
     super.initState();
+    _periods = const [];
+    _selectedKey = '';
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final territoryColor = context.color.territoryColor;
     _periods = <_MetricCardData>[
       _MetricCardData(
+        key: 'today',
         titleKey: 'merchant_today',
         snapshot: widget.summary.overview.today,
-        color: context.color.territoryColor,
+        color: territoryColor,
       ),
       _MetricCardData(
+        key: 'week',
         titleKey: 'merchant_last_7_days',
         snapshot: widget.summary.overview.week,
         color: Colors.indigo,
       ),
       _MetricCardData(
+        key: 'month',
         titleKey: 'merchant_last_30_days',
         snapshot: widget.summary.overview.month,
         color: Colors.teal,
       ),
     ];
-    _selected = _periods.first;
+    if (!_initialized && _periods.isNotEmpty) {
+      _selectedKey = _periods.first.key;
+      _initialized = true;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'merchant_overview_stats'.translate(context),
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        const SizedBox(height: 12),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: _periods.map((period) {
-              final bool isSelected = identical(period, _selected);
-              return Padding(
-                padding: const EdgeInsetsDirectional.only(end: 8),
-                child: ChoiceChip(
-                  elevation: isSelected ? 1 : 0,
-                  label: Text(period.titleKey.translate(context)),
-                  selected: isSelected,
-                  selectedColor: period.color.withValues(alpha: 0.15),
-                  avatar: isSelected
-                      ? Icon(Icons.check, size: 16, color: period.color)
-                      : null,
-                  onSelected: (_) => setState(() => _selected = period),
-                ),
-              );
-            }).toList(),
-          ),
-        ),
-        const SizedBox(height: 16),
-        _MetricSummaryCard(data: _selected),
-      ],
-    );
+        final selectedMetric = _periods.firstWhere(
+          (period) => period.key == _selectedKey,
+          orElse: () => _periods.isNotEmpty ? _periods.first : _MetricCardData.empty(),
+        );
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'merchant_overview_stats'.translate(context),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 12),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: _periods.map((period) {
+                  final bool isSelected = period.key == _selectedKey;
+                  return Padding(
+                    padding: const EdgeInsetsDirectional.only(end: 8),
+                    child: ChoiceChip(
+                      elevation: isSelected ? 1 : 0,
+                      label: Text(period.titleKey.translate(context)),
+                      selected: isSelected,
+                      selectedColor: period.color.withValues(alpha: 0.15),
+                      avatar: isSelected
+                          ? Icon(Icons.check, size: 16, color: period.color)
+                          : null,
+                      onSelected: (_) => setState(() => _selectedKey = period.key),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            _MetricSummaryCard(data: selectedMetric),
+          ],
+        );
   }
 }
 class _MetricSummaryCard extends StatelessWidget {
@@ -1618,14 +1854,31 @@ class _MetricSummaryCard extends StatelessWidget {
 
 class _MetricCardData {
   const _MetricCardData({
+    required this.key,
     required this.titleKey,
     required this.snapshot,
     required this.color,
   });
 
+  final String key;
   final String titleKey;
   final MerchantMetricSnapshot snapshot;
   final Color color;
+
+  factory _MetricCardData.empty() => _MetricCardData(
+        key: '__empty__',
+        titleKey: 'merchant_overview_stats',
+        snapshot: MerchantMetricSnapshot(
+          from: '',
+          to: '',
+          visits: 0,
+          productViews: 0,
+          addToCart: 0,
+          orders: 0,
+          revenue: 0.0,
+        ),
+        color: Colors.grey,
+      );
 }
 
 class _RevenueHighlight extends StatelessWidget {

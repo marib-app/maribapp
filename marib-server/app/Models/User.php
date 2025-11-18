@@ -30,6 +30,13 @@ class User extends Authenticatable {
     use HasApiTokens, HasFactory, Notifiable, HasRoles, SoftDeletes, HasPermissions;
 
     /**
+     * Always eager load relations that are commonly required on the mobile app.
+     *
+     * @var array<int, string>
+     */
+    protected $with = ['store'];
+
+    /**
      * ثوابت أنواع الحسابات
      */
     const ACCOUNT_TYPE_CUSTOMER = 1;    
@@ -403,6 +410,11 @@ class User extends Authenticatable {
         $additionalInfo = $this->additional_info;
         $additionalInfo['place_names'][] = $placeName;
         $this->additional_info = $additionalInfo;
+    }
+
+    public function store(): HasOne
+    {
+        return $this->hasOne(Store::class);
     }
 
     /**

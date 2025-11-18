@@ -51,6 +51,7 @@ import 'package:marib/utils/api.dart';
 import 'package:marib/utils/cloudState/cloud_state.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/ui_utils.dart';
+import 'package:marib/utils/merchant_display_helper.dart';
 
 import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
 
@@ -172,7 +173,7 @@ class SellerInfoSection extends StatelessWidget {
           const SizedBox(height: 4),
 
           // ✅ اسم المستخدم
-          Text(user.name ?? "").bold().size(context.font.large),
+          Text(_merchantDisplayName(user)).bold().size(context.font.large),
 
           const SizedBox(height: 4),
 
@@ -365,7 +366,7 @@ Widget setSellerDetails(BuildContext context, ItemModel model) {
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
         children: [
-          SellerProfileImage(imageUrl: user.profile),
+          SellerProfileImage(imageUrl: _merchantProfileImage(user)),
           Expanded(child: SellerInfoSection(user: user)),
           SellerActions(user: user),
         ],
@@ -422,14 +423,20 @@ Map<String, dynamic>? _contactInfoFromUser(User user) {
 }
 
 String _merchantDisplayName(User user) {
-  final Map<String, dynamic>? contactInfo = _contactInfoFromUser(user);
-  if (contactInfo != null) {
-    final dynamic name = contactInfo['business_name'];
-    if (name is String && name.trim().isNotEmpty) {
-      return name.trim();
-    }
-  }
-  return user.name ?? '';
+  return MerchantDisplayHelper.resolveDisplayName(
+    isMerchant: _isMerchantAccount(user),
+    store: user.store,
+    additionalInfo: user.additionalInfo,
+    fallbackName: user.name,
+  );
+}
+
+String? _merchantProfileImage(User user) {
+  return MerchantDisplayHelper.resolveProfileImage(
+    isMerchant: _isMerchantAccount(user),
+    store: user.store,
+    fallbackImage: user.profile,
+  );
 }
 
 seller_category_utils.SellerCategoryIdentifiers

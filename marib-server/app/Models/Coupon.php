@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Carbon;
@@ -15,6 +16,7 @@ class Coupon extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
+        'store_id',
         'code',
         'name',
         'description',
@@ -42,6 +44,11 @@ class Coupon extends Model
 
     ];
 
+    public function store(): BelongsTo
+    {
+        return $this->belongsTo(Store::class);
+    }
+
     public function scopeActive(Builder $query): Builder
     {
         $now = Carbon::now();
@@ -53,6 +60,17 @@ class Coupon extends Model
             ->where(function (Builder $builder) use ($now) {
                 $builder->whereNull('ends_at')->orWhere('ends_at', '>=', $now);
             });
+    }
+
+    public function scopeForStore(Builder $query, ?int $storeId): Builder
+    {
+        if ($storeId === null) {
+            return $query->whereNull('store_id');
+        }
+
+        return $query->where(function (Builder $builder) use ($storeId) {
+            $builder->whereNull('store_id')->orWhere('store_id', $storeId);
+        });
     }
 
     public function isWithinUsageLimits(?int $userId = null): bool

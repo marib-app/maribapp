@@ -100,8 +100,14 @@
                     &nbsp;&nbsp;
                     @php
                         $authUser = Auth::user();
+                        $storeProfile = $authUser?->store;
                         $fallbackAvatar = url('assets/images/faces/2.jpg');
-                        $avatarUrl = $authUser && filled($authUser->profile) ? $authUser->profile : $fallbackAvatar;
+                        $avatarUrl = $storeProfile && filled($storeProfile->logo_path)
+                            ? $storeProfile->logo_path
+                            : ($authUser && filled($authUser->profile) ? $authUser->profile : $fallbackAvatar);
+                        $displayName = $storeProfile && filled($storeProfile->name)
+                            ? $storeProfile->name
+                            : ($authUser?->name ?? __('Guest'));
                         $loginUrl = \Illuminate\Support\Facades\Route::has('login') ? route('login') : url('/');
                     @endphp
 
@@ -111,10 +117,10 @@
                                class="user-dropdown d-flex align-items-center dropend dropdown-toggle"
                                data-bs-toggle="dropdown" aria-expanded="false">
                                 <div class="avatar avatar-md2">
-                                    <img src="{{ $avatarUrl }}" alt="{{ $authUser->name }}">
+                                    <img src="{{ $avatarUrl }}" alt="{{ $displayName }}">
                                 </div>
                                 <div class="text">
-                                    <h6 class="user-dropdown-name">{{ $authUser->name }}</h6>
+                                    <h6 class="user-dropdown-name">{{ $displayName }}</h6>
                                     <p class="user-dropdown-status text-sm text-muted"></p>
                                 </div>
                             </a>

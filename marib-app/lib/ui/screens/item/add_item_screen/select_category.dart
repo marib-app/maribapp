@@ -89,6 +89,8 @@ class _SelectCategoryScreenState extends CloudState<SelectCategoryScreen> {
 
   @override
   void initState() {
+    setCloudData("merchantAllowedCategoryIds", _restrictMerchantCategories ? List<int>.unmodifiable(_merchantAllowedCategoryIds) : const <int>[]);
+    setCloudData("restrictMerchantCategories", _restrictMerchantCategories);
     setCloudData("breadCrumb", <CategoryModel>[]);
 
     clearCloudData('delegateRootId');
@@ -156,12 +158,44 @@ class _SelectCategoryScreenState extends CloudState<SelectCategoryScreen> {
     );
   }
 
+  List<int> _loadMerchantAllowedCategoryIds() {
+    final Map<String, dynamic>? store = HiveUtils.getMerchantStoreRaw();
+    if (store == null) {
+      return const <int>[];
+    }
+
+    final Map<String, dynamic>? meta = _stringKeyedMap(store['meta']);
+    dynamic categoriesSource;
+    if (meta != null && meta['categories'] != null) {
+      categoriesSource = meta['categories'];
+    } else if (store.containsKey('categories')) {
+      categoriesSource = store['categories'];
+    } else if (store.containsKey('category_ids')) {
+      categoriesSource = store['category_ids'];
+    }
+
+    final List<int> ids = _normalizeMerchantCategoryIdList(categoriesSource);
+    return ids.isEmpty ? const <int>[] : ids;
+  }
+
+  bool _shouldRestrictMerchantCategories() {
+    final int? type = HiveUtils.getUserDetails().userType;
+    return type == Constant.accountTypeSeller && _merchantAllowedCategoryIds.isNotEmpty;
+  }
+
 
   Future<void> _fetchAllRootCategories() async {
     final cubit = context.read<FetchCategoryCubit>();
 
     // اطلب الصفحة الأولى ثم انتظر وصول بيانات فعلية
-    cubit.fetchCategories();
+    final bool restrict = _restrictMerchantCategories;
+    final List<int> allowedIds =
+        restrict ? _merchantAllowedCategoryIds : const <int>[];
+    cubit.fetchCategories(
+      onlyAllowed: restrict,
+      allowedCategoryIds: restrict ? allowedIds : const <int>[],
+      ensureCategoryIds: restrict ? allowedIds : const <int>[],
+    );
     var state = await cubit.stream.firstWhere((s) => s is FetchCategorySuccess);
     var prevLen = (state as FetchCategorySuccess).categories.length;
 
@@ -346,6 +380,9 @@ class _SelectNestedCategoryState extends CloudState<SelectNestedCategory> {
 
   @override
   void initState() {
+    _merchantAllowedCategoryIds = _extractAllowedMerchantCategoryIds();
+    _restrictMerchantCategories =
+        (getCloudData('restrictMerchantCategories') as bool?) ?? false;
 
     delegateRootId = getCloudData('delegateRootId') as int?;
 
@@ -382,19 +419,40 @@ class _SelectNestedCategoryState extends CloudState<SelectNestedCategory> {
   }
 
 
+  void _requestSubCategories(
+      FetchSubCategoriesCubit cubit, int categoryId) {
+    final bool restrict = _applyMerchantRestriction;
+    final List<int> allowed = _allowedMerchantCategoryIds;
+    cubit.fetchSubCategories(
+      categoryId: categoryId,
+      onlyAllowed: restrict,
+      allowedCategoryIds: restrict ? allowed : null,
+      ensureCategoryIds: restrict ? allowed : null,
+    );
+  }
+
+  List<int> _extractAllowedMerchantCategoryIds() {
+    final dynamic raw = getCloudData('merchantAllowedCategoryIds');
+    if (raw == null) {
+      return const <int>[];
+    }
+    final List<int> ids = _normalizeMerchantCategoryIdList(raw);
+    return ids.isEmpty ? const <int>[] : ids;
+  }
+
   Future<void> _fetchAllSubCategories() async {
     final c = context.read<FetchSubCategoriesCubit>();
 
     final categoryId = _resolveCategoryIdForFetch();
 
-    c.fetchSubCategories(categoryId: categoryId);
+    _requestSubCategories(c, categoryId);
 
 
     var state = await c.stream.firstWhere((s) => s is FetchSubCategoriesSuccess);
     var prevLen = (state as FetchSubCategoriesSuccess).categories.length;
 
     while (c.hasMoreData()) {
-      c.fetchSubCategories(categoryId: categoryId);
+      _requestSubCategories(c, categoryId);
 
       state = await c.stream.firstWhere(
             (s) => s is FetchSubCategoriesSuccess && (s as FetchSubCategoriesSuccess).categories.length > prevLen,
@@ -428,7 +486,7 @@ class _SelectNestedCategoryState extends CloudState<SelectNestedCategory> {
 
         debugPrint(
             '[SelectNestedCategory] fetchSubCategories(): load more id=${id}');
-        c.fetchSubCategories(categoryId: id);
+        _requestSubCategories(c, id);
       }
     }
   }
@@ -561,9 +619,7 @@ class _SelectNestedCategoryState extends CloudState<SelectNestedCategory> {
 
     debugPrint(
         '[SelectNestedCategory] retry fetchSubCategories() id=${id}');
-    context.read<FetchSubCategoriesCubit>().fetchSubCategories(
-      categoryId: id,
-    );
+    _requestSubCategories(context.read<FetchSubCategoriesCubit>(), id);
   }
 
 
@@ -629,3 +685,118 @@ class _SelectNestedCategoryState extends CloudState<SelectNestedCategory> {
     );
   }
 }
+
+
+
+
+
+
+
+
+List<int> _normalizeMerchantCategoryIdList(dynamic source) {
+  if (source == null) {
+    return const <int>[];
+  }
+
+  final Set<int> normalized = <int>{};
+
+  void addValue(dynamic value) {
+    final int? parsed = _coercePositiveMerchantCategoryId(value);
+    if (parsed != null) {
+      normalized.add(parsed);
+    }
+  }
+
+  void ingest(dynamic value) {
+    if (value == null) {
+      return;
+    }
+    if (value is Iterable) {
+      for (final dynamic entry in value) {
+        if (entry is Map) {
+          addValue(entry['id']);
+          addValue(entry['category_id']);
+          addValue(entry['categoryId']);
+          if (entry['pivot'] is Map) {
+            addValue(entry['pivot']['category_id']);
+          }
+        } else {
+          addValue(entry);
+        }
+      }
+      return;
+    }
+    if (value is Map) {
+      if (value.containsKey('data')) {
+        ingest(value['data']);
+        return;
+      }
+      for (final dynamic entry in value.values) {
+        ingest(entry);
+      }
+      return;
+    }
+    if (value is String) {
+      final String trimmed = value.trim();
+      if (trimmed.isEmpty) {
+        return;
+      }
+      if (trimmed.contains(',')) {
+        for (final String token in trimmed.split(',')) {
+          ingest(token);
+        }
+        return;
+      }
+      addValue(trimmed);
+      return;
+    }
+    addValue(value);
+  }
+
+  ingest(source);
+  if (normalized.isEmpty) {
+    return const <int>[];
+  }
+  return List<int>.unmodifiable(normalized);
+}
+
+int? _coercePositiveMerchantCategoryId(dynamic value) {
+  if (value == null) {
+    return null;
+  }
+  if (value is int) {
+    return value > 0 ? value : null;
+  }
+  if (value is num) {
+    final int coerced = value.toInt();
+    return coerced > 0 ? coerced : null;
+  }
+  if (value is String) {
+    final String trimmed = value.trim();
+    if (trimmed.isEmpty) {
+      return null;
+    }
+    final int? parsed = int.tryParse(trimmed);
+    if (parsed == null || parsed <= 0) {
+      return null;
+    }
+    return parsed;
+  }
+  return null;
+}
+
+Map<String, dynamic>? _stringKeyedMap(dynamic raw) {
+  if (raw is Map<String, dynamic>) {
+    return raw;
+  }
+  if (raw is Map) {
+    return raw.map(
+      (dynamic key, dynamic value) => MapEntry(
+        key.toString(),
+        value,
+      ),
+    );
+  }
+  return null;
+}
+

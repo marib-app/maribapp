@@ -245,7 +245,7 @@ class OrderCheckoutService
             $taxRate = (float) ($data['tax_rate'] ?? 0);
             $taxAmount = round($subTotal * $taxRate, 2);
 
-            $coupon = $this->resolveCoupon($user, $data['coupon_code'] ?? null);
+            $coupon = $this->resolveCoupon($user, $data['coupon_code'] ?? null, $storeId);
             $discountAmount = $coupon?->calculateDiscount($subTotal) ?? 0.0;
             $couponCode = $coupon?->code;
 
@@ -1034,7 +1034,7 @@ class OrderCheckoutService
 
 
 
-    private function resolveCoupon(User $user, ?string $code): ?Coupon
+    private function resolveCoupon(User $user, ?string $code, ?int $storeId): ?Coupon
     {
         if ($code === null || trim($code) === '') {
             return null;
@@ -1042,10 +1042,12 @@ class OrderCheckoutService
 
         $normalized = Str::upper(trim($code));
 
-        $coupon = Coupon::query()
+        $couponQuery = Coupon::query()
             ->whereRaw('upper(code) = ?', [$normalized])
             ->active()
-            ->first();
+            ->forStore($storeId);
+
+        $coupon = $couponQuery->first();
 
         if (! $coupon) {
             throw ValidationException::withMessages([

@@ -631,11 +631,24 @@ class CartController extends Controller
 
         $departmentKey = $departments->first();
 
+        $storeContext = $this->summarizeCartStoreContext($cartItems);
+
+        if ($storeContext['multiple_stores']) {
+            return $this->validationError(__('cart.multi_store_not_supported'), 409, 'multiple_store_items');
+        }
+
+        if ($storeContext['has_store_items'] && $storeContext['has_general_items']) {
+            return $this->validationError(__('cart.store_cart_conflict'), 409, 'store_cart_conflict');
+        }
+
+        $storeId = $storeContext['store_id'];
+
         $normalizedCode = Str::upper(trim((string) $couponCode));
 
 
         $coupon = Coupon::query()
             ->whereRaw('upper(code) = ?', [$normalizedCode])
+            ->forStore($storeId)
             ->first();
 
         if (! $coupon) {
@@ -738,7 +751,7 @@ class CartController extends Controller
 
         $totalQuantity = $cartItems->sum('quantity');
 
-        $discounts = $this->resolveDiscounts($user, $selection, $subtotal);
+        $discounts = $this->resolveDiscounts($user, $selection, $subtotal, $cartItems);
 
         [$currency, $currencyConflict] = $this->resolveCurrency(collect($items), null);
         if ($currency === null && ! $currencyConflict) {
@@ -970,6 +983,27 @@ class CartController extends Controller
         }
 
         return Store::with(['settings', 'workingHours'])->find($storeId);
+    }
+
+    protected function summarizeCartStoreContext(Collection $cartItems): array
+    {
+        $storeIds = $cartItems->pluck('store_id')->filter()->unique()->values();
+        $hasStoreItems = $storeIds->isNotEmpty();
+        $hasGeneralItems = $cartItems->contains(static fn (CartItem $cartItem) => $cartItem->store_id === null);
+
+        $storeId = null;
+        if ($storeIds->count() === 1) {
+            $firstId = $storeIds->first();
+            $storeId = $firstId !== null ? (int) $firstId : null;
+        }
+
+        return [
+            'store_ids' => $storeIds,
+            'store_id' => $storeId,
+            'has_store_items' => $hasStoreItems,
+            'has_general_items' => $hasGeneralItems,
+            'multiple_stores' => $storeIds->count() > 1,
+        ];
     }
 
     protected function resolveStoreLogoUrl(?string $path): ?string
@@ -1268,7 +1302,7 @@ class CartController extends Controller
 
         $items = $this->mapCartItems($cartItems);
         $subtotal = $cartItems->sum(static fn (CartItem $cartItem) => $cartItem->subtotal);
-        $discounts = $this->resolveDiscounts($user, $selection, $subtotal);
+        $discounts = $this->resolveDiscounts($user, $selection, $subtotal, $cartItems);
 
         $checkout = $this->buildCheckoutPayload(
             $user,
@@ -1318,7 +1352,7 @@ class CartController extends Controller
     /**
      * @return array{coupons: array<int, array<string, mixed>>, total: float}
      */
-    protected function resolveDiscounts(User $user, ?CartCouponSelection $selection, float $subtotal): array
+    protected function resolveDiscounts(User $user, ?CartCouponSelection $selection, float $subtotal, Collection $cartItems): array
     {
         $discounts = [
             'coupons' => [],
@@ -1335,6 +1369,26 @@ class CartController extends Controller
             $selection->delete();
 
             return $discounts;
+        }
+
+        $context = $this->summarizeCartStoreContext($cartItems);
+
+        if ($context['multiple_stores'] || ($context['has_store_items'] && $context['has_general_items'])) {
+            $selection->delete();
+
+            return $discounts;
+        }
+
+        $storeId = $context['store_id'];
+
+        if ($coupon->store_id !== null) {
+            if ($storeId === null || (int) $coupon->store_id !== (int) $storeId) {
+                $selection->delete();
+
+                return $discounts;
+            }
+        } elseif ($storeId === null) {
+            // General coupon on general cart - fine.
         }
 
         if (! $coupon->isCurrentlyActive()) {

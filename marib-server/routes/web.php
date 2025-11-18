@@ -31,6 +31,8 @@ use App\Http\Controllers\MetalRateController;
 use App\Http\Controllers\StoreDashboardController;
 use App\Http\Controllers\MerchantStoreController;
 use App\Http\Controllers\Store\StoreManualPaymentController;
+use App\Http\Controllers\Store\StoreCouponController;
+use App\Http\Controllers\Store\StoreInsightsController;
 use App\Http\Controllers\Store\StoreOrderController;
 use App\Http\Controllers\Store\MerchantProductController;
 use App\Http\Controllers\Store\MerchantWalletController;
@@ -803,6 +805,21 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
           Route::delete('products/{item}', [MerchantProductController::class, 'destroy'])
               ->whereNumber('item')
               ->name('products.destroy');
+          Route::get('coupons', [StoreCouponController::class, 'index'])->name('coupons.index');
+          Route::get('coupons/create', [StoreCouponController::class, 'create'])->name('coupons.create');
+          Route::post('coupons', [StoreCouponController::class, 'store'])->name('coupons.store');
+          Route::get('coupons/{coupon}/edit', [StoreCouponController::class, 'edit'])
+              ->whereNumber('coupon')
+              ->name('coupons.edit');
+          Route::match(['put', 'patch'], 'coupons/{coupon}', [StoreCouponController::class, 'update'])
+              ->whereNumber('coupon')
+              ->name('coupons.update');
+          Route::patch('coupons/{coupon}/toggle', [StoreCouponController::class, 'toggle'])
+              ->whereNumber('coupon')
+              ->name('coupons.toggle');
+          Route::delete('coupons/{coupon}', [StoreCouponController::class, 'destroy'])
+              ->whereNumber('coupon')
+              ->name('coupons.destroy');
           Route::get('settings', [MerchantStoreSettingsController::class, 'index'])->name('settings');
           Route::post('settings/general', [MerchantStoreSettingsController::class, 'updateGeneral'])->name('settings.general');
           Route::post('settings/hours', [MerchantStoreSettingsController::class, 'updateHours'])->name('settings.hours');
@@ -817,6 +834,9 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
               ->name('settings.gateway-accounts.destroy');
           Route::post('settings/wallet/withdraw', [MerchantStoreSettingsController::class, 'submitWalletWithdrawal'])
               ->name('settings.wallet.withdraw');
+          Route::get('reports/orders', [StoreInsightsController::class, 'orderReports'])->name('reports.orders');
+          Route::get('reports/sales', [StoreInsightsController::class, 'salesReports'])->name('reports.sales');
+          Route::get('reports/customers', [StoreInsightsController::class, 'customerReports'])->name('reports.customers');
       });
 
     /* --------------------------------- الإعدادات Settings --------------------------------- */

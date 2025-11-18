@@ -1,4 +1,4 @@
-﻿{
+{
   "report": "ط§ظ„ط¥ط¨ظ„ط§ط؛",
   "reportThisService": "ط£ط¨ظ„ط؛ ط¹ظ† ظ‡ط°ظ‡ ط§ظ„ط®ط¯ظ…ط©",
   "rating": "ط§ظ„طھظ‚ظٹظٹظ…",
@@ -97,5 +97,13 @@
   "merchant_ads_filter_active": "منشورة",
   "merchant_ads_filter_rejected": "مرفوضة",
   "merchant_ads_filter_sold": "تم البيع",
-  "merchant_ads_loading": "جاري تحديث الإعلانات..."
+  "merchant_ads_loading": "جاري تحديث الإعلانات...",
+  "merchant_coupons_tab": "كوبونات الخصم",
+  "merchant_order_reports_tab": "تقارير الطلبات",
+  "merchant_sales_reports_tab": "تقارير المبيعات",
+  "merchant_customer_reports_tab": "تقارير العملاء",
+  "merchant_coupons_placeholder": "هنا ستنشئ الكوبونات وتراقب أداء كل حملة ترويجية. الواجهة قادمة قريبًا.",
+  "merchant_order_reports_placeholder": "لوحة تقارير الطلبات التفصيلية ستتوفر قريبًا لتتبع كل مرحلة دون تأخير.",
+  "merchant_sales_reports_placeholder": "تحليلات المبيعات والإيرادات في طريقها إليك لتسهيل قراءة الأداء اليومي.",
+  "merchant_customer_reports_placeholder": "تقارير تحليل العملاء والولاء ستعرض هنا قريبًا لمنحك نظرة أوضح عن جمهورك."
 }

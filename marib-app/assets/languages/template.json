@@ -892,5 +892,13 @@
   "merchant_ads_filter_active": "Published",
   "merchant_ads_filter_rejected": "Rejected",
   "merchant_ads_filter_sold": "Sold out",
-  "merchant_ads_loading": "Updating ads..."
+  "merchant_ads_loading": "Updating ads...",
+  "merchant_coupons_tab": "Discount coupons",
+  "merchant_order_reports_tab": "Order reports",
+  "merchant_sales_reports_tab": "Sales reports",
+  "merchant_customer_reports_tab": "Customer reports",
+  "merchant_coupons_placeholder": "Track and launch coupon campaigns to boost loyal customers. This workspace is rolling out soon.",
+  "merchant_order_reports_placeholder": "Detailed analytics for every order stage are coming soon to help you spot bottlenecks early.",
+  "merchant_sales_reports_placeholder": "Visualize revenue, averages, and trends. Sales dashboards will be activated shortly.",
+  "merchant_customer_reports_placeholder": "Understand your customer segments, loyalty, and recency. Customer reports arrive here soon."
 }

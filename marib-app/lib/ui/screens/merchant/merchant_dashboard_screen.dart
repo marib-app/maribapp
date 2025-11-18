@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:marib/app/navigation/app_page_route.dart';
 import 'package:marib/app/navigation/motion/route_motion.dart';
 import 'package:marib/app/routes.dart';
+import 'package:marib/settings.dart';
 import 'package:marib/data/cubits/merchant/merchant_dashboard_cubit.dart';
 import 'package:marib/data/cubits/merchant/merchant_manual_payments_cubit.dart';
 import 'package:marib/data/cubits/merchant/merchant_orders_cubit.dart';
@@ -53,7 +54,7 @@ class MerchantDashboardScreen extends StatelessWidget {
         base.copyWith(fontWeight: FontWeight.w500, height: 1.1);
 
     return DefaultTabController(
-      length: 5,
+      length: 9,
       child: Scaffold(
         appBar: UiUtils.buildAppBar(
           context,
@@ -71,11 +72,16 @@ class MerchantDashboardScreen extends StatelessWidget {
                   border: Border.all(color: border),
                 ),
                 child: TabBar(
+                  isScrollable: true,
                   tabs: [
                     Tab(text: 'merchant_home'.translate(context)),
                     Tab(text: 'merchant_ads_tab_title'.translate(context)),
                     Tab(text: 'merchant_requests'.translate(context)),
                     Tab(text: 'merchant_remittances'.translate(context)),
+                    Tab(text: 'merchant_coupons_tab'.translate(context)),
+                    Tab(text: 'merchant_order_reports_tab'.translate(context)),
+                    Tab(text: 'merchant_sales_reports_tab'.translate(context)),
+                    Tab(text: 'merchant_customer_reports_tab'.translate(context)),
                     Tab(text: 'merchant_settings'.translate(context)),
                   ],
                   indicator: UnderlineTabIndicator(
@@ -103,6 +109,10 @@ class MerchantDashboardScreen extends StatelessWidget {
             _MerchantAdsTab(),
             _MerchantOrdersTab(),
             _MerchantManualPaymentsTab(),
+            _MerchantCouponsTab(),
+            _MerchantOrderReportsTab(),
+            _MerchantSalesReportsTab(),
+            _MerchantCustomerReportsTab(),
             _MerchantSettingsTab(),
           ],
         ),
@@ -335,28 +345,14 @@ class _MerchantOrdersTab extends StatefulWidget {
 }
 
 class _MerchantOrdersTabState extends State<_MerchantOrdersTab> {
-  final ScrollController _scrollController = ScrollController();
   String _selectedStatus = _orderStatusFilters.first.value;
 
-  @override
-  void initState() {
-    super.initState();
-    _scrollController.addListener(_handleScroll);
-  }
-
-  @override
-  void dispose() {
-    _scrollController
-      ..removeListener(_handleScroll)
-      ..dispose();
-    super.dispose();
-  }
-
-  void _handleScroll() {
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 120) {
+  bool _handleScrollNotification(ScrollNotification notification) {
+    if (notification.metrics.pixels >=
+        notification.metrics.maxScrollExtent - 120) {
       context.read<MerchantOrdersCubit>().loadMore();
     }
+    return false;
   }
 
   @override
@@ -382,31 +378,33 @@ class _MerchantOrdersTabState extends State<_MerchantOrdersTab> {
         return RefreshIndicator(
           color: context.color.territoryColor,
           onRefresh: () => context.read<MerchantOrdersCubit>().refresh(),
-          child: ListView(
-            controller: _scrollController,
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-            children: [
-              _StatusFilterChips(
-                filters: _orderStatusFilters,
-                value: _selectedStatus,
-                onChanged: (value) {
-                  setState(() => _selectedStatus = value);
-                  context.read<MerchantOrdersCubit>().load(status: value);
-                },
-              ),
-              const SizedBox(height: 12),
-              if (orders.isEmpty)
-                const _EmptyState(
-                  messageKey: 'merchant_there_are_no_requests_currently',
-                )
-              else
-                ...orders.map((order) => _OrderListTile(order: order)),
-              if (success.isLoadingMore)
-                const Padding(
-                  padding: EdgeInsets.all(12.0),
-                  child: Center(child: CircularProgressIndicator()),
+          child: NotificationListener<ScrollNotification>(
+            onNotification: _handleScrollNotification,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+              children: [
+                _StatusFilterChips(
+                  filters: _orderStatusFilters,
+                  value: _selectedStatus,
+                  onChanged: (value) {
+                    setState(() => _selectedStatus = value);
+                    context.read<MerchantOrdersCubit>().load(status: value);
+                  },
                 ),
-            ],
+                const SizedBox(height: 12),
+                if (orders.isEmpty)
+                  const _EmptyState(
+                    messageKey: 'merchant_there_are_no_requests_currently',
+                  )
+                else
+                  ...orders.map((order) => _OrderListTile(order: order)),
+                if (success.isLoadingMore)
+                  const Padding(
+                    padding: EdgeInsets.all(12.0),
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+              ],
+            ),
           ),
         );
       },
@@ -424,28 +422,14 @@ class _MerchantManualPaymentsTab extends StatefulWidget {
 
 class _MerchantManualPaymentsTabState
     extends State<_MerchantManualPaymentsTab> {
-  final ScrollController _scrollController = ScrollController();
   String _selectedStatus = _manualPaymentStatusFilters.first.value;
 
-  @override
-  void initState() {
-    super.initState();
-    _scrollController.addListener(_handleScroll);
-  }
-
-  @override
-  void dispose() {
-    _scrollController
-      ..removeListener(_handleScroll)
-      ..dispose();
-    super.dispose();
-  }
-
-  void _handleScroll() {
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 120) {
+  bool _handleScrollNotification(ScrollNotification notification) {
+    if (notification.metrics.pixels >=
+        notification.metrics.maxScrollExtent - 120) {
       context.read<MerchantManualPaymentsCubit>().loadMore();
     }
+    return false;
   }
 
   @override
@@ -474,38 +458,40 @@ class _MerchantManualPaymentsTabState
           color: context.color.territoryColor,
           onRefresh: () =>
               context.read<MerchantManualPaymentsCubit>().refresh(),
-          child: ListView(
-            controller: _scrollController,
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-            children: [
-              _StatusFilterChips(
-                filters: _manualPaymentStatusFilters,
-                value: _selectedStatus,
-                onChanged: (value) {
-                  setState(() => _selectedStatus = value);
-                  context
-                      .read<MerchantManualPaymentsCubit>()
-                      .load(status: value);
-                },
-              ),
-              const SizedBox(height: 12),
-              if (requests.isEmpty)
-                const _EmptyState(
-                  messageKey: 'merchant_there_are_no_transfers_currently',
-                )
-              else
-                ...requests.map(
-                  (payment) => _ManualPaymentTile(
-                    payment: payment,
-                    onTap: () => _openPaymentSheet(context, payment),
+          child: NotificationListener<ScrollNotification>(
+            onNotification: _handleScrollNotification,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+              children: [
+                _StatusFilterChips(
+                  filters: _manualPaymentStatusFilters,
+                  value: _selectedStatus,
+                  onChanged: (value) {
+                    setState(() => _selectedStatus = value);
+                    context
+                        .read<MerchantManualPaymentsCubit>()
+                        .load(status: value);
+                  },
+                ),
+                const SizedBox(height: 12),
+                if (requests.isEmpty)
+                  const _EmptyState(
+                    messageKey: 'merchant_there_are_no_transfers_currently',
+                  )
+                else
+                  ...requests.map(
+                    (payment) => _ManualPaymentTile(
+                      payment: payment,
+                      onTap: () => _openPaymentSheet(context, payment),
+                    ),
                   ),
-                ),
-              if (success.isLoadingMore)
-                const Padding(
-                  padding: EdgeInsets.all(12.0),
-                  child: Center(child: CircularProgressIndicator()),
-                ),
-            ],
+                if (success.isLoadingMore)
+                  const Padding(
+                    padding: EdgeInsets.all(12.0),
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+              ],
+            ),
           ),
         );
       },
@@ -1002,19 +988,43 @@ class _MerchantSettingsTab extends StatelessWidget {
     );
   }
 
-  static void _openOnboarding(
+  static Future<void> _openOnboarding(
     BuildContext context, {
     required String source,
     required int step,
-  }) {
-    Navigator.pushNamed(
-      context,
-      Routes.merchantOnboarding,
-      arguments: {
-        'resumeFromStep': step,
-        'from': 'merchant_settings_$source',
-      },
+  }) async {
+    // Preserve existing signature for future analytics/hooks.
+    // ignore: unused_local_variable
+    final String _unusedSource = source;
+    // ignore: unused_local_variable
+    final int _unusedStep = step;
+
+    final List<String> hosts = AppSettings.hostUrlCandidates;
+    final String baseHost =
+        hosts.isNotEmpty ? hosts.first : AppSettings.hostUrl;
+    final Uri? uri = Uri.tryParse(
+      '${HelperUtils.checkHost(baseHost)}merchant/settings',
     );
+
+    if (uri == null) {
+      HelperUtils.showSnackBarMessage(
+        context,
+        'تعذر فتح إعدادات المتجر.',
+      );
+      return;
+    }
+
+    final bool launched = await launchUrl(
+      uri,
+      mode: LaunchMode.externalApplication,
+    );
+
+    if (!launched) {
+      HelperUtils.showSnackBarMessage(
+        context,
+        'تعذر فتح إعدادات المتجر.',
+      );
+    }
   }
 }
 
@@ -2284,6 +2294,101 @@ class _ErrorView extends StatelessWidget {
             ElevatedButton(
               onPressed: onRetry,
               child: const Text('إعادة المحاولة'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MerchantCouponsTab extends StatelessWidget {
+  const _MerchantCouponsTab();
+
+  @override
+  Widget build(BuildContext context) {
+    return const _MerchantPlaceholderTab(
+      icon: Icons.confirmation_num_outlined,
+      titleKey: 'merchant_coupons_tab',
+      descriptionKey: 'merchant_coupons_placeholder',
+    );
+  }
+}
+
+class _MerchantOrderReportsTab extends StatelessWidget {
+  const _MerchantOrderReportsTab();
+
+  @override
+  Widget build(BuildContext context) {
+    return const _MerchantPlaceholderTab(
+      icon: Icons.show_chart,
+      titleKey: 'merchant_order_reports_tab',
+      descriptionKey: 'merchant_order_reports_placeholder',
+    );
+  }
+}
+
+class _MerchantSalesReportsTab extends StatelessWidget {
+  const _MerchantSalesReportsTab();
+
+  @override
+  Widget build(BuildContext context) {
+    return const _MerchantPlaceholderTab(
+      icon: Icons.payments_outlined,
+      titleKey: 'merchant_sales_reports_tab',
+      descriptionKey: 'merchant_sales_reports_placeholder',
+    );
+  }
+}
+
+class _MerchantCustomerReportsTab extends StatelessWidget {
+  const _MerchantCustomerReportsTab();
+
+  @override
+  Widget build(BuildContext context) {
+    return const _MerchantPlaceholderTab(
+      icon: Icons.groups_outlined,
+      titleKey: 'merchant_customer_reports_tab',
+      descriptionKey: 'merchant_customer_reports_placeholder',
+    );
+  }
+}
+
+class _MerchantPlaceholderTab extends StatelessWidget {
+  const _MerchantPlaceholderTab({
+    required this.icon,
+    required this.titleKey,
+    required this.descriptionKey,
+  });
+
+  final IconData icon;
+  final String titleKey;
+  final String descriptionKey;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.color;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 64, color: colors.territoryColor),
+            const SizedBox(height: 16),
+            Text(
+              titleKey.translate(context),
+              style: Theme.of(context).textTheme.titleLarge,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              descriptionKey.translate(context),
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(color: colors.textDefaultColor.withOpacity(0.7)),
+              textAlign: TextAlign.center,
             ),
           ],
         ),

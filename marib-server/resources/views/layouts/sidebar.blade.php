@@ -290,6 +290,30 @@
               </a>
             </li>
             <li class="sidebar-item">
+              <a href="{{ route('merchant.coupons.index') }}" class="sidebar-link">
+                <i class="bi bi-ticket-perforated"></i>
+                <span class="menu-item">{{ __('sidebar.coupons_menu') }}</span>
+              </a>
+            </li>
+            <li class="sidebar-item">
+              <a href="{{ route('merchant.reports.orders') }}" class="sidebar-link">
+                <i class="bi bi-graph-up"></i>
+                <span class="menu-item">{{ __('sidebar.orders_reports_menu') }}</span>
+              </a>
+            </li>
+            <li class="sidebar-item">
+              <a href="{{ route('merchant.reports.sales') }}" class="sidebar-link">
+                <i class="bi bi-cash-coin"></i>
+                <span class="menu-item">{{ __('sidebar.sales_reports_menu') }}</span>
+              </a>
+            </li>
+            <li class="sidebar-item">
+              <a href="{{ route('merchant.reports.customers') }}" class="sidebar-link">
+                <i class="bi bi-people"></i>
+                <span class="menu-item">{{ __('sidebar.customers_reports_menu') }}</span>
+              </a>
+            </li>
+            <li class="sidebar-item">
               <a href="{{ route('merchant.settings') }}" class="sidebar-link">
                 <i class="bi bi-gear"></i>
                 <span class="menu-item">{{ __('sidebar.store_settings') }}</span>

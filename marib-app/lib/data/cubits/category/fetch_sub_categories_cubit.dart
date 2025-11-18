@@ -20,6 +20,9 @@ class FetchSubCategoriesSuccess extends FetchSubCategoriesState {
   final bool isLoadingMore;
   final bool hasError;
   final List<CategoryModel> categories;
+  final bool onlyAllowed;
+  final List<int>? allowedCategoryIds;
+  final List<int>? ensureCategoryIds;
 
   FetchSubCategoriesSuccess({
     required this.total,
@@ -27,6 +30,9 @@ class FetchSubCategoriesSuccess extends FetchSubCategoriesState {
     required this.isLoadingMore,
     required this.hasError,
     required this.categories,
+    this.onlyAllowed = false,
+    this.allowedCategoryIds,
+    this.ensureCategoryIds,
   });
 
   FetchSubCategoriesSuccess copyWith({
@@ -35,6 +41,9 @@ class FetchSubCategoriesSuccess extends FetchSubCategoriesState {
     bool? isLoadingMore,
     bool? hasError,
     List<CategoryModel>? categories,
+    bool? onlyAllowed,
+    List<int>? allowedCategoryIds,
+    List<int>? ensureCategoryIds,
   }) {
     return FetchSubCategoriesSuccess(
       total: total ?? this.total,
@@ -42,6 +51,9 @@ class FetchSubCategoriesSuccess extends FetchSubCategoriesState {
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       hasError: hasError ?? this.hasError,
       categories: categories ?? this.categories,
+      onlyAllowed: onlyAllowed ?? this.onlyAllowed,
+      allowedCategoryIds: allowedCategoryIds ?? this.allowedCategoryIds,
+      ensureCategoryIds: ensureCategoryIds ?? this.ensureCategoryIds,
     );
   }
 
@@ -52,6 +64,9 @@ class FetchSubCategoriesSuccess extends FetchSubCategoriesState {
       'isLoadingMore': isLoadingMore,
       'hasError': hasError,
       'categories': categories.map((x) => x.toJson()).toList(),
+      'onlyAllowed': onlyAllowed,
+      'allowedCategoryIds': allowedCategoryIds,
+      'ensureCategoryIds': ensureCategoryIds,
     };
   }
 
@@ -66,6 +81,13 @@ class FetchSubCategoriesSuccess extends FetchSubCategoriesState {
           (x) => CategoryModel.fromJson(x as Map<String, dynamic>),
         ),
       ),
+      onlyAllowed: map['onlyAllowed'] as bool? ?? false,
+      allowedCategoryIds: (map['allowedCategoryIds'] as List<dynamic>?)
+          ?.map((dynamic e) => e as int)
+          .toList(),
+      ensureCategoryIds: (map['ensureCategoryIds'] as List<dynamic>?)
+          ?.map((dynamic e) => e as int)
+          .toList(),
     );
   }
 
@@ -77,7 +99,7 @@ class FetchSubCategoriesSuccess extends FetchSubCategoriesState {
 
   @override
   String toString() {
-    return 'FetchSubCategoriesSuccess(total: $total,  page: $page, isLoadingMore: $isLoadingMore, hasError: $hasError, categories: $categories)';
+    return 'FetchSubCategoriesSuccess(total: $total,  page: $page, isLoadingMore: $isLoadingMore, hasError: $hasError, onlyAllowed: $onlyAllowed, allowedCategoryIds: $allowedCategoryIds, ensureCategoryIds: $ensureCategoryIds, categories: $categories)';
   }
 }
 
@@ -93,16 +115,30 @@ class FetchSubCategoriesCubit extends Cubit<FetchSubCategoriesState> {
   final CategoryRepository _categoryRepository = CategoryRepository();
   int? _activeCategoryId;
 
-  Future<void> fetchSubCategories(
-      {bool? forceRefresh,
-      bool? loadWithoutDelay,
-      required int categoryId}) async {
+  Future<void> fetchSubCategories({
+    bool? forceRefresh,
+    bool? loadWithoutDelay,
+    required int categoryId,
+    bool onlyAllowed = false,
+    Iterable<int> allowedCategoryIds = const <int>[],
+    Iterable<int> ensureCategoryIds = const <int>[],
+  }) async {
     try {
       emit(FetchSubCategoriesInProgress());
       _activeCategoryId = categoryId;
 
+      final List<int> normalizedAllowed =
+          _normalizeCategoryIds(allowedCategoryIds);
+      final List<int> normalizedEnsure =
+          _normalizeCategoryIds(ensureCategoryIds);
+
       DataOutput<CategoryModel> categories = await _categoryRepository
-          .fetchCategories(page: 1, categoryId: categoryId);
+          .fetchCategories(
+              page: 1,
+              categoryId: categoryId,
+              onlyAllowed: onlyAllowed,
+              allowedCategoryIds: normalizedAllowed,
+              ensureCategoryIds: normalizedEnsure);
 
 
       final List<CategoryModel> sanitizedCategories =
@@ -113,7 +149,14 @@ class FetchSubCategoriesCubit extends Cubit<FetchSubCategoriesState> {
           categories: sanitizedCategories,
           page: 1,
           hasError: false,
-          isLoadingMore: false));
+          isLoadingMore: false,
+          onlyAllowed: onlyAllowed,
+          allowedCategoryIds: normalizedAllowed.isEmpty
+              ? null
+              : List<int>.from(normalizedAllowed),
+          ensureCategoryIds: normalizedEnsure.isEmpty
+              ? null
+              : List<int>.from(normalizedEnsure)));
     } catch (e) {
       _activeCategoryId = null;
       emit(FetchSubCategoriesFailure(e.toString()));
@@ -131,21 +174,23 @@ class FetchSubCategoriesCubit extends Cubit<FetchSubCategoriesState> {
   Future<void> fetchSubCategoriesMore() async {
     try {
       if (state is FetchSubCategoriesSuccess) {
-        if ((state as FetchSubCategoriesSuccess).isLoadingMore) {
+        final FetchSubCategoriesSuccess current =
+            state as FetchSubCategoriesSuccess;
+        if (current.isLoadingMore) {
           return;
         }
-        emit(
-            (state as FetchSubCategoriesSuccess).copyWith(isLoadingMore: true));
+        emit(current.copyWith(isLoadingMore: true));
         DataOutput<CategoryModel> result =
             await _categoryRepository.fetchCategories(
-          page: (state as FetchSubCategoriesSuccess).page + 1,
-              categoryId: _activeCategoryId,
-            );
+          page: current.page + 1,
+          categoryId: _activeCategoryId,
+          onlyAllowed: current.onlyAllowed,
+          allowedCategoryIds: current.allowedCategoryIds ?? const <int>[],
+          ensureCategoryIds: current.ensureCategoryIds ?? const <int>[],
+        );
 
-        FetchSubCategoriesSuccess categoryState =
-            (state as FetchSubCategoriesSuccess);
         final List<CategoryModel> updatedCategories =
-        List<CategoryModel>.from(categoryState.categories)
+        List<CategoryModel>.from(current.categories)
           ..addAll(_sanitizeCategoryList(result.modelList));
 
         final List<String> list =
@@ -157,8 +202,11 @@ class FetchSubCategoriesCubit extends Cubit<FetchSubCategoriesState> {
             isLoadingMore: false,
             hasError: false,
             categories: updatedCategories,
-            page: (state as FetchSubCategoriesSuccess).page + 1,
-            total: result.total));
+            page: current.page + 1,
+            total: result.total,
+            onlyAllowed: current.onlyAllowed,
+            allowedCategoryIds: current.allowedCategoryIds,
+            ensureCategoryIds: current.ensureCategoryIds));
       }
     } catch (e) {
       emit((state as FetchSubCategoriesSuccess)
@@ -209,5 +257,18 @@ class FetchSubCategoriesCubit extends Cubit<FetchSubCategoriesState> {
   @override
   Map<String, dynamic>? toJson(FetchSubCategoriesState state) {
     return null;
+  }
+
+  List<int> _normalizeCategoryIds(Iterable<int> ids) {
+    final Set<int> normalized = <int>{};
+    for (final int id in ids) {
+      if (id > 0) {
+        normalized.add(id);
+      }
+    }
+    if (normalized.isEmpty) {
+      return const <int>[];
+    }
+    return List<int>.unmodifiable(normalized);
   }
 }

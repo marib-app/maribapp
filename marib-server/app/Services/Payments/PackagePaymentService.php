@@ -30,6 +30,14 @@ class PackagePaymentService
     private const SUPPORTED_METHODS = ['manual_bank', 'wallet'];
 
     /**
+     * @return array<int, string>
+     */
+    public static function supportedMethods(): array
+    {
+        return array_values(array_unique(self::SUPPORTED_METHODS));
+    }
+
+    /**
      * @var array<string, array<int, string>>
      */
     private const LEGACY_METHOD_ALIASES = [

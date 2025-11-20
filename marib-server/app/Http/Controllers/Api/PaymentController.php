@@ -8,6 +8,7 @@ use App\Http\Resources\PaymentTransactionResource;
 use App\Http\Resources\Payments\SubjectResource;
 use App\Models\ManualPaymentRequest;
 use App\Models\Order;
+use App\Models\Package;
 use App\Models\PaymentTransaction;
 use App\Models\Service;
 use App\Models\ServiceRequest;
@@ -17,6 +18,7 @@ use App\Services\LegalNumberingService;
 use App\Services\Payments\OrderPaymentService;
 use App\Services\OrderCheckoutService;
 use App\Services\PaymentFulfillmentService;
+use App\Services\Payments\PackagePaymentService;
 use App\Services\Payments\ServicePaymentService;
 use App\Services\Payments\WifiPlanPaymentService;
 use App\Support\Payments\PaymentGatewayCurrencyPolicy;
@@ -32,6 +34,7 @@ class PaymentController extends Controller
     public function __construct(
         private readonly ServicePaymentService $servicePaymentService,
         private readonly OrderPaymentService $orderPaymentService,
+        private readonly PackagePaymentService $packagePaymentService,
         private readonly WifiPlanPaymentService $wifiPlanPaymentService,
         private readonly PaymentFulfillmentService $paymentFulfillmentService,
         private readonly LegalNumberingService $legalNumberingService
@@ -47,7 +50,7 @@ class PaymentController extends Controller
         }
 
         $purpose = strtolower($request->input('purpose', 'service'));
-        $supportedPurposes = ['service', 'order', 'wifi_plan'];
+        $supportedPurposes = ['service', 'order', 'wifi_plan', 'package'];
 
         if (! in_array($purpose, $supportedPurposes, true)) {
             throw ValidationException::withMessages([
@@ -63,6 +66,10 @@ class PaymentController extends Controller
             return $this->initiateWifiPlanPayment($request, $user->getKey());
         }
 
+        if ($purpose === 'package') {
+            return $this->initiatePackagePayment($request, $user->getKey());
+        }
+
         return $this->initiateOrderPayment($request, $user->getKey());
     }
 
@@ -75,7 +82,7 @@ class PaymentController extends Controller
         }
 
         $purpose = strtolower($request->input('purpose', 'service'));
-        $supportedPurposes = ['service', 'order', 'wifi_plan'];
+        $supportedPurposes = ['service', 'order', 'wifi_plan', 'package'];
 
         if (! in_array($purpose, $supportedPurposes, true)) {
             throw ValidationException::withMessages([
@@ -89,6 +96,10 @@ class PaymentController extends Controller
 
         if ($purpose === 'wifi_plan') {
             return $this->confirmWifiPlanPayment($request, $user->getKey());
+        }
+
+        if ($purpose === 'package') {
+            return $this->confirmPackagePayment($request, $user->getKey());
         }
 
         return $this->confirmOrderPayment($request, $user->getKey());
@@ -391,6 +402,98 @@ class PaymentController extends Controller
         return $this->buildWifiPlanResponse($existing, $plan, $statusCode, $availableGateways);
     }
 
+    private function initiatePackagePayment(Request $request, int $userId): JsonResponse
+    {
+        $validated = $request->validate([
+            'payment_method' => ['required', 'string', 'max:191'],
+            'currency' => ['nullable', 'string', 'size:3'],
+            'package_id' => ['required', 'integer', 'exists:packages,id'],
+            'amount' => ['nullable', 'numeric', 'min:0'],
+            'metadata' => ['nullable', 'array'],
+        ]);
+
+        $package = Package::query()->findOrFail($validated['package_id']);
+        $requestUser = $request->user() ?? Auth::user();
+
+        if (! $requestUser) {
+            return response()->json(['message' => __('Unauthenticated.')], 401);
+        }
+
+        $method = $this->normalizePaymentMethodForPurpose($validated['payment_method'], 'package');
+        $currency = strtoupper(trim($validated['currency'] ?? (string) config('app.currency', 'SAR')));
+        if ($currency === '') {
+            $currency = strtoupper((string) config('app.currency', 'SAR'));
+        }
+
+        if (! PaymentGatewayCurrencyPolicy::supports($method, $currency)) {
+            throw ValidationException::withMessages([
+                'currency' => __('gateway_currency_unsupported'),
+            ]);
+        }
+
+        $idempotencyKey = $this->resolveIdempotencyKey($request, [
+            'purpose' => 'package',
+            'user' => $userId,
+            'package' => $package->getKey(),
+            'method' => $method,
+            'currency' => $currency,
+            'amount' => $validated['amount'] ?? $package->final_price ?? '',
+        ]);
+
+        $existing = PaymentTransaction::query()
+            ->where('user_id', $userId)
+            ->where('idempotency_key', $idempotencyKey)
+            ->first();
+
+        if (! $existing) {
+            $payload = [
+                'amount' => $validated['amount'] ?? null,
+                'currency' => $currency,
+                'metadata' => $validated['metadata'] ?? null,
+            ];
+
+            $transaction = $this->packagePaymentService->initiate(
+                $requestUser,
+                $package,
+                $method,
+                $idempotencyKey,
+                $payload
+            );
+
+            $existing = $transaction;
+        }
+
+        if ($existing->payment_gateway === 'wallet'
+            && strtolower((string) $existing->payment_status) !== 'succeed') {
+            $existing = $this->packagePaymentService->confirm(
+                $requestUser,
+                $existing,
+                $existing->idempotency_key ?? $idempotencyKey,
+                [
+                    'currency' => $currency,
+                    'amount' => $validated['amount'] ?? null,
+                    'metadata' => $validated['metadata'] ?? null,
+                ]
+            )->fresh();
+        }
+
+        $package->refresh();
+
+        $statusCode = $this->inferStatusCode($existing);
+        $availableGateways = PackagePaymentService::supportedMethods();
+
+        PaymentTrace::trace('payment.initiate.package', [
+            'user_id' => $userId,
+            'payable_type' => Package::class,
+            'payable_id' => $package->getKey(),
+            'payment_transaction_id' => $existing->getKey(),
+            'idempotency_key' => $existing->idempotency_key,
+            'status_code' => $statusCode,
+        ], $request);
+
+        return $this->buildPackageResponse($existing, $package, $statusCode, $availableGateways);
+    }
+
     private function initiateOrderPayment(Request $request, int $userId): JsonResponse
     {
         $validated = $request->validate([
@@ -593,6 +696,63 @@ class PaymentController extends Controller
         ], $request);
 
         return $this->buildWifiPlanResponse($freshTransaction, $plan, $statusCode);
+    }
+
+    private function confirmPackagePayment(Request $request, int $userId): JsonResponse
+    {
+        $validated = $request->validate([
+            'transaction_id' => ['nullable', 'integer'],
+            'idempotency_key' => ['nullable', 'string', 'max:64'],
+            'package_id' => ['required', 'integer', 'exists:packages,id'],
+        ]);
+
+        if (empty($validated['transaction_id']) && empty($validated['idempotency_key'])) {
+            throw ValidationException::withMessages([
+                'transaction_id' => __('A transaction reference is required.'),
+            ]);
+        }
+
+        $package = Package::query()->findOrFail($validated['package_id']);
+
+        $transaction = $this->resolveTransactionReference(
+            $userId,
+            $validated['transaction_id'] ?? null,
+            $validated['idempotency_key'] ?? null
+        );
+
+        $idempotencyKey = $validated['idempotency_key']
+            ?? $transaction->idempotency_key
+            ?? Str::uuid()->toString();
+
+        if (! $transaction->idempotency_key) {
+            $transaction->idempotency_key = $idempotencyKey;
+            $transaction->save();
+            $transaction->refresh();
+        }
+
+        $confirmationPayload = $this->buildPaymentConfirmationPayload($request, $transaction, 'package');
+
+        $freshTransaction = $this->packagePaymentService->confirm(
+            $request->user(),
+            $transaction,
+            $idempotencyKey,
+            $confirmationPayload
+        )->fresh();
+
+        $package->refresh();
+
+        $statusCode = $this->inferStatusCode($freshTransaction);
+
+        PaymentTrace::trace('payment.confirm.package', [
+            'user_id' => $userId,
+            'payable_type' => Package::class,
+            'payable_id' => $package->getKey(),
+            'payment_transaction_id' => $freshTransaction->getKey(),
+            'idempotency_key' => $freshTransaction->idempotency_key,
+            'status_code' => $statusCode,
+        ], $request);
+
+        return $this->buildPackageResponse($freshTransaction, $package, $statusCode);
     }
 
 
@@ -913,6 +1073,56 @@ class PaymentController extends Controller
         return response()->json($response, $statusCode);
     }
 
+    private function buildPackageResponse(
+        PaymentTransaction $transaction,
+        Package $package,
+        int $statusCode,
+        ?array $availableGateways = null
+    ): JsonResponse {
+        $transaction->loadMissing([
+            'manualPaymentRequest.manualBank',
+            'manualPaymentRequest.paymentTransaction.order',
+            'manualPaymentRequest.paymentTransaction.walletTransaction',
+        ]);
+
+        if ($transaction->manual_payment_request_id === null
+            || strtolower((string) $transaction->payment_gateway) === 'wallet') {
+            $transaction->setRelation('manualPaymentRequest', null);
+        }
+
+        $manualRequest = $transaction->manualPaymentRequest instanceof ManualPaymentRequest
+            ? $transaction->manualPaymentRequest
+            : null;
+
+        $response = [
+            'transaction' => PaymentTransactionResource::make($transaction)->resolve(),
+            'manual_payment_request' => $manualRequest
+                ? ManualPaymentRequestResource::make($manualRequest)->resolve()
+                : null,
+            'subject' => SubjectResource::make([
+                'type' => 'package',
+                'id' => $package->getKey(),
+                'number' => $package->name,
+                'status' => $package->status ?? null,
+            ])->resolve(),
+            'next' => $this->buildNextNavigation($transaction, 'package', $package->getKey()),
+            'payment_transaction_id' => $transaction->getKey(),
+            'payment_intent_id' => $transaction->idempotency_key,
+        ];
+
+        if (is_array($availableGateways)) {
+            $normalizedGateways = array_values(array_unique(array_filter(
+                $availableGateways,
+                static fn ($value) => is_string($value) && $value !== ''
+            )));
+
+            $response['available_gateways'] = $normalizedGateways;
+            $response['allowed_gateways'] = $normalizedGateways;
+        }
+
+        return response()->json($response, $statusCode);
+    }
+
     private function buildOrderResponse(PaymentTransaction $transaction, Order $order, int $statusCode): JsonResponse
     {
         $transaction->loadMissing([
@@ -1039,6 +1249,16 @@ class PaymentController extends Controller
             ];
         }
 
+        if ($context === 'package') {
+            return [
+                'resource' => 'packages',
+                'route' => 'packages.show',
+                'show_url' => null,
+                'transaction_id' => (string) $transaction->getKey(),
+                'dismiss' => true,
+            ];
+        }
+
         return [
             'resource' => 'service_requests',
             'route' => 'service_requests.show',
@@ -1075,6 +1295,7 @@ class PaymentController extends Controller
         $allowed = match ($purpose) {
             'service' => ServicePaymentService::SUPPORTED_METHODS,
             'wifi_plan' => WifiPlanPaymentService::supportedMethods(),
+            'package' => PackagePaymentService::supportedMethods(),
             default => OrderPaymentService::supportedMethods(),
         };
 

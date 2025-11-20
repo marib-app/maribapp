@@ -1185,6 +1185,7 @@ class ManualPaymentService {
     String? purpose,
     String? currency,
     int? orderId,
+    int? packageId,
     String? paymentMethod,
     double? amount,
     int? serviceId,
@@ -1240,6 +1241,12 @@ class ManualPaymentService {
         serviceRequestId: serviceRequestId,
         wifiPlanId: wifiPlanId,
       );
+
+      if (packageId != null &&
+          packageId > 0 &&
+          purposeForBody.toLowerCase() == 'package') {
+        body['package_id'] = packageId;
+      }
 
       if (formattedAmount != null) {
         body['amount'] = formattedAmount;
@@ -1541,6 +1548,12 @@ class ManualPaymentService {
       wifiPlanId: wifiPlanId,
     );
 
+    if (packageId != null &&
+        packageId > 0 &&
+        purposeForBody.toLowerCase() == 'package') {
+      basePayload['package_id'] = packageId;
+    }
+
     final Map<String, dynamic>? metadataPayload =
         _mergeTransferReferenceMetadata(metadata, referenceValue);
 
@@ -1790,6 +1803,12 @@ class ManualPaymentService {
       serviceRequestId: serviceRequestId,
       wifiPlanId: wifiPlanId,
     );
+
+    if (packageId != null &&
+        packageId > 0 &&
+        purposeForBody.toLowerCase() == 'package') {
+      basePayload['package_id'] = packageId;
+    }
 
     final Map<String, dynamic> additionalData = <String, dynamic>{
       ...basePayload,

@@ -301,15 +301,23 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       }
 
       final currency = widget.args.normalizedCurrency;
-      final int? orderIdParam = (!isWalletTopUp && widget.args.packageId > 0)
-          ? widget.args.packageId
-          : null;
+      final bool isOrderPurpose = purposeParam == 'order';
+      final bool isPackagePurpose = purposeParam == 'package';
+      final int? orderIdParam =
+          (!isWalletTopUp && isOrderPurpose && widget.args.packageId > 0)
+              ? widget.args.packageId
+              : null;
+      final int? packageIdParam =
+          (isPackagePurpose && widget.args.packageId > 0)
+              ? widget.args.packageId
+              : null;
 
       final settings = await _service.fetchManualPaymentSettings(
         token: widget.args.token,
         purpose: purposeParam,
         currency: currency,
         orderId: orderIdParam,
+        packageId: packageIdParam,
         paymentMethod:
             ManualPaymentService.paymentMethodForApi(_manualBankMethod),
         amount: isWalletTopUp ? widget.args.amount : null,
@@ -784,10 +792,13 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     final selectedMethod = _resolveGatewayForIntent(walletPurpose);
 
     final bool isOrderPurpose = purposeParam == 'order';
+    final bool isPackagePurpose = purposeParam == 'package';
 
     final int? orderIdParam = (isOrderPurpose && widget.args.packageId > 0)
         ? widget.args.packageId
         : null;
+    final int? packageIdParam =
+        (isPackagePurpose && widget.args.packageId > 0) ? widget.args.packageId : null;
 
     try {
       final settings = await _service.fetchManualPaymentSettings(
@@ -795,6 +806,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         purpose: purposeParam,
         currency: currency,
         orderId: orderIdParam,
+        packageId: packageIdParam,
         paymentMethod: ManualPaymentService.paymentMethodForApi(selectedMethod),
         amount: isWalletTopUp ? widget.args.amount : null,
         serviceId: purposeParam == 'service'

@@ -3,16 +3,12 @@ import 'dart:io';
 import 'package:marib/data/cubits/subscription/fetch_ads_listing_subscription_packages_cubit.dart';
 import 'package:marib/data/cubits/system/get_api_keys_cubit.dart';
 import 'package:marib/settings.dart';
-import 'package:marib/ui/screens/subscription/widget/subscription_package_card.dart';
-import 'package:marib/ui/screens/subscription/widget/subscription_packages_bottom_bar.dart';
-import 'package:marib/ui/screens/subscription/widget/subscription_packages_shell.dart';
-import 'package:marib/ui/screens/subscription/widget/subscription_packages_tab_switcher.dart';
+import 'package:marib/ui/screens/subscription/widget/featured_ads_subscription_plan_item.dart';
+import 'package:marib/ui/screens/subscription/widget/item_listing_subscription_plans_item.dart';
 import 'package:marib/ui/screens/widgets/intertitial_ads_screen.dart';
 import 'package:marib/ui/theme/theme.dart';
-import 'package:marib/data/helper/widgets.dart';
-import 'package:marib/utils/helper_utils.dart';
 
-// âœ… ط­ظ„ طھط¹ط§ط±ط¶ HiveUtils ط¹ط¨ط± Alias
+// ✅ حل تعارض HiveUtils عبر Alias
 import 'package:marib/utils/hive_utils.dart' as OldHive;
 
 import 'package:marib/utils/payment/gatways/inAppPurchaseManager.dart';
@@ -59,7 +55,7 @@ class SubscriptionPackageListScreen extends StatefulWidget {
   final int? focusPackageId;
   final String? focusPackageType;
 
-  // âœ… طھظˆظ‚ظٹط¹ ظ…ط·ط§ط¨ظ‚ ظ„ط§ط³طھط¯ط¹ط§ط، ط§ظ„ط±ط§ظˆطھط± ظ„ط¯ظٹظƒ: route(routeSettings)
+  // ✅ توقيع مطابق لاستدعاء الراوتر لديك: route(routeSettings)
   static Route route(RouteSettings settings) {
     int? focusPackageId;
     String? focusPackageType;
@@ -78,7 +74,7 @@ class SubscriptionPackageListScreen extends StatefulWidget {
       return MultiBlocProvider(
         providers: [
           BlocProvider(create: (context) => AssignFreePackageCubit()),
-          // ط¨ط§ظ‚ظٹ ط§ظ„ظ€ cubits طھظˆظپظ‘ظژط± ط£ط¹ظ„ظ‰ ظپظٹ ط§ظ„ط´ط¬ط±ط© ط¹ط§ط¯ط© (GetApiKeys / Fetch*). ط¥ظ† ط£ط±ط¯طھطŒ ظٹظ…ظƒظ† ط­ظ‚ظ†ظ‡ط§ ظ‡ظ†ط§ ط£ظٹط¶ظ‹ط§.
+          // باقي الـ cubits توفَّر أعلى في الشجرة عادة (GetApiKeys / Fetch*). إن أردت، يمكن حقنها هنا أيضًا.
         ],
         child: SubscriptionPackageListScreen(
           focusPackageId: focusPackageId,
@@ -99,12 +95,17 @@ class _SubscriptionPackageListScreenState
   bool isInterstitialAdShown = false;
 
   // Controllers
-  static const double _cardWidth = 260;
-  static const double _cardSpacing = 16;
-
-  final ScrollController _listingScrollController = ScrollController();
-  final ScrollController _featuredScrollController = ScrollController();
+  final PageController adsPageController =
+      PageController(initialPage: 0, viewportFraction: 0.86);
+  final PageController featuredPageController =
+      PageController(initialPage: 0, viewportFraction: 0.86);
   late final TabController _tabController;
+
+  // Selection state per tab
+  final ValueNotifier<SubscriptionPackageModel?> _selectedListing =
+      ValueNotifier<SubscriptionPackageModel?>(null);
+  final ValueNotifier<SubscriptionPackageModel?> _selectedFeatured =
+      ValueNotifier<SubscriptionPackageModel?>(null);
 
   int _listingIndex = 0;
   int _featuredIndex = 0;
@@ -145,8 +146,8 @@ class _SubscriptionPackageListScreenState
     _tabController.removeListener(_handleTabSelection);
     _tabController.dispose();
 
-    _listingScrollController.dispose();
-    _featuredScrollController.dispose();
+    adsPageController.dispose();
+    featuredPageController.dispose();
     if (Platform.isIOS) {
       _inAppPurchaseManager.dispose();
     }
@@ -182,10 +183,11 @@ class _SubscriptionPackageListScreenState
       setState(() {
         _listingIndex = index;
       });
+      _selectedListing.value = packages[index];
       if (_tabController.index != 0) {
         _tabController.index = 0;
       }
-      _scrollToIndex(_listingScrollController, index);
+      _jumpToPage(adsPageController, index);
     });
 
     return true;
@@ -209,69 +211,162 @@ class _SubscriptionPackageListScreenState
       setState(() {
         _featuredIndex = index;
       });
+      _selectedFeatured.value = packages[index];
       if (_tabController.index != 1) {
         _tabController.index = 1;
       }
-      _scrollToIndex(_featuredScrollController, index);
+      _jumpToPage(featuredPageController, index);
     });
 
     return true;
   }
 
+  void _jumpToPage(PageController controller, int index) {
+    if (!mounted) return;
+    if (controller.hasClients) {
+      controller.jumpToPage(index);
+      return;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (controller.hasClients) {
+        controller.jumpToPage(index);
+      }
+    });
+  }
+
   void _handleTabSelection() {
     if (_tabController.indexIsChanging) {
       setState(() {
-        // ظٹظڈط¯ط§ط± ط§ظ„ظپظ‡ط±ط³ ط¹ظ†ط¯ onPageChanged ظ„ظƒظ„ طھط¨ظˆظٹط¨
+        // يُدار الفهرس عند onPageChanged لكل تبويب
       });
     }
+  }
+
+  void _onListingPageChanged(int i, List<SubscriptionPackageModel> list) {
+    setState(() {
+      _listingIndex = i;
+      _selectedListing.value = list[i];
+    });
+  }
+
+  void _onFeaturedPageChanged(int i, List<SubscriptionPackageModel> list) {
+    setState(() {
+      _featuredIndex = i;
+      _selectedFeatured.value = list[i];
+    });
   }
 
   void _showSnack(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
+  String _priceLabel(SubscriptionPackageModel? m) {
+    if (m == null) return "";
+    final p = m.price?.toString() ?? "";
+    return p; // 🔒 لا نعتمد على خصائص غير موجودة (title/durationText)
+  }
+
   @override
   Widget build(BuildContext context) {
-    final Color seedAccent = context.color.headingAccentColor;
-    final listingAccent = seedAccent.darken(8);
-    final featuredAccent = seedAccent.brighten(12);
-    final highlights = _buildHighlightItems(context);
-    final tabs = _buildTabs(context);
-
-    return MultiBlocListener(
-      listeners: [
-        BlocListener<GetApiKeysCubit, GetApiKeysState>(
-          listener: (context, state) {
-            if (state is GetApiKeysSuccess) {
-              AppSettings.updatePaymentGateways(
-                wallet: state.walletEnabled,
-                manualBanks: state.manualBanks,
-                eastYemenBank: state.eastYemenBank,
-              );
-            }
-          },
-        ),
-        BlocListener<AssignFreePackageCubit, AssignFreePackageState>(
-          listener: _handleAssignState,
-        ),
-      ],
-      child: SubscriptionPackageShell(
-        tabController: _tabController,
-        tabs: tabs,
-        tabViews: [
-          _buildListingTab(context, listingAccent),
-          _buildFeaturedTab(context, featuredAccent),
+    return Scaffold(
+      backgroundColor: context.color.backgroundColor,
+      appBar: UiUtils.buildAppBar(
+        context,
+        showBackButton: true,
+        title: "subsctiptionPlane".translate(context),
+        bottomHeight: 49,
+        bottom: [
+          Container(
+            decoration: BoxDecoration(
+              color: context.color.secondaryColor,
+              boxShadow: [
+                BoxShadow(
+                  color: context.color.borderColor.withOpacity(0.8),
+                  spreadRadius: 3,
+                  blurRadius: 2,
+                  offset: const Offset(0, 1),
+                ),
+              ],
+            ),
+            child: TabBar(
+              controller: _tabController,
+              tabs: [
+                Tab(text: "adsListing".translate(context)),
+                Tab(text: "featuredAdsLbl".translate(context)),
+              ],
+              indicatorColor: context.color.territoryColor,
+              indicatorWeight: 3,
+              labelColor: context.color.territoryColor,
+              unselectedLabelColor:
+                  context.color.textDefaultColor.withOpacity(0.5),
+              labelStyle: const TextStyle(fontSize: 16),
+              labelPadding: const EdgeInsets.symmetric(horizontal: 16),
+              indicatorSize: TabBarIndicatorSize.tab,
+            ),
+          ),
         ],
-        bottomBar: const SizedBox.shrink(),
-        title: 'subsctiptionPlane'.translate(context),
-        subtitle:
-            'ط§ط®طھط± ط§ظ„ط¨ط§ظ‚ط© ط§ظ„ظ…ط«ط§ظ„ظٹط© ظ„طھط¹ط²ظٹط² ط¸ظ‡ظˆط± ط¥ط¹ظ„ط§ظ†ط§طھظƒ',
-        highlights: highlights,
+      ),
+
+      // ====== CTA ثابت أسفل الشاشة لكل تبويب ======
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Container(
+          decoration: BoxDecoration(
+            color: context.color.secondaryColor,
+            border: Border(
+              top: BorderSide(color: context.color.borderColor),
+            ),
+          ),
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+          child: _CtaSwitcher(
+            tabController: _tabController,
+            selectedListing: _selectedListing,
+            selectedFeatured: _selectedFeatured,
+            listingIndex: _listingIndex,
+            featuredIndex: _featuredIndex,
+            labelBuilder: (sel, isFeatured) {
+              // 🔒 لا نستخدم title — نعرض تسمية عامة مع رقم الصفحة + السعر
+              final idx = isFeatured ? _featuredIndex : _listingIndex;
+              final price = _priceLabel(sel);
+              final base = isFeatured ? "باقة التمييز" : "باقة النشر";
+              return price.isNotEmpty
+                  ? "$base #${idx + 1} • $price"
+                  : "$base #${idx + 1}";
+            },
+            onPickGateway: (selected, type) {
+              _startManualBankTransfer(
+                selected,
+                isFeatured: type == _PackageType.featured,
+              );
+            },
+          ),
+        ),
+      ),
+
+      body: BlocListener<GetApiKeysCubit, GetApiKeysState>(
+        listener: (context, state) {
+          if (state is GetApiKeysSuccess) {
+            AppSettings.updatePaymentGateways(
+              wallet: state.walletEnabled,
+              manualBanks: state.manualBanks,
+              eastYemenBank: state.eastYemenBank,
+            );
+          }
+        },
+        child: TabBarView(
+          controller: _tabController,
+          children: [
+            adsListing(),
+            featuredAds(),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildListingTab(BuildContext context, Color accentColor) {
+  Builder adsListing() {
     return Builder(builder: (context) {
       if (!isInterstitialAdShown) {
         AdHelper.showInterstitialAd();
@@ -283,17 +378,11 @@ class _SubscriptionPackageListScreenState
         listener: (context, state) {
           if (state is FetchAdsListingSubscriptionPackagesSuccess) {
             final list = state.subscriptionPackages;
-            final focused = applyListingFocus(list);
-            if (!focused && list.isNotEmpty) {
+            if (_selectedListing.value == null && list.isNotEmpty) {
+              // ✅ تهيئة أولية خارج مرحلة البناء
               WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (!mounted) return;
                 final safeIndex = _listingIndex.clamp(0, list.length - 1);
-                if (safeIndex >= 0 && safeIndex < list.length) {
-                  setState(() {
-                    _listingIndex = safeIndex;
-                  });
-                  _scrollToIndex(_listingScrollController, safeIndex);
-                }
+                _selectedListing.value = list[safeIndex];
               });
             }
           }
@@ -304,7 +393,7 @@ class _SubscriptionPackageListScreenState
           }
 
           if (state is FetchAdsListingSubscriptionPackagesFailure) {
-            // âœ… ط¹ط±ط¶ NoInternet ط¹ظ†ط¯ ط§ظ„ط­ط§ط¬ط©طŒ ظˆط¥ظ„ط§ ط®ط·ط£ ط¹ط§ظ…
+            // ✅ عرض NoInternet عند الحاجة، وإلا خطأ عام
             if (state.errorMessage == "no-internet") {
               return NoInternet(
                 onRetry: () => context
@@ -326,11 +415,47 @@ class _SubscriptionPackageListScreenState
               );
             }
 
-            return _buildHorizontalPackagesSection(
-              context: context,
-              list: list,
-              accentColor: accentColor,
-              isFeatured: false,
+            // ❌ لا نعين _selectedListing.value هنا
+            return Stack(
+              children: [
+                PageView.builder(
+                  controller: adsPageController,
+                  itemCount: list.length,
+                  onPageChanged: (i) => _onListingPageChanged(i, list),
+                  itemBuilder: (context, index) {
+                    final model = list[index];
+                    final active = index == _listingIndex;
+
+                    return AnimatedPadding(
+                      duration: const Duration(milliseconds: 220),
+                      padding: EdgeInsets.symmetric(vertical: active ? 8 : 18),
+                      child: AnimatedScale(
+                        duration: const Duration(milliseconds: 220),
+                        scale: active ? 1.0 : 0.95,
+                        child: ItemListingSubscriptionPlansItem(
+                          itemIndex: _listingIndex,
+                          index: index,
+                          model: model,
+                          inAppPurchaseManager: _inAppPurchaseManager,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                Positioned(
+                  bottom: 12,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: _DotsIndicator(
+                      count: list.length,
+                      index: _listingIndex,
+                      activeColor: context.color.territoryColor,
+                      color: context.color.borderColor.withOpacity(0.6),
+                    ),
+                  ),
+                ),
+              ],
             );
           }
 
@@ -340,7 +465,7 @@ class _SubscriptionPackageListScreenState
     });
   }
 
-  Widget _buildFeaturedTab(BuildContext context, Color accentColor) {
+  Builder featuredAds() {
     return Builder(builder: (context) {
       if (!isInterstitialAdShown) {
         AdHelper.showInterstitialAd();
@@ -352,17 +477,11 @@ class _SubscriptionPackageListScreenState
         listener: (context, state) {
           if (state is FetchFeaturedSubscriptionPackagesSuccess) {
             final list = state.subscriptionPackages;
-            final focused = applyFeaturedFocus(list);
-            if (!focused && list.isNotEmpty) {
+            if (_selectedFeatured.value == null && list.isNotEmpty) {
+              // ✅ تهيئة أولية خارج مرحلة البناء
               WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (!mounted) return;
                 final safeIndex = _featuredIndex.clamp(0, list.length - 1);
-                if (safeIndex >= 0 && safeIndex < list.length) {
-                  setState(() {
-                    _featuredIndex = safeIndex;
-                  });
-                  _scrollToIndex(_featuredScrollController, safeIndex);
-                }
+                _selectedFeatured.value = list[safeIndex];
               });
             }
           }
@@ -373,7 +492,7 @@ class _SubscriptionPackageListScreenState
           }
 
           if (state is FetchFeaturedSubscriptionPackagesFailure) {
-            if (state.errorMessage == 'no-internet') {
+            if (state.errorMessage == "no-internet") {
               return NoInternet(
                 onRetry: () => context
                     .read<FetchFeaturedSubscriptionPackagesCubit>()
@@ -394,11 +513,45 @@ class _SubscriptionPackageListScreenState
               );
             }
 
-            return _buildHorizontalPackagesSection(
-              context: context,
-              list: list,
-              accentColor: accentColor,
-              isFeatured: true,
+            // ❌ لا نعين _selectedFeatured.value هنا
+            return Stack(
+              children: [
+                PageView.builder(
+                  controller: featuredPageController,
+                  itemCount: list.length,
+                  onPageChanged: (i) => _onFeaturedPageChanged(i, list),
+                  itemBuilder: (context, index) {
+                    final model = list[index];
+                    final active = index == _featuredIndex;
+
+                    return AnimatedPadding(
+                      duration: const Duration(milliseconds: 220),
+                      padding: EdgeInsets.symmetric(vertical: active ? 8 : 18),
+                      child: AnimatedScale(
+                        duration: const Duration(milliseconds: 220),
+                        scale: active ? 1.0 : 0.95,
+                        child: FeaturedAdsSubscriptionPlansItem(
+                          modelList: [model], // الودجت يتوقع قائمة
+                          inAppPurchaseManager: _inAppPurchaseManager,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                Positioned(
+                  bottom: 12,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: _DotsIndicator(
+                      count: list.length,
+                      index: _featuredIndex,
+                      activeColor: context.color.territoryColor,
+                      color: context.color.borderColor.withOpacity(0.6),
+                    ),
+                  ),
+                ),
+              ],
             );
           }
 
@@ -408,251 +561,18 @@ class _SubscriptionPackageListScreenState
     });
   }
 
-  Widget _buildHorizontalPackagesSection({
-    required BuildContext context,
-    required List<SubscriptionPackageModel> list,
-    required Color accentColor,
-    required bool isFeatured,
-  }) {
-    final ScrollController controller =
-        isFeatured ? _featuredScrollController : _listingScrollController;
-    final String categoryLabel = isFeatured
-        ? 'featuredAdsLbl'.translate(context)
-        : 'adsListing'.translate(context);
-    final IconData icon =
-        isFeatured ? Icons.workspace_premium_outlined : Icons.layers_rounded;
-
-    return SizedBox(
-      height: 240,
-      child: ListView.separated(
-        controller: controller,
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        itemCount: list.length,
-        separatorBuilder: (_, __) => const SizedBox(width: _cardSpacing),
-        itemBuilder: (context, index) {
-          final model = list[index];
-          final bool isActive =
-              isFeatured ? index == _featuredIndex : index == _listingIndex;
-          return SizedBox(
-            width: _cardWidth,
-            child: SubscriptionPackageCard(
-              model: model,
-              position: index + 1,
-              selected: isActive,
-              accentColor: accentColor,
-              icon: icon,
-              categoryLabel: categoryLabel,
-              onTap: () => _handlePackageTap(
-                list: list,
-                index: index,
-                isFeatured: isFeatured,
-                accentColor: accentColor,
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  void _handlePackageTap({
-    required List<SubscriptionPackageModel> list,
-    required int index,
-    required bool isFeatured,
-    required Color accentColor,
-  }) {
-    if (index < 0 || index >= list.length) {
-      return;
-    }
-    final model = list[index];
-    setState(() {
-      if (isFeatured) {
-        _featuredIndex = index;
-      } else {
-        _listingIndex = index;
-      }
-    });
-    _showPackageDetailsSheet(
-      model: model,
-      accentColor: accentColor,
-      tab: isFeatured
-          ? SubscriptionPackageTab.featured
-          : SubscriptionPackageTab.listing,
-    );
-  }
-
-  void _scrollToIndex(ScrollController controller, int index) {
-    final double targetOffset = index * (_cardWidth + _cardSpacing);
-    if (!controller.hasClients) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted || !controller.hasClients) return;
-        final double maxOffset = controller.position.maxScrollExtent;
-        controller.jumpTo(
-          targetOffset.clamp(0, maxOffset),
-        );
-      });
-      return;
-    }
-
-    final double maxOffset = controller.position.maxScrollExtent;
-    controller.animateTo(
-      targetOffset.clamp(0, maxOffset),
-      duration: const Duration(milliseconds: 320),
-      curve: Curves.easeOutCubic,
-    );
-  }
-
-  Future<void> _showPackageDetailsSheet({
-    required SubscriptionPackageModel model,
-    required SubscriptionPackageTab tab,
-    required Color accentColor,
-  }) async {
-    if (!mounted) return;
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: context.color.secondaryColor,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-      ),
-      builder: (sheetContext) {
-        return _PackageDetailsSheet(
-          model: model,
-          tab: tab,
-          accentColor: accentColor,
-          onPurchase: () {
-            Navigator.of(sheetContext).pop();
-            _onPurchase(model, tab);
-          },
-        );
-      },
-    );
-  }
-
-  Future<void> _onPurchase(
-    SubscriptionPackageModel? selected,
-    SubscriptionPackageTab tab,
-  ) async {
-    if (!OldHive.HiveUtils.isUserAuthenticated()) {
-      _showSnack('loginFirst'.translate(context));
-      return;
-    }
-
-    if (selected == null) {
-      _showSnack('ط§ط®طھط± ط¨ط§ظ‚ط© ط£ظˆظ„ط§ظ‹'.translate(context));
-      return;
-    }
-
-    final packageId = selected.id;
-    if (packageId == null) {
-      _showSnack('ط­ط¯ط« ط®ط·ط£ ط£ط«ظ†ط§ط، طھط­ط¯ظٹط¯ ط§ظ„ط¨ط§ظ‚ط©'
-          .translate(context));
-      return;
-    }
-
-    final amount = (selected.finalPrice ?? selected.price ?? 0).toDouble();
-    if (amount <= 0) {
-      context
-          .read<AssignFreePackageCubit>()
-          .assignFreePackage(packageId: packageId);
-      return;
-    }
-
-    await _startManualBankTransfer(
-      selected,
-      isFeatured: tab == SubscriptionPackageTab.featured,
-    );
-  }
-
-  void _refreshPackages() {
-    context.read<FetchAdsListingSubscriptionPackagesCubit>().fetchPackages();
-    context.read<FetchFeaturedSubscriptionPackagesCubit>().fetchPackages();
-  }
-
-  void _handleAssignState(
-    BuildContext context,
-    AssignFreePackageState state,
-  ) {
-    if (state is AssignFreePackageInProgress) {
-      Widgets.showLoader(context);
-      return;
-    }
-
-    Widgets.hideLoder(context);
-
-    if (state is AssignFreePackageInSuccess) {
-      HelperUtils.showSnackBarMessage(
-        context,
-        state.responseMessage,
-        type: MessageType.success,
-      );
-      _refreshPackages();
-    } else if (state is AssignFreePackageFailure) {
-      HelperUtils.showSnackBarMessage(
-        context,
-        state.error,
-        type: MessageType.error,
-      );
-    }
-  }
-
-  List<SubscriptionHighlightItem> _buildHighlightItems(BuildContext context) {
-    final colors = context.color;
-    final Color seedAccent = colors.headingAccentColor;
-    return [
-      SubscriptionHighlightItem(
-        icon: Icons.auto_graph_rounded,
-        label:
-            'ظ…طھط§ط¨ط¹ط© ظپظˆط±ظٹط© ظ„ط£ط¯ط§ط، ط¥ط¹ظ„ط§ظ†ط§طھظƒ ظˆط¥ط­طµط§ط¦ظٹط§طھ ط¯ظ‚ظٹظ‚ط©',
-        accentColor: seedAccent.darken(12),
-      ),
-      SubscriptionHighlightItem(
-        icon: Icons.security_rounded,
-        label:
-            'ط·ط±ظ‚ ط¯ظپط¹ ظ…ظˆط«ظˆظ‚ط© طھط´ظ…ظ„ ط§ظ„طھط­ظˆظٹظ„ ط§ظ„ط¨ظ†ظƒظٹ ظˆط§ظ„ظ…ط­ط§ظپط¸ ط§ظ„ظ…ط­ظ„ظٹط©',
-        accentColor: seedAccent.darken(4),
-      ),
-      SubscriptionHighlightItem(
-        icon: Icons.notifications_active_rounded,
-        label:
-            'طھظ†ط¨ظٹظ‡ط§طھ ظˆطھط¬ط¯ظٹط¯ ظ…ط¨ظƒط± ظ„ط¶ظ…ط§ظ† ط¹ط¯ظ… طھظˆظ‚ظپ ط¸ظ‡ظˆط± ط¥ط¹ظ„ط§ظ†ط§طھظƒ',
-        accentColor: seedAccent,
-      ),
-    ];
-  }
-
-  List<SubscriptionTabData> _buildTabs(BuildContext context) {
-    final colors = context.color;
-    final Color seedAccent = colors.headingAccentColor;
-    return [
-      SubscriptionTabData(
-        icon: Icons.layers_rounded,
-        label: 'adsListing'.translate(context),
-        accentColor: seedAccent.darken(6),
-      ),
-      SubscriptionTabData(
-        icon: Icons.workspace_premium_outlined,
-        label: 'featuredAdsLbl'.translate(context),
-        accentColor: seedAccent.brighten(8),
-      ),
-    ];
-  }
-
-  // ===== BottomSheet ظ„ط§ط®طھظٹط§ط± ط¨ظˆط§ط¨ط© ط§ظ„ط¯ظپط¹ =====
+  // ===== BottomSheet لاختيار بوابة الدفع =====
   Future<void> _startManualBankTransfer(
     SubscriptionPackageModel? selected, {
     required bool isFeatured,
   }) async {
     if (!OldHive.HiveUtils.isUserAuthenticated()) {
-      _showSnack('ظٹطھط·ظ„ط¨ طھط³ط¬ظٹظ„ ط§ظ„ط¯ط®ظˆظ„ ظ„ط¥طھظ…ط§ظ… ط§ظ„ط´ط±ط§ط،'
-          .translate(context));
+      _showSnack("يتطلب تسجيل الدخول لإتمام الشراء".translate(context));
       return;
     }
 
     if (selected == null) {
-      _showSnack('ط§ط®طھط± ط¨ط§ظ‚ط© ط£ظˆظ„ط§ظ‹'.translate(context));
+      _showSnack("اختر باقة أولاً".translate(context));
       return;
     }
 
@@ -663,15 +583,13 @@ class _SubscriptionPackageListScreenState
     }
     final packageId = selected.id;
     if (packageId == null) {
-      _showSnack("ط­ط¯ط« ط®ط·ط£ ط£ط«ظ†ط§ط، طھط­ط¯ظٹط¯ ط§ظ„ط¨ط§ظ‚ط©"
-          .translate(context));
+      _showSnack("حدث خطأ أثناء تحديد الباقة".translate(context));
       return;
     }
 
     final amount = (selected.finalPrice ?? selected.price ?? 0).toDouble();
     if (amount <= 0) {
-      _showSnack(
-          "ظ‡ط°ظ‡ ط§ظ„ط¨ط§ظ‚ط© ظ…ط¬ط§ظ†ظٹط© ط­ط§ظ„ظٹط§ظ‹".translate(context));
+      _showSnack("هذه الباقة مجانية حالياً".translate(context));
       return;
     }
 
@@ -718,256 +636,142 @@ class _SubscriptionPackageListScreenState
   }
 }
 
-class _PackageDetailsSheet extends StatelessWidget {
-  const _PackageDetailsSheet({
-    required this.model,
-    required this.tab,
-    required this.accentColor,
-    required this.onPurchase,
-  });
+// ======== Widgets مساعدة =========
 
-  final SubscriptionPackageModel model;
-  final SubscriptionPackageTab tab;
-  final Color accentColor;
-  final VoidCallback onPurchase;
+enum _PackageType { listing, featured }
+
+class _CtaSwitcher extends StatelessWidget {
+  final TabController? tabController;
+  final ValueNotifier<SubscriptionPackageModel?> selectedListing;
+  final ValueNotifier<SubscriptionPackageModel?> selectedFeatured;
+  final int listingIndex;
+  final int featuredIndex;
+
+  final String Function(SubscriptionPackageModel?, bool isFeatured)
+      labelBuilder;
+  final void Function(SubscriptionPackageModel?, _PackageType) onPickGateway;
+
+  const _CtaSwitcher({
+    required this.tabController,
+    required this.selectedListing,
+    required this.selectedFeatured,
+    required this.listingIndex,
+    required this.featuredIndex,
+    required this.labelBuilder,
+    required this.onPickGateway,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.color;
-    final double priceValue = (model.finalPrice ?? model.price ?? 0).toDouble();
-    final bool isFree = priceValue <= 0;
-    final String priceLabel = isFree
-        ? 'free'.translate(context)
-        : '${HelperUtils.formatPrice(priceValue)} ${model.currency ?? ''}'
-            .trim();
-    final String title = model.name?.trim().isNotEmpty == true
-        ? model.name!.trim()
-        : _tabLabel(context);
-    final String description = _description(context);
-    final List<Widget> chips = _buildMetaChips(context);
-    final String buttonLabel =
-        isFree ? 'free'.translate(context) : 'buyNow'.translate(context);
-
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 48,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: colors.borderColor.withOpacity(0.7),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            color: colors.textDefaultColor,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          _tabLabel(context),
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: colors.textLightColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        priceLabel,
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          color: accentColor,
-                        ),
-                      ),
-                      if (!isFree && (model.price ?? 0) > priceValue)
-                        Text(
-                          '${HelperUtils.formatPrice(model.price)} ${model.currency ?? ''}'
-                              .trim(),
-                          style: TextStyle(
-                            decoration: TextDecoration.lineThrough,
-                            color: colors.textLightColor,
-                          ),
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-              if (chips.isNotEmpty) ...[
-                const SizedBox(height: 18),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: chips,
-                ),
-              ],
-              if (description.isNotEmpty) ...[
-                const SizedBox(height: 18),
-                Text(
-                  description,
-                  style: TextStyle(
-                    color: colors.textDefaultColor.withOpacity(0.85),
-                    height: 1.45,
-                  ),
-                ),
-              ],
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: accentColor,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                  ),
-                  onPressed: onPurchase,
-                  child: Text(
-                    buttonLabel,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  List<Widget> _buildMetaChips(BuildContext context) {
-    final List<Widget> chips = [];
-    void addChip(IconData icon, String label) {
-      chips.add(
-        _DetailChip(
-          icon: icon,
-          label: label,
-          accentColor: accentColor,
+    final idx = tabController?.index ?? 0;
+    if (idx == 1) {
+      return ValueListenableBuilder<SubscriptionPackageModel?>(
+        valueListenable: selectedFeatured,
+        builder: (_, sel, __) => _BottomCtaBar(
+          label: labelBuilder(sel, true),
+          enabled: sel != null,
+          onPay: () => onPickGateway(sel, _PackageType.featured),
         ),
       );
     }
-
-    final String? duration = _durationLabel(context);
-    if (duration != null) {
-      addChip(Icons.schedule_rounded, duration);
-    }
-
-    final String? limit = _limitLabel(context);
-    if (limit != null) {
-      addChip(Icons.layers_outlined, limit);
-    }
-
-    return chips;
-  }
-
-  String? _durationLabel(BuildContext context) {
-    final raw = model.duration?.trim();
-    if (raw == null || raw.isEmpty || raw.toLowerCase() == 'null') {
-      return null;
-    }
-    return '$raw ${"days".translate(context)}';
-  }
-
-  String? _limitLabel(BuildContext context) {
-    final raw = model.limit?.trim();
-    if (raw == null || raw.isEmpty || raw.toLowerCase() == 'null') {
-      return null;
-    }
-    final bool unlimited = raw.toLowerCase() == 'unlimited';
-    final String base =
-        unlimited ? 'unlimitedLbl'.translate(context) : raw.trim();
-    return '$base - ${_tabLabel(context)}';
-  }
-
-  String _description(BuildContext context) {
-    final raw = model.description?.trim();
-    if (raw != null && raw.isNotEmpty && raw.toLowerCase() != 'null') {
-      return raw;
-    }
-    return 'صممنا هذه الباقة لتمنح إعلانك دفعة إضافية من الظهور.';
-  }
-
-  String _tabLabel(BuildContext context) {
-    switch (tab) {
-      case SubscriptionPackageTab.listing:
-        return 'adsListing'.translate(context);
-      case SubscriptionPackageTab.featured:
-        return 'featuredAdsLbl'.translate(context);
-    }
+    return ValueListenableBuilder<SubscriptionPackageModel?>(
+      valueListenable: selectedListing,
+      builder: (_, sel, __) => _BottomCtaBar(
+        label: labelBuilder(sel, false),
+        enabled: sel != null,
+        onPay: () => onPickGateway(sel, _PackageType.listing),
+      ),
+    );
   }
 }
 
-class _DetailChip extends StatelessWidget {
-  const _DetailChip({
-    required this.icon,
-    required this.label,
-    required this.accentColor,
-  });
-
-  final IconData icon;
+class _BottomCtaBar extends StatelessWidget {
   final String label;
-  final Color accentColor;
+  final bool enabled;
+  final VoidCallback onPay;
+
+  const _BottomCtaBar({
+    required this.label,
+    required this.enabled,
+    required this.onPay,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.color;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        color: colors.backgroundColor,
-        border: Border.all(color: colors.borderColor.withOpacity(0.5)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: 16,
-            color: accentColor,
-          ),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: TextStyle(
-              color: colors.textDefaultColor,
-              fontWeight: FontWeight.w600,
+    return Row(
+      children: [
+        Expanded(
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 180),
+            opacity: enabled ? 1 : 0.7,
+            child: Text(
+              label.isEmpty ? "اختر باقة أولاً".translate(context) : label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: context.color.textDefaultColor,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
-        ],
-      ),
+        ),
+        const SizedBox(width: 12),
+        SizedBox(
+          height: 44,
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: enabled
+                  ? context.color.territoryColor
+                  : context.color.borderColor,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+            ),
+            onPressed: enabled ? onPay : null,
+            child: Text(
+              "اختر طريقة الدفع".translate(context),
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DotsIndicator extends StatelessWidget {
+  final int count;
+  final int index;
+  final Color activeColor;
+  final Color color;
+
+  const _DotsIndicator({
+    required this.count,
+    required this.index,
+    required this.activeColor,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (count <= 1) return const SizedBox.shrink();
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(count, (i) {
+        final active = i == index;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          margin: const EdgeInsets.symmetric(horizontal: 3),
+          width: active ? 18 : 7,
+          height: 7,
+          decoration: BoxDecoration(
+            color: active ? activeColor : color,
+            borderRadius: BorderRadius.circular(8),
+          ),
+        );
+      }),
     );
   }
 }

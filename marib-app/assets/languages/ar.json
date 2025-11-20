@@ -105,5 +105,12 @@
   "merchant_coupons_placeholder": "هنا ستنشئ الكوبونات وتراقب أداء كل حملة ترويجية. الواجهة قادمة قريبًا.",
   "merchant_order_reports_placeholder": "لوحة تقارير الطلبات التفصيلية ستتوفر قريبًا لتتبع كل مرحلة دون تأخير.",
   "merchant_sales_reports_placeholder": "تحليلات المبيعات والإيرادات في طريقها إليك لتسهيل قراءة الأداء اليومي.",
-  "merchant_customer_reports_placeholder": "تقارير تحليل العملاء والولاء ستعرض هنا قريبًا لمنحك نظرة أوضح عن جمهورك."
+  "merchant_customer_reports_placeholder": "تقارير تحليل العملاء والولاء ستعرض هنا قريبًا لمنحك نظرة أوضح عن جمهورك.",
+  "merchant_payment_methods_heading": "��� ����� ��������",
+  "merchant_payment_methods_empty": "�� ���� ��� ��� ����� ��� ����.",
+  "merchant_payment_gateway_label": "�������",
+  "merchant_payment_beneficiary_label": "��� ������",
+  "merchant_payment_account_number_label": "��� ������",
+  "merchant_payment_method_status_active": "�����",
+  "merchant_payment_method_status_inactive": "������"
 }

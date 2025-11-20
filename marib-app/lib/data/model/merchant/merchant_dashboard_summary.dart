@@ -6,6 +6,7 @@ class MerchantDashboardSummary {
     required this.workingHours,
     required this.policies,
     required this.staff,
+    required this.gatewayAccounts,
   });
 
   factory MerchantDashboardSummary.fromJson(dynamic json) {
@@ -25,6 +26,9 @@ class MerchantDashboardSummary {
       staff: data['staff'] == null
           ? null
           : MerchantStaffInfo.fromJson(data['staff']),
+      gatewayAccounts: (data['gateway_accounts'] as List? ?? const [])
+          .map((dynamic item) => MerchantGatewayAccount.fromJson(item))
+          .toList(),
     );
   }
 
@@ -34,6 +38,7 @@ class MerchantDashboardSummary {
   final List<MerchantWorkingHour> workingHours;
   final List<MerchantPolicy> policies;
   final MerchantStaffInfo? staff;
+  final List<MerchantGatewayAccount> gatewayAccounts;
 }
 
 class MerchantStoreInfo {
@@ -275,4 +280,58 @@ class MerchantStaffInfo {
   final String email;
   final String status;
   final String role;
+}
+
+class MerchantGatewayAccount {
+  MerchantGatewayAccount({
+    required this.id,
+    required this.beneficiaryName,
+    required this.accountNumber,
+    required this.isActive,
+    required this.gateway,
+  });
+
+  factory MerchantGatewayAccount.fromJson(dynamic json) {
+    final Map<String, dynamic> data =
+        json is Map<String, dynamic> ? json : <String, dynamic>{};
+
+    return MerchantGatewayAccount(
+      id: data['id'] as int? ?? 0,
+      beneficiaryName: (data['beneficiary_name'] ?? '') as String,
+      accountNumber: (data['account_number'] ?? '') as String,
+      isActive: data['is_active'] as bool? ?? false,
+      gateway: data['store_gateway'] == null
+          ? null
+          : MerchantGatewayInfo.fromJson(data['store_gateway']),
+    );
+  }
+
+  final int id;
+  final String beneficiaryName;
+  final String accountNumber;
+  final bool isActive;
+  final MerchantGatewayInfo? gateway;
+}
+
+class MerchantGatewayInfo {
+  MerchantGatewayInfo({
+    required this.id,
+    required this.name,
+    required this.logoUrl,
+  });
+
+  factory MerchantGatewayInfo.fromJson(dynamic json) {
+    final Map<String, dynamic> data =
+        json is Map<String, dynamic> ? json : <String, dynamic>{};
+
+    return MerchantGatewayInfo(
+      id: data['id'] as int? ?? 0,
+      name: (data['name'] ?? '') as String,
+      logoUrl: data['logo_url'] as String?,
+    );
+  }
+
+  final int id;
+  final String name;
+  final String? logoUrl;
 }

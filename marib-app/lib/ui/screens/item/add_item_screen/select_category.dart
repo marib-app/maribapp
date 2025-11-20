@@ -80,6 +80,17 @@ class _SelectCategoryScreenState extends CloudState<SelectCategoryScreen> {
   // متحكم التمرير لمتابعة الوصول لنهاية القائمة
   late final ScrollController controller = ScrollController();
 
+  late final List<int> _merchantAllowedCategoryIds =
+      _loadMerchantAllowedCategoryIds();
+  late final bool _restrictMerchantCategories =
+      _shouldRestrictMerchantCategories();
+
+  bool get _applyMerchantRestriction =>
+      _restrictMerchantCategories && _merchantAllowedCategoryIds.isNotEmpty;
+
+  List<int> get _allowedMerchantCategoryIds =>
+      _applyMerchantRestriction ? _merchantAllowedCategoryIds : const <int>[];
+
 
 
 
@@ -101,8 +112,9 @@ class _SelectCategoryScreenState extends CloudState<SelectCategoryScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
 
-
-      _delegateRootId = HiveUtils.getDelegateRootCategoryId();
+      _delegateRootId = _restrictMerchantCategories
+          ? Constant.storeRootCategoryId
+          : HiveUtils.getDelegateRootCategoryId();
       if (_delegateRootId != null) {
         final root = _buildDelegateRootCategory(_delegateRootId!);
         setCloudData('delegateRootId', _delegateRootId!);
@@ -159,7 +171,8 @@ class _SelectCategoryScreenState extends CloudState<SelectCategoryScreen> {
   }
 
   List<int> _loadMerchantAllowedCategoryIds() {
-    final Map<String, dynamic>? store = HiveUtils.getMerchantStoreRaw();
+    Map<String, dynamic>? store = HiveUtils.getMerchantStoreRaw();
+    store ??= HiveUtils.getUserDetails().store;
     if (store == null) {
       return const <int>[];
     }
@@ -371,6 +384,15 @@ class _SelectNestedCategoryState extends CloudState<SelectNestedCategory> {
   // متحكم التمرير لمتابعة نهاية القائمة (Load More)
   late final ScrollController controller = ScrollController();
 
+  late final List<int> _merchantAllowedCategoryIds;
+  late final bool _restrictMerchantCategories;
+
+  bool get _applyMerchantRestriction =>
+      _restrictMerchantCategories && _merchantAllowedCategoryIds.isNotEmpty;
+
+  List<int> get _allowedMerchantCategoryIds =>
+      _applyMerchantRestriction ? _merchantAllowedCategoryIds : const <int>[];
+
   // نسخة محلية من الـ Breadcrumb لسرعة التحديث البصري (إن لزم)
   List<CategoryModel> breadCrumbData = [];
 
@@ -426,8 +448,8 @@ class _SelectNestedCategoryState extends CloudState<SelectNestedCategory> {
     cubit.fetchSubCategories(
       categoryId: categoryId,
       onlyAllowed: restrict,
-      allowedCategoryIds: restrict ? allowed : null,
-      ensureCategoryIds: restrict ? allowed : null,
+      allowedCategoryIds: restrict ? allowed : const <int>[],
+      ensureCategoryIds: restrict ? allowed : const <int>[],
     );
   }
 
@@ -720,6 +742,9 @@ List<int> _normalizeMerchantCategoryIdList(dynamic source) {
           if (entry['pivot'] is Map) {
             addValue(entry['pivot']['category_id']);
           }
+          if (entry.containsKey('children')) {
+            ingest(entry['children']);
+          }
         } else {
           addValue(entry);
         }
@@ -799,4 +824,5 @@ Map<String, dynamic>? _stringKeyedMap(dynamic raw) {
   }
   return null;
 }
+
 

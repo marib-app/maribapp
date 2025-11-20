@@ -24,7 +24,7 @@ class StoreDashboardController extends Controller
 
         /** @var Store|null $store */
         $store = $user->stores()
-            ->with(['settings', 'workingHours', 'policies', 'staff'])
+            ->with(['settings', 'workingHours', 'policies', 'staff', 'gatewayAccounts.storeGateway'])
             ->latest()
             ->first();
 
@@ -84,6 +84,20 @@ class StoreDashboardController extends Controller
                     'status' => $member->status,
                     'role' => $member->role,
                 ])->values()->first(),
+            'gateway_accounts' => $store->gatewayAccounts
+                ->map(fn ($account) => [
+                    'id' => $account->id,
+                    'beneficiary_name' => $account->beneficiary_name,
+                    'account_number' => $account->account_number,
+                    'is_active' => (bool) $account->is_active,
+                    'store_gateway' => $account->storeGateway
+                        ? [
+                            'id' => $account->storeGateway->id,
+                            'name' => $account->storeGateway->name,
+                            'logo_url' => $account->storeGateway->logo_url,
+                        ]
+                        : null,
+                ])->values(),
         ]);
     }
 

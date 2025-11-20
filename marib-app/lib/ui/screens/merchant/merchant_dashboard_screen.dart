@@ -959,7 +959,10 @@ class _MerchantSettingsTab extends StatelessWidget {
                 child: const Text('إدارة طرق الدفع'),
               ),
             ],
-            child: _PaymentOptionsSection(status: summary.status),
+            child: _PaymentOptionsSection(
+              status: summary.status,
+              accounts: summary.gatewayAccounts,
+            ),
           ),
           const SizedBox(height: 16),
           _SettingsCard(
@@ -1182,19 +1185,29 @@ class _WorkingHoursSection extends StatelessWidget {
 }
 
 class _PaymentOptionsSection extends StatelessWidget {
-  const _PaymentOptionsSection({required this.status});
+  const _PaymentOptionsSection({
+    required this.status,
+    required this.accounts,
+  });
 
   final MerchantStoreStatus status;
+  final List<MerchantGatewayAccount> accounts;
 
   @override
   Widget build(BuildContext context) {
     final chips = <Widget>[
-      _PaymentFlag(label: 'التوصيل', value: status.allowDelivery),
-      _PaymentFlag(label: 'الاستلام', value: status.allowPickup),
-      _PaymentFlag(label: 'حوالات يدوية', value: status.allowManualPayments),
+      _PaymentFlag(label: 'الاستلام من المتجر', value: status.allowPickup),
+      _PaymentFlag(
+        label: 'التحويل البنكي اليدوي',
+        value: status.allowManualPayments,
+      ),
       _PaymentFlag(label: 'المحفظة', value: status.allowWallet),
       _PaymentFlag(label: 'الدفع عند الاستلام', value: status.allowCod),
     ];
+
+    final String minOrderValue = status.minOrderAmount != null
+        ? NumberFormat.currency(symbol: 'ر.ي').format(status.minOrderAmount)
+        : 'غير متاح';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1203,11 +1216,35 @@ class _PaymentOptionsSection extends StatelessWidget {
         const SizedBox(height: 16),
         _KeyValueRow(
           label: 'الحد الأدنى للطلب',
-          value: status.minOrderAmount != null
-              ? NumberFormat.currency(symbol: 'ر.ي')
-                  .format(status.minOrderAmount)
-              : 'غير محدد',
+          value: minOrderValue,
         ),
+        const SizedBox(height: 18),
+        Text(
+          'merchant_payment_methods_heading'.translate(context),
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            color: context.color.textColorDark,
+          ),
+        ),
+        const SizedBox(height: 8),
+        if (accounts.isEmpty)
+          Text(
+            'merchant_payment_methods_empty'.translate(context),
+            style: TextStyle(
+              color: context.color.textColorDark.withValues(alpha: 0.7),
+            ),
+          )
+        else
+          Column(
+            children: accounts
+                .map(
+                  (account) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: _GatewayAccountTile(account: account),
+                  ),
+                )
+                .toList(),
+          ),
       ],
     );
   }
@@ -1290,6 +1327,110 @@ class _KeyValueRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _GatewayAccountTile extends StatelessWidget {
+  const _GatewayAccountTile({required this.account});
+
+  final MerchantGatewayAccount account;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.color;
+    final String gatewayName =
+        account.gateway?.name.isNotEmpty == true ? account.gateway!.name : '---';
+    final String accountName =
+        account.beneficiaryName.isNotEmpty ? account.beneficiaryName : '---';
+    final String accountNumber =
+        account.accountNumber.isNotEmpty ? account.accountNumber : '---';
+    final bool isActive = account.isActive;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: theme.textDefaultColor.withValues(alpha: 0.1),
+        ),
+        color: theme.secondaryColor.withValues(alpha: 0.025),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              _GatewayAvatar(logoUrl: account.gateway?.logoUrl),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  gatewayName,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: theme.textColorDark,
+                  ),
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: (isActive ? Colors.green : Colors.redAccent)
+                      .withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  (isActive
+                          ? 'merchant_payment_method_status_active'
+                          : 'merchant_payment_method_status_inactive')
+                      .translate(context),
+                  style: TextStyle(
+                    fontSize: context.font.small,
+                    fontWeight: FontWeight.w600,
+                    color: isActive ? Colors.green : Colors.redAccent,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _KeyValueRow(
+            label: 'merchant_payment_beneficiary_label'.translate(context),
+            value: accountName,
+          ),
+          const SizedBox(height: 8),
+          _KeyValueRow(
+            label: 'merchant_payment_account_number_label'.translate(context),
+            value: accountNumber,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GatewayAvatar extends StatelessWidget {
+  const _GatewayAvatar({this.logoUrl});
+
+  final String? logoUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color fallback =
+        context.color.secondaryColor.withValues(alpha: 0.2);
+    final bool hasLogo = logoUrl != null && logoUrl!.isNotEmpty;
+
+    return CircleAvatar(
+      radius: 24,
+      backgroundColor: fallback,
+      backgroundImage: hasLogo ? NetworkImage(logoUrl!) : null,
+      child: hasLogo
+          ? null
+          : Icon(
+              Icons.payments_outlined,
+              color: context.color.territoryColor,
+            ),
     );
   }
 }
@@ -2579,5 +2720,8 @@ String? _stringify(dynamic value) {
   final text = value.toString().trim();
   return text.isEmpty ? null : text;
 }
+
+
+
 
 

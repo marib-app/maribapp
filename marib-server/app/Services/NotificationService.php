@@ -156,6 +156,8 @@ class NotificationService {
 
             //TODO : Add this process to queue for better performance
 
+            [$reservedFields, $customBodyFields] = self::splitReservedBodyFields($customBodyFields);
+
             $notificationBody = is_string($message) ? trim($message) : $message;
             if (empty($notificationBody) && !empty($customBodyFields['message_preview'])) {
                 $notificationBody = $customBodyFields['message_preview'];
@@ -165,20 +167,23 @@ class NotificationService {
             }
 
             $sanitizedBodyFields = self::sanitizeDataPayload($customBodyFields);
+            if (!empty($reservedFields['data']) && is_array($reservedFields['data'])) {
+                $sanitizedBodyFields = array_merge(
+                    $sanitizedBodyFields,
+                    self::sanitizeDataPayload($reservedFields['data'])
+                );
+            }
 
             $navigationPayload = [
                 'deeplink' => $sanitizedBodyFields['deeplink'] ?? $customBodyFields['deeplink'] ?? null,
                 'click_action' => $sanitizedBodyFields['click_action'] ?? $customBodyFields['click_action'] ?? null,
             ];
 
-            $ttl = config('services.fcm.ttl', '3600s');
-            if (!is_string($ttl) || !preg_match('/^\d+s$/', $ttl)) {
-                \Log::warning('NotificationService: Invalid TTL configuration detected, falling back to default.', [
-                    'configured_ttl' => $ttl,
-                ]);
-                $ttl = '3600s';
+            $ttl = self::resolveTtlValue($reservedFields['ttl_seconds'] ?? $reservedFields['ttl'] ?? null);
+            $androidPriority = strtoupper((string) ($reservedFields['priority'] ?? 'HIGH'));
+            if (!in_array($androidPriority, ['HIGH', 'NORMAL'], true)) {
+                $androidPriority = 'HIGH';
             }
-
 
             $dataWithTitle = [
                 ...$sanitizedBodyFields,
@@ -252,12 +257,12 @@ class NotificationService {
 
 
                 $data = [
-                    "message" => [
-                        "token"        => $registrationID,
-                        "data"         => self::convertToStringRecursively($dataWithTitle),
-                        "notification" => $notificationPayload,
-                        "android"      => [
-                            "priority"       => "HIGH",
+                        "message" => [
+                            "token"        => $registrationID,
+                            "data"         => self::convertToStringRecursively($dataWithTitle),
+                            "notification" => $notificationPayload,
+                            "android"      => [
+                            "priority"       => $androidPriority,
                             "ttl"            => $ttl,
                             "direct_boot_ok" => true,
                             "notification"   => [
@@ -295,6 +300,11 @@ class NotificationService {
                         ],
                     ],
                 ];
+                if (!empty($reservedFields['collapse_key'])) {
+                    $data['message']['android']['collapse_key'] = $reservedFields['collapse_key'];
+                    $data['message']['apns']['headers']['apns-collapse-id'] = $reservedFields['collapse_key'];
+                }
+
                 if (!empty($navigationPayload['deeplink'])) {
                     $data['message']['apns']['payload']['deeplink'] = $navigationPayload['deeplink'];
                     $data['message']['webpush']['fcm_options']['link'] = $navigationPayload['deeplink'];
@@ -309,8 +319,13 @@ class NotificationService {
 
                 }
 
+                $label = $reservedFields['analytics_label'] ?? null;
+                if (!$label) {
+                    $label = $type === 'chat' ? 'chat_message' : 'general_notification';
+                }
+
                 $data['message']['fcm_options'] = [
-                    'analytics_label' => $type === 'chat' ? 'chat_message' : 'general_notification',
+                    'analytics_label' => $label,
                 ];
                 
 
@@ -673,6 +688,59 @@ class NotificationService {
     }
 
     
+    protected static function splitReservedBodyFields(array $payload): array
+    {
+        $reservedKeys = [
+            'ttl_seconds',
+            'ttl',
+            'priority',
+            'collapse_key',
+            'analytics_label',
+            'data',
+        ];
+
+        $reserved = [];
+        foreach ($reservedKeys as $key) {
+            if (array_key_exists($key, $payload)) {
+                $reserved[$key] = $payload[$key];
+                unset($payload[$key]);
+            }
+        }
+
+        return [$reserved, $payload];
+    }
+
+    protected static function resolveTtlValue(int|string|null $ttlSeconds): string
+    {
+        if (is_string($ttlSeconds)) {
+            $trimmed = trim($ttlSeconds);
+
+            if (preg_match('/^\d+s$/', $trimmed)) {
+                return $trimmed;
+            }
+
+            if (is_numeric($trimmed)) {
+                $ttlSeconds = (int) $trimmed;
+            } else {
+                $ttlSeconds = null;
+            }
+        }
+
+        $seconds = is_numeric($ttlSeconds) ? (int) $ttlSeconds : null;
+        if ($seconds === null || $seconds <= 0) {
+            $configured = config('services.fcm.ttl', '3600s');
+            if (is_string($configured) && preg_match('/^\d+s$/', $configured)) {
+                return $configured;
+            }
+
+            $seconds = (int) config('services.fcm.ttl_seconds', 3600);
+        }
+
+        $seconds = max(1, min($seconds, 2419200));
+
+        return sprintf('%ss', $seconds);
+    }
+
     protected static function sanitizeDataPayload(array $payload): array
     {
         $reservedKeys = [

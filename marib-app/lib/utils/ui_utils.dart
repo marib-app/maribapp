@@ -557,7 +557,7 @@ class UiUtils {
   static final Map<OverlayState, _SoftSnackBarHandle> _activeSoftSnackBars =
       <OverlayState, _SoftSnackBarHandle>{};
 
-  // دالة التحكم في عرض الوقت والتاريخ
+  // ط¯ط§ظ„ط© ط§ظ„طھط­ظƒظ… ظپظٹ ط¹ط±ط¶ ط§ظ„ظˆظ‚طھ ظˆط§ظ„طھط§ط±ظٹط®
 
   static String formatSmartTime(String? dateString) {
     if (dateString == null || dateString.isEmpty) return "";
@@ -569,11 +569,11 @@ class UiUtils {
       final difference = now.difference(date);
 
       if (difference.inDays >= 1) {
-        // أكثر من يوم = نعرض التاريخ الكامل
+        // ط£ظƒط«ط± ظ…ظ† ظٹظˆظ… = ظ†ط¹ط±ط¶ ط§ظ„طھط§ط±ظٹط® ط§ظ„ظƒط§ظ…ظ„
         return DateFormat('d  MMM   yyyy  -  h:mm a', 'ar').format(date);
       } else {
-        // أقل من يوم = نعرض "قبل دقائق" أو "الآن"
-        return timeago.format(date, locale: 'ar'); // ✅ هذا أهم شيء
+        // ط£ظ‚ظ„ ظ…ظ† ظٹظˆظ… = ظ†ط¹ط±ط¶ "ظ‚ط¨ظ„ ط¯ظ‚ط§ط¦ظ‚" ط£ظˆ "ط§ظ„ط¢ظ†"
+        return timeago.format(date, locale: 'ar'); // âœ… ظ‡ط°ط§ ط£ظ‡ظ… ط´ظٹط،
       }
     } catch (e) {
       return "";
@@ -606,7 +606,7 @@ class UiUtils {
           getTranslatedLabel(context, 'subscriptionLimitRemaining');
       final remainingText = (limit.remaining ?? 0).toString();
       final totalValue = limit.total;
-      final totalText = totalValue != null ? totalValue.toString() : '—';
+      final totalText = totalValue != null ? totalValue.toString() : 'â€”';
       summary = template
           .replaceAll('{remaining}', remainingText)
           .replaceAll('{total}', totalText);
@@ -629,7 +629,7 @@ class UiUtils {
       return summary;
     }
 
-    return '$summary · $expiry';
+    return '$summary آ· $expiry';
   }
 
   static String? subscriptionLimitExpiry(
@@ -672,7 +672,7 @@ class UiUtils {
     }
   }
 
-  // ✅ إرجاع أيقونة SVG من المسار المحدد
+  // âœ… ط¥ط±ط¬ط§ط¹ ط£ظٹظ‚ظˆظ†ط© SVG ظ…ظ† ط§ظ„ظ…ط³ط§ط± ط§ظ„ظ…ط­ط¯ط¯
   static SvgPicture getSvg(String path,
       {Color? color, BoxFit? fit, double? width, double? height}) {
     return SvgPicture.asset(
@@ -689,12 +689,12 @@ class UiUtils {
     if (await canLaunchUrl(Uri.parse(url))) {
       await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
     } else {
-      throw 'لا يمكن فتح الرابط: $url';
+      throw 'ظ„ط§ ظٹظ…ظƒظ† ظپطھط­ ط§ظ„ط±ط§ط¨ط·: $url';
     }
   }
 
   static void showLoadingDialog(BuildContext context,
-      {String title = "جاري التحميل..."}) {
+      {String title = "ط¬ط§ط±ظٹ ط§ظ„طھط­ظ…ظٹظ„..."}) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -831,18 +831,22 @@ class UiUtils {
     final String? normalizedSubtitle =
         subtitle != null && subtitle.trim().isNotEmpty ? subtitle.trim() : null;
 
-    final Color resolvedBackgroundColor =
-        backgroundColor ?? colorScheme.secondaryColor;
-    final Color resolvedBorderColor = borderColor ?? colorScheme.borderColor;
-    final Color resolvedForegroundColor =
-        foregroundColor ?? colorScheme.textAutoAdapt(resolvedBackgroundColor);
+    final Color resolvedBackgroundColor = backgroundColor ??
+        theme.appBarTheme.backgroundColor ??
+        colorScheme.surface;
+    final Color resolvedForegroundColor = foregroundColor ??
+        theme.appBarTheme.foregroundColor ??
+        colorScheme.onSurface;
+    final Color resolvedBorderColor =
+        borderColor ?? colorScheme.borderColor;
+
     final bool hasBottom = bottom != null && bottom.isNotEmpty;
     final bool hasLeading = leading != null || showBackButton;
 
     final EdgeInsetsGeometry resolvedPadding = contentPadding ??
         EdgeInsetsDirectional.only(
-          start: hasLeading ? 16 : 24,
-          end: actions?.isNotEmpty == true ? 16 : 24,
+          start: hasLeading ? 16 : 20,
+          end: actions?.isNotEmpty == true ? 12 : 20,
           top: 8,
           bottom: 8,
         );
@@ -855,7 +859,7 @@ class UiUtils {
     if (leading != null) {
       resolvedLeading = leading;
     } else if (showBackButton) {
-    final ui.TextDirection textDirection = Directionality.of(context);
+      final ui.TextDirection textDirection = Directionality.of(context);
       resolvedLeading = _AppBarBackButton(
         onPressed: onBackPress ?? () => Navigator.of(context).maybePop(),
         foregroundColor: resolvedForegroundColor,
@@ -870,27 +874,17 @@ class UiUtils {
 
     final TextStyle defaultTitleStyle = theme.textTheme.titleMedium?.copyWith(
           fontWeight: FontWeight.w700,
-          fontSize: actions?.isNotEmpty == true ? 17 : 21,
-          letterSpacing: 0.2,
           color: resolvedForegroundColor,
         ) ??
         TextStyle(
           fontWeight: FontWeight.w700,
-          fontSize: actions?.isNotEmpty == true ? 17 : 21,
-          letterSpacing: 0.2,
           color: resolvedForegroundColor,
         );
 
     final TextStyle subtitleTextStyle = theme.textTheme.bodySmall?.copyWith(
-          fontWeight: FontWeight.w400,
-          fontSize: 13,
-          letterSpacing: 0.15,
           color: resolvedForegroundColor.withOpacity(0.7),
         ) ??
         TextStyle(
-          fontWeight: FontWeight.w400,
-          fontSize: 13,
-          letterSpacing: 0.15,
           color: resolvedForegroundColor.withOpacity(0.7),
         );
 
@@ -921,6 +915,66 @@ class UiUtils {
       );
     }
 
+    final Color resolvedStatusBarColor =
+        statusBarColor ?? resolvedBackgroundColor;
+    final SystemUiOverlayStyle statusBarStyle = getSystemUiOverlayStyle(
+      context: context,
+      statusBarColor: resolvedStatusBarColor,
+    );
+
+    final double statusBarHeight = MediaQuery.of(context).padding.top;
+    final double additionsHeight = hasBottom
+        ? (resolvedBottomHeight ?? 48)
+        : 0;
+    final double totalHeight = toolbarHeight + additionsHeight + statusBarHeight;
+
+    Widget? bottomWidget;
+    if (hasBottom) {
+      bottomWidget = Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Divider(
+            height: 0,
+            thickness: borderStrokeWidth,
+            indent: 16,
+            endIndent: 16,
+            color: resolvedBorderColor.withOpacity(0.25),
+          ),
+          Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(16, 8, 16, 12),
+            child: _AppBarBottomSection(
+              children: bottom!,
+              height: resolvedBottomHeight,
+            ),
+          ),
+        ],
+      );
+    }
+
+    final Widget toolbar = IconTheme.merge(
+      data: IconThemeData(
+        color: resolvedForegroundColor,
+        size: 22,
+      ),
+      child: DefaultTextStyle(
+        style: defaultTitleStyle,
+        child: Padding(
+          padding: resolvedPadding,
+          child: NavigationToolbar(
+            leading: resolvedLeading,
+            middle: resolvedTitle,
+            trailing: trailingActions != null
+                ? Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: trailingActions,
+                  )
+                : null,
+            centerMiddle: centerTitle,
+          ),
+        ),
+      ),
+    );
+
     final BorderRadius borderRadiusShape = BorderRadius.only(
       topLeft:
           shouldHideTopBorder ? Radius.zero : Radius.circular(borderRadius),
@@ -930,178 +984,40 @@ class UiUtils {
       bottomRight: Radius.circular(borderRadius),
     );
 
-    final BorderSide defaultBorderSide = BorderSide(
-      color: resolvedBorderColor.withOpacity(0.85),
-      width: borderStrokeWidth,
-    );
-
-    final Border border = Border(
-      top: shouldHideTopBorder ? BorderSide.none : defaultBorderSide,
-      left: defaultBorderSide,
-      right: defaultBorderSide,
-      bottom: defaultBorderSide,
-    );
-
-    final bool isDarkMode = theme.brightness == Brightness.dark;
-    final Color accentColor = colorScheme.headingAccentColor;
-    final Color gradientEnd =
-        Color.lerp(resolvedBackgroundColor, accentColor, isDarkMode ? 0.18 : 0.28) ??
-            resolvedBackgroundColor;
-
-    final LinearGradient backgroundGradient = LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [
-        resolvedBackgroundColor.withOpacity(isDarkMode ? 0.88 : 0.96),
-        gradientEnd.withOpacity(isDarkMode ? 0.72 : 0.86),
-      ],
-    );
-
-    final Color resolvedStatusBarColor =
-        statusBarColor ?? backgroundGradient.colors.first;
-    final SystemUiOverlayStyle statusBarStyle = getSystemUiOverlayStyle(
-      context: context,
-      statusBarColor: resolvedStatusBarColor,
-    );
-
-    final Color shadowColor =
-        (isDarkMode ? Colors.black : Colors.black.withOpacity(0.35))
-            .withOpacity(isDarkMode ? 0.32 : 0.16);
-
-    final double topPadding = MediaQuery.of(context).padding.top;
-    final double totalHeight =
-        toolbarHeight + (resolvedBottomHeight ?? 0.0) + topPadding;
-
     return PreferredSize(
       preferredSize: Size.fromHeight(totalHeight),
-      child: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: statusBarStyle,
-        sized: true,
-        child: SizedBox(
-          height: totalHeight,
+      child: ClipRRect(
+        borderRadius: borderRadiusShape,
+        child: AnnotatedRegion<SystemUiOverlayStyle>(
+          value: statusBarStyle,
+          sized: true,
           child: Material(
-            color: Colors.transparent,
+            color: resolvedBackgroundColor,
+            elevation: 0,
             child: SafeArea(
               top: true,
               bottom: false,
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: borderRadiusShape,
-                  boxShadow: [
-                    BoxShadow(
-                      color: shadowColor,
-                      blurRadius: 26,
-                      offset: const Offset(0, 14),
-                      spreadRadius: -2,
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: borderRadiusShape,
-                  child: BackdropFilter(
-                    filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: backgroundGradient,
-                        border: border,
-                      ),
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          Positioned.fill(
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: [
-                                    Colors.white.withOpacity(
-                                      isDarkMode ? 0.02 : 0.14,
-                                    ),
-                                    Colors.transparent,
-                                  ],
-                                ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    decoration: shouldHideTopBorder
+                        ? null
+                        : BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(
+                                color: resolvedBorderColor.withOpacity(0.25),
+                                width: borderStrokeWidth,
                               ),
                             ),
                           ),
-                          Positioned(
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            child: Container(
-                              height: 2,
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.centerLeft,
-                                  end: Alignment.centerRight,
-                                  colors: [
-                                    accentColor.withOpacity(
-                                      isDarkMode ? 0.28 : 0.18,
-                                    ),
-                                    Colors.transparent,
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                          IconTheme.merge(
-                            data: IconThemeData(
-                              color: resolvedForegroundColor,
-                              size: 22,
-                            ),
-                            child: DefaultTextStyle(
-                              style: defaultTitleStyle,
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  SizedBox(
-                                    height: toolbarHeight,
-                                    child: Padding(
-                                      padding: resolvedPadding,
-                                      child: NavigationToolbar(
-                                        leading: resolvedLeading != null
-                                            ? Padding(
-                                          padding:
-                                          const EdgeInsetsDirectional
-                                              .only(end: 12),
-                                          child: resolvedLeading,
-                                        )
-                                            : null,
-                                        middle: resolvedTitle,
-                                        trailing: trailingActions != null
-                                            ? Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: trailingActions,
-                                        )
-                                            : null,
-                                        centerMiddle: centerTitle,
-                                      ),
-                                    ),
-                                  ),
-                                  if (hasBottom) ...[
-                                    Divider(
-                                      height: 0, // <-- هنا التغيير لمنع overflow 1px
-                                      thickness: 1,
-                                      indent: 20,
-                                      endIndent: 20,
-                                      color: resolvedBorderColor.withOpacity(
-                                        isDarkMode ? 0.28 : 0.15,
-                                      ),
-                                    ),
-                                    _AppBarBottomSection(
-                                      children: bottom!,
-                                      height: resolvedBottomHeight,
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                    child: SizedBox(
+                      height: toolbarHeight,
+                      child: toolbar,
                     ),
                   ),
-                ),
+                  if (bottomWidget != null) bottomWidget,
+                ],
               ),
             ),
           ),
@@ -1125,15 +1041,15 @@ class UiUtils {
     return spaced;
   }
 
-  /// ويدجت عام لتطبيق تأثير الضغط المائي (Ripple Effect) في جميع أنحاء التطبيق.
+  /// ظˆظٹط¯ط¬طھ ط¹ط§ظ… ظ„طھط·ط¨ظٹظ‚ طھط£ط«ظٹط± ط§ظ„ط¶ط؛ط· ط§ظ„ظ…ط§ط¦ظٹ (Ripple Effect) ظپظٹ ط¬ظ…ظٹط¹ ط£ظ†ط­ط§ط، ط§ظ„طھط·ط¨ظٹظ‚.
   ///
-  /// ✅ يستخدم `InkWell` داخل `Material` لتوفير تأثير الضغط.
-  /// ✅ مناسب للأزرار أو أي عنصر قابل للنقر.
+  /// âœ… ظٹط³طھط®ط¯ظ… `InkWell` ط¯ط§ط®ظ„ `Material` ظ„طھظˆظپظٹط± طھط£ط«ظٹط± ط§ظ„ط¶ط؛ط·.
+  /// âœ… ظ…ظ†ط§ط³ط¨ ظ„ظ„ط£ط²ط±ط§ط± ط£ظˆ ط£ظٹ ط¹ظ†طµط± ظ‚ط§ط¨ظ„ ظ„ظ„ظ†ظ‚ط±.
   ///
-  /// [child]: الودجت الداخلي.
-  /// [onTap]: الدالة التي يتم تنفيذها عند النقر.
-  /// [borderRadius]: لتحديد شكل الحواف (اختياري).
-  /// [splashColor]: لتغيير لون تأثير الضغط (اختياري).
+  /// [child]: ط§ظ„ظˆط¯ط¬طھ ط§ظ„ط¯ط§ط®ظ„ظٹ.
+  /// [onTap]: ط§ظ„ط¯ط§ظ„ط© ط§ظ„طھظٹ ظٹطھظ… طھظ†ظپظٹط°ظ‡ط§ ط¹ظ†ط¯ ط§ظ„ظ†ظ‚ط±.
+  /// [borderRadius]: ظ„طھط­ط¯ظٹط¯ ط´ظƒظ„ ط§ظ„ط­ظˆط§ظپ (ط§ط®طھظٹط§ط±ظٹ).
+  /// [splashColor]: ظ„طھط؛ظٹظٹط± ظ„ظˆظ† طھط£ط«ظٹط± ط§ظ„ط¶ط؛ط· (ط§ط®طھظٹط§ط±ظٹ).
 
   static Widget ripple({
     required Widget child,
@@ -1161,15 +1077,15 @@ class UiUtils {
     }
   }
 
-  // رسالة الزائر
-  // تعرض Bottom Sheet (نافذة منبثقة من أسفل الشاشة).
-  // تخبر المستخدم أن تسجيل الدخول ضروري للوصول لبعض الميزات
+  // ط±ط³ط§ظ„ط© ط§ظ„ط²ط§ط¦ط±
+  // طھط¹ط±ط¶ Bottom Sheet (ظ†ط§ظپط°ط© ظ…ظ†ط¨ط«ظ‚ط© ظ…ظ† ط£ط³ظپظ„ ط§ظ„ط´ط§ط´ط©).
+  // طھط®ط¨ط± ط§ظ„ظ…ط³طھط®ط¯ظ… ط£ظ† طھط³ط¬ظٹظ„ ط§ظ„ط¯ط®ظˆظ„ ط¶ط±ظˆط±ظٹ ظ„ظ„ظˆطµظˆظ„ ظ„ط¨ط¹ط¶ ط§ظ„ظ…ظٹط²ط§طھ
 
   static void _loginBox(BuildContext context) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent, // لعمل خلفية شفافة مع زوايا مدورة
+      backgroundColor: Colors.transparent, // ظ„ط¹ظ…ظ„ ط®ظ„ظپظٹط© ط´ظپط§ظپط© ظ…ط¹ ط²ظˆط§ظٹط§ ظ…ط¯ظˆط±ط©
       builder: (context) {
         final theme = Theme.of(context);
         final isDark = theme.brightness == Brightness.dark;
@@ -1671,7 +1587,7 @@ class UiUtils {
         const EdgeInsets.fromLTRB(20, 16, 20, 12),
     EdgeInsetsGeometry safeAreaMinimum = EdgeInsets.zero,
     VoidCallback? onClosePressed,
-    String closeTooltip = 'إغلاق',
+    String closeTooltip = 'ط¥ط؛ظ„ط§ظ‚',
     Widget? closeIcon,
     Color? closeButtonBackgroundColor,
     Color? closeIconColor,
@@ -1799,7 +1715,7 @@ class UiUtils {
     );
   }
 
-  // عرض نافذة حوار (Dialog) منبثقة للمستخدم في حال عدم وجود باقة متاحة (مثل اشتراك أو خطة).
+  // ط¹ط±ط¶ ظ†ط§ظپط°ط© ط­ظˆط§ط± (Dialog) ظ…ظ†ط¨ط«ظ‚ط© ظ„ظ„ظ…ط³طھط®ط¯ظ… ظپظٹ ط­ط§ظ„ ط¹ط¯ظ… ظˆط¬ظˆط¯ ط¨ط§ظ‚ط© ظ…طھط§ط­ط© (ظ…ط«ظ„ ط§ط´طھط±ط§ظƒ ط£ظˆ ط®ط·ط©).
 
   static void noPackageAvailableDialog(
     BuildContext context, {
@@ -1884,7 +1800,7 @@ class UiUtils {
       context,
       AppPageRoute.build(
         builder: (context) => GalleryView(
-          images: images.cast<String>(), // ✅ تحويل القائمة لنوع String
+          images: images.cast<String>(), // âœ… طھط­ظˆظٹظ„ ط§ظ„ظ‚ط§ط¦ظ…ط© ظ„ظ†ظˆط¹ String
           initialIndex: initalIndex,
         ),
         motionPattern: AppMotionPattern.glide,
@@ -1892,7 +1808,7 @@ class UiUtils {
     );
   }
 
-// وظيفتها عرض نافذة حوار (Dialog) مع تأثير ضبابي (Blur) خلفها،
+// ظˆط¸ظٹظپطھظ‡ط§ ط¹ط±ط¶ ظ†ط§ظپط°ط© ط­ظˆط§ط± (Dialog) ظ…ط¹ طھط£ط«ظٹط± ط¶ط¨ط§ط¨ظٹ (Blur) ط®ظ„ظپظ‡ط§طŒ
 
   static Future showBlurredDialoge(
     BuildContext context, {
@@ -2103,44 +2019,44 @@ extension FormatAmount on String {
   }
 }
 
-// دالة اخرى للتحكم في الوقت والتاريخ
+// ط¯ط§ظ„ط© ط§ط®ط±ظ‰ ظ„ظ„طھط­ظƒظ… ظپظٹ ط§ظ„ظˆظ‚طھ ظˆط§ظ„طھط§ط±ظٹط®
 
-// دالة موحّدة: إن مرّرت format تستخدمه، وإلا ترجع صيغة عربية ذكية "قبل X ..."
+// ط¯ط§ظ„ط© ظ…ظˆط­ظ‘ط¯ط©: ط¥ظ† ظ…ط±ظ‘ط±طھ format طھط³طھط®ط¯ظ…ظ‡طŒ ظˆط¥ظ„ط§ طھط±ط¬ط¹ طµظٹط؛ط© ط¹ط±ط¨ظٹط© ط°ظƒظٹط© "ظ‚ط¨ظ„ X ..."
 extension FormatDate on String {
   String formatDate({String? format, String locale = 'ar'}) {
     try {
       final date = DateTime.parse(this);
-      // لو حدّدت فورمات صريح، نستخدمه (توافق مع الاستدعاءات القديمة)
+      // ظ„ظˆ ط­ط¯ظ‘ط¯طھ ظپظˆط±ظ…ط§طھ طµط±ظٹط­طŒ ظ†ط³طھط®ط¯ظ…ظ‡ (طھظˆط§ظپظ‚ ظ…ط¹ ط§ظ„ط§ط³طھط¯ط¹ط§ط،ط§طھ ط§ظ„ظ‚ط¯ظٹظ…ط©)
       if (format != null && format.isNotEmpty) {
         return DateFormat(format, locale).format(date);
       }
 
-      // سلوك عربي ذكي عند عدم تحديد format
+      // ط³ظ„ظˆظƒ ط¹ط±ط¨ظٹ ط°ظƒظٹ ط¹ظ†ط¯ ط¹ط¯ظ… طھط­ط¯ظٹط¯ format
       final now = DateTime.now();
       final difference = now.difference(date);
 
       if (difference.inDays < 0) {
-        // التاريخ في المستقبل
+        // ط§ظ„طھط§ط±ظٹط® ظپظٹ ط§ظ„ظ…ط³طھظ‚ط¨ظ„
         return _formatFullDate(date, locale);
       }
 
       if (difference.inDays == 0) {
         if (difference.inMinutes < 1) {
-          return "الآن";
+          return "ط§ظ„ط¢ظ†";
         } else if (difference.inHours < 1) {
-          return "قبل ${_convertToArabicNumbers(difference.inMinutes)} دقيقة";
+          return "ظ‚ط¨ظ„ ${_convertToArabicNumbers(difference.inMinutes)} ط¯ظ‚ظٹظ‚ط©";
         } else {
-          return "قبل ${_convertToArabicNumbers(difference.inHours)} ساعة";
+          return "ظ‚ط¨ظ„ ${_convertToArabicNumbers(difference.inHours)} ط³ط§ط¹ط©";
         }
       }
 
-      if (difference.inDays == 1) return "قبل يوم";
-      if (difference.inDays == 2) return "قبل يومين";
+      if (difference.inDays == 1) return "ظ‚ط¨ظ„ ظٹظˆظ…";
+      if (difference.inDays == 2) return "ظ‚ط¨ظ„ ظٹظˆظ…ظٹظ†";
       if (difference.inDays <= 30) {
-        return "قبل ${_convertToArabicNumbers(difference.inDays)} يوم";
+        return "ظ‚ط¨ظ„ ${_convertToArabicNumbers(difference.inDays)} ظٹظˆظ…";
       }
 
-      // أكثر من 30 يوم → صيغة كاملة
+      // ط£ظƒط«ط± ظ…ظ† 30 ظٹظˆظ… â†’ طµظٹط؛ط© ظƒط§ظ…ظ„ط©
       return _formatFullDate(date, locale);
     } catch (_) {
       return "";
@@ -2148,11 +2064,11 @@ extension FormatDate on String {
   }
 
   String _formatFullDate(DateTime date, String locale) {
-    return DateFormat("d  MMMM،  y", locale).format(date);
+    return DateFormat("d  MMMMطŒ  y", locale).format(date);
   }
 
   String _convertToArabicNumbers(int number) {
-    final arabicNumbers = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+    final arabicNumbers = ['ظ ', 'ظ،', 'ظ¢', 'ظ£', 'ظ¤', 'ظ¥', 'ظ¦', 'ظ§', 'ظ¨', 'ظ©'];
     return number
         .toString()
         .split('')
@@ -2459,7 +2375,7 @@ class _SoftSnackBarHandle {
   final GlobalKey<_SoftSnackBarWidgetState> key;
 }
 
-// لو BlurDialoge معرفة عندك في ملف ثاني، تأكد من import لها
+// ظ„ظˆ BlurDialoge ظ…ط¹ط±ظپط© ط¹ظ†ط¯ظƒ ظپظٹ ظ…ظ„ظپ ط«ط§ظ†ظٹطŒ طھط£ظƒط¯ ظ…ظ† import ظ„ظ‡ط§
 // import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart';
 
 class BlurredRichDialog extends StatelessWidget implements BlurDialoge {
@@ -2563,7 +2479,7 @@ class BlurredRichDialog extends StatelessWidget implements BlurDialoge {
                                     decoration: TextDecoration.underline,
                                     height: 1.5),
                                 onOpenLink: (url) async {
-                                  // افتح الرابط بالطريقة المناسبة لمشروعك
+                                  // ط§ظپطھط­ ط§ظ„ط±ط§ط¨ط· ط¨ط§ظ„ط·ط±ظٹظ‚ط© ط§ظ„ظ…ظ†ط§ط³ط¨ط© ظ„ظ…ط´ط±ظˆط¹ظƒ
                                 },
                               ),
                             ),
@@ -2634,7 +2550,7 @@ class BlurredRichDialog extends StatelessWidget implements BlurDialoge {
   }
 }
 
-// زر أكشن
+// ط²ط± ط£ظƒط´ظ†
 class BlurredAction {
   final String label;
   final VoidCallback onPressed;
@@ -2736,6 +2652,7 @@ class _AppBarBottomSection extends StatelessWidget {
     );
   }
 }
+
 
 
 

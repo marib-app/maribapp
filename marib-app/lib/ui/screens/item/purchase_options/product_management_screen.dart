@@ -61,6 +61,7 @@ class ProductManagementScreen extends StatefulWidget {
                       draft: args.pendingDraft!,
                     )
                 : null,
+            pendingProductOptions: args.pendingDraft?.productOptions,
           )..initialize(),
           child: content,
         );
@@ -267,8 +268,15 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
     if (!outcome.success) {
       return;
     }
-    final PendingItemDraft? reviewDraft =
-        _pendingDraft?.copyWith(item: cubit.state.item);
+
+    PendingItemDraft? reviewDraft = _pendingDraft;
+    if (reviewDraft != null) {
+      final pendingOptions = cubit.pendingProductOptions;
+      reviewDraft = reviewDraft.copyWith(
+        item: cubit.state.item,
+        productOptions: pendingOptions ?? reviewDraft.productOptions,
+      );
+    }
     Navigator.pushNamed(
       context,
       Routes.productReviewScreen,

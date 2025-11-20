@@ -1,4 +1,4 @@
-﻿import 'dart:collection';
+import 'dart:collection';
 import 'dart:math' as math;
 import 'package:marib/data/model/custom_field/custom_field_model.dart';
 
@@ -7,6 +7,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:marib/data/model/item/item_model.dart';
+import 'package:marib/data/model/item/pending_product_options.dart';
 import 'package:marib/data/model/item/purchase_options.dart';
 import 'package:marib/data/repositories/item/item_purchase_options_repository.dart';
 import 'package:marib/utils/api.dart' show ApiHttpException;
@@ -143,7 +144,7 @@ ManagedAttributeType _resolveManagedAttributeType(
   }
 
   final String normalizedName = attribute.name.toLowerCase();
-  if (normalizedName.contains('مقاس') || normalizedName.contains('size')) {
+  if (normalizedName.contains('????') || normalizedName.contains('size')) {
     return ManagedAttributeType.size;
   }
 
@@ -153,11 +154,11 @@ ManagedAttributeType _resolveManagedAttributeType(
 String _defaultAttributeName(ManagedAttributeType type) {
   switch (type) {
     case ManagedAttributeType.color:
-      return 'اللون';
+      return '?????';
     case ManagedAttributeType.size:
-      return 'المقاس';
+      return '??????';
     case ManagedAttributeType.custom:
-      return 'سمة المنتج';
+      return '??? ??????';
   }
 }
 
@@ -807,26 +808,36 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     this._repository,
     ItemModel item, {
     Future<ItemModel> Function()? createItem,
+    PendingProductOptions? pendingProductOptions,
   })  : _createItem = createItem,
+        _pendingProductOptions = pendingProductOptions,
         item = item,
         super(ProductManagementState.initial(item));
 
   final ItemPurchaseOptionsRepository _repository;
   final Future<ItemModel> Function()? _createItem;
+  PendingProductOptions? _pendingProductOptions;
   ItemModel item;
   int _attributeSeed = 0;
 
-  static const String genericSuccessMessage = 'تم حفظ التعديلات بنجاح.';
-  static const String genericFailureMessage = 'تعذر حفظ التعديلات، حاول مرة أخرى.';
+  PendingProductOptions? get pendingProductOptions => _pendingProductOptions;
+
+  static const String genericSuccessMessage = '?? ??? ????????? ?????.';
+  static const String genericFailureMessage = '???? ??? ????????? ???? ??? ????.';
 
   Future<void> initialize() async {
     final int? itemId = item.id;
     if (itemId == null) {
-      emit(state.copyWith(
-        loading: false,
-        clearError: true,
-        options: ItemPurchaseOptions.empty(itemId: itemId ?? 0),
-      ));
+      if (_pendingProductOptions != null &&
+          _pendingProductOptions!.hasPendingData) {
+        _applyPendingProductOptionsLocally();
+      } else {
+        emit(state.copyWith(
+          loading: false,
+          clearError: true,
+          options: ItemPurchaseOptions.empty(itemId: 0),
+        ));
+      }
       return;
     }
 
@@ -1147,7 +1158,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     }
 
     final String resolved =
-        (value ?? 'خيار ${attribute.options.length + 1}').trim();
+        (value ?? '???? ${attribute.options.length + 1}').trim();
     final List<String> options = <String>[...attribute.options, resolved];
     _updateAttributeOptions(key, options);
   }
@@ -1254,18 +1265,18 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
 
     final String asciiDigits = value
         .replaceAllMapped(
-      RegExp('[٠-٩۰-۹]'),
+      RegExp('[0-9?-?]'),
           (Match match) {
         final int codeUnit = match.group(0)!.codeUnitAt(0);
         final int base = codeUnit >= 0x06F0 ? 0x06F0 : 0x0660;
         return (codeUnit - base).toString();
       },
     )
-        .replaceAll('٫', '.');
+        .replaceAll('?', '.');
 
     final String sanitized = asciiDigits
         .replaceAll(',', '.')
-        .replaceAll('،', '.');
+        .replaceAll('?', '.');
 
     final String trimmed = sanitized.trim();
 
@@ -1274,7 +1285,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
         deliverySize: null,
         deliverySizeInput: '',
         clearDeliverySize: true,
-        deliverySizeError: 'يرجى إدخال وزن المنتج بالكيلوجرام.',
+        deliverySizeError: '???? ????? ??? ?????? ???????????.',
         clearDeliverySizeError: false,
         error: null,
       ));
@@ -1286,7 +1297,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       emit(state.copyWith(
         deliverySizeInput: trimmed,
         deliverySizeError:
-            'يمكن إدخال الأرقام والفاصل العشري فقط (على سبيل المثال 2.5).',
+            '???? ????? ??????? ??????? ?????? ??? (??? ???? ?????? 2.5).',
         clearDeliverySizeError: false,
         error: null,
       ));
@@ -1297,7 +1308,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     if (decimalIndex != -1 && trimmed.length - decimalIndex - 1 > 3) {
       emit(state.copyWith(
         deliverySizeInput: trimmed,
-        deliverySizeError: 'يمكن استخدام حتى ثلاثة منازل عشرية فقط.',
+        deliverySizeError: '???? ??????? ??? ????? ????? ????? ???.',
         clearDeliverySizeError: false,
         error: null,
       ));
@@ -1307,7 +1318,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     if (trimmed.endsWith('.')) {
       emit(state.copyWith(
         deliverySizeInput: trimmed,
-        deliverySizeError: 'يرجى إكمال الجزء العشري بعد الفاصل.',
+        deliverySizeError: '???? ????? ????? ?????? ??? ??????.',
         clearDeliverySizeError: false,
         error: null,
       ));
@@ -1317,7 +1328,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     if (parsed <= 0) {
       emit(state.copyWith(
         deliverySizeInput: trimmed,
-        deliverySizeError: 'الوزن يجب أن يكون أكبر من صفر.',
+        deliverySizeError: '????? ??? ?? ???? ???? ?? ???.',
         clearDeliverySizeError: false,
         error: null,
       ));
@@ -1593,7 +1604,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
               entries.isEmpty) {
             return _AttributesPayloadResult.failure(SubmissionOutcome(
               success: false,
-              message: 'لا يمكن النشر قبل مراجعة جميع البيانات.',
+              message: '?? ???? ????? ??? ?????? ???? ????????.',
             ));
           }
 
@@ -1618,7 +1629,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
               options.isEmpty) {
             return _AttributesPayloadResult.failure(SubmissionOutcome(
               success: false,
-              message: 'لا يمكن النشر قبل مراجعة جميع البيانات.',
+              message: '?? ???? ????? ??? ?????? ???? ????????.',
             ));
           }
 
@@ -1667,7 +1678,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
         stackTrace,
         name: "ProductManagementCubit",
       );
-      final String fallbackMessage = 'تعذر حفظ السمات، حاول مرة أخرى.';
+      final String fallbackMessage = '???? ??? ?????? ???? ??? ????.';
       final String message =
           _extractFailureMessage(error, fallback: fallbackMessage);
       return _failureOutcome(message, fallback: fallbackMessage);
@@ -1678,7 +1689,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     if (state.hasStockVariants && state.variantForms.isEmpty) {
       return const _StockRowsResult.failure(SubmissionOutcome(
         success: false,
-        message: 'لا يمكن النشر قبل مراجعة جميع البيانات.',
+        message: '?? ???? ????? ??? ?????? ???? ????????.',
       ));
     }
 
@@ -1723,7 +1734,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
         stackTrace,
         name: "ProductManagementCubit",
       );
-      final String fallbackMessage = 'تعذر حفظ المخزون، حاول لاحقاً.';
+      final String fallbackMessage = '???? ??? ??????? ???? ??????.';
       final String message =
           _extractFailureMessage(error, fallback: fallbackMessage);
       return _failureOutcome(message, fallback: fallbackMessage);
@@ -1739,14 +1750,14 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       if (state.discountValue == null) {
         return const _DiscountPayloadResult.failure(SubmissionOutcome(
           success: false,
-          message: 'لا يمكن النشر قبل مراجعة جميع البيانات.',
+          message: '?? ???? ????? ??? ?????? ???? ????????.',
         ));
       }
 
       if (state.discountStart == null || state.discountEnd == null) {
         return const _DiscountPayloadResult.failure(SubmissionOutcome(
           success: false,
-          message: 'لا يمكن النشر قبل مراجعة جميع البيانات.',
+          message: '?? ???? ????? ??? ?????? ???? ????????.',
         ));
       }
 
@@ -1784,11 +1795,99 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
         stackTrace,
         name: "ProductManagementCubit",
       );
-      final String fallbackMessage = 'تعذر حفظ بيانات الخصم، حاول لاحقاً.';
+      final String fallbackMessage = '???? ??? ?????? ????? ???? ??????.';
       final String message =
           _extractFailureMessage(error, fallback: fallbackMessage);
       return _failureOutcome(message, fallback: fallbackMessage);
     }
+  }
+
+
+  SubmissionOutcome _storePendingProductOptions(
+    _AttributesPayloadResult attributesResult,
+    _StockRowsResult stockResult,
+    _DiscountPayloadResult discountResult,
+  ) {
+    _pendingProductOptions = PendingProductOptions(
+      attributes: attributesResult.payload,
+      stockRows: stockResult.rows,
+      discountPayload: discountResult.payload,
+      deliverySize: attributesResult.deliverySize,
+    );
+    _applyPendingProductOptionsLocally();
+    return _successOutcome(
+      'Options saved for review. They will be applied after publishing.',
+    );
+  }
+
+  void _applyPendingProductOptionsLocally() {
+    final PendingProductOptions? pending = _pendingProductOptions;
+    if (pending == null) {
+      return;
+    }
+    final ItemPurchaseOptions derived = _buildOptionsFromPending(pending);
+    _applyOptions(derived, finalPrice: derived.finalPrice);
+  }
+
+  ItemPurchaseOptions _buildOptionsFromPending(
+      PendingProductOptions pending) {
+    final List<Map<String, dynamic>> attributePayload =
+        pending.attributes
+            .map((Map<String, dynamic> entry) =>
+                Map<String, dynamic>.from(entry))
+            .toList(growable: false);
+
+    final List<Map<String, dynamic>> stockPayload =
+        pending.stockRows.map((Map<String, dynamic> entry) {
+      final Map<String, dynamic> normalized =
+          Map<String, dynamic>.from(entry);
+      final int stock = _normalizeStockValue(normalized['stock']);
+      final int reserved =
+          _normalizeStockValue(normalized['reserved_stock']);
+      final int available = normalized.containsKey('available_stock')
+          ? _normalizeStockValue(normalized['available_stock'])
+          : stock;
+      return <String, dynamic>{
+        'variant_key': (normalized['variant_key'] ?? '').toString(),
+        'stock': stock,
+        'reserved_stock': reserved,
+        'available_stock': available,
+      };
+    }).toList(growable: false);
+
+    final Map<String, dynamic> data = <String, dynamic>{
+      'item_id': item.id ?? 0,
+      'base_price': state.basePrice,
+      'final_price': state.previewFinalPrice,
+      'attributes': attributePayload,
+      'variant_stocks': stockPayload,
+    };
+
+    if (pending.deliverySize != null) {
+      data['delivery_size'] = pending.deliverySize;
+    }
+
+    if (pending.discountPayload.isNotEmpty) {
+      data['discount'] = Map<String, dynamic>.from(
+        pending.discountPayload,
+      );
+    }
+
+    return ItemPurchaseOptions.fromJson(data);
+  }
+
+  int _normalizeStockValue(dynamic value) {
+    if (value is int) {
+      return value;
+    }
+    if (value is num) {
+      return value.toInt();
+    }
+    if (value is String) {
+      final String trimmed = value.trim();
+      return trimmed.isEmpty ? 0 : (int.tryParse(trimmed) ?? 0);
+    }
+    return 0;
   }
 
   _VariantFormsSnapshot _captureVariantSnapshot() {
@@ -1931,7 +2030,36 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     if (!state.hasLoaded) {
       return const SubmissionOutcome(
         success: false,
-        message: 'لا يمكن النشر قبل مراجعة جميع البيانات.',
+        message: '? ???? ??? ?? ??? ???? ????.',
+      );
+    }
+
+    final _AttributesPayloadResult attributesResult = _buildAttributesPayload();
+    if (!attributesResult.isSuccess) {
+      return attributesResult.outcome!;
+    }
+
+    if (state.hasStockVariants && state.variantForms.isEmpty) {
+      return const SubmissionOutcome(
+        success: false,
+        message: '? ???? ??? ?? ??? ???? ????.',
+      );
+    }
+
+    if (item.id == null) {
+      final _StockRowsResult pendingStock = _buildStockRows();
+      if (!pendingStock.isSuccess) {
+        return pendingStock.outcome!;
+      }
+      final _DiscountPayloadResult pendingDiscount =
+          _buildDiscountPayload();
+      if (!pendingDiscount.isSuccess) {
+        return pendingDiscount.outcome!;
+      }
+      return _storePendingProductOptions(
+        attributesResult,
+        pendingStock,
+        pendingDiscount,
       );
     }
 
@@ -1941,18 +2069,6 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     }
 
     final int itemId = item.id!;
-    final _AttributesPayloadResult attributesResult = _buildAttributesPayload();
-    if (!attributesResult.isSuccess) {
-      return attributesResult.outcome!;
-    }
-
-    if (state.hasStockVariants && state.variantForms.isEmpty) {
-      return const SubmissionOutcome(
-        success: false,
-        message: 'لا يمكن النشر قبل مراجعة جميع البيانات.',
-      );
-    }
-
     final _DiscountPayloadResult discountResult = _buildDiscountPayload();
     if (!discountResult.isSuccess) {
       return discountResult.outcome!;
@@ -2005,13 +2121,14 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       emit(state.copyWith(discountSaving: false));
     }
 
+    _pendingProductOptions = null;
+
     if (lastOutcome == null) {
       return _successOutcome('');
     }
 
     return _successOutcome(lastOutcome.message);
   }
-
   Future<SubmissionOutcome> submitAllAndReview() async {
     final SubmissionOutcome outcome = await submitAll();
 
@@ -2047,7 +2164,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     if (_createItem == null) {
       return const SubmissionOutcome(
         success: false,
-        message: 'لا يمكن النشر قبل مراجعة جميع البيانات.',
+        message: '?? ???? ????? ??? ?????? ???? ????????.',
       );
     }
 
@@ -2076,7 +2193,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
         name: "ProductManagementCubit",
       );
       final String fallbackMessage =
-          'تعذر إنشاء الإعلان قبل المتابعة، حاول مرة أخرى.';
+          '???? ????? ??????? ??? ???????? ???? ??? ????.';
       final String message =
           _extractFailureMessage(error, fallback: fallbackMessage);
       return _failureOutcome(message, fallback: fallbackMessage);

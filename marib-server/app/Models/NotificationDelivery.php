@@ -14,22 +14,33 @@ class NotificationDelivery extends Model
     public const STATUS_SENT = 'sent';
     public const STATUS_DELIVERED = 'delivered';
     public const STATUS_FAILED = 'failed';
+    public const STATUS_SKIPPED = 'skipped';
 
     protected $fillable = [
         'campaign_id',
         'segment_id',
         'notification_id',
         'user_id',
+        'type',
+        'fingerprint',
+        'collapse_key',
+        'deeplink',
+        'priority',
+        'ttl',
         'status',
         'delivered_at',
         'opened_at',
         'clicked_at',
         'reactivated_at',
         'meta',
+        'device',
+        'payload',
     ];
 
     protected $casts = [
         'meta' => 'array',
+        'payload' => 'array',
+        'device' => 'array',
         'delivered_at' => 'datetime',
         'opened_at' => 'datetime',
         'clicked_at' => 'datetime',

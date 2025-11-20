@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:marib/data/cubits/item/manage_item_cubit.dart';
 import 'package:marib/data/model/item/item_model.dart';
+import 'package:marib/data/model/item/pending_product_options.dart';
 import 'package:marib/ui/screens/user_profile/my_item_tab.dart';
 
 const Object _kSentinel = Object();
@@ -16,6 +17,7 @@ class PendingItemDraft {
     List<File>? galleryImages,
     bool isEdit = false,
     String? editSourceKey,
+    PendingProductOptions? productOptions,
   })  : payload = Map<String, dynamic>.unmodifiable(
           Map<String, dynamic>.from(payload),
         ),
@@ -28,7 +30,8 @@ class PendingItemDraft {
         editSourceKey = editSourceKey,
         categoryPath = List<int>.unmodifiable(
           List<int>.from(categoryPath),
-        );
+        ),
+        productOptions = productOptions;
 
   final Map<String, dynamic> payload;
   final ItemModel item;
@@ -37,6 +40,7 @@ class PendingItemDraft {
   final bool isEdit;
   final String? editSourceKey;
   final List<int> categoryPath;
+  final PendingProductOptions? productOptions;
 
   bool get requiresCreation => item.id == null;
 
@@ -53,6 +57,7 @@ class PendingItemDraft {
     bool? isEdit,
     Object? editSourceKey = _kSentinel,
     List<int>? categoryPath,
+    Object? productOptions = _kSentinel,
   }) {
     return PendingItemDraft(
       payload: payload ?? this.payload,
@@ -66,6 +71,9 @@ class PendingItemDraft {
           ? this.editSourceKey
           : editSourceKey as String?,
       categoryPath: categoryPath ?? this.categoryPath,
+      productOptions: identical(productOptions, _kSentinel)
+          ? this.productOptions
+          : productOptions as PendingProductOptions?,
     );
   }
 }

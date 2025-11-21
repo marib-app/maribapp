@@ -15,6 +15,10 @@ use App\Http\Controllers\Api\StoreGatewayController;
 use App\Http\Controllers\Api\StoreGatewayPublicController;
 use App\Http\Controllers\Api\StoreOnboardingController;
 use App\Http\Controllers\Api\StorefrontController;
+use App\Http\Controllers\Api\NotificationInboxController;
+use App\Http\Controllers\Api\NotificationPreferenceController;
+use App\Http\Controllers\Api\NotificationTopicController;
+use App\Http\Controllers\Api\ActionRequestController;
 use App\Http\Controllers\ApiController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\ServiceRequestController as ApiServiceRequestController;
@@ -83,6 +87,23 @@ Route::get('web/experience', WebExperienceController::class)
 
 /* Authenticated Routes */
 Route::group(['middleware' => ['auth:sanctum']], static function () {
+    Route::get('notifications', [NotificationInboxController::class, 'index']);
+    Route::get('notifications/unread-count', [NotificationInboxController::class, 'unreadCount']);
+    Route::post('notifications/mark-read', [NotificationInboxController::class, 'markRead']);
+    Route::post('notifications/mark-all-read', [NotificationInboxController::class, 'markAllRead']);
+
+    Route::get('notification-preferences', [NotificationPreferenceController::class, 'index']);
+    Route::post('notification-preferences', [NotificationPreferenceController::class, 'store']);
+
+    Route::get('topics', [NotificationTopicController::class, 'index']);
+    Route::post('topics/subscribe', [NotificationTopicController::class, 'subscribe']);
+    Route::post('topics/unsubscribe', [NotificationTopicController::class, 'unsubscribe']);
+
+    Route::get('action-requests/{actionRequest}', [ActionRequestController::class, 'show'])
+        ->whereUuid('actionRequest');
+    Route::post('action-requests/{actionRequest}/perform', [ActionRequestController::class, 'perform'])
+        ->whereUuid('actionRequest');
+
 
     Route::prefix('store')->group(function (): void {
         Route::get('dashboard/summary', [ApiStoreDashboardController::class, 'summary']);

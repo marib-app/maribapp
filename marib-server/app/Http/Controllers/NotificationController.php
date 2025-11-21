@@ -3,13 +3,15 @@
 namespace App\Http\Controllers;
 use App\Events\AdminDashboardNotification;
 
+use App\Data\Notifications\NotificationIntent;
+use App\Enums\NotificationType;
 use App\Models\Item;
 use App\Models\Notifications;
-use App\Models\UserFcmToken;
+use App\Models\User;
 use App\Services\BootstrapTableService;
 use App\Services\FileService;
 use App\Services\MarketingNotificationService;
-use App\Services\NotificationService;
+use App\Services\NotificationDispatchService;
 use App\Services\ResponseService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -97,67 +99,28 @@ class NotificationController extends Controller {
 
             broadcast(new AdminDashboardNotification($broadcastPayload));   
 
-            
-            if ($request->send_to == "selected") {
-                // إرسال للمستخدمين المحددين
-                \Log::info('NotificationController: Sending to selected users', ['user_ids' => $request->user_id]);
-                $fcm_ids = UserFcmToken::select('fcm_token')->whereIn('user_id', explode(',', $request->user_id))->pluck('fcm_token')->toArray();
-            } else if (in_array($request->send_to, Notifications::ACCOUNT_TYPE_RECIPIENTS, true)) {
-                // إرسال حسب نوع الحساب (فردي، تجاري، عقاري)
-                \Log::info('NotificationController: Sending to account type', ['account_type' => $request->send_to]);
-                $fcm_ids = UserFcmToken::whereHas('user', function ($q) use ($request) {
-                    $q->where('notification', 1)->where('account_type', $request->send_to);
-                })->select('fcm_token')->pluck('fcm_token')->toArray();
-            } else {
-                // إرسال للجميع
-                \Log::info('NotificationController: Sending to all users');
-                $fcm_ids = UserFcmToken::whereHas('user', static function ($q) {
-                    $q->where('notification', 1);
-                })->select('fcm_token')->pluck('fcm_token')->toArray();
-            }
-            
-            \Log::info('NotificationController: FCM tokens retrieved', [
-                'total_tokens' => count($fcm_ids),
-                'tokens_sample' => array_slice($fcm_ids, 0, 3) // عرض أول 3 tokens فقط للأمان
+            $recipientIds = $this->resolveTargetUserIds($request);
+            \Log::info('NotificationController: resolved recipients', [
+                'count' => count($recipientIds),
             ]);
-            
-            if (!empty($fcm_ids)) {
-                $registrationIDs = array_filter($fcm_ids);
-                \Log::info('NotificationController: Filtered FCM tokens', [
-                    'filtered_tokens_count' => count($registrationIDs)
-                ]);
-                
-                \Log::info('NotificationController: Calling FCM service', [
-                    'title' => $request->title,
-                    'message' => $request->message,
-                    'type' => 'notification'
-                ]);
-                
-                $notification_result = NotificationService::sendFcmNotification($registrationIDs, $request->title, $request->message, "notification", [
-                    "image"   => $notification->image,
-                    "item_id" => $notification->item_id,
-                ]);
-                
-                \Log::info('NotificationController: FCM service response', [
-                    'success' => !$notification_result['error'],
-                    'message' => $notification_result['message'] ?? 'No message',
-                    'data' => isset($notification_result['data']) ? 'Data present' : 'No data'
-                ]);
 
-                if ($notification_result['error']) {
-                    \Log::error('NotificationController: FCM sending failed', $notification_result);
-                    ResponseService::warningResponse(
-                        $notification_result['message'],
-                        $notification_result,
-                        $notification_result['code'] ?? null
-                    );
-                
-                } else {
-                    \Log::info('NotificationController: FCM sending successful');
-                }
+            if (!empty($recipientIds)) {
+                $this->dispatchBroadcastNotifications(
+                    $recipientIds,
+                    $request->title,
+                    $request->message,
+                    [
+                        'image' => $notification->image,
+                        'item_id' => $notification->item_id,
+                        'deeplink' => $this->resolveDeeplink($notification),
+                        'notification_id' => $notification->id,
+                        'send_to' => $request->send_to,
+                    ]
+                );
             } else {
-                \Log::warning('NotificationController: No FCM tokens found for sending');
+                \Log::warning('NotificationController: No recipients found for broadcast');
             }
+
             ResponseService::successResponse('Message Send Successfully', $notification);
 
         } catch (Throwable $th) {
@@ -239,4 +202,64 @@ class NotificationController extends Controller {
             ResponseService::errorResponse();
         }
     }
+
+    private function resolveTargetUserIds(Request $request): array
+    {
+        if ($request->send_to === 'selected') {
+            $ids = array_filter(
+                array_map('trim', explode(',', (string) $request->user_id))
+            );
+
+            return array_map('intval', $ids);
+        }
+
+        $query = User::query()->where('notification', 1);
+
+        if (in_array($request->send_to, Notifications::ACCOUNT_TYPE_RECIPIENTS, true)) {
+            $query->where('account_type', $this->mapAccountType($request->send_to));
+        }
+
+        return $query->pluck('id')->map(fn ($id) => (int) $id)->all();
+    }
+
+    private function dispatchBroadcastNotifications(array $userIds, string $title, string $body, array $data): void
+    {
+        $dispatcher = app(NotificationDispatchService::class);
+        $deeplink = (string) ($data['deeplink'] ?? 'marib://notifications');
+
+        foreach (array_chunk($userIds, 500) as $chunk) {
+            foreach ($chunk as $userId) {
+                $intent = new NotificationIntent(
+                    userId: $userId,
+                    type: NotificationType::BroadcastMarketing,
+                    title: $title,
+                    body: $body,
+                    deeplink: $deeplink,
+                    entity: 'notification',
+                    entityId: $data['notification_id'] ?? null,
+                    data: $data,
+                );
+                $dispatcher->dispatch($intent, true);
+            }
+        }
+    }
+
+    private function resolveDeeplink(Notifications $notification): string
+    {
+        if (!empty($notification->item_id)) {
+            return sprintf('marib://item/%s', $notification->item_id);
+        }
+
+        return 'marib://notifications';
+    }
+
+    private function mapAccountType(string $value): int
+    {
+        return match ($value) {
+            'business' => User::ACCOUNT_TYPE_SELLER,
+            'real_estate' => User::ACCOUNT_TYPE_REAL_ESTATE,
+            default => User::ACCOUNT_TYPE_CUSTOMER,
+        };
+    }
 }
+

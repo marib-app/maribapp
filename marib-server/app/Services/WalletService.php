@@ -2,10 +2,11 @@
 
 namespace App\Services;
 
+use App\Data\Notifications\NotificationIntent;
+use App\Enums\NotificationType;
 use App\Models\ManualPaymentRequest;
 use App\Models\PaymentTransaction;
 use App\Models\User;
-use App\Models\UserFcmToken;
 use App\Models\WalletAudit;
 use App\Models\WalletUsageLimit;
 
@@ -18,7 +19,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 use Illuminate\Support\Facades\DB;
-use App\Services\NotificationService;
+use App\Services\NotificationDispatchService;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 use InvalidArgumentException;
@@ -298,40 +299,26 @@ class WalletService
 
     protected function sendWalletNotification(User $user, WalletTransaction $transaction): void
     {
-        $tokens = UserFcmToken::query()
-            ->where('user_id', $user->getKey())
-            ->pluck('fcm_token')
-            ->filter()
-            ->unique()
-            ->values()
-            ->all();
-
-        if (empty($tokens)) {
-            return;
-        }
-
         $payload = $this->buildWalletNotificationPayload($transaction);
+        $deeplink = (string) ($payload['data']['deeplink'] ?? config('services.mobile.wallet_deeplink', 'marib://wallet'));
 
         try {
-            $response = NotificationService::sendFcmNotification(
-                $tokens,
-                $payload['title'],
-                $payload['body'],
-                $payload['type'],
-                $payload['data']
+            app(NotificationDispatchService::class)->dispatch(
+                new NotificationIntent(
+                    userId: $user->getKey(),
+                    type: NotificationType::WalletAlert,
+                    title: $payload['title'] ?? __('Wallet updated'),
+                    body: $payload['body'] ?? '',
+                    deeplink: $deeplink,
+                    entity: 'wallet_transaction',
+                    entityId: $transaction->getKey(),
+                    data: $payload['data'] ?? [],
+                    meta: [
+                        'wallet_transaction_id' => $transaction->getKey(),
+                        'wallet_account_id' => $transaction->wallet_account_id,
+                    ],
+                ),
             );
-
-            if (is_array($response) && ($response['error'] ?? false)) {
-                Log::warning('WalletService: Wallet notification responded with an error', [
-                    'message' => $response['message'] ?? null,
-                    'details' => $response['details'] ?? null,
-                    'code' => $response['code'] ?? null,
-
-
-                ]);
-            }
-
-
         } catch (Throwable $exception) {
             Log::error('WalletService: Failed to send wallet notification', [
                 'error' => $exception->getMessage(),

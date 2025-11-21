@@ -20,6 +20,7 @@ import 'package:marib/data/cubits/system/fetch_system_settings_cubit.dart';
 import 'package:marib/data/cubits/system/get_api_keys_cubit.dart';
 import 'package:marib/data/cubits/home/fetch_home_all_items_cubit.dart';
 import 'package:marib/data/cubits/home/fetch_home_screen_cubit.dart';
+import 'package:marib/data/cubits/notifications/unread_notifications_cubit.dart';
 
 import 'package:marib/data/model/system_settings_model.dart';
 
@@ -50,7 +51,10 @@ class HomeScreen extends StatefulWidget {
 }
 
 class HomeScreenState extends State<HomeScreen>
-    with TickerProviderStateMixin, AutomaticKeepAliveClientMixin<HomeScreen> {
+    with
+        TickerProviderStateMixin,
+        AutomaticKeepAliveClientMixin<HomeScreen>,
+        WidgetsBindingObserver {
   @override
   bool get wantKeepAlive => true;
 
@@ -64,6 +68,7 @@ class HomeScreenState extends State<HomeScreen>
   @override
   void initState() {
     super.initState(); // ✅ ضع دائمًا أولاً
+    WidgetsBinding.instance.addObserver(this);
 
     initializeSettings();
     addPageScrollListener();
@@ -83,6 +88,7 @@ class HomeScreenState extends State<HomeScreen>
     r<FetchCategoryCubit>().fetchCategories();
     r<FetchHomeScreenCubit>().fetch(interfaceType: "homepage");
     r<FetchHomeAllItemsCubit>().fetch();
+    unawaited(r<UnreadNotificationsCubit>().refresh(silent: true));
 
     // if (HiveUtils.isUserAuthenticated()) {
     //   fetchApiKeys(); // ← فعّلها إن كنت تحتاج مفاتيح فعلاً
@@ -98,7 +104,16 @@ class HomeScreenState extends State<HomeScreen>
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     NotificationService.disposeListeners();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      context.read<UnreadNotificationsCubit>().refresh(silent: true);
+    }
   }
 
   void initializeSettings() {

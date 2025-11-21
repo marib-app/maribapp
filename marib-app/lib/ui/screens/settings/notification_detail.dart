@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_linkify/flutter_linkify.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:marib/app/routes.dart';
 import 'package:marib/data/model/notification_data.dart';
+import 'package:marib/ui/screens/notifications/action_request_details_screen.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/responsiveSize.dart';
 import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
+import 'package:marib/utils/helper_utils.dart';
 
 class NotificationDetail extends StatefulWidget {
   const NotificationDetail({super.key});
@@ -36,15 +39,21 @@ class _NotificationDetailState extends State<NotificationDetail> {
           title: "notifications".translate(context),
           showBackButton: true,
         ),
-        body: const Center(child: Text('لا توجد بيانات إشعار')),
+        body: const Center(child: Text('notification_not_available')),
       );
     }
 
-    final notif   = args as NotificationData;
-    final imgUrl  = _normalizeImage(notif.image);
-    final title   = (notif.title ?? '').trim();
-    final message = (notif.message ?? '').trim();
-    final timeStr = UiUtils.formatSmartTime(notif.createdAt);
+    final NotificationData notification = args;
+    final String imageUrl = HelperUtils.absoluteImage(
+      notification.image ?? notification.data['image'],
+    );
+    final String title = (notification.title ?? '').trim();
+    final String message = (notification.displayMessage ?? '').trim();
+    final String timeStr = UiUtils.formatSmartTime(
+      notification.createdAt ?? notification.deliveredAt?.toIso8601String(),
+    );
+    final ActionRequestRouteArgs? actionArgs =
+        _parseActionRequest(notification);
 
     return Scaffold(
       backgroundColor: context.color.primaryColor,
@@ -56,36 +65,27 @@ class _NotificationDetailState extends State<NotificationDetail> {
       body: ListView(
         padding: const EdgeInsets.only(bottom: 20),
         children: <Widget>[
-          // صورة الإشعار (إن وُجدت)
-          if (imgUrl != null && imgUrl.isNotEmpty)
+          if (imageUrl.isNotEmpty) ...[
             const SizedBox(height: 10),
-          if (imgUrl != null && imgUrl.isNotEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(14),
                 child: AspectRatio(
                   aspectRatio: 16 / 7,
-                  child: _NetworkImageSafe(imgUrl: imgUrl),
+                  child: _NetworkImageSafe(imgUrl: imageUrl),
                 ),
               ),
             ),
-
+          ],
           const SizedBox(height: 10),
-
-
-
-
-// سطر واحد: العنوان يمين — التاريخ يسار
-
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14),
             child: Directionality(
-              textDirection: TextDirection.ltr, // نجبر الـ Row على LTR
+              textDirection: TextDirection.ltr,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // التاريخ يسار (يظهر أول عنصر في LTR)
                   Text(
                     timeStr,
                     maxLines: 1,
@@ -96,8 +96,6 @@ class _NotificationDetailState extends State<NotificationDetail> {
                         .bodySmall
                         ?.copyWith(color: Colors.grey),
                   ),
-
-                  // العنوان يمين (يظهر آخر عنصر في LTR)
                   Flexible(
                     child: Text(
                       title,
@@ -114,13 +112,7 @@ class _NotificationDetailState extends State<NotificationDetail> {
               ),
             ),
           ),
-
-
-
           const SizedBox(height: 4),
-
-
-          // فاصل خفيف جدًا (نصف خط تقريبًا) بلون رمادي باهت
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 100, vertical: 10),
             child: Divider(
@@ -129,11 +121,7 @@ class _NotificationDetailState extends State<NotificationDetail> {
               color: Colors.grey.withOpacity(0.25),
             ),
           ),
-
           const SizedBox(height: 10),
-
-
-          // نص الإشعار مع دعم الروابط
           if (message.isNotEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -149,25 +137,50 @@ class _NotificationDetailState extends State<NotificationDetail> {
                 },
               ),
             ),
+          if (actionArgs != null) ...[
+            const SizedBox(height: 20),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pushNamed(
+                    context,
+                    Routes.actionRequestPage,
+                    arguments: actionArgs,
+                  ),
+                  child: Text("open".translate(context)),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 
-
-  /// تطبيع بسيط للرابط (أضف base لاحقًا إذا احتجت)
-  String? _normalizeImage(String? url) {
-    if (url == null) return null;
-    final u = url.trim();
-    if (u.isEmpty) return null;
-    if (u.startsWith('http')) return u;
-    if (u.startsWith('/')) return u; // أضف base هنا لو يلزم
-    return u; // اسم ملف فقط — بدّله إلى '$base/$u' لو احتجت
+  ActionRequestRouteArgs? _parseActionRequest(NotificationData notification) {
+    final String? deeplink =
+        notification.deeplink ?? notification.data['deeplink']?.toString();
+    if (deeplink == null || deeplink.isEmpty) {
+      return null;
+    }
+    final Uri? uri = Uri.tryParse(deeplink);
+    if (uri == null || uri.scheme != 'marib' || uri.host != 'action-request') {
+      return null;
+    }
+    if (uri.pathSegments.isEmpty) {
+      return null;
+    }
+    final String id = uri.pathSegments.first;
+    final String? token = uri.queryParameters['token'];
+    if (id.isEmpty || token == null || token.isEmpty) {
+      return null;
+    }
+    return ActionRequestRouteArgs(requestId: id, token: token);
   }
 }
 
-
-/// صورة شبكة آمنة مع معالجة أخطاء
 class _NetworkImageSafe extends StatelessWidget {
   final String imgUrl;
   const _NetworkImageSafe({required this.imgUrl});

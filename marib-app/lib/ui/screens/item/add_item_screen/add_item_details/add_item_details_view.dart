@@ -8,7 +8,7 @@ import 'package:marib/app/routes.dart';
 import 'package:marib/data/model/item/item_model.dart';
 import 'package:marib/ui/screens/item/add_item_screen/add_item_details/add_item_details_keyboard_manager.dart';
 import 'package:marib/ui/screens/item/add_item_screen/add_item_details/add_item_details_model.dart';
-import 'package:marib/ui/screens/item/add_item_screen/add_item_details/add_item_details_submission_service.dart';
+import 'package:marib/ui/screens/item/add_item_screen/add_item_submission.dart';
 import 'package:marib/ui/screens/item/add_item_screen/add_item_details/add_item_details_shein_service.dart';
 import 'package:marib/ui/screens/widgets/custom_text_form_field.dart';
 import 'package:marib/utils/responsiveSize.dart';

@@ -10,6 +10,15 @@ class NotificationDeliveryFactory extends Factory
 {
     protected $model = NotificationDelivery::class;
 
+    public function configure()
+    {
+        return $this->afterCreating(function (NotificationDelivery $delivery): void {
+            $payload = $delivery->payload ?? [];
+            $payload['id'] = (string) $delivery->id;
+            $delivery->forceFill(['payload' => $payload])->save();
+        });
+    }
+
     public function definition(): array
     {
         $type = $this->faker->randomElement(['payment.request', 'order.status', 'wallet.alert']);

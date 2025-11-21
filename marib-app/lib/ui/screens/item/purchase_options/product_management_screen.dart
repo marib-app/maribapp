@@ -277,8 +277,7 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
         productOptions: pendingOptions ?? reviewDraft.productOptions,
       );
     }
-    Navigator.pushNamed(
-      context,
+    Navigator.of(context, rootNavigator: true).pushNamed(
       Routes.productReviewScreen,
       arguments: <String, dynamic>{
         'item': cubit.state.item,

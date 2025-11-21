@@ -61,7 +61,9 @@ class CustomersController extends Controller {
             $order = $request->order ?? 'DESC';
 
             if ($request->notification_list) {
-                $sql = User::role('User')->orderBy($sort, $order)->has('fcm_tokens')->where('notification', 1);
+                $sql = User::role('User')
+                    ->orderBy($sort, $order)
+                    ->withCount('fcm_tokens as fcm_tokens_count');
             } else {
                 $sql = User::role('User')->orderBy($sort, $order)->withCount('items')->withTrashed();
             }
@@ -69,9 +71,7 @@ class CustomersController extends Controller {
             if (!empty($request->search)) {
                 $sql = $sql->search($request->search);
             }
-            $requestedAccountType = $request->filled('account_type')
-                ? (int) $request->account_type
-                : null;
+            $requestedAccountType = $this->resolveAccountTypeFilter($request->account_type ?? null);
 
             if ($requestedAccountType !== null) {
                 $sql->where('account_type', $requestedAccountType);
@@ -394,5 +394,31 @@ class CustomersController extends Controller {
             ResponseService::logErrorResponse($th, "CustomersController --> updateAdditionalInfo");
             ResponseService::errorResponse();
         }
+    }
+
+    private function resolveAccountTypeFilter($raw): ?int
+    {
+        if ($raw === null || $raw === '') {
+            return null;
+        }
+
+        if (is_numeric($raw)) {
+            $value = (int) $raw;
+
+            return $value > 0 ? $value : null;
+        }
+
+        $map = [
+            'individual' => User::ACCOUNT_TYPE_CUSTOMER,
+            'customer' => User::ACCOUNT_TYPE_CUSTOMER,
+            'real_estate' => User::ACCOUNT_TYPE_REAL_ESTATE,
+            'estate' => User::ACCOUNT_TYPE_REAL_ESTATE,
+            'business' => User::ACCOUNT_TYPE_SELLER,
+            'seller' => User::ACCOUNT_TYPE_SELLER,
+        ];
+
+        $key = strtolower(trim((string) $raw));
+
+        return $map[$key] ?? null;
     }
 }

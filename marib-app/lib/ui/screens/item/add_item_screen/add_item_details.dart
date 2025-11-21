@@ -8,7 +8,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:image_picker/image_picker.dart';
 
-import 'package:marib/app/routes.dart';
 import 'package:marib/data/cubits/item/manage_item_cubit.dart';
 
 import 'package:marib/data/model/category_model.dart';
@@ -16,7 +15,7 @@ import 'package:marib/ui/screens/item/add_item_screen/add_item_details/add_item_
 import 'package:marib/ui/screens/item/add_item_screen/add_item_details/add_item_details_keyboard_manager.dart';
 import 'package:marib/ui/screens/item/add_item_screen/add_item_details/add_item_details_model.dart';
 import 'package:marib/ui/screens/item/add_item_screen/add_item_details/add_item_details_shein_service.dart';
-import 'package:marib/ui/screens/item/add_item_screen/add_item_details/add_item_details_submission_service.dart';
+import 'package:marib/ui/screens/item/add_item_screen/add_item_submission.dart';
 import 'package:marib/ui/screens/item/add_item_screen/add_item_details/add_item_details_view.dart';
 import 'package:marib/ui/screens/item/add_item_screen/image_section.dart';
 

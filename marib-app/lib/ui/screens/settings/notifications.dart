@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:marib/app/routes.dart';
 import 'package:marib/data/cubits/fetch_notifications_cubit.dart';
-import 'package:marib/data/helper/custom_exception.dart';
-import 'package:marib/data/model/item/item_model.dart';
+import 'package:marib/data/cubits/notifications/unread_notifications_cubit.dart';
 import 'package:marib/data/model/notification_data.dart';
+import 'package:marib/ui/screens/notifications/action_request_details_screen.dart';
+import 'package:marib/data/helper/custom_exception.dart';
 
 import 'package:marib/utils/extensions/extensions.dart';
-import 'package:marib/utils/api.dart'; // إن لم تكن تستعمله يمكنك حذفه
 import 'package:marib/utils/responsiveSize.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/helper_utils.dart';
@@ -21,79 +20,112 @@ import 'package:marib/ui/screens/widgets/errors/no_data_found.dart';
 import 'package:marib/ui/screens/widgets/errors/no_internet.dart';
 import 'package:marib/ui/screens/widgets/errors/something_went_wrong.dart';
 import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
-import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/app/app_scroll_behavior.dart';
 
-/// =========
-/// Utils
-/// =========
-
-/// طبّع رابط الصورة بدون الاعتماد على Api.baseUrl
-/// لو عندك base لاحقاً (مثل Constant.mediaBaseUrl) مرّره عبر البراميتر.
-String? normalizeImage(String? url, {String? base}) {
-  if (url == null) return null;
-  final u = url.trim();
-  if (u.isEmpty) return null;
-  if (u.startsWith('http')) return u;
-  if (u.startsWith('/'))
-    return (base != null && base.isNotEmpty) ? '$base$u' : u;
-  return (base != null && base.isNotEmpty) ? '$base/$u' : u;
+enum NotificationCategory {
+  all,
+  marketing,
+  account,
+  wallet,
+  system,
+  updates,
 }
 
-/// تخزين حالة المقروء لكل مستخدم
-class ReadNotifStore {
-  static const _prefix = 'read_notifications';
-
-  static String _keyForUser(String userId) => '$_prefix:$userId';
-
-  static Future<Set<String>> load(String? userId) async {
-    if (userId == null || userId.isEmpty) {
-      return <String>{};
+extension NotificationCategoryX on NotificationCategory {
+  String label(BuildContext context) {
+    switch (this) {
+      case NotificationCategory.all:
+        return 'الكل';
+      case NotificationCategory.marketing:
+        return 'الإعلانات';
+      case NotificationCategory.account:
+        return 'الحساب';
+      case NotificationCategory.wallet:
+        return 'المحفظة';
+      case NotificationCategory.system:
+        return 'النظام';
+      case NotificationCategory.updates:
+        return 'المستجدات';
     }
-    final prefs = await SharedPreferences.getInstance();
-    final list = prefs.getStringList(_keyForUser(userId)) ?? const <String>[];
-    return list.toSet();
-  }
-
-  static Future<void> save(String? userId, Set<String> ids) async {
-    if (userId == null || userId.isEmpty) {
-      return;
-    }
-
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(_keyForUser(userId), ids.toList(growable: false));
   }
 }
-
-/// =========
-/// Screen
-/// =========
 
 class Notifications extends StatefulWidget {
-  const Notifications({super.key});
+  const Notifications({super.key, this.highlightNotificationId});
+
+  final String? highlightNotificationId;
 
   @override
   NotificationsState createState() => NotificationsState();
 
   static Route route(RouteSettings routeSettings) {
-    return BlurredRouter(builder: (_) => const Notifications());
+    String? highlightId;
+    final Object? args = routeSettings.arguments;
+    if (args is Map<String, dynamic>) {
+      highlightId = args['highlightId']?.toString();
+    } else if (args is String) {
+      highlightId = args;
+    }
+    return BlurredRouter(
+      builder: (_) => Notifications(highlightNotificationId: highlightId),
+      settings: routeSettings,
+    );
   }
 }
 
-class NotificationsState extends State<Notifications> {
+class NotificationsState extends State<Notifications>
+    with SingleTickerProviderStateMixin {
   late final ScrollController _pageScrollController = ScrollController();
+  late final TabController _tabController;
 
-  String? _userId;
+  static const Set<String> _marketingTypes = <String>{
+    'broadcast',
+    'broadcast.marketing',
+    'campaign',
+    'ads',
+    'promo',
+  };
 
-  Set<String> _readIds = <String>{};
+  static const Set<String> _walletTypes = <String>{
+    'wallet',
+    'wallet.alert',
+    'payment',
+    'payment.request',
+    'payout',
+    'transfer',
+  };
+
+  static const Set<String> _accountTypes = <String>{
+    'account',
+    'action.request',
+    'kyc',
+    'kyc.request',
+    'security',
+    'auth',
+  };
+
+  static const Set<String> _updateTypes = <String>{
+    'order',
+    'order.status',
+    'delivery',
+    'shipping',
+    'booking',
+    'chat.message',
+  };
+
   bool _isPaging = false;
   bool _adShown = false;
-
-  List<ItemModel> itemData = [];
+  NotificationCategory _selectedCategory = NotificationCategory.all;
+  String? _highlightNotificationId;
 
   @override
   void initState() {
     super.initState();
+    _highlightNotificationId = widget.highlightNotificationId;
+    _tabController = TabController(
+      length: NotificationCategory.values.length,
+      vsync: this,
+    )..addListener(_handleTabChange);
 
     AdHelper.loadInterstitialAd();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -104,20 +136,9 @@ class NotificationsState extends State<Notifications> {
     });
 
     context.read<FetchNotificationsCubit>().fetchNotifications();
-    _restoreReadState();
+    context.read<UnreadNotificationsCubit>().refresh(silent: true);
 
     _pageScrollController.addListener(_pageScroll);
-  }
-
-  Future<void> _restoreReadState() async {
-    final currentUserId = HiveUtils.getUserId();
-    final saved = await ReadNotifStore.load(currentUserId);
-
-    if (!mounted) return;
-    setState(() {
-      _userId = currentUserId;
-      _readIds = saved;
-    });
   }
 
   void _pageScroll() {
@@ -134,118 +155,124 @@ class NotificationsState extends State<Notifications> {
   void dispose() {
     _pageScrollController.removeListener(_pageScroll);
     _pageScrollController.dispose();
+    _tabController
+      ..removeListener(_handleTabChange)
+      ..dispose();
     super.dispose();
   }
 
-  String _notifKey(NotificationData n, int index) {
-    final hasId = (n.id?.toString().trim().isNotEmpty == true);
-    return hasId ? n.id.toString() : '${n.title}-${n.createdAt}-$index';
+  @override
+  void didUpdateWidget(covariant Notifications oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.highlightNotificationId != widget.highlightNotificationId) {
+      _highlightNotificationId = widget.highlightNotificationId;
+    }
+  }
+
+  void _handleTabChange() {
+    if (_tabController.indexIsChanging) {
+      return;
+    }
+    setState(() {
+      _selectedCategory = NotificationCategory.values[_tabController.index];
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.primaryColor,
-      appBar: UiUtils.buildAppBar(
-        context,
-        title: "notifications".translate(context),
-        showBackButton: true,
-      ),
-      body: BlocBuilder<FetchNotificationsCubit, FetchNotificationsState>(
-        builder: (context, state) {
-          if (state is FetchNotificationsInProgress) {
-            return _buildNotificationShimmer(context);
-          }
-          if (state is FetchNotificationsFailure) {
-            if (state.errorMessage is ApiException &&
-                state.errorMessage.error == "no-internet") {
-              return NoInternet(
-                onRetry: () => context
-                    .read<FetchNotificationsCubit>()
-                    .fetchNotifications(),
-              );
+    return BlocListener<FetchNotificationsCubit, FetchNotificationsState>(
+      listenWhen: (_, current) => current is FetchNotificationsSuccess,
+      listener: (context, state) {
+        if (state is FetchNotificationsSuccess) {
+          context.read<UnreadNotificationsCubit>().setCount(state.unreadCount);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Theme.of(context).colorScheme.primaryColor,
+        appBar: UiUtils.buildAppBar(
+          context,
+          title: "notifications".translate(context),
+          showBackButton: true,
+          actions: [
+            BlocBuilder<FetchNotificationsCubit, FetchNotificationsState>(
+              builder: (context, state) {
+                final bool canMarkAll = state is FetchNotificationsSuccess &&
+                    state.unreadCount > 0 &&
+                    state.notificationdata.isNotEmpty;
+                return IconButton(
+                  icon: const Icon(Icons.done_all_outlined),
+                  tooltip: "mark_all_read".translate(context),
+                  onPressed: canMarkAll
+                      ? () => context
+                          .read<FetchNotificationsCubit>()
+                          .markAllAsRead()
+                      : null,
+                );
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.settings_outlined),
+              tooltip: "notification_settings".translate(context),
+              onPressed: () {
+                Navigator.pushNamed(
+                  context,
+                  Routes.notificationSettingsPage,
+                );
+              },
+            ),
+          ],
+          bottom: [_buildCategoryTabs(context)],
+          bottomHeight: 48,
+        ),
+        body: BlocBuilder<FetchNotificationsCubit, FetchNotificationsState>(
+          builder: (context, state) {
+            if (state is FetchNotificationsInProgress) {
+              return _buildNotificationShimmer(context);
             }
-            final String message = state.errorMessage.toString().trim();
-            return SomethingWentWrong(
-              title: 'تعذر تحميل الإشعارات',
-              description:
-                  'حدث خلل مفاجئ أثناء تحميل قائمة الإشعارات. حاول مرة أخرى أو حدّث الصفحة.',
-              details: message.isEmpty ? null : message,
-              onReload: () =>
-                  context.read<FetchNotificationsCubit>().fetchNotifications(),
-            );
-          }
-          if (state is FetchNotificationsSuccess) {
-            if (state.notificationdata.isEmpty) {
-              return NoDataFound(
-                onTap: () => context
-                    .read<FetchNotificationsCubit>()
-                    .fetchNotifications(),
-                category: EmptyStateCategory.notifications,
-              );
+
+            if (state is FetchNotificationsFailure) {
+              final dynamic error = state.errorMessage;
+              final String normalizedError =
+                  error is CustomException ? error.toString() : '$error';
+              if (normalizedError.contains('no-internet')) {
+                return const NoInternet();
+              }
+              return const SomethingWentWrong();
             }
-            return _buildNotificationList(context, state);
-          }
-          return const SizedBox.shrink();
-        },
+
+            if (state is FetchNotificationsSuccess) {
+              if (state.notificationdata.isEmpty) {
+                return const NoDataFound(
+                  category: EmptyStateCategory.notifications,
+                );
+              }
+              return _buildNotificationList(context, state);
+            }
+
+            return const SizedBox.shrink();
+          },
+        ),
       ),
     );
   }
 
-  /// شيمر مطابق 1:1 لمقاس البطاقة
   Widget _buildNotificationShimmer(BuildContext context) {
-    const double avatar = 53;
-    const double radius = 10;
-
-    return ListView.separated(
-      padding: const EdgeInsets.all(10),
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: 8,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        return Material(
-          color: Theme.of(context).colorScheme.secondaryColor,
-          borderRadius: BorderRadius.circular(radius),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(radius),
-              border: Border.all(
-                color: context.color.borderColor.darken(50),
-                width: 1,
-              ),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.all(Radius.circular(15)),
-                  child: const CustomShimmer(width: avatar, height: avatar),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      CustomShimmer(height: 16, width: 220),
-                      const SizedBox(height: 8),
-                      CustomShimmer(height: 12, width: 260),
-                      const SizedBox(height: 10),
-                      CustomShimmer(height: 10, width: 120),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: 6,
+      itemBuilder: (_, __) => const NotificationShimmerLoadingContainer(),
     );
   }
 
   Widget _buildNotificationList(
-      BuildContext context, FetchNotificationsSuccess state) {
+    BuildContext context,
+    FetchNotificationsSuccess state,
+  ) {
     final cubit = context.read<FetchNotificationsCubit>();
+    final List<NotificationData> filteredNotifications = state
+        .notificationdata
+        .where(_matchesSelectedCategory)
+        .toList(growable: false);
 
     return Column(
       children: [
@@ -253,129 +280,173 @@ class NotificationsState extends State<Notifications> {
           child: RefreshIndicator(
             color: Theme.of(context).colorScheme.territoryColor,
             onRefresh: () => cubit.refreshNotifications(),
-            child: ListView.separated(
-              controller: _pageScrollController,
-              physics: const AlwaysScrollableScrollPhysics(
-                parent: AppScrollBehavior.defaultPhysics,
-              ),
-              padding: const EdgeInsets.all(10),
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemCount: state.notificationdata.length,
-              itemBuilder: (context, index) {
-                final NotificationData n = state.notificationdata[index];
-
-                final String id = _notifKey(n, index);
-                final bool isRead = _readIds.contains(id);
-
-                // صورة مع تطبيع/حماية
-                final String img = (normalizeImage(n.image) ?? '').trim();
-
-                return Material(
-                  key: ValueKey(id),
-                  color: Theme.of(context).colorScheme.secondaryColor,
-                  borderRadius: BorderRadius.circular(10),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(10),
-                    onTap: () {
-                      setState(() => _readIds.add(id));
-                      ReadNotifStore.save(_userId, _readIds);
-
-                      Navigator.pushNamed(
-                        context,
-                        Routes.notificationDetailPage,
-                        arguments: n,
-                      );
-                    },
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: context.color.borderColor.darken(50),
-                          width: 1,
-                        ),
+            child: filteredNotifications.isEmpty
+                ? ListView(
+                    physics: const AlwaysScrollableScrollPhysics(
+                      parent: AppScrollBehavior.defaultPhysics,
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 32,
+                    ),
+                    children: [
+                      const SizedBox(height: 32),
+                      Icon(
+                        Icons.notifications_off_outlined,
+                        size: 48,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .textLightColor
+                            .withOpacity(0.7),
                       ),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 12),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // صورة الإشعار - باستخدام أسلوبك UiUtils.getImage
-                          ClipRRect(
-                            clipBehavior: Clip.antiAliasWithSaveLayer,
-                            borderRadius:
-                                const BorderRadius.all(Radius.circular(15)),
-                            child: UiUtils.getImage(
-                              img, // قد يكون فارغًا؛ UiUtils عادة يتعامل مع ذلك
-                              height: 53.rh(context),
-                              width: 53.rw(context),
-                              fit: BoxFit.cover, // أفضل من fill لتفادي التشويه
-                            ),
-                          ),
-                          const SizedBox(width: 12),
+                      const SizedBox(height: 16),
+                      Text(
+                        'لا توجد إشعارات ضمن هذا التصنيف حالياً',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ],
+                  )
+                : ListView.separated(
+                    controller: _pageScrollController,
+                    physics: const AlwaysScrollableScrollPhysics(
+                      parent: AppScrollBehavior.defaultPhysics,
+                    ),
+                    padding: const EdgeInsets.all(10),
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemCount: filteredNotifications.length,
+                    itemBuilder: (context, index) {
+                      final NotificationData notification =
+                          filteredNotifications[index];
+                      final String id = notification.id;
+                      final bool isRead = notification.isRead;
+                      final bool isHighlighted =
+                          _highlightNotificationId != null &&
+                              _highlightNotificationId == id;
+                      final String? message =
+                          notification.displayMessage ?? '';
+                      final String image = HelperUtils.absoluteImage(
+                        notification.image ??
+                            notification.data['image']?.toString(),
+                      );
+                      final String timeLabel = UiUtils.formatSmartTime(
+                        notification.createdAt ??
+                            notification.deliveredAt?.toIso8601String() ??
+                            notification.openedAt?.toIso8601String(),
+                      );
 
-                          // نصوص
-                          Expanded(
-                            child: Column(
+                      final Color baseColor =
+                          Theme.of(context).colorScheme.secondaryColor;
+                      final Color highlightBorder =
+                          Theme.of(context).colorScheme.territoryColor;
+
+                      return Material(
+                        key: ValueKey(id),
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () => _handleNotificationTap(notification),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            decoration: BoxDecoration(
+                              color: isHighlighted
+                                  ? baseColor.withOpacity(0.8)
+                                  : baseColor,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isHighlighted
+                                    ? highlightBorder
+                                    : context.color.borderColor.darken(50),
+                                width: isHighlighted ? 2 : 1,
+                              ),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 12,
+                            ),
+                            child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
-                              children: <Widget>[
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        (n.title ?? '').firstUpperCase(),
-                                        maxLines: 1,
+                              children: [
+                                ClipRRect(
+                                  clipBehavior: Clip.antiAliasWithSaveLayer,
+                                  borderRadius: const BorderRadius.all(
+                                    Radius.circular(15),
+                                  ),
+                                  child: UiUtils.getImage(
+                                    image,
+                                    height: 53.rh(context),
+                                    width: 53.rw(context),
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              (notification.title ?? '')
+                                                  .firstUpperCase(),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .titleMedium!
+                                                  .merge(
+                                                    TextStyle(
+                                                      fontWeight: isRead
+                                                          ? FontWeight.w500
+                                                          : FontWeight.w700,
+                                                    ),
+                                                  ),
+                                            ),
+                                          ),
+                                          if (!isRead)
+                                            Container(
+                                              width: 8,
+                                              height: 8,
+                                              margin:
+                                                  const EdgeInsetsDirectional
+                                                      .only(
+                                                start: 8,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .territoryColor,
+                                                shape: BoxShape.circle,
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        (message ?? '').firstUpperCase(),
+                                        maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
                                         style: Theme.of(context)
                                             .textTheme
-                                            .titleMedium!
-                                            .merge(TextStyle(
-                                              fontWeight: isRead
-                                                  ? FontWeight.w500
-                                                  : FontWeight.w700,
-                                            )),
-                                      ),
-                                    ),
-                                    if (!isRead)
-                                      Container(
-                                        width: 8,
-                                        height: 8,
-                                        margin:
-                                            const EdgeInsetsDirectional.only(
-                                                start: 8),
-                                        decoration: BoxDecoration(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .territoryColor,
-                                          shape: BoxShape.circle,
-                                        ),
-                                      ),
-                                  ],
+                                            .bodySmall!
+                                            .copyWith(height: 1.35),
+                                      ).color(context.color.textLightColor),
+                                      const SizedBox(height: 10),
+                                      Text(timeLabel)
+                                          .size(context.font.smaller)
+                                          .color(context.color.textLightColor),
+                                    ],
+                                  ),
                                 ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  (n.message ?? '').firstUpperCase(),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall!
-                                      .copyWith(height: 1.35),
-                                ).color(context.color.textLightColor),
-                                const SizedBox(height: 10),
-                                Text((n.createdAt?.formatDate().toString() ??
-                                        ''))
-                                    .size(context.font.smaller)
-                                    .color(context.color.textLightColor),
                               ],
                             ),
                           ),
-                        ],
-                      ),
-                    ),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
         ),
         if (state.isLoadingMore) UiUtils.progress(),
@@ -383,16 +454,167 @@ class NotificationsState extends State<Notifications> {
     );
   }
 
-  /// (اختياري) غير مستخدمة هنا
-  Future<List<ItemModel>> getItemById() async {
-    final body = <String, dynamic>{};
-    final response = await Api.get(url: Api.getItemApi, queryParameters: body);
-    if (!response[Api.error]) {
-      List list = response['data'];
-      itemData = list.map((model) => ItemModel.fromJson(model)).toList();
-    } else {
-      throw CustomException(response[Api.message]);
+  bool _matchesSelectedCategory(NotificationData notification) {
+    if (_selectedCategory == NotificationCategory.all) {
+      return true;
     }
-    return itemData;
+    return _categoryForNotification(notification) == _selectedCategory;
+  }
+
+  NotificationCategory _categoryForNotification(NotificationData notification) {
+    final String normalizedCategory =
+        (notification.category ?? notification.data['category']?.toString() ?? '')
+            .toLowerCase();
+
+    switch (normalizedCategory) {
+      case 'marketing':
+        return NotificationCategory.marketing;
+      case 'account':
+        return NotificationCategory.account;
+      case 'wallet':
+        return NotificationCategory.wallet;
+      case 'updates':
+        return NotificationCategory.updates;
+      case 'system':
+        return NotificationCategory.system;
+    }
+
+    final String type = (notification.type ?? '').toLowerCase();
+    final String entity =
+        (notification.data['entity'] ?? '').toString().toLowerCase();
+    final String deeplink = (notification.deeplink ?? '').toLowerCase();
+    final String title = (notification.title ?? '').toLowerCase();
+
+    if (_matchesAny(type, entity, deeplink, title, _marketingTypes)) {
+      return NotificationCategory.marketing;
+    }
+
+    if (_matchesAny(type, entity, deeplink, title, _accountTypes)) {
+      return NotificationCategory.account;
+    }
+
+    if (_matchesAny(type, entity, deeplink, title, _walletTypes)) {
+      return NotificationCategory.wallet;
+    }
+
+    if (_matchesAny(type, entity, deeplink, title, _updateTypes)) {
+      return NotificationCategory.updates;
+    }
+
+    return NotificationCategory.system;
+  }
+
+  bool _matchesAny(
+    String type,
+    String entity,
+    String deeplink,
+    String title,
+    Set<String> needles,
+  ) {
+    for (final String needle in needles) {
+      if (needle.isEmpty) continue;
+      if (type.contains(needle) ||
+          entity.contains(needle) ||
+          deeplink.contains(needle) ||
+          title.contains(needle)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  Widget _buildCategoryTabs(BuildContext context) {
+    return TabBar(
+      controller: _tabController,
+      isScrollable: true,
+      indicatorColor: Theme.of(context).colorScheme.territoryColor,
+      labelColor: Theme.of(context).colorScheme.territoryColor,
+      unselectedLabelColor: Theme.of(context).colorScheme.textLightColor,
+      tabs: NotificationCategory.values
+          .map((category) => Tab(text: category.label(context)))
+          .toList(growable: false),
+    );
+  }
+
+  void _handleNotificationTap(NotificationData notification) {
+    context
+        .read<FetchNotificationsCubit>()
+        .markNotificationAsRead(notification);
+    if (_highlightNotificationId == notification.id) {
+      setState(() => _highlightNotificationId = null);
+    }
+
+    final ActionRequestRouteArgs? actionArgs =
+        _parseActionRequest(notification);
+    if (actionArgs != null) {
+      Navigator.pushNamed(
+        context,
+        Routes.actionRequestPage,
+        arguments: actionArgs,
+      );
+      return;
+    }
+
+    Navigator.pushNamed(
+      context,
+      Routes.notificationDetailPage,
+      arguments: notification,
+    );
+  }
+
+  ActionRequestRouteArgs? _parseActionRequest(NotificationData notification) {
+    final String? deeplink = notification.deeplink ??
+        notification.data['deeplink']?.toString() ??
+        notification.data['request_deeplink']?.toString();
+    if (deeplink == null || deeplink.isEmpty) {
+      return null;
+    }
+
+    final Uri? uri = Uri.tryParse(deeplink);
+    if (uri == null) return null;
+
+    if (uri.scheme != 'marib') return null;
+    if (uri.host != 'action-request') return null;
+
+    if (uri.pathSegments.isEmpty) return null;
+    final String id = uri.pathSegments.first;
+    final String? token =
+        uri.queryParameters['token'] ?? notification.data['token']?.toString();
+
+    if (id.isEmpty || token == null || token.isEmpty) {
+      return null;
+    }
+
+    return ActionRequestRouteArgs(
+      requestId: id,
+      token: token,
+    );
+  }
+}
+
+class NotificationShimmerLoadingContainer extends StatelessWidget {
+  const NotificationShimmerLoadingContainer({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme palette = Theme.of(context).colorScheme;
+    return Card(
+      color: palette.secondaryColor,
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            CustomShimmer(width: double.infinity, height: 16),
+            SizedBox(height: 12),
+            CustomShimmer(width: double.infinity, height: 12),
+            SizedBox(height: 12),
+            CustomShimmer(width: 120, height: 10),
+          ],
+        ),
+      ),
+    );
   }
 }

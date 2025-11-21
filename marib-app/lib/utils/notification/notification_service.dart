@@ -14,6 +14,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:marib/ui/screens/chat/chat_screen.dart';
 import 'package:marib/ui/screens/chat/chat_badge_controller.dart';
+import 'package:marib/ui/screens/notifications/action_request_details_screen.dart';
 
 import 'package:marib/ui/screens/settings/main_activity.dart';
 import 'package:marib/data/cubits/chat/get_seller_chat_users_cubit.dart';
@@ -28,7 +29,9 @@ import 'package:marib/data/cubits/chat/load_chat_messages.dart';
 import 'package:marib/data/cubits/chat/send_message.dart';
 import 'package:marib/data/model/chat/chated_user_model.dart';
 import 'package:marib/data/model/data_output.dart';
+import 'package:marib/data/model/notification_data.dart';
 import 'package:marib/utils/api.dart';
+import 'package:marib/data/cubits/notifications/unread_notifications_cubit.dart';
 import 'package:marib/data/cubits/wallet/manual_payment_requests_cubit.dart';
 import 'package:marib/data/cubits/wallet/wallet_transfers_cubit.dart';
 import 'package:marib/data/cubits/wallet/wallet_withdrawals_cubit.dart';
@@ -204,6 +207,7 @@ class NotificationService {
 
   static final List<_WalletScopeEntry> _walletScopeEntries =
       <_WalletScopeEntry>[];
+  static DateTime? _lastUnreadSyncAt;
 
   static Stream<String> get walletNotifications =>
       _walletNotificationController.stream;
@@ -655,13 +659,142 @@ class NotificationService {
       return;
     }
 
+    _openNotificationsPage(highlightId: null);
+  }
+
+  static NotificationData? _notificationDataFromMessage(
+    RemoteMessage message,
+  ) {
+    final Map<String, dynamic> rawData =
+        Map<String, dynamic>.from(message.data);
+    final RemoteNotification? remote = message.notification;
+
+    final String id = (rawData['id'] ??
+            rawData['notification_id'] ??
+            rawData['notificationId'] ??
+            message.messageId ??
+            DateTime.now().millisecondsSinceEpoch.toString())
+        .toString();
+
+    final String? title =
+        rawData['title']?.toString() ?? remote?.title ?? rawData['heading'];
+    final String? body =
+        rawData['body']?.toString() ?? remote?.body ?? rawData['message'];
+    final String? image = (rawData['image'] ??
+            remote?.android?.imageUrl ??
+            remote?.apple?.imageUrl)
+        ?.toString();
+    final String? deeplink =
+        rawData['deeplink']?.toString() ?? rawData['click_action']?.toString();
+    final String? createdAt =
+        rawData['created_at']?.toString() ?? DateTime.now().toIso8601String();
+    final Map<String, dynamic> dataPayload =
+        Map<String, dynamic>.from(rawData);
+
+    if (title == null && body == null && dataPayload.isEmpty) {
+      return null;
+    }
+
+    return NotificationData(
+      id: id,
+      title: title,
+      message: body,
+      body: body,
+      image: image,
+      type: rawData['type']?.toString(),
+      deeplink: deeplink,
+      data: dataPayload,
+      createdAt: createdAt,
+      deliveredAt: DateTime.now(),
+      category: rawData['category']?.toString(),
+    );
+  }
+
+  static bool _shouldTrackUnreadCount({
+    required RemoteMessage? message,
+    required String normalizedNotificationType,
+  }) {
+    if (message == null || !HiveUtils.isUserAuthenticated()) {
+      return false;
+    }
+    if (normalizedNotificationType == 'chat') {
+      return false;
+    }
+
+    final RemoteMessage resolvedMessage = message!;
+    final Map<String, dynamic> data =
+        Map<String, dynamic>.from(resolvedMessage.data);
+    const List<String> idKeys = <String>[
+      'payload_id',
+      'payloadId',
+      'delivery_id',
+      'deliveryId',
+      'notification_id',
+      'notificationId',
+      'id',
+    ];
+
+    for (final String key in idKeys) {
+      final String? value = data[key]?.toString();
+      if (value != null && value.isNotEmpty) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  static void _notifyUnreadBadge() {
+    if (!HiveUtils.isUserAuthenticated()) {
+      return;
+    }
+    final BuildContext? context = Constant.navigatorKey.currentContext;
+    if (context == null) {
+      return;
+    }
+    try {
+      final UnreadNotificationsCubit cubit =
+          context.read<UnreadNotificationsCubit>();
+      cubit.setCount(cubit.state + 1);
+      final DateTime now = DateTime.now();
+      if (_lastUnreadSyncAt == null ||
+          now.difference(_lastUnreadSyncAt!) >= const Duration(seconds: 5)) {
+        _lastUnreadSyncAt = now;
+        unawaited(cubit.refresh(silent: true));
+      }
+    } catch (_) {}
+  }
+
+  static void _openNotificationsFromMessage(RemoteMessage message) {
+    final NotificationData? notification =
+        _notificationDataFromMessage(message);
+    final String? highlightId =
+        notification?.id ??
+        message.data['id']?.toString() ??
+        message.messageId;
+    _openNotificationsPage(highlightId: highlightId);
+  }
+
+  static void _openNotificationDetail(RemoteMessage message) {
+    _openNotificationsFromMessage(message);
+  }
+
+  static void _openNotificationsPage({String? highlightId}) {
+    final BuildContext? navigationContext =
+        Constant.navigatorKey.currentContext;
+    if (navigationContext == null) {
+      return;
+    }
+
     Future<void>.delayed(
       Duration.zero,
       () {
-        HelperUtils.goToNextPage(
-          Routes.notificationPage,
+        Navigator.pushNamed(
           navigationContext,
-          false,
+          Routes.notificationPage,
+          arguments: highlightId == null || highlightId.isEmpty
+              ? null
+              : <String, dynamic>{'highlightId': highlightId},
         );
       },
     );
@@ -757,6 +890,13 @@ class NotificationService {
       return;
     }
 
+    if (_shouldTrackUnreadCount(
+      message: message,
+      normalizedNotificationType: normalizedNotificationType,
+    )) {
+      _notifyUnreadBadge();
+    }
+
     if (_isWalletNotification(
       notificationType: normalizedNotificationType,
       eventType: normalizedEventType,
@@ -837,7 +977,7 @@ class NotificationService {
             );
             HelperUtils.showSnackBarMessage(
               navigationContext,
-              'تم تأكيد الدفع بنجاح للطلب $label.',
+              'طھظ… طھط£ظƒظٹط¯ ط§ظ„ط¯ظپط¹ ط¨ظ†ط¬ط§ط­ ظ„ظ„ط·ظ„ط¨ $label.',
               type: MessageType.success,
             );
           });
@@ -986,7 +1126,6 @@ class NotificationService {
             senderId: senderIdParsed);
 
         ChatMessageHandler.add(chatMessageModel);
-
       } else {
         localNotification.createNotification(
           isLocked: false,
@@ -1306,358 +1445,218 @@ class NotificationService {
     if (message.notification == null) {
       await handleNotification(message, context);
     }
+    await _processNotificationTap(message);
   }
 
-  static Future<void> onTapNotificationHandler(context) async {
+    static Future<void> onTapNotificationHandler(context) async {
     await onMessageOpen?.cancel();
-    onMessageOpen = FirebaseMessaging.onMessageOpenedApp
-        .listen((RemoteMessage message) async {
-      print("message.data on tap***${message.data.toString()}");
-      if (message.data['type'] == "chat") {
-        var username = message.data['user_name'];
-        var itemTitleImage = message.data['item_title_image'];
-        var itemTitle = message.data['item_title'];
-        var userProfile = message.data['user_profile'];
-        var senderId = message.data['sender_id'];
-        var itemId = message.data['item_id'];
-        var date = message.data['created_at'];
-        var itemOfferId = message.data['item_offer_id'];
-        var conversationId = message.data['conversation_id'];
+    onMessageOpen = FirebaseMessaging.onMessageOpenedApp.listen(
+      (RemoteMessage message) async {
+        await _processNotificationTap(message);
+      },
+    );
+  }
 
-        var itemPrice = message.data['item_price'];
-        var itemOfferPrice = message.data['item_offer_amount'] ?? null;
-        final int itemOfferIdParsed = _tryParseInt(itemOfferId) ?? 0;
-        Future.delayed(
-          Duration.zero,
-          () {
-            Navigator.push(
-              Constant.navigatorKey.currentContext!,
-              AppPageRoute.build(
-                builder: (context) {
-                  return MultiBlocProvider(
-                    providers: [
-                      BlocProvider(
-                        create: (context) => SendMessageCubit(),
-                      ),
-                      BlocProvider(
-                        create: (context) => LoadChatMessagesCubit(),
-                      ),
-                    ],
-                    child: Builder(
-                      builder: (context) {
-                        final Map<String, dynamic> normalizedData =
-                            Map<String, dynamic>.from(message.data);
-                        final List<ChatParticipant>? participants =
-                            NotificationService.getCachedParticipants(
-                                  (conversationId ?? '').toString(),
-                                  itemOfferId: itemOfferIdParsed,
-                                ) ??
-                                NotificationService
-                                    .buildParticipantsFromNotification(
-                                  data: normalizedData,
-                                );
-                        if (participants != null && participants.isNotEmpty) {
-                          NotificationService.cacheParticipants(
-                            participants: participants,
-                            conversationId: (conversationId ?? '').toString(),
-                            itemOfferId:
-                                itemOfferIdParsed > 0 ? itemOfferIdParsed : null,
-                            senderId: senderId?.toString(),
-                            itemId: itemId?.toString(),
-                          );
-                        }
+  static Future<void> _processNotificationTap(RemoteMessage message) async {
+    print("message.data on tap***${message.data.toString()}");
+    if (_handleActionRequestDeeplink(message.data)) {
+      return;
+    }
+    final String? rawType = message.data['type']?.toString();
+    if (rawType == "chat") {
+      var username = message.data['user_name'];
+      var itemTitleImage = message.data['item_title_image'];
+      var itemTitle = message.data['item_title'];
+      var userProfile = message.data['user_profile'];
+      var senderId = message.data['sender_id'];
+      var itemId = message.data['item_id'];
+      var date = message.data['created_at'];
+      var itemOfferId = message.data['item_offer_id'];
+      var conversationId = message.data['conversation_id'];
 
-                        final String? currency =
-                            NotificationService.extractCurrency(normalizedData);
-                        final String? currencySymbol =
-                            NotificationService.extractCurrencySymbol(
-                                normalizedData);
-
-                        return ChatScreen(
-                          profilePicture: userProfile ?? "",
-                          userName: username ?? "",
-                          itemImage: itemTitleImage ?? "",
-                          itemTitle: itemTitle ?? "",
-                          userId: senderId ?? "",
-                          itemId: itemId ?? "",
-                          date: date ?? "",
-                          itemOfferId: itemOfferIdParsed,
-                          conversationId: (conversationId ?? '').toString(),
-                          itemPrice: getPrice(itemPrice)!,
-                          itemOfferPrice: getPrice(itemOfferPrice),
-                          buyerId: HiveUtils.getUserId(),
-                          alreadyReview: false,
-                          isPurchased: 0,
-                          participants: participants,
-                          currency: currency,
-                          currencySymbol: currencySymbol,
-                        );
-                      },
-                    ),
-                  );
-                },
-                motionPattern: AppMotionPattern.glide,
-              ),
-            );
-          },
-        );
-      } else if (message.data['type'] == "offer") {
-        if (HiveUtils.isUserBasicallyAuthenticated()) {
-          var username = message.data['user_name'];
-          var itemTitleImage = message.data['item_title_image'];
-          var itemTitle = message.data['item_title'];
-          var userProfile = message.data['user_profile'];
-          var senderId = message.data['sender_id'];
-          var itemId = message.data['item_id'];
-          var date = message.data['created_at'];
-          var itemOfferId = message.data['item_offer_id'];
-          var conversationId = message.data['conversation_id'];
-
-          var itemPrice = message.data['item_price'];
-          var itemOfferPrice = message.data['item_offer_amount'] ?? null;
-          final int itemOfferIdParsed = _tryParseInt(itemOfferId) ?? 0;
-
-          /* var username = message.data['user_name'];
-          var itemTitleImage = message.data['image'];
-          var itemTitle = message.data['name'];
-          var userProfile = message.data['user_profile'];
-          var senderId = message.data['user_id'];
-          var itemId = message.data['id'];
-          var date = message.data['created_at'];
-          var itemOfferId = message.data['item_offer_id'];
-          var itemPrice = message.data['price'];
-          var itemOfferPrice = message.data['item_offer_amount'] ?? null;*/
-          Future.delayed(
-            Duration.zero,
-            () {
-              Navigator.push(
-                Constant.navigatorKey.currentContext!,
-                AppPageRoute.build(
-                  builder: (context) {
-                    return MultiBlocProvider(
-                    providers: [
-                      BlocProvider(
-                        create: (context) => SendMessageCubit(),
-                      ),
-                      BlocProvider(
-                        create: (context) => LoadChatMessagesCubit(),
-                      ),
-                    ],
-                    child: Builder(
-                      builder: (context) {
-                        final Map<String, dynamic> normalizedData =
-                            Map<String, dynamic>.from(message.data);
-
-                        final List<ChatParticipant>? participants =
-                            NotificationService.getCachedParticipants(
-                                  (conversationId ?? '').toString(),
-                                  itemOfferId: itemOfferIdParsed,
-                                ) ??
-                                NotificationService
-                                    .buildParticipantsFromNotification(
-                                  data: normalizedData,
-                                );
-                        if (participants != null && participants.isNotEmpty) {
-                          NotificationService.cacheParticipants(
-                            participants: participants,
-                            conversationId: (conversationId ?? '').toString(),
-                            itemOfferId:
-                                itemOfferIdParsed > 0 ? itemOfferIdParsed : null,
-                            senderId: senderId?.toString(),
-                            itemId: itemId?.toString(),
-                          );
-                        }
-
-                        final String? currency =
-                            NotificationService.extractCurrency(normalizedData);
-                        final String? currencySymbol =
-                            NotificationService.extractCurrencySymbol(
-                                normalizedData);
-
-                        return ChatScreen(
-                          profilePicture: userProfile ?? "",
-                          userName: username ?? "",
-                          itemImage: itemTitleImage ?? "",
-                          itemTitle: itemTitle ?? "",
-                          userId: senderId ?? "",
-                          itemId: itemId ?? "",
-                          date: date ?? "",
-                          itemOfferId: itemOfferIdParsed,
-                          conversationId: (conversationId ?? '').toString(),
-                          itemPrice: getPrice(itemPrice)!,
-                          itemOfferPrice: getPrice(itemOfferPrice),
-                          buyerId: HiveUtils.getUserId(),
-                          alreadyReview: false,
-                          isPurchased: 0,
-                          currency: currency,
-                          currencySymbol: currencySymbol,
-                        );
-                      },
-                    ),
-                  );
-                },
-                motionPattern: AppMotionPattern.glide,
-                ),
-              );
-            },
-          );
-          /*Future.delayed(Duration.zero, () {
-            HelperUtils.goToNextPage(
-              Routes.main,
-              Constant.navigatorKey.currentContext!,
-              false,
-            );
-            MainActivity.globalKey.currentState?.onItemTapped(1);
-          });*/
-        } else {
-          Future.delayed(Duration.zero, () {
-            HelperUtils.goToNextPage(Routes.notificationPage,
-                Constant.navigatorKey.currentContext!, false);
-          });
-        }
-      } else if (message.data['type'] == "item-update") {
-        Future.delayed(Duration.zero, () {
-          HelperUtils.goToNextPage(
-            Routes.main,
+      var itemPrice = message.data['item_price'];
+      var itemOfferPrice = message.data['item_offer_amount'] ?? null;
+      final int itemOfferIdParsed = _tryParseInt(itemOfferId) ?? 0;
+      Future.delayed(
+        Duration.zero,
+        () {
+          Navigator.push(
             Constant.navigatorKey.currentContext!,
-            false,
+            AppPageRoute.build(
+              builder: (context) {
+                return MultiBlocProvider(
+                  providers: [
+                    BlocProvider(
+                      create: (context) => SendMessageCubit(),
+                    ),
+                    BlocProvider(
+                      create: (context) => LoadChatMessagesCubit(),
+                    ),
+                  ],
+                  child: Builder(
+                    builder: (context) {
+                      final Map<String, dynamic> normalizedData =
+                          Map<String, dynamic>.from(message.data);
+                      final List<ChatParticipant>? participants =
+                          NotificationService.getCachedParticipants(
+                                (conversationId ?? '').toString(),
+                                itemOfferId: itemOfferIdParsed,
+                              ) ??
+                              NotificationService.buildParticipantsFromNotification(
+                                data: normalizedData,
+                              );
+                      if (participants != null && participants.isNotEmpty) {
+                        NotificationService.cacheParticipants(
+                          participants: participants,
+                          conversationId: (conversationId ?? '').toString(),
+                          itemOfferId: itemOfferIdParsed > 0
+                              ? itemOfferIdParsed
+                              : null,
+                          senderId: senderId?.toString(),
+                          itemId: itemId?.toString(),
+                        );
+                      }
+
+                      final String? currency =
+                          NotificationService.extractCurrency(normalizedData);
+                      final String? currencySymbol =
+                          NotificationService.extractCurrencySymbol(
+                              normalizedData);
+
+                      return ChatScreen(
+                        profilePicture: userProfile ?? "",
+                        userName: username ?? "",
+                        itemImage: itemTitleImage ?? "",
+                        itemTitle: itemTitle ?? "",
+                        userId: senderId ?? "",
+                        itemId: itemId ?? "",
+                        date: date ?? "",
+                        itemOfferId: itemOfferIdParsed,
+                        conversationId: (conversationId ?? '').toString(),
+                        itemPrice: getPrice(itemPrice)!,
+                        itemOfferPrice: getPrice(itemOfferPrice),
+                        buyerId: HiveUtils.getUserId(),
+                        alreadyReview: false,
+                        isPurchased: 0,
+                        participants: participants,
+                        currency: currency,
+                        currencySymbol: currencySymbol,
+                      );
+                    },
+                  ),
+                );
+              },
+              motionPattern: AppMotionPattern.glide,
+            ),
           );
-          MainActivity.globalKey.currentState?.onItemTapped(2);
-        });
-      } else if (message.data["item_id"] != null &&
-          message.data["item_id"] != '') {
-        String id = message.data["item_id"] ?? "";
-        DataOutput<ItemModel> item =
-            await ItemRepository().fetchItemFromItemId(int.parse(id));
+        },
+      ).whenComplete(() => debugPrint('notification'));
+      return;
+    }
+
+    if (rawType == "payment") {
+      if (!HiveUtils.isUserAuthenticated()) {
+        _openNotificationDetail(message);
+        return;
+      }
+
+      final Map<String, dynamic> paymentData =
+          Map<String, dynamic>.from(message.data);
+
+      final String? manualPaymentId = _firstNonEmptyValue([
+        paymentData['manual_payment_request_id'],
+        paymentData['manualPaymentRequestId'],
+      ]);
+
+      final String? alias = _detectPayableAlias(paymentData);
+
+      Future<void> navigateTo(String route,
+          Map<String, dynamic>? args) async {
         Future.delayed(Duration.zero, () {
           Navigator.pushNamed(
-              Constant.navigatorKey.currentContext!, Routes.adDetailsScreen,
-              arguments: {
-                'model': item.modelList[0],
-              });
-          /* HelperUtils.goToNextPage(Routes.adDetailsScreen,
-              Constant.navigatorKey.currentContext!, false,
-              args: {
-                'model': item.modelList[0],
-              });*/
-        });
-      } else if (message.data['type'] == "payment") {
-        if (!HiveUtils.isUserAuthenticated()) {
-          Future.delayed(Duration.zero, () {
-            HelperUtils.goToNextPage(Routes.notificationPage,
-                Constant.navigatorKey.currentContext!, false);
-          });
-          return;
-        }
-
-        final Map<String, dynamic> paymentData =
-            Map<String, dynamic>.from(message.data);
-
-        final String? manualPaymentId = _firstNonEmptyValue([
-          paymentData['manual_payment_request_id'],
-          paymentData['manualPaymentRequestId'],
-        ]);
-
-        final String? alias = _detectPayableAlias(paymentData);
-
-        Future<void> navigateTo(
-            String route, Map<String, dynamic>? args) async {
-          Future.delayed(Duration.zero, () {
-            Navigator.pushNamed(
-              Constant.navigatorKey.currentContext!,
-              route,
-              arguments: args,
-            );
-          });
-        }
-
-        switch (alias) {
-          case 'order':
-            final String? orderId = _firstNonEmptyValue([
-              paymentData['order_id'],
-              paymentData['orderId'],
-              paymentData['payable_id'],
-              paymentData['payableId'],
-            ]);
-
-            if (orderId != null && orderId.isNotEmpty) {
-              navigateTo(Routes.orderSteps, {
-                'order_id': orderId,
-                if (manualPaymentId != null)
-                  'manual_payment_request_id': manualPaymentId,
-              });
-              return;
-            }
-            break;
-
-          case 'package':
-            final String? packageIdStr = _firstNonEmptyValue([
-              paymentData['package_id'],
-              paymentData['packageId'],
-              paymentData['payable_id'],
-              paymentData['payableId'],
-            ]);
-
-            final int? packageId = _tryParseInt(packageIdStr);
-            final String? packageType = _firstNonEmptyValue([
-              paymentData['package_type'],
-              paymentData['packageType'],
-              paymentData['purpose'],
-            ]);
-
-            navigateTo(Routes.subscriptionPackageListRoute, {
-              if (packageId != null) 'package_id': packageId,
-              if (packageType != null) 'package_type': packageType,
-              if (manualPaymentId != null)
-                'manual_payment_request_id': manualPaymentId,
-              'source': 'payment_notification',
-            });
-            return;
-
-          case 'wallet':
-          case 'wallet_top_up':
-            navigateTo(Routes.wallet, {
-              if (manualPaymentId != null)
-                'manual_payment_request_id': manualPaymentId,
-            });
-            return;
-
-          case 'service':
-          case 'wifi_plan':
-            final String? serviceId = _firstNonEmptyValue([
-              paymentData['service_id'],
-              paymentData['serviceId'],
-              paymentData['payable_id'],
-              paymentData['payableId'],
-            ]);
-
-            if (serviceId != null && serviceId.isNotEmpty) {
-              navigateTo(Routes.otherServices, {
-                'service_id': serviceId,
-                if (manualPaymentId != null)
-                  'manual_payment_request_id': manualPaymentId,
-              });
-              return;
-            }
-            break;
-        }
-
-        Future.delayed(Duration.zero, () {
-          HelperUtils.goToNextPage(Routes.notificationPage,
-              Constant.navigatorKey.currentContext!, false);
-        });
-      } else {
-        Future.delayed(Duration.zero, () {
-          HelperUtils.goToNextPage(Routes.notificationPage,
-              Constant.navigatorKey.currentContext!, false);
+            Constant.navigatorKey.currentContext!,
+            route,
+            arguments: args,
+          );
         });
       }
-    }
-// if (message.data["screen"] == "profile") {
-//   Navigator.pushNamed(context, profileRoute);
-// }
 
-            );
+      switch (alias) {
+        case 'order':
+          final String? orderId = _firstNonEmptyValue([
+            paymentData['order_id'],
+            paymentData['orderId'],
+            paymentData['payable_id'],
+            paymentData['payableId'],
+          ]);
+
+          if (orderId != null && orderId.isNotEmpty) {
+            navigateTo(Routes.orderSteps, {
+              'order_id': orderId,
+              if (manualPaymentId != null)
+                'manual_payment_request_id': manualPaymentId,
+            });
+            return;
+          }
+          break;
+
+        case 'package':
+          final String? packageIdStr = _firstNonEmptyValue([
+            paymentData['package_id'],
+            paymentData['packageId'],
+            paymentData['payable_id'],
+            paymentData['payableId'],
+          ]);
+
+          final int? packageId = _tryParseInt(packageIdStr);
+          final String? packageType = _firstNonEmptyValue([
+            paymentData['package_type'],
+            paymentData['packageType'],
+            paymentData['purpose'],
+          ]);
+
+          navigateTo(Routes.subscriptionPackageListRoute, {
+            if (packageId != null) 'package_id': packageId,
+            if (packageType != null) 'package_type': packageType,
+            if (manualPaymentId != null)
+              'manual_payment_request_id': manualPaymentId,
+            'source': 'payment_notification',
+          });
+          return;
+
+        case 'wallet':
+        case 'wallet_top_up':
+          navigateTo(Routes.wallet, {
+            if (manualPaymentId != null)
+              'manual_payment_request_id': manualPaymentId,
+          });
+          return;
+
+        case 'service':
+        case 'wifi_plan':
+          final String? serviceId = _firstNonEmptyValue([
+            paymentData['service_id'],
+            paymentData['serviceId'],
+            paymentData['payable_id'],
+            paymentData['payableId'],
+          ]);
+
+          if (serviceId != null && serviceId.isNotEmpty) {
+            navigateTo(Routes.otherServices, {
+              'service_id': serviceId,
+              if (manualPaymentId != null)
+                'manual_payment_request_id': manualPaymentId,
+            });
+            return;
+          }
+          break;
+      }
+
+      _openNotificationDetail(message);
+      return;
+    }
+
+    _openNotificationDetail(message);
   }
 
   static Future<void> registerListeners(context) async {
@@ -2494,3 +2493,52 @@ class _CachedParticipantsEntry {
         .toList();
   }
 }
+
+bool _handleActionRequestDeeplink(Map<String, dynamic> data) {
+  final String? deeplink = data['deeplink']?.toString();
+  final ActionRequestRouteArgs? args = _extractActionRequestArgs(deeplink);
+  if (args == null) {
+    return false;
+  }
+
+  final BuildContext? context = Constant.navigatorKey.currentContext;
+  if (context == null) {
+    return false;
+  }
+
+  Future.delayed(Duration.zero, () {
+    Navigator.of(context).pushNamed(
+      Routes.actionRequestPage,
+      arguments: args,
+    );
+  });
+
+  return true;
+}
+
+ActionRequestRouteArgs? _extractActionRequestArgs(String? deeplink) {
+  if (deeplink == null || deeplink.isEmpty) {
+    return null;
+  }
+  final Uri? uri = Uri.tryParse(deeplink);
+  if (uri == null) {
+    return null;
+  }
+  if (uri.scheme != 'marib' || uri.host != 'action-request') {
+    return null;
+  }
+  if (uri.pathSegments.isEmpty) {
+    return null;
+  }
+  final String id = uri.pathSegments.first;
+  final String? token = uri.queryParameters['token'];
+  if (id.isEmpty || token == null || token.isEmpty) {
+    return null;
+  }
+
+  return ActionRequestRouteArgs(
+    requestId: id,
+    token: token,
+  );
+}
+

@@ -202,8 +202,7 @@ class Api {
           : <String>[Constant.baseUrl];
   static int _activeBaseUrlIndex = 0;
 
-  static String get _activeBaseUrl =>
-      _baseUrlCandidates[_activeBaseUrlIndex];
+  static String get _activeBaseUrl => _baseUrlCandidates[_activeBaseUrlIndex];
 
   static bool _userLogoutInProgress = false;
   static bool get networkLoggingEnabled =>
@@ -648,7 +647,18 @@ class Api {
 
   static String itemDiscountApi(int itemId) => "items/$itemId/discount";
   static String getMyItemApi = "my-items";
-  static String getNotificationListApi = "get-notification-list";
+  static String getNotificationListApi = "notifications";
+  static String notificationsApi = "notifications";
+  static String notificationsUnreadApi = "notifications/unread-count";
+  static String notificationsMarkReadApi = "notifications/mark-read";
+  static String notificationsMarkAllReadApi = "notifications/mark-all-read";
+  static String notificationPreferencesApi = "notification-preferences";
+  static String notificationTopicsApi = "topics";
+  static String notificationTopicSubscribeApi = "topics/subscribe";
+  static String notificationTopicUnsubscribeApi = "topics/unsubscribe";
+  static String actionRequestApi(String id) => "action-requests/$id";
+  static String actionRequestPerformApi(String id) =>
+      "action-requests/$id/perform";
   static String deleteUserApi = "delete-user";
   static String manageFavouriteApi = "manage-favourite";
   static String getPackageApi = "get-package";
@@ -819,10 +829,8 @@ class Api {
     'banks',
   ];
 
-
   /// مسار فهرس بوابات المتجر الحالية للتاجر المصادق (المسار القديم).
   static String storeGatewaysCatalogApi() => 'store-gateways';
-
 
   /// مسار بوابات المتجر الجديدة (يجب تمرير هوية التاجر أو السلَج/المعرف).
   static String storeGatewaysApi(dynamic seller) {
@@ -1170,8 +1178,7 @@ class Api {
         final int derivedStatus = respCode is int && respCode > 0
             ? respCode
             : (statusCode == 0 ? 422 : statusCode);
-        final String message =
-            (resp['message'] ?? 'request-failed').toString();
+        final String message = (resp['message'] ?? 'request-failed').toString();
         if ((derivedStatus == 401 || derivedStatus == 403) &&
             shouldForceLogout) {
           userExpired();
@@ -1233,8 +1240,8 @@ class Api {
 
   /// معالجة انتهاء صلاحية جلسة المستخدم
   static void userExpired() {
-    final BuildContext? ctx =
-        Constant.navigatorKey.currentContext ?? Constant.navigatorKey.currentState?.context;
+    final BuildContext? ctx = Constant.navigatorKey.currentContext ??
+        Constant.navigatorKey.currentState?.context;
 
     if (ctx == null) {
       debugPrint(
@@ -1368,8 +1375,7 @@ class Api {
       return false;
     }
     final int previousIndex = _activeBaseUrlIndex;
-    _activeBaseUrlIndex =
-        (_activeBaseUrlIndex + 1) % _baseUrlCandidates.length;
+    _activeBaseUrlIndex = (_activeBaseUrlIndex + 1) % _baseUrlCandidates.length;
     if (_activeBaseUrlIndex == previousIndex) {
       return false;
     }
@@ -1527,8 +1533,7 @@ class Api {
             ? Map<String, dynamic>.from(payloadMap)
             : (normalizedPayload ?? rawPayload);
         throw ApiHttpException(
-          errorMessage:
-              extractMessage(errorPayload) ?? 'request-failed',
+          errorMessage: extractMessage(errorPayload) ?? 'request-failed',
           statusCode: normalizedStatus,
           payload: errorPayload,
         );
@@ -1620,8 +1625,7 @@ class Api {
 
     while (attempt < maxAttempts) {
       final String baseUrl = _activeBaseUrl;
-      final String requestUrl =
-          (resolvedUseBaseUrl ? baseUrl : "") + url;
+      final String requestUrl = (resolvedUseBaseUrl ? baseUrl : "") + url;
       final Map<String, dynamic> requestHeaders = headers();
       final _CachedApiResponse? cachedResponse = enableEtagCache
           ? _ApiResponseCache.get(requestUrl, queryParameters)
@@ -1682,11 +1686,10 @@ class Api {
           return Map<String, dynamic>.from(cachedResponse.payload);
         }
 
-        final bool switchedBase =
-            resolvedUseBaseUrl &&
-                _shouldRetryDueToNetwork(e) &&
-                attempt < maxAttempts - 1 &&
-                _moveToNextBaseUrl(baseUrl);
+        final bool switchedBase = resolvedUseBaseUrl &&
+            _shouldRetryDueToNetwork(e) &&
+            attempt < maxAttempts - 1 &&
+            _moveToNextBaseUrl(baseUrl);
 
         if (switchedBase) {
           attempt += 1;
@@ -2134,8 +2137,7 @@ class Api {
       return false;
     }
 
-    final String? message =
-        _extractMessageFromPayload(payload)?.toLowerCase();
+    final String? message = _extractMessageFromPayload(payload)?.toLowerCase();
     if (message != null) {
       for (final marker in _deactivationMessageMarkers) {
         if (message.contains(marker)) {

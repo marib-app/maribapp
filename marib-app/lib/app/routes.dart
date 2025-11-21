@@ -67,6 +67,8 @@ import 'package:marib/app/navigation/motion/route_motion.dart';
 import 'package:marib/ui/screens/settings/contact_us.dart';
 import 'package:marib/ui/screens/settings/notification_detail.dart';
 import 'package:marib/ui/screens/settings/notifications.dart';
+import 'package:marib/ui/screens/settings/notification_settings_screen.dart';
+import 'package:marib/ui/screens/notifications/action_request_details_screen.dart';
 import 'package:marib/ui/screens/settings/profile_setting.dart';
 
 import 'package:marib/ui/screens/classified_ads/details.dart';
@@ -182,6 +184,8 @@ class Routes {
   static const filterScreen = 'filterScreen';
   static const notificationPage = 'notificationpage';
   static const notificationDetailPage = 'notificationdetailpage';
+  static const notificationSettingsPage = 'notificationsettingspage';
+  static const actionRequestPage = 'actionrequestpage';
   static const addItemScreenRoute = 'addItemScreenRoute';
   static const subscriptionPackageListRoute = 'subscriptionPackageListRoute';
   static const subscriptionScreen = 'subscriptionScreen';
@@ -449,6 +453,10 @@ class Routes {
         return Notifications.route(routeSettings);
       case notificationDetailPage:
         return NotificationDetail.route(routeSettings);
+      case notificationSettingsPage:
+        return NotificationSettingsScreen.route(routeSettings);
+      case actionRequestPage:
+        return ActionRequestDetailsScreen.route(routeSettings);
 
       case successItemScreen:
         return SuccessItemScreen.route(routeSettings);

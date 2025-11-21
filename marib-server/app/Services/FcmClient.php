@@ -36,7 +36,8 @@ class FcmClient
             $payload->title,
             $payload->body,
             $payload->type,
-            $customFields
+            $customFields,
+            true
         );
     }
 }

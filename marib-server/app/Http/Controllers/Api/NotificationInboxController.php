@@ -7,8 +7,6 @@ use App\Models\NotificationDelivery;
 use App\Services\NotificationInboxService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 
 class NotificationInboxController extends Controller
 {

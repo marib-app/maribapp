@@ -1,16 +1,18 @@
 <?php
 
 namespace App\Services;
-use App\Models\User;
 
+use App\Data\Notifications\NotificationIntent;
+use App\Enums\NotificationDispatchStatus;
+use App\Enums\NotificationType;
 use App\Models\Setting;
+use App\Models\User;
 use App\Models\UserFcmToken;
 use Google\Client;
 use Google\Exception;
-use Illuminate\Support\Facades\Storage;
 use GuzzleHttp\Client as GuzzleClient;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-
 use Throwable;
 
 class NotificationService {
@@ -87,30 +89,61 @@ class NotificationService {
      * @param array $customBodyFields
      * @return string|array|bool
      */
-    public static function sendFcmNotification(array $registrationIDs, string|null $title = '', string|null $message = '', string $type = "default", array $customBodyFields = []): string|array|bool {
-        try {
+    public static function sendFcmNotification(array $registrationIDs, string|null $title = '', string|null $message = '', string $type = "default", array $customBodyFields = [], bool $skipDispatch = false): string|array|bool {
+        if ($registrationIDs === []) {
+            \Log::info('NotificationService: No registration IDs provided, skipping notification dispatch.', [
+                'type' => $type,
+            ]);
 
-            if (empty($registrationIDs)) {
-                \Log::info('NotificationService: No registration IDs provided, skipping FCM notification dispatch.', [
+            return [
+                'error'   => false,
+                'message' => 'No registration tokens supplied.',
+                'data'    => [],
+            ];
+        }
+
+        $dispatched = false;
+        if (!$skipDispatch) {
+            try {
+                $userIds = self::resolveUserIdsFromTokens($registrationIDs);
+                if (!empty($userIds)) {
+                    $dispatchService = app(NotificationDispatchService::class);
+                    foreach ($userIds as $userId) {
+                        $intent = new NotificationIntent(
+                            userId: $userId,
+                            type: self::normalizeLegacyType($type),
+                            title: $title ?? '',
+                            body: $message ?? '',
+                            deeplink: self::resolveLegacyDeeplink($customBodyFields),
+                            entity: self::resolveLegacyEntity($type, $customBodyFields),
+                            entityId: self::resolveLegacyEntityId($customBodyFields),
+                            data: array_merge($customBodyFields, [
+                                'legacy_type' => $type,
+                            ]),
+                            meta: [
+                                'legacy_bridge' => true,
+                                'provided_tokens' => count($registrationIDs),
+                            ],
+                        );
+                        $result = $dispatchService->dispatch($intent, true);
+                        if ($result->status === NotificationDispatchStatus::Queued) {
+                            $dispatched = true;
+                        }
+                    }
+
+                    if ($dispatched) {
+                        \Log::info('NotificationService: notifications queued via dispatch, continuing with direct FCM for compatibility.');
+                    }
+                }
+            } catch (Throwable $exception) {
+                \Log::warning('NotificationService: Failed to route notification through dispatch service, falling back to direct FCM.', [
                     'type' => $type,
+                    'error' => $exception->getMessage(),
                 ]);
-
-                return [
-                    'error'   => false,
-                    'message' => 'No registration tokens supplied.',
-                    'data'    => [],
-                ];
             }
+        }
 
-            // \Log::info('NotificationService: Starting FCM notification process', [
-            //     'tokens_count' => count($registrationIDs),
-            //     'title' => $title,
-            //     'message' => $message,
-            //     'type' => $type
-            // ]);
-            
-            //TODO : Use this from caching
-
+        try {
             $configurationState = self::validateHttpV1Configuration();
 
             if ($configurationState['error']) {
@@ -969,6 +1002,69 @@ class NotificationService {
         return false;
 
 
+    }
+
+    protected static function resolveUserIdsFromTokens(array $registrationIDs): array
+    {
+        if ($registrationIDs === []) {
+            return [];
+        }
+
+        return UserFcmToken::query()
+            ->whereIn('fcm_token', $registrationIDs)
+            ->pluck('user_id')
+            ->filter()
+            ->unique()
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->all();
+    }
+
+    protected static function normalizeLegacyType(string $type): NotificationType|string
+    {
+        $normalized = strtolower(trim($type));
+        $map = [
+            'order-status-update' => NotificationType::OrderStatus,
+            'wallet' => NotificationType::WalletAlert,
+            'wallet_withdrawal' => NotificationType::WalletAlert,
+            'payment' => NotificationType::WalletAlert,
+            'payment.request' => NotificationType::PaymentRequest,
+            'action-request' => NotificationType::ActionRequest,
+        ];
+
+        foreach ($map as $needle => $case) {
+            if ($normalized === strtolower($needle)) {
+                return $case;
+            }
+        }
+
+        foreach (NotificationType::cases() as $case) {
+            if ($case->value === $normalized || $case->value === $type) {
+                return $case;
+            }
+        }
+
+        return $type;
+    }
+
+    protected static function resolveLegacyDeeplink(array $customBodyFields): string
+    {
+        return (string) ($customBodyFields['deeplink'] ?? $customBodyFields['click_action'] ?? 'marib://inbox');
+    }
+
+    protected static function resolveLegacyEntity(string $type, array $customBodyFields): string
+    {
+        return (string) ($customBodyFields['entity'] ?? $customBodyFields['context'] ?? $type ?? 'notification');
+    }
+
+    protected static function resolveLegacyEntityId(array $customBodyFields): string|int|null
+    {
+        return $customBodyFields['entity_id']
+            ?? $customBodyFields['order_id']
+            ?? $customBodyFields['transaction_id']
+            ?? $customBodyFields['manual_payment_request_id']
+            ?? $customBodyFields['payment_transaction_id']
+            ?? null;
     }
 
     protected static function resolveFirebaseProjectId(): ?string

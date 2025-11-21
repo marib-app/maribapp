@@ -20,7 +20,7 @@ use Throwable;
 
 class NotificationDispatchService
 {
-    public function dispatch(NotificationIntent $intent): NotificationDispatchResult
+    public function dispatch(NotificationIntent $intent, bool $sendSynchronously = false): NotificationDispatchResult
     {
         $type = $intent->typeValue();
         $policy = $this->policyFor($type);
@@ -109,7 +109,12 @@ class NotificationDispatchService
         }
 
         $queue = Arr::get($policy, 'queue', config('notification.defaults.queue', 'notifications'));
-        SendFcmMessageJob::dispatch($delivery->id)->onQueue($queue);
+
+        if ($sendSynchronously) {
+            SendFcmMessageJob::dispatchSync($delivery->id);
+        } else {
+            SendFcmMessageJob::dispatch($delivery->id)->onQueue($queue);
+        }
 
         app(NotificationInboxService::class)->incrementUnreadCount($intent->userId);
 

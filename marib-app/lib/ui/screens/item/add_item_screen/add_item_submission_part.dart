@@ -1,27 +1,4 @@
-import 'dart:convert';
-import 'dart:io';
-
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-
-import 'package:marib/app/routes.dart';
-import 'package:marib/data/cubits/item/manage_item_cubit.dart';
-import 'package:marib/data/helper/widgets.dart';
-import 'package:marib/data/model/item/item_model.dart';
-import 'package:marib/ui/screens/item/add_item_screen/add_item_details/add_item_details_model.dart';
-import 'package:marib/ui/screens/user_profile/my_item_tab.dart';
-import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart';
-import 'package:marib/ui/screens/widgets/dynamic_field/dynamic_field.dart';
-import 'package:marib/utils/cloudState/cloud_state.dart';
-import 'package:marib/utils/constant.dart';
-import 'package:marib/utils/errorFilter.dart';
-import 'package:marib/utils/geo_rules.dart';
-import 'package:marib/utils/helper_utils.dart';
-import 'package:marib/utils/hive_utils.dart';
-import 'package:marib/utils/ui_utils.dart';
-import 'package:marib/utils/ecommerce_department.dart';
-import 'package:marib/ui/screens/item/purchase_options/pending_item_draft.dart';
+﻿part of 'add_item_submission.dart';
 
 class AddItemDetailsSubmissionService {
   AddItemDetailsSubmissionService({
@@ -39,26 +16,26 @@ class AddItemDetailsSubmissionService {
   int _screenStack = 0;
 
   final List<Map<String, String>> arabCountries = const <Map<String, String>>[
-    {'name': 'اليمن', 'code': '+967'},
-    {'name': 'السعودية', 'code': '+966'},
-    {'name': 'مصر', 'code': '+20'},
-    {'name': 'الإمارات', 'code': '+971'},
-    {'name': 'الأردن', 'code': '+962'},
-    {'name': 'سوريا', 'code': '+963'},
-    {'name': 'العراق', 'code': '+964'},
-    {'name': 'الكويت', 'code': '+965'},
-    {'name': 'البحرين', 'code': '+973'},
-    {'name': 'قطر', 'code': '+974'},
-    {'name': 'عُمان', 'code': '+968'},
-    {'name': 'الجزائر', 'code': '+213'},
-    {'name': 'تونس', 'code': '+216'},
-    {'name': 'ليبيا', 'code': '+218'},
-    {'name': 'المغرب', 'code': '+212'},
-    {'name': 'موريتانيا', 'code': '+222'},
-    {'name': 'فلسطين', 'code': '+970'},
-    {'name': 'لبنان', 'code': '+961'},
-    {'name': 'السودان', 'code': '+249'},
-    {'name': 'جيبوتي', 'code': '+253'},
+    {'name': '╪د┘┘è┘à┘', 'code': '+967'},
+    {'name': '╪د┘╪│╪╣┘ê╪»┘è╪ر', 'code': '+966'},
+    {'name': '┘à╪╡╪▒', 'code': '+20'},
+    {'name': '╪د┘╪ح┘à╪د╪▒╪د╪ز', 'code': '+971'},
+    {'name': '╪د┘╪ث╪▒╪»┘', 'code': '+962'},
+    {'name': '╪│┘ê╪▒┘è╪د', 'code': '+963'},
+    {'name': '╪د┘╪╣╪▒╪د┘é', 'code': '+964'},
+    {'name': '╪د┘┘â┘ê┘è╪ز', 'code': '+965'},
+    {'name': '╪د┘╪ذ╪ص╪▒┘è┘', 'code': '+973'},
+    {'name': '┘é╪╖╪▒', 'code': '+974'},
+    {'name': '╪╣┘┘à╪د┘', 'code': '+968'},
+    {'name': '╪د┘╪ش╪▓╪د╪خ╪▒', 'code': '+213'},
+    {'name': '╪ز┘ê┘╪│', 'code': '+216'},
+    {'name': '┘┘è╪ذ┘è╪د', 'code': '+218'},
+    {'name': '╪د┘┘à╪║╪▒╪ذ', 'code': '+212'},
+    {'name': '┘à┘ê╪▒┘è╪ز╪د┘┘è╪د', 'code': '+222'},
+    {'name': '┘┘╪│╪╖┘è┘', 'code': '+970'},
+    {'name': '┘╪ذ┘╪د┘', 'code': '+961'},
+    {'name': '╪د┘╪│┘ê╪»╪د┘', 'code': '+249'},
+    {'name': '╪ش┘è╪ذ┘ê╪ز┘è', 'code': '+253'},
   ];
 
 // add_item_details_submission_service.dart
@@ -69,18 +46,18 @@ class AddItemDetailsSubmissionService {
     required String storeRootId,        // Constant.storeRootCategoryIdAsString
   }) {
     final it = (interfaceType ?? '').toLowerCase().trim();
-    // الأقسام المسموح بها بالاسم
+    // ╪د┘╪ث┘é╪│╪د┘à ╪د┘┘à╪│┘à┘ê╪ص ╪ذ┘ç╪د ╪ذ╪د┘╪د╪│┘à
     const allowedTypes = {'shein_products', 'computer_section'};
     if (allowedTypes.contains(it)) return true;
     if (isSheinCategory) return true;
 
-    // فحص بالمعرّفات (من القيم التي أعطيتنيها)
+    // ┘╪ص╪╡ ╪ذ╪د┘┘à╪╣╪▒┘ّ┘╪د╪ز (┘à┘ ╪د┘┘é┘è┘à ╪د┘╪ز┘è ╪ث╪╣╪╖┘è╪ز┘┘è┘ç╪د)
     final ids = {
       ...?(categoryIds?.map((e) => e.toString())),
     };
-    if (ids.contains(storeRootId)) return true; // متجر
-    if (ids.contains('4')) return true;         // شي إن root = 4
-    if (ids.contains('5')) return true;         // كمبيوتر root = 5
+    if (ids.contains(storeRootId)) return true; // ┘à╪ز╪ش╪▒
+    if (ids.contains('4')) return true;         // ╪┤┘è ╪ح┘ root = 4
+    if (ids.contains('5')) return true;         // ┘â┘à╪ذ┘è┘ê╪ز╪▒ root = 5
     return false;
   }
 
@@ -89,10 +66,10 @@ class AddItemDetailsSubmissionService {
   Future<void> openProductManagementOrCreateDraft(BuildContext context) async {
     final ItemModel current = model.item ?? ItemModel();
 
-    // تحقّق القسم (متجر/كمبيوتر/شي إن)
+    // ╪ز╪ص┘é┘ّ┘é ╪د┘┘é╪│┘à (┘à╪ز╪ش╪▒/┘â┘à╪ذ┘è┘ê╪ز╪▒/╪┤┘è ╪ح┘)
     if (!supportsProductOptionsForItem(current)) {
       HelperUtils.showSnackBarMessage(
-        context, 'خيارات المنتج متاحة فقط لأقسام المتجر أو الكمبيوتر أو شي إن',
+        context, '╪«┘è╪د╪▒╪د╪ز ╪د┘┘à┘╪ز╪ش ┘à╪ز╪د╪ص╪ر ┘┘é╪╖ ┘╪ث┘é╪│╪د┘à ╪د┘┘à╪ز╪ش╪▒ ╪ث┘ê ╪د┘┘â┘à╪ذ┘è┘ê╪ز╪▒ ╪ث┘ê ╪┤┘è ╪ح┘',
       );
       return;
     }
@@ -122,18 +99,18 @@ class AddItemDetailsSubmissionService {
     } catch (e) {
       if (kDebugMode) print('[debug] openProductManagementOrCreateDraft error: $e');
     }
-    // لو عنده id جاهز: افتح مباشرة
+    // ┘┘ê ╪╣┘╪»┘ç id ╪ش╪د┘ç╪▓: ╪د┘╪ز╪ص ┘à╪ذ╪د╪┤╪▒╪ر
     
     if (id > 0) {
       Navigator.pushNamed(
         context,
         Routes.productManagementScreen,
-        arguments: current, // يدعمه _resolveItem(arguments)
+        arguments: current, // ┘è╪»╪╣┘à┘ç _resolveItem(arguments)
       );
       return;
     }
 
-    // ما في id ⇒ أنشئ مسودة سريعة بدون موقع (تحتاج صورة على الأقل)
+    // ┘à╪د ┘┘è id ظçْ ╪ث┘╪┤╪خ ┘à╪│┘ê╪»╪ر ╪│╪▒┘è╪╣╪ر ╪ذ╪»┘ê┘ ┘à┘ê┘é╪╣ (╪ز╪ص╪ز╪د╪ش ╪╡┘ê╪▒╪ر ╪╣┘┘ë ╪د┘╪ث┘é┘)
     // Build mainImageFile and galleryFiles considering Map entries
     final List<File> galleryFiles = <File>[];
     File? flaggedMainFile;
@@ -234,16 +211,16 @@ class AddItemDetailsSubmissionService {
     model.item = draft.item;
     model.isSubmittingWithoutLocation = true;
 
-    Navigator.pushNamed(
-      context,
-      openProductManagement
-          ? Routes.productManagementScreen
-          : Routes.productReviewScreen,
-      arguments: <String, dynamic>{
-        'item': draft.item,
-        'pendingDraft': draft,
-      },
-    );
+    Navigator.of(context, rootNavigator: true)
+        .pushNamed(
+          Routes.productReviewScreen,
+          arguments: <String, dynamic>{
+            'item': draft.item,
+            'pendingDraft': draft,
+            'openProductManagement': openProductManagement,
+          },
+        )
+        .whenComplete(() => model.isSubmittingWithoutLocation = false);
   }
 
   /// Debug helper: print the current image-related state and what would be
@@ -338,8 +315,8 @@ class AddItemDetailsSubmissionService {
       UiUtils.showBlurredDialoge(
         context,
         dialoge: const BlurredDialogBox(
-          title: 'الصورة مطلوبة',
-          content: Text('يرجى اختيار صورة واحدة على الأقل لإعلانك.'),
+          title: '╪د┘╪╡┘ê╪▒╪ر ┘à╪╖┘┘ê╪ذ╪ر',
+          content: Text('┘è╪▒╪ش┘ë ╪د╪«╪ز┘è╪د╪▒ ╪╡┘ê╪▒╪ر ┘ê╪د╪ص╪»╪ر ╪╣┘┘ë ╪د┘╪ث┘é┘ ┘╪ح╪╣┘╪د┘┘â.'),
         ),
       );
       return;
@@ -428,16 +405,16 @@ class AddItemDetailsSubmissionService {
       model.item = draft.item;
       model.isSubmittingWithoutLocation = true;
 
-      Navigator.pushNamed(
-        context,
-        openProductManagement
-            ? Routes.productManagementScreen
-            : Routes.productReviewScreen,
-        arguments: <String, dynamic>{
-          'item': draft.item,
-          'pendingDraft': draft,
-        },
-      );
+      Navigator.of(context, rootNavigator: true)
+          .pushNamed(
+            Routes.productReviewScreen,
+            arguments: <String, dynamic>{
+              'item': draft.item,
+              'pendingDraft': draft,
+              'openProductManagement': openProductManagement,
+            },
+          )
+          .whenComplete(() => model.isSubmittingWithoutLocation = false);
       return;
     }
 
@@ -883,7 +860,7 @@ class AddItemDetailsSubmissionService {
     if (!model.isEdit && mainImageFile == null) {
       HelperUtils.showSnackBarMessage(
         context,
-        'يرجى إضافة صورة رئيسية قبل المتابعة.',
+        '┘è╪▒╪ش┘ë ╪ح╪╢╪د┘╪ر ╪╡┘ê╪▒╪ر ╪▒╪خ┘è╪│┘è╪ر ┘é╪ذ┘ ╪د┘┘à╪ز╪د╪ذ╪╣╪ر.',
       );
       return null;
     }
@@ -1006,3 +983,4 @@ class AddItemDetailsSubmissionService {
         id == Constant.realEstateRootCategoryId;
   }
 }
+

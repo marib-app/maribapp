@@ -1,8 +1,7 @@
-import 'package:marib/data/helper/custom_exception.dart';
-import 'package:marib/data/model/notification_data.dart';
-import 'package:marib/utils/api.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:marib/data/model/notification_data.dart';
+import 'package:marib/data/repositories/notifications_repository_repository.dart';
 
 abstract class NotificationState {}
 
@@ -39,20 +38,9 @@ class NotificationCubit extends Cubit<NotificationState> {
   Future<List<NotificationData>> getNotificationFromDb(
     BuildContext context,
   ) async {
-    Map<String, String> body = {};
-    List<NotificationData> notificationList = [];
-    var response = await Api.get(
-      url: Api.getNotificationListApi,
-      queryParameters: body,
-    );
-
-    if (!response[Api.error]) {
-      List list = response['data'];
-      notificationList =
-          list.map((model) => NotificationData.fromJson(model)).toList();
-    } else {
-      throw CustomException(response[Api.message]);
-    }
-    return notificationList;
+    final NotificationsRepository repository = NotificationsRepository();
+    final NotificationPageResult result =
+        await repository.fetchNotifications(perPage: 50);
+    return result.items;
   }
 }

@@ -48,7 +48,9 @@ import 'package:marib/data/cubits/system/language_cubit.dart';
 import 'package:marib/data/cubits/system/notification_cubit.dart';
 import 'package:marib/data/cubits/system/user_details.dart';
 import 'package:marib/data/cubits/utility/item_edit_global.dart';
+import 'package:marib/data/cubits/notifications/unread_notifications_cubit.dart';
 import 'package:marib/data/repositories/favourites_repository.dart';
+import 'package:marib/data/repositories/notifications_repository_repository.dart';
 import 'package:marib/data/cubits/add_item_review_cubit.dart';
 import 'package:marib/data/cubits/home/fetch_section_items_cubit.dart';
 import 'package:marib/data/cubits/location/fetch_cities_cubit.dart';
@@ -170,6 +172,10 @@ class RegisterCubits {
     BlocProvider(create: (context) => ProfileStatsCubit()),
     BlocProvider(create: (context) => RequestDeviceCubit()),
     BlocProvider(create: (context) => RequestSupportCubit()),
-    BlocProvider(create: (context) => OtpCubit(OtpRepository()))
+    BlocProvider(create: (context) => OtpCubit(OtpRepository())),
+    BlocProvider(
+      create: (context) =>
+          UnreadNotificationsCubit(NotificationsRepository()),
+    ),
   ];
 }

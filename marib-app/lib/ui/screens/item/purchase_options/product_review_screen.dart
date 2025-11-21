@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 
+import 'package:marib/app/navigation/app_page_route.dart';
+import 'package:marib/app/navigation/motion/route_motion.dart';
 import 'package:marib/app/routes.dart';
 import 'package:marib/data/cubits/item/manage_item_cubit.dart';
 import 'package:marib/data/helper/widgets.dart';
@@ -17,6 +19,7 @@ import 'package:marib/data/repositories/item/item_purchase_options_repository.da
 import 'package:marib/data/repositories/item/item_repository.dart';
 import 'package:marib/ui/screens/item/purchase_options/pending_item_draft.dart';
 import 'package:marib/ui/theme/theme.dart';
+import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
 import 'package:marib/utils/errorFilter.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/helper_utils.dart';
@@ -30,18 +33,21 @@ class ProductReviewScreen extends StatefulWidget {
     this.initialOptions,
     this.initialMessage,
     this.pendingDraft,
+    this.autoOpenProductManagement = false,
   });
 
   final ItemModel item;
   final ItemPurchaseOptions? initialOptions;
   final String? initialMessage;
   final PendingItemDraft? pendingDraft;
+  final bool autoOpenProductManagement;
 
   static Route<dynamic> route(RouteSettings settings) {
     ItemModel? item;
     ItemPurchaseOptions? options;
     String? message;
     PendingItemDraft? draft;
+    bool autoOpenProductManagement = false;
 
     final dynamic arguments = settings.arguments;
     if (arguments is ItemModel) {
@@ -70,6 +76,10 @@ class ProductReviewScreen extends StatefulWidget {
       if (messageCandidate is String && messageCandidate.trim().isNotEmpty) {
         message = messageCandidate;
       }
+      final dynamic autoOpenCandidate = arguments['openProductManagement'];
+      if (autoOpenCandidate is bool) {
+        autoOpenProductManagement = autoOpenCandidate;
+      }
     }
 
     if (draft != null && item == null) {
@@ -85,6 +95,7 @@ class ProductReviewScreen extends StatefulWidget {
       initialOptions: options,
       initialMessage: message,
       pendingDraft: draft,
+      autoOpenProductManagement: autoOpenProductManagement,
     );
 
     if (draft != null) {
@@ -94,7 +105,11 @@ class ProductReviewScreen extends StatefulWidget {
       );
     }
 
-    return MaterialPageRoute(builder: (_) => content, settings: settings);
+    return AppPageRoute.build(
+      settings: settings,
+      motionPattern: AppMotionPattern.glide,
+      builder: (_) => content,
+    );
   }
 
   @override
@@ -110,6 +125,9 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
   String? _error;
   late final PageController _galleryController;
   int _galleryIndex = 0;
+  late bool _autoOpenProductManagement;
+  bool _showSkeleton = true;
+  bool _hasScheduledDeferredLoad = false;
 
   final ItemPurchaseOptionsRepository _optionsRepository =
       ItemPurchaseOptionsRepository();
@@ -122,18 +140,22 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
     _options = widget.initialOptions;
     _pendingDraft = widget.pendingDraft;
     _galleryController = PageController();
-
-    if (_options == null && _item.id != null) {
-      _fetchOptions();
-    }
+    _autoOpenProductManagement = widget.autoOpenProductManagement;
 
     final String? message = widget.initialMessage;
-    if (message != null && message.trim().isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (message != null && message.trim().isNotEmpty) {
         HelperUtils.showSnackBarMessage(context, message);
-      });
-    }
+      }
+
+      _startDeferredLoad();
+
+      if (_autoOpenProductManagement) {
+        _autoOpenProductManagement = false;
+        _openProductManagement();
+      }
+    });
   }
 
   @override
@@ -147,6 +169,7 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
     final List<Widget> sections = _buildSections();
 
     return Scaffold(
+      backgroundColor: context.color.primaryColor,
       appBar: UiUtils.buildAppBar(
         context,
         title: '?????? ???????',
@@ -165,19 +188,7 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
             RefreshIndicator(
               color: context.color.territoryColor,
               onRefresh: _handleRefresh,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 160),
-                physics: const AlwaysScrollableScrollPhysics(),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    for (int i = 0; i < sections.length; i++) ...[
-                      sections[i],
-                      if (i != sections.length - 1) const SizedBox(height: 16),
-                    ],
-                  ],
-                ),
-              ),
+              child: _buildScrollableContent(sections),
             ),
             if (_isFetching && _options != null)
               const Positioned(
@@ -199,6 +210,22 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
       return;
     }
     await _fetchOptions();
+  }
+
+  void _startDeferredLoad() {
+    if (_hasScheduledDeferredLoad) {
+      return;
+    }
+    _hasScheduledDeferredLoad = true;
+
+    Future<void>(() async {
+      if (_options == null && _item.id != null) {
+        await _fetchOptions();
+      }
+      if (mounted) {
+        setState(() => _showSkeleton = false);
+      }
+    });
   }
 
   List<Widget> _buildSections() {
@@ -243,6 +270,41 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
     }
 
     return sections;
+  }
+
+  Widget _buildScrollableContent(List<Widget> sections) {
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final List<Widget> children;
+        if (_showSkeleton) {
+          children = const <Widget>[SizedBox(height: 16), _ReviewLoadingSkeleton()];
+        } else if (sections.isEmpty) {
+          children = const <Widget>[SizedBox(height: 32), _EmptyReviewPlaceholder()];
+        } else {
+          children = <Widget>[
+            for (int i = 0; i < sections.length; i++) ...[
+              sections[i],
+              if (i != sections.length - 1) const SizedBox(height: 16),
+            ],
+          ];
+        }
+
+        return SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 160),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: constraints.maxHeight,
+              minWidth: double.infinity,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: children,
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Widget _buildGallerySection(List<_GalleryMedia> media) {
@@ -342,14 +404,16 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
 
   Widget _buildMetaInfoCard() {
     final List<_InfoRow> rows = <_InfoRow>[
-      _InfoRow('?????', _item.category?.name),
-      _InfoRow('???????', _item.city ?? _draftValue('city')),
-      _InfoRow('???????', _item.state ?? _draftValue('state')),
-      _InfoRow('??????', _item.country ?? _draftValue('country')),
-      _InfoRow('???????', _item.address ?? _draftValue('address')),
-      _InfoRow('??? ???????', _item.contact ?? _draftValue('contact')),
-      _InfoRow('???? ??????', _item.productLink ?? _draftValue('product_link')),
-      _InfoRow('???? ????????', _item.reviewLink ?? _draftValue('review_link')),
+      _InfoRow('?????', _normalizeText(_item.category?.name)),
+      _InfoRow('???????', _normalizeText(_item.city ?? _draftValue('city'))),
+      _InfoRow('???????', _normalizeText(_item.state ?? _draftValue('state'))),
+      _InfoRow('??????', _normalizeText(_item.country ?? _draftValue('country'))),
+      _InfoRow('???????', _normalizeText(_item.address ?? _draftValue('address'))),
+      _InfoRow('??? ???????', _normalizeText(_item.contact ?? _draftValue('contact'))),
+      _InfoRow('???? ??????',
+          _normalizeText(_item.productLink ?? _draftValue('product_link'))),
+      _InfoRow('???? ????????',
+          _normalizeText(_item.reviewLink ?? _draftValue('review_link'))),
     ];
 
     final Iterable<_InfoRow> available =
@@ -421,6 +485,15 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
         : _buildSummaryRowsColumn(rows);
 
     return _SectionCard(title: '?????? ???????', child: child);
+  }
+
+
+  String? _normalizeText(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+    final String text = value.toString().trim();
+    return text.isEmpty ? null : text;
   }
 
   Widget _buildSummaryCard(ItemPurchaseOptions options) {
@@ -731,8 +804,8 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
     if (!payload.containsKey(key)) {
       return null;
     }
-    final String text = payload[key]?.toString().trim() ?? '';
-    return text.isEmpty ? null : text;
+    return _normalizeText(payload[key]);
+
   }
 
   List<_GalleryMedia> _resolveGalleryMedia() {
@@ -807,12 +880,15 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
     };
 
     final bool hasBlockedStatus = blockedStatuses.contains(status);
+    final bool missingPublishPayload = _item.id == null && _pendingDraft == null;
     final bool disablePublish =
-        _publishing || _item.id == null || hasBlockedStatus;
+        _publishing || hasBlockedStatus || missingPublishPayload;
     final String buttonTitle =
         hasBlockedStatus ? _resolveDisabledButtonTitle(status) : '??? ????';
     final String? disabledMessage =
-        hasBlockedStatus ? _resolveDisabledMessage(status) : null;
+        hasBlockedStatus ? _resolveDisabledMessage(status) : (missingPublishPayload
+            ? '?? ???? ????? ??? ????? ???????.'
+            : null);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
@@ -939,6 +1015,17 @@ class _ProductReviewScreenState extends State<ProductReviewScreen> {
     final String formatted = formatter.format(parsedPrice);
     return '$formatted $currency';
   }
+  Future<void> _openProductManagement() async {
+    final PendingItemDraft? draft = _pendingDraft;
+    await Navigator.of(context, rootNavigator: true).pushNamed(
+      Routes.productManagementScreen,
+      arguments: <String, dynamic>{
+        'item': _item,
+        if (draft != null) 'pendingDraft': draft,
+      },
+    );
+  }
+
 }
 
 class _GalleryMedia {
@@ -975,7 +1062,9 @@ class _SectionCard extends StatelessWidget {
     final ColorScheme palette = context.color;
 
     return Card(
-      color: palette.secondaryColor,
+      elevation: 2,
+      color: palette.cardColor,
+      shadowColor: palette.borderColor.withOpacity(0.3),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -992,3 +1081,112 @@ class _SectionCard extends StatelessWidget {
   }
 }
 
+class _EmptyReviewPlaceholder extends StatelessWidget {
+  const _EmptyReviewPlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Icon(Icons.receipt_long_outlined,
+            size: 72, color: context.color.borderColor),
+        const SizedBox(height: 16),
+        Text(
+          '?? ???? ?????? ????? ?? ???? ????? ?????.',
+          textAlign: TextAlign.center,
+          style: theme.textTheme.titleMedium,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          '????? ????? ??? ????? �������� ������ �� ����� ?????.',
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodyMedium
+              ?.copyWith(color: context.color.textLightColor),
+        ),
+      ],
+    );
+  }
+}
+
+class _ReviewLoadingSkeleton extends StatelessWidget {
+  const _ReviewLoadingSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: const [
+        _SkeletonCard(
+          includeMedia: true,
+          lineWidths: [0.6, 0.4, 0.9, 0.8],
+        ),
+        SizedBox(height: 16),
+        _SkeletonCard(lineWidths: [0.5, 0.7, 0.9, 0.6]),
+        SizedBox(height: 16),
+        _SkeletonCard(lineWidths: [0.8, 0.3, 0.5]),
+      ],
+    );
+  }
+}
+
+class _SkeletonCard extends StatelessWidget {
+  const _SkeletonCard({
+    required this.lineWidths,
+    this.includeMedia = false,
+  });
+
+  final List<double> lineWidths;
+  final bool includeMedia;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: context.color.cardColor,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (includeMedia) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: const SizedBox(
+                  height: 180,
+                  child: ShimmerBox(height: 180),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+            for (int i = 0; i < lineWidths.length; i++) ...[
+              _SkeletonLine(widthFactor: lineWidths[i]),
+              if (i != lineWidths.length - 1) const SizedBox(height: 12),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SkeletonLine extends StatelessWidget {
+  const _SkeletonLine({
+    required this.widthFactor,
+    this.height = 14,
+  });
+
+  final double widthFactor;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    final double clamped = widthFactor.clamp(0.1, 1.0);
+    return FractionallySizedBox(
+      widthFactor: clamped,
+      alignment: Alignment.centerLeft,
+      child: ShimmerBox(height: height),
+    );
+  }
+}

@@ -32,7 +32,7 @@ import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/merchant_display_helper.dart';
 
-import 'unread_notifications_cubit.dart';
+import 'package:marib/data/cubits/notifications/unread_notifications_cubit.dart';
 
 // ملاحظة: ProfileHeaderUI يدعم welcomeText و welcomeColor و shrinkFactor.
 

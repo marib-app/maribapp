@@ -584,34 +584,39 @@ class ServiceRequestController extends Controller
                     ->values()
                     ->all();
                     
-                    if (!empty($tokens)) {
-                    $title = 'تحديث طلب الخدمة';
-                    $statusLabel = ucfirst($r->status);
-                    $body  = 'تم تحديث حالة طلبك إلى: ' . $statusLabel;
 
+
+                if (!empty($tokens)) {
                     $deeplink = route('service.requests.review', $r->getKey());
+                    $reason = $r->status === 'rejected' ? ($r->rejected_reason ?: null) : null;
 
-                    $dataPayload = [
-                        'service_request_id' => $r->getKey(),
-                        'status'             => $r->status,
-                        'status_label'       => $statusLabel,
-                        'service_id'         => $r->service_id,
-                        'service_title'      => $r->service?->title,
-                        'user_id'            => $r->user_id,
+                    $titles = [
+                        'approved' => 'تمت الموافقة على طلب ربط الشبكة',
+                        'rejected' => 'تم رفض طلب ربط الشبكة',
+                        'review' => 'طلب ربط الشبكة قيد المراجعة',
                     ];
 
-                    if ($r->status === 'rejected' && filled($r->rejected_reason)) {
-                        $dataPayload['rejected_reason'] = $r->rejected_reason;
-                    }
+                    $bodies = [
+                        'approved' => 'تمت الموافقة على طلبك لربط الشبكة وسيتم تفعيلها.',
+                        'rejected' => 'تم رفض طلبك لربط الشبكة' . ($reason ? ' للسبب التالي: ' . $reason : '.'),
+                        'review' => 'تم إعادة طلبك للمراجعة وسيتم إشعارك بعد اتخاذ القرار.',
+                    ];
 
                     $notificationResponse = NotificationService::sendFcmNotification(
                         $tokens,
-                        $title,
-                        $body,
+                        $titles[$r->status] ?? 'تحديث طلب الخدمة',
+                        $bodies[$r->status] ?? 'تم تحديث حالة طلبك.',
                         'service-request-update',
                         [
-                            'data'         => json_encode($dataPayload, JSON_UNESCAPED_UNICODE),
-                            'deeplink'     => $deeplink,
+                            'data' => [
+                                'status' => $r->status,
+                                'request_id' => $r->getKey(),
+                                'reason' => $reason,
+                                'service_id' => $r->service_id,
+                                'service_title' => $r->service?->title,
+                                'user_id' => $r->user_id,
+                            ],
+                            'deeplink' => $deeplink,
                             'click_action' => $deeplink,
                         ]
                     );

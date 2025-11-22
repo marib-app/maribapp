@@ -408,8 +408,12 @@ class ServiceRequestController extends Controller
         $deeplink = route('service.requests.review', $serviceRequest->getKey());
         $notificationPayload = [
             'service_request_id' => $serviceRequest->getKey(),
+            'request_id' => $serviceRequest->getKey(),
             'status' => $serviceRequest->status,
             'service_id' => $serviceRequest->service_id,
+            'service_title' => $service->title,
+            'user_id' => $user->getKey(),
+            'reason' => null,
         ];
 
 
@@ -430,7 +434,7 @@ class ServiceRequestController extends Controller
                     'تم إرسال طلبك بنجاح. طلبك الآن قيد المراجعة وسيتم التواصل معك فور مراجعة الطلب .',
                     'service-request-created',
                     [
-                        'data' => json_encode($notificationPayload, JSON_UNESCAPED_UNICODE),
+                        'data' => $notificationPayload,
 
                         'deeplink' => $deeplink,
                         'click_action' => $deeplink,
@@ -456,6 +460,57 @@ class ServiceRequestController extends Controller
             ]);
         }
 
+
+        try {
+            $ownerId = $service->owner_id;
+
+            if ($ownerId && (int) $ownerId !== (int) $user->id) {
+                $ownerTokens = UserFcmToken::query()
+                    ->where('user_id', $ownerId)
+                    ->pluck('fcm_token')
+                    ->filter()
+                    ->unique()
+                    ->values()
+                    ->all();
+
+                if (!empty($ownerTokens)) {
+                    $ownerNotificationResponse = NotificationService::sendFcmNotification(
+                        $ownerTokens,
+                        'طلب ربط شبكة جديد',
+                        'تم إرسال طلب ربط شبكتك وهو قيد المراجعة حالياً.',
+                        'service-request-created-owner',
+                        [
+                            'data' => array_merge($notificationPayload, [
+                                'request_id' => $serviceRequest->getKey(),
+                                'status' => $serviceRequest->status,
+                                'reason' => null,
+                                'service_title' => $service->title,
+                                'user_id' => $user->getKey(),
+                            ]),
+                            'deeplink' => $deeplink,
+                            'click_action' => $deeplink,
+                        ]
+                    );
+
+                    if (is_array($ownerNotificationResponse) && ($ownerNotificationResponse['error'] ?? false)) {
+                        Log::warning('service_requests.create_owner_notification_failed', [
+                            'service_request_id' => $serviceRequest->getKey(),
+                            'owner_id' => $ownerId,
+                            'response_message' => $ownerNotificationResponse['message'] ?? null,
+                            'response_details' => $ownerNotificationResponse['details'] ?? null,
+                            'response_code' => $ownerNotificationResponse['code'] ?? null,
+                        ]);
+                    }
+                }
+            }
+        } catch (\Throwable $exception) {
+            Log::error('service_requests.create_owner_notification_exception', [
+                'service_request_id' => $serviceRequest->getKey(),
+                'owner_id' => $service->owner_id,
+                'error' => $exception->getMessage(),
+                'exception_class' => get_class($exception),
+            ]);
+        }
 
 
         $providerIds = null;
@@ -487,9 +542,9 @@ class ServiceRequestController extends Controller
                         'تم تقديم طلب خدمة جديد وهو قيد المراجعة. يرجى متابعة الطلب والتواصل مع العميل بعد المراجعة.',
                         'service-request-created-provider',
                         [
-                            'data' => json_encode(array_merge($notificationPayload, [
+                            'data' => array_merge($notificationPayload, [
                                 'submitted_by' => $user->getKey(),
-                            ]), JSON_UNESCAPED_UNICODE),
+                            ]),
                             'deeplink' => $deeplink,
                             'click_action' => $deeplink,
                         ]

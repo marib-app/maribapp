@@ -279,6 +279,7 @@ class ManualPaymentSubmissionResult {
     this.requiresConfirmation = false,
     this.subject,
     this.next,
+    this.delivery,
     required this.raw,
   });
 
@@ -295,6 +296,7 @@ class ManualPaymentSubmissionResult {
   final bool requiresConfirmation;
   final Map<String, dynamic>? subject;
   final Map<String, dynamic>? next;
+  final Map<String, dynamic>? delivery;
 
   Map<String, dynamic> toJson() => raw;
 
@@ -305,6 +307,7 @@ class ManualPaymentSubmissionResult {
     String? paymentIntentId,
     String? status,
     String? message,
+    Map<String, dynamic>? delivery,
     Map<String, dynamic>? raw,
     Map<String, dynamic>? manualPaymentRequest,
     Map<String, dynamic>? paymentTransaction,
@@ -326,10 +329,10 @@ class ManualPaymentSubmissionResult {
       requiresConfirmation: requiresConfirmation ?? this.requiresConfirmation,
       subject: subject ?? this.subject,
       next: next ?? this.next,
+      delivery: delivery ?? this.delivery,
       raw: raw ?? this.raw,
     );
   }
-
 
   static int? _parseInt(dynamic value) {
     if (value == null) return null;
@@ -370,8 +373,6 @@ class ManualPaymentSubmissionResult {
   int? get manualPaymentIdAsInt => _parseInt(manualPaymentId);
 
   int? get paymentTransactionIdAsInt => _parseInt(paymentTransactionId);
-
-
 
   static String? _parseIdentifier(dynamic value) {
     if (value == null) return null;
@@ -495,6 +496,8 @@ class ManualPaymentSubmissionResult {
         _mapify(dataMap?['subject']) ?? _mapify(map['subject']);
     final Map<String, dynamic>? nextMap =
         _mapify(dataMap?['next']) ?? _mapify(map['next']);
+    final Map<String, dynamic>? deliveryMap =
+        _mapify(dataMap?['delivery']) ?? _mapify(map['delivery']);
 
     String? lookupId(List<String> keys,
         {bool includeTransaction = false, bool includeIntent = false}) {
@@ -657,6 +660,9 @@ class ManualPaymentSubmissionResult {
           ? Map<String, dynamic>.unmodifiable(subjectMap)
           : null,
       next: nextMap != null ? Map<String, dynamic>.unmodifiable(nextMap) : null,
+      delivery: deliveryMap != null
+          ? Map<String, dynamic>.unmodifiable(deliveryMap)
+          : null,
       raw: Map<String, dynamic>.unmodifiable(map),
     );
   }
@@ -699,8 +705,9 @@ class ManualPaymentService {
     final String purposeValue = purpose.trim();
     final String methodValue = paymentMethod.trim();
     final String trimmedCurrency = currency.trim();
-    final String currencyValue =
-        trimmedCurrency.isNotEmpty ? trimmedCurrency.toUpperCase() : _fallbackCurrencyCode;
+    final String currencyValue = trimmedCurrency.isNotEmpty
+        ? trimmedCurrency.toUpperCase()
+        : _fallbackCurrencyCode;
     final String normalizedPurpose = purposeValue.toLowerCase();
 
     final Map<String, dynamic> payload = <String, dynamic>{};
@@ -1890,10 +1897,9 @@ class ManualPaymentService {
         ),
       );
 
-
       if (res.data is Map) {
         final Map<String, dynamic> responseMap =
-        Map<String, dynamic>.from(res.data as Map);
+            Map<String, dynamic>.from(res.data as Map);
         if (responseMap['error'] == true) {
           final dynamic codeValue = responseMap['code'];
           final int? errorCode =
@@ -2017,10 +2023,8 @@ class ManualPaymentService {
     }
   }
 
-
-
-
-  Future<ManualPayment?> fetchManualPaymentRequestById(int manualRequestId) async {
+  Future<ManualPayment?> fetchManualPaymentRequestById(
+      int manualRequestId) async {
     final payments = await fetchMyManualPayments(latestOnly: false);
     final String target = manualRequestId.toString();
 
@@ -2041,7 +2045,8 @@ class ManualPaymentService {
       }
       final manualData = payment.manualPaymentData;
       if (manualData != null) {
-        final dynamic candidate = manualData['id'] ?? manualData['manual_payment_id'];
+        final dynamic candidate =
+            manualData['id'] ?? manualData['manual_payment_id'];
         if (_matches(candidate?.toString())) {
           return payment;
         }
@@ -2050,6 +2055,4 @@ class ManualPaymentService {
 
     return null;
   }
-
-
 }

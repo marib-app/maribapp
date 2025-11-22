@@ -360,7 +360,14 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       setState(() {
         _banks = manualAllowed ? displayableBanks : <BankAccount>[];
         _eastYemenBank = eastAllowed ? eastConfigForUi : null;
-        _walletGatewayAllowed = walletAllowedByConfig;
+        final bool walletAvailable =
+            (_walletSummaryReady || widget.args.allowWalletGateway) &&
+                walletAllowedByConfig;
+        final bool walletPurpose = isWalletTopUp || normalizedWalletTopUp;
+        final bool walletOptionAllowed = walletAvailable &&
+            (!walletPurpose || widget.args.allowWalletGateway);
+
+        _walletGatewayAllowed = walletOptionAllowed;
         _manualGatewayAllowed = manualAllowed;
         _eastGatewayAllowed = eastAllowed;
 
@@ -371,12 +378,6 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         _settingsCurrencyInfo = settingsCurrency;
 
         final normalizedGateway = widget.args.normalizedGateway;
-        final bool walletAvailable =
-            _walletSummaryReady && walletAllowedByConfig;
-
-        final bool walletPurpose = isWalletTopUp || normalizedWalletTopUp;
-        final bool walletOptionAllowed =
-            walletAvailable && !walletPurpose && walletAllowedByConfig;
 
         if (normalizedGateway == _eastYemenMethod && _eastYemenBank != null) {
           _selectedMethod = _eastYemenMethod;
@@ -698,8 +699,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
 
   String _resolveGatewayForIntent(bool walletPurpose) {
     final String? current = _selectedMethod;
-    final bool walletDisallowed =
-        walletPurpose && current == _walletMethod;
+    final bool walletDisallowed = walletPurpose && current == _walletMethod;
     if (current != null && !walletDisallowed) {
       return current;
     }
@@ -797,8 +797,9 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     final int? orderIdParam = (isOrderPurpose && widget.args.packageId > 0)
         ? widget.args.packageId
         : null;
-    final int? packageIdParam =
-        (isPackagePurpose && widget.args.packageId > 0) ? widget.args.packageId : null;
+    final int? packageIdParam = (isPackagePurpose && widget.args.packageId > 0)
+        ? widget.args.packageId
+        : null;
 
     try {
       final settings = await _service.fetchManualPaymentSettings(
@@ -1137,8 +1138,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       final int? serviceIdArg = normalizedPurpose == 'service'
           ? widget.args.serviceId ?? widget.args.itemId
           : widget.args.serviceId;
-      final int? wifiPlanIdArg =
-          widget.args.wifiPlanId ?? widget.args.itemId;
+      final int? wifiPlanIdArg = widget.args.wifiPlanId ?? widget.args.itemId;
 
       if (serviceRequestIdArg != null) {
         payableType = 'App\\Models\\ServiceRequest';
@@ -1445,7 +1445,10 @@ class _BankTransferScreenState extends State<BankTransferScreen>
 
     if (_usingWallet) {
       if (transactionId != null) {
-        return PaymentRouteResult.wallet(transactionId);
+        return PaymentRouteResult.wallet(
+          transactionId,
+          delivery: result.delivery,
+        );
       }
       return null;
     }
@@ -1957,4 +1960,3 @@ class _ShimmerBox extends StatelessWidget {
     );
   }
 }
-

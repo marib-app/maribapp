@@ -695,7 +695,13 @@ class PaymentController extends Controller
             'status_code' => $statusCode,
         ], $request);
 
-        return $this->buildWifiPlanResponse($freshTransaction, $plan, $statusCode);
+        return $this->buildWifiPlanResponse(
+            $freshTransaction,
+            $plan,
+            $statusCode,
+            null,
+            $confirmation['delivery'] ?? null
+        );
     }
 
     private function confirmPackagePayment(Request $request, int $userId): JsonResponse
@@ -1027,7 +1033,8 @@ class PaymentController extends Controller
         PaymentTransaction $transaction,
         WifiPlan $plan,
         int $statusCode,
-        ?array $availableGateways = null
+        ?array $availableGateways = null,
+        ?array $delivery = null
     ): JsonResponse {
         $transaction->loadMissing([
             'manualPaymentRequest.manualBank',
@@ -1068,6 +1075,10 @@ class PaymentController extends Controller
 
             $response['available_gateways'] = $normalizedGateways;
             $response['allowed_gateways'] = $normalizedGateways;
+        }
+
+        if (is_array($delivery) && ! empty($delivery)) {
+            $response['delivery'] = $delivery;
         }
 
         return response()->json($response, $statusCode);

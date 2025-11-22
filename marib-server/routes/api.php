@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\StorefrontController;
 use App\Http\Controllers\Api\NotificationInboxController;
 use App\Http\Controllers\Api\NotificationPreferenceController;
 use App\Http\Controllers\Api\NotificationTopicController;
+use App\Http\Controllers\Api\NotificationPaymentController;
 use App\Http\Controllers\Api\ActionRequestController;
 use App\Http\Controllers\ApiController;
 use Illuminate\Support\Facades\Route;
@@ -91,6 +92,8 @@ Route::group(['middleware' => ['auth:sanctum']], static function () {
     Route::get('notifications/unread-count', [NotificationInboxController::class, 'unreadCount']);
     Route::post('notifications/mark-read', [NotificationInboxController::class, 'markRead']);
     Route::post('notifications/mark-all-read', [NotificationInboxController::class, 'markAllRead']);
+    Route::post('notifications/{delivery}/payment-request', [NotificationPaymentController::class, 'update'])
+        ->whereNumber('delivery');
 
     Route::get('notification-preferences', [NotificationPreferenceController::class, 'index']);
     Route::post('notification-preferences', [NotificationPreferenceController::class, 'store']);

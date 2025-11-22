@@ -217,4 +217,31 @@ class NotificationsRepository {
 
     return NotificationData.fromJson(payload);
   }
+
+  Future<NotificationData?> updateNotificationPaymentStatus({
+    required String deliveryId,
+    required String status,
+    String? transactionId,
+    String? reference,
+    String? note,
+  }) async {
+    final Map<String, dynamic> response = await Api.postJson(
+      url: Api.notificationPaymentRequestApi(deliveryId),
+      data: <String, dynamic>{
+        'status': status,
+        if (transactionId != null && transactionId.isNotEmpty)
+          'transaction_id': transactionId,
+        if (reference != null && reference.isNotEmpty)
+          'transaction_reference': reference,
+        if (note != null && note.isNotEmpty) 'note': note,
+      },
+    );
+
+    final Map<String, dynamic>? payload =
+        _ensureMap(response['delivery']) ?? _ensureMap(response['data']);
+    if (payload == null || payload.isEmpty) {
+      return null;
+    }
+    return NotificationData.fromJson(payload);
+  }
 }

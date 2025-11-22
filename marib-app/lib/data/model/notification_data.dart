@@ -130,6 +130,29 @@ class NotificationData {
   DateTime? get effectiveTimestamp =>
       openedAt ?? deliveredAt ?? clickedAt ?? _parseDate(createdAt);
 
+  NotificationPaymentRequest? get paymentRequest {
+    Map<String, dynamic>? resolve(dynamic value) {
+      final Map<String, dynamic>? map =
+          NotificationPaymentRequest.mapFrom(value);
+      if (map == null || map.isEmpty) {
+        return null;
+      }
+      return map;
+    }
+
+    Map<String, dynamic>? candidate =
+        resolve(meta?['payment_request']) ?? resolve(data['payment_request']);
+    if (candidate == null) {
+      final Map<String, dynamic>? metaNested =
+          resolve(data['meta']) ?? resolve(meta);
+      candidate = resolve(metaNested?['payment_request']);
+    }
+    if (candidate == null || candidate.isEmpty) {
+      return null;
+    }
+    return NotificationPaymentRequest.fromJson(candidate);
+  }
+
   static DateTime? _parseDate(dynamic value) {
     if (value == null) return null;
     final String raw = value.toString();
@@ -142,6 +165,137 @@ class NotificationData {
   }
 
   static Map<String, dynamic>? _ensureMap(dynamic value) {
+    if (value is Map<String, dynamic>) {
+      return value;
+    }
+    if (value is Map) {
+      return Map<String, dynamic>.from(value);
+    }
+    return null;
+  }
+}
+
+class NotificationPaymentRequest {
+  const NotificationPaymentRequest({
+    required this.id,
+    required this.amount,
+    required this.currency,
+    required this.status,
+    this.note,
+    this.allowedGateways = const <String>[],
+    this.transactionId,
+    this.transactionReference,
+    this.clientNote,
+    this.updatedAt,
+    this.createdAt,
+  });
+
+  final String id;
+  final double amount;
+  final String currency;
+  final String status;
+  final String? note;
+  final List<String> allowedGateways;
+  final String? transactionId;
+  final String? transactionReference;
+  final String? clientNote;
+  final DateTime? updatedAt;
+  final DateTime? createdAt;
+
+  bool get isPending => status == 'pending';
+  bool get isSubmitted => status == 'submitted';
+  bool get isPaid => status == 'paid';
+
+  String get formattedAmount {
+    final bool hasFraction = amount % 1 != 0;
+    final String value = hasFraction
+        ? amount.toStringAsFixed(2)
+        : amount.toStringAsFixed(0);
+    return '$value $currency';
+  }
+
+  NotificationPaymentRequest copyWith({
+    double? amount,
+    String? currency,
+    String? status,
+    String? note,
+    List<String>? allowedGateways,
+    String? transactionId,
+    String? transactionReference,
+    String? clientNote,
+    DateTime? updatedAt,
+    DateTime? createdAt,
+  }) {
+    return NotificationPaymentRequest(
+      id: id,
+      amount: amount ?? this.amount,
+      currency: (currency ?? this.currency).toUpperCase(),
+      status: status ?? this.status,
+      note: note ?? this.note,
+      allowedGateways: allowedGateways ?? this.allowedGateways,
+      transactionId: transactionId ?? this.transactionId,
+      transactionReference: transactionReference ?? this.transactionReference,
+      clientNote: clientNote ?? this.clientNote,
+      updatedAt: updatedAt ?? this.updatedAt,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  factory NotificationPaymentRequest.fromJson(Map<String, dynamic> json) {
+    double parseAmount(dynamic value) {
+      if (value is num) {
+        return value.toDouble();
+      }
+      if (value is String) {
+        final sanitized = value.replaceAll(RegExp(r'[^0-9\.-]'), '');
+        return double.tryParse(sanitized) ?? 0;
+      }
+      return 0;
+    }
+
+    List<String> parseGateways(dynamic value) {
+      if (value is Iterable) {
+        return value
+            .map((dynamic entry) => entry?.toString().trim() ?? '')
+            .where((element) => element.isNotEmpty)
+            .map((e) => e.toLowerCase())
+            .toList();
+      }
+      if (value is String && value.isNotEmpty) {
+        return value
+            .split(',')
+            .map((e) => e.trim().toLowerCase())
+            .where((element) => element.isNotEmpty)
+            .toList();
+      }
+      return const <String>[];
+    }
+
+    DateTime? parseDate(dynamic value) {
+      if (value == null) return null;
+      if (value is DateTime) return value;
+      if (value is String && value.isNotEmpty) {
+        return DateTime.tryParse(value);
+      }
+      return null;
+    }
+
+    return NotificationPaymentRequest(
+      id: json['id']?.toString() ?? '',
+      amount: parseAmount(json['amount']),
+      currency: (json['currency']?.toString() ?? 'YER').toUpperCase(),
+      status: json['status']?.toString().toLowerCase() ?? 'pending',
+      note: json['note']?.toString(),
+      allowedGateways: parseGateways(json['allowed_gateways']),
+      transactionId: json['transaction_id']?.toString(),
+      transactionReference: json['transaction_reference']?.toString(),
+      clientNote: json['client_note']?.toString(),
+      updatedAt: parseDate(json['updated_at']),
+      createdAt: parseDate(json['created_at']),
+    );
+  }
+
+  static Map<String, dynamic>? mapFrom(dynamic value) {
     if (value is Map<String, dynamic>) {
       return value;
     }

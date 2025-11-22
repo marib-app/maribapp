@@ -1645,10 +1645,14 @@ class PaymentFulfillmentService
                 ->all();
 
             if ($userTokens !== []) {
+                $cardCode = $deliveryPayload['code'] ?? null;
+
                 NotificationService::sendFcmNotification(
                     $userTokens,
-                    __('تم استلام كرت الواي فاي'),
-                    __('تم تسليم كود شبكة :network.', ['network' => $network->name]),
+                    __('تم إصدار كرت الواي فاي'),
+                    $cardCode
+                        ? __('الكرت الخاص بك هو :code', ['code' => $cardCode])
+                        : __('تم تسليم كود شبكة :network.', ['network' => $network->name]),
                     'wifi_purchase',
                     array_filter([
                         'deeplink' => config('services.mobile.wifi_orders_deeplink', 'eclassify://wifi/orders'),
@@ -1816,3 +1820,4 @@ class PaymentFulfillmentService
     }
 
 }
+

@@ -5,8 +5,10 @@ namespace App\Services\Payments;
 use App\Enums\Wifi\WifiCodeStatus;
 use App\Enums\Wifi\WifiNetworkStatus;
 use App\Enums\Wifi\WifiPlanStatus;
+use Carbon\Carbon;
 use App\Models\PaymentTransaction;
 use App\Models\User;
+use App\Models\WalletAccount;
 use App\Models\WalletTransaction;
 use App\Models\Wifi\WifiCode;
 use App\Models\Wifi\WifiNetwork;
@@ -18,6 +20,9 @@ use App\Services\PaymentFulfillmentService;
 use App\Services\WalletService;
 use App\Support\InputSanitizer;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\QueryException;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -31,6 +36,17 @@ class WifiPlanPaymentService
      * @var array<int, string>
      */
     private const SUPPORTED_METHODS = ['manual_bank', 'wallet'];
+    /**
+     * @var array<int, string>
+     */
+    private const ACTIVE_GATEWAY_INDEXES = [
+        'payment_transactions_active_gateway_unique',
+        'payment_transactions_payable_gateway_active_unique',
+    ];
+    /**
+     * @var array<int, string>
+     */
+    private const ACTIVE_PAYMENT_STATUSES = ['pending', 'initiated', 'processing'];
 
     /**
      * @var array<string, array<int, string>>
@@ -158,6 +174,17 @@ class WifiPlanPaymentService
         }
 
         if ($method === 'wallet') {
+            $currency = strtoupper((string) ($transaction->currency ?? $plan->currency ?? config('app.currency', 'SAR')));
+            $requiredAmount = (float) ($transaction->amount ?? $plan->price);
+            $walletAccount = $this->walletService->findAccount($user, $currency);
+            $balance = $walletAccount instanceof WalletAccount ? (float) $walletAccount->balance : 0.0;
+
+            if ($balance + 0.0001 < $requiredAmount) {
+                throw ValidationException::withMessages([
+                    'wallet' => __('رصيد المحفظة غير كافٍ لإتمام العملية.'),
+                ]);
+            }
+
             $walletTransaction = $this->debitWallet(
                 $user,
                 $transaction,
@@ -359,17 +386,28 @@ class WifiPlanPaymentService
             return $existing;
         }
 
-        $active = PaymentTransaction::query()
-            ->where('user_id', $user->getKey())
-            ->where('payable_type', WifiPlan::class)
-            ->where('payable_id', $plan->getKey())
-            ->where('payment_status', 'pending')
-            ->whereIn('payment_gateway', $this->expandLegacyMethods($method))
+        $active = $this->activeTransactionQuery($plan, $method)
             ->lockForUpdate()
             ->first();
 
         if ($active) {
             $dirty = false;
+
+            if ((int) $active->user_id !== $user->getKey()) {
+                if ($this->pendingTransactionIsStale($active)) {
+                    $this->expirePendingTransaction($active);
+
+                    return $this->findOrCreateTransaction(
+                        $user,
+                        $plan,
+                        $method,
+                        $idempotencyKey,
+                        $data
+                    );
+                }
+
+                $dirty = $this->takeOverPendingTransaction($active, $user) || $dirty;
+            }
 
             if ($active->payment_gateway !== $method) {
                 $active->payment_gateway = $method;
@@ -414,17 +452,127 @@ class WifiPlanPaymentService
             $meta['payment_reference'] = $data['reference'];
         }
 
-        return PaymentTransaction::create([
-            'user_id' => $user->getKey(),
-            'amount' => $amount,
-            'currency' => $currency,
-            'payment_gateway' => $method,
-            'payment_status' => 'pending',
-            'payable_type' => WifiPlan::class,
-            'payable_id' => $plan->getKey(),
-            'idempotency_key' => $idempotencyKey,
-            'meta' => $meta,
-        ]);
+        try {
+            return PaymentTransaction::create([
+                'user_id' => $user->getKey(),
+                'amount' => $amount,
+                'currency' => $currency,
+                'payment_gateway' => $method,
+                'payment_status' => 'pending',
+                'payable_type' => WifiPlan::class,
+                'payable_id' => $plan->getKey(),
+                'idempotency_key' => $idempotencyKey,
+                'meta' => $meta,
+            ]);
+        } catch (UniqueConstraintViolationException $exception) {
+            if (! $this->isActiveGatewayConstraint($exception)) {
+                throw $exception;
+            }
+
+            $pending = $this->activeTransactionQuery($plan, $method)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $pending) {
+                throw $exception;
+            }
+
+            if ((int) $pending->user_id !== $user->getKey()) {
+                if ($this->pendingTransactionIsStale($pending)) {
+                    $this->expirePendingTransaction($pending);
+
+                    return $this->findOrCreateTransaction(
+                        $user,
+                        $plan,
+                        $method,
+                        $idempotencyKey,
+                        $data
+                    );
+                }
+
+                $this->takeOverPendingTransaction($pending, $user);
+            }
+
+            $meta = $pending->meta ?? [];
+            if ($method === 'wallet') {
+                $meta['wallet'] = array_replace_recursive($meta['wallet'] ?? [], [
+                    'idempotency_key' => $idempotencyKey,
+                ]);
+            }
+
+            $pending->idempotency_key = $idempotencyKey;
+            $pending->meta = $meta;
+            $pending->amount = $pending->amount ?? $amount;
+            $pending->currency = $pending->currency ?? $currency;
+            $pending->save();
+
+            return $pending->fresh();
+        } catch (QueryException $exception) {
+            if ($exception->getCode() === '23000'
+                && $this->isActiveGatewayConstraint($exception)) {
+                return $this->reusePendingTransaction(
+                    $user,
+                    $plan,
+                    $method,
+                    $idempotencyKey,
+                    $data,
+                    $exception
+                );
+            }
+
+            throw $exception;
+        }
+    }
+
+    protected function reusePendingTransaction(
+        User $user,
+        WifiPlan $plan,
+        string $method,
+        string $idempotencyKey,
+        array $data,
+        QueryException $exception
+    ): PaymentTransaction {
+        $pending = $this->activeTransactionQuery($plan, $method)
+            ->lockForUpdate()
+            ->first();
+
+        if (! $pending) {
+            throw $exception;
+        }
+
+        $amount = $this->resolveAmount($plan, $data);
+        $currency = strtoupper((string) ($plan->currency ?? $data['currency'] ?? config('app.currency', 'SAR')));
+
+        if ((int) $pending->user_id !== $user->getKey()) {
+            if ($this->pendingTransactionIsStale($pending)) {
+                $this->expirePendingTransaction($pending);
+
+                return $this->findOrCreateTransaction(
+                    $user,
+                    $plan,
+                    $method,
+                    $idempotencyKey,
+                    $data
+                );
+            }
+
+            $this->takeOverPendingTransaction($pending, $user);
+        }
+
+        $meta = $pending->meta ?? [];
+        if ($method === 'wallet') {
+            $meta['wallet'] = array_replace_recursive($meta['wallet'] ?? [], [
+                'idempotency_key' => $idempotencyKey,
+            ]);
+        }
+
+        $pending->idempotency_key = $idempotencyKey;
+        $pending->meta = $meta;
+        $pending->amount = $pending->amount ?? $amount;
+        $pending->currency = $pending->currency ?? $currency;
+        $pending->save();
+
+        return $pending->fresh();
     }
 
     /**
@@ -442,6 +590,25 @@ class WifiPlanPaymentService
         }
 
         return array_unique($methods);
+    }
+
+    protected function activeTransactionQuery(WifiPlan $plan, string $method): Builder
+    {
+        $query = PaymentTransaction::query()
+            ->where('payable_type', WifiPlan::class)
+            ->where('payable_id', $plan->getKey())
+            ->whereIn('payment_gateway', $this->expandLegacyMethods($method));
+
+        return $this->applyActiveGatewayConstraints($query);
+    }
+
+    protected function applyActiveGatewayConstraints(Builder $query): Builder
+    {
+        return $query->where(function (Builder $constraints): void {
+            $constraints->whereIn('payment_status', self::ACTIVE_PAYMENT_STATUSES)
+                ->orWhereNull('payment_status')
+                ->orWhere('is_active', true);
+        });
     }
 
     /**
@@ -478,6 +645,82 @@ class WifiPlanPaymentService
                 'name' => $network->name,
             ] : null,
         ]);
+    }
+
+    protected function pendingTransactionIsStale(PaymentTransaction $transaction): bool
+    {
+        $lastTouched = $transaction->updated_at ?? $transaction->created_at;
+
+        if ($lastTouched instanceof Carbon) {
+            $timestamp = $lastTouched;
+        } elseif (is_string($lastTouched) && trim($lastTouched) !== '') {
+            try {
+                $timestamp = Carbon::parse($lastTouched);
+            } catch (\Throwable) {
+                return false;
+            }
+        } else {
+            return false;
+        }
+
+        return $timestamp->lessThan(Carbon::now()->subMinutes(3));
+    }
+
+    protected function expirePendingTransaction(PaymentTransaction $transaction): void
+    {
+        $transaction->payment_status = 'expired';
+        $transaction->is_active = false;
+        $transaction->save();
+    }
+
+    protected function takeOverPendingTransaction(PaymentTransaction $transaction, User $user): bool
+    {
+        $changed = false;
+
+        if ((int) $transaction->user_id !== $user->getKey()) {
+            $transaction->user_id = $user->getKey();
+            $changed = true;
+        }
+
+        if ((bool) $transaction->is_active !== true) {
+            $transaction->is_active = true;
+            $changed = true;
+        }
+
+        if ($transaction->manual_payment_request_id !== null) {
+            $transaction->manual_payment_request_id = null;
+            $changed = true;
+        }
+
+        if ($transaction->relationLoaded('manualPaymentRequest')) {
+            $transaction->unsetRelation('manualPaymentRequest');
+        }
+
+        $meta = $transaction->meta ?? [];
+        if (! is_array($meta)) {
+            $meta = [];
+        }
+
+        if (array_key_exists('manual', $meta)) {
+            unset($meta['manual']);
+            $transaction->meta = $meta;
+            $changed = true;
+        }
+
+        return $changed;
+    }
+
+    protected function isActiveGatewayConstraint(\Throwable $exception): bool
+    {
+        $message = $exception->getMessage();
+
+        foreach (self::ACTIVE_GATEWAY_INDEXES as $index) {
+            if ($message !== '' && str_contains($message, $index)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

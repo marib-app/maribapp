@@ -191,6 +191,13 @@ class _WifiNetworkDetailsScreenState extends State<WifiNetworkDetailsScreen> {
     if (!mounted || result == null || result == false) return;
 
     final int? transactionId = _extractTransactionId(result);
+    final Map<String, dynamic>? inlineDelivery = _extractWifiDelivery(result);
+
+    if (inlineDelivery != null &&
+        await _showInlineDelivery(inlineDelivery, plan, transactionId)) {
+      return;
+    }
+
     if (transactionId == null || transactionId <= 0) {
       return;
     }
@@ -218,8 +225,7 @@ class _WifiNetworkDetailsScreenState extends State<WifiNetworkDetailsScreen> {
                   ?.toString()
                   .toLowerCase() ==
               'succeed') ||
-          (result.raw['payment_status']?.toString().toLowerCase() ==
-              'succeed');
+          (result.raw['payment_status']?.toString().toLowerCase() == 'succeed');
 
       if (!successFlag) {
         return null;
@@ -251,6 +257,88 @@ class _WifiNetworkDetailsScreenState extends State<WifiNetworkDetailsScreen> {
     final String text = value.toString();
     if (text.isEmpty) return null;
     return int.tryParse(text);
+  }
+
+  Map<String, dynamic>? _extractWifiDelivery(Object result) {
+    Map<String, dynamic>? payload;
+    if (result is PaymentRouteResult) {
+      payload = result.delivery;
+    } else if (result is ManualPaymentSubmissionResult) {
+      payload = result.delivery ?? _coerceMap(result.raw['delivery']);
+    }
+    if (payload == null || payload.isEmpty) {
+      return null;
+    }
+    return Map<String, dynamic>.from(payload);
+  }
+
+  Map<String, dynamic>? _coerceMap(dynamic value) {
+    if (value is Map<String, dynamic>) {
+      return Map<String, dynamic>.from(value);
+    }
+    if (value is Map) {
+      return Map<String, dynamic>.from(value as Map);
+    }
+    return null;
+  }
+
+  Future<bool> _showInlineDelivery(
+    Map<String, dynamic> delivery,
+    WifiPlan plan,
+    int? transactionId,
+  ) async {
+    final List<String> codes = _collectDeliveryCodes(delivery);
+    if (codes.isEmpty) {
+      return false;
+    }
+
+    final WifiPurchase purchase = WifiPurchase(
+      id: transactionId ?? plan.id,
+      planId: plan.id,
+      planName: plan.name,
+      networkName: widget.network.name,
+      codes: codes,
+      reference: _stringify(delivery['serial_no']) ??
+          _stringify(delivery['reference']),
+      metadata: <String, dynamic>{
+        'transaction_id': transactionId ?? delivery['transaction_id'],
+        'delivery_source': 'inline',
+        ...delivery,
+      }..removeWhere((key, value) => value == null),
+    );
+
+    await _showWifiCodeDialog(purchase);
+    return true;
+  }
+
+  List<String> _collectDeliveryCodes(Map<String, dynamic> delivery) {
+    final Set<String> codes = <String>{};
+
+    void add(dynamic value) {
+      final String? code = _stringify(value);
+      if (code != null && code.isNotEmpty) {
+        codes.add(code);
+      }
+    }
+
+    add(delivery['code']);
+    final dynamic extra = delivery['codes'];
+    if (extra is Iterable) {
+      for (final entry in extra) {
+        add(entry);
+      }
+    }
+
+    return codes.toList();
+  }
+
+  String? _stringify(dynamic value) {
+    if (value == null) return null;
+    if (value is String) {
+      final trimmed = value.trim();
+      return trimmed.isEmpty ? null : trimmed;
+    }
+    return value.toString();
   }
 
   Future<void> _revealWifiCodes(int transactionId, WifiPlan plan) async {

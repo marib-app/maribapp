@@ -602,43 +602,22 @@ class NotificationsState extends State<Notifications>
             .trim()
             .toLowerCase();
 
+    final NotificationCategory? explicitCategory =
+        _categoryFromLabel(normalizedCategory);
+
     final Set<String> tokens = _extractTokens(notification);
     final bool walletHit = _matchesTokens(tokens, _walletTokens);
     final bool accountHit = _matchesTokens(tokens, _accountTokens);
     final bool marketingHit = _matchesTokens(tokens, _marketingTokens);
     final bool updateHit = _matchesTokens(tokens, _updateTokens);
+    final bool manualBroadcast = _isManualBroadcast(notification);
 
-    switch (normalizedCategory) {
-      case 'marketing':
-      case 'العروض والإعلانات':
-      case 'العروض والاعلانات':
-        if (walletHit) return NotificationCategory.wallet;
-        return NotificationCategory.marketing;
-      case 'account':
-      case 'account_settings':
-      case 'الحساب والإعدادات':
-      case 'الحساب والاعدادات':
-        if (walletHit) return NotificationCategory.wallet;
-        return NotificationCategory.account;
-      case 'wallet':
-      case 'wallet_payments':
-      case 'wallet-payments':
-      case 'المحفظة والمدفوعات':
-      case 'المحفظة والمدفوعات ':
-        return NotificationCategory.wallet;
-      case 'updates':
-      case 'app_updates':
-      case 'app-updates':
-      case 'مستجدات التطبيق':
-      case 'اخر مستجدات التطبيق':
-        if (walletHit) return NotificationCategory.wallet;
-        return NotificationCategory.updates;
-      case 'system':
-      case 'system_alerts':
-      case 'system-alerts':
-      case 'تنبيهات النظام':
-        if (walletHit) return NotificationCategory.wallet;
-        return NotificationCategory.system;
+    if (!manualBroadcast && walletHit) {
+      return NotificationCategory.wallet;
+    }
+
+    if (explicitCategory != null) {
+      return explicitCategory;
     }
 
     if (walletHit) {
@@ -714,6 +693,51 @@ class NotificationsState extends State<Notifications>
     addValue(notification.meta);
 
     return tokens;
+  }
+
+  NotificationCategory? _categoryFromLabel(String normalized) {
+    switch (normalized) {
+      case 'marketing':
+      case 'العروض والإعلانات':
+      case 'العروض والاعلانات':
+        return NotificationCategory.marketing;
+      case 'account':
+      case 'account_settings':
+      case 'الحساب والإعدادات':
+      case 'الحساب والاعدادات':
+        return NotificationCategory.account;
+      case 'wallet':
+      case 'wallet_payments':
+      case 'wallet-payments':
+      case 'المحفظة والمدفوعات':
+      case 'المحفظة والمدفوعات ':
+        return NotificationCategory.wallet;
+      case 'updates':
+      case 'app_updates':
+      case 'app-updates':
+      case 'مستجدات التطبيق':
+      case 'اخر مستجدات التطبيق':
+        return NotificationCategory.updates;
+      case 'system':
+      case 'system_alerts':
+      case 'system-alerts':
+      case 'تنبيهات النظام':
+        return NotificationCategory.system;
+      case 'all':
+        return NotificationCategory.all;
+      default:
+        return null;
+    }
+  }
+
+  bool _isManualBroadcast(NotificationData notification) {
+    final dynamic source =
+        notification.data['source'] ?? notification.meta?['source'];
+    if (source == null) {
+      return false;
+    }
+    final String normalized = source.toString().trim().toLowerCase();
+    return normalized == 'manual-broadcast' || normalized == 'manual_broadcast';
   }
 
   bool _matchesTokens(Set<String> haystack, Set<String> needles) {
@@ -849,4 +873,3 @@ void _ensureArabicTimeago() {
     _timeagoArabicConfigured = true;
   } catch (_) {}
 }
-

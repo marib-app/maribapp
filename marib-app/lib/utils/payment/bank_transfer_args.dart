@@ -13,6 +13,7 @@ class BankTransferArgs {
   final int? serviceRequestId;
   final int? wifiPlanId;
   final List<String>? allowedGateways;
+  final bool allowWalletGateway;
 
   const BankTransferArgs({
     required this.token,
@@ -29,6 +30,7 @@ class BankTransferArgs {
     this.serviceRequestId,
     this.wifiPlanId,
     this.allowedGateways,
+    this.allowWalletGateway = false,
   });
 }
 

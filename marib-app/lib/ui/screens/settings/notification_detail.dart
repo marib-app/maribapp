@@ -18,6 +18,12 @@ import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/responsiveSize.dart';
 import 'package:marib/utils/ui_utils.dart';
+import 'package:marib/utils/hive_utils.dart';
+import 'package:marib/utils/payment/bank_transfer_args.dart';
+import 'package:marib/utils/payment/bank_transfer_screen.dart';
+import 'package:marib/utils/payment/manual_payment_service.dart'
+    show ManualPaymentService, ManualPaymentSubmissionResult;
+import 'package:marib/utils/payment/payment_route_result.dart';
 
 class NotificationDetail extends StatelessWidget {
   const NotificationDetail({super.key});
@@ -114,6 +120,8 @@ class _DetailBody extends StatelessWidget {
             .format(DateTime.parse(created));
     final ActionRequestRouteArgs? actionArgs =
         _parseActionRequest(notification);
+    final NotificationPaymentRequest? paymentRequest =
+        notification.paymentRequest;
 
     return ListView(
       padding: const EdgeInsets.only(bottom: 20),
@@ -190,6 +198,16 @@ class _DetailBody extends StatelessWidget {
               },
             ),
           ),
+        if (paymentRequest != null) ...[
+          const SizedBox(height: 20),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: _PaymentRequestCard(
+              notification: notification,
+              request: paymentRequest,
+            ),
+          ),
+        ],
         if (actionArgs != null) ...[
           const SizedBox(height: 20),
           Padding(
@@ -230,6 +248,303 @@ class _DetailBody extends StatelessWidget {
       return null;
     }
     return ActionRequestRouteArgs(requestId: id, token: token);
+  }
+}
+
+class _PaymentRequestCard extends StatefulWidget {
+  const _PaymentRequestCard({
+    required this.notification,
+    required this.request,
+  });
+
+  final NotificationData notification;
+  final NotificationPaymentRequest request;
+
+  @override
+  State<_PaymentRequestCard> createState() => _PaymentRequestCardState();
+}
+
+class _PaymentRequestCardState extends State<_PaymentRequestCard> {
+  bool _submitting = false;
+
+  Future<void> _startPaymentFlow() async {
+    if (_submitting) return;
+    if (!HiveUtils.isUserAuthenticated()) {
+      UiUtils.checkUser(onNotGuest: () {}, context: context);
+      return;
+    }
+    final String token = HiveUtils.getJWT();
+    if (token.isEmpty) {
+      HelperUtils.showSnackBarMessage(
+        context,
+        'loginFirst'.translate(context),
+      );
+      return;
+    }
+
+    final NotificationPaymentRequest request = widget.request;
+    final BankTransferArgs args = BankTransferArgs(
+      token: token,
+      packageId: int.tryParse(widget.notification.id) ?? 0,
+      amount: request.amount,
+      currency: request.currency,
+      packageType: 'wallet_top_up',
+      purpose: ManualPaymentService.walletTopUpPurpose,
+      allowedGateways:
+          request.allowedGateways.isEmpty ? null : request.allowedGateways,
+      allowWalletGateway: true,
+    );
+
+    setState(() => _submitting = true);
+
+    try {
+      final dynamic result = await BankTransferScreen.show(context, args);
+      if (!mounted || result == null || result == false) {
+        return;
+      }
+      if (!mounted) return;
+      final _PaymentResult? mapped = _PaymentResult.fromRaw(result);
+      if (mapped == null) {
+        HelperUtils.showSnackBarMessage(
+          context,
+          'تعذر تحديد نتيجة عملية الدفع.',
+        );
+        return;
+      }
+
+      await context.read<NotificationDetailCubit>().updatePaymentRequest(
+            notification: widget.notification,
+            status: mapped.status,
+            transactionId: mapped.transactionId,
+            reference: mapped.reference,
+          );
+
+      if (!mounted) return;
+
+      final String successMessage = mapped.status == 'paid'
+          ? 'تم تسجيل الدفعة بنجاح.'
+          : 'تم إرسال تفاصيل الدفع وبانتظار المراجعة.';
+      HelperUtils.showSnackBarMessage(context, successMessage);
+    } catch (error) {
+      HelperUtils.showSnackBarMessage(context, error.toString());
+    } finally {
+      if (mounted) {
+        setState(() => _submitting = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final NotificationPaymentRequest request = widget.request;
+    final ColorScheme palette = Theme.of(context).colorScheme;
+    final TextTheme textTheme = Theme.of(context).textTheme;
+
+    final bool isCancelled = request.status == 'cancelled';
+    final Color statusColor = request.isPaid
+        ? Colors.green
+        : request.isSubmitted
+            ? Colors.orange
+            : isCancelled
+                ? Colors.red
+                : palette.territoryColor;
+    final String statusLabel = request.isPaid
+        ? 'مدفوع'
+        : request.isSubmitted
+            ? 'قيد المراجعة'
+            : isCancelled
+                ? 'ملغى'
+                : 'بانتظار الدفع';
+
+    return Card(
+      margin: EdgeInsets.zero,
+      color: palette.secondaryColor.withOpacity(0.65),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: palette.territoryColor.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.request_page_outlined,
+                    color: palette.territoryColor,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'دفعة مطلوبة',
+                        style: textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        request.formattedAmount,
+                        style: textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        request.isPaid
+                            ? Icons.verified_rounded
+                            : Icons.av_timer_rounded,
+                        size: 16,
+                        color: statusColor,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        statusLabel,
+                        style: textTheme.labelMedium?.copyWith(
+                          color: statusColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            if ((request.note ?? '').isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                request.note!,
+                style: textTheme.bodyMedium
+                    ?.copyWith(color: palette.textLightColor),
+              ),
+            ],
+            if ((request.transactionId ?? '').isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(
+                'مرجع العملية: ${request.transactionId}',
+                style: textTheme.bodySmall
+                    ?.copyWith(color: palette.textLightColor),
+              ),
+            ],
+            const SizedBox(height: 16),
+            if (request.isPending)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _submitting ? null : _startPaymentFlow,
+                  icon: _submitting
+                      ? SizedBox(
+                          height: 16,
+                          width: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: palette.onPrimary,
+                          ),
+                        )
+                      : const Icon(Icons.credit_score_rounded),
+                  label: Text(
+                    _submitting ? 'جاري التحضير...' : 'ادفع الآن',
+                  ),
+                ),
+              )
+            else
+              Container(
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      request.isPaid
+                          ? Icons.verified_rounded
+                          : Icons.fact_check_rounded,
+                      color: statusColor,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      request.isPaid
+                          ? 'تمت معالجة الدفعة'
+                          : isCancelled
+                              ? 'تم إلغاء الطلب من قبل الفريق'
+                              : 'بانتظار مراجعة فريق المدفوعات',
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: statusColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PaymentResult {
+  const _PaymentResult({
+    required this.status,
+    this.transactionId,
+    this.reference,
+  });
+
+  final String status;
+  final String? transactionId;
+  final String? reference;
+
+  static _PaymentResult? fromRaw(dynamic result) {
+    if (result is PaymentRouteResult) {
+      final String? reference =
+          result.manualRequestId?.toString() ?? result.walletTxnId?.toString();
+      final String status = result.kind == PaymentRouteKind.walletSuccess
+          ? 'paid'
+          : 'submitted';
+      return _PaymentResult(
+        status: status,
+        transactionId: reference,
+        reference: reference,
+      );
+    }
+    if (result is ManualPaymentSubmissionResult) {
+      final String? transactionId =
+          result.paymentTransactionId ?? result.manualPaymentId;
+      final String lowered = (result.status ?? '').toLowerCase();
+      final bool immediateSuccess = !result.requiresConfirmation &&
+          (lowered == 'succeeded' ||
+              lowered == 'approved' ||
+              lowered == 'paid');
+      return _PaymentResult(
+        status: immediateSuccess ? 'paid' : 'submitted',
+        transactionId: transactionId ?? result.paymentIntentId,
+        reference: result.manualPaymentId ?? result.paymentTransactionId,
+      );
+    }
+    return null;
   }
 }
 

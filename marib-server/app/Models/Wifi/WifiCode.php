@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class WifiCode extends Model
@@ -74,9 +76,9 @@ class WifiCode extends Model
     public function code(): Attribute
     {
         return Attribute::make(
-            get: fn (?string $value, array $attributes) => $attributes['code_encrypted'] ?? null
-                ? Crypt::decryptString($attributes['code_encrypted'])
-                : null,
+            get: function (?string $value, array $attributes) {
+                return $this->decryptEncryptedColumn($attributes['code_encrypted'] ?? null, 'code_encrypted');
+            },
             set: function ($value): array {
                 if ($value === null) {
                     return [
@@ -127,9 +129,9 @@ class WifiCode extends Model
     protected function encryptedFieldAccessor(string $column): Attribute
     {
         return Attribute::make(
-            get: fn (?string $value, array $attributes) => $attributes[$column] ?? null
-                ? Crypt::decryptString($attributes[$column])
-                : null,
+            get: function (?string $value, array $attributes) use ($column) {
+                return $this->decryptEncryptedColumn($attributes[$column] ?? null, $column);
+            },
             set: function ($value) use ($column): array {
                 if ($value === null) {
                     return [$column => null];
@@ -144,6 +146,39 @@ class WifiCode extends Model
                 return [$column => Crypt::encryptString($value)];
             }
         );
+    }
+
+    protected function decryptEncryptedColumn(?string $payload, string $column): ?string
+    {
+        if ($payload === null) {
+            return null;
+        }
+
+        $normalized = trim($payload);
+
+        if ($normalized === '') {
+            return null;
+        }
+
+        try {
+            return Crypt::decryptString($normalized);
+        } catch (DecryptException $exception) {
+            Log::warning('wifi_code.decrypt_failed', [
+                'code_id' => $this->getKey(),
+                'column' => $column,
+                'message' => $exception->getMessage(),
+            ]);
+
+            return $normalized;
+        } catch (\Throwable $exception) {
+            Log::error('wifi_code.decrypt_failed_unexpected', [
+                'code_id' => $this->getKey(),
+                'column' => $column,
+                'message' => $exception->getMessage(),
+            ]);
+
+            return $normalized;
+        }
     }
 }
 

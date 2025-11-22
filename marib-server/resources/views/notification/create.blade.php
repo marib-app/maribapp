@@ -100,6 +100,36 @@
                                         <input type="url" name="cta_link" id="cta_link" class="form-control" placeholder="https://example.com">
                                         <small class="text-muted d-block mt-1">{{ __('اختياري إذا أردت توجيه المستخدم لرابط خارجي.') }}</small>
                                     </div>
+                                    <div class="col-12">
+                                        <div class="border rounded-3 p-3 h-100">
+                                            <div class="d-flex flex-column flex-lg-row gap-3 justify-content-between">
+                                                <div>
+                                                    <strong>{{ __('طلب دفعة من العميل') }}</strong>
+                                                    <p class="text-muted small mb-0">
+                                                        {{ __('في حال تفعيل الخيار سيظهر للمستلم زر دفع داخل تفاصيل الإشعار بالمبلغ الذي تحدده هنا.') }}
+                                                    </p>
+                                                </div>
+                                                <div class="form-check form-switch mb-0">
+                                                    <input class="form-check-input" type="checkbox" role="switch" id="request_payment" name="request_payment" value="1">
+                                                    <label class="form-check-label" for="request_payment">{{ __('تفعيل طلب الدفع') }}</label>
+                                                </div>
+                                            </div>
+                                            <div id="payment_request_fields" class="row g-3 mt-1 d-none">
+                                                <div class="col-md-6">
+                                                    <label for="payment_amount" class="form-label">{{ __('المبلغ المطلوب') }}</label>
+                                                    <div class="input-group">
+                                                        <input type="number" step="0.01" min="0" class="form-control" id="payment_amount" name="payment_amount" placeholder="0.00">
+                                                        <input type="text" class="form-control text-uppercase" id="payment_currency" name="payment_currency" value="YER" maxlength="3" style="max-width: 120px;">
+                                                    </div>
+                                                    <small class="text-muted d-block mt-1">{{ __('استخدم رمز العملة من 3 أحرف (مثال: YER, SAR, USD).') }}</small>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label for="payment_note" class="form-label">{{ __('ملاحظة للعميل (اختياري)') }}</label>
+                                                    <input type="text" class="form-control" id="payment_note" name="payment_note" placeholder="{{ __('مثال: رسوم اشتراك شهر مارس') }}">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -297,6 +327,10 @@
             const targetInputs = document.querySelectorAll('[data-target-input]');
             const sendToSelect = document.getElementById('send_to');
             const customRecipientHint = document.getElementById('customRecipientHint');
+            const paymentToggle = document.getElementById('request_payment');
+            const paymentFields = document.getElementById('payment_request_fields');
+            const paymentAmount = document.getElementById('payment_amount');
+            const paymentCurrency = document.getElementById('payment_currency');
             const userIdInput = document.getElementById('user_id');
             const recipientsModalEl = document.getElementById('customRecipientsModal');
             const openRecipientModalBtn = document.getElementById('openRecipientModal');
@@ -336,6 +370,25 @@
                     recipientsModalEl.classList.remove('show');
                     recipientsModalEl.style.display = 'none';
                 }
+            }
+
+            function togglePaymentFields() {
+                const enabled = paymentToggle && paymentToggle.checked;
+                if (paymentFields) {
+                    paymentFields.classList.toggle('d-none', !enabled);
+                }
+                const inputs = [paymentAmount, paymentCurrency];
+                inputs.forEach(input => {
+                    if (!input) return;
+                    if (enabled) {
+                        input.setAttribute('required', 'required');
+                    } else {
+                        input.removeAttribute('required');
+                        if (input === paymentAmount) {
+                            input.value = '';
+                        }
+                    }
+                });
             }
 
             function toggleImageField() {
@@ -470,6 +523,11 @@
             if (includeImage) {
                 includeImage.addEventListener('change', toggleImageField);
                 toggleImageField();
+            }
+
+            if (paymentToggle) {
+                paymentToggle.addEventListener('change', togglePaymentFields);
+                togglePaymentFields();
             }
 
             if (targetSelect) {

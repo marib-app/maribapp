@@ -36,4 +36,28 @@ class NotificationDetailCubit extends Cubit<NotificationDetailState> {
       emit(NotificationDetailSuccess(fallback));
     }
   }
+
+  Future<NotificationData?> updatePaymentRequest({
+    required NotificationData notification,
+    required String status,
+    String? transactionId,
+    String? reference,
+    String? note,
+  }) async {
+    try {
+      final NotificationData? updated =
+          await _repository.updateNotificationPaymentStatus(
+        deliveryId: notification.id,
+        status: status,
+        transactionId: transactionId,
+        reference: reference,
+        note: note,
+      );
+      if (updated != null) {
+        emit(NotificationDetailSuccess(updated));
+        return updated;
+      }
+    } catch (_) {}
+    return null;
+  }
 }

@@ -652,6 +652,8 @@ class Api {
   static String notificationsUnreadApi = "notifications/unread-count";
   static String notificationsMarkReadApi = "notifications/mark-read";
   static String notificationsMarkAllReadApi = "notifications/mark-all-read";
+  static String notificationPaymentRequestApi(String id) =>
+      "notifications/$id/payment-request";
   static String notificationPreferencesApi = "notification-preferences";
   static String notificationTopicsApi = "topics";
   static String notificationTopicSubscribeApi = "topics/subscribe";

@@ -19,6 +19,7 @@ use App\Services\ResponseService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 use Throwable;
@@ -102,6 +103,12 @@ class NotificationController extends Controller {
             'target_deeplink' => ['required_if:target_type,deeplink', 'nullable', 'string', 'max:255'],
             'cta_label' => ['nullable', 'string', 'max:60'],
             'cta_link' => ['nullable', 'url', 'max:255'],
+            'request_payment' => ['sometimes', 'boolean'],
+            'payment_amount' => ['required_if:request_payment,1', 'nullable', 'numeric', 'gt:0'],
+            'payment_currency' => ['required_if:request_payment,1', 'nullable', 'string', 'size:3'],
+            'payment_note' => ['nullable', 'string', 'max:200'],
+            'payment_gateways' => ['nullable', 'array'],
+            'payment_gateways.*' => ['string', 'max:50'],
         ], [
             'user_id.required_if' => __("Please select at least one user"),
             'target_item_id.required_if' => __("Please choose an item for this destination."),
@@ -112,6 +119,8 @@ class NotificationController extends Controller {
             'target_screen.required_if' => __("Please choose an in-app screen."),
             'target_url.required_if' => __("Please provide a link for this destination."),
             'target_deeplink.required_if' => __("Please provide a deeplink."),
+            'payment_amount.required_if' => __("Please provide the amount to request."),
+            'payment_currency.required_if' => __("Please specify the currency for the requested payment."),
         ]);
 
         if ($validator->fails()) {
@@ -129,6 +138,14 @@ class NotificationController extends Controller {
                 ? (int) $request->input('target_item_id')
                 : null;
             $meta = $this->buildNotificationMeta($request, $itemId);
+            $meta['source'] = 'manual-broadcast';
+            $paymentRequest = $this->buildPaymentRequestMeta($request);
+            if ($paymentRequest !== null) {
+                if (! is_array($meta)) {
+                    $meta = [];
+                }
+                $meta['payment_request'] = $paymentRequest;
+            }
             
             if (method_exists(NotificationService::class, 'validateHttpV1Configuration')) {
                 $configCheck = NotificationService::validateHttpV1Configuration();
@@ -298,7 +315,13 @@ class NotificationController extends Controller {
         $deeplink = (string) ($data['deeplink'] ?? 'marib://notifications');
         $intentData = $data;
         $intentData['category'] = $data['category'] ?? 'general';
+        $intentData['source'] = 'manual-broadcast';
+        $metaPayload = $notification->meta ?? [];
+        if (! empty($metaPayload['payment_request'])) {
+            $intentData['payment_request'] = $metaPayload['payment_request'];
+        }
 
+        $metaPayload = $notification->meta ?? [];
         foreach (array_chunk($userIds, 500) as $chunk) {
             foreach ($chunk as $userId) {
                 $intent = new NotificationIntent(
@@ -310,6 +333,7 @@ class NotificationController extends Controller {
                     entity: 'notification',
                     entityId: $data['notification_id'] ?? null,
                     data: $intentData,
+                    meta: $metaPayload,
                 );
                 $dispatcher->dispatch($intent, true);
             }
@@ -399,6 +423,54 @@ class NotificationController extends Controller {
             'chat' => __('الدردشة'),
             'profile' => __('ملفي الشخصي'),
         ];
+    }
+
+    private function buildPaymentRequestMeta(Request $request): ?array
+    {
+        if (! $request->boolean('request_payment')) {
+            return null;
+        }
+
+        $amount = (float) $request->input('payment_amount', 0);
+        if ($amount <= 0) {
+            return null;
+        }
+
+        $currency = strtoupper(trim((string) $request->input('payment_currency', 'YER')));
+        $note = trim((string) $request->input('payment_note', ''));
+        $gateways = $request->input('payment_gateways');
+
+        $allowedGateways = [];
+        if (is_array($gateways)) {
+            foreach ($gateways as $gateway) {
+                if (! is_string($gateway)) {
+                    continue;
+                }
+                $normalized = trim(strtolower($gateway));
+                if ($normalized !== '') {
+                    $allowedGateways[] = $normalized;
+                }
+            }
+        }
+
+        if (empty($allowedGateways)) {
+            $allowedGateways = ['manual_bank', 'wallet', 'east_yemen_bank'];
+        } else {
+            $allowedGateways = array_values(array_unique($allowedGateways));
+        }
+
+        $timestamp = now()->toIso8601String();
+
+        return array_filter([
+            'id' => (string) Str::uuid(),
+            'amount' => round($amount, 2),
+            'currency' => $currency ?: 'YER',
+            'status' => 'pending',
+            'note' => $note !== '' ? $note : null,
+            'allowed_gateways' => $allowedGateways,
+            'created_at' => $timestamp,
+            'updated_at' => $timestamp,
+        ]);
     }
 
     private function buildNotificationMeta(Request $request, ?int $itemId): array

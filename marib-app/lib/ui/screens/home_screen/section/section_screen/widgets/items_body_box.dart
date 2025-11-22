@@ -224,6 +224,7 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
         body: NestedScrollView(
           headerSliverBuilder: (context, innerBoxIsScrolled) {
             final List<Widget> slivers = <Widget>[];
+
             if (widget.storefrontHeader != null) {
               slivers.add(
                 SliverToBoxAdapter(
@@ -239,19 +240,24 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
             }
 
             if (widget.enableTopBar || showTopPlaceholder) {
+              final SliverOverlapAbsorberHandle overlapHandle =
+                  NestedScrollView.sliverOverlapAbsorberHandleFor(context);
               slivers.add(
-                SliverPersistentHeader(
-                  pinned: true,
-                  delegate: _CategoryTabsHeaderDelegate(
-                    showPlaceholder: showTopPlaceholder,
-                    enableTopBar: widget.enableTopBar,
-                    parentCategoryId: _catId,
-                    selectedCategoryNotifier: widget.selectedCategoryId,
-                    interfaceType: widget.interfaceType,
-                    sellerCategoryIds: _sellerCategoryIds,
-                    buildPlaceholder: _buildTopBarShimmerExact,
-                    onCategorySelected: _handleCategorySelection,
-                    contentColor: context.color.secondaryColor,
+                SliverOverlapAbsorber(
+                  handle: overlapHandle,
+                  sliver: SliverPersistentHeader(
+                    pinned: true,
+                    delegate: _CategoryTabsHeaderDelegate(
+                      showPlaceholder: showTopPlaceholder,
+                      enableTopBar: widget.enableTopBar,
+                      parentCategoryId: _catId,
+                      selectedCategoryNotifier: widget.selectedCategoryId,
+                      interfaceType: widget.interfaceType,
+                      sellerCategoryIds: _sellerCategoryIds,
+                      buildPlaceholder: _buildTopBarShimmerExact,
+                      onCategorySelected: _handleCategorySelection,
+                      contentColor: context.color.secondaryColor,
+                    ),
                   ),
                 ),
               );
@@ -259,31 +265,43 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
 
             return slivers;
           },
-          body: RepaintBoundary(
-            child: HomeTabView(
-              selectedCategoryId: widget.selectedCategoryId,
-              categoryId: widget.categoryId,
-              searchController: widget.searchController,
-              viewModeListenable: _viewMode,
-              bottomPadding: widget.bottomContentPadding,
-              showShimmer: widget.showShimmer,
-              sliderRefreshToken: widget.sliderRefreshToken,
-              sellerCategoryIds: _sellerCategoryIds,
-              interfaceType: widget.interfaceType,
-              rootCategoryName: widget.categoryName,
-              currentSortBy: widget.sortBy,
-              currentFilter: widget.filter,
-              enableSubcats: widget.enableSubcats,
-              onScrollDirectionChanged: widget.onScrollDirectionChanged,
-              specialRequestSectionSlug: widget.specialRequestSectionSlug,
-              enableAdSlider: widget.enableAdSlider,
-              adInterfaceType: widget.adInterfaceType,
-              showFeaturedAds: widget.enableFeaturedAds,
-              onLoadMore: widget.onLoadMore,
-            ),
+          body: Builder(
+            builder: (bodyContext) {
+              final SliverOverlapAbsorberHandle? overlapHandleBody =
+                  (widget.enableTopBar || showTopPlaceholder)
+                      ? NestedScrollView.sliverOverlapAbsorberHandleFor(
+                          bodyContext,
+                        )
+                      : null;
+              return RepaintBoundary(
+                child: HomeTabView(
+                  selectedCategoryId: widget.selectedCategoryId,
+                  categoryId: widget.categoryId,
+                  searchController: widget.searchController,
+                  viewModeListenable: _viewMode,
+                  bottomPadding: widget.bottomContentPadding,
+                  showShimmer: widget.showShimmer,
+                  sliderRefreshToken: widget.sliderRefreshToken,
+                  sellerCategoryIds: _sellerCategoryIds,
+                  interfaceType: widget.interfaceType,
+                  rootCategoryName: widget.categoryName,
+                  currentSortBy: widget.sortBy,
+                  currentFilter: widget.filter,
+                  enableSubcats: widget.enableSubcats,
+                  onScrollDirectionChanged: widget.onScrollDirectionChanged,
+                  specialRequestSectionSlug: widget.specialRequestSectionSlug,
+                  enableAdSlider: widget.enableAdSlider,
+                  adInterfaceType: widget.adInterfaceType,
+                  showFeaturedAds: widget.enableFeaturedAds,
+                  onLoadMore: widget.onLoadMore,
+                  overlapHandle: overlapHandleBody,
+                ),
+              );
+            },
           ),
         ),
-      ),
+        ),
+
     );
   }
 
@@ -376,7 +394,7 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
 }
 
 class _CategoryTabsHeaderDelegate extends SliverPersistentHeaderDelegate {
-  static const double _tabsHeight = 62.0;
+  static const double _tabsHeight = 70.0;
 
   _CategoryTabsHeaderDelegate({
     required this.showPlaceholder,

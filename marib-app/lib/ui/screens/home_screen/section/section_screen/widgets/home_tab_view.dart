@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'dart:async';
 import 'dart:math';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
@@ -68,6 +69,7 @@ class HomeTabView extends StatefulWidget {
   final String? interfaceType;
   final String? rootCategoryName;
   final bool showFeaturedAds;
+  final SliverOverlapAbsorberHandle? overlapHandle;
 
   const HomeTabView({
     required this.selectedCategoryId,
@@ -93,6 +95,7 @@ class HomeTabView extends StatefulWidget {
     this.interfaceType,
     this.rootCategoryName,
     this.showFeaturedAds = false,
+    this.overlapHandle,
     super.key,
   });
 
@@ -685,6 +688,10 @@ class _HomeTabViewState extends State<HomeTabView> {
             controller: _controller,
             cacheExtent: 800, // ✅ تحميل مسبق معتدل يقلل التقطيع
             slivers: [
+              if (widget.overlapHandle != null)
+                SliverOverlapInjector(
+                  handle: widget.overlapHandle!,
+                ),
               // ============= السلايدر =============
 
               SliverToBoxAdapter(

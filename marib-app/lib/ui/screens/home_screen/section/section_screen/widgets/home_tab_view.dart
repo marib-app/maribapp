@@ -104,7 +104,9 @@ class _HomeTabViewState extends State<HomeTabView> {
   static const int _gridCrossAxisCount = 2;
   static const double _scrollDirectionChangeThreshold = 40.0;
 
-  late final ScrollController controller;
+  final ScrollController _internalController = ScrollController();
+  ScrollController? _primaryController;
+  ScrollController? _attachedController;
   double _lastReportedScrollOffset = 0.0;
 
   int? _activeSubcatId; // الفئة الفرعية المختارة حالياً
@@ -115,18 +117,30 @@ class _HomeTabViewState extends State<HomeTabView> {
   bool _isLoadingMore = false;
   bool _loadingIndicatorPulseForward = true;
   Set<int>? _sellerCategoryIdSet;
+  ScrollController get _controller =>
+      _primaryController ?? _internalController;
+
+  void _attachController(ScrollController controller) {
+    if (_attachedController == controller) return;
+    _detachController();
+    _attachedController = controller;
+    _attachedController!.addListener(_handleScrollDirectionChange);
+  }
+
+  void _detachController() {
+    _attachedController?.removeListener(_handleScrollDirectionChange);
+    _attachedController = null;
+  }
 
   @override
   void initState() {
     super.initState();
-    controller = ScrollController();
-
-    _lastReportedScrollOffset = controller.initialScrollOffset;
+    _attachController(_controller);
+    _lastReportedScrollOffset = _controller.initialScrollOffset;
     _sellerCategoryIdSet =
         _normalizeSellerCategoryIds(widget.sellerCategoryIds);
 
     widget.selectedCategoryId.addListener(_onSelectedCategoryChanged);
-    controller.addListener(_handleScrollDirectionChange);
 
     _lastTopCatId = widget.selectedCategoryId.value;
   }
@@ -134,9 +148,8 @@ class _HomeTabViewState extends State<HomeTabView> {
   @override
   void dispose() {
     widget.selectedCategoryId.removeListener(_onSelectedCategoryChanged);
-    controller.removeListener(_handleScrollDirectionChange);
-
-    controller.dispose();
+    _detachController();
+    _internalController.dispose();
     super.dispose();
   }
 
@@ -151,6 +164,17 @@ class _HomeTabViewState extends State<HomeTabView> {
     if (!listEquals(oldWidget.sellerCategoryIds, widget.sellerCategoryIds)) {
       _sellerCategoryIdSet =
           _normalizeSellerCategoryIds(widget.sellerCategoryIds);
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final ScrollController? primary =
+        PrimaryScrollController.maybeOf(context);
+    if (primary != _primaryController) {
+      _primaryController = primary;
+      _attachController(_controller);
     }
   }
 
@@ -189,20 +213,20 @@ class _HomeTabViewState extends State<HomeTabView> {
   void _scheduleScrollReset() {
     if (!mounted) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !controller.hasClients) {
+      if (!mounted || !_controller.hasClients) {
         return;
       }
-      controller
+      _controller
           .animateTo(
         0,
         duration: const Duration(milliseconds: 250),
         curve: Curves.easeOut,
       )
           .catchError((_) {
-        if (!mounted || !controller.hasClients) {
+        if (!mounted || !_controller.hasClients) {
           return;
         }
-        controller.jumpTo(0);
+        _controller.jumpTo(0);
       });
     });
   }
@@ -447,11 +471,11 @@ class _HomeTabViewState extends State<HomeTabView> {
   }
 
   void _handleScrollDirectionChange() {
-    if (!controller.hasClients) {
+    if (!_controller.hasClients) {
       return;
     }
 
-    final ScrollPosition position = controller.position;
+    final ScrollPosition position = _controller.position;
     final ScrollDirection direction = position.userScrollDirection;
     bool? isScrollingUp;
     switch (direction) {
@@ -658,7 +682,7 @@ class _HomeTabViewState extends State<HomeTabView> {
             return false;
           },
           child: CustomScrollView(
-            controller: controller,
+            controller: _controller,
             cacheExtent: 800, // ✅ تحميل مسبق معتدل يقلل التقطيع
             slivers: [
               // ============= السلايدر =============
@@ -1335,10 +1359,10 @@ class _HomeTabViewState extends State<HomeTabView> {
             currentState.isLoadingMore) {
           return;
         }
-        if (!controller.hasClients) {
+        if (!_controller.hasClients) {
           return;
         }
-        if (controller.position.maxScrollExtent > 0) {
+        if (_controller.position.maxScrollExtent > 0) {
           return;
         }
         if (!fetchCubit.hasMoreData()) {

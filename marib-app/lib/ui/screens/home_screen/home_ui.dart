@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
@@ -34,18 +34,18 @@ import 'package:marib/utils/merchant_display_helper.dart';
 
 import 'package:marib/data/cubits/notifications/unread_notifications_cubit.dart';
 
-// ملاحظة: ProfileHeaderUI يدعم welcomeText و welcomeColor و shrinkFactor.
+// ظ…ظ„ط§ط­ط¸ط©: ProfileHeaderUI ظٹط¯ط¹ظ… welcomeText ظˆ welcomeColor ظˆ shrinkFactor.
 
 class HomeScreenUI extends StatelessWidget {
-  // الأساسيات
+  // ط§ظ„ط£ط³ط§ط³ظٹط§طھ
   final ScrollController scrollController;
   final VoidCallback onSupportPressed;
   final List<Widget> bodySlivers;
 
-  // إمّا تمرر ودجت جاهز للهيدر... (اختياري)
+  // ط¥ظ…ظ‘ط§ طھظ…ط±ط± ظˆط¯ط¬طھ ط¬ط§ظ‡ط² ظ„ظ„ظ‡ظٹط¯ط±... (ط§ط®طھظٹط§ط±ظٹ)
   final Widget? appBarLeading;
 
-  // ...أو تمرر بيانات البروفايل ونبني الهيدر داخلياً (اختياري)
+  // ...ط£ظˆ طھظ…ط±ط± ط¨ظٹط§ظ†ط§طھ ط§ظ„ط¨ط±ظˆظپط§ظٹظ„ ظˆظ†ط¨ظ†ظٹ ط§ظ„ظ‡ظٹط¯ط± ط¯ط§ط®ظ„ظٹط§ظ‹ (ط§ط®طھظٹط§ط±ظٹ)
   final bool? isAuthenticated;
   final String? name;
   final String? mobile;
@@ -58,11 +58,11 @@ class HomeScreenUI extends StatelessWidget {
   final VoidCallback? onNotificationTap;
   final VoidCallback? onInfoTap;
 
-  // سطر الترحيب
+  // ط³ط·ط± ط§ظ„طھط±ط­ظٹط¨
   final String? userId;
   final bool showWelcomeLine;
 
-  // خيارات إضافية
+  // ط®ظٹط§ط±ط§طھ ط¥ط¶ط§ظپظٹط©
   final Future<void> Function()? onRefresh;
   final bool hideFabOnScroll;
   final double? expandedHeight;
@@ -95,15 +95,15 @@ class HomeScreenUI extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // قياس الهيدر
+    // ظ‚ظٹط§ط³ ط§ظ„ظ‡ظٹط¯ط±
     final double kExpanded =
         expandedHeight ?? (110.0.rh(context)).clamp(100.0, 200.0);
 
-    // القيم القادمة من البراميترز
+    // ط§ظ„ظ‚ظٹظ… ط§ظ„ظ‚ط§ط¯ظ…ط© ظ…ظ† ط§ظ„ط¨ط±ط§ظ…ظٹطھط±ط²
     final String idStr = (userId ?? '').trim();
     final String paramName = (name ?? '').trim();
 
-    // بيانات المستخدم الحقيقية من التخزين
+    // ط¨ظٹط§ظ†ط§طھ ط§ظ„ظ…ط³طھط®ط¯ظ… ط§ظ„ط­ظ‚ظٹظ‚ظٹط© ظ…ظ† ط§ظ„طھط®ط²ظٹظ†
     return ValueListenableBuilder<Box<dynamic>>(
       valueListenable: Hive.box(HiveKeys.userDetailsBox).listenable(),
       builder: (context, _, __) {
@@ -129,7 +129,7 @@ class HomeScreenUI extends StatelessWidget {
             if (paramName.isNotEmpty && paramName != idStr) {
               return paramName;
             }
-            return '  زائر';
+            return '  ط²ط§ط¦ط±';
           }
 
           final String trimmedMerchant = resolvedMerchantName.trim();
@@ -145,7 +145,7 @@ class HomeScreenUI extends StatelessWidget {
           if (dn.isNotEmpty && dn != idStr) {
             return dn;
           }
-          return '  زائر';
+          return '  ط²ط§ط¦ط±';
         })();
 
         final String phone = (mobile?.isNotEmpty == true)
@@ -192,7 +192,7 @@ class HomeScreenUI extends StatelessWidget {
         return SafeArea(
           child: Scaffold(
             backgroundColor: context.color.primaryColor,
-            // لا تغيّر ألوان الـAppBar
+            // ظ„ط§ طھط؛ظٹظ‘ط± ط£ظ„ظˆط§ظ† ط§ظ„ظ€AppBar
             body: NestedScrollView(
               controller: scrollController,
               headerSliverBuilder: (context, _) => [
@@ -226,7 +226,7 @@ class HomeScreenUI extends StatelessWidget {
                             onInfoTap: onInfoTap ?? () {},
                             shrinkFactor: t,
                             welcomeText: (showWelcomeLine && idStr.isNotEmpty)
-                                ? "مرحبًا بك: $idStr"
+                                ? "ظ…ط±ط­ط¨ظ‹ط§ ط¨ظƒ: $idStr"
                                 : null,
                             welcomeColor: Theme.of(context)
                                 .colorScheme
@@ -290,7 +290,7 @@ class HomeScreenUI extends StatelessWidget {
   }
 
   Widget _buildBody(BuildContext context) {
-    // ✨ لا نستخدم SingleChildScrollView ولا PrimaryScrollController هنا
+    // âœ¨ ظ„ط§ ظ†ط³طھط®ط¯ظ… SingleChildScrollView ظˆظ„ط§ PrimaryScrollController ظ‡ظ†ط§
     final List<Widget> slivers = bodySlivers.isEmpty
         ? <Widget>[const SliverToBoxAdapter(child: SizedBox.shrink())]
         : bodySlivers;
@@ -308,7 +308,7 @@ class HomeScreenUI extends StatelessWidget {
   }
 
   Widget _curvedBottom(BuildContext context, {required double opacity}) {
-    // انحناءة بسيطة تندمج مع أسفل الـAppBar
+    // ط§ظ†ط­ظ†ط§ط،ط© ط¨ط³ظٹط·ط© طھظ†ط¯ظ…ط¬ ظ…ط¹ ط£ط³ظپظ„ ط§ظ„ظ€AppBar
     return IgnorePointer(
       child: Opacity(
         opacity: opacity,
@@ -337,7 +337,7 @@ bool _isMerchant(UserModel? details) {
   return normalized == 'seller' || normalized == 'commercial';
 }
 
-/// إخفاء/إظهار الفاب أثناء التمرير
+/// ط¥ط®ظپط§ط،/ط¥ط¸ظ‡ط§ط± ط§ظ„ظپط§ط¨ ط£ط«ظ†ط§ط، ط§ظ„طھظ…ط±ظٹط±
 class _FabHider extends StatefulWidget {
   const _FabHider({
     required this.scrollController,
@@ -370,9 +370,9 @@ class _FabHiderState extends State<_FabHider> {
   void _onScroll() {
     final curr = widget.scrollController.position.pixels;
     if (curr > _last + 6 && _visible) {
-      setState(() => _visible = false); // نزول → أخفِ
+      setState(() => _visible = false); // ظ†ط²ظˆظ„ â†’ ط£ط®ظپظگ
     } else if (curr < _last - 6 && !_visible) {
-      setState(() => _visible = true); // صعود → أظهر
+      setState(() => _visible = true); // طµط¹ظˆط¯ â†’ ط£ط¸ظ‡ط±
     }
     _last = curr;
   }
@@ -401,7 +401,7 @@ class _FabHiderState extends State<_FabHider> {
 }
 
 /* =======================
-   Header UI (داخلي) مع تحجيم مرن
+   Header UI (ط¯ط§ط®ظ„ظٹ) ظ…ط¹ طھط­ط¬ظٹظ… ظ…ط±ظ†
    ======================= */
 
 class ProfileHeaderUI extends StatelessWidget {
@@ -422,7 +422,7 @@ class ProfileHeaderUI extends StatelessWidget {
     this.guestIconScale = 0.80,
     this.guestIconMin,
     this.guestIconMax,
-    this.shrinkFactor = 1.0, // 1 موسّع، 0 منكمش
+    this.shrinkFactor = 1.0, // 1 ظ…ظˆط³ظ‘ط¹طŒ 0 ظ…ظ†ظƒظ…ط´
     this.welcomeText,
     this.welcomeColor,
   });
@@ -433,11 +433,11 @@ class ProfileHeaderUI extends StatelessWidget {
   final String profileUrl;
   final bool isVerified;
 
-  // أضف هذه الحقول مع البقية
-  final double? guestIconSize; // حجم ثابت بالبكسل (إن حددته يتجاهل scale)
-  final double guestIconScale; // نسبة من قطر الأفاتار (افتراضي 0.62)
-  final double? guestIconMin; // حد أدنى اختياري
-  final double? guestIconMax; // حد أقصى اختياري
+  // ط£ط¶ظپ ظ‡ط°ظ‡ ط§ظ„ط­ظ‚ظˆظ„ ظ…ط¹ ط§ظ„ط¨ظ‚ظٹط©
+  final double? guestIconSize; // ط­ط¬ظ… ط«ط§ط¨طھ ط¨ط§ظ„ط¨ظƒط³ظ„ (ط¥ظ† ط­ط¯ط¯طھظ‡ ظٹطھط¬ط§ظ‡ظ„ scale)
+  final double guestIconScale; // ظ†ط³ط¨ط© ظ…ظ† ظ‚ط·ط± ط§ظ„ط£ظپط§طھط§ط± (ط§ظپطھط±ط§ط¶ظٹ 0.62)
+  final double? guestIconMin; // ط­ط¯ ط£ط¯ظ†ظ‰ ط§ط®طھظٹط§ط±ظٹ
+  final double? guestIconMax; // ط­ط¯ ط£ظ‚طµظ‰ ط§ط®طھظٹط§ط±ظٹ
 
   final int cartCount;
   final int notifCount;
@@ -449,8 +449,8 @@ class ProfileHeaderUI extends StatelessWidget {
 
   final double shrinkFactor;
 
-  final String? welcomeText; // غير مستخدم الآن
-  final Color? welcomeColor; // غير مستخدم الآن
+  final String? welcomeText; // ط؛ظٹط± ظ…ط³طھط®ط¯ظ… ط§ظ„ط¢ظ†
+  final Color? welcomeColor; // ط؛ظٹط± ظ…ط³طھط®ط¯ظ… ط§ظ„ط¢ظ†
 
   @override
   Widget build(BuildContext context) {
@@ -461,7 +461,7 @@ class ProfileHeaderUI extends StatelessWidget {
         final double w = constraints.maxWidth;
 
         /* =============================
-       * 1) مقاسات عامة تتقلّص بسلاسة
+       * 1) ظ…ظ‚ط§ط³ط§طھ ط¹ط§ظ…ط© طھطھظ‚ظ„ظ‘طµ ط¨ط³ظ„ط§ط³ط©
        * ============================= */
         final double maxIconTap = (w * 0.12).clamp(36.0, 44.0);
         final double minIconTap = maxIconTap * 0.84;
@@ -474,14 +474,14 @@ class ProfileHeaderUI extends StatelessWidget {
             (minIconSize + (maxIconSize - minIconSize) * shrinkFactor);
 
         /* ============================================
-       * 2) الأفاتار: كبير موسّع → يتقلّص تدريجيًا
-       *    (انيميشنه مستقل عن رقم الجوال/الاسم)
+       * 2) ط§ظ„ط£ظپط§طھط§ط±: ظƒط¨ظٹط± ظ…ظˆط³ظ‘ط¹ â†’ ظٹطھظ‚ظ„ظ‘طµ طھط¯ط±ظٹط¬ظٹظ‹ط§
+       *    (ط§ظ†ظٹظ…ظٹط´ظ†ظ‡ ظ…ط³طھظ‚ظ„ ط¹ظ† ط±ظ‚ظ… ط§ظ„ط¬ظˆط§ظ„/ط§ظ„ط§ط³ظ…)
        * ============================================ */
         const double avatarExpandScale =
-            1.70; // مقدار تكبير الأفاتار قبل التمرير
+            1.70; // ظ…ظ‚ط¯ط§ط± طھظƒط¨ظٹط± ط§ظ„ط£ظپط§طھط§ط± ظ‚ط¨ظ„ ط§ظ„طھظ…ط±ظٹط±
         final double maxAvatarTap = maxIconTap * avatarExpandScale;
         final double minAvatarTap =
-            minIconTap * 0.82; // حجم الأفاتار عند الانكماش الكامل
+            minIconTap * 0.82; // ط­ط¬ظ… ط§ظ„ط£ظپط§طھط§ط± ط¹ظ†ط¯ ط§ظ„ط§ظ†ظƒظ…ط§ط´ ط§ظ„ظƒط§ظ…ظ„
         final double avatarTap =
             (minAvatarTap + (maxAvatarTap - minAvatarTap) * shrinkFactor);
 
@@ -491,29 +491,29 @@ class ProfileHeaderUI extends StatelessWidget {
             (avatarTap / 2) - (borderStroke + innerPadding);
 
         /* =============================
-       * 3) تباعدات عامة ونقاط ضبط
+       * 3) طھط¨ط§ط¹ط¯ط§طھ ط¹ط§ظ…ط© ظˆظ†ظ‚ط§ط· ط¶ط¨ط·
        * ============================= */
         final double hPad = (w * 0.03).clamp(8.0, 14.0);
         const double vPad = 8.0;
         final double gap = (w * 0.02).clamp(6.0, 12.0);
 
-        final bool small = w < 360; // شاشة ضيّقة
+        final bool small = w < 360; // ط´ط§ط´ط© ط¶ظٹظ‘ظ‚ط©
         final double nameMin = context.font.small;
         final double nameMax = context.font.large;
         final double nameSize = nameMin +
-            (nameMax - nameMin) * shrinkFactor; // حجم اسم ديناميكي (مستقل)
+            (nameMax - nameMin) * shrinkFactor; // ط­ط¬ظ… ط§ط³ظ… ط¯ظٹظ†ط§ظ…ظٹظƒظٹ (ظ…ط³طھظ‚ظ„)
 
         /* ====================================================
-       * 4) سلوك رقم الجوال: يظهر موسّع، يختفي بانكماش الهيدر
-       *    (انيميشنه مستقل — لا يزاحم الاسم لأنه مُثبت بأسفل)
+       * 4) ط³ظ„ظˆظƒ ط±ظ‚ظ… ط§ظ„ط¬ظˆط§ظ„: ظٹط¸ظ‡ط± ظ…ظˆط³ظ‘ط¹طŒ ظٹط®طھظپظٹ ط¨ط§ظ†ظƒظ…ط§ط´ ط§ظ„ظ‡ظٹط¯ط±
+       *    (ط§ظ†ظٹظ…ظٹط´ظ†ظ‡ ظ…ط³طھظ‚ظ„ â€” ظ„ط§ ظٹط²ط§ط­ظ… ط§ظ„ط§ط³ظ… ظ„ط£ظ†ظ‡ ظ…ظڈط«ط¨طھ ط¨ط£ط³ظپظ„)
        * ==================================================== */
-        const double phoneThreshold = 0.60; // تحتها يختفي الرقم
+        const double phoneThreshold = 0.60; // طھط­طھظ‡ط§ ظٹط®طھظپظٹ ط§ظ„ط±ظ‚ظ…
         final bool showPhoneNow =
             isAuthenticated && (shrinkFactor > phoneThreshold);
 
         /* ===================================================
-       * 5) شارة التحقق: تظهر موسّع، تختفي بانكماش قوي
-       *    AnimatedSwitcher حتى لا تحجز مساحة عند الإخفاء
+       * 5) ط´ط§ط±ط© ط§ظ„طھط­ظ‚ظ‚: طھط¸ظ‡ط± ظ…ظˆط³ظ‘ط¹طŒ طھط®طھظپظٹ ط¨ط§ظ†ظƒظ…ط§ط´ ظ‚ظˆظٹ
+       *    AnimatedSwitcher ط­طھظ‰ ظ„ط§ طھط­ط¬ط² ظ…ط³ط§ط­ط© ط¹ظ†ط¯ ط§ظ„ط¥ط®ظپط§ط،
        * =================================================== */
         const double badgeThreshold = 0.60;
         final bool showBadge = isVerified && (shrinkFactor > badgeThreshold);
@@ -529,7 +529,7 @@ class ProfileHeaderUI extends StatelessWidget {
             mainAxisSize: MainAxisSize.max,
             children: [
               /* =============================
-             * صورة الحساب (InkWell → الملف الشخصي)
+             * طµظˆط±ط© ط§ظ„ط­ط³ط§ط¨ (InkWell â†’ ط§ظ„ظ…ظ„ظپ ط§ظ„ط´ط®طµظٹ)
              * ============================= */
               SizedBox(
                 width: avatarTap,
@@ -550,7 +550,7 @@ class ProfileHeaderUI extends StatelessWidget {
                       ),
                       padding: const EdgeInsets.all(innerPadding),
                       child: TweenAnimationBuilder<double>(
-                        // انيميشن حجم الأفاتار مستقل وثابت النعومة
+                        // ط§ظ†ظٹظ…ظٹط´ظ† ط­ط¬ظ… ط§ظ„ط£ظپط§طھط§ط± ظ…ط³طھظ‚ظ„ ظˆط«ط§ط¨طھ ط§ظ„ظ†ط¹ظˆظ…ط©
                         tween: Tween(begin: avatarRadius, end: avatarRadius),
                         duration: const Duration(milliseconds: 200),
                         curve: Curves.easeOutCubic,
@@ -568,19 +568,19 @@ class ProfileHeaderUI extends StatelessWidget {
               SizedBox(width: gap),
 
               /* ============================================================
-             * النصوص داخل مساحة ثابتة الارتفاع = ارتفاع الأفاتار
-             * نستخدم Stack لتثبيت التموضع:
-             *  - الشارة: أعلى يسار
-             *  - الاسم: منتصف يسار (لا يتأثر بظهور/اختفاء الرقم)
-             *  - الرقم: أسفل يسار (AnimatedSwitcher مستقل)
+             * ط§ظ„ظ†طµظˆطµ ط¯ط§ط®ظ„ ظ…ط³ط§ط­ط© ط«ط§ط¨طھط© ط§ظ„ط§ط±طھظپط§ط¹ = ط§ط±طھظپط§ط¹ ط§ظ„ط£ظپط§طھط§ط±
+             * ظ†ط³طھط®ط¯ظ… Stack ظ„طھط«ط¨ظٹطھ ط§ظ„طھظ…ظˆط¶ط¹:
+             *  - ط§ظ„ط´ط§ط±ط©: ط£ط¹ظ„ظ‰ ظٹط³ط§ط±
+             *  - ط§ظ„ط§ط³ظ…: ظ…ظ†طھطµظپ ظٹط³ط§ط± (ظ„ط§ ظٹطھط£ط«ط± ط¨ط¸ظ‡ظˆط±/ط§ط®طھظپط§ط، ط§ظ„ط±ظ‚ظ…)
+             *  - ط§ظ„ط±ظ‚ظ…: ط£ط³ظپظ„ ظٹط³ط§ط± (AnimatedSwitcher ظ…ط³طھظ‚ظ„)
              * ============================================================ */
               Expanded(
                 child: SizedBox(
-                  height: avatarTap, // نفس ارتفاع الأفاتار → لا Overflow
+                  height: avatarTap, // ظ†ظپط³ ط§ط±طھظپط§ط¹ ط§ظ„ط£ظپط§طھط§ط± â†’ ظ„ط§ Overflow
                   child: Stack(
                     clipBehavior: Clip.none,
                     children: [
-                      // (أ) الشارة أعلى الـstart بدل left
+                      // (ط£) ط§ظ„ط´ط§ط±ط© ط£ط¹ظ„ظ‰ ط§ظ„ظ€start ط¨ط¯ظ„ left
                       PositionedDirectional(
                         top: 0,
                         start: 0,
@@ -625,7 +625,7 @@ class ProfileHeaderUI extends StatelessWidget {
                         ),
                       ),
 
-                      // (ب) الاسم في منتصف الـstart (محاذي للأفاتار في RTL/LTR)
+                      // (ط¨) ط§ظ„ط§ط³ظ… ظپظٹ ظ…ظ†طھطµظپ ط§ظ„ظ€start (ظ…ط­ط§ط°ظٹ ظ„ظ„ط£ظپط§طھط§ط± ظپظٹ RTL/LTR)
                       Align(
                         alignment: AlignmentDirectional.centerStart,
                         child: GestureDetector(
@@ -641,11 +641,11 @@ class ProfileHeaderUI extends StatelessWidget {
                               },
                               context: context,
                             );
-                          }, // يفتح الملف الشخصي
+                          }, // ظٹظپطھط­ ط§ظ„ظ…ظ„ظپ ط§ظ„ط´ط®طµظٹ
                           child: Padding(
-                            // نبعد الاسم شوي عن الأيقونات في الجهة المقابلة
+                            // ظ†ط¨ط¹ط¯ ط§ظ„ط§ط³ظ… ط´ظˆظٹ ط¹ظ† ط§ظ„ط£ظٹظ‚ظˆظ†ط§طھ ظپظٹ ط§ظ„ط¬ظ‡ط© ط§ظ„ظ…ظ‚ط§ط¨ظ„ط©
                             padding: EdgeInsetsDirectional.only(
-                              // احتياطي بسيط ناحية الـend حتى لا يلتصق بالسلة بعد الانكماش
+                              // ط§ط­طھظٹط§ط·ظٹ ط¨ط³ظٹط· ظ†ط§ط­ظٹط© ط§ظ„ظ€end ط­طھظ‰ ظ„ط§ ظٹظ„طھطµظ‚ ط¨ط§ظ„ط³ظ„ط© ط¨ط¹ط¯ ط§ظ„ط§ظ†ظƒظ…ط§ط´
                               end: iconTap + gap,
                             ),
                             child: AnimatedDefaultTextStyle(
@@ -669,7 +669,7 @@ class ProfileHeaderUI extends StatelessWidget {
                         ),
                       ),
 
-                      // (ج) رقم الجوال أسفل الـstart بدل bottom/left
+                      // (ط¬) ط±ظ‚ظ… ط§ظ„ط¬ظˆط§ظ„ ط£ط³ظپظ„ ط§ظ„ظ€start ط¨ط¯ظ„ bottom/left
                       PositionedDirectional(
                         start: 3,
                         end: 0,
@@ -710,8 +710,8 @@ class ProfileHeaderUI extends StatelessWidget {
               ),
 
               SizedBox(width: gap),
-// زر الاشعارات متبقي ربط العداد
-              // باقي الأيقونات مع الشارات
+// ط²ط± ط§ظ„ط§ط´ط¹ط§ط±ط§طھ ظ…طھط¨ظ‚ظٹ ط±ط¨ط· ط§ظ„ط¹ط¯ط§ط¯
+              // ط¨ط§ظ‚ظٹ ط§ظ„ط£ظٹظ‚ظˆظ†ط§طھ ظ…ط¹ ط§ظ„ط´ط§ط±ط§طھ
               _IconWithBadge(
                 icon: AppIcons.cart,
                 onTap: () {
@@ -770,7 +770,7 @@ class ProfileHeaderUI extends StatelessWidget {
     );
   }
 
-  // صورة الحساب: شبكة أو أيقونة افتراضية
+  // طµظˆط±ط© ط§ظ„ط­ط³ط§ط¨: ط´ط¨ظƒط© ط£ظˆ ط£ظٹظ‚ظˆظ†ط© ط§ظپطھط±ط§ط¶ظٹط©
   Widget _buildAvatar(BuildContext context) {
     if (profileUrl.isNotEmpty) {
       return ClipOval(
@@ -800,7 +800,7 @@ class ProfileHeaderUI extends StatelessWidget {
       builder: (ctx, constraints) {
         final double side = constraints.biggest.shortestSide;
 
-        // حجم الأيقونة: ثابت إن وُضع، وإلا نسبة من قطر الأفاتار
+        // ط­ط¬ظ… ط§ظ„ط£ظٹظ‚ظˆظ†ط©: ط«ط§ط¨طھ ط¥ظ† ظˆظڈط¶ط¹طŒ ظˆط¥ظ„ط§ ظ†ط³ط¨ط© ظ…ظ† ظ‚ط·ط± ط§ظ„ط£ظپط§طھط§ط±
         double size = guestIconSize ?? (side * guestIconScale);
 
         if (guestIconMin != null)
@@ -889,19 +889,21 @@ class _BadgeDot extends StatelessWidget {
         borderRadius: BorderRadius.circular(9),
         border: Border.all(color: Colors.white, width: 1),
       ),
-      child: const Center(
+      child: Center(
         child: Text(
-          // سيتم تعيين النص لاحقًا مع نفس النمط
-          '',
-          style: TextStyle(
-              fontSize: 10, color: Colors.white, fontWeight: FontWeight.w700),
+          text,
+          style: const TextStyle(
+            fontSize: 10,
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
     );
   }
 }
 
-/// لإظهار قيمة الشارة داخل الـCenter بدون إعادة بناء الشكل
+/// ظ„ط¥ط¸ظ‡ط§ط± ظ‚ظٹظ…ط© ط§ظ„ط´ط§ط±ط© ط¯ط§ط®ظ„ ط§ظ„ظ€Center ط¨ط¯ظˆظ† ط¥ط¹ط§ط¯ط© ط¨ظ†ط§ط، ط§ظ„ط´ظƒظ„
 extension on _BadgeDot {
   Widget build(BuildContext context) {
     final String text = value > 99 ? '99+' : value.toString();
@@ -924,7 +926,7 @@ extension on _BadgeDot {
   }
 }
 
-/// نفس الشيمر السابق لكن كدالة واجهة
+/// ظ†ظپط³ ط§ظ„ط´ظٹظ…ط± ط§ظ„ط³ط§ط¨ظ‚ ظ„ظƒظ† ظƒط¯ط§ظ„ط© ظˆط§ط¬ظ‡ط©
 
 Widget homeShimmerEffect(BuildContext context) {
   const defaultPadding = 16.0;
@@ -986,7 +988,7 @@ class _ShimmerBox extends StatelessWidget {
   }
 }
 
-/// واجهة عناصر "الكل"
+/// ظˆط§ط¬ظ‡ط© ط¹ظ†ط§طµط± "ط§ظ„ظƒظ„"
 class AllItemsWidget extends StatelessWidget {
   const AllItemsWidget({super.key});
 
@@ -1044,3 +1046,5 @@ class AllItemsWidget extends StatelessWidget {
     );
   }
 }
+
+

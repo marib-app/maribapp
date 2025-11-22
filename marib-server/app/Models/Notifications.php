@@ -28,6 +28,14 @@ class Notifications extends Model {
         'real_estate',
     ];
 
+    public const BROADCAST_CATEGORIES = [
+        'marketing',
+        'account',
+        'wallet',
+        'updates',
+        'system',
+    ];
+
 
 
 
@@ -37,7 +45,13 @@ class Notifications extends Model {
         'image',
         'item_id',
         'user_id',
-        'send_to'
+        'send_to',
+        'category',
+        'meta',
+    ];
+
+    protected $casts = [
+        'meta' => 'array',
     ];
 
 

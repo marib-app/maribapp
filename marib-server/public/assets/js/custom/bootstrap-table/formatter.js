@@ -1,7 +1,7 @@
 function imageFormatter(value) {
     if (value) {
         return '<a class="image-popup-no-margins one-image" href="' + value + '">' +
-            '<img class="rounded avatar-md shadow img-fluid " alt="" src="' + value + '" width="55" onerror="onErrorImage(event)">' +
+            '<img class="rounded shadow img-fluid" alt="" src="' + value + '" style="width:44px;height:44px;object-fit:cover;" onerror="onErrorImage(event)">' +
             '</a>'
     } else {
         return '-'

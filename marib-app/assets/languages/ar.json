@@ -1,4 +1,4 @@
-{
+﻿{
   "report": "ط§ظ„ط¥ط¨ظ„ط§ط؛",
   "reportThisService": "ط£ط¨ظ„ط؛ ط¹ظ† ظ‡ط°ظ‡ ط§ظ„ط®ط¯ظ…ط©",
   "rating": "ط§ظ„طھظ‚ظٹظٹظ…",
@@ -88,7 +88,12 @@
   "storePendingBadge": "ط­ط³ط§ط¨ظƒ ظ‚ظٹط¯ ط§ظ„ظ…ط±ط§ط¬ط¹ط©",
   "storePendingBadgeHint": "ط³ظ†ط¨ظ„ط؛ظƒ ظ…ط¬ط±ط¯ ط§ع¯طھظ…ط§ط¯ ط§ظ„ط·ظ„ط¨",
   "storePendingManagementTitle": "ط§ظ„ظ…طھط¬ط± ظ‚ظٹط¯ ط§ظ„ظ…ط±ط§ط¬ط¹ط©",
-  "storePendingManagementBody": "ظ„ط§ ظٹظ…ظƒظ†ظƒ ط¥ط¯ط§ط±ط© ط§ظ„ظ…طھط¬ط± ط­ط§ظ„ظٹط§ظ‹ ظ„ط£ظ† ط·ظ„ط¨ظƒ ظ…ط§ ط²ط§ظ„ ظ‚ظٹط¯ ط§ظ„ظ…ط±ط§ط¬ط¹ط©. ط¥ط°ط§ طھط£ط®ط±طھ ط§ظ„ظ…ظˆط§ظپظ‚ط© ظپطھط§طµظ„ ظ…ط¹ ظپط±ظٹظ‚ ط§ظ„ط¯ط¹ظ….",
+  "storefrontFollowCta": "متابعة المتجر",
+  "storefrontFollowComingSoon": "ميزة متابعة المتاجر قادمة قريباً.",
+  "storefrontWhatsappAction": "واتساب",
+  "storefrontDirectionsAction": "الاتجاهات",
+  "storefrontOpenNow": "مفتوح الآن",
+  "storefrontClosedNow": "مغلق حالياً",  "storePendingManagementBody": "ظ„ط§ ظٹظ…ظƒظ†ظƒ ط¥ط¯ط§ط±ط© ط§ظ„ظ…طھط¬ط± ط­ط§ظ„ظٹط§ظ‹ ظ„ط£ظ† ط·ظ„ط¨ظƒ ظ…ط§ ط²ط§ظ„ ظ‚ظٹط¯ ط§ظ„ظ…ط±ط§ط¬ط¹ط©. ط¥ط°ط§ طھط£ط®ط±طھ ط§ظ„ظ…ظˆط§ظپظ‚ط© ظپطھط§طµظ„ ظ…ط¹ ظپط±ظٹظ‚ ط§ظ„ط¯ط¹ظ….",
   "storePendingPublishingTitle": "ظ„ط§ ظٹظ…ظƒظ†ظƒ ظ†ط´ط± ط§ظ„ظ…ظ†طھط¬ط§طھ ط­ط§ظ„ظٹط§ً",
   "storePendingPublishingBody": "ط­ط³ط§ط¨ ظ…طھط¬ط±ظƒ ط§ظ„طھط¬ط§ط±ظٹ ظ‚ظٹط¯ ط§ظ„ظ…ط±ط§ط¬ط¹ط©. ط³طھط³طھط·ظٹط¹ ط¨ظ†ط´ط± ط£ظٹ ط¥ط¹ظ„ط§ظ† ط¨ط¹ط¯ ط§ظ„ظ…ظˆط§ظپظ‚ط© ظ„ظ„ط·ظ„ط¨.",
   "merchant_ads_tab_title": "إعلانات المتجر",
@@ -106,11 +111,12 @@
   "merchant_order_reports_placeholder": "لوحة تقارير الطلبات التفصيلية ستتوفر قريبًا لتتبع كل مرحلة دون تأخير.",
   "merchant_sales_reports_placeholder": "تحليلات المبيعات والإيرادات في طريقها إليك لتسهيل قراءة الأداء اليومي.",
   "merchant_customer_reports_placeholder": "تقارير تحليل العملاء والولاء ستعرض هنا قريبًا لمنحك نظرة أوضح عن جمهورك.",
-  "merchant_payment_methods_heading": "��� ����� ��������",
-  "merchant_payment_methods_empty": "�� ���� ��� ��� ����� ��� ����.",
-  "merchant_payment_gateway_label": "�������",
-  "merchant_payment_beneficiary_label": "��� ������",
-  "merchant_payment_account_number_label": "��� ������",
-  "merchant_payment_method_status_active": "�����",
-  "merchant_payment_method_status_inactive": "������"
+  "merchant_payment_methods_heading": "��� ����� ��������",
+  "merchant_payment_methods_empty": "�� ���� ��� ��� ����� ��� ����.",
+  "merchant_payment_gateway_label": "�������",
+  "merchant_payment_beneficiary_label": "��� ������",
+  "merchant_payment_account_number_label": "��� ������",
+  "merchant_payment_method_status_active": "�����",
+  "merchant_payment_method_status_inactive": "������"
 }
+

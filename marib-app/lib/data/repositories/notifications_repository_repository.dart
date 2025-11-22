@@ -202,4 +202,19 @@ class NotificationsRepository {
     }
     return null;
   }
+
+  Future<NotificationData> fetchNotificationDetail(String id) async {
+    final Map<String, dynamic> response = await Api.get(
+      url: '${Api.notificationsApi}/$id',
+    );
+
+    final Map<String, dynamic>? payload =
+        _ensureMap(response['data'] ?? response['notification']) ??
+            _ensureMap(response);
+    if (payload == null || payload.isEmpty) {
+      throw ApiException('notification_not_available');
+    }
+
+    return NotificationData.fromJson(payload);
+  }
 }

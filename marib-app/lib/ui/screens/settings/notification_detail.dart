@@ -1,22 +1,40 @@
+
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_linkify/flutter_linkify.dart';
+import 'package:intl/intl.dart' as intl;
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:marib/app/routes.dart';
+import 'package:marib/data/cubits/notifications/notification_detail_cubit.dart';
 import 'package:marib/data/model/notification_data.dart';
+import 'package:marib/data/repositories/notifications_repository_repository.dart';
 import 'package:marib/ui/screens/notifications/action_request_details_screen.dart';
-import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/ui/theme/theme.dart';
-import 'package:marib/utils/extensions/extensions.dart';
-import 'package:marib/utils/responsiveSize.dart';
 import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
+import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
+import 'package:marib/ui/screens/widgets/errors/something_went_wrong.dart';
+import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/helper_utils.dart';
+import 'package:marib/utils/responsiveSize.dart';
+import 'package:marib/utils/ui_utils.dart';
 
-class NotificationDetail extends StatefulWidget {
+class NotificationDetail extends StatelessWidget {
   const NotificationDetail({super.key});
 
   @override
-  State<NotificationDetail> createState() => _NotificationDetailState();
+  Widget build(BuildContext context) {
+    final Object? args = ModalRoute.of(context)?.settings.arguments;
+    if (args is! NotificationData) {
+      return _buildEmptyScaffold(context);
+    }
+
+    return BlocProvider(
+      create: (_) => NotificationDetailCubit(NotificationsRepository())
+        ..load(args.id, args),
+      child: _NotificationDetailContent(initialNotification: args),
+    );
+  }
 
   static Route route(RouteSettings routeSettings) {
     return BlurredRouter(
@@ -24,37 +42,8 @@ class NotificationDetail extends StatefulWidget {
       settings: routeSettings,
     );
   }
-}
 
-class _NotificationDetailState extends State<NotificationDetail> {
-  @override
-  Widget build(BuildContext context) {
-    final args = ModalRoute.of(context)?.settings.arguments;
-
-    if (args is! NotificationData) {
-      return Scaffold(
-        backgroundColor: context.color.primaryColor,
-        appBar: UiUtils.buildAppBar(
-          context,
-          title: "notifications".translate(context),
-          showBackButton: true,
-        ),
-        body: const Center(child: Text('notification_not_available')),
-      );
-    }
-
-    final NotificationData notification = args;
-    final String imageUrl = HelperUtils.absoluteImage(
-      notification.image ?? notification.data['image'],
-    );
-    final String title = (notification.title ?? '').trim();
-    final String message = (notification.displayMessage ?? '').trim();
-    final String timeStr = UiUtils.formatSmartTime(
-      notification.createdAt ?? notification.deliveredAt?.toIso8601String(),
-    );
-    final ActionRequestRouteArgs? actionArgs =
-        _parseActionRequest(notification);
-
+  Widget _buildEmptyScaffold(BuildContext context) {
     return Scaffold(
       backgroundColor: context.color.primaryColor,
       appBar: UiUtils.buildAppBar(
@@ -62,100 +51,163 @@ class _NotificationDetailState extends State<NotificationDetail> {
         title: "notifications".translate(context),
         showBackButton: true,
       ),
-      body: ListView(
-        padding: const EdgeInsets.only(bottom: 20),
-        children: <Widget>[
-          if (imageUrl.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(14),
-                child: AspectRatio(
-                  aspectRatio: 16 / 7,
-                  child: _NetworkImageSafe(imgUrl: imageUrl),
-                ),
-              ),
-            ),
-          ],
+      body: const Center(child: Text('notification_not_available')),
+    );
+  }
+}
+
+class _NotificationDetailContent extends StatelessWidget {
+  const _NotificationDetailContent({required this.initialNotification});
+
+  final NotificationData initialNotification;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: context.color.primaryColor,
+      appBar: UiUtils.buildAppBar(
+        context,
+        title: "notifications".translate(context),
+        showBackButton: true,
+      ),
+      body: BlocBuilder<NotificationDetailCubit, NotificationDetailState>(
+        builder: (context, state) {
+          if (state is NotificationDetailLoading ||
+              state is NotificationDetailInitial) {
+            return const _DetailShimmer();
+          }
+          if (state is NotificationDetailFailure) {
+            return _DetailError(
+              onRetry: () => context
+                  .read<NotificationDetailCubit>()
+                  .load(initialNotification.id, initialNotification),
+            );
+          }
+          if (state is NotificationDetailSuccess) {
+            return _DetailBody(notification: state.notification);
+          }
+          return const _DetailShimmer();
+        },
+      ),
+    );
+  }
+}
+
+class _DetailBody extends StatelessWidget {
+  const _DetailBody({required this.notification});
+
+  final NotificationData notification;
+
+  @override
+  Widget build(BuildContext context) {
+    final String imageUrl = HelperUtils.absoluteImage(
+      notification.image ?? notification.data['image'],
+    );
+    final String title = (notification.title ?? '').trim();
+    final String message = (notification.displayMessage ?? '').trim();
+    final String created = notification.createdAt ??
+        notification.deliveredAt?.toIso8601String() ??
+        '';
+    final String timeStr = created.isEmpty
+        ? ''
+        : intl.DateFormat("d MMMM yyyy - h:mm a", 'ar')
+            .format(DateTime.parse(created));
+    final ActionRequestRouteArgs? actionArgs =
+        _parseActionRequest(notification);
+
+    return ListView(
+      padding: const EdgeInsets.only(bottom: 20),
+      children: <Widget>[
+        if (imageUrl.isNotEmpty) ...[
           const SizedBox(height: 10),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            child: Directionality(
-              textDirection: TextDirection.ltr,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    timeStr,
-                    maxLines: 1,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: AspectRatio(
+                aspectRatio: 16 / 7,
+                child: _NetworkImageSafe(imgUrl: imageUrl),
+              ),
+            ),
+          ),
+        ],
+        const SizedBox(height: 10),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: Directionality(
+            textDirection: TextDirection.ltr,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  timeStr,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.left,
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: Colors.grey),
+                ),
+                Flexible(
+                  child: Text(
+                    title,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.left,
+                    textAlign: TextAlign.right,
                     style: Theme.of(context)
                         .textTheme
-                        .bodySmall
-                        ?.copyWith(color: Colors.grey),
+                        .titleMedium!
+                        .copyWith(fontWeight: FontWeight.w600),
                   ),
-                  Flexible(
-                    child: Text(
-                      title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.right,
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleMedium!
-                          .copyWith(fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 100, vertical: 10),
-            child: Divider(
-              height: 0.5,
-              thickness: 0.5,
-              color: Colors.grey.withOpacity(0.25),
-            ),
-          ),
-          const SizedBox(height: 10),
-          if (message.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              child: Linkify(
-                text: message,
-                style: Theme.of(context).textTheme.bodyMedium,
-                options: const LinkifyOptions(looseUrl: true),
-                onOpen: (link) async {
-                  final uri = Uri.tryParse(link.url);
-                  if (uri != null && await canLaunchUrl(uri)) {
-                    await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  }
-                },
-              ),
-            ),
-          if (actionArgs != null) ...[
-            const SizedBox(height: 20),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pushNamed(
-                    context,
-                    Routes.actionRequestPage,
-                    arguments: actionArgs,
-                  ),
-                  child: Text("open".translate(context)),
                 ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 100, vertical: 10),
+          child: Divider(
+            height: 0.5,
+            thickness: 0.5,
+            color: Colors.grey.withOpacity(0.25),
+          ),
+        ),
+        const SizedBox(height: 10),
+        if (message.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: Linkify(
+              text: message,
+              style: Theme.of(context).textTheme.bodyMedium,
+              options: const LinkifyOptions(looseUrl: true),
+              onOpen: (link) async {
+                final uri = Uri.tryParse(link.url);
+                if (uri != null && await canLaunchUrl(uri)) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                }
+              },
+            ),
+          ),
+        if (actionArgs != null) ...[
+          const SizedBox(height: 20),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pushNamed(
+                  context,
+                  Routes.actionRequestPage,
+                  arguments: actionArgs,
+                ),
+                child: Text("open".translate(context)),
               ),
             ),
-          ],
+          ),
         ],
-      ),
+      ],
     );
   }
 
@@ -178,6 +230,93 @@ class _NotificationDetailState extends State<NotificationDetail> {
       return null;
     }
     return ActionRequestRouteArgs(requestId: id, token: token);
+  }
+}
+
+class _DetailShimmer extends StatelessWidget {
+  const _DetailShimmer();
+
+  @override
+  Widget build(BuildContext context) {
+    final Color base = context.color.secondaryColor;
+    return Container(
+      color: base,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: const [
+          _ShimmerBlock(height: 140),
+          SizedBox(height: 16),
+          _ShimmerBlock(height: 18, width: 120),
+          SizedBox(height: 8),
+          _ShimmerBlock(height: 20, width: double.infinity),
+          SizedBox(height: 24),
+          _ShimmerParagraph(lines: 5),
+        ],
+      ),
+    );
+  }
+}
+
+class _ShimmerBlock extends StatelessWidget {
+  const _ShimmerBlock({required this.height, this.width});
+
+  final double height;
+  final double? width;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: CustomShimmer(
+        height: height,
+        width: width ?? double.infinity,
+      ),
+    );
+  }
+}
+
+class _ShimmerParagraph extends StatelessWidget {
+  const _ShimmerParagraph({required this.lines});
+
+  final int lines;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: List<Widget>.generate(
+        lines,
+        (int index) => Padding(
+          padding: EdgeInsets.only(bottom: index == lines - 1 ? 0 : 8),
+          child: _ShimmerBlock(
+            height: 14,
+            width: index == lines - 1 ? 180 : double.infinity,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DetailError extends StatelessWidget {
+  const _DetailError({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SomethingWentWrong(),
+          const SizedBox(height: 12),
+          ElevatedButton(
+            onPressed: onRetry,
+            child: Text('retry'.translate(context)),
+          ),
+        ],
+      ),
+    );
   }
 }
 

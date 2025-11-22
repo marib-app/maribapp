@@ -92,7 +92,10 @@ class WalletAdminController extends Controller
         );
 
         $transactionsQuery = WalletTransaction::query()
-            ->with(['manualPaymentRequest', 'paymentTransaction'])
+            ->with([
+                'manualPaymentRequest',
+                'paymentTransaction.walletTransaction',
+            ])
             ->where('wallet_account_id', $walletAccount->getKey())
             ->latest('created_at');
 

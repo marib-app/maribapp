@@ -34,6 +34,7 @@ class ItemsBodyBox extends StatefulWidget {
   final int sliderRefreshToken;
   final List<int>? sellerCategoryIds;
   final String? interfaceType;
+  final Widget? storefrontHeader;
 
   // جديد: لا تبني شريط التصنيفات/السلايدر إلا إذا true
   final bool enableTopBar;
@@ -71,6 +72,7 @@ class ItemsBodyBox extends StatefulWidget {
     this.onScrollDirectionChanged,
     this.bottomContentPadding = 0.0,
     this.sellerCategoryIds,
+    this.storefrontHeader,
     super.key,
   });
 
@@ -95,7 +97,6 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
   @override
   void initState() {
     _sellerCategoryIds = _normalizeSellerCategoryIds(widget.sellerCategoryIds);
-
     super.initState();
   }
 
@@ -220,102 +221,72 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
         // ===== الجسم: شريط التصنيفات + المحتوى =====
 
 // ===== الجسم: شريط التصنيفات + المحتوى =====
-        body: Column(
-          mainAxisSize: MainAxisSize.max,
-          children: [
-            // ✅ نفس الهيكل والهوامش للحالتين (شيمر/حقيقي)
-            Material(
-              color: context.color.secondaryColor,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (widget.enableTopBar && !showTopPlaceholder)
-                    ValueListenableBuilder<int?>(
-                      valueListenable: widget.selectedCategoryId,
-                      builder: (context, selectedId, _) {
-                        return KeyedSubtree(
-                          key: ValueKey('pcslider_${widget.categoryId}'),
-                          child: PcSliderWidget(
-                            parentId: _catId,
-                            selectedCategoryId: selectedId,
-                            onCategorySelected: (id) {
-                              final int rawId = id ?? 0;
-                              final int effectiveId =
-                                  rawId <= 0 ? _catId : rawId;
-                              if (widget.selectedCategoryId.value != rawId) {
-                                widget.selectedCategoryId.value = rawId;
-                              }
-                              final query = widget.searchController.text.trim();
-                              final ItemFilterModel? baseFilter = widget.filter;
-                              final ItemFilterModel? nextFilter =
-                                  baseFilter == null
-                                      ? null
-                                      : baseFilter.copyWith(
-                                          categoryId: effectiveId.toString(),
-                                        );
-                              context
-                                  .read<FetchItemSummaryCubit>()
-                                  .fetchSummaries(
-                                    categoryId: effectiveId,
-                                    search: query,
-                                    sortBy: widget.sortBy,
-                                    filter: nextFilter,
-                                    perPage:
-                                        FetchItemSummaryCubit.defaultPerPage,
-                                  );
-                              _lastExecutedQuery = query;
-                            },
-                            interfaceType: widget.interfaceType,
-                            sellerCategoryIds: _sellerCategoryIds,
-                          ),
-                        );
-                      },
-                    )
-                  else if (showTopPlaceholder)
-                    _buildTopBarShimmerExact(), // ← شيمر مطابق تمامًا للهيكل
-
-                  const SizedBox(height: 6), // ← نفس الفاصل في الحالتين
-                ],
-              ),
-            ),
-
-            // باقي الجسم (السلايدر/القوائم...)
-            Expanded(
-              child: RepaintBoundary(
-                child: HomeTabView(
-                  selectedCategoryId: widget.selectedCategoryId,
-                  categoryId: widget.categoryId,
-                  searchController: widget.searchController,
-                  viewModeListenable: _viewMode,
-                  bottomPadding: widget.bottomContentPadding,
-                  showShimmer: widget.showShimmer,
-                  sliderRefreshToken: widget.sliderRefreshToken,
-                  sellerCategoryIds: _sellerCategoryIds,
-                  interfaceType: widget.interfaceType,
-                  rootCategoryName: widget.categoryName,
-
-                  // موجودة عندك مسبقًا:
-                  currentSortBy: widget.sortBy,
-                  currentFilter: widget.filter,
-                  enableSubcats: widget.enableSubcats,
-                  onScrollDirectionChanged: widget.onScrollDirectionChanged,
-                  specialRequestSectionSlug: widget.specialRequestSectionSlug,
-
-                  // ✨ المهم: مرر مفاتيح السلايدر الإعلاني
-                  enableAdSlider: widget.enableAdSlider,
-                  // ← أضِف هذا
-                  adInterfaceType: widget.adInterfaceType,
-                  showFeaturedAds: widget.enableFeaturedAds,
-                  // ← وأيضًا هذا
-                  onLoadMore: widget.onLoadMore,
+        body: NestedScrollView(
+          headerSliverBuilder: (context, innerBoxIsScrolled) {
+            final List<Widget> slivers = <Widget>[];
+            if (widget.storefrontHeader != null) {
+              slivers.add(
+                SliverToBoxAdapter(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      widget.storefrontHeader!,
+                      const SizedBox(height: 4),
+                    ],
+                  ),
                 ),
-              ),
+              );
+            }
+
+            if (widget.enableTopBar || showTopPlaceholder) {
+              slivers.add(
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _CategoryTabsHeaderDelegate(
+                    showPlaceholder: showTopPlaceholder,
+                    enableTopBar: widget.enableTopBar,
+                    parentCategoryId: _catId,
+                    selectedCategoryNotifier: widget.selectedCategoryId,
+                    interfaceType: widget.interfaceType,
+                    sellerCategoryIds: _sellerCategoryIds,
+                    buildPlaceholder: _buildTopBarShimmerExact,
+                    onCategorySelected: _handleCategorySelection,
+                    contentColor: context.color.secondaryColor,
+                  ),
+                ),
+              );
+            }
+
+            return slivers;
+          },
+          body: RepaintBoundary(
+            child: HomeTabView(
+              selectedCategoryId: widget.selectedCategoryId,
+              categoryId: widget.categoryId,
+              searchController: widget.searchController,
+              viewModeListenable: _viewMode,
+              bottomPadding: widget.bottomContentPadding,
+              showShimmer: widget.showShimmer,
+              sliderRefreshToken: widget.sliderRefreshToken,
+              sellerCategoryIds: _sellerCategoryIds,
+              interfaceType: widget.interfaceType,
+              rootCategoryName: widget.categoryName,
+              currentSortBy: widget.sortBy,
+              currentFilter: widget.filter,
+              enableSubcats: widget.enableSubcats,
+              onScrollDirectionChanged: widget.onScrollDirectionChanged,
+              specialRequestSectionSlug: widget.specialRequestSectionSlug,
+              enableAdSlider: widget.enableAdSlider,
+              adInterfaceType: widget.adInterfaceType,
+              showFeaturedAds: widget.enableFeaturedAds,
+              onLoadMore: widget.onLoadMore,
             ),
-          ],
+          ),
         ),
       ),
     );
   }
+
 
   List<int>? _normalizeSellerCategoryIds(List<int>? ids) {
     if (ids == null) {
@@ -332,6 +303,26 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
     }
     final List<int> sorted = normalized.toList(growable: false)..sort();
     return sorted;
+  }
+
+  void _handleCategorySelection(int? id) {
+    final int rawId = id ?? 0;
+    final int effectiveId = rawId <= 0 ? _catId : rawId;
+    if (widget.selectedCategoryId.value != rawId) {
+      widget.selectedCategoryId.value = rawId;
+    }
+    final String query = widget.searchController.text.trim();
+    final ItemFilterModel? baseFilter = widget.filter;
+    final ItemFilterModel? nextFilter =
+        baseFilter?.copyWith(categoryId: effectiveId.toString());
+    context.read<FetchItemSummaryCubit>().fetchSummaries(
+          categoryId: effectiveId,
+          search: query,
+          sortBy: widget.sortBy,
+          filter: nextFilter,
+          perPage: FetchItemSummaryCubit.defaultPerPage,
+        );
+    _lastExecutedQuery = query;
   }
 
   Widget _buildTopBarShimmerExact() {
@@ -381,4 +372,95 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
       ),
     );
   }
+
 }
+
+class _CategoryTabsHeaderDelegate extends SliverPersistentHeaderDelegate {
+  static const double _tabsHeight = 62.0;
+
+  _CategoryTabsHeaderDelegate({
+    required this.showPlaceholder,
+    required this.enableTopBar,
+    required this.parentCategoryId,
+    required this.selectedCategoryNotifier,
+    required this.interfaceType,
+    required this.sellerCategoryIds,
+    required this.buildPlaceholder,
+    required this.onCategorySelected,
+    required this.contentColor,
+  });
+
+  final bool showPlaceholder;
+  final bool enableTopBar;
+  final int parentCategoryId;
+  final ValueNotifier<int?> selectedCategoryNotifier;
+  final String? interfaceType;
+  final List<int>? sellerCategoryIds;
+  final Widget Function() buildPlaceholder;
+  final ValueChanged<int?> onCategorySelected;
+  final Color contentColor;
+
+  double get _effectiveHeight =>
+      (enableTopBar || showPlaceholder) ? _tabsHeight : 0.0;
+
+  @override
+  double get minExtent => _effectiveHeight;
+
+  @override
+  double get maxExtent => _effectiveHeight;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    if (_effectiveHeight == 0.0) {
+      return const SizedBox.shrink();
+    }
+
+    return SizedBox(
+      height: _tabsHeight,
+      child: Material(
+        color: contentColor,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (enableTopBar && !showPlaceholder)
+              ValueListenableBuilder<int?>(
+                valueListenable: selectedCategoryNotifier,
+                builder: (context, selectedId, _) {
+                  return KeyedSubtree(
+                    key: ValueKey('pcslider_$parentCategoryId'),
+                    child: PcSliderWidget(
+                      parentId: parentCategoryId,
+                      selectedCategoryId: selectedId,
+                      onCategorySelected: onCategorySelected,
+                      interfaceType: interfaceType,
+                      sellerCategoryIds: sellerCategoryIds,
+                    ),
+                  );
+                },
+              )
+            else if (showPlaceholder)
+              buildPlaceholder(),
+            const SizedBox(height: 6),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _CategoryTabsHeaderDelegate oldDelegate) {
+    return showPlaceholder != oldDelegate.showPlaceholder ||
+        enableTopBar != oldDelegate.enableTopBar ||
+        parentCategoryId != oldDelegate.parentCategoryId ||
+        interfaceType != oldDelegate.interfaceType ||
+        !listEquals(sellerCategoryIds, oldDelegate.sellerCategoryIds) ||
+        contentColor != oldDelegate.contentColor;
+  }
+}
+
+
+

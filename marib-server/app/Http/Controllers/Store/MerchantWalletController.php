@@ -126,6 +126,10 @@ class MerchantWalletController extends Controller
         $currency = strtoupper((string) ($walletAccount->currency ?? $defaultCurrency));
 
         $transactions = $walletAccount->transactions()
+            ->with([
+                'manualPaymentRequest',
+                'paymentTransaction.walletTransaction',
+            ])
             ->latest('created_at')
             ->limit(10)
             ->get();

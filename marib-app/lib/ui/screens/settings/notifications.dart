@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:marib/app/routes.dart';
@@ -20,35 +20,39 @@ import 'package:marib/ui/screens/widgets/errors/no_data_found.dart';
 import 'package:marib/ui/screens/widgets/errors/no_internet.dart';
 import 'package:marib/ui/screens/widgets/errors/something_went_wrong.dart';
 import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
+import 'package:intl/intl.dart' as intl;
+import 'package:timeago/timeago.dart' as timeago;
 import 'package:marib/app/app_scroll_behavior.dart';
 
 enum NotificationCategory {
   all,
   marketing,
-  account,
   wallet,
-  system,
+  account,
   updates,
+  system,
 }
+
 
 extension NotificationCategoryX on NotificationCategory {
   String label(BuildContext context) {
     switch (this) {
       case NotificationCategory.all:
         return 'الكل';
-      case NotificationCategory.marketing:
-        return 'الإعلانات';
       case NotificationCategory.account:
-        return 'الحساب';
+        return 'الحساب والإعدادات';
       case NotificationCategory.wallet:
-        return 'المحفظة';
-      case NotificationCategory.system:
-        return 'النظام';
+        return 'المحفظة والمدفوعات';
       case NotificationCategory.updates:
-        return 'المستجدات';
+        return 'مستجدات التطبيق';
+      case NotificationCategory.marketing:
+        return 'العروض والإعلانات';
+      case NotificationCategory.system:
+        return 'تنبيهات النظام';
     }
   }
 }
+
 
 class Notifications extends StatefulWidget {
   const Notifications({super.key, this.highlightNotificationId});
@@ -78,41 +82,155 @@ class NotificationsState extends State<Notifications>
   late final ScrollController _pageScrollController = ScrollController();
   late final TabController _tabController;
 
-  static const Set<String> _marketingTypes = <String>{
+  static const Set<String> _marketingTokens = <String>{
     'broadcast',
-    'broadcast.marketing',
+    'marketing',
     'campaign',
     'ads',
     'promo',
+    'promotion',
+    'offer',
+    'announcement',
+    'عرض',
+    'عروض',
+    'إعلان',
+    'إعلانات',
+    'ترويج',
+    'ترويجي',
+    'خصم',
+    'كوبون',
+    'صفقة',
+    'تسويق',
+    'دعاية',
+    'حملة',
+    'حملات',
+    'مهرجان',
+    'تنزيلات',
+    'كشك',
   };
-
-  static const Set<String> _walletTypes = <String>{
+  static const Set<String> _walletTokens = <String>{
     'wallet',
     'wallet.alert',
+    'wallet.balance',
+    'wallet_balance',
+    'wallet_top_up',
+    'wallet.transfer',
+    'wallet.payment',
+    'wallet-payment',
+    'wallet_payments',
+    'wallet.cashout',
+    'wallet.deposit',
+    'wallet.withdraw',
+    'wallet.withdrawal',
+    'wallet.payout',
+    'wallet.remittance',
+    'wallet.settlement',
     'payment',
     'payment.request',
     'payout',
     'transfer',
+    'transfer.request',
+    'money_transfer',
+    'finance',
+    'transaction',
+    'invoice',
+    'billing',
+    'balance',
+    'topup',
+    'top_up',
+    'top-up',
+    'recharge',
+    'withdraw',
+    'withdrawal',
+    'withdrawn',
+    'deposit',
+    'محفظة',
+    'المحفظة',
+    'مدفوعات',
+    'دفعة',
+    'دفعات',
+    'دفع',
+    'سحب',
+    'إيداع',
+    'ايداع',
+    'حوالة',
+    'تحويل',
+    'تحويل مالي',
+    'رصيد',
+    'رصيدك',
+    'الفاتورة',
+    'فاتورة',
+    'فاتورتك',
+    'الفواتير',
+    'سداد',
+    'سحب نقدي',
+    'إضافة رصيد',
+    'إضافة رصيدك',
+    'شحن المحفظة',
+    'شحن رصيد',
   };
-
-  static const Set<String> _accountTypes = <String>{
+  static const Set<String> _accountTokens = <String>{
     'account',
+    'profile',
     'action.request',
     'kyc',
     'kyc.request',
     'security',
     'auth',
+    'login',
+    'verification',
+    'password',
+    'حساب',
+    'الحساب',
+    'إعدادات',
+    'اعدادات',
+    'ملف',
+    'الملف',
+    'هوية',
+    'توثيق',
+    'التحقق',
+    'التحقق من الهوية',
+    'رمز',
+    'otp',
+    'تسجيل',
+    'الدخول',
+    'الخروج',
+    'أمان',
+    'كلمة المرور',
+    'تغيير كلمة المرور',
+    'تغيير كلمة السر',
+    'البريد',
+    'البريد الإلكتروني',
+    'البريد الالكتروني',
+    'تحديث الحساب',
+    'إعداد حسابك',
+    'إدارة الحساب',
+    'ملفك',
+    'حسابك',
+    'رقم الجوال',
+    'رقم الهاتف',
   };
-
-  static const Set<String> _updateTypes = <String>{
-    'order',
-    'order.status',
-    'delivery',
-    'shipping',
-    'booking',
-    'chat.message',
+  static const Set<String> _updateTokens = <String>{
+    'update',
+    'version',
+    'release',
+    'changelog',
+    'feature',
+    'تحسين',
+    'تحسينات',
+    'تحديث',
+    'تحديثات',
+    'مستجدات',
+    'خبر',
+    'أخبار التطبيق',
+    'ميزة جديدة',
+    'اصدار',
+    'الإصدار',
+    'إطلاق',
+    'تجربة جديدة',
+    'خدمة جديدة',
+    'تحسين جديد',
   };
-
   bool _isPaging = false;
   bool _adShown = false;
   NotificationCategory _selectedCategory = NotificationCategory.all;
@@ -329,11 +447,9 @@ class NotificationsState extends State<Notifications>
                         notification.image ??
                             notification.data['image']?.toString(),
                       );
-                      final String timeLabel = UiUtils.formatSmartTime(
-                        notification.createdAt ??
-                            notification.deliveredAt?.toIso8601String() ??
-                            notification.openedAt?.toIso8601String(),
-                      );
+                      final bool hasImage = image.trim().isNotEmpty;
+                      final String timeLabel =
+                          _formatArabicTime(notification);
 
                       final Color baseColor =
                           Theme.of(context).colorScheme.secondaryColor;
@@ -367,18 +483,37 @@ class NotificationsState extends State<Notifications>
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                ClipRRect(
-                                  clipBehavior: Clip.antiAliasWithSaveLayer,
-                                  borderRadius: const BorderRadius.all(
-                                    Radius.circular(15),
-                                  ),
-                                  child: UiUtils.getImage(
-                                    image,
-                                    height: 53.rh(context),
-                                    width: 53.rw(context),
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
+                                hasImage
+                                    ? ClipRRect(
+                                        clipBehavior:
+                                            Clip.antiAliasWithSaveLayer,
+                                        borderRadius: const BorderRadius.all(
+                                          Radius.circular(15),
+                                        ),
+                                        child: UiUtils.getImage(
+                                          image,
+                                          height: 53.rh(context),
+                                          width: 53.rw(context),
+                                          fit: BoxFit.cover,
+                                        ),
+                                      )
+                                    : Container(
+                                        height: 53.rh(context),
+                                        width: 53.rw(context),
+                                        decoration: BoxDecoration(
+                                          color: context
+                                              .color.territoryColor
+                                              .withOpacity(0.12),
+                                          borderRadius: const BorderRadius.all(
+                                            Radius.circular(15),
+                                          ),
+                                        ),
+                                        child: Icon(
+                                          Icons.notifications_rounded,
+                                          color:
+                                              context.color.territoryColor,
+                                        ),
+                                      ),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
@@ -464,60 +599,129 @@ class NotificationsState extends State<Notifications>
   NotificationCategory _categoryForNotification(NotificationData notification) {
     final String normalizedCategory =
         (notification.category ?? notification.data['category']?.toString() ?? '')
+            .trim()
             .toLowerCase();
+
+    final Set<String> tokens = _extractTokens(notification);
+    final bool walletHit = _matchesTokens(tokens, _walletTokens);
+    final bool accountHit = _matchesTokens(tokens, _accountTokens);
+    final bool marketingHit = _matchesTokens(tokens, _marketingTokens);
+    final bool updateHit = _matchesTokens(tokens, _updateTokens);
 
     switch (normalizedCategory) {
       case 'marketing':
+      case 'العروض والإعلانات':
+      case 'العروض والاعلانات':
+        if (walletHit) return NotificationCategory.wallet;
         return NotificationCategory.marketing;
       case 'account':
+      case 'account_settings':
+      case 'الحساب والإعدادات':
+      case 'الحساب والاعدادات':
+        if (walletHit) return NotificationCategory.wallet;
         return NotificationCategory.account;
       case 'wallet':
+      case 'wallet_payments':
+      case 'wallet-payments':
+      case 'المحفظة والمدفوعات':
+      case 'المحفظة والمدفوعات ':
         return NotificationCategory.wallet;
       case 'updates':
+      case 'app_updates':
+      case 'app-updates':
+      case 'مستجدات التطبيق':
+      case 'اخر مستجدات التطبيق':
+        if (walletHit) return NotificationCategory.wallet;
         return NotificationCategory.updates;
       case 'system':
+      case 'system_alerts':
+      case 'system-alerts':
+      case 'تنبيهات النظام':
+        if (walletHit) return NotificationCategory.wallet;
         return NotificationCategory.system;
     }
 
-    final String type = (notification.type ?? '').toLowerCase();
-    final String entity =
-        (notification.data['entity'] ?? '').toString().toLowerCase();
-    final String deeplink = (notification.deeplink ?? '').toLowerCase();
-    final String title = (notification.title ?? '').toLowerCase();
-
-    if (_matchesAny(type, entity, deeplink, title, _marketingTypes)) {
-      return NotificationCategory.marketing;
-    }
-
-    if (_matchesAny(type, entity, deeplink, title, _accountTypes)) {
-      return NotificationCategory.account;
-    }
-
-    if (_matchesAny(type, entity, deeplink, title, _walletTypes)) {
+    if (walletHit) {
       return NotificationCategory.wallet;
     }
 
-    if (_matchesAny(type, entity, deeplink, title, _updateTypes)) {
+    if (accountHit) {
+      return NotificationCategory.account;
+    }
+
+    if (marketingHit) {
+      return NotificationCategory.marketing;
+    }
+
+    if (updateHit) {
       return NotificationCategory.updates;
     }
 
     return NotificationCategory.system;
   }
 
-  bool _matchesAny(
-    String type,
-    String entity,
-    String deeplink,
-    String title,
-    Set<String> needles,
-  ) {
-    for (final String needle in needles) {
-      if (needle.isEmpty) continue;
-      if (type.contains(needle) ||
-          entity.contains(needle) ||
-          deeplink.contains(needle) ||
-          title.contains(needle)) {
-        return true;
+  Set<String> _extractTokens(NotificationData notification) {
+    final Set<String> tokens = <String>{};
+
+    void addValue(dynamic value) {
+      if (value == null) return;
+
+      if (value is Map) {
+        for (final MapEntry<dynamic, dynamic> entry in value.entries) {
+          addValue(entry.key);
+          addValue(entry.value);
+        }
+        return;
+      }
+
+      if (value is Iterable) {
+        for (final dynamic element in value) {
+          addValue(element);
+        }
+        return;
+      }
+
+      final String normalized = value.toString().trim().toLowerCase();
+      if (normalized.isEmpty) {
+        return;
+      }
+      tokens.add(normalized);
+      tokens.addAll(
+        normalized
+            .split(RegExp(r'[^a-z0-9\u0600-\u06FF]+'))
+            .where((segment) => segment.trim().isNotEmpty),
+      );
+    }
+
+    addValue(notification.type);
+    addValue(notification.category);
+    addValue(notification.deeplink);
+    addValue(notification.title);
+    addValue(notification.message);
+    addValue(notification.body);
+    addValue(notification.displayMessage);
+    addValue(notification.data['category']);
+    addValue(notification.data['entity']);
+    addValue(notification.data['context']);
+    addValue(notification.data['topic']);
+    addValue(notification.data['type']);
+    addValue(notification.data['title']);
+    addValue(notification.data['subtitle']);
+    addValue(notification.data['body']);
+    addValue(notification.data['message']);
+    addValue(notification.data['tags']);
+    addValue(notification.data);
+    addValue(notification.meta);
+
+    return tokens;
+  }
+
+  bool _matchesTokens(Set<String> haystack, Set<String> needles) {
+    for (final String token in haystack) {
+      for (final String needle in needles) {
+        if (token.contains(needle)) {
+          return true;
+        }
       }
     }
     return false;
@@ -618,3 +822,31 @@ class NotificationShimmerLoadingContainer extends StatelessWidget {
     );
   }
 }
+
+String _formatArabicTime(NotificationData notification) {
+  final String? raw = notification.createdAt ??
+      notification.deliveredAt?.toIso8601String() ??
+      notification.openedAt?.toIso8601String();
+  if (raw == null || raw.isEmpty) {
+    return '';
+  }
+  try {
+    _ensureArabicTimeago();
+    return timeago.format(DateTime.parse(raw).toLocal(), locale: 'ar');
+  } catch (_) {
+    return '';
+  }
+}
+
+bool _timeagoArabicConfigured = false;
+
+void _ensureArabicTimeago() {
+  if (_timeagoArabicConfigured) {
+    return;
+  }
+  try {
+    timeago.setLocaleMessages('ar', timeago.ArMessages());
+    _timeagoArabicConfigured = true;
+  } catch (_) {}
+}
+

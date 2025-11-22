@@ -17,6 +17,7 @@ import 'package:flutter/foundation.dart';
 
 import 'package:marib/data/cubits/system/language_cubit.dart';
 import 'dart:async';
+import 'package:marib/data/cubits/notifications/unread_notifications_cubit.dart';
 import 'package:marib/ui/screens/chat/chat_badge_controller.dart';
 import 'package:marib/utils/performance/performance_route_observer.dart';
 import 'package:marib/app/app_scroll_behavior.dart';
@@ -45,6 +46,12 @@ class EntryPointState extends State<EntryPoint> {
     //ChatMessageHandler.handle();
     ChatGlobals.init();
     unawaited(ChatBadgeController.init(userId: HiveUtils.getUserId()));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      try {
+        context.read<UnreadNotificationsCubit>().refresh(silent: true);
+      } catch (_) {}
+    });
   }
 
   @override

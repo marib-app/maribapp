@@ -1,15 +1,19 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:marib/ui/theme/theme.dart';
-import 'package:marib/utils/extensions/extensions.dart';
-import 'package:marib/utils/constant.dart';
-import 'package:marib/utils/hive_utils.dart';
-import 'package:marib/utils/api.dart';
-import 'package:marib/data/model/item_filter_model.dart';
-import 'package:marib/data/cubits/item/fetch_item_summary_cubit.dart';
 import 'package:marib/data/cubits/home/fetch_home_screen_cubit.dart';
+import 'package:marib/data/cubits/item/fetch_item_summary_cubit.dart';
+import 'package:marib/data/cubits/merchant/storefront_cubit.dart';
+import 'package:marib/data/model/item_filter_model.dart';
+import 'package:marib/data/model/merchant/storefront_model.dart';
+import 'package:marib/ui/theme/theme.dart';
+import 'package:marib/utils/constant.dart';
+import 'package:marib/utils/extensions/extensions.dart';
+import 'package:marib/utils/helper_utils.dart';
+import 'package:marib/utils/hive_utils.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:marib/data/cubits/slider_cubit.dart';
 
@@ -18,6 +22,7 @@ import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 
 import 'widgets/filter_sort_bar/filter_sort_bar.dart';
 import 'widgets/items_body_box.dart';
+import 'widgets/storefront_header.dart';
 import 'package:marib/utils/slider_interface_mapper.dart';
 import 'package:marib/utils/featured_section_utils.dart';
 import 'package:marib/utils/logger.dart';
@@ -30,6 +35,8 @@ class Section_screen extends StatefulWidget {
   final List<String> categoryIds; // قائمة معرفات الفئات
   final String? interfaceType;
   final int? sellerId;
+  final String? storefrontId;
+  final Map<String, dynamic>? storefrontSnapshot;
   final List<int>? sellerCategoryIds;
 
   const Section_screen({
@@ -39,6 +46,8 @@ class Section_screen extends StatefulWidget {
     required this.categoryIds,
     this.interfaceType,
     this.sellerId,
+    this.storefrontId,
+    this.storefrontSnapshot,
     this.sellerCategoryIds,
   });
 
@@ -53,22 +62,42 @@ class Section_screen extends StatefulWidget {
             ? rawInterfaceType.trim()
             : null;
     final int? sellerId = _parseSellerId(arguments?['sellerId']);
+    final String? storefrontId = _parseStoreIdentifier(arguments?['storeId']);
+    final Map<String, dynamic>? storefrontSnapshot =
+        _parseStorefrontSnapshot(arguments?['storeSnapshot']);
     final List<int>? sellerCategoryIds =
         _parseSellerCategoryIds(arguments?['sellerCategoryIds']);
     return BlurredRouter(
-      builder: (_) => BlocProvider(
-        create: (context) => FetchHomeScreenCubit(
-          defaultInterfaceType: interfaceType,
-        ),
-        child: Section_screen(
-          categoryId: arguments?['catID'] as String,
-          categoryName: arguments?['catName'],
-          categoryIds: arguments?['categoryIds'],
-          interfaceType: interfaceType,
-          sellerId: sellerId,
-          sellerCategoryIds: sellerCategoryIds,
-        ),
-      ),
+      builder: (_) {
+        final providers = <BlocProvider<dynamic>>[
+          BlocProvider<FetchHomeScreenCubit>(
+            create: (context) =>
+                FetchHomeScreenCubit(defaultInterfaceType: interfaceType),
+          ),
+        ];
+
+        if (storefrontId != null) {
+          providers.add(
+            BlocProvider<StorefrontCubit>(
+              create: (context) => StorefrontCubit()..load(storefrontId),
+            ),
+          );
+        }
+
+        return MultiBlocProvider(
+          providers: providers,
+          child: Section_screen(
+            categoryId: arguments?['catID'] as String,
+            categoryName: arguments?['catName'],
+            categoryIds: arguments?['categoryIds'],
+            interfaceType: interfaceType,
+            sellerId: sellerId,
+            storefrontId: storefrontId,
+            storefrontSnapshot: storefrontSnapshot,
+            sellerCategoryIds: sellerCategoryIds,
+          ),
+        );
+      },
     );
   }
 
@@ -148,6 +177,62 @@ class Section_screen extends StatefulWidget {
 
     return result.toList(growable: false)..sort();
   }
+
+  static String? _parseStoreIdentifier(dynamic raw) {
+    if (raw == null) {
+      return null;
+    }
+
+    if (raw is num) {
+      final int value = raw.toInt();
+      return value > 0 ? value.toString() : null;
+    }
+
+    if (raw is String) {
+      final String trimmed = raw.trim();
+      return trimmed.isEmpty ? null : trimmed;
+    }
+
+    return null;
+  }
+
+  static Map<String, dynamic>? _parseStorefrontSnapshot(dynamic raw) {
+    if (raw == null) {
+      return null;
+    }
+
+    if (raw is Map<String, dynamic>) {
+      return Map<String, dynamic>.from(raw);
+    }
+
+    if (raw is Map) {
+      return raw.map(
+        (key, value) => MapEntry(key.toString(), value),
+      );
+    }
+
+    if (raw is String) {
+      final String trimmed = raw.trim();
+      if (trimmed.isEmpty) {
+        return null;
+      }
+      try {
+        final dynamic decoded = json.decode(trimmed);
+        if (decoded is Map<String, dynamic>) {
+          return Map<String, dynamic>.from(decoded);
+        }
+        if (decoded is Map) {
+          return decoded.map(
+            (key, value) => MapEntry(key.toString(), value),
+          );
+        }
+      } catch (_) {
+        return null;
+      }
+    }
+
+    return null;
+  }
 }
 
 class Section_screenState extends State<Section_screen> {
@@ -173,6 +258,7 @@ class Section_screenState extends State<Section_screen> {
   // ✅ حقل البحث + ديباونس
   final TextEditingController searchController = TextEditingController();
   List<int>? _sellerCategoryIds;
+  StorefrontDetails? _snapshotStorefront;
 
   // ✅ تحميل المزيد
   bool _isLoadingMore = false;
@@ -215,6 +301,8 @@ class Section_screenState extends State<Section_screen> {
 
   late final String? _requestSectionSlug;
   late final bool _enableFeaturedAds;
+  bool get _hasStorefrontContext =>
+      widget.storefrontId != null || widget.storefrontSnapshot != null;
 
   bool _isValidCategoryId(String? raw) {
     if (raw == null) return false;
@@ -426,6 +514,7 @@ class Section_screenState extends State<Section_screen> {
     _catId = _parseInitialCategoryId(widget.categoryId);
     _enableFeaturedAds = _featuredAdRootIds.contains(_catId);
     _sellerCategoryIds = _normalizeSellerCategoryIds(widget.sellerCategoryIds);
+    _snapshotStorefront = _deriveSnapshotDetails(widget.storefrontSnapshot);
 
     // (اختياري) لو هذه المتغيرات عندك أصلاً — وإلا احذف السطور الثلاثة:
     // searchbody = {};
@@ -519,6 +608,9 @@ class Section_screenState extends State<Section_screen> {
         oldWidget.sellerCategoryIds, widget.sellerCategoryIds)) {
       _sellerCategoryIds =
           _normalizeSellerCategoryIds(widget.sellerCategoryIds);
+    }
+    if (!mapEquals(oldWidget.storefrontSnapshot, widget.storefrontSnapshot)) {
+      _snapshotStorefront = _deriveSnapshotDetails(widget.storefrontSnapshot);
     }
   }
 
@@ -864,6 +956,7 @@ class Section_screenState extends State<Section_screen> {
                                     categoryName: widget.categoryName,
                                     sellerCategoryIds: _sellerCategoryIds,
                                     bottomContentPadding: bottomContentPadding,
+                                    storefrontHeader: _buildStorefrontHeader(),
 
                                     showCartAction: showCartAction,
                                     onCartTap: onCartTap,
@@ -876,7 +969,7 @@ class Section_screenState extends State<Section_screen> {
                                         _requestSectionSlug,
                                     interfaceType: _sliderInterfaceType,
                                     enableTopBar: _showSlider,
-                                    enableAdSlider: _showAdSlider,
+                                    enableAdSlider: _hasStorefrontContext ? false : _showAdSlider,
                                     // إن كانت موجودة عندك
                                     adInterfaceType: _sliderInterfaceType,
                                     // ← تمرير الواجهة المعتمدة دائمًا
@@ -893,7 +986,7 @@ class Section_screenState extends State<Section_screen> {
                                         _showBottomBar.value = isScrollingUp;
                                       }
                                     },
-                                    enableFeaturedAds: _enableFeaturedAds,
+                                    enableFeaturedAds: _hasStorefrontContext ? false : _enableFeaturedAds,
                                   ),
                                 ),
                               ),
@@ -918,4 +1011,254 @@ class Section_screenState extends State<Section_screen> {
       ),
     );
   }
+
+  Widget? _buildStorefrontHeader() {
+    final String? storeIdentifier = widget.storefrontId;
+    final StorefrontDetails? snapshot = _snapshotStorefront;
+
+    if (storeIdentifier == null && snapshot == null) {
+      return null;
+    }
+
+    if (storeIdentifier == null && snapshot != null) {
+      return _buildStorefrontHeaderFromDetails(snapshot);
+    }
+
+    return BlocBuilder<StorefrontCubit, StorefrontState>(
+      builder: (context, state) {
+        if (state is StorefrontSuccess) {
+          return _buildStorefrontHeaderFromDetails(state.details);
+        }
+
+        if (state is StorefrontFailure) {
+          if (snapshot != null) {
+            return _buildStorefrontHeaderFromDetails(snapshot);
+          }
+          return _StorefrontHeaderMessage(
+            message: 'somethingWentWrong'.translate(context),
+            onRetry: () =>
+                context.read<StorefrontCubit>().load(storeIdentifier!),
+          );
+        }
+
+        if (state is StorefrontLoading) {
+          if (snapshot != null) {
+            return _buildStorefrontHeaderFromDetails(snapshot);
+          }
+          return const _StorefrontHeaderPlaceholder();
+        }
+
+        if (snapshot != null) {
+          return _buildStorefrontHeaderFromDetails(snapshot);
+        }
+
+        return const _StorefrontHeaderPlaceholder();
+      },
+    );
+  }
+
+  Widget _buildStorefrontHeaderFromDetails(StorefrontDetails details) {
+    final StorefrontContact? contact = details.contact;
+    final String? phone = contact?.phone;
+    final String? whatsapp = contact?.whatsapp ?? contact?.phone;
+
+    return MerchantStorefrontHeader(
+      details: details,
+      onCallTap: _hasContactValue(phone) ? () => _launchPhone(phone) : null,
+      onWhatsappTap:
+          _hasContactValue(whatsapp) ? () => _launchWhatsApp(whatsapp) : null,
+      onDirectionsTap: details.location != null
+          ? () => _launchDirections(details.location)
+          : null,
+      onFollowTap: () {
+        HelperUtils.showSnackBarMessage(
+          context,
+          'storefrontFollowComingSoon'.translate(context),
+        );
+      },
+    );
+  }
+
+  StorefrontDetails? _deriveSnapshotDetails(
+    Map<String, dynamic>? snapshot,
+  ) {
+    if (snapshot == null) {
+      return null;
+    }
+    try {
+      return StorefrontDetails.fromSnapshot(snapshot);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  bool _hasContactValue(String? raw) {
+    return raw?.trim().isNotEmpty == true;
+  }
+
+  Future<void> _launchPhone(String? raw) async {
+    final String? normalized =
+        _normalizeContactValue(raw, keepLeadingPlus: true);
+    if (normalized == null) {
+      _showContactError();
+      return;
+    }
+    await _launchExternalUri(Uri.parse('tel:$normalized'));
+  }
+
+  Future<void> _launchWhatsApp(String? raw) async {
+    final String? normalized =
+        _normalizeContactValue(raw, keepLeadingPlus: false);
+    if (normalized == null) {
+      _showContactError();
+      return;
+    }
+    await _launchExternalUri(Uri.parse('https://wa.me/$normalized'));
+  }
+
+  Future<void> _launchDirections(StorefrontLocation? location) async {
+    if (location == null) {
+      _showContactError();
+      return;
+    }
+    String? query;
+    if (location.latitude != null && location.longitude != null) {
+      query = '${location.latitude},${location.longitude}';
+    } else {
+      query = location.primaryLine;
+    }
+    if (query == null || query.trim().isEmpty) {
+      _showContactError();
+      return;
+    }
+    final Uri uri = Uri.parse(
+      'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(query)}',
+    );
+    await _launchExternalUri(uri);
+  }
+
+  Future<void> _launchExternalUri(Uri? uri) async {
+    if (!mounted || uri == null) {
+      _showContactError();
+      return;
+    }
+    try {
+      final bool launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched) {
+        _showContactError();
+      }
+    } catch (_) {
+      _showContactError();
+    }
+  }
+
+  String? _normalizeContactValue(
+    String? raw, {
+    required bool keepLeadingPlus,
+  }) {
+    final String trimmed = raw?.trim() ?? '';
+    if (trimmed.isEmpty) {
+      return null;
+    }
+    final String digits = trimmed.replaceAll(RegExp(r'[^0-9+]'), '');
+    if (digits.isEmpty) {
+      return null;
+    }
+    final String numbersOnly = digits.replaceAll('+', '');
+    if (keepLeadingPlus && trimmed.startsWith('+')) {
+      return '+$numbersOnly';
+    }
+    return numbersOnly;
+  }
+
+  void _showContactError() {
+    if (!mounted) return;
+    HelperUtils.showSnackBarMessage(
+      context,
+      'somethingWentWrong'.translate(context),
+    );
+  }
 }
+
+class _StorefrontHeaderPlaceholder extends StatelessWidget {
+  const _StorefrontHeaderPlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      padding: const EdgeInsets.all(28),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 18,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: const Center(
+        child: SizedBox(
+          height: 28,
+          width: 28,
+          child: CircularProgressIndicator(strokeWidth: 2.4),
+        ),
+      ),
+    );
+  }
+}
+
+class _StorefrontHeaderMessage extends StatelessWidget {
+  const _StorefrontHeaderMessage({
+    required this.message,
+    this.onRetry,
+  });
+
+  final String message;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme colors = theme.colorScheme;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      decoration: BoxDecoration(
+        color: colors.errorContainer.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.storefront_rounded,
+            color: colors.error,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              message,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colors.error,
+              ),
+            ),
+          ),
+          if (onRetry != null)
+            TextButton(
+              onPressed: onRetry,
+              child: Text('retry'.translate(context)),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+
+

@@ -847,6 +847,12 @@ class Api {
   /// مسار إحضار مؤشرات المتجر للتاجر.
   static const String storeDashboardSummaryApi = 'store/dashboard/summary';
 
+  /// ����� ������ ������ ��� ������� �� ����� �������.
+  static String storefrontShowApi(dynamic storeId) {
+    final String normalized = _normalizeStoreIdentifier(storeId);
+    return 'stores/$normalized';
+  }
+
   /// مسار حساب محدد ضمن [storeGatewayAccountsApi].
   static String storeGatewayAccountApi(dynamic accountId) {
     final String normalized = Uri.encodeComponent('$accountId');

@@ -169,6 +169,8 @@ class HomeScreenState extends State<HomeScreen>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    final int unreadCount =
+        context.watch<UnreadNotificationsCubit>().state;
 
     final List<Widget> bodySlivers = <Widget>[
       _buildHomeContentSliver(),
@@ -189,7 +191,7 @@ class HomeScreenState extends State<HomeScreen>
       profileUrl: '',
       isVerified: false,
       cartCount: 0,
-      notifCount: 0,
+      notifCount: unreadCount,
       onAvatarTap: null,
       onCartTap: () {},
       onNotificationTap: () {},

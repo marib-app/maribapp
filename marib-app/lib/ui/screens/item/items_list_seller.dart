@@ -12,7 +12,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:marib/data/model/item_filter_model.dart';
 import 'package:marib/data/model/item/item_model.dart';
-import 'package:marib/data/model/user_model.dart';
 
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/api.dart';
@@ -331,6 +330,7 @@ class ItemsListListState extends State<ItemsListSeller> {
     final Map<String, dynamic>? contactInfo =
         _contactInfoFromAdditional(additionalInfo ?? seller.additionalInfo);
     final Map<String, dynamic>? storeData = _cloneMap(seller.store);
+    final String? storeIdentifier = _extractStoreIdentifier(storeData);
     String? businessLogo;
     String? businessName = seller.name;
     final seller_category_utils.SellerCategoryIdentifiers sellerCategories =
@@ -393,6 +393,9 @@ class ItemsListListState extends State<ItemsListSeller> {
             'categoryIds': [storeCategoryId],
             'interfaceType': 'e_store',
             'sellerId': seller.id,
+            if (storeIdentifier != null) 'storeId': storeIdentifier,
+            if (storeData != null && storeData.isNotEmpty)
+              'storeSnapshot': storeData,
             if (sellerCategoryPayload != null)
               'sellerCategoryIds': sellerCategoryPayload,
           });
@@ -584,6 +587,48 @@ class ItemsListListState extends State<ItemsListSeller> {
     }
     final String normalized = value.toString().trim();
     return normalized.isEmpty ? null : normalized;
+  }
+
+  String? _extractStoreIdentifier(Map<String, dynamic>? storeData) {
+    if (storeData == null || storeData.isEmpty) {
+      return null;
+    }
+    final String? numericId =
+        _normalizeNumericIdentifier(storeData['id'] ?? storeData['store_id']);
+    if (numericId != null) {
+      return numericId;
+    }
+    return _normalizeSlugIdentifier(storeData['slug']);
+  }
+
+  String? _normalizeNumericIdentifier(dynamic raw) {
+    if (raw == null) {
+      return null;
+    }
+    if (raw is num) {
+      final int value = raw.toInt();
+      return value > 0 ? value.toString() : null;
+    }
+    if (raw is String) {
+      final String trimmed = raw.trim();
+      if (trimmed.isEmpty) {
+        return null;
+      }
+      final int? parsed = int.tryParse(trimmed);
+      return parsed != null && parsed > 0 ? parsed.toString() : null;
+    }
+    return null;
+  }
+
+  String? _normalizeSlugIdentifier(dynamic raw) {
+    if (raw == null) {
+      return null;
+    }
+    if (raw is String) {
+      final String trimmed = raw.trim();
+      return trimmed.isEmpty ? null : trimmed;
+    }
+    return null;
   }
 
   _StoreAvailabilityStatus _resolveStoreAvailabilityStatus({

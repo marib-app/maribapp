@@ -331,6 +331,7 @@ Widget setSellerDetails(BuildContext context, ItemModel model) {
             _extractSellerCategoryIdentifiers(user);
         final dynamic sellerCategoryPayload = sellerCategories.toRoutePayload();
         final String storeCategoryId = Constant.storeRootCategoryIdAsString;
+        final String? storeIdentifier = _merchantStoreIdentifier(user);
 
         Navigator.pushNamed(
           context,
@@ -341,6 +342,9 @@ Widget setSellerDetails(BuildContext context, ItemModel model) {
             'categoryIds': [storeCategoryId],
             'interfaceType': 'e_store',
             'sellerId': user.id,
+            if (storeIdentifier != null) 'storeId': storeIdentifier,
+            if (user.store != null && user.store!.isNotEmpty)
+              'storeSnapshot': user.store,
             if (sellerCategoryPayload != null)
               'sellerCategoryIds': sellerCategoryPayload,
           },
@@ -443,6 +447,52 @@ seller_category_utils.SellerCategoryIdentifiers
     _extractSellerCategoryIdentifiers(User user) {
   final Map<String, dynamic>? contactInfo = _contactInfoFromUser(user);
   return seller_category_utils.extractSellerCategoryIdentifiers(contactInfo);
+}
+
+String? _merchantStoreIdentifier(User user) {
+  return _normalizeStoreIdentifier(user.store);
+}
+
+String? _normalizeStoreIdentifier(Map<String, dynamic>? store) {
+  if (store == null || store.isEmpty) {
+    return null;
+  }
+  final String? numeric =
+      _normalizeNumericStoreIdentifier(store['id'] ?? store['store_id']);
+  if (numeric != null) {
+    return numeric;
+  }
+  return _normalizeSlugStoreIdentifier(store['slug']);
+}
+
+String? _normalizeNumericStoreIdentifier(dynamic raw) {
+  if (raw == null) {
+    return null;
+  }
+  if (raw is num) {
+    final int value = raw.toInt();
+    return value > 0 ? value.toString() : null;
+  }
+  if (raw is String) {
+    final String trimmed = raw.trim();
+    if (trimmed.isEmpty) {
+      return null;
+    }
+    final int? parsed = int.tryParse(trimmed);
+    return parsed != null && parsed > 0 ? parsed.toString() : null;
+  }
+  return null;
+}
+
+String? _normalizeSlugStoreIdentifier(dynamic raw) {
+  if (raw == null) {
+    return null;
+  }
+  if (raw is String) {
+    final String trimmed = raw.trim();
+    return trimmed.isEmpty ? null : trimmed;
+  }
+  return null;
 }
 
 class SellerDetailsShimmer extends StatelessWidget {

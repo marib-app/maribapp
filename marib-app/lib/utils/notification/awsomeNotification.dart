@@ -28,6 +28,7 @@ import 'package:marib/data/model/item/item_model.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:marib/data/model/chat/chated_user_model.dart';
+import 'package:marib/data/cubits/notifications/unread_notifications_cubit.dart';
 
 class LocalAwsomeNotification {
   AwesomeNotifications notification = AwesomeNotifications();
@@ -39,17 +40,21 @@ class LocalAwsomeNotification {
         null,
         [
           NotificationChannel(
-              channelKey: Constant.notificationChannel,
-              channelName: 'Basic notifications',
-              channelDescription: 'Notification channel',
-              importance: NotificationImportance.Max,
-              ledColor: Colors.grey),
+            channelKey: Constant.notificationChannel,
+            channelName: 'Basic notifications',
+            channelDescription: 'Notification channel',
+            importance: NotificationImportance.Max,
+            ledColor: Colors.grey,
+            channelShowBadge: true,
+          ),
           NotificationChannel(
-              channelKey: "Chat Notification",
-              channelName: 'Chat Notifications',
-              channelDescription: 'Chat Notifications',
-              importance: NotificationImportance.Max,
-              ledColor: Colors.grey)
+            channelKey: "Chat Notification",
+            channelName: 'Chat Notifications',
+            channelDescription: 'Chat Notifications',
+            importance: NotificationImportance.Max,
+            ledColor: Colors.grey,
+            channelShowBadge: true,
+          )
         ],
         channelGroups: [],
         debug: true);
@@ -73,6 +78,7 @@ class LocalAwsomeNotification {
     required bool isLocked,
   }) async {
     try {
+      final int badgeCount = _resolveBadgeCount();
       final Map<String, dynamic> payload = notificationData.data;
       final bool isChat = payload["type"] == "chat";
       final String? rawImage = payload["image"]?.toString();
@@ -111,6 +117,7 @@ class LocalAwsomeNotification {
               notificationLayout: NotificationLayout.MessagingGroup,
               groupKey: notificationData.data["id"],
               channelKey: "Chat Notification",
+              badge: badgeCount,
             ),
           );
         }
@@ -134,6 +141,7 @@ class LocalAwsomeNotification {
                 notificationLayout: NotificationLayout.BigPicture,
                 groupKey: payload["item_id"],
                 channelKey: Constant.notificationChannel,
+                badge: badgeCount,
               ),
             );
           }
@@ -153,6 +161,7 @@ class LocalAwsomeNotification {
                 notificationLayout: NotificationLayout.Default,
                 groupKey: payload["item_id"],
                 channelKey: Constant.notificationChannel,
+                badge: badgeCount,
               ),
             );
           }
@@ -190,6 +199,20 @@ class LocalAwsomeNotification {
     }
 
     // If the permission is already granted, you can proceed with setting up notifications here.
+  }
+
+  int _resolveBadgeCount() {
+    try {
+      final BuildContext? context = Constant.navigatorKey.currentContext;
+      if (context == null) {
+        return 1;
+      }
+      final int count =
+          context.read<UnreadNotificationsCubit>().state;
+      return count.clamp(1, 9999);
+    } catch (_) {
+      return 1;
+    }
   }
 }
 
@@ -451,5 +474,3 @@ class NotificationController {
     }
   }
 }
-
-

@@ -744,11 +744,12 @@ class NotificationService {
     return false;
   }
 
-  static void _notifyUnreadBadge() {
+  static void _notifyUnreadBadge([BuildContext? explicitContext]) {
     if (!HiveUtils.isUserAuthenticated()) {
       return;
     }
-    final BuildContext? context = Constant.navigatorKey.currentContext;
+    final BuildContext? context =
+        explicitContext ?? Constant.navigatorKey.currentContext;
     if (context == null) {
       return;
     }
@@ -894,7 +895,7 @@ class NotificationService {
       message: message,
       normalizedNotificationType: normalizedNotificationType,
     )) {
-      _notifyUnreadBadge();
+      _notifyUnreadBadge(context);
     }
 
     if (_isWalletNotification(

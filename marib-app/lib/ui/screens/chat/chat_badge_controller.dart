@@ -18,6 +18,7 @@ class ChatBadgeController {
   static String? _userId;
   static bool _badgeSupportKnown = false;
   static bool _isBadgeSupported = false;
+  static int _externalBadge = 0;
 
   /// Loads the cached unread counters for the supplied [userId]. Passing `null`
   /// resets the controller to zero which is used on logout.
@@ -27,6 +28,7 @@ class ChatBadgeController {
       _userId = null;
       _buyerUnread = 0;
       _sellerUnread = 0;
+      _externalBadge = 0;
       _notify();
       return;
     }
@@ -35,6 +37,7 @@ class ChatBadgeController {
     final stored = await ChatBadgeStore.load(trimmed);
     _buyerUnread = stored.buyer.clamp(0, 9999);
     _sellerUnread = stored.seller.clamp(0, 9999);
+    _externalBadge = 0;
     _notify();
   }
 
@@ -57,13 +60,20 @@ class ChatBadgeController {
   static void incrementTempUnread() {
     final int tempTotal = (_buyerUnread + _sellerUnread + 1).clamp(0, 9999);
     totalUnread.value = tempTotal;
-    _updateAppBadge(tempTotal);
+    _updateAppBadge(tempTotal + _externalBadge);
+  }
+
+  static void updateNotificationBadge(int count) {
+    _externalBadge = count.clamp(0, 9999);
+    _updateAppBadge(
+      (_buyerUnread + _sellerUnread).clamp(0, 9999) + _externalBadge,
+    );
   }
 
   static void _notify() {
-    final int total = (_buyerUnread + _sellerUnread).clamp(0, 9999);
-    totalUnread.value = total;
-    _updateAppBadge(total);
+    final int chatTotal = (_buyerUnread + _sellerUnread).clamp(0, 9999);
+    totalUnread.value = chatTotal;
+    _updateAppBadge(chatTotal + _externalBadge);
   }
   static void _persist() {
     final String? userId = _userId;

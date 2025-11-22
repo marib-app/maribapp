@@ -26,6 +26,7 @@ use App\Services\WalletService;
 use App\Services\Payments\TransactionAmountResolver;
 use App\Models\User;
 
+use App\Enums\Wifi\WifiCodeBatchStatus;
 
 use App\Models\PaymentTransaction;
 use App\Models\UserFcmToken;
@@ -1540,12 +1541,31 @@ class PaymentFulfillmentService
 
         $plan->setRelation('network', $network);
 
-        $code = WifiCode::query()
-            ->where('wifi_plan_id', $plan->getKey())
+        $codeBatchId = $options['wifi_code_batch_id'] ?? null;
+
+        $codeQuery = WifiCode::query()
+        
+        ->where('wifi_plan_id', $plan->getKey())
             ->where('status', WifiCodeStatus::AVAILABLE->value)
             ->orderBy('id')
-            ->lockForUpdate()
-            ->first();
+            ->lockForUpdate();
+
+        $codeQuery->when($codeBatchId, static function ($query, $batchId): void {
+            $query->where('wifi_code_batch_id', $batchId)
+                ->whereHas('batch', static function ($batchQuery): void {
+                    $batchQuery->where('status', WifiCodeBatchStatus::ACTIVE->value);
+                });
+        }, static function ($query): void {
+            $query->where(static function ($availableQuery): void {
+                $availableQuery
+                    ->whereNull('wifi_code_batch_id')
+                    ->orWhereHas('batch', static function ($batchQuery): void {
+                        $batchQuery->where('status', WifiCodeBatchStatus::ACTIVE->value);
+                    });
+            });
+        });
+
+        $code = $codeQuery->first();
 
         if (! $code instanceof WifiCode) {
             throw new RuntimeException('No available wifi codes found for the selected plan.');
@@ -1559,6 +1579,9 @@ class PaymentFulfillmentService
             'password' => $code->password,
             'serial_no' => $code->serialNo,
             'expiry_date' => $code->expiry_date?->toDateString(),
+            'code_batch_id' => $code->wifi_code_batch_id,
+
+
         ];
 
         $code->status = WifiCodeStatus::SOLD;
@@ -1567,6 +1590,7 @@ class PaymentFulfillmentService
         $code->meta = array_replace_recursive($code->meta ?? [], [
             'payment_transaction_id' => $transaction->getKey(),
             'sold_to_user_id' => $userId,
+            'wifi_code_batch_id' => $code->wifi_code_batch_id,
         ]);
         $code->save();
 
@@ -1612,6 +1636,8 @@ class PaymentFulfillmentService
                 'network_id' => $network->getKey(),
                 'code_id' => $code->getKey(),
                 'code_suffix' => $code->code_suffix,
+                'code_batch_id' => $code->wifi_code_batch_id,
+                
                 'delivered_at' => $now->toIso8601String(),
             ],
         ]);
@@ -1648,6 +1674,7 @@ class PaymentFulfillmentService
                     'wifi_network_id' => $network->getKey(),
                     'wifi_plan_id' => $plan->getKey(),
                     'wifi_code_id' => $code->getKey(),
+                    'wifi_code_batch_id' => $code->wifi_code_batch_id,
                     'payment_transaction_id' => $transaction->getKey(),
                     'commission_rate' => $commissionRate,
                     'commission_amount' => $commissionAmount,
@@ -1692,6 +1719,7 @@ class PaymentFulfillmentService
             $owner,
             $plan,
             $network,
+            $code,
             $deliveryPayload,
             $currency,
             $grossAmount,
@@ -1734,6 +1762,8 @@ class PaymentFulfillmentService
                         'password' => $deliveryPayload['password'],
                         'serial_no' => $deliveryPayload['serial_no'],
                         'expiry_date' => $deliveryPayload['expiry_date'],
+                        'wifi_code_batch_id' => $code->wifi_code_batch_id,
+                    
                     ], static fn ($value) => $value !== null && $value !== '')
                 );
             }
@@ -1771,6 +1801,8 @@ class PaymentFulfillmentService
                             'transaction_id' => $transaction->getKey(),
                             'category' => 'wifi_sale',
                             'card_code' => $deliveryPayload['code'],
+                            'wifi_code_batch_id' => $code->wifi_code_batch_id,
+
                             'gross_amount' => $grossAmount,
                             'commission_rate' => $commissionRate,
                             'commission_amount' => $commissionAmount,
@@ -1796,6 +1828,7 @@ class PaymentFulfillmentService
                                 'card_code' => $deliveryPayload['code'],
                                 'wallet_balance' => $ownerWalletBalance,
                                 'payment_transaction_id' => $transaction->getKey(),
+                                'wifi_code_batch_id' => $code->wifi_code_batch_id,
                             ]
                         );
                     }

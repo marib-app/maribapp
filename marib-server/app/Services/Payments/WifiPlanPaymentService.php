@@ -2,6 +2,8 @@
 
 namespace App\Services\Payments;
 
+
+use App\Enums\Wifi\WifiCodeBatchStatus;
 use App\Enums\Wifi\WifiCodeStatus;
 use App\Enums\Wifi\WifiNetworkStatus;
 use App\Enums\Wifi\WifiPlanStatus;
@@ -783,6 +785,12 @@ class WifiPlanPaymentService
         $hasCodes = WifiCode::query()
             ->where('wifi_plan_id', $plan->getKey())
             ->where('status', WifiCodeStatus::AVAILABLE->value)
+            ->where(static function ($query): void {
+                $query->whereNull('wifi_code_batch_id')
+                    ->orWhereHas('batch', static function ($batchQuery): void {
+                        $batchQuery->where('status', WifiCodeBatchStatus::ACTIVE->value);
+                    });
+            })
             ->exists();
 
         if (! $hasCodes) {

@@ -1572,12 +1572,15 @@ class PaymentFulfillmentService
         $buyerPhone = $this->normalizeUserPhoneNumber($buyer);
         $ownerPhone = $this->normalizeUserPhoneNumber($owner);
 
+        $walletTransaction = null;
+
+
 
         if ($owner && $netAmount > 0) {
             /** @var WalletService $walletService */
             $walletService = app(WalletService::class);
 
-            $walletService->credit($owner, 'wifi_plan:' . $transaction->getKey(), $netAmount, [
+            $walletTransaction = $walletService->credit($owner, 'wifi_plan:' . $transaction->getKey(), $netAmount, [
                 'currency' => $currency,
                 'meta' => [
                     'context' => 'wifi_plan_sale',
@@ -1632,8 +1635,12 @@ class PaymentFulfillmentService
             $currency,
             $grossAmount,
             $netAmount,
+            $commissionRate,
+            $commissionAmount,
             $buyerPhone,
-            $ownerPhone
+            $ownerPhone,
+            $transaction,
+            $walletTransaction
         ): void {
             
             $userTokens = UserFcmToken::query()
@@ -1658,6 +1665,9 @@ class PaymentFulfillmentService
                         'deeplink' => config('services.mobile.wifi_orders_deeplink', 'eclassify://wifi/orders'),
                         'wifi_plan_id' => $plan->getKey(),
                         'wifi_network_id' => $network->getKey(),
+                        'transaction_id' => $transaction->getKey(),
+                        'category' => 'wifi_purchase',
+                        'card_code' => $deliveryPayload['code'],
                         'code' => $deliveryPayload['code'],
                         'username' => $deliveryPayload['username'],
                         'password' => $deliveryPayload['password'],
@@ -1677,23 +1687,57 @@ class PaymentFulfillmentService
                     ->all();
 
                 if ($ownerTokens !== []) {
+                    $ownerWalletBalance = $walletTransaction?->balance_after;
+
+                    $ownerBody = __('تم بيع كرت :code بسعر :amount :currency بنسبة عمولة :commission٪. الرصيد المتبقي :balance :currency.', [
+                        'code' => $deliveryPayload['code'],
+                        'amount' => number_format($grossAmount, 2),
+                        'currency' => $currency,
+                        'commission' => number_format($commissionRate * 100, 2),
+                        'balance' => number_format((float) $ownerWalletBalance, 2),
+                    ]);
+
                     NotificationService::sendFcmNotification(
                         $ownerTokens,
                         __('تم بيع كرت واي فاي'),
-                        __('تم بيع :plan بمبلغ :amount :currency.', [
-                            'plan' => $plan->name,
-                            'amount' => number_format($grossAmount, 2),
-                            'currency' => $currency,
-                        ]),
+                        $ownerBody,
+
                         'wifi_sale',
                         [
                             'deeplink' => config('services.mobile.wifi_owner_sales_deeplink', 'eclassify://wifi/owner/sales'),
                             'wifi_plan_id' => $plan->getKey(),
                             'wifi_network_id' => $network->getKey(),
+                            'transaction_id' => $transaction->getKey(),
+                            'category' => 'wifi_sale',
+                            'card_code' => $deliveryPayload['code'],
+                            'gross_amount' => $grossAmount,
+                            'commission_rate' => $commissionRate,
+                            'commission_amount' => $commissionAmount,
                             'net_amount' => $netAmount,
                             'currency' => $currency,
+                            'wallet_balance' => $ownerWalletBalance,
                         ]
                     );
+
+                    if ($walletTransaction instanceof WalletTransaction) {
+                        NotificationService::sendFcmNotification(
+                            $ownerTokens,
+                            __('تم إضافة رصيد إلى المحفظة'),
+                            __('تم إيداع :amount :currency في محفظتك. رقم العملية: :transaction.', [
+                                'amount' => number_format($walletTransaction->amount, 2),
+                                'currency' => $walletTransaction->currency,
+                                'transaction' => $walletTransaction->getKey(),
+                            ]),
+                            'wallet_credit',
+                            [
+                                'transaction_id' => $walletTransaction->getKey(),
+                                'category' => 'wallet_credit',
+                                'card_code' => $deliveryPayload['code'],
+                                'wallet_balance' => $ownerWalletBalance,
+                                'payment_transaction_id' => $transaction->getKey(),
+                            ]
+                        );
+                    }
                 }
             }
 

@@ -57,7 +57,7 @@ class PaymentFulfillmentService
         try {
 
             $normalizedType = $this->normalizePayableType($payableType);
-            $paymentGateway = $options['payment_gateway'] ?? null;
+            $paymentGateway = $options['payment_gateway'] ?? $transaction->payment_gateway ?? null;
             $manualPaymentRequestId = $options['manual_payment_request_id'] ?? null;
 
             $this->mergeTransactionMeta($transaction, $options['meta'] ?? []);
@@ -67,6 +67,7 @@ class PaymentFulfillmentService
             }
 
             if ($paymentGateway === 'wallet') {
+                $options = $this->requireWalletDebitTransaction($transaction, $options);
                 $this->synchronizeWalletMeta($transaction, $options);
             } elseif (!empty($paymentGateway)) {
                 $transaction->payment_gateway = $paymentGateway;
@@ -182,9 +183,69 @@ class PaymentFulfillmentService
 
             return [
                 'error' => true,
-                'message' => 'Unable to process the payment',
+                'message' => $throwable->getMessage() ?: 'Unable to process the payment',
             ];
         }
+    }
+
+
+    /**
+     * Ensure wallet payments carry a valid debit transaction before fulfillment.
+     *
+     * @param array<string, mixed> $options
+     * @return array<string, mixed>
+     */
+    protected function requireWalletDebitTransaction(PaymentTransaction $transaction, array $options): array
+    {
+        $walletTransaction = $options['wallet_transaction'] ?? null;
+
+        if (is_numeric($walletTransaction)) {
+            $walletTransaction = WalletTransaction::query()->find((int) $walletTransaction);
+        }
+
+        if (! $walletTransaction instanceof WalletTransaction) {
+            $walletTransactionId = data_get($options, 'meta.wallet.transaction_id')
+                ?? data_get($transaction->meta, 'wallet.transaction_id');
+
+            if ($walletTransactionId) {
+                $walletTransaction = WalletTransaction::query()->find($walletTransactionId);
+            }
+        }
+
+        if (! $walletTransaction instanceof WalletTransaction) {
+            throw new RuntimeException('Wallet debit transaction is required to complete wallet payments.');
+        }
+
+        if ($walletTransaction->type !== 'debit') {
+            throw new RuntimeException('Wallet transaction must represent a debit operation.');
+        }
+
+        $walletAccount = $walletTransaction->walletAccount()->first();
+
+        if ($walletAccount && (int) $walletAccount->user_id !== (int) $transaction->user_id) {
+            throw new RuntimeException('Wallet transaction owner does not match the payment user.');
+        }
+
+        if ($walletTransaction->payment_transaction_id !== null
+            && $walletTransaction->payment_transaction_id !== $transaction->getKey()) {
+            throw new RuntimeException('Wallet transaction is already linked to a different payment.');
+        }
+
+        if ($walletTransaction->payment_transaction_id === null && $transaction->getKey() !== null) {
+            $walletTransaction->payment_transaction_id = $transaction->getKey();
+            $walletTransaction->save();
+        }
+
+        $options['wallet_transaction'] = $walletTransaction;
+
+        $walletMeta = [
+            'transaction_id' => $walletTransaction->getKey(),
+            'idempotency_key' => $walletTransaction->idempotency_key,
+        ];
+
+        $options['meta']['wallet'] = array_replace_recursive($options['meta']['wallet'] ?? [], $walletMeta);
+
+        return $options;
     }
 
     protected function handlePackagePurchase(PaymentTransaction $transaction, ?int $packageId, int $userId, array $options = []): void

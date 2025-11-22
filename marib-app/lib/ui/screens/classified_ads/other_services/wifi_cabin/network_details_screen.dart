@@ -9,6 +9,7 @@ import 'package:marib/utils/errorFilter.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/hive_utils.dart';
+import 'package:marib/utils/api.dart';
 import 'package:marib/utils/payment/bank_transfer_args.dart';
 import 'package:marib/utils/payment/bank_transfer_screen.dart';
 import 'package:marib/utils/payment/manual_payment_service.dart'
@@ -357,11 +358,32 @@ class _WifiNetworkDetailsScreenState extends State<WifiNetworkDetailsScreen> {
       }
 
       await _showWifiCodeDialog(purchase);
-    } catch (error) {
+    } on ApiHttpException catch (apiError) {
       if (!mounted) return;
+      String? fromPayload;
+      if (apiError.payload is Map &&
+          (apiError.payload['message'] ?? '').toString().trim().isNotEmpty) {
+        fromPayload = apiError.payload['message'].toString().trim();
+      }
+      final dynamic extracted = ErrorFilter.check(apiError).error;
+      final String message = fromPayload ??
+          (extracted is String && extracted.trim().isNotEmpty
+              ? extracted
+              : apiError.errorMessage?.toString() ??
+                  'حدث خطأ غير متوقع أثناء جلب كروت الشبكة.');
       HelperUtils.showSnackBarMessage(
         context,
-        ErrorFilter.check(error).error,
+        message,
+      );
+    } catch (error) {
+      if (!mounted) return;
+      final dynamic friendly = ErrorFilter.check(error).error;
+      final String message = friendly is String && friendly.trim().isNotEmpty
+          ? friendly
+          : friendly?.toString() ?? error.toString();
+      HelperUtils.showSnackBarMessage(
+        context,
+        message,
       );
     }
   }

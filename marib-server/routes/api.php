@@ -37,6 +37,7 @@ use App\Http\Controllers\Wifi\AdminModerationController;
 use App\Http\Controllers\Wifi\OwnerBatchController;
 use App\Http\Controllers\Wifi\OwnerNetworkController;
 use App\Http\Controllers\Wifi\OwnerPlanController;
+use App\Http\Controllers\Wifi\WifiOrderController;
 use App\Http\Controllers\Admin\AdminAuthController;
 use App\Http\Controllers\Wifi\PublicDiscoveryController;
 use App\Http\Controllers\Api\WebExperienceController;
@@ -70,10 +71,14 @@ Route::prefix('admin')->group(function (): void {
     });
 });
 
-Route::prefix('wifi')->group(function (): void {
-    Route::get('networks', [PublicDiscoveryController::class, 'networks']);
-    Route::get('plans', [PublicDiscoveryController::class, 'plans']);
-});
+    Route::prefix('wifi')->group(function (): void {
+        Route::get('networks', [PublicDiscoveryController::class, 'networks']);
+        Route::get('plans', [PublicDiscoveryController::class, 'plans']);
+        Route::middleware('auth:sanctum')->group(function (): void {
+            Route::get('orders/{transaction}/code', [WifiOrderController::class, 'showCode'])
+                ->whereNumber('transaction');
+        });
+    });
 
 Route::get('products/{item}/purchase-options', [ProductPurchaseOptionsController::class, 'show'])
     ->whereNumber('item');

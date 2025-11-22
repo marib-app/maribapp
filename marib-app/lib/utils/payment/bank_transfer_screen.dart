@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:marib/app/app_scroll_behavior.dart';
@@ -41,7 +41,6 @@ class BankTransferScreen extends StatefulWidget {
   /// المستخدم على إكمال خطوات الدفع قبل المغادرة.
   ///
 
-
   static Future<T?> show<T>(BuildContext context, BankTransferArgs args) {
     return showModalBottomSheet<T>(
       context: context,
@@ -55,12 +54,10 @@ class BankTransferScreen extends StatefulWidget {
       },
     );
   }
-}
-
 
   @override
   State<BankTransferScreen> createState() => _BankTransferScreenState();
-
+}
 
 class _BankTransferScreenState extends State<BankTransferScreen>
     with SingleTickerProviderStateMixin {
@@ -81,7 +78,8 @@ class _BankTransferScreenState extends State<BankTransferScreen>
 
   int? _selectedBankId;
   int? _pressedBankId; // لتعقب حالة الضغط على بطاقة البنك (مؤثر Scale)
-  int? _highlightedAccountNameBankId; // لتعقب تمييز اسم الحساب عند التفاعل مع العنصر
+  int?
+      _highlightedAccountNameBankId; // لتعقب تمييز اسم الحساب عند التفاعل مع العنصر
   WalletSummary? _walletSummary;
   dynamic _walletError;
   String? _lastWalletEventKey;
@@ -225,6 +223,9 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         return 'order';
       }
 
+      if (normalized.contains('wifi')) {
+        return 'wifi_plan';
+      }
 
       if (normalized == 'general') {
         return 'general';
@@ -239,6 +240,9 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     }
 
     final packageType = widget.args.packageType.trim().toLowerCase();
+    if (packageType.contains('wifi') || widget.args.wifiPlanId != null) {
+      return 'wifi_plan';
+    }
     if (packageType.contains('service') || widget.args.serviceId != null) {
       return 'service';
     }
@@ -286,11 +290,12 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       final String? purposeParam;
       if (purpose == 'order' || purpose == 'package') {
         purposeParam = purpose;
+      } else if (purpose == 'wifi_plan' || widget.args.wifiPlanId != null) {
+        purposeParam = 'wifi_plan';
       } else if (isWalletTopUp) {
         purposeParam = _walletTopUpPurpose;
       } else if (purpose == 'service' || widget.args.serviceId != null) {
         purposeParam = 'service';
-
       } else {
         purposeParam = null;
       }
@@ -310,7 +315,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
             ManualPaymentService.paymentMethodForApi(_manualBankMethod),
         amount: isWalletTopUp ? widget.args.amount : null,
         serviceId: widget.args.serviceId ?? widget.args.itemId,
-
+        wifiPlanId: widget.args.wifiPlanId,
         serviceRequestId: widget.args.serviceRequestId,
       );
 
@@ -683,8 +688,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
 
   String _resolveGatewayForIntent(bool walletPurpose) {
     final String? current = _selectedMethod;
-    final bool walletDisallowed =
-        walletPurpose && current == _walletMethod;
+    final bool walletDisallowed = walletPurpose && current == _walletMethod;
     if (current != null && !walletDisallowed) {
       return current;
     }
@@ -738,11 +742,12 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     final String? purposeParam;
     if (purpose == 'order' || purpose == 'package') {
       purposeParam = purpose;
+    } else if (purpose == 'wifi_plan' || widget.args.wifiPlanId != null) {
+      purposeParam = 'wifi_plan';
     } else if (isWalletTopUp) {
       purposeParam = _walletTopUpPurpose;
     } else if (purpose == 'service' || widget.args.serviceId != null) {
       purposeParam = 'service';
-
     } else {
       purposeParam = null;
     }
@@ -781,7 +786,6 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         ? widget.args.packageId
         : null;
 
-
     try {
       final settings = await _service.fetchManualPaymentSettings(
         token: widget.args.token,
@@ -791,7 +795,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         paymentMethod: ManualPaymentService.paymentMethodForApi(selectedMethod),
         amount: isWalletTopUp ? widget.args.amount : null,
         serviceId: widget.args.serviceId ?? widget.args.itemId,
-
+        wifiPlanId: widget.args.wifiPlanId,
         serviceRequestId: widget.args.serviceRequestId,
       );
 
@@ -942,11 +946,8 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         UiUtils.showSoftSnackBar(
           context,
           message: 'حجم الملف يتجاوز 5 ميغابايت، يرجى اختيار ملف أصغر.',
-
         );
       }
-
-
 
       setState(() {
         _receiptFile = file;
@@ -1100,8 +1101,6 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     }
     setState(() => _submitting = true);
     try {
-
-
       final normalizedPurpose = widget.args.normalizedPurpose.toLowerCase();
       final bool isWalletTopUp = normalizedPurpose == _walletTopUpPurpose ||
           normalizedPurpose.contains('wallet');
@@ -1112,7 +1111,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       final int? serviceRequestIdArg = widget.args.serviceRequestId;
       final int? serviceIdArg = widget.args.serviceId ?? widget.args.itemId;
 
-      final int? wifiPlanIdArg = widget.args.wifiPlanId ?? widget.args.itemId;
+      final int? wifiPlanIdArg = widget.args.wifiPlanId;
 
       if (serviceRequestIdArg != null) {
         payableType = 'App\\Models\\ServiceRequest';
@@ -1127,6 +1126,10 @@ class _BankTransferScreenState extends State<BankTransferScreen>
             payableType = 'package';
             payableId = widget.args.packageId;
             break;
+          case 'wifi_plan':
+            payableType = 'App\\Models\\Wifi\\WifiPlan';
+            payableId = wifiPlanIdArg ?? widget.args.packageId;
+            break;
           case _walletTopUpPurpose:
             payableType = ManualPaymentService.walletTopUpPurpose;
             payableId = null;
@@ -1140,6 +1143,9 @@ class _BankTransferScreenState extends State<BankTransferScreen>
             if (isWalletTopUp) {
               payableType = ManualPaymentService.walletTopUpPurpose;
               payableId = null;
+            } else if (wifiPlanIdArg != null) {
+              payableType = 'App\\Models\\Wifi\\WifiPlan';
+              payableId = wifiPlanIdArg;
             } else {
               payableType = 'package';
               payableId = widget.args.packageId;
@@ -1156,18 +1162,21 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       int? orderIdForApi;
       int? packageIdForApi;
       int? serviceIdForApi;
+      int? wifiPlanIdForApi;
       if (normalizedPurpose == 'order') {
         purposeForApi = 'order';
         orderIdForApi = resolvedPackageId;
       } else if (normalizedPurpose == 'package') {
         purposeForApi = 'package';
         packageIdForApi = resolvedPackageId;
+      } else if (normalizedPurpose == 'wifi_plan' || wifiPlanIdArg != null) {
+        purposeForApi = 'wifi_plan';
+        wifiPlanIdForApi = wifiPlanIdArg ?? resolvedPackageId;
       } else if (isWalletTopUp) {
         purposeForApi = ManualPaymentService.walletTopUpPurpose;
       } else if (normalizedPurpose == 'service') {
         purposeForApi = 'service';
         serviceIdForApi = resolvedServiceId;
-
       } else if (resolvedPackageId != null) {
         purposeForApi = 'package';
         packageIdForApi = resolvedPackageId;
@@ -1209,6 +1218,9 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       if (serviceIdArg != null) {
         metadata['service_id'] = serviceIdArg;
       }
+      if (wifiPlanIdArg != null) {
+        metadata['wifi_plan_id'] = wifiPlanIdArg;
+      }
 
       if (senderName.isNotEmpty) metadata['sender_name'] = senderName;
       if (_usingManualBank && transferCode.isNotEmpty) {
@@ -1245,6 +1257,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
           orderId: orderIdForApi,
           packageId: packageIdForApi,
           serviceId: serviceIdForApi,
+          wifiPlanId: wifiPlanIdForApi,
           serviceRequestId: widget.args.serviceRequestId,
           amount: widget.args.amount,
           currency: submissionCurrency,
@@ -1266,6 +1279,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
           packageId: packageIdForApi,
           serviceId: serviceIdForApi,
           serviceRequestId: widget.args.serviceRequestId,
+          wifiPlanId: wifiPlanIdForApi,
           amount: widget.args.amount,
           currency: submissionCurrency,
           userNote: userNote.isEmpty ? null : userNote,
@@ -1283,6 +1297,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
           orderId: orderIdForApi,
           packageId: packageIdForApi,
           serviceId: serviceIdForApi,
+          wifiPlanId: wifiPlanIdForApi,
           serviceRequestId: widget.args.serviceRequestId,
           amount: widget.args.amount,
           currency: submissionCurrency,
@@ -1325,16 +1340,18 @@ class _BankTransferScreenState extends State<BankTransferScreen>
 
       if (!mounted) return;
 
-      final bool ok = result.success == true;
+      final bool ok = _resultIndicatesSuccess(result);
 
       final String successMessage = (() {
         final t = (result.message ?? '').trim();
-        if (t.isNotEmpty) return t;
-        return _usingEastYemen
-            ? 'حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.'
-            : _usingWallet
-            ? 'حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.'
-            : 'حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.';
+        if (t.isNotEmpty && !_looksLikeErrorMessage(t)) return t;
+        if (_usingEastYemen) {
+          return 'تم تأكيد تحويل بنك الشرق بنجاح.';
+        }
+        if (_usingWallet) {
+          return 'تم الدفع من المحفظة بنجاح.';
+        }
+        return 'تم إنشاء طلب التحويل البنكي بنجاح.';
       })();
 
       final String errorMessage = (() {
@@ -1343,8 +1360,8 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         return _usingEastYemen
             ? 'حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.'
             : _usingWallet
-            ? 'حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.'
-            : 'حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.';
+                ? 'حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.'
+                : 'حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.';
       })();
 
       final String? displayReference = (() {
@@ -1391,9 +1408,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       }
     } catch (e) {
       if (!mounted) return;
-      _showOverlayMessage(
-          'حدث خطأ غير متوقع: $e',
-          type: MessageType.error);
+      _showOverlayMessage('حدث خطأ غير متوقع: $e', type: MessageType.error);
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -1402,11 +1417,15 @@ class _BankTransferScreenState extends State<BankTransferScreen>
   PaymentRouteResult? _buildPaymentRouteResult(
       ManualPaymentSubmissionResult result) {
     final int? transactionId = _extractPaymentTransactionId(result);
+    final Map<String, dynamic>? deliveryPayload =
+        _extractDeliveryPayload(result);
 
     if (_usingWallet) {
       if (transactionId != null) {
-        return PaymentRouteResult.wallet(transactionId);
-
+        return PaymentRouteResult.wallet(
+          transactionId,
+          delivery: deliveryPayload,
+        );
       }
       return null;
     }
@@ -1417,7 +1436,35 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     }
 
     if (transactionId != null) {
-      return PaymentRouteResult.wallet(transactionId);
+      return PaymentRouteResult.wallet(
+        transactionId,
+        delivery: deliveryPayload,
+      );
+    }
+
+    return null;
+  }
+
+  Map<String, dynamic>? _extractDeliveryPayload(
+      ManualPaymentSubmissionResult result) {
+    Map<String, dynamic>? copyIfNotEmpty(Map<String, dynamic>? source) {
+      if (source == null || source.isEmpty) {
+        return null;
+      }
+      return Map<String, dynamic>.from(source);
+    }
+
+    final Map<String, dynamic>? direct = copyIfNotEmpty(result.delivery);
+    if (direct != null) {
+      return direct;
+    }
+
+    final dynamic rawDelivery = result.raw['delivery'];
+    if (rawDelivery is Map<String, dynamic>) {
+      return copyIfNotEmpty(rawDelivery);
+    }
+    if (rawDelivery is Map) {
+      return copyIfNotEmpty(Map<String, dynamic>.from(rawDelivery));
     }
 
     return null;
@@ -1587,8 +1634,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
                         ),
                       ),
                       IconButton(
-                        tooltip:
-                        'حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.',
+                        tooltip: 'حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.',
                         onPressed: () => Navigator.of(sheetContext).pop(),
                         icon: Icon(
                           Icons.close_rounded,
@@ -1613,7 +1659,6 @@ class _BankTransferScreenState extends State<BankTransferScreen>
                     'حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.',
                     'حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.',
                     'حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.',
-
                   ].map(
                     (step) => Padding(
                       padding: const EdgeInsetsDirectional.only(bottom: 8),
@@ -1700,6 +1745,57 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     return err.toString();
   }
 
+  bool _looksLikeErrorMessage(String text) {
+    final normalized = text.trim().toLowerCase();
+    if (normalized.isEmpty) {
+      return false;
+    }
+    const probes = <String>[
+      'خطأ',
+      'غير متوقع',
+      'فشل',
+      'لم يتم',
+      'تعذر',
+      'error',
+      'fail',
+      'unable',
+      'unexpected',
+    ];
+    for (final probe in probes) {
+      if (normalized.contains(probe)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool _resultIndicatesSuccess(ManualPaymentSubmissionResult result) {
+    if (result.success == true) {
+      return true;
+    }
+    final String? status = result.status?.trim().toLowerCase();
+    if (status != null &&
+        status.isNotEmpty &&
+        const {
+          'succeed',
+          'succeeded',
+          'success',
+          'approved',
+          'completed',
+          'done',
+        }.contains(status)) {
+      return true;
+    }
+    if (result.paymentTransactionIdAsInt != null) {
+      return true;
+    }
+    final dynamic deliveryNode = result.delivery ?? result.raw['delivery'];
+    if (deliveryNode is Map && deliveryNode.isNotEmpty) {
+      return true;
+    }
+    return false;
+  }
+
   void _showOverlayMessage(String message,
       {MessageType type = MessageType.success}) {
     _overlayMessageTimer?.cancel();
@@ -1712,8 +1808,9 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       UiUtils.showSoftSnackBar(
         buildContext,
         message: message,
-        backgroundColor:
-        type == MessageType.error ? Colors.red : Colors.black.withOpacity(.85),
+        backgroundColor: type == MessageType.error
+            ? Colors.red
+            : Colors.black.withOpacity(.85),
         duration: Duration(seconds: type == MessageType.error ? 4 : 3),
       );
       return;
@@ -1818,18 +1915,15 @@ class _BankTransferScreenState extends State<BankTransferScreen>
               color: onSurface,
             ),
           ),
-          content: const Text(
-              'حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.'),
+          content: const Text('حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text(
-                  'حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.'),
+              child: const Text('حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.'),
             ),
             FilledButton(
               onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text(
-                  'حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.'),
+              child: const Text('حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.'),
             ),
           ],
         );
@@ -1871,7 +1965,6 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     );
   }
 }
-
 
 class _ShimmerBox extends StatelessWidget {
   final AnimationController controller;
@@ -1915,10 +2008,3 @@ class _ShimmerBox extends StatelessWidget {
     );
   }
 }
-
-
-
-
-
-
-

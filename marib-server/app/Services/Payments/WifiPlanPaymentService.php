@@ -127,6 +127,10 @@ class WifiPlanPaymentService
         $plan = WifiPlan::query()->with('network')->findOrFail($transaction->payable_id);
         $this->ensurePlanIsPurchasable($plan);
 
+
+        $requiredAmount = (float) ($transaction->amount ?? $plan->price);
+
+
         $rawMethod = $data['payment_method'] ?? $transaction->payment_gateway;
         $method = $this->normalizePaymentMethod(is_string($rawMethod) ? $rawMethod : null);
 
@@ -158,7 +162,19 @@ class WifiPlanPaymentService
         $options = [
             'payment_gateway' => $method,
             'payment_reference' => $data['reference'] ?? null,
-            'meta' => $this->buildConfirmationMeta($transaction, $plan, $data),
+            'meta' => array_replace_recursive(
+                $this->buildConfirmationMeta($transaction, $plan, $data),
+                [
+                    'wallet' => [
+                        'expected_amount' => $requiredAmount,
+                    ],
+                    'payment' => [
+                        'expected_amount' => $requiredAmount,
+                    ],
+                ],
+            ),
+            'expected_amount' => $requiredAmount,
+        
         ];
 
         $manualPaymentRequestId = $data['manual_payment_request_id'] ?? $transaction->manual_payment_request_id;
@@ -215,6 +231,12 @@ class WifiPlanPaymentService
             $options['meta']['wallet'] = array_replace_recursive($options['meta']['wallet'] ?? [], [
                 'transaction_id' => $walletTransaction->getKey(),
                 'idempotency_key' => $walletTransaction->idempotency_key,
+            ]);
+        }
+
+        if ($method === 'wallet' && ! ($options['wallet_transaction'] ?? null) instanceof WalletTransaction) {
+            throw ValidationException::withMessages([
+                'wallet' => __('لم يتم تأكيد خصم المحفظة، يرجى المحاولة مرة أخرى.'),
             ]);
         }
 

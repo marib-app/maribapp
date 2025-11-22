@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Data\Notifications\NotificationIntent;
+use App\Enums\NotificationType;
 use App\Models\FeaturedItems;
 use App\Models\Item;
 use App\Models\ManualPaymentRequest;
@@ -19,6 +21,7 @@ use Illuminate\Support\Facades\Storage;
 
 use App\Models\WalletTransaction;
 use App\Services\Logging\PaymentTrace;
+use App\Services\NotificationDispatchService;
 use App\Services\NotificationService;
 use App\Services\SmsService;
 use App\Services\Wifi\WifiOperationalService;
@@ -104,6 +107,7 @@ class PaymentFulfillmentService
                 $manualPaymentRequestId
             ) {
 
+                $walletTransaction = $options['wallet_transaction'] ?? null;
 
 
 
@@ -128,6 +132,19 @@ class PaymentFulfillmentService
                 }
 
                 $transaction->save();
+
+
+                if ($walletTransaction instanceof WalletTransaction
+                    && (int) data_get($transaction->meta, 'wallet.transaction_id') !== (int) $walletTransaction->getKey()) {
+                    $this->mergeTransactionMeta($transaction, [
+                        'wallet' => [
+                            'transaction_id' => $walletTransaction->getKey(),
+                        ],
+                    ]);
+
+                    $transaction->save();
+                }
+
 
                 $serviceRequestModel = null;
                 $wifiDelivery = null;
@@ -167,6 +184,12 @@ class PaymentFulfillmentService
                         'user_id' => $userId,
                     ]);
                 }
+
+
+                if ($walletTransaction instanceof WalletTransaction && $walletTransaction->type === 'debit') {
+                    $this->dispatchWalletDebitNotification($transaction, $walletTransaction, $userId);
+                }
+
 
                 return [
                     'error' => false,
@@ -217,6 +240,15 @@ class PaymentFulfillmentService
             throw new RuntimeException('Wallet debit transaction is required to complete wallet payments.');
         }
 
+
+        $providedWalletId = data_get($options, 'meta.wallet.transaction_id')
+            ?? data_get($transaction->meta, 'wallet.transaction_id');
+
+        if ($providedWalletId !== null && (int) $providedWalletId !== (int) $walletTransaction->getKey()) {
+            throw new RuntimeException('Provided wallet transaction does not match the payment context.');
+        }
+
+
         if ($walletTransaction->type !== 'debit') {
             throw new RuntimeException('Wallet transaction must represent a debit operation.');
         }
@@ -226,15 +258,44 @@ class PaymentFulfillmentService
         if ($walletAccount && (int) $walletAccount->user_id !== (int) $transaction->user_id) {
             throw new RuntimeException('Wallet transaction owner does not match the payment user.');
         }
+        $paymentTransactionId = $transaction->getKey();
 
         if ($walletTransaction->payment_transaction_id !== null
-            && $walletTransaction->payment_transaction_id !== $transaction->getKey()) {
+            && $paymentTransactionId !== null
+            && $walletTransaction->payment_transaction_id !== $paymentTransactionId) {
             throw new RuntimeException('Wallet transaction is already linked to a different payment.');
         }
 
-        if ($walletTransaction->payment_transaction_id === null && $transaction->getKey() !== null) {
-            $walletTransaction->payment_transaction_id = $transaction->getKey();
+        if ($walletTransaction->payment_transaction_id === null) {
+            if ($paymentTransactionId === null) {
+                throw new RuntimeException('Payment transaction must be persisted before linking wallet transaction.');
+            }
+
+            $walletTransaction->payment_transaction_id = $paymentTransactionId;
             $walletTransaction->save();
+        }
+
+
+        $transactionCurrency = strtoupper((string) ($transaction->currency ?? ''));
+
+        if ($transactionCurrency !== ''
+            && strtoupper((string) $walletTransaction->currency) !== $transactionCurrency) {
+            throw new RuntimeException('Wallet transaction currency does not match the payment currency.');
+        }
+
+        $expectedAmount = $options['expected_amount']
+            ?? data_get($options, 'meta.wallet.expected_amount')
+            ?? $transaction->amount;
+
+        if (! is_numeric($expectedAmount)) {
+            throw new RuntimeException('Payment amount is required to validate the wallet transaction.');
+        }
+
+        $normalizedExpectedAmount = round((float) $expectedAmount, 2);
+        $normalizedWalletAmount = round((float) $walletTransaction->amount, 2);
+
+        if (abs($normalizedWalletAmount - $normalizedExpectedAmount) > 0.01) {
+            throw new RuntimeException('Wallet debit amount does not match the payment amount.');
         }
 
         $options['wallet_transaction'] = $walletTransaction;
@@ -1935,6 +1996,51 @@ class PaymentFulfillmentService
     }
 
 
+    protected function dispatchWalletDebitNotification(
+        PaymentTransaction $transaction,
+        WalletTransaction $walletTransaction,
+        int $userId
+    ): void {
+        $user = $transaction->user;
+
+        if (! $user instanceof User || (int) $user->getKey() !== (int) $userId) {
+            $user = User::query()->find($userId);
+        }
+
+        if (! $user instanceof User) {
+            return;
+        }
+
+        try {
+            /** @var WalletService $walletService */
+            $walletService = app(WalletService::class);
+            $payload = $walletService->buildWalletNotificationPayload($walletTransaction);
+            $deeplink = (string) ($payload['data']['deeplink'] ?? config('services.mobile.wallet_deeplink', 'marib://wallet'));
+
+            app(NotificationDispatchService::class)->dispatch(
+                new NotificationIntent(
+                    userId: $user->getKey(),
+                    type: NotificationType::WalletAlert,
+                    title: $payload['title'] ?? __('Wallet updated'),
+                    body: $payload['body'] ?? '',
+                    deeplink: $deeplink,
+                    entity: 'wallet_transaction',
+                    entityId: $walletTransaction->getKey(),
+                    data: $payload['data'] ?? [],
+                    meta: [
+                        'wallet_transaction_id' => $walletTransaction->getKey(),
+                        'wallet_account_id' => $walletTransaction->wallet_account_id,
+                    ],
+                ),
+            );
+        } catch (Throwable $exception) {
+            Log::warning('PaymentFulfillmentService: Failed to send wallet debit notification', [
+                'error' => $exception->getMessage(),
+                'wallet_transaction_id' => $walletTransaction->getKey(),
+                'payment_transaction_id' => $transaction->getKey(),
+            ]);
+        }
+    }
 
     private function normalizeUserPhoneNumber(?User $user): ?string
     {

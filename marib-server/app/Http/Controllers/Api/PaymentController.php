@@ -1062,7 +1062,8 @@ class PaymentController extends Controller
                 'number' => $plan->name,
                 'status' => $plan->status,
             ])->resolve(),
-            'next' => $this->buildNextNavigation($transaction, 'wifi_plan', $plan->getKey()),
+            // لا نعيد توجيه المستخدم بعد شراء الواي فاي
+            'next' => null,
             'payment_transaction_id' => $transaction->getKey(),
             'payment_intent_id' => $transaction->idempotency_key,
         ];

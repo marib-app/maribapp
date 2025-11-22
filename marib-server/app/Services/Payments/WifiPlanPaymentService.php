@@ -80,6 +80,15 @@ class WifiPlanPaymentService
         $data = InputSanitizer::stripNumberFields($data);
 
         $method = $this->normalizePaymentMethod($method);
+
+        // For WiFi plans we do not support creating manual_bank transactions without a linked manual request.
+        // Front-end cabin flow only allows wallet + east_yemen_bank.
+        if ($method === 'manual_bank') {
+            throw ValidationException::withMessages([
+                'payment_method' => __('طھط­ظˆظٹظ„ ط§ظ„ط¨ظ†ظƒ ط§ظ„ظٹط¯ظˆظٹ طºظٹط± ظ…طھط§ط­ ظ‡ط°ط§ ط§ظ„ط®ط·ط©.'),
+            ]);
+        }
+
         $data['payment_method'] = $method;
 
         return $this->db->transaction(function () use ($user, $plan, $method, $idempotencyKey, $data) {

@@ -10,6 +10,7 @@ import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/api.dart';
 
 import 'package:marib/utils/ui_utils.dart';
+
 // شاشة تحويل الأموال عبر التحويل البنكي وخيارات المحافظ.
 
 import 'package:marib/utils/payment/bank_account.dart';
@@ -39,7 +40,7 @@ class BankTransferScreen extends StatefulWidget {
 
   /// تعرض شاشة التحويل البنكي كصفحة سفلية تمنع الإغلاق العرضي وتساعد
   /// المستخدم على إكمال خطوات الدفع قبل المغادرة.
-  ///
+
 
   static Future<T?> show<T>(BuildContext context, BankTransferArgs args) {
     return showModalBottomSheet<T>(

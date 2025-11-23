@@ -15,6 +15,7 @@ use App\Models\Wifi\ReputationCounter;
 use App\Models\Wifi\WifiNetwork;
 use App\Models\Wifi\WifiReport;
 use App\Services\Audit\AuditLogger;
+use App\Services\Wifi\WifiNotificationService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -22,7 +23,10 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class AdminModerationController extends Controller
 {
-    public function __construct(private AuditLogger $auditLogger)
+    public function __construct(
+        private readonly AuditLogger $auditLogger,
+        private readonly WifiNotificationService $wifiNotifications
+    )
     {
     }
 
@@ -84,8 +88,11 @@ class AdminModerationController extends Controller
         ]);
 
         $network->save();
+        $network->refresh();
 
-        return WifiNetworkResource::make($network->refresh());
+        $this->wifiNotifications->notifyNetworkStatusUpdated($network, $validated['reason'] ?? null);
+
+        return WifiNetworkResource::make($network);
     }
 
     public function reports(Request $request): AnonymousResourceCollection

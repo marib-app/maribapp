@@ -278,7 +278,7 @@ class Api {
     return Map<String, dynamic>.from(cached.payload);
   }
 
-  static Map<String, dynamic> headers() {
+  static Map<String, dynamic> headers({bool includeAuthHeader = true}) {
     final Map<String, dynamic> headers = {
       "Accept": "application/json",
     };
@@ -287,6 +287,11 @@ class Api {
     final languageCode = language is Map ? language['code'] : null;
     if (languageCode is String && languageCode.isNotEmpty) {
       headers["Content-Language"] = languageCode;
+    }
+
+    if (!includeAuthHeader) {
+      _ensureSliderSessionHeaders(headers);
+      return headers;
     }
 
     final bool hasAuthSession = HiveUtils.isUserAuthenticated() ||
@@ -1622,6 +1627,7 @@ class Api {
     Map<String, dynamic>? queryParameters,
     bool? useBaseUrl,
     bool enableEtagCache = false,
+    bool includeAuthHeader = true,
   }) async {
     if (_isSliderEndpoint(url)) {
       await HiveUtils.ensureSliderSessionId();
@@ -1634,7 +1640,7 @@ class Api {
     while (attempt < maxAttempts) {
       final String baseUrl = _activeBaseUrl;
       final String requestUrl = (resolvedUseBaseUrl ? baseUrl : "") + url;
-      final Map<String, dynamic> requestHeaders = headers();
+      final Map<String, dynamic> requestHeaders = headers(includeAuthHeader: includeAuthHeader);
       final _CachedApiResponse? cachedResponse = enableEtagCache
           ? _ApiResponseCache.get(requestUrl, queryParameters)
           : null;

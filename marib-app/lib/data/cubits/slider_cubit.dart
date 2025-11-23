@@ -225,7 +225,11 @@ class SliderCubit extends Cubit<SliderState> {
     if (cleanedInterfaceType != null && cleanedInterfaceType.isNotEmpty) {
       body['interface_type'] = cleanedInterfaceType;
     }
-    var response = await Api.get(url: Api.getSliderApi, queryParameters: body);
+    var response = await Api.get(
+      url: Api.getSliderApi,
+      queryParameters: body,
+      includeAuthHeader: false,
+    );
 
     if (response[Api.error]) {
 

@@ -1763,6 +1763,11 @@ class PaymentFulfillmentService
         $network->statistics = $statistics;
         $network->save();
 
+        $remainingCodes = WifiCode::query()
+            ->where('wifi_plan_id', $plan->getKey())
+            ->where('status', WifiCodeStatus::AVAILABLE->value)
+            ->count();
+
         $deliveryPayload['plan'] = [
             'id' => $plan->getKey(),
             'name' => $plan->name,
@@ -1790,7 +1795,8 @@ class PaymentFulfillmentService
             $buyerPhone,
             $ownerPhone,
             $transaction,
-            $walletTransaction
+            $walletTransaction,
+            $remainingCodes
         ): void {
             
             $userTokens = UserFcmToken::query()
@@ -1804,12 +1810,20 @@ class PaymentFulfillmentService
             if ($userTokens !== []) {
                 $cardCode = $deliveryPayload['code'] ?? null;
 
+                $userTitle = __('wifi.notifications.purchase_success_title');
+                $userBody = $cardCode
+                    ? __('wifi.notifications.purchase_success_body_with_code', [
+                        'network' => $network->name,
+                        'code' => $cardCode,
+                    ])
+                    : __('wifi.notifications.purchase_success_body_without_code', [
+                        'network' => $network->name,
+                    ]);
+
                 NotificationService::sendFcmNotification(
                     $userTokens,
-                    __('تم إصدار كرت الواي فاي'),
-                    $cardCode
-                        ? __('الكرت الخاص بك هو :code', ['code' => $cardCode])
-                        : __('تم تسليم كود شبكة :network.', ['network' => $network->name]),
+                    $userTitle,
+                    $userBody,
                     'wifi_purchase',
                     array_filter([
                         'deeplink' => config('services.mobile.wifi_orders_deeplink', 'eclassify://wifi/orders'),
@@ -1841,17 +1855,19 @@ class PaymentFulfillmentService
                 if ($ownerTokens !== []) {
                     $ownerWalletBalance = $walletTransaction?->balance_after;
 
-                    $ownerBody = __('تم بيع كرت :code بسعر :amount :currency بنسبة عمولة :commission٪. الرصيد المتبقي :balance :currency.', [
-                        'code' => $deliveryPayload['code'],
+                    $ownerBody = __('wifi.notifications.owner_sale_body', [
+                        'plan' => $plan->name,
                         'amount' => number_format($grossAmount, 2),
                         'currency' => $currency,
                         'commission' => number_format($commissionRate * 100, 2),
-                        'balance' => number_format((float) $ownerWalletBalance, 2),
+                        'commission_value' => number_format($commissionAmount, 2),
+                        'net' => number_format($netAmount, 2),
+                        'remaining' => $remainingCodes,
                     ]);
 
                     NotificationService::sendFcmNotification(
                         $ownerTokens,
-                        __('تم بيع كرت واي فاي'),
+                        __('wifi.notifications.owner_sale_title'),
                         $ownerBody,
 
                         'wifi_sale',
@@ -1870,14 +1886,15 @@ class PaymentFulfillmentService
                             'net_amount' => $netAmount,
                             'currency' => $currency,
                             'wallet_balance' => $ownerWalletBalance,
+                            'remaining_codes' => $remainingCodes,
                         ]
                     );
 
                     if ($walletTransaction instanceof WalletTransaction) {
                         NotificationService::sendFcmNotification(
                             $ownerTokens,
-                            __('تم إضافة رصيد إلى المحفظة'),
-                            __('تم إيداع :amount :currency في محفظتك. رقم العملية: :transaction.', [
+                            __('wifi.notifications.wallet_credit_title'),
+                            __('wifi.notifications.wallet_credit_body', [
                                 'amount' => number_format($walletTransaction->amount, 2),
                                 'currency' => $walletTransaction->currency,
                                 'transaction' => $walletTransaction->getKey(),
@@ -1895,8 +1912,6 @@ class PaymentFulfillmentService
                     }
                 }
             }
-
-
 
             /** @var SmsService $smsService */
             $smsService = app(SmsService::class);

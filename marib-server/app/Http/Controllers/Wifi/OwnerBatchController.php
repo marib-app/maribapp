@@ -11,6 +11,7 @@ use App\Models\Wifi\WifiCodeBatch;
 use App\Models\Wifi\WifiPlan;
 use App\Services\Audit\AuditLogger;
 use App\Services\Wifi\WifiCodeBatchProcessor;
+use App\Services\Wifi\WifiNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -20,7 +21,8 @@ class OwnerBatchController extends Controller
 {
     public function __construct(
         private AuditLogger $auditLogger,
-        private WifiCodeBatchProcessor $batchProcessor
+        private WifiCodeBatchProcessor $batchProcessor,
+        private WifiNotificationService $wifiNotifications
     )
     {
     }
@@ -127,8 +129,11 @@ class OwnerBatchController extends Controller
         ]);
 
         $batch->save();
+        $batch->refresh();
 
-        return WifiCodeBatchResource::make($batch->refresh());
+        $this->wifiNotifications->notifyBatchStatusChanged($batch, $target, $validated['notes'] ?? null);
+
+        return WifiCodeBatchResource::make($batch);
     }
 
     public function destroy(Request $request, WifiCodeBatch $batch)

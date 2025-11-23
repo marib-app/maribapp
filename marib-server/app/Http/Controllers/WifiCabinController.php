@@ -15,6 +15,7 @@ use App\Models\Wifi\WifiSale;
 use App\Services\Audit\AuditLogger;
 use App\Services\Wifi\WifiCodeBatchProcessor;
 use App\Services\Wifi\WifiOperationalService;
+use App\Services\Wifi\WifiNotificationService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Contracts\View\View as ViewContract;
 use Illuminate\Http\JsonResponse;
@@ -38,7 +39,8 @@ class WifiCabinController extends Controller
         private readonly WifiCodeBatch $wifiCodeBatch,
         private readonly AuditLogger $auditLogger,
         private readonly WifiOperationalService $operationalService,
-        private readonly WifiCodeBatchProcessor $batchProcessor
+        private readonly WifiCodeBatchProcessor $batchProcessor,
+        private readonly WifiNotificationService $wifiNotifications
     ) {
     }
 
@@ -453,6 +455,9 @@ class WifiCabinController extends Controller
             $this->refreshPlanInventoryMeta($batch->plan);
         }
 
+        $batch->refresh();
+        $this->wifiNotifications->notifyBatchStatusChanged($batch, $targetStatus);
+
         return redirect()
             ->back()
             ->with('status', __('تمت الموافقة على طلب المالك بنجاح.'));
@@ -490,6 +495,13 @@ class WifiCabinController extends Controller
         if ($batch->plan) {
             $this->refreshPlanInventoryMeta($batch->plan);
         }
+
+        $batch->refresh();
+        $this->wifiNotifications->notifyBatchStatusChanged(
+            $batch,
+            WifiCodeBatchStatus::ARCHIVED,
+            $validated['reason'] ?? null
+        );
 
         return redirect()
             ->back()

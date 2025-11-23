@@ -23,6 +23,7 @@ use App\Models\Wifi\WifiCodeBatch;
 use App\Models\Wifi\WifiNetwork;
 use App\Models\Wifi\WifiReport;
 use App\Services\Audit\AuditLogger;
+use App\Services\Wifi\WifiNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -32,7 +33,10 @@ use Illuminate\Support\Facades\Storage;
 
 class OwnerNetworkController extends Controller
 {
-    public function __construct(private AuditLogger $auditLogger)
+    public function __construct(
+        private readonly AuditLogger $auditLogger,
+        private readonly WifiNotificationService $wifiNotifications
+    )
     {
     }
 
@@ -76,6 +80,8 @@ class OwnerNetworkController extends Controller
 
         $network->save();
         $network->refresh();
+
+        $this->wifiNotifications->notifyNetworkSubmitted($network);
 
         $this->auditLogger->logChanges($network, 'wifi.network.created', array_unique($auditFields), $request->user(), [
             'description' => 'Wifi network created by owner',
@@ -148,6 +154,9 @@ class OwnerNetworkController extends Controller
                 'description' => 'Wifi network commission updated by owner',
             ]);
             $network->save();
+            $network->refresh();
+
+            $this->wifiNotifications->notifyCommissionUpdated($network, $commission);
         }
 
         return WifiNetworkResource::make($network->refresh());

@@ -29,7 +29,11 @@ class CategoryRepository {
         parameters[Api.interfaceType] = interfaceType.trim();
       }
       Map<String, dynamic> response =
-          await Api.get(url: Api.getCategoriesApi, queryParameters: parameters);
+          await Api.get(
+            url: Api.getCategoriesApi,
+            queryParameters: parameters,
+            includeAuthHeader: false,
+          );
 
       final CategoryModel? selfCategory =
           _parseSelfCategory(response, categoryId: categoryId);

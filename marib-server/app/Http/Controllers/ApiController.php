@@ -9635,17 +9635,19 @@ public function storeRequestDevice(Request $request)
     }
 
     private function getDefaultCurrencyCode(): ?string {
-        $settingKeys = ['currency_code', 'currency', 'default_currency', 'currency_symbol'];
+        $settingKeys = ['currency_code', 'currency', 'default_currency'];
 
         foreach ($settingKeys as $key) {
             $value = Setting::where('name', $key)->value('value');
 
             if (!empty($value)) {
-                return strtoupper($value);
+                return strtoupper(trim((string) $value));
             }
         }
 
-        return null;
+        $fallbackCurrency = config('app.currency');
+
+        return filled($fallbackCurrency) ? strtoupper((string) $fallbackCurrency) : null;
     }
 
     private function generateManualPaymentSignedUrl(?string $path): ?string {

@@ -2236,6 +2236,7 @@ class _SoftSnackBarWidgetState extends State<_SoftSnackBarWidget>
   late final Animation<double> _fadeAnimation;
   late final Animation<Offset> _slideAnimation;
   Timer? _autoDismissTimer;
+  Timer? _fallbackDismissTimer;
   Completer<void>? _dismissCompleter;
   bool _hasCompletedExit = false;
 
@@ -2277,34 +2278,48 @@ class _SoftSnackBarWidgetState extends State<_SoftSnackBarWidget>
     }
 
     if (status == AnimationStatus.dismissed && !_hasCompletedExit) {
-      _hasCompletedExit = true;
-      widget.onFinish();
-      if (_dismissCompleter != null && !_dismissCompleter!.isCompleted) {
-        _dismissCompleter!.complete();
-      }
-      _dismissCompleter = null;
+      _completeDismissal();
     }
   }
 
-  Future<void> dismiss() {
+  void _completeDismissal() {
+    if (_hasCompletedExit) {
+      return;
+    }
+    _hasCompletedExit = true;
+    _fallbackDismissTimer?.cancel();
+    _dismissCompleter ??= Completer<void>();
+
+    widget.onFinish();
+    if (!_dismissCompleter!.isCompleted) {
+      _dismissCompleter!.complete();
+    }
+  }
+
+  Future<void> dismiss({bool animate = true}) {
     if (!mounted) {
       return Future.value();
     }
+
+    _fallbackDismissTimer?.cancel();
+    _autoDismissTimer?.cancel();
+    _dismissCompleter ??= Completer<void>();
 
     if (_hasCompletedExit) {
       return _dismissCompleter?.future ?? Future.value();
     }
 
-    _autoDismissTimer?.cancel();
-    _dismissCompleter ??= Completer<void>();
-
-    if (_controller.status == AnimationStatus.dismissed ||
+    if (!animate ||
+        _controller.status == AnimationStatus.dismissed ||
         _controller.value == 0.0) {
-      if (!_dismissCompleter!.isCompleted) {
-        _dismissCompleter!.complete();
-      }
+      _completeDismissal();
       return _dismissCompleter!.future;
     }
+
+    _fallbackDismissTimer = Timer(
+      _animationDuration + const Duration(milliseconds: 150),
+      _completeDismissal,
+    );
 
     if (_controller.status != AnimationStatus.reverse) {
       _controller.reverse();
@@ -2316,6 +2331,7 @@ class _SoftSnackBarWidgetState extends State<_SoftSnackBarWidget>
   @override
   void dispose() {
     _autoDismissTimer?.cancel();
+    _fallbackDismissTimer?.cancel();
     _controller.removeStatusListener(_handleStatusChange);
     _controller.dispose();
     if (_dismissCompleter != null && !_dismissCompleter!.isCompleted) {

@@ -798,6 +798,7 @@ class UiUtils {
       final _SoftSnackBarWidgetState? state = active.key.currentState;
       if (state != null) {
         if (active.dismissingFuture != null) {
+          active.dismissingFuture!.whenComplete(showPendingSnackBar);
           return;
         }
         final Future<void> dismissFuture = state.dismiss();

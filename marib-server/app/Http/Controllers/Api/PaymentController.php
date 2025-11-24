@@ -530,11 +530,10 @@ class PaymentController extends Controller
         return $this->buildPackageResponse($existing, $package, $statusCode, $availableGateways);
     }
 
-        return $this->buildServiceResponse($existing, $serviceRequest, $statusCode, $availableGateways);
-    }
-
-    private function initiateWifiPlanPayment(Request $request, int $userId): JsonResponse
+    private function initiateOrderPayment(Request $request, int $userId): JsonResponse
     {
+
+
         $incomingCurrency = $request->input('currency');
         $incomingAmount = $request->input('amount');
 
@@ -544,12 +543,12 @@ class PaymentController extends Controller
 
         if ($incomingAmount === '' || $incomingAmount === null) {
             $request->merge(['amount' => null]);
-        }
-
+        } 
+        
         $validated = $request->validate([
             'payment_method' => ['required', 'string', 'max:191'],
             'currency' => ['nullable', 'string', 'size:3'],
-            'wifi_plan_id' => ['required', 'integer', 'exists:wifi_plans,id'],
+            'order_id' => ['required', 'integer', 'exists:orders,id'],
             'amount' => ['nullable', 'numeric', 'min:0'],
             'metadata' => ['nullable', 'array'],
         ]);

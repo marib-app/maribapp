@@ -328,10 +328,22 @@ class PaymentController extends Controller
             ->findOrFail($validated['wifi_plan_id']);
 
         $method = $this->normalizePaymentMethodForPurpose($validated['payment_method'], 'wifi_plan');
-        $currency = strtoupper(trim($validated['currency']));
+        $currency = strtoupper(trim($validated['currency'] ?? ''));
 
-        if ($method === 'wallet') {
+        if (in_array($method, ['wallet', 'east_yemen_bank'], true)) {
             $currency = $this->walletService->getPrimaryCurrency();
+        } elseif ($currency === '') {
+            $fallbackCurrency = strtoupper(trim((string) ($plan->currency ?: config('app.currency', 'SAR'))));
+
+            if ($fallbackCurrency !== '') {
+                $currency = $fallbackCurrency;
+            }
+        }
+
+        if ($currency === '') {
+            throw ValidationException::withMessages([
+                'currency' => __('validation.required', ['attribute' => 'currency']),
+            ]);
         }
 
         if (! PaymentGatewayCurrencyPolicy::supports($method, $currency)) {
@@ -340,7 +352,9 @@ class PaymentController extends Controller
             ]);
         }
 
-        if ($method !== 'wallet' && is_string($plan->currency) && $plan->currency !== '') {
+        if (! in_array($method, ['wallet', 'east_yemen_bank'], true)
+            && is_string($plan->currency)
+            && $plan->currency !== '') {
             $planCurrency = strtoupper(trim($plan->currency));
             if ($planCurrency !== '' && $planCurrency !== $currency) {
                 throw ValidationException::withMessages([

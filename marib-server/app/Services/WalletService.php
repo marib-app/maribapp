@@ -59,13 +59,18 @@ class WalletService
 
         $normalizedCurrency = strtoupper($currency);
 
-        $account = WalletAccount::query()
-            ->where('user_id', $userModel->getKey())
-            ->where('currency', $normalizedCurrency)
+        $account = $this->findAccount($userModel, $normalizedCurrency);
+
+        if (! $account instanceof WalletAccount) {
+            throw new HttpException(402, __('رصيد المحفظة غير كافٍ.'));
+        }
+
+        $lockedAccount = WalletAccount::query()
+            ->whereKey($account->getKey())
             ->lockForUpdate()
             ->first();
 
-        if (! $account instanceof WalletAccount || (float) $account->balance < $amount) {
+        if (! $lockedAccount instanceof WalletAccount || (float) $lockedAccount->balance < $amount) {
             throw new HttpException(402, __('رصيد المحفظة غير كافٍ.'));
         }
     }
@@ -213,10 +218,37 @@ class WalletService
 
     public function findAccount(User $user, string $currency): ?WalletAccount
     {
-        return WalletAccount::query()
+        $normalizedCurrency = strtoupper($currency);
+
+        $account = WalletAccount::query()
             ->where('user_id', $user->getKey())
-            ->where('currency', strtoupper($currency))
+            ->where('currency', $normalizedCurrency)
             ->first();
+
+        if ($account instanceof WalletAccount) {
+            return $account;
+        }
+
+        /** @var WalletAccount|null $existing */
+        $existing = WalletAccount::query()
+            ->where('user_id', $user->getKey())
+            ->orderBy('id')
+            ->first();
+
+        if (! $existing instanceof WalletAccount) {
+            return null;
+        }
+
+        if ($existing->currency !== $normalizedCurrency) {
+            $existing->currency = $normalizedCurrency;
+            $existing->save();
+
+            WalletTransaction::query()
+                ->where('wallet_account_id', $existing->getKey())
+                ->update(['currency' => $normalizedCurrency]);
+        }
+
+        return $existing;
     }
 
     protected function resolveWalletAccount(User $user, string $currency, bool $lockForUpdate = false): WalletAccount

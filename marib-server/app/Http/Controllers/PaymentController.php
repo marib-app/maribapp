@@ -171,7 +171,7 @@ class PaymentController extends Controller
 
         $validated['payment_method'] = $this->normalizePaymentMethodForPurpose($selectedMethod, $purpose);
 
-        if ($validated['payment_method'] === 'wallet') {
+        if (in_array($validated['payment_method'], ['wallet', 'east_yemen_bank'], true)) {
             $validated['currency'] = $this->walletService->getPrimaryCurrency();
         }
 

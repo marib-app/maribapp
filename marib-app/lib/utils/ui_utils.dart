@@ -556,6 +556,8 @@ class _UiSmartButtonState extends State<_UiSmartButton> {
 class UiUtils {
   static final Map<OverlayState, _SoftSnackBarHandle> _activeSoftSnackBars =
       <OverlayState, _SoftSnackBarHandle>{};
+  static final Map<OverlayState, VoidCallback> _pendingSoftSnackBars =
+      <OverlayState, VoidCallback>{};
 
   // ط¯ط§ظ„ط© ط§ظ„طھط­ظƒظ… ظپظٹ ط¹ط±ط¶ ط§ظ„ظˆظ‚طھ ظˆط§ظ„طھط§ط±ظٹط®
 
@@ -738,6 +740,7 @@ class UiUtils {
     final ThemeData theme = Theme.of(context);
 
     void insertSnackBar() {
+      _pendingSoftSnackBars.remove(overlayState);
       final GlobalKey<_SoftSnackBarWidgetState> key =
           GlobalKey<_SoftSnackBarWidgetState>();
       late OverlayEntry entry;
@@ -774,17 +777,37 @@ class UiUtils {
         ),
       );
 
-      _activeSoftSnackBars[overlayState] =
+      final _SoftSnackBarHandle handle =
           _SoftSnackBarHandle(entry: entry, key: key);
+      _activeSoftSnackBars[overlayState] = handle;
 
       overlayState.insert(entry);
     }
 
+    void showPendingSnackBar() {
+      final VoidCallback? pending = _pendingSoftSnackBars.remove(overlayState);
+      if (pending != null) {
+        pending();
+      }
+    }
+
     final _SoftSnackBarHandle? active = _activeSoftSnackBars[overlayState];
     if (active != null) {
+      _pendingSoftSnackBars[overlayState] = insertSnackBar;
+
       final _SoftSnackBarWidgetState? state = active.key.currentState;
       if (state != null) {
-        state.dismiss().whenComplete(insertSnackBar);
+        if (active.dismissingFuture != null) {
+          return;
+        }
+        final Future<void> dismissFuture = state.dismiss();
+        active.dismissingFuture = dismissFuture;
+        dismissFuture.whenComplete(() {
+          if (identical(active.dismissingFuture, dismissFuture)) {
+            active.dismissingFuture = null;
+          }
+          showPendingSnackBar();
+        });
         return;
       }
 
@@ -792,6 +815,8 @@ class UiUtils {
         active.entry.remove();
       }
       _activeSoftSnackBars.remove(overlayState);
+      showPendingSnackBar();
+      return;
     }
 
     insertSnackBar();
@@ -2366,13 +2391,14 @@ class _SoftSnackBarWidgetState extends State<_SoftSnackBarWidget>
 }
 
 class _SoftSnackBarHandle {
-  const _SoftSnackBarHandle({
+  _SoftSnackBarHandle({
     required this.entry,
     required this.key,
   });
 
   final OverlayEntry entry;
   final GlobalKey<_SoftSnackBarWidgetState> key;
+  Future<void>? dismissingFuture;
 }
 
 // ظ„ظˆ BlurDialoge ظ…ط¹ط±ظپط© ط¹ظ†ط¯ظƒ ظپظٹ ظ…ظ„ظپ ط«ط§ظ†ظٹطŒ طھط£ظƒط¯ ظ…ظ† import ظ„ظ‡ط§

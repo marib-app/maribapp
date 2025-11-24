@@ -35,7 +35,7 @@ class WifiPlanPaymentService
     /**
      * @var array<int, string>
      */
-    private const SUPPORTED_METHODS = ['manual_bank', 'wallet'];
+    private const SUPPORTED_METHODS = ['manual_bank', 'east_yemen_bank', 'wallet'];
     /**
      * @var array<int, string>
      */
@@ -53,6 +53,12 @@ class WifiPlanPaymentService
      */
     private const LEGACY_METHOD_ALIASES = [
         'manual_bank' => ['manual'],
+        'east_yemen_bank' => [
+            'east',
+            'alsharq',
+            'al-sharq',
+            'bank_alsharq',
+        ],
     ];
 
     public function __construct(
@@ -137,7 +143,7 @@ class WifiPlanPaymentService
 
         $manualContext = null;
 
-        if ($method === 'manual_bank') {
+        if (in_array($method, ['manual_bank', 'east_yemen_bank'], true)) {
             $manualContext = $this->prepareManualBankConfirmationPayload(
                 $user,
                 $transaction,

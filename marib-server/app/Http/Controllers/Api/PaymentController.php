@@ -534,7 +534,7 @@ class PaymentController extends Controller
     {
         $validated = $request->validate([
             'payment_method' => ['required', 'string', 'max:191'],
-            'currency' => ['required', 'string', 'size:3'],
+            'currency' => ['nullable', 'string', 'size:3'],
             'order_id' => ['required', 'integer', 'exists:orders,id'],
             'amount' => ['nullable', 'numeric', 'min:0'],
             'metadata' => ['nullable', 'array'],

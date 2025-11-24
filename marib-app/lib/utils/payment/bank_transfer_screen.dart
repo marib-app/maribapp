@@ -59,7 +59,7 @@ class BankTransferScreen extends StatefulWidget {
 
 
   @override
-  State<BankTransferScreen> createState() => _BankTransferScreenState();
+  _BankTransferScreenState createState() => _BankTransferScreenState();
 
 
 class _BankTransferScreenState extends State<BankTransferScreen>

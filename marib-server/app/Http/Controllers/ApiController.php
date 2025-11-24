@@ -224,11 +224,9 @@ class ApiController extends Controller {
         'ليرة تركية' => 'TRY',
     ];
 
-    private const WALLET_CURRENCY_CODE = 'YER';
-
     private function getWalletCurrencyCode(): string
     {
-        return self::WALLET_CURRENCY_CODE;
+        return $this->walletService->getPrimaryCurrency();
     }
 
     private function ensureWalletAccountCurrency(WalletAccount $walletAccount): WalletAccount

@@ -26,6 +26,7 @@ use App\Services\LegalNumberingService;
 use App\Models\PaymentConfiguration;
 use App\Models\WalletAccount;
 use App\Services\Payments\ManualPaymentRequestService;
+use App\Services\WalletService;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\JsonResponse;
@@ -49,7 +50,8 @@ class PaymentController extends Controller
         private readonly ServicePaymentService $servicePaymentService,
         private readonly ManualPaymentRequestService $manualPaymentRequestService,
         private readonly CreateOrLinkManualPaymentRequest $manualPaymentLinker,
-        private readonly LegalNumberingService $legalNumberingService
+        private readonly LegalNumberingService $legalNumberingService,
+        private readonly WalletService $walletService
         
         )
     {
@@ -168,6 +170,10 @@ class PaymentController extends Controller
         }
 
         $validated['payment_method'] = $this->normalizePaymentMethodForPurpose($selectedMethod, $purpose);
+
+        if ($validated['payment_method'] === 'wallet') {
+            $validated['currency'] = $this->walletService->getPrimaryCurrency();
+        }
 
         if (($validated['currency'] ?? null) !== null
             && ! PaymentGatewayCurrencyPolicy::supports($validated['payment_method'], $validated['currency'])) {

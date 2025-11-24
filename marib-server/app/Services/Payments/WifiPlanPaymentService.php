@@ -183,7 +183,7 @@ class WifiPlanPaymentService
         }
 
         if ($method === 'wallet') {
-            $currency = strtoupper((string) ($transaction->currency ?? $plan->currency ?? config('app.currency', 'SAR')));
+            $currency = $this->walletService->getPrimaryCurrency();
             $requiredAmount = (float) ($transaction->amount ?? $plan->price);
             $walletAccount = $this->walletService->findAccount($user, $currency);
             $balance = $walletAccount instanceof WalletAccount ? (float) $walletAccount->balance : 0.0;
@@ -200,7 +200,7 @@ class WifiPlanPaymentService
                 $idempotencyKey,
                 (float) $transaction->amount,
                 [
-                    'currency' => strtoupper((string) ($transaction->currency ?? $plan->currency ?? config('app.currency', 'SAR'))),
+                    'currency' => $currency,
                     'meta' => [
                         'context' => 'wifi_plan_purchase',
                         'wifi_plan_id' => $plan->getKey(),
@@ -444,6 +444,14 @@ class WifiPlanPaymentService
 
         $amount = $this->resolveAmount($plan, $data);
         $currency = strtoupper((string) ($plan->currency ?? $data['currency'] ?? config('app.currency', 'SAR')));
+
+        if ($method === 'wallet') {
+            $currency = $this->walletService->getPrimaryCurrency();
+        }
+
+        if ($method === 'wallet') {
+            $currency = $this->walletService->getPrimaryCurrency();
+        }
 
         $meta = $this->buildBaseMeta($plan);
 

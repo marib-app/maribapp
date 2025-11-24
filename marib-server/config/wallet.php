@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'currency' => env('WALLET_CURRENCY', 'YER'),
     'limits' => [
         'enabled' => env('WALLET_LIMITS_ENABLED', false),
         'credit' => [

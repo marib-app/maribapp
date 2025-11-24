@@ -29,6 +29,11 @@ use Throwable;
 
 class WalletService
 {
+    public function getPrimaryCurrency(): string
+    {
+        return strtoupper((string) config('wallet.currency', 'YER'));
+    }
+
     public function credit(User $user, string $idempotencyKey, float $amount, array $options = []): WalletTransaction
     {
         return $this->record($user, 'credit', $idempotencyKey, $amount, $options);

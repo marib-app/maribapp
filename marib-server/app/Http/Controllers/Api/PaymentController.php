@@ -18,6 +18,7 @@ use App\Services\LegalNumberingService;
 use App\Services\Payments\OrderPaymentService;
 use App\Services\OrderCheckoutService;
 use App\Services\PaymentFulfillmentService;
+use App\Services\WalletService;
 use App\Services\Payments\PackagePaymentService;
 use App\Services\Payments\ServicePaymentService;
 use App\Services\Payments\WifiPlanPaymentService;
@@ -37,7 +38,8 @@ class PaymentController extends Controller
         private readonly PackagePaymentService $packagePaymentService,
         private readonly WifiPlanPaymentService $wifiPlanPaymentService,
         private readonly PaymentFulfillmentService $paymentFulfillmentService,
-        private readonly LegalNumberingService $legalNumberingService
+        private readonly LegalNumberingService $legalNumberingService,
+        private readonly WalletService $walletService
     ) {
     }
 
@@ -58,19 +60,35 @@ class PaymentController extends Controller
             ]);
         }
 
-        if ($purpose === 'service') {
-            return $this->initiateServicePayment($request, $user->getKey());
-        }
+        try {
+            if ($purpose === 'service') {
+                return $this->initiateServicePayment($request, $user->getKey());
+            }
 
-        if ($purpose === 'wifi_plan') {
-            return $this->initiateWifiPlanPayment($request, $user->getKey());
-        }
+            if ($purpose === 'wifi_plan') {
+                return $this->initiateWifiPlanPayment($request, $user->getKey());
+            }
 
-        if ($purpose === 'package') {
-            return $this->initiatePackagePayment($request, $user->getKey());
-        }
+            if ($purpose === 'package') {
+                return $this->initiatePackagePayment($request, $user->getKey());
+            }
 
-        return $this->initiateOrderPayment($request, $user->getKey());
+            return $this->initiateOrderPayment($request, $user->getKey());
+        } catch (ValidationException $exception) {
+            if ($purpose === 'wifi_plan') {
+                Log::warning('payment.initiate.wifi_plan.validation_failed', [
+                    'user_id' => $user->getKey(),
+                    'errors' => $exception->errors(),
+                    'request_extract' => [
+                        'payment_method' => $request->input('payment_method'),
+                        'currency' => $request->input('currency'),
+                        'wifi_plan_id' => $request->input('wifi_plan_id'),
+                    ],
+                ]);
+            }
+
+            throw $exception;
+        }
     }
 
     public function confirm(Request $request): JsonResponse
@@ -312,13 +330,17 @@ class PaymentController extends Controller
         $method = $this->normalizePaymentMethodForPurpose($validated['payment_method'], 'wifi_plan');
         $currency = strtoupper(trim($validated['currency']));
 
+        if ($method === 'wallet') {
+            $currency = $this->walletService->getPrimaryCurrency();
+        }
+
         if (! PaymentGatewayCurrencyPolicy::supports($method, $currency)) {
             throw ValidationException::withMessages([
                 'currency' => __('gateway_currency_unsupported'),
             ]);
         }
 
-        if (is_string($plan->currency) && $plan->currency !== '') {
+        if ($method !== 'wallet' && is_string($plan->currency) && $plan->currency !== '') {
             $planCurrency = strtoupper(trim($plan->currency));
             if ($planCurrency !== '' && $planCurrency !== $currency) {
                 throw ValidationException::withMessages([
@@ -847,6 +869,10 @@ class PaymentController extends Controller
         }
 
         $payload['payment_method'] = $methodHint;
+
+        if ($methodHint === 'wallet') {
+            $payload['currency'] = $this->walletService->getPrimaryCurrency();
+        }
 
         unset($payload['bank_id']);
 

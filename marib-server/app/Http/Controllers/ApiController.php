@@ -224,7 +224,49 @@ class ApiController extends Controller {
         'ليرة تركية' => 'TRY',
     ];
 
+    private function normalizeCurrencyCode(?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
 
+        $trimmed = trim($value);
+
+        if ($trimmed === '') {
+            return null;
+        }
+
+        $lower = strtolower($trimmed);
+
+        if (array_key_exists($lower, self::CURRENCY_SYNONYMS)) {
+            return self::CURRENCY_SYNONYMS[$lower];
+        }
+
+        if (preg_match('/^[a-z]{3}$/i', $trimmed) === 1) {
+            return strtoupper($trimmed);
+        }
+
+        return null;
+    }
+
+    private function getAppCurrencyCode(): string
+    {
+        return $this->normalizeCurrencyCode((string) config('app.currency')) ?? 'YER';
+    }
+
+    private function normalizeWalletCurrency(WalletAccount $walletAccount, string $defaultCurrency): string
+    {
+        $normalized = $this->normalizeCurrencyCode($walletAccount->currency) ?? $defaultCurrency;
+
+        if ($walletAccount->currency !== $normalized) {
+            $walletAccount->forceFill(['currency' => $normalized])->save();
+        }
+
+        return $normalized;
+    }
+
+
+    
     protected function getWalletWithdrawalMethods(): array
     {
         $configuredMethods = config('wallet.withdrawals.methods', []);
@@ -3770,7 +3812,7 @@ class ApiController extends Controller {
     {
         try {
             $user = Auth::user();
-            $defaultCurrency = strtoupper((string) config('app.currency', 'SAR'));
+            $defaultCurrency = $this->getAppCurrencyCode();
 
             $walletAccount = WalletAccount::query()->firstOrCreate(
                 ['user_id' => $user->id],
@@ -3780,15 +3822,15 @@ class ApiController extends Controller {
                 ]
             
             );
+            $accountCurrency = $this->normalizeWalletCurrency($walletAccount, $defaultCurrency);
 
             $latestTransaction = $walletAccount->transactions()
                 ->latest('created_at')
                 ->first();
 
 
-            $currency = strtoupper((string) ($walletAccount->currency
-                ?? $latestTransaction?->currency
-                ?? $defaultCurrency));
+            $transactionCurrency = $this->normalizeCurrencyCode($latestTransaction?->currency);
+            $currency = $transactionCurrency ?? $accountCurrency;
 
 
             $data = [
@@ -3830,7 +3872,7 @@ class ApiController extends Controller {
 
         try {
             $user = Auth::user();
-            $defaultCurrency = strtoupper((string) config('app.currency', 'SAR'));
+            $defaultCurrency = $this->getAppCurrencyCode();
 
             $walletAccount = WalletAccount::query()->firstOrCreate(
                 ['user_id' => $user->id],
@@ -3840,14 +3882,14 @@ class ApiController extends Controller {
                 ]
             
             );
+            $accountCurrency = $this->normalizeWalletCurrency($walletAccount, $defaultCurrency);
 
             $latestTransaction = $walletAccount->transactions()
                 ->latest('created_at')
                 ->first();
 
-            $currency = strtoupper((string) ($walletAccount->currency
-                ?? $latestTransaction?->currency
-                ?? $defaultCurrency));
+            $transactionCurrency = $this->normalizeCurrencyCode($latestTransaction?->currency);
+            $currency = $transactionCurrency ?? $accountCurrency;
 
 
             $query = WalletTransaction::query()
@@ -3902,7 +3944,7 @@ class ApiController extends Controller {
         try {
 
             $user = Auth::user();
-            $defaultCurrency = strtoupper((string) config('app.currency', 'SAR'));
+            $defaultCurrency = $this->getAppCurrencyCode();
             $walletAccount = WalletAccount::query()->firstOrCreate(
                 ['user_id' => $user->id],
                 [
@@ -3910,9 +3952,10 @@ class ApiController extends Controller {
                     'currency' => $defaultCurrency,
                 ]
             );
+            $accountCurrency = $this->normalizeWalletCurrency($walletAccount, $defaultCurrency);
 
             $methods = array_values($this->getWalletWithdrawalMethods());
-            $currency = strtoupper((string) ($walletAccount->currency ?? $defaultCurrency));
+            $currency = $accountCurrency;
 
             $data = [
                 'methods' => array_map(static function (array $method) {
@@ -3975,7 +4018,7 @@ class ApiController extends Controller {
 
         try {
             $user = Auth::user();
-            $defaultCurrency = strtoupper((string) config('app.currency', 'SAR'));
+            $defaultCurrency = $this->getAppCurrencyCode();
 
             $walletAccount = WalletAccount::query()->firstOrCreate(
                 ['user_id' => $user->id],
@@ -3984,6 +4027,7 @@ class ApiController extends Controller {
                     'currency' => $defaultCurrency,
                 ]
             );
+            $accountCurrency = $this->normalizeWalletCurrency($walletAccount, $defaultCurrency);
 
             $amount = round((float) $validated['amount'], 2);
 
@@ -4025,9 +4069,8 @@ class ApiController extends Controller {
             ]);
 
 
-            $currency = strtoupper((string) ($walletAccount->currency
-                ?? $transaction->currency
-                ?? $defaultCurrency));
+            $transactionCurrency = $this->normalizeCurrencyCode($transaction->currency ?? null);
+            $currency = $transactionCurrency ?? $accountCurrency;
 
             $data = [
                 'id' => $withdrawalRequest->getKey(),
@@ -4085,7 +4128,7 @@ class ApiController extends Controller {
 
         try {
             $user = Auth::user();
-            $defaultCurrency = strtoupper((string) config('app.currency', 'SAR'));
+            $defaultCurrency = $this->getAppCurrencyCode();
 
             $walletAccount = WalletAccount::query()->firstOrCreate(
                 ['user_id' => $user->id],
@@ -4095,6 +4138,7 @@ class ApiController extends Controller {
                 ]
             
             );
+            $accountCurrency = $this->normalizeWalletCurrency($walletAccount, $defaultCurrency);
 
             $query = WalletWithdrawalRequest::query()
                 ->with(['transaction', 'account'])
@@ -4119,9 +4163,8 @@ class ApiController extends Controller {
             $firstWithdrawal = $withdrawals[0] ?? null;
             $withdrawalCurrency = is_array($firstWithdrawal) ? ($firstWithdrawal['currency'] ?? null) : null;
 
-            $currency = strtoupper((string) ($walletAccount->currency
-                ?? $withdrawalCurrency
-                ?? $defaultCurrency));
+            $withdrawalCurrencyNormalized = $this->normalizeCurrencyCode($withdrawalCurrency);
+            $currency = $withdrawalCurrencyNormalized ?? $accountCurrency;
 
 
             $data = [
@@ -4297,16 +4340,16 @@ class ApiController extends Controller {
                 $notes
             );
 
-            $responseCurrency = $debitTransaction->currency
+            $responseCurrency = $this->normalizeCurrencyCode($debitTransaction->currency
                 ?? $creditTransaction->currency
-                ?? $normalizedCurrency
-                ?? config('app.currency', 'SAR');
+                ?? $normalizedCurrency)
+                ?? $this->getAppCurrencyCode();
 
 
             $data = [
                 'idempotency_key' => $idempotencyKey,
                 'amount' => round($amount, 2),
-                'currency' => Str::upper((string) $responseCurrency),
+                'currency' => $responseCurrency,
                 'sender' => [
                     'id' => $sender->id,
                     'name' => $sender->name,
@@ -9639,15 +9682,15 @@ public function storeRequestDevice(Request $request)
 
         foreach ($settingKeys as $key) {
             $value = Setting::where('name', $key)->value('value');
+            $normalized = $this->normalizeCurrencyCode($value);
 
-            if (!empty($value)) {
-                return strtoupper(trim((string) $value));
+            if ($normalized !== null) {
+                return $normalized;
             }
         }
 
-        $fallbackCurrency = config('app.currency');
+        return $this->getAppCurrencyCode();
 
-        return filled($fallbackCurrency) ? strtoupper((string) $fallbackCurrency) : null;
     }
 
     private function generateManualPaymentSignedUrl(?string $path): ?string {
@@ -9850,10 +9893,8 @@ public function storeRequestDevice(Request $request)
 
 
 
-        $requestedCurrency = $request->input('currency');
-        $currency = filled($requestedCurrency)
-            ? strtoupper($requestedCurrency)
-            : $this->getDefaultCurrencyCode();
+        $requestedCurrency = $this->normalizeCurrencyCode($request->input('currency'));
+        $currency = $requestedCurrency ?? $this->getDefaultCurrencyCode();
 
         $user = Auth::user();
 

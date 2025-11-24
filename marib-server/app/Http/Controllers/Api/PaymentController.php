@@ -532,6 +532,14 @@ class PaymentController extends Controller
 
     private function initiateOrderPayment(Request $request, int $userId): JsonResponse
     {
+
+
+        $incomingCurrency = $request->input('currency');
+
+        if (! is_string($incomingCurrency) || trim($incomingCurrency) === '') {
+            $request->merge(['currency' => null]);
+        }
+
         $validated = $request->validate([
             'payment_method' => ['required', 'string', 'max:191'],
             'currency' => ['nullable', 'string', 'size:3'],

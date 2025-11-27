@@ -1,5 +1,5 @@
-﻿// FILE: lib/ui/screens/auth/sign_up/signup_screen.dart
-// Refactored: ط§ظ„ظ…ظ†ط·ظ‚ ظ‡ظ†ط§ ظپظ‚ط· + ط§ط³طھط¯ط¹ط§ط، ظˆط§ط¬ظ‡ط§طھ ظ…ظ† signup_sections.dart ظˆ account_type_selector.dart
+// FILE: lib/ui/screens/auth/sign_up/signup_screen.dart
+// Refactored: ?§?„?…?†?·?‚ ?‡?†?§ ???‚?· + ?§?????????§?? ???§?¬?‡?§?? ?…?† signup_sections.dart ?? account_type_selector.dart
 import 'dart:io';
 import 'dart:convert';
 import 'package:flutter_svg/svg.dart';
@@ -31,12 +31,12 @@ import 'package:flutter/foundation.dart';
 
 import 'package:marib/ui/screens/auth/sign_up/email_verification_screen.dart';
 
-// ط§ظ„ظˆط§ط¬ظ‡ط§طھ ط§ظ„ظ…ظپطµظˆظ„ط©
+// ?§?„???§?¬?‡?§?? ?§?„?…???µ???„?©
 import 'Widgets/account_type_selector.dart';
 import 'Widgets/signup_shared_widgets.dart';
 import 'Widgets/real_estate_section.dart';
 import 'Widgets/business_section.dart';
-import 'dart:async'; // ظ„ظ„ظ€ Timer
+import 'dart:async'; // ?„?„?€ Timer
 import 'package:marib/data/cubits/system/fetch_system_settings_cubit.dart';
 import 'package:marib/utils/notification/notification_service.dart';
 import '../widgets/auth_status_bar.dart';
@@ -84,7 +84,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
   final GlobalKey<FormState> _formKey = GlobalKey();
   final TextEditingController _emailController = TextEditingController();
 
-  // ط­ظ‚ظˆظ„ ط§ظ„ط¹ظ‚ط§ط±ظٹ (ظ†ظˆط¹ 2)
+  // ?­?‚???„ ?§?„???‚?§?±?? (?†???? 2)
   final TextEditingController _officeNameController = TextEditingController();
   final TextEditingController _officePhoneController = TextEditingController();
   final TextEditingController _officeWhatsappController =
@@ -92,7 +92,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
   final TextEditingController _officeLocationController =
       TextEditingController();
 
-  // ط­ظ‚ظˆظ„ ط§ظ„طھط¬ط§ط±ظٹ (ظ†ظˆط¹ 3)
+  // ?­?‚???„ ?§?„???¬?§?±?? (?†???? 3)
   final TextEditingController _businessNameController = TextEditingController();
   final TextEditingController _businessPhoneController =
       TextEditingController();
@@ -105,7 +105,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
   final TextEditingController _storeStaffEmailController =
       TextEditingController();
 
-  // ظ‚ظˆط§ط¦ظ… ظ„ظ„ط­ط³ط§ط¨ ط§ظ„طھط¬ط§ط±ظٹ
+  // ?‚???§?¦?… ?„?„?­???§?¨ ?§?„???¬?§?±??
   List<int> selectedBusinessCategories = [];
   List<StoreGatewayOption> _storeGateways = const <StoreGatewayOption>[];
   final Set<int> _selectedStoreGatewayIds = <int>{};
@@ -116,24 +116,24 @@ class _SignupScreenState extends CloudState<SignupScreen> {
   bool _isLoadingStoreGateways = false;
   String? _storeGatewaysError;
 
-  // طµظˆط±/ظ…ظ„ظپط§طھ
+  // ?µ???±/?…?„???§??
   File? _officeLogoImage;
   File? _businessLogoImage;
   File? _commercialRegisterFile;
   final ImagePicker _picker = ImagePicker();
 
-  // ط§ظ„ظ…ظˆظ‚ط¹
+  // ?§?„?…???‚??
   double? _latitude, _longitude;
   String? _selectedAddress;
   bool _isLocationLoading = false;
 
-  // ط§ظ„ظ…ظˆظ‚ط¹ ظ„ظƒظ„ ظ†ظˆط¹
+  // ?§?„?…???‚?? ?„???„ ?†????
   double? _officeLatitude, _officeLongitude;
   String? _officeSelectedAddress;
   double? _businessLatitude, _businessLongitude;
   String? _businessSelectedAddress;
 
-  // ط£ظˆظ‚ط§طھ ط§ظ„ط¹ظ…ظ„ (طھط¬ط§ط±ظٹ)
+  // ?????‚?§?? ?§?„???…?„ (???¬?§?±??)
   TimeOfDay? _openingTime;
   TimeOfDay? _closingTime;
 
@@ -151,7 +151,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
 
   bool isUploading = false;
 
-  // ط£ظˆظ‚ط§طھ ط§ظ„ط¹ظ…ظ„ (ط§ظپطھط±ط§ط¶ظٹ: ط¬ظ…ظٹط¹ ط§ظ„ط£ظٹط§ظ… ط؛ظٹط± ظ…طھط§ط­ط©)
+  // ?????‚?§?? ?§?„???…?„ (?§?????±?§?¶??: ?¬?…???? ?§?„?????§?… ?????± ?…???§?­?©)
   Map<String, dynamic> _workingHours = {
     "sat": {"enabled": false, "from": null, "to": null},
     "sun": {"enabled": false, "from": null, "to": null},
@@ -163,7 +163,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
   };
 
   String? countryCode;
-  String? flagEmoji = "ًں‡¾ًں‡ھ";
+  String? flagEmoji = "??‡???‡?";
 
   // Social login
   String? currentSelectedAccountType;
@@ -181,14 +181,67 @@ class _SignupScreenState extends CloudState<SignupScreen> {
     }
   }
 
-  // ط§ط®طھظٹط§ط± طµظˆط±ط©
+  Future<void> _openAccountTypeBottomSheet() async {
+    final String? selected = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        String? localValue = currentSelectedAccountType;
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            return SafeArea(
+              top: false,
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: 16,
+                  right: 16,
+                  top: 16,
+                  bottom: 16 + MediaQuery.of(ctx).viewInsets.bottom,
+                ),
+                child: SingleChildScrollView(
+                  child: AccountTypeSelector(
+                    value: localValue,
+                    onChanged: (v) => setSheetState(() => localValue = v),
+                    onContinue: () => Navigator.pop(ctx, localValue),
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    if (!mounted) return;
+    if (selected != null) {
+      setState(() => currentSelectedAccountType = selected);
+      Navigator.pushReplacement(
+        context,
+        AppPageRoute.build(
+          builder: (context) => SignupScreen(
+            selectedAccountType: selected,
+            phoneNumber: widget.phoneNumber,
+            countryCode: widget.countryCode,
+            fromSocialLogin: false,
+          ),
+          motionPattern: AppMotionPattern.glide,
+        ),
+      );
+    }
+  }
+
+  // ?§?®?????§?± ?µ???±?©
   Future<void> _pickImage(String type) async {
     try {
-      // ط§ط¨ط¯ط£ "ط±ظپط¹" ظˆط§ط¬ظ‡ط©ظ‹
+      // ?§?¨???? "?±????" ???§?¬?‡?©?‹
       if (type == 'office_logo') {
         setState(() {
           _officeLogoUploading = true;
-          _officeLogoProgress = null; // ط£ظˆ ظ‚ظٹظ…ط© 0..1 ط¥ط°ط§ ط¹ظ†ط¯ظƒ طھظ‚ط¯ظ… ط­ظ‚ظٹظ‚ظٹ
+          _officeLogoProgress =
+              null; // ???? ?‚???…?© 0..1 ???°?§ ???†???? ???‚???… ?­?‚???‚??
         });
       } else if (type == 'business_logo') {
         setState(() {
@@ -214,10 +267,10 @@ class _SignupScreenState extends CloudState<SignupScreen> {
         });
       }
 
-      // ظ…ط­ط§ظƒط§ط© ط±ظپط¹ ط³ط±ظٹط¹ ظ„ط¥ط¸ظ‡ط§ط± ط§ظ„ظ„ظˆط¯ط± (ط§ط­ط°ظپ ط§ظ„طھط£ط®ظٹط± ظ„ظˆ ط¹ظ†ط¯ظƒ ط±ظپط¹ ط­ظ‚ظٹظ‚ظٹ)
+      // ?…?­?§???§?© ?±???? ???±???? ?„???¸?‡?§?± ?§?„?„?????± (?§?­?°?? ?§?„?????®???± ?„?? ???†???? ?±???? ?­?‚???‚??)
       await Future.delayed(const Duration(milliseconds: 400));
 
-      // ط£ظ†ظ‡ظگ ط§ظ„ط±ظپط¹ + ظپط¹ظ‘ظ„ طھظ„ظ…ظٹط­ ط§ظ„ظ†ط¬ط§ط­ 3 ط«ظˆط§ظ†ظٹ
+      // ???†?‡?? ?§?„?±???? + ?????‘?„ ???„?…???­ ?§?„?†?¬?§?­ 3 ?«???§?†??
       if (type == 'office_logo') {
         if (mounted) {
           setState(() {
@@ -242,7 +295,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
         }
       }
     } catch (e) {
-      // ط£ظ†ظ‡ظگ ط§ظ„ط±ظپط¹ ظپظٹ ط­ط§ظ„ ط§ظ„ط®ط·ط£
+      // ???†?‡?? ?§?„?±???? ???? ?­?§?„ ?§?„?®?·??
       if (mounted) {
         setState(() {
           _officeLogoUploading = false;
@@ -257,9 +310,9 @@ class _SignupScreenState extends CloudState<SignupScreen> {
     }
   }
 
-  // ط§ط®طھظٹط§ط± ظ…ظ„ظپ ط§ظ„ط³ط¬ظ„ ط§ظ„طھط¬ط§ط±ظٹ
+  // ?§?®?????§?± ?…?„?? ?§?„???¬?„ ?§?„???¬?§?±??
 
-// ظ„ظˆ ط¨طھط³طھط®ط¯ظ… kIsWeb:
+// ?„?? ?¨???????®???… kIsWeb:
 
   static const _maxFileSizeBytes = 10 * 1024 * 1024; // 10MB
   static const _allowedExt = [
@@ -274,19 +327,19 @@ class _SignupScreenState extends CloudState<SignupScreen> {
 
   Future<void> _pickFile() async {
     try {
-      // 1) ظپطھط­ ظ…ظ†طھظ‚ظٹ ط§ظ„ظ…ظ„ظپط§طھ (ظ…ط§ ظ†ظپط¹ظ‘ظ„ ط§ظ„ظ„ظˆط¯ط± ظ‡ظ†ط§ ظ„ط£ظ† ظ†ط§ظپط°ط© ط§ظ„ظ†ط¸ط§ظ… طھط؛ط·ظٹ ط§ظ„ظˆط§ط¬ظ‡ط©)
+      // 1) ?????­ ?…?†???‚?? ?§?„?…?„???§?? (?…?§ ?†?????‘?„ ?§?„?„?????± ?‡?†?§ ?„???† ?†?§???°?© ?§?„?†?¸?§?… ?????·?? ?§?„???§?¬?‡?©)
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: _allowedExt,
-        withData: true, // ظ…ظ‡ظ… ظ„ظ„ظˆظٹط¨
+        withData: true, // ?…?‡?… ?„?„?????¨
       );
 
-      if (result == null) return; // ط§ظ„ظ…ط³طھط®ط¯ظ… ط£ظ„ط؛ظ‰
+      if (result == null) return; // ?§?„?…?????®???… ???„???‰
 
       final picked = result.files.single;
       final ext = (picked.extension ?? '').toLowerCase();
 
-      // طھط­ظ‚ظ‚ ط§ظ„ط§ظ…طھط¯ط§ط¯
+      // ???­?‚?‚ ?§?„?§?…?????§??
       if (!_allowedExt.contains(ext)) {
         HelperUtils.showSnackBarMessage(
           context,
@@ -296,18 +349,18 @@ class _SignupScreenState extends CloudState<SignupScreen> {
         return;
       }
 
-      // طھط­ظ‚ظ‚ ط§ظ„ط­ط¬ظ…
+      // ???­?‚?‚ ?§?„?­?¬?…
       final size = picked.size;
       if (size > _maxFileSizeBytes) {
         HelperUtils.showSnackBarMessage(
           context,
-          "fileTooLarge".translate(context), // "ط§ظ„ط­ط¬ظ… ظٹطھط¬ط§ظˆط² 10MB"
+          "fileTooLarge".translate(context), // "?§?„?­?¬?… ?????¬?§???? 10MB"
           messageDuration: 3,
         );
         return;
       }
 
-      // 2) ط§ط­ظپط¸ ط§ظ„ظ…ظ„ظپ ط§ظ„ظ…ط®طھط§ط±
+      // 2) ?§?­???¸ ?§?„?…?„?? ?§?„?…?®???§?±
       if (kIsWeb) {
         if (picked.bytes == null) {
           HelperUtils.showSnackBarMessage(
@@ -317,12 +370,12 @@ class _SignupScreenState extends CloudState<SignupScreen> {
           );
           return;
         }
-        // ط­ظپط¸/ط±ظپط¹ ظ…ط¨ط§ط´ط±ط© ط¨ط§ظ„ظ€ bytes ط¹ظ†ط¯ظƒ ط¥ظ† ط§ط­طھط¬طھ:
+        // ?­???¸/?±???? ?…?¨?§?´?±?© ?¨?§?„?€ bytes ???†???? ???† ?§?­???¬??:
         // _webFileBytes = picked.bytes!;
         // _webFileName  = picked.name;
         setState(() {
           _commercialRegisterFile =
-              null; // ظ„ط§ ظ†ظ…ظ„ظƒ File ط¹ظ„ظ‰ ط§ظ„ظˆظٹط¨طŒ ط§ط­طھظپط¸ ط¨ط§ظ„ط§ط³ظ… ظپظ‚ط· ط¥ظ† ط´ط¦طھ
+              null; // ?„?§ ?†?…?„?? File ???„?‰ ?§?„?????¨?? ?§?­?????¸ ?¨?§?„?§???… ???‚?· ???† ?´?¦??
         });
       } else {
         final path = picked.path;
@@ -339,12 +392,12 @@ class _SignupScreenState extends CloudState<SignupScreen> {
         });
       }
 
-      // 3) ظپط¹ظ‘ظ„ ط§ظ„ظ„ظˆط¯ط± ط£ط«ظ†ط§ط، "ط§ظ„ط±ظپط¹ ط§ظ„ظپط¹ظ„ظٹ"
+      // 3) ?????‘?„ ?§?„?„?????± ???«?†?§?? "?§?„?±???? ?§?„?????„??"
       setState(() => isUploading = true);
       try {
-        // TODO: ط§ط±ظپط¹ ط§ظ„ظ…ظ„ظپ ظ„ظ„ط³ظٹط±ظپط± ظ‡ظ†ط§
+        // TODO: ?§?±???? ?§?„?…?„?? ?„?„?????±???± ?‡?†?§
         // await api.uploadCommercialRegister(_commercialRegisterFile or picked.bytes);
-        await Future.delayed(const Duration(seconds: 1)); // ظ…ط­ط§ظƒط§ط© ط±ظپط¹
+        await Future.delayed(const Duration(seconds: 1)); // ?…?­?§???§?© ?±????
       } finally {
         if (mounted) setState(() => isUploading = false);
       }
@@ -361,11 +414,11 @@ class _SignupScreenState extends CloudState<SignupScreen> {
   void _removePickedFile() {
     setState(() {
       _commercialRegisterFile = null;
-      // _webFileBytes = null; _webFileName = null; // ظ„ظ„ظˆظٹط¨ ط¥ظ† ظˆط¬ظگط¯
+      // _webFileBytes = null; _webFileName = null; // ?„?„?????¨ ???† ???¬????
     });
   }
 
-  // ط§ط®طھظٹط§ط± ط§ظ„ظˆظ‚طھ
+  // ?§?®?????§?± ?§?„???‚??
   Future<void> _selectTime(BuildContext context, bool isOpeningTime) async {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
@@ -404,7 +457,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
     }
   }
 
-  // ط§ظ„ظ…ظˆظ‚ط¹ ط§ظ„ط­ط§ظ„ظٹ
+  // ?§?„?…???‚?? ?§?„?­?§?„??
   Future<void> _getCurrentLocation() async {
     setState(() {
       _isLocationLoading = true;
@@ -451,7 +504,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
 
       setState(() {
         if (widget.selectedAccountType == "2") {
-          // ط¹ظ‚ط§ط±ظٹ
+          // ???‚?§?±??
           _officeLatitude = position.latitude;
           _officeLongitude = position.longitude;
           if (placemarks.isNotEmpty) {
@@ -461,7 +514,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
             _officeLocationController.text = _officeSelectedAddress ?? "";
           }
         } else if (widget.selectedAccountType == "3") {
-          // طھط¬ط§ط±ظٹ
+          // ???¬?§?±??
           _businessLatitude = position.latitude;
           _businessLongitude = position.longitude;
           if (placemarks.isNotEmpty) {
@@ -471,7 +524,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
             _businessLocationController.text = _businessSelectedAddress ?? "";
           }
         } else {
-          // ظپط±ط¯ظٹ
+          // ???±????
           _latitude = position.latitude;
           _longitude = position.longitude;
           if (placemarks.isNotEmpty) {
@@ -500,12 +553,12 @@ class _SignupScreenState extends CloudState<SignupScreen> {
     }
   }
 
-  // ط²ط± ط§ظ„ظ…ظˆظ‚ط¹
+  // ???± ?§?„?…???‚??
   VoidCallback _getLocationCallback() {
     return _isLocationLoading ? () {} : _getCurrentLocation;
   }
 
-  // ظ…ظ†طھظ‚ظٹ ط§ظ„ط¯ظˆظ„ط©
+  // ?…?†???‚?? ?§?„?????„?©
   void _showCountryPicker() {
     showCountryPicker(
       context: context,
@@ -692,10 +745,10 @@ class _SignupScreenState extends CloudState<SignupScreen> {
         baseColor: statusBarBase,
       ),
       child: Scaffold(
-        // ط§ظ„ط®ظ„ظپظٹط© ط§ظ„ط¹ط§ظ…ط©
+        // ?§?„?®?„?????© ?§?„???§?…?©
         backgroundColor: context.color.backgroundColor,
 
-        // ط§ظ„ط¬ط³ظ…: ط®ظ„ظپظٹط© ظ…طھط¯ط±ط¬ط© + ظ…ط­طھظˆظ‰ ط¯ط§ط®ظ„ SafeArea (top: false) ظ…ط¹ ط­ط¬ط² ط§ظ„ظ…ط³ط§ط­ط© ظٹط¯ظˆظٹظ‹ط§
+        // ?§?„?¬???…: ?®?„?????© ?…?????±?¬?© + ?…?­?????‰ ???§?®?„ SafeArea (top: false) ?…?? ?­?¬?? ?§?„?…???§?­?© ?????????‹?§
         body: DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -709,7 +762,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
           child: SafeArea(
             top: false,
             bottom: false,
-            // ط®ظ„ظٹظ‡ ظٹط±ط³ظ… ط­طھظ‰ ط¢ط®ط± ط§ظ„ط´ط§ط´ط© (ظ†ط¶ط¨ط· ط§ظ„ظ€ inset ط¨ط§ظ„ط³ظپظ„ ط¹ظ†ط¯ ط§ظ„ظƒظٹط¨ظˆط±ط¯ ظٹط¯ظˆظٹظ‹ط§)
+            // ?®?„???‡ ???±???… ?­???‰ ???®?± ?§?„?´?§?´?© (?†?¶?¨?· ?§?„?€ inset ?¨?§?„?????„ ???†?? ?§?„?????¨???±?? ?????????‹?§)
             child: CustomScrollView(
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               slivers: [
@@ -719,7 +772,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
                     baseColor: statusBarBase,
                   ),
                 ),
-                // ===== ط§ظ„ظ‡ظٹط¯ط±: ط´ط¹ط§ط± + ط¹ط¨ط§ط±ط© طھط±ط­ظٹط¨ظٹط© =====
+                // ===== ?§?„?‡?????±: ?´???§?± + ???¨?§?±?© ???±?­???¨???© =====
                 SliverAppBar(
                   pinned: true,
                   floating: false,
@@ -763,7 +816,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
                   ),
                 ),
 
-                // ===== ط§ظ„ظ…ط­طھظˆظ‰ (ط¬ط³ظ… ط§ظ„ظ†ظ…ظˆط°ط¬) =====
+                // ===== ?§?„?…?­?????‰ (?¬???… ?§?„?†?…???°?¬) =====
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: EdgeInsets.fromLTRB(6, 8, 6, 16 + bottomInset),
@@ -785,30 +838,28 @@ class _SignupScreenState extends CloudState<SignupScreen> {
 
                             if (widget.fromSocialLogin == true &&
                                 widget.selectedAccountType == null) ...[
-                              AccountTypeSelector(
-                                value: currentSelectedAccountType,
-                                onChanged: (v) => setState(
-                                    () => currentSelectedAccountType = v),
-                                onContinue: () {
-                                  Navigator.pushReplacement(
-                                    context,
-                                    AppPageRoute.build(
-                                      builder: (context) => SignupScreen(
-                                        selectedAccountType:
-                                            currentSelectedAccountType,
-                                        phoneNumber: widget.phoneNumber,
-                                        countryCode: widget.countryCode,
-                                        fromSocialLogin: false,
-                                      ),
-                                      motionPattern: AppMotionPattern.glide,
-                                    ),
-                                  );
-                                },
+                              Text("chooseAccountType".translate(context))
+                                  .size(context.font.large)
+                                  .color(context.color.textDefaultColor),
+                              const SizedBox(height: 8),
+                              Text("mustSelectAccountType".translate(context))
+                                  .size(context.font.small)
+                                  .color(context.color.textColorDark
+                                      .withOpacity(0.7)),
+                              const SizedBox(height: 12),
+                              UiUtils.buildButton(
+                                context,
+                                onPressed: _openAccountTypeBottomSheet,
+                                buttonTitle:
+                                    "chooseAccountType".translate(context),
+                                radius: 12,
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 14, horizontal: 8),
                               ),
                               const SizedBox(height: 24),
                             ],
 
-                            // ط§ظ„ط¹ظ‚ط§ط±ظٹ
+                            // ?§?„???‚?§?±??
                             if (widget.selectedAccountType == "2") ...[
                               RealEstateSection(
                                 logo: _officeLogoImage,
@@ -818,19 +869,19 @@ class _SignupScreenState extends CloudState<SignupScreen> {
                                 officeWhatsapp: _officeWhatsappController,
                                 officeLocation: _officeLocationController,
                                 prefixText:
-                                    "${flagEmoji ?? "ًں‡¾ًں‡ھ"} ${countryCode ?? "+967"}",
+                                    "${flagEmoji ?? "??‡???‡?"} ${countryCode ?? "+967"}",
                                 onPickCountry: _showCountryPicker,
                                 isLocationLoading: _isLocationLoading,
                                 onGetLocation: _getLocationCallback(),
                                 showLogoPicker: false,
 
-                                // â¬‡ï¸ڈ ظ…ظ‡ظ… ظ„ط¹ط±ط¶ ط§ظ„ظ„ظˆط¯ط±/ط§ظ„طھظ„ظ…ظٹط­
+                                // â¬‡?¸? ?…?‡?… ?„???±?¶ ?§?„?„?????±/?§?„???„?…???­
                                 isLogoUploading: _officeLogoUploading,
                                 logoUploadProgress: _officeLogoProgress,
                                 showLogoPreviewHint: _officeLogoPreviewHint,
                               )
                             ],
-                            // ط§ظ„ط£ظپط±ط§ط¯
+                            // ?§?„?????±?§??
                             if (widget.selectedAccountType == "1" ||
                                 widget.selectedAccountType == "individual") ...[
                               EmailOnlySection(
@@ -926,7 +977,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
                           whatsapp: _businessWhatsappController,
                           location: _businessLocationController,
                           prefixText:
-                              "${flagEmoji ?? "ًں‡¾ًں‡ھ"} ${countryCode ?? "+967"}",
+                              "${flagEmoji ?? "??‡???‡?"} ${countryCode ?? "+967"}",
                           onPickCountry: _showCountryPicker,
                           isLocationLoading: _isLocationLoading,
                           onGetLocation: _getLocationCallback(),
@@ -1024,8 +1075,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
               ),
             ),
             TextButton(
-              onPressed: () =>
-                  Navigator.of(context).pushNamed(Routes.login),
+              onPressed: () => Navigator.of(context).pushNamed(Routes.login),
               child: Text("login".translate(context))
                   .underline()
                   .color(context.color.territoryColor),
@@ -1134,7 +1184,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
   }
 
   bool _validateWithoutPhone() {
-    // ظ†ظˆط¹ 3 (طھط¬ط§ط±ظٹ): ظ†طھط­ظ‚ظ‚ ظ…ظ† ط§ظ„ط§ط³ظ…/ط§ظ„ظ…ظˆظ‚ط¹/ط§ظ„ط£ظ‚ط³ط§ظ… ظپظ‚ط· â€” ط¨ط¯ظˆظ† ظ‡ط§طھظپ/ظˆط§طھط³ط§ط¨
+    // ?†???? 3 (???¬?§?±??): ?†???­?‚?‚ ?…?† ?§?„?§???…/?§?„?…???‚??/?§?„???‚???§?… ???‚?· â€” ?¨?????† ?‡?§????/???§?????§?¨
     if (widget.selectedAccountType == "3") {
       if (_businessNameController.text.trim().isEmpty) {
         HelperUtils.showSnackBarMessage(
@@ -1165,7 +1215,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
       if (staffUsername.isEmpty) {
         HelperUtils.showSnackBarMessage(
           context,
-          "يرجى إدخال اسم المستخدم الخاص ببريد لوحة المتجر.",
+          "???? ????? ??? ???????? ????? ????? ???? ??????.",
           messageDuration: 3,
         );
         return false;
@@ -1175,14 +1225,14 @@ class _SignupScreenState extends CloudState<SignupScreen> {
           !_staffUsernamePattern.hasMatch(staffUsername)) {
         HelperUtils.showSnackBarMessage(
           context,
-          "المعرّف يجب أن يكون من ${Constant.storeStaffEmailMinLength} إلى ${Constant.storeStaffEmailMaxLength} رمزًا ويحتوي على أحرف إنجليزية أو أرقام أو (. - _).",
+          "??????? ??? ?? ???? ?? ${Constant.storeStaffEmailMinLength} ??? ${Constant.storeStaffEmailMaxLength} ????? ?????? ??? ???? ???????? ?? ????? ?? (. - _).",
           messageDuration: 4,
         );
         return false;
       }
     }
 
-    // ظ†ظˆط¹ 2 (ط¹ظ‚ط§ط±ظٹ): ظ„ط§ ظ†ط¬ط¹ظ„ ط£ظٹ ط­ظ‚ظ„ ط¥ط¬ط¨ط§ط±ظٹ ط§ظ„ط¢ظ†
+    // ?†???? 2 (???‚?§?±??): ?„?§ ?†?¬???„ ???? ?­?‚?„ ???¬?¨?§?±?? ?§?„???†
     return true;
   }
 
@@ -1305,7 +1355,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
     }
   }
 
-  // ط¥ط±ط³ط§ظ„ ط§ظ„ط·ظ„ط¨
+  // ???±???§?„ ?§?„?·?„?¨
 
   Future<void> _submitForm() async {
     final form = _formKey.currentState;
@@ -1314,7 +1364,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
     form.save();
     final acctType = widget.selectedAccountType;
     final bool passValidation = (acctType == "2" || acctType == "3")
-        ? _validateWithoutPhone() // ظ†طھط¬ط§ظˆط² طھط­ظ‚ظ‚ط§طھ ط§ظ„ظ€ Form ظˆظ†ط³طھط®ط¯ظ… طھط­ظ‚ظ‚ ظ…ط®طµطµ
+        ? _validateWithoutPhone() // ?†???¬?§???? ???­?‚?‚?§?? ?§?„?€ Form ???†?????®???… ???­?‚?‚ ?…?®?µ?µ
         : (form.validate() && _validateAdditionalFields());
 
     if (passValidation) {
@@ -1322,7 +1372,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
         final Map<String, dynamic> payload = {};
 
         if (widget.selectedAccountType == "2") {
-          // ط¹ظ‚ط§ط±ظٹ
+          // ???‚?§?±??
           payload.addAll({
             "office_name": _officeNameController.text.trim(),
             "office_phone": _officePhoneController.text.trim(),
@@ -1347,7 +1397,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
             payload["office_logo"] = base64Image;
           }
         } else if (widget.selectedAccountType == "3") {
-          // طھط¬ط§ط±ظٹ
+          // ???¬?§?±??
           final List<_StoreGatewayAccountDraft> gatewayAccounts =
               _collectStoreGatewayAccountDrafts();
 
@@ -1419,7 +1469,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
             payload["commercial_register_filename"] = fileName;
           }
         } else {
-          // ظپط±ط¯ظٹ
+          // ???±????
           payload.addAll({
             "email": _emailController.text,
             "phone_number": widget.phoneNumber,
@@ -1603,20 +1653,20 @@ class _SignupScreenState extends CloudState<SignupScreen> {
             if (mounted) {
               context.read<UserDetailsCubit>().fill(HiveUtils.getUserDetails());
 
-            FetchSystemSettingsCubit.refreshPermissionsForCurrentUser(
-              context,
-              clearCacheBeforeFetch: true,
-            );
-          }
+              FetchSystemSettingsCubit.refreshPermissionsForCurrentUser(
+                context,
+                clearCacheBeforeFetch: true,
+              );
+            }
 
-          if (widget.selectedAccountType == "3") {
-            await _syncStoreGatewayAccounts();
+            if (widget.selectedAccountType == "3") {
+              await _syncStoreGatewayAccounts();
+            }
+          } catch (e) {
+            if (kDebugMode) {
+              print('Failed to persist registration data: ${e.toString()}');
+            }
           }
-        } catch (e) {
-          if (kDebugMode) {
-            print('Failed to persist registration data: ${e.toString()}');
-          }
-        }
 
           HelperUtils.showSnackBarMessage(
             context,
@@ -1625,7 +1675,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
           );
 
           if (widget.selectedAccountType == "1") {
-            // ظپط±ط¯ظٹ: طھط­ظ‚ظ‚ ط§ظ„ظ…ظˆظ‚ط¹
+            // ???±????: ???­?‚?‚ ?§?„?…???‚??
             if (HiveUtils.getCityName() != null &&
                 HiveUtils.getCityName() != "" &&
                 HiveUtils.getCityName() != "null") {
@@ -1636,7 +1686,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
                   Routes.locationPermissionScreen, (route) => false);
             }
           } else {
-            // طھط¬ط§ط±ظٹ/ط¹ظ‚ط§ط±ظٹ
+            // ???¬?§?±??/???‚?§?±??
             HelperUtils.killPreviousPages(
                 context, Routes.main, {"from": "signup"});
           }
@@ -1679,5 +1729,3 @@ class _StoreGatewayAccountDraft {
     };
   }
 }
-
-

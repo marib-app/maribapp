@@ -185,43 +185,43 @@ class ApiController extends Controller {
 
     private const CURRENCY_SYNONYMS = [
         'yer' => 'YER',
-        'ريال يمني' => 'YER',
-        'ريال يمنى' => 'YER',
-        'ر.ي' => 'YER',
-        'ر. ي.' => 'YER',
+        '╪▒┘è╪د┘ ┘è┘à┘┘è' => 'YER',
+        '╪▒┘è╪د┘ ┘è┘à┘┘ë' => 'YER',
+        '╪▒.┘è' => 'YER',
+        '╪▒. ┘è.' => 'YER',
         'sar' => 'SAR',
-        'ريال سعودي' => 'SAR',
-        'ر.س' => 'SAR',
-        'ر. س.' => 'SAR',
-        'sar ر.س' => 'SAR',
+        '╪▒┘è╪د┘ ╪│╪╣┘ê╪»┘è' => 'SAR',
+        '╪▒.╪│' => 'SAR',
+        '╪▒. ╪│.' => 'SAR',
+        'sar ╪▒.╪│' => 'SAR',
         'omr' => 'OMR',
-        'ريال عماني' => 'OMR',
-        'ر.ع' => 'OMR',
+        '╪▒┘è╪د┘ ╪╣┘à╪د┘┘è' => 'OMR',
+        '╪▒.╪╣' => 'OMR',
         'aed' => 'AED',
-        'درهم اماراتي' => 'AED',
-        'د.إ' => 'AED',
+        '╪»╪▒┘ç┘à ╪د┘à╪د╪▒╪د╪ز┘è' => 'AED',
+        '╪».╪ح' => 'AED',
         'kwd' => 'KWD',
-        'دينار كويتي' => 'KWD',
-        'د.ك' => 'KWD',
+        '╪»┘è┘╪د╪▒ ┘â┘ê┘è╪ز┘è' => 'KWD',
+        '╪».┘â' => 'KWD',
         'bhd' => 'BHD',
-        'دينار بحريني' => 'BHD',
-        'د.ب' => 'BHD',
+        '╪»┘è┘╪د╪▒ ╪ذ╪ص╪▒┘è┘┘è' => 'BHD',
+        '╪».╪ذ' => 'BHD',
         'egp' => 'EGP',
-        'جنيه مصري' => 'EGP',
-        'ج.م' => 'EGP',
+        '╪ش┘┘è┘ç ┘à╪╡╪▒┘è' => 'EGP',
+        '╪ش.┘à' => 'EGP',
         'usd' => 'USD',
-        'أ.ر' => 'USD',
-        'دولار' => 'USD',
-        'دولار امريكي' => 'USD',
+        '╪ث.╪▒' => 'USD',
+        '╪»┘ê┘╪د╪▒' => 'USD',
+        '╪»┘ê┘╪د╪▒ ╪د┘à╪▒┘è┘â┘è' => 'USD',
         '$' => 'USD',
         'eur' => 'EUR',
-        '€' => 'EUR',
-        'جنيه استرليني' => 'GBP',
+        'ظéش' => 'EUR',
+        '╪ش┘┘è┘ç ╪د╪│╪ز╪▒┘┘è┘┘è' => 'GBP',
         'gbp' => 'GBP',
-        '£' => 'GBP',
+        '┬ث' => 'GBP',
         'try' => 'TRY',
-        '₺' => 'TRY',
-        'ليرة تركية' => 'TRY',
+        'ظé║' => 'TRY',
+        '┘┘è╪▒╪ر ╪ز╪▒┘â┘è╪ر' => 'TRY',
     ];
 
     private function getWalletCurrencyCode(): string
@@ -762,7 +762,7 @@ class ApiController extends Controller {
 
     public function userSignup(Request $request) {
         try {
-            \Log::info('📝 UserSignup Request:', [
+            \Log::info('≡اôإ UserSignup Request:', [
                 'type' => $request->type,
                 'firebase_id' => $request->firebase_id,
                 'mobile' => $request->mobile ?? 'not provided',
@@ -779,9 +779,9 @@ class ApiController extends Controller {
                 'platform_type' => 'nullable|in:android,ios'
             ];
             
-            // إضافة validation للهاتف إذا كان نوع التسجيل هو google
+            // ╪ح╪╢╪د┘╪ر validation ┘┘┘ç╪د╪ز┘ ╪ح╪░╪د ┘â╪د┘ ┘┘ê╪╣ ╪د┘╪ز╪│╪ش┘è┘ ┘ç┘ê google
             if ($request->type == 'google') {
-                $validationRules['mobile'] = 'nullable'; // جعل الهاتف اختياري للـ Google
+                $validationRules['mobile'] = 'nullable'; // ╪ش╪╣┘ ╪د┘┘ç╪د╪ز┘ ╪د╪«╪ز┘è╪د╪▒┘è ┘┘┘ Google
             } elseif ($request->type == 'phone') {
                 $validationRules['mobile'] = 'required|unique:users,mobile';
             } elseif ($request->type == 'email') {
@@ -795,13 +795,13 @@ class ApiController extends Controller {
             }
 
             
-            // رسائل خطأ مخصصة
+            // ╪▒╪│╪د╪خ┘ ╪«╪╖╪ث ┘à╪«╪╡╪╡╪ر
             $customMessages = [
-                'mobile.required' => 'رقم الهاتف مطلوب.',
-                'mobile.unique'   => 'هذا الرقم مستخدم لحساب آخر.',
-                'email.required' => 'الإيميل مطلوب.',
-                'email.email' => 'يرجى إدخال إيميل صحيح.',
-                'code.exists' => 'كود الإحالة غير صحيح.'
+                'mobile.required' => '╪▒┘é┘à ╪د┘┘ç╪د╪ز┘ ┘à╪╖┘┘ê╪ذ.',
+                'mobile.unique'   => '┘ç╪░╪د ╪د┘╪▒┘é┘à ┘à╪│╪ز╪«╪»┘à ┘╪ص╪│╪د╪ذ ╪ت╪«╪▒.',
+                'email.required' => '╪د┘╪ح┘è┘à┘è┘ ┘à╪╖┘┘ê╪ذ.',
+                'email.email' => '┘è╪▒╪ش┘ë ╪ح╪»╪«╪د┘ ╪ح┘è┘à┘è┘ ╪╡╪ص┘è╪ص.',
+                'code.exists' => '┘â┘ê╪» ╪د┘╪ح╪ص╪د┘╪ر ╪║┘è╪▒ ╪╡╪ص┘è╪ص.'
             ];
             
             $validator = Validator::make($request->all(), $validationRules, $customMessages);
@@ -826,14 +826,14 @@ class ApiController extends Controller {
 
                 $request->merge(['email' => $generatedEmail]);
 
-                \Log::info('📧 Generated fallback email for phone signup', [
+                \Log::info('≡اôد Generated fallback email for phone signup', [
                     'mobile' => $request->mobile,
                     'country_code' => $request->country_code,
                     'generated_email' => $generatedEmail,
                 ]);
             }
 
-            // البحث عن مستخدم موجود بـ Google firebase_id
+            // ╪د┘╪ذ╪ص╪س ╪╣┘ ┘à╪│╪ز╪«╪»┘à ┘à┘ê╪ش┘ê╪» ╪ذ┘ Google firebase_id
             $existingGoogleUser = null;
             if ($type == 'google') {
                 $existingGoogleUser = SocialLogin::where('firebase_id', $firebase_id)
@@ -841,7 +841,7 @@ class ApiController extends Controller {
                     ->with('user')
                     ->first();
                     
-                \Log::info('🔍 Searching for existing Google user by firebase_id:', [
+                \Log::info('≡ا¤ Searching for existing Google user by firebase_id:', [
                     'firebase_id' => $firebase_id,
                     'found' => $existingGoogleUser ? 'yes' : 'no',
                     'user_id' => $existingGoogleUser ? $existingGoogleUser->user->id : null
@@ -858,34 +858,34 @@ class ApiController extends Controller {
                 ResponseService::errorResponse("User is deactivated. Please Contact the administrator");
             }
             
-            // البحث عن مستخدم موجود بنفس رقم الهاتف أو الإيميل
+            // ╪د┘╪ذ╪ص╪س ╪╣┘ ┘à╪│╪ز╪«╪»┘à ┘à┘ê╪ش┘ê╪» ╪ذ┘┘╪│ ╪▒┘é┘à ╪د┘┘ç╪د╪ز┘ ╪ث┘ê ╪د┘╪ح┘è┘à┘è┘
             $existingUser = null;
             if ($request->type == 'phone' && !empty($request->mobile)) {
                 $existingUser = User::where('mobile', $request->mobile)->first();
             } elseif ($request->type == 'email' && !empty($request->email)) {
                 $existingUser = User::where('email', $request->email)->first();
             } elseif ($request->type == 'google') {
-                // للـ Google، ابحث بالـ email أولاً، ثم بالـ mobile إذا كان متوفراً
+                // ┘┘┘ Google╪î ╪د╪ذ╪ص╪س ╪ذ╪د┘┘ email ╪ث┘ê┘╪د┘ï╪î ╪س┘à ╪ذ╪د┘┘ mobile ╪ح╪░╪د ┘â╪د┘ ┘à╪ز┘ê┘╪▒╪د┘ï
                 if (!empty($request->email)) {
                     $existingUser = User::where('email', $request->email)->first();
-                    \Log::info('🔍 Searching for Google user by email:', [
+                    \Log::info('≡ا¤ Searching for Google user by email:', [
                         'email' => $request->email,
                         'found' => $existingUser ? 'yes' : 'no'
                     ]);
                 }
                 if (!$existingUser && !empty($request->mobile)) {
                     $existingUser = User::where('mobile', $request->mobile)->first();
-                    \Log::info('🔍 Searching for Google user by mobile:', [
+                    \Log::info('≡ا¤ Searching for Google user by mobile:', [
                         'mobile' => $request->mobile,
                         'found' => $existingUser ? 'yes' : 'no'
                     ]);
                 }
             }
 
-            // التحقق من حالة المستخدم الموجود
+            // ╪د┘╪ز╪ص┘é┘é ┘à┘ ╪ص╪د┘╪ر ╪د┘┘à╪│╪ز╪«╪»┘à ╪د┘┘à┘ê╪ش┘ê╪»
             $shouldUpdateExistingUser = false;
             if ($existingUser) {
-                \Log::info('🔍 Found existing user:', [
+                \Log::info('≡ا¤ Found existing user:', [
                     'user_id' => $existingUser->id,
                     'email' => $existingUser->email,
                     'mobile' => $existingUser->mobile,
@@ -896,26 +896,26 @@ class ApiController extends Controller {
                 
                 if ($existingUser->is_verified == 0 && $existingUser->email_verified_at === null) {
                     $shouldUpdateExistingUser = true;
-                    \Log::info('✅ User is not verified, allowing update');
+                    \Log::info('ظ£à User is not verified, allowing update');
                 } elseif ($existingUser->is_verified == 1 && $existingUser->email_verified_at !== null) {
-                    // للـ Google users، السماح بالتحديث حتى لو كان محققاً
+                    // ┘┘┘ Google users╪î ╪د┘╪│┘à╪د╪ص ╪ذ╪د┘╪ز╪ص╪»┘è╪س ╪ص╪ز┘ë ┘┘ê ┘â╪د┘ ┘à╪ص┘é┘é╪د┘ï
                     if ($request->type == 'google') {
                         $shouldUpdateExistingUser = true;
-                        \Log::info('✅ Allowing Google user to update verified account:', [
+                        \Log::info('ظ£à Allowing Google user to update verified account:', [
                             'user_id' => $existingUser->id,
                             'email' => $existingUser->email
                         ]);
                     } else {
-                        // المستخدم محقق مسبقاً - إرجاع رسالة خطأ
+                        // ╪د┘┘à╪│╪ز╪«╪»┘à ┘à╪ص┘é┘é ┘à╪│╪ذ┘é╪د┘ï - ╪ح╪▒╪ش╪د╪╣ ╪▒╪│╪د┘╪ر ╪«╪╖╪ث
                         if ($request->type == 'phone') {
-                            ResponseService::errorResponse('هذا الحساب موجود مسبقا. يرجى تسجيل برقم هاتف آخر.');
+                            ResponseService::errorResponse('┘ç╪░╪د ╪د┘╪ص╪│╪د╪ذ ┘à┘ê╪ش┘ê╪» ┘à╪│╪ذ┘é╪د. ┘è╪▒╪ش┘ë ╪ز╪│╪ش┘è┘ ╪ذ╪▒┘é┘à ┘ç╪د╪ز┘ ╪ت╪«╪▒.');
                         } else {
-                            ResponseService::errorResponse('هذا الحساب موجود. يرجى تسجيل بإيميل آخر.');
+                            ResponseService::errorResponse('┘ç╪░╪د ╪د┘╪ص╪│╪د╪ذ ┘à┘ê╪ش┘ê╪». ┘è╪▒╪ش┘ë ╪ز╪│╪ش┘è┘ ╪ذ╪ح┘è┘à┘è┘ ╪ت╪«╪▒.');
                         }
                     }
                 }
             } else {
-                \Log::info('🔍 No existing user found for:', [
+                \Log::info('≡ا¤ No existing user found for:', [
                     'type' => $request->type,
                     'email' => $request->email ?? 'not provided',
                     'mobile' => $request->mobile ?? 'not provided'
@@ -923,7 +923,7 @@ class ApiController extends Controller {
             }
 
             if ($type == 'google' && $existingGoogleUser) {
-                \Log::info('🔄 Updating existing Google user:', [
+                \Log::info('≡ا¤ Updating existing Google user:', [
                     'firebase_id' => $firebase_id,
                     'user_id' => $existingGoogleUser->user->id,
                     'mobile' => $request->mobile,
@@ -935,13 +935,17 @@ class ApiController extends Controller {
                 $user = $existingGoogleUser->user;
                 $userData = $request->all();
                 
-                // تحديث بيانات المستخدم
+                // ╪ز╪ص╪»┘è╪س ╪ذ┘è╪د┘╪د╪ز ╪د┘┘à╪│╪ز╪«╪»┘à
                 if (!empty($request->password)) {
                     $userData['password'] = Hash::make($request->password);
                 }
                 $userData['profile'] = $request->hasFile('profile') ? $request->file('profile')->store('user_profile', 'public') : $request->profile;
+                $targetAccountType = $userData['account_type'] ?? $user->account_type ?? null;
+                if ((int) $targetAccountType === User::ACCOUNT_TYPE_SELLER) {
+                    $userData['name'] = $this->fallbackSellerName($request, $userData, $user);
+                }
                 
-                // تحديث البيانات المطلوبة
+                // ╪ز╪ص╪»┘è╪س ╪د┘╪ذ┘è╪د┘╪د╪ز ╪د┘┘à╪╖┘┘ê╪ذ╪ر
                 $user->update([
                     'name' => $userData['name'] ?? $user->name,
                     'mobile' => $userData['mobile'] ?? $user->mobile,
@@ -953,7 +957,7 @@ class ApiController extends Controller {
                     'flag_emoji' => $userData['flag_emoji'] ?? $user->flag_emoji,
                 ]);
                 
-                \Log::info('✅ Google user updated successfully:', [
+                \Log::info('ظ£à Google user updated successfully:', [
                     'user_id' => $user->id,
                     'updated_fields' => [
                         'name' => $user->name,
@@ -962,7 +966,7 @@ class ApiController extends Controller {
                     ]
                 ]);
                 
-                // معالجة كود الإحالة إذا تم إرساله
+                // ┘à╪╣╪د┘╪ش╪ر ┘â┘ê╪» ╪د┘╪ح╪ص╪د┘╪ر ╪ح╪░╪د ╪ز┘à ╪ح╪▒╪│╪د┘┘ç
                 if (!empty($request->code)) {
                     $referralAttempt = $this->handleReferralCode(
                         $request->code,
@@ -983,8 +987,8 @@ class ApiController extends Controller {
                 DB::beginTransaction();
 
                 if ($shouldUpdateExistingUser) {
-                    // تحديث المستخدم الموجود
-                    \Log::info('🔄 Updating existing user:', [
+                    // ╪ز╪ص╪»┘è╪س ╪د┘┘à╪│╪ز╪«╪»┘à ╪د┘┘à┘ê╪ش┘ê╪»
+                    \Log::info('≡ا¤ Updating existing user:', [
                         'user_id' => $existingUser->id,
                         'type' => $request->type,
                         'mobile' => $request->mobile,
@@ -992,12 +996,16 @@ class ApiController extends Controller {
                     ]);
                     
                     $userData = $request->all();
+                    $targetAccountType = $userData['account_type'] ?? $existingUser->account_type ?? null;
+                    if ((int) $targetAccountType === User::ACCOUNT_TYPE_SELLER) {
+                        $userData['name'] = null;
+                    }
                     if (!empty($request->password)) {
                         $userData['password'] = Hash::make($request->password);
                     }
                     $userData['profile'] = $request->hasFile('profile') ? $request->file('profile')->store('user_profile', 'public') : $request->profile;
                     
-                    // تعيين حالة التحقق حسب نوع التسجيل
+                    // ╪ز╪╣┘è┘è┘ ╪ص╪د┘╪ر ╪د┘╪ز╪ص┘é┘é ╪ص╪│╪ذ ┘┘ê╪╣ ╪د┘╪ز╪│╪ش┘è┘
                     if (in_array($request->type, ['google', 'apple'])) {
                         $userData['is_verified'] = 1;
                         $userData['email_verified_at'] = now();
@@ -1009,7 +1017,7 @@ class ApiController extends Controller {
                     $existingUser->update($userData);
                     $user = $existingUser;
                     
-                    \Log::info('✅ Existing user updated successfully:', [
+                    \Log::info('ظ£à Existing user updated successfully:', [
                         'user_id' => $user->id,
                         'updated_fields' => [
                             'name' => $user->name,
@@ -1018,7 +1026,7 @@ class ApiController extends Controller {
                         ]
                     ]);
                     
-                    // معالجة كود الإحالة إذا تم إرساله
+                    // ┘à╪╣╪د┘╪ش╪ر ┘â┘ê╪» ╪د┘╪ح╪ص╪د┘╪ر ╪ح╪░╪د ╪ز┘à ╪ح╪▒╪│╪د┘┘ç
                     if (!empty($request->code)) {
                         $referralAttempt = $this->handleReferralCode(
                             $request->code,
@@ -1041,16 +1049,24 @@ class ApiController extends Controller {
                     }
                     
                     Auth::guard('web')->login($user);
+                    $targetAccountType = $userData['account_type'] ?? null;
+                    if ((int) $targetAccountType === User::ACCOUNT_TYPE_SELLER) {
+                        $userData['name'] = $this->fallbackSellerName($request, $userData, $existingUser);
+                    }
                     $auth = User::find($user->id);
                 } else {
-                    // إنشاء مستخدم جديد
+                    // ╪ح┘╪┤╪د╪ة ┘à╪│╪ز╪«╪»┘à ╪ش╪»┘è╪»
                     $userData = $request->all();
                     if (!empty($request->password)) {
                         $userData['password'] = Hash::make($request->password);
                     }
                     $userData['profile'] = $request->hasFile('profile') ? $request->file('profile')->store('user_profile', 'public') : $request->profile;
+                    $targetAccountType = $userData['account_type'] ?? null;
+                    if ((int) $targetAccountType === User::ACCOUNT_TYPE_SELLER) {
+                        $userData['name'] = $this->fallbackSellerName($request, $userData);
+                    }
                     
-                    // تعيين حالة التحقق حسب نوع التسجيل
+                    // ╪ز╪╣┘è┘è┘ ╪ص╪د┘╪ر ╪د┘╪ز╪ص┘é┘é ╪ص╪│╪ذ ┘┘ê╪╣ ╪د┘╪ز╪│╪ش┘è┘
                     if (in_array($request->type, ['google', 'apple'])) {
                         $userData['is_verified'] = 1;
                         $userData['email_verified_at'] = now();
@@ -1059,17 +1075,17 @@ class ApiController extends Controller {
                         $userData['email_verified_at'] = null;
                     }
                     
-                    // للـ Google users، إذا لم يتم تمرير رقم الهاتف، استخدم email كـ mobile مؤقت
+                    // ┘┘┘ Google users╪î ╪ح╪░╪د ┘┘à ┘è╪ز┘à ╪ز┘à╪▒┘è╪▒ ╪▒┘é┘à ╪د┘┘ç╪د╪ز┘╪î ╪د╪│╪ز╪«╪»┘à email ┘â┘ mobile ┘à╪ج┘é╪ز
                     if ($type == 'google' && empty($request->mobile)) {
                         $userData['mobile'] = $request->email ?? 'temp_' . time();
-                        \Log::info('📱 Using temporary mobile for Google user:', [
+                        \Log::info('≡اô▒ Using temporary mobile for Google user:', [
                             'email' => $request->email,
                             'temp_mobile' => $userData['mobile']
                         ]);
                     }
                     
                     if ($type == 'google') {
-                        \Log::info('🆕 Creating new Google user:', [
+                        \Log::info('≡اـ Creating new Google user:', [
                             'firebase_id' => $firebase_id,
                             'mobile' => $userData['mobile'],
                             'name' => $request->name
@@ -1079,13 +1095,13 @@ class ApiController extends Controller {
                     $user = User::create($userData);
                     
                     if ($type == 'google') {
-                        \Log::info('✅ New Google user created:', [
+                        \Log::info('ظ£à New Google user created:', [
                             'user_id' => $user->id,
                             'firebase_id' => $firebase_id
                         ]);
                     }
                     
-                    // معالجة كود الإحالة إذا تم إرساله
+                    // ┘à╪╣╪د┘╪ش╪ر ┘â┘ê╪» ╪د┘╪ح╪ص╪د┘╪ر ╪ح╪░╪د ╪ز┘à ╪ح╪▒╪│╪د┘┘ç
                     if (!empty($request->code)) {
                         $referralAttempt = $this->handleReferralCode(
                             $request->code,
@@ -1179,23 +1195,23 @@ class ApiController extends Controller {
                            ->first();
 
                 if (!$user) {
-                    ResponseService::errorResponse('رقم الهاتف غير مسجل. يرجى إنشاء حساب جديد أولاً.', null, config('constants.RESPONSE_CODE.INVALID_LOGIN'));
+                    ResponseService::errorResponse('╪▒┘é┘à ╪د┘┘ç╪د╪ز┘ ╪║┘è╪▒ ┘à╪│╪ش┘. ┘è╪▒╪ش┘ë ╪ح┘╪┤╪د╪ة ╪ص╪│╪د╪ذ ╪ش╪»┘è╪» ╪ث┘ê┘╪د┘ï.', null, config('constants.RESPONSE_CODE.INVALID_LOGIN'));
                 }
 
                 if ($user->trashed()) {
-                    ResponseService::errorResponse('تم إلغاء تفعيل حسابك. يرجى التواصل مع الإدارة.', null, config('constants.RESPONSE_CODE.DEACTIVATED_ACCOUNT'));
+                    ResponseService::errorResponse('╪ز┘à ╪ح┘╪║╪د╪ة ╪ز┘╪╣┘è┘ ╪ص╪│╪د╪ذ┘â. ┘è╪▒╪ش┘ë ╪د┘╪ز┘ê╪د╪╡┘ ┘à╪╣ ╪د┘╪ح╪»╪د╪▒╪ر.', null, config('constants.RESPONSE_CODE.DEACTIVATED_ACCOUNT'));
                 }
 
                 // Check if user has password set
                 if (!$user->password) {
                     ResponseService::errorResponse('
                     
-                    لم يتم تعيين كلمة مرور لهذا الحساب. يرجى تسجيل الدخول باستخدام OTP أو إعادة تعيين كلمة المرور.', null, config('constants.RESPONSE_CODE.INVALID_LOGIN'));
+                    ┘┘à ┘è╪ز┘à ╪ز╪╣┘è┘è┘ ┘â┘┘à╪ر ┘à╪▒┘ê╪▒ ┘┘ç╪░╪د ╪د┘╪ص╪│╪د╪ذ. ┘è╪▒╪ش┘ë ╪ز╪│╪ش┘è┘ ╪د┘╪»╪«┘ê┘ ╪ذ╪د╪│╪ز╪«╪»╪د┘à OTP ╪ث┘ê ╪ح╪╣╪د╪»╪ر ╪ز╪╣┘è┘è┘ ┘â┘┘à╪ر ╪د┘┘à╪▒┘ê╪▒.', null, config('constants.RESPONSE_CODE.INVALID_LOGIN'));
                 }
 
                 // Verify password
                 if (!Hash::check($request->password, $user->password)) {
-                    ResponseService::errorResponse('كلمة المرور غير صحيحة.', null, config('constants.RESPONSE_CODE.INVALID_LOGIN'));
+                    ResponseService::errorResponse('┘â┘┘à╪ر ╪د┘┘à╪▒┘ê╪▒ ╪║┘è╪▒ ╪╡╪ص┘è╪ص╪ر.', null, config('constants.RESPONSE_CODE.INVALID_LOGIN'));
                 }
 
                 Auth::guard('web')->login($user);
@@ -1210,11 +1226,11 @@ class ApiController extends Controller {
                 })->first();
 
                 if (!$socialLogin) {
-                    ResponseService::errorResponse('المستخدم غير مسجل. يرجى إنشاء حساب جديد أولاً.', null, config('constants.RESPONSE_CODE.INVALID_LOGIN'));
+                    ResponseService::errorResponse('╪د┘┘à╪│╪ز╪«╪»┘à ╪║┘è╪▒ ┘à╪│╪ش┘. ┘è╪▒╪ش┘ë ╪ح┘╪┤╪د╪ة ╪ص╪│╪د╪ذ ╪ش╪»┘è╪» ╪ث┘ê┘╪د┘ï.', null, config('constants.RESPONSE_CODE.INVALID_LOGIN'));
                 }
 
                 if (!empty($socialLogin->user->deleted_at)) {
-                    ResponseService::errorResponse("تم إلغاء تفعيل المستخدم. يرجى التواصل مع الإدارة", null, config('constants.RESPONSE_CODE.DEACTIVATED_ACCOUNT'));
+                    ResponseService::errorResponse("╪ز┘à ╪ح┘╪║╪د╪ة ╪ز┘╪╣┘è┘ ╪د┘┘à╪│╪ز╪«╪»┘à. ┘è╪▒╪ش┘ë ╪د┘╪ز┘ê╪د╪╡┘ ┘à╪╣ ╪د┘╪ح╪»╪د╪▒╪ر", null, config('constants.RESPONSE_CODE.DEACTIVATED_ACCOUNT'));
                 }
 
                 Auth::guard('web')->login($socialLogin->user);
@@ -1222,7 +1238,7 @@ class ApiController extends Controller {
             }
 
             if (!$auth->hasRole('User')) {
-                ResponseService::errorResponse('بيانات تسجيل الدخول غير صحيحة', null, config('constants.RESPONSE_CODE.INVALID_LOGIN'));
+                ResponseService::errorResponse('╪ذ┘è╪د┘╪د╪ز ╪ز╪│╪ش┘è┘ ╪د┘╪»╪«┘ê┘ ╪║┘è╪▒ ╪╡╪ص┘è╪ص╪ر', null, config('constants.RESPONSE_CODE.INVALID_LOGIN'));
             }
 
             // Update FCM token
@@ -1240,7 +1256,7 @@ class ApiController extends Controller {
             // Generate token
             $token = $auth->createToken($auth->name ?? '')->plainTextToken;
 
-            ResponseService::successResponse('تم تسجيل الدخول بنجاح', $auth, ['token' => $token]);
+            ResponseService::successResponse('╪ز┘à ╪ز╪│╪ش┘è┘ ╪د┘╪»╪«┘ê┘ ╪ذ┘╪ش╪د╪ص', $auth, ['token' => $token]);
         } catch (Throwable $th) {
             ResponseService::logErrorResponse($th, "API Controller -> Login");
             ResponseService::errorResponse();
@@ -1288,7 +1304,7 @@ class ApiController extends Controller {
             }
             $data['show_personal_details'] = $request->show_personal_details;
 
-            // معالجة البيانات الإضافية للحسابات التجارية والعقارية
+            // ┘à╪╣╪د┘╪ش╪ر ╪د┘╪ذ┘è╪د┘╪د╪ز ╪د┘╪ح╪╢╪د┘┘è╪ر ┘┘╪ص╪│╪د╪ذ╪د╪ز ╪د┘╪ز╪ش╪د╪▒┘è╪ر ┘ê╪د┘╪╣┘é╪د╪▒┘è╪ر
             if ($request->has('additional_data') && !empty($request->additional_data)) {
                 $additionalInfo = $app_user->additional_info ?: [];
                 if (!is_array($additionalInfo)) {
@@ -1299,7 +1315,7 @@ class ApiController extends Controller {
                     $additionalInfo['contact_info'] = [];
                 }
                 
-                // تحديث البيانات الإضافية حسب نوع الحساب
+                // ╪ز╪ص╪»┘è╪س ╪د┘╪ذ┘è╪د┘╪د╪ز ╪د┘╪ح╪╢╪د┘┘è╪ر ╪ص╪│╪ذ ┘┘ê╪╣ ╪د┘╪ص╪│╪د╪ذ
                 foreach ($request->additional_data as $key => $value) {
                     $additionalInfo['contact_info'][$key] = $value;
                 }
@@ -1654,7 +1670,7 @@ class ApiController extends Controller {
             return null;
         }
 
-        return $lines->map(static fn ($line) => '• ' . $line)->implode("\n");
+        return $lines->map(static fn ($line) => 'ظت ' . $line)->implode("\n");
      }
 
 
@@ -3193,7 +3209,7 @@ class ApiController extends Controller {
             ResponseService::validationError($validator->errors()->first());
         }
         try {
-            DB::beginTransaction(); // تصحيح: يجب أن يكون beginTransaction وليس commit
+            DB::beginTransaction(); // ╪ز╪╡╪ص┘è╪ص: ┘è╪ش╪ذ ╪ث┘ ┘è┘â┘ê┘ beginTransaction ┘ê┘┘è╪│ commit
             $user = Auth::user();
             $item = Item::where('user_id', $user->id)->where('status', 'approved')->findOrFail($request->item_id);
 
@@ -3214,7 +3230,7 @@ class ApiController extends Controller {
             }
 
             
-            // التحقق من أن الإعلان ليس مميزاً بالفعل
+            // ╪د┘╪ز╪ص┘é┘é ┘à┘ ╪ث┘ ╪د┘╪ح╪╣┘╪د┘ ┘┘è╪│ ┘à┘à┘è╪▓╪د┘ï ╪ذ╪د┘┘╪╣┘
             $featuredItems = FeaturedItems::where([
                 'item_id'    => $request->item_id,
                 'package_id' => $user_package->package_id,
@@ -3229,7 +3245,7 @@ class ApiController extends Controller {
                 ResponseService::errorResponse("Item is already featured");
             }
 
-            // إنشاء إعلان مميز مجاناً بدون باقة
+            // ╪ح┘╪┤╪د╪ة ╪ح╪╣┘╪د┘ ┘à┘à┘è╪▓ ┘à╪ش╪د┘╪د┘ï ╪ذ╪»┘ê┘ ╪ذ╪د┘é╪ر
             FeaturedItems::create([
                 'item_id'                   => $request->item_id,
                 'package_id'                => $user_package->package_id,
@@ -3631,7 +3647,7 @@ class ApiController extends Controller {
 
             $sliderMetricService->recordClick($slider, $userId, $sessionId, $now);
 
-            ResponseService::successResponse(__('تم تسجيل النقرة بنجاح.'));
+            ResponseService::successResponse(__('╪ز┘à ╪ز╪│╪ش┘è┘ ╪د┘┘┘é╪▒╪ر ╪ذ┘╪ش╪د╪ص.'));
         } catch (Throwable $th) {
             ResponseService::logErrorResponse($th, 'API Controller -> recordSliderClick');
             ResponseService::errorResponse();
@@ -7072,7 +7088,7 @@ class ApiController extends Controller {
         }
 
         if (!$this->serviceAuthorizationService->userCanManageService($user, $service)) {
-            return ResponseService::errorResponse('غير مصرح لك بإدارة هذه الخدمة.', null, 403);
+            return ResponseService::errorResponse('╪║┘è╪▒ ┘à╪╡╪▒╪ص ┘┘â ╪ذ╪ح╪»╪د╪▒╪ر ┘ç╪░┘ç ╪د┘╪«╪»┘à╪ر.', null, 403);
         }
 
         $service->load([
@@ -7123,7 +7139,7 @@ class ApiController extends Controller {
         }
 
         if ((int) $service->owner_id !== (int) $user->id) {
-            return ResponseService::errorResponse('غير مصرح لك بإدارة هذه الخدمة.', null, 403);
+            return ResponseService::errorResponse('╪║┘è╪▒ ┘à╪╡╪▒╪ص ┘┘â ╪ذ╪ح╪»╪د╪▒╪ر ┘ç╪░┘ç ╪د┘╪«╪»┘à╪ر.', null, 403);
         }
 
         $validator = Validator::make($request->all(), [
@@ -7138,7 +7154,7 @@ class ApiController extends Controller {
         $payload = $validator->validated();
 
         if (empty($payload)) {
-            ResponseService::validationError('لا توجد بيانات لتحديث الخدمة.');
+            ResponseService::validationError('┘╪د ╪ز┘ê╪ش╪» ╪ذ┘è╪د┘╪د╪ز ┘╪ز╪ص╪»┘è╪س ╪د┘╪«╪»┘à╪ر.');
         }
 
         if ($request->has('status')) {
@@ -7171,7 +7187,7 @@ class ApiController extends Controller {
         }
 
         if ((int) $service->owner_id !== (int) $user->id) {
-            return ResponseService::errorResponse('غير مصرح لك بإدارة هذه الخدمة.', null, 403);
+            return ResponseService::errorResponse('╪║┘è╪▒ ┘à╪╡╪▒╪ص ┘┘â ╪ذ╪ح╪»╪د╪▒╪ر ┘ç╪░┘ç ╪د┘╪«╪»┘à╪ر.', null, 403);
         }
 
         DB::beginTransaction();
@@ -7219,7 +7235,7 @@ class ApiController extends Controller {
             ResponseService::validationError($validator->errors()->first());
         }
 
-        // فلتر خدمة واحدة بالمعرّف (إن طُلب)
+        // ┘┘╪ز╪▒ ╪«╪»┘à╪ر ┘ê╪د╪ص╪»╪ر ╪ذ╪د┘┘à╪╣╪▒┘ّ┘ (╪ح┘ ╪╖┘┘╪ذ)
         if ($request->filled('id')) {
             $s = Service::where('status', true)
                 ->where(function($q){
@@ -7238,7 +7254,7 @@ class ApiController extends Controller {
             ResponseService::successResponse('Service fetched successfully.', $payload);
         }
 
-        // قائمة خدمات
+        // ┘é╪د╪خ┘à╪ر ╪«╪»┘à╪د╪ز
         $query = Service::with([
                 'category',
                 'serviceCustomFields.value',
@@ -7332,10 +7348,10 @@ class ApiController extends Controller {
 }
 
 /**
- * يحوّل كائن Service إلى مصفوفة JSON جاهزة للتطبيق.
+ * ┘è╪ص┘ê┘ّ┘ ┘â╪د╪خ┘ Service ╪ح┘┘ë ┘à╪╡┘┘ê┘╪ر JSON ╪ش╪د┘ç╪▓╪ر ┘┘╪ز╪╖╪ذ┘è┘é.
  *  *
  * @param  Service  $s
- * @param  bool     $includeOwnerEmail هل يجب تضمين البريد الإلكتروني للمالك؟
+ * @param  bool     $includeOwnerEmail ┘ç┘ ┘è╪ش╪ذ ╪ز╪╢┘à┘è┘ ╪د┘╪ذ╪▒┘è╪» ╪د┘╪ح┘┘â╪ز╪▒┘ê┘┘è ┘┘┘à╪د┘┘â╪ا
  */
 private function mapService(Service $s, bool $includeOwnerEmail = false): array
 {
@@ -7374,15 +7390,15 @@ private function mapService(Service $s, bool $includeOwnerEmail = false): array
         'views'             => (int) ($s->views ?? 0),
         'expiry_date'       => $expiry,
 
-        // ✅ حافظ على المفاتيح القديمة مع روابط كاملة
+        // ظ£à ╪ص╪د┘╪╕ ╪╣┘┘ë ╪د┘┘à┘╪د╪ز┘è╪ص ╪د┘┘é╪»┘è┘à╪ر ┘à╪╣ ╪▒┘ê╪د╪ذ╪╖ ┘â╪د┘à┘╪ر
         'image'             => $url($s->image),
         'icon'              => $url($s->icon),
 
-        // (إضافي متوافق للخلف)
+        // (╪ح╪╢╪د┘┘è ┘à╪ز┘ê╪د┘┘é ┘┘╪«┘┘)
         'image_url'         => $url($s->image),
         'icon_url'          => $url($s->icon),
 
-        // الحقول الجديدة
+        // ╪د┘╪ص┘é┘ê┘ ╪د┘╪ش╪»┘è╪»╪ر
         'is_paid'           => (bool) $s->is_paid,
         'price'             => $s->price !== null ? (float) $s->price : null,
         'currency'          => $s->currency,
@@ -7401,7 +7417,7 @@ private function mapService(Service $s, bool $includeOwnerEmail = false): array
 
         'service_uid'       => $s->service_uid,
 
-        // (إضافي) تواريخ قد يحتاجها التطبيق
+        // (╪ح╪╢╪د┘┘è) ╪ز┘ê╪د╪▒┘è╪« ┘é╪» ┘è╪ص╪ز╪د╪ش┘ç╪د ╪د┘╪ز╪╖╪ذ┘è┘é
         'created_at'        => optional($s->created_at)->toISOString(),
         'updated_at'        => optional($s->updated_at)->toISOString(),
     ];
@@ -7425,7 +7441,7 @@ private function deleteServiceMedia(Service $service): void
         try {
             $disk->delete($path);
         } catch (Throwable) {
-            // تجاهل أي أخطاء في الحذف من التخزين العام.
+            // ╪ز╪ش╪د┘ç┘ ╪ث┘è ╪ث╪«╪╖╪د╪ة ┘┘è ╪د┘╪ص╪░┘ ┘à┘ ╪د┘╪ز╪«╪▓┘è┘ ╪د┘╪╣╪د┘à.
         }
     }
 }
@@ -8469,7 +8485,7 @@ private function formatServiceFieldValueForApi(ServiceCustomField $field, ?Servi
                 'department' => ['nullable', 'string', Rule::in(array_keys($departments))],
             ],
             [
-                'department.in' => 'القسم المحدد غير مدعوم.',
+                'department.in' => '╪د┘┘é╪│┘à ╪د┘┘à╪ص╪»╪» ╪║┘è╪▒ ┘à╪»╪╣┘ê┘à.',
             ]
         );
 
@@ -8491,7 +8507,7 @@ private function formatServiceFieldValueForApi(ServiceCustomField $field, ?Servi
             if (!$policy) {
                 return response()->json([
                     'status' => false,
-                    'message' => 'لم يتم العثور على سياسة تسعير نشطة.',
+                    'message' => '┘┘à ┘è╪ز┘à ╪د┘╪╣╪س┘ê╪▒ ╪╣┘┘ë ╪│┘è╪د╪│╪ر ╪ز╪│╪╣┘è╪▒ ┘╪┤╪╖╪ر.',
                 ], 404);
 
 
@@ -8599,7 +8615,7 @@ private function formatServiceFieldValueForApi(ServiceCustomField $field, ?Servi
             
             return response()->json([
                 'status' => true,
-                'message' => 'تم جلب سياسة التسعير بنجاح.',
+                'message' => '╪ز┘à ╪ش┘╪ذ ╪│┘è╪د╪│╪ر ╪د┘╪ز╪│╪╣┘è╪▒ ╪ذ┘╪ش╪د╪ص.',
                 'data' => [
                     'policy' => $policyData,
                     'weight_tiers' => $weightTiers,
@@ -8636,7 +8652,7 @@ private function formatServiceFieldValueForApi(ServiceCustomField $field, ?Servi
                 
                 return response()->json([
                     'error' => true,
-                    'message' => __('نوع الحساب المطلوب غير صالح.'),
+                    'message' => __('┘┘ê╪╣ ╪د┘╪ص╪│╪د╪ذ ╪د┘┘à╪╖┘┘ê╪ذ ╪║┘è╪▒ ╪╡╪د┘╪ص.'),
                 ], 422);
             }
 
@@ -8656,7 +8672,7 @@ private function formatServiceFieldValueForApi(ServiceCustomField $field, ?Servi
 
             return response()->json([
                 'error' => false,
-                'message' => __('تم جلب الحسابات بنجاح.'),
+                'message' => __('╪ز┘à ╪ش┘╪ذ ╪د┘╪ص╪│╪د╪ذ╪د╪ز ╪ذ┘╪ش╪د╪ص.'),
                 'data' => $users,
             ]);
         } catch (\Throwable $th) {
@@ -8715,7 +8731,7 @@ public function storeRequestDevice(Request $request)
 
     return response()->json([
         'status' => true,
-        'message' => 'تم إرسال الطلب بنجاح',
+        'message' => '╪ز┘à ╪ح╪▒╪│╪د┘ ╪د┘╪╖┘╪ذ ╪ذ┘╪ش╪د╪ص',
         'data' => $requestDevice
     ]);
 }
@@ -8733,7 +8749,7 @@ public function storeRequestDevice(Request $request)
         $otpEnabled = filter_var($settings['whatsapp_otp_enabled'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
         if (!$otpEnabled) {
-            return ResponseService::errorResponse('خدمة رمز التحقق عبر واتساب غير مفعلة حالياً.');
+            return ResponseService::errorResponse('╪«╪»┘à╪ر ╪▒┘à╪▓ ╪د┘╪ز╪ص┘é┘é ╪╣╪ذ╪▒ ┘ê╪د╪ز╪│╪د╪ذ ╪║┘è╪▒ ┘à┘╪╣┘╪ر ╪ص╪د┘┘è╪د┘ï.');
         }
 
         $phone = $request->country_code . $request->phone;
@@ -8742,7 +8758,7 @@ public function storeRequestDevice(Request $request)
         $check = $whatsApp->checkNumber($phone);
 
         if (!($check['status'] ?? false)) {
-            return ResponseService::errorResponse("عذرًا، هذا الرقم غير مرتبط بحساب واتساب.");
+            return ResponseService::errorResponse("╪╣╪░╪▒┘ï╪د╪î ┘ç╪░╪د ╪د┘╪▒┘é┘à ╪║┘è╪▒ ┘à╪▒╪ز╪ذ╪╖ ╪ذ╪ص╪│╪د╪ذ ┘ê╪د╪ز╪│╪د╪ذ.");
         }
 
         $otp = rand(100000, 999999);
@@ -8756,18 +8772,18 @@ public function storeRequestDevice(Request $request)
             'expires_at' => now()->addMinutes(5)->timestamp,
         ]);
 
-        $defaultNewUserMessage = "مرحبًا بك في *مارب بين يديك*! 🎉\n\n"
-            . "نحن سعداء بانضمامك إلى عائلتنا.\n"
-            . "لتأكيد هويتك وضمان أمان حسابك، نرسل لك رمز التحقق الخاص بك:\n\n"
-            . "*رمز التحقق:* :otp\n\n"
-            . "⚠️ *ملاحظة:* لا تشارك هذا الرمز مع أي شخص. إذا لم تطلب هذا الرمز، يرجى تجاهل هذه الرسالة.\n\n"
-            . "شكرًا لاختيارك *مارب بين يديك* ونتمنى لك تجربة مميزة وآمنة! 😊";
+        $defaultNewUserMessage = "┘à╪▒╪ص╪ذ┘ï╪د ╪ذ┘â ┘┘è *┘à╪د╪▒╪ذ ╪ذ┘è┘ ┘è╪»┘è┘â*! ≡اë\n\n"
+            . "┘╪ص┘ ╪│╪╣╪»╪د╪ة ╪ذ╪د┘╪╢┘à╪د┘à┘â ╪ح┘┘ë ╪╣╪د╪خ┘╪ز┘╪د.\n"
+            . "┘╪ز╪ث┘â┘è╪» ┘ç┘ê┘è╪ز┘â ┘ê╪╢┘à╪د┘ ╪ث┘à╪د┘ ╪ص╪│╪د╪ذ┘â╪î ┘╪▒╪│┘ ┘┘â ╪▒┘à╪▓ ╪د┘╪ز╪ص┘é┘é ╪د┘╪«╪د╪╡ ╪ذ┘â:\n\n"
+            . "*╪▒┘à╪▓ ╪د┘╪ز╪ص┘é┘é:* :otp\n\n"
+            . "ظأبي╕ *┘à┘╪د╪ص╪╕╪ر:* ┘╪د ╪ز╪┤╪د╪▒┘â ┘ç╪░╪د ╪د┘╪▒┘à╪▓ ┘à╪╣ ╪ث┘è ╪┤╪«╪╡. ╪ح╪░╪د ┘┘à ╪ز╪╖┘╪ذ ┘ç╪░╪د ╪د┘╪▒┘à╪▓╪î ┘è╪▒╪ش┘ë ╪ز╪ش╪د┘ç┘ ┘ç╪░┘ç ╪د┘╪▒╪│╪د┘╪ر.\n\n"
+            . "╪┤┘â╪▒┘ï╪د ┘╪د╪«╪ز┘è╪د╪▒┘â *┘à╪د╪▒╪ذ ╪ذ┘è┘ ┘è╪»┘è┘â* ┘ê┘╪ز┘à┘┘ë ┘┘â ╪ز╪ش╪▒╪ذ╪ر ┘à┘à┘è╪▓╪ر ┘ê╪ت┘à┘╪ر! ≡اءè";
 
-        $defaultForgotPasswordMessage = "مرحبًا بك في *مارب بين يديك*! 🎉\n\n"
-            . "لتأكيد هويتك واستعادة الوصول إلى حسابك، نرسل لك رمز التحقق الخاص بك:\n\n"
-            . "*رمز التحقق:* :otp\n\n"
-            . "⚠️ *ملاحظة:* لا تشارك هذا الرمز مع أي شخص. إذا لم تطلب هذا الرمز، يرجى تجاهل هذه الرسالة.\n\n"
-            . "شكرًا لاختيارك *مارب بين يديك* ونتمنى لك تجربة مميزة وآمنة! 😊";
+        $defaultForgotPasswordMessage = "┘à╪▒╪ص╪ذ┘ï╪د ╪ذ┘â ┘┘è *┘à╪د╪▒╪ذ ╪ذ┘è┘ ┘è╪»┘è┘â*! ≡اë\n\n"
+            . "┘╪ز╪ث┘â┘è╪» ┘ç┘ê┘è╪ز┘â ┘ê╪د╪│╪ز╪╣╪د╪»╪ر ╪د┘┘ê╪╡┘ê┘ ╪ح┘┘ë ╪ص╪│╪د╪ذ┘â╪î ┘╪▒╪│┘ ┘┘â ╪▒┘à╪▓ ╪د┘╪ز╪ص┘é┘é ╪د┘╪«╪د╪╡ ╪ذ┘â:\n\n"
+            . "*╪▒┘à╪▓ ╪د┘╪ز╪ص┘é┘é:* :otp\n\n"
+            . "ظأبي╕ *┘à┘╪د╪ص╪╕╪ر:* ┘╪د ╪ز╪┤╪د╪▒┘â ┘ç╪░╪د ╪د┘╪▒┘à╪▓ ┘à╪╣ ╪ث┘è ╪┤╪«╪╡. ╪ح╪░╪د ┘┘à ╪ز╪╖┘╪ذ ┘ç╪░╪د ╪د┘╪▒┘à╪▓╪î ┘è╪▒╪ش┘ë ╪ز╪ش╪د┘ç┘ ┘ç╪░┘ç ╪د┘╪▒╪│╪د┘╪ر.\n\n"
+            . "╪┤┘â╪▒┘ï╪د ┘╪د╪«╪ز┘è╪د╪▒┘â *┘à╪د╪▒╪ذ ╪ذ┘è┘ ┘è╪»┘è┘â* ┘ê┘╪ز┘à┘┘ë ┘┘â ╪ز╪ش╪▒╪ذ╪ر ┘à┘à┘è╪▓╪ر ┘ê╪ت┘à┘╪ر! ≡اءè";
 
         $templates = [
             'new_user' => $settings['whatsapp_otp_message_new_user'] ?? $defaultNewUserMessage,
@@ -8781,7 +8797,7 @@ public function storeRequestDevice(Request $request)
         SendOtpWhatsAppJob::dispatch($phone, $message);
 
 
-        return ResponseService::successResponse('تم إرسال رمز التحقق عبر WhatsApp بنجاح.');
+        return ResponseService::successResponse('╪ز┘à ╪ح╪▒╪│╪د┘ ╪▒┘à╪▓ ╪د┘╪ز╪ص┘é┘é ╪╣╪ذ╪▒ WhatsApp ╪ذ┘╪ش╪د╪ص.');
     }
 
 
@@ -8800,7 +8816,7 @@ public function storeRequestDevice(Request $request)
 
         if (!$user) {
             return ResponseService::errorResponse(
-                'المستخدم غير موجود لهذا الرقم',
+                '╪د┘┘à╪│╪ز╪«╪»┘à ╪║┘è╪▒ ┘à┘ê╪ش┘ê╪» ┘┘ç╪░╪د ╪د┘╪▒┘é┘à',
                 404
             );
         }
@@ -8810,7 +8826,7 @@ public function storeRequestDevice(Request $request)
             $user->is_verified = 1;
             $user->save();
 
-            return ResponseService::successResponse('تم التحقق بنجاح (تم تعطيل التحقق عبر واتساب حالياً).');
+            return ResponseService::successResponse('╪ز┘à ╪د┘╪ز╪ص┘é┘é ╪ذ┘╪ش╪د╪ص (╪ز┘à ╪ز╪╣╪╖┘è┘ ╪د┘╪ز╪ص┘é┘é ╪╣╪ذ╪▒ ┘ê╪د╪ز╪│╪د╪ذ ╪ص╪د┘┘è╪د┘ï).');
         }
 
         $otpRecord = OTP::where('phone', $phone)
@@ -8821,14 +8837,14 @@ public function storeRequestDevice(Request $request)
 
         if (!$otpRecord) {
             return ResponseService::errorResponse(
-                'رمز التحقق غير صحيح أو لا يمكن العثور عليه',
+                '╪▒┘à╪▓ ╪د┘╪ز╪ص┘é┘é ╪║┘è╪▒ ╪╡╪ص┘è╪ص ╪ث┘ê ┘╪د ┘è┘à┘â┘ ╪د┘╪╣╪س┘ê╪▒ ╪╣┘┘è┘ç',
                 404
             );
         }
 
         if ($otpRecord->expires_at < now()->timestamp) {
             return ResponseService::errorResponse(
-                'رمز التحقق منتهي الصلاحية',
+                '╪▒┘à╪▓ ╪د┘╪ز╪ص┘é┘é ┘à┘╪ز┘ç┘è ╪د┘╪╡┘╪د╪ص┘è╪ر',
                 410
             );
         }
@@ -8841,23 +8857,23 @@ public function storeRequestDevice(Request $request)
         $user->is_verified = 1;
         $user->save();
 
-        return ResponseService::successResponse('تم التحقق بنجاح');
+        return ResponseService::successResponse('╪ز┘à ╪د┘╪ز╪ص┘é┘é ╪ذ┘╪ش╪د╪ص');
 
     }
 
     /**
-     * إكمال التسجيل للمستخدمين
+     * ╪ح┘â┘à╪د┘ ╪د┘╪ز╪│╪ش┘è┘ ┘┘┘à╪│╪ز╪«╪»┘à┘è┘
      */
     public function completeRegistration(Request $request)
     {
         try {
             DB::beginTransaction();
             
-            // تسجيل البيانات المرسلة للتصحيح
+            // ╪ز╪│╪ش┘è┘ ╪د┘╪ذ┘è╪د┘╪د╪ز ╪د┘┘à╪▒╪│┘╪ر ┘┘╪ز╪╡╪ص┘è╪ص
             \Log::info('Complete Registration Request:', $request->all());
             \Log::info('User Account Type:', ['account_type' => $request->account_type]);
             
-            // التحقق الأساسي
+            // ╪د┘╪ز╪ص┘é┘é ╪د┘╪ث╪│╪د╪│┘è
             $validator = Validator::make($request->all(), [
                 'phone_number' => 'nullable|string',
                 'country_code' => 'nullable|string',
@@ -8865,8 +8881,8 @@ public function storeRequestDevice(Request $request)
                 'email' => 'nullable|email|unique:users,email,' . Auth::id(),
             ]);
 
-            // التحقق المشروط حسب نوع الحساب - مرن للحسابات التجارية
-            // نقبل البيانات المرسلة كما هي ونحفظها
+            // ╪د┘╪ز╪ص┘é┘é ╪د┘┘à╪┤╪▒┘ê╪╖ ╪ص╪│╪ذ ┘┘ê╪╣ ╪د┘╪ص╪│╪د╪ذ - ┘à╪▒┘ ┘┘╪ص╪│╪د╪ذ╪د╪ز ╪د┘╪ز╪ش╪د╪▒┘è╪ر
+            // ┘┘é╪ذ┘ ╪د┘╪ذ┘è╪د┘╪د╪ز ╪د┘┘à╪▒╪│┘╪ر ┘â┘à╪د ┘ç┘è ┘ê┘╪ص┘╪╕┘ç╪د
 
             if ($validator->fails()) {
                 return ResponseService::validationError($validator->errors()->first());
@@ -8874,7 +8890,7 @@ public function storeRequestDevice(Request $request)
 
             $user = Auth::user();
             
-            // تحديث البيانات الأساسية فقط إذا كانت مرسلة
+            // ╪ز╪ص╪»┘è╪س ╪د┘╪ذ┘è╪د┘╪د╪ز ╪د┘╪ث╪│╪د╪│┘è╪ر ┘┘é╪╖ ╪ح╪░╪د ┘â╪د┘╪ز ┘à╪▒╪│┘╪ر
             if ($request->has('phone_number') && !empty($request->phone_number)) {
                 $user->mobile = $request->phone_number;
             }
@@ -8884,19 +8900,23 @@ public function storeRequestDevice(Request $request)
             }
             
             $user->account_type = $request->account_type;
+            if ((int) $user->account_type === User::ACCOUNT_TYPE_SELLER) {
+                // For merchant accounts rely on store/business name instead of a personal username
+                $user->name = $this->fallbackSellerName($request, $user->toArray(), $user);
+            }
             
             if ($request->has('email') && !empty($request->email)) {
                 $user->email = $request->email;
             }
             
-            // إعداد المعلومات الإضافية للحسابات التجارية والعقارية
-            // الحفاظ على البيانات الموجودة وتحديثها فقط
+            // ╪ح╪╣╪»╪د╪» ╪د┘┘à╪╣┘┘ê┘à╪د╪ز ╪د┘╪ح╪╢╪د┘┘è╪ر ┘┘╪ص╪│╪د╪ذ╪د╪ز ╪د┘╪ز╪ش╪د╪▒┘è╪ر ┘ê╪د┘╪╣┘é╪د╪▒┘è╪ر
+            // ╪د┘╪ص┘╪د╪╕ ╪╣┘┘ë ╪د┘╪ذ┘è╪د┘╪د╪ز ╪د┘┘à┘ê╪ش┘ê╪»╪ر ┘ê╪ز╪ص╪»┘è╪س┘ç╪د ┘┘é╪╖
             $additionalInfo = $user->additional_info ?: [];
             if (!is_array($additionalInfo)) {
                 $additionalInfo = [];
             }
             
-            // التأكد من وجود المفاتيح الأساسية
+            // ╪د┘╪ز╪ث┘â╪» ┘à┘ ┘ê╪ش┘ê╪» ╪د┘┘à┘╪د╪ز┘è╪ص ╪د┘╪ث╪│╪د╪│┘è╪ر
             if (!isset($additionalInfo['contact_info'])) {
                 $additionalInfo['contact_info'] = [];
             }
@@ -8905,11 +8925,15 @@ public function storeRequestDevice(Request $request)
             }
             
             if ((int) $request->account_type === User::ACCOUNT_TYPE_REAL_ESTATE) {
-                // حساب عقاري - معالجة البيانات الخاصة بالعقارات
-                // الحفاظ على البيانات الموجودة وتحديث المرسلة فقط
+                // ╪ص╪│╪د╪ذ ╪╣┘é╪د╪▒┘è - ┘à╪╣╪د┘╪ش╪ر ╪د┘╪ذ┘è╪د┘╪د╪ز ╪د┘╪«╪د╪╡╪ر ╪ذ╪د┘╪╣┘é╪د╪▒╪د╪ز
+                // ╪د┘╪ص┘╪د╪╕ ╪╣┘┘ë ╪د┘╪ذ┘è╪د┘╪د╪ز ╪د┘┘à┘ê╪ش┘ê╪»╪ر ┘ê╪ز╪ص╪»┘è╪س ╪د┘┘à╪▒╪│┘╪ر ┘┘é╪╖
                 $contactInfo = $additionalInfo['contact_info'];
+
+                if ((int) $user->account_type === User::ACCOUNT_TYPE_SELLER) {
+                    $user->name = $this->fallbackSellerName($request, $user->toArray(), $user);
+                }
                 
-                // بيانات الحساب العقاري
+                // ╪ذ┘è╪د┘╪د╪ز ╪د┘╪ص╪│╪د╪ذ ╪د┘╪╣┘é╪د╪▒┘è
                 if ($request->has('office_name')) {
                     $contactInfo['office_name'] = $request->office_name;
                 }
@@ -8926,20 +8950,20 @@ public function storeRequestDevice(Request $request)
                     $contactInfo['office_location'] = $request->office_location;
                 }
                 
-                // معالجة الموقع الجغرافي
+                // ┘à╪╣╪د┘╪ش╪ر ╪د┘┘à┘ê┘é╪╣ ╪د┘╪ش╪║╪▒╪د┘┘è
                 if ($request->has('latitude') && $request->has('longitude')) {
                     $contactInfo['latitude'] = $request->latitude;
                     $contactInfo['longitude'] = $request->longitude;
                 }
                 
-                // معالجة صورة المكتب
+                // ┘à╪╣╪د┘╪ش╪ر ╪╡┘ê╪▒╪ر ╪د┘┘à┘â╪ز╪ذ
                 if ($request->has('office_logo')) {
                     try {
                         $imageData = base64_decode($request->office_logo);
                         $imageName = 'office_logo_' . $user->id . '_' . time() . '.jpg';
                         $imagePath = 'uploads/office_logos/' . $imageName;
                         
-                        // إنشاء المجلد إذا لم يكن موجود
+                        // ╪ح┘╪┤╪د╪ة ╪د┘┘à╪ش┘╪» ╪ح╪░╪د ┘┘à ┘è┘â┘ ┘à┘ê╪ش┘ê╪»
                         if (!file_exists(public_path('uploads/office_logos'))) {
                             mkdir(public_path('uploads/office_logos'), 0777, true);
                         }
@@ -8954,11 +8978,11 @@ public function storeRequestDevice(Request $request)
                 $additionalInfo['contact_info'] = $contactInfo;
                 
             } elseif ((int) $request->account_type === User::ACCOUNT_TYPE_SELLER) {
-                // حساب تجاري - معالجة البيانات الخاصة بالتجارة
-                // الحفاظ على البيانات الموجودة وتحديث المرسلة فقط
+                // ╪ص╪│╪د╪ذ ╪ز╪ش╪د╪▒┘è - ┘à╪╣╪د┘╪ش╪ر ╪د┘╪ذ┘è╪د┘╪د╪ز ╪د┘╪«╪د╪╡╪ر ╪ذ╪د┘╪ز╪ش╪د╪▒╪ر
+                // ╪د┘╪ص┘╪د╪╕ ╪╣┘┘ë ╪د┘╪ذ┘è╪د┘╪د╪ز ╪د┘┘à┘ê╪ش┘ê╪»╪ر ┘ê╪ز╪ص╪»┘è╪س ╪د┘┘à╪▒╪│┘╪ر ┘┘é╪╖
                 $contactInfo = $additionalInfo['contact_info'];
                 
-                // بيانات الحساب التجاري
+                // ╪ذ┘è╪د┘╪د╪ز ╪د┘╪ص╪│╪د╪ذ ╪د┘╪ز╪ش╪د╪▒┘è
                 if ($request->has('business_name')) {
                     $contactInfo['business_name'] = $request->business_name;
                 }
@@ -8987,7 +9011,7 @@ public function storeRequestDevice(Request $request)
                     $contactInfo['payment_account_details'] = $request->payment_account_details;
                 }
                 
-                // معالجة أوقات العمل للحسابات التجارية
+                // ┘à╪╣╪د┘╪ش╪ر ╪ث┘ê┘é╪د╪ز ╪د┘╪╣┘à┘ ┘┘╪ص╪│╪د╪ذ╪د╪ز ╪د┘╪ز╪ش╪د╪▒┘è╪ر
                 if ($request->has('opening_time')) {
                     $contactInfo['opening_time'] = $request->opening_time;
                 }
@@ -8996,20 +9020,20 @@ public function storeRequestDevice(Request $request)
                     $contactInfo['closing_time'] = $request->closing_time;
                 }
                 
-                // معالجة الموقع الجغرافي
+                // ┘à╪╣╪د┘╪ش╪ر ╪د┘┘à┘ê┘é╪╣ ╪د┘╪ش╪║╪▒╪د┘┘è
                 if ($request->has('latitude') && $request->has('longitude')) {
                     $contactInfo['latitude'] = $request->latitude;
                     $contactInfo['longitude'] = $request->longitude;
                 }
                 
-                // معالجة صورة المحل
+                // ┘à╪╣╪د┘╪ش╪ر ╪╡┘ê╪▒╪ر ╪د┘┘à╪ص┘
                 if ($request->has('business_logo')) {
                     try {
                         $imageData = base64_decode($request->business_logo);
                         $imageName = 'business_logo_' . $user->id . '_' . time() . '.jpg';
                         $imagePath = 'uploads/business_logos/' . $imageName;
                         
-                        // إنشاء المجلد إذا لم يكن موجود
+                        // ╪ح┘╪┤╪د╪ة ╪د┘┘à╪ش┘╪» ╪ح╪░╪د ┘┘à ┘è┘â┘ ┘à┘ê╪ش┘ê╪»
                         if (!file_exists(public_path('uploads/business_logos'))) {
                             mkdir(public_path('uploads/business_logos'), 0777, true);
                         }
@@ -9021,14 +9045,14 @@ public function storeRequestDevice(Request $request)
                     }
                 }
                 
-                // معالجة ملف السجل التجاري
+                // ┘à╪╣╪د┘╪ش╪ر ┘à┘┘ ╪د┘╪│╪ش┘ ╪د┘╪ز╪ش╪د╪▒┘è
                 if ($request->has('commercial_register_file') && $request->has('commercial_register_filename')) {
                     try {
                         $fileData = base64_decode($request->commercial_register_file);
                         $fileName = 'commercial_register_' . $user->id . '_' . time() . '_' . $request->commercial_register_filename;
                         $filePath = 'uploads/commercial_registers/' . $fileName;
                         
-                        // إنشاء المجلد إذا لم يكن موجود
+                        // ╪ح┘╪┤╪د╪ة ╪د┘┘à╪ش┘╪» ╪ح╪░╪د ┘┘à ┘è┘â┘ ┘à┘ê╪ش┘ê╪»
                         if (!file_exists(public_path('uploads/commercial_registers'))) {
                             mkdir(public_path('uploads/commercial_registers'), 0777, true);
                         }
@@ -9043,7 +9067,7 @@ public function storeRequestDevice(Request $request)
                 
                 $additionalInfo['contact_info'] = $contactInfo;
                 
-                // معالجة الفئات للحسابات التجارية
+                // ┘à╪╣╪د┘╪ش╪ر ╪د┘┘╪خ╪د╪ز ┘┘╪ص╪│╪د╪ذ╪د╪ز ╪د┘╪ز╪ش╪د╪▒┘è╪ر
                 if ($request->has('business_categories')) {
                     $categories = explode(',', $request->business_categories);
                     $additionalInfo['categories'] = array_map('trim', $categories);
@@ -9055,11 +9079,11 @@ public function storeRequestDevice(Request $request)
             
             DB::commit();
             
-            // تسجيل نجاح العملية
+            // ╪ز╪│╪ش┘è┘ ┘╪ش╪د╪ص ╪د┘╪╣┘à┘┘è╪ر
             \Log::info('Complete Registration Success for User ID: ' . $user->id);
             \Log::info('Updated Additional Info:', ['additional_info' => $additionalInfo]);
             
-            return ResponseService::successResponse('تم إكمال التسجيل بنجاح', $user);
+            return ResponseService::successResponse('╪ز┘à ╪ح┘â┘à╪د┘ ╪د┘╪ز╪│╪ش┘è┘ ╪ذ┘╪ش╪د╪ص', $user);
             
         } catch (Throwable $th) {
             DB::rollBack();
@@ -9069,7 +9093,7 @@ public function storeRequestDevice(Request $request)
     }
 
     /**
-     * تحديث كلمة المرور بعد التحقق من OTP
+     * ╪ز╪ص╪»┘è╪س ┘â┘┘à╪ر ╪د┘┘à╪▒┘ê╪▒ ╪ذ╪╣╪» ╪د┘╪ز╪ص┘é┘é ┘à┘ OTP
      */
     public function updatePassword(Request $request)
     {
@@ -9084,7 +9108,7 @@ public function storeRequestDevice(Request $request)
                 return ResponseService::validationError($validator->errors()->first());
             }
 
-            // البحث عن المستخدم بناءً على رقم الهاتف
+            // ╪د┘╪ذ╪ص╪س ╪╣┘ ╪د┘┘à╪│╪ز╪«╪»┘à ╪ذ┘╪د╪ة┘ï ╪╣┘┘ë ╪▒┘é┘à ╪د┘┘ç╪د╪ز┘
             $user = User::where('mobile', $request->phone)
                        ->whereHas('roles', function ($q) {
                            $q->where('name', 'User');
@@ -9092,24 +9116,24 @@ public function storeRequestDevice(Request $request)
                        ->first();
 
             if (!$user) {
-                return ResponseService::errorResponse('رقم الهاتف غير مسجل.', null, 404);
+                return ResponseService::errorResponse('╪▒┘é┘à ╪د┘┘ç╪د╪ز┘ ╪║┘è╪▒ ┘à╪│╪ش┘.', null, 404);
             }
 
             if ($user->trashed()) {
-                return ResponseService::errorResponse('تم إلغاء تفعيل حسابك. يرجى التواصل مع الإدارة.', null, config('constants.RESPONSE_CODE.DEACTIVATED_ACCOUNT'));
+                return ResponseService::errorResponse('╪ز┘à ╪ح┘╪║╪د╪ة ╪ز┘╪╣┘è┘ ╪ص╪│╪د╪ذ┘â. ┘è╪▒╪ش┘ë ╪د┘╪ز┘ê╪د╪╡┘ ┘à╪╣ ╪د┘╪ح╪»╪د╪▒╪ر.', null, config('constants.RESPONSE_CODE.DEACTIVATED_ACCOUNT'));
             }
 
-            // تحديث كلمة المرور
+            // ╪ز╪ص╪»┘è╪س ┘â┘┘à╪ر ╪د┘┘à╪▒┘ê╪▒
             $user->password = Hash::make($request->password);
             $user->save();
 
-            // تسجيل دخول المستخدم تلقائياً
+            // ╪ز╪│╪ش┘è┘ ╪»╪«┘ê┘ ╪د┘┘à╪│╪ز╪«╪»┘à ╪ز┘┘é╪د╪خ┘è╪د┘ï
             Auth::guard('web')->login($user);
             
-            // إنشاء توكن جديد
+            // ╪ح┘╪┤╪د╪ة ╪ز┘ê┘â┘ ╪ش╪»┘è╪»
             $token = $user->createToken($user->name ?? '')->plainTextToken;
 
-            // تحديث FCM token إذا كان متوفراً
+            // ╪ز╪ص╪»┘è╪س FCM token ╪ح╪░╪د ┘â╪د┘ ┘à╪ز┘ê┘╪▒╪د┘ï
             if (!empty($request->fcm_id)) {
                 UserFcmToken::updateOrCreate(
                     ['fcm_token' => $request->fcm_id],
@@ -9121,7 +9145,7 @@ public function storeRequestDevice(Request $request)
                 );
             }
 
-            return ResponseService::successResponse('تم تحديث كلمة المرور بنجاح وتسجيل الدخول', $user, ['token' => $token]);
+            return ResponseService::successResponse('╪ز┘à ╪ز╪ص╪»┘è╪س ┘â┘┘à╪ر ╪د┘┘à╪▒┘ê╪▒ ╪ذ┘╪ش╪د╪ص ┘ê╪ز╪│╪ش┘è┘ ╪د┘╪»╪«┘ê┘', $user, ['token' => $token]);
             
         } catch (Throwable $th) {
             ResponseService::logErrorResponse($th, "API Controller -> updatePassword");
@@ -9146,6 +9170,30 @@ public function storeRequestDevice(Request $request)
         ];
     }
 
+    /**
+     * Resolve a non-null display name for seller accounts.
+     */
+    private function fallbackSellerName(Request $request, array $userData = [], ?User $user = null): string
+    {
+        $candidate = $request->input('business_name')
+            ?? ($userData['business_name'] ?? null)
+            ?? ($userData['name'] ?? null)
+            ?? ($user?->name ?? null);
+
+        $candidate = is_string($candidate) ? trim($candidate) : '';
+        if ($candidate !== '') {
+            return $candidate;
+        }
+
+        $mobile = $request->mobile ?? ($userData['mobile'] ?? ($user?->mobile ?? ''));
+        $normalizedMobile = preg_replace('/\D+/', '', (string) $mobile);
+        if (!empty($normalizedMobile)) {
+            return 'store_' . $normalizedMobile;
+        }
+
+        return 'store_' . Str::uuid()->toString();
+    }
+
 
 
     private function buildReferralRequestMeta(Request $request): array
@@ -9166,11 +9214,11 @@ public function storeRequestDevice(Request $request)
 
 
     /**
-     * معالجة كود الإحالة
+     * ┘à╪╣╪د┘╪ش╪ر ┘â┘ê╪» ╪د┘╪ح╪ص╪د┘╪ر
      * 
-     * @param string $code كود الإحالة
-     * @param User $user المستخدم الجديد
-     * @param string $contactInfo معلومات الاتصال
+     * @param string $code ┘â┘ê╪» ╪د┘╪ح╪ص╪د┘╪ر
+     * @param User $user ╪د┘┘à╪│╪ز╪«╪»┘à ╪د┘╪ش╪»┘è╪»
+     * @param string $contactInfo ┘à╪╣┘┘ê┘à╪د╪ز ╪د┘╪د╪ز╪╡╪د┘
      * @param array<string, mixed> $locationPayload
      * @return array<string, mixed>
      * 
@@ -9241,7 +9289,7 @@ public function storeRequestDevice(Request $request)
 
 
         try {
-            // البحث عن المستخدم الذي يملك كود الإحالة
+            // ╪د┘╪ذ╪ص╪س ╪╣┘ ╪د┘┘à╪│╪ز╪«╪»┘à ╪د┘╪░┘è ┘è┘à┘┘â ┘â┘ê╪» ╪د┘╪ح╪ص╪د┘╪ر
             $referrer = User::where('referral_code', $code)->first();
             
             if (!$referrer) {
@@ -9275,7 +9323,7 @@ public function storeRequestDevice(Request $request)
 
             }
             
-            // الحصول على أول تحدي نشط
+            // ╪د┘╪ص╪╡┘ê┘ ╪╣┘┘ë ╪ث┘ê┘ ╪ز╪ص╪»┘è ┘╪┤╪╖
 
 
             if ($lat === null || $lng === null || $deviceTime === null) {
@@ -9331,7 +9379,7 @@ public function storeRequestDevice(Request $request)
                 
             }
             
-            // إنشاء سجل الإحالة مع challenge_id و points
+            // ╪ح┘╪┤╪د╪ة ╪│╪ش┘ ╪د┘╪ح╪ص╪د┘╪ر ┘à╪╣ challenge_id ┘ê points
                  $referral = Referral::create([
                 'referrer_id' => $referrer->id,
                 'referred_user_id' => $user->id,
@@ -9339,7 +9387,7 @@ public function storeRequestDevice(Request $request)
                 'points' => $challenge->points_per_referral,
             ]);
             
-            // تقليل عدد الإحالات المطلوبة بمقدار واحد
+            // ╪ز┘é┘┘è┘ ╪╣╪»╪» ╪د┘╪ح╪ص╪د┘╪د╪ز ╪د┘┘à╪╖┘┘ê╪ذ╪ر ╪ذ┘à┘é╪»╪د╪▒ ┘ê╪د╪ص╪»
             $challenge->decrement('required_referrals');
             
             $auditContext['referral_id'] = $referral->id;
@@ -9474,14 +9522,14 @@ public function storeRequestDevice(Request $request)
                 return ResponseService::errorResponse('User not authenticated', null, 401);
             }
             
-            // عدد الإعلانات
+            // ╪╣╪»╪» ╪د┘╪ح╪╣┘╪د┘╪د╪ز
             $totalAds = Item::where('user_id', $user->id)->count();
             $activeAds = Item::where('user_id', $user->id)->where('status', 'approved')->count();
             
-            // عدد المفضلة
+            // ╪╣╪»╪» ╪د┘┘à┘╪╢┘╪ر
             $totalFavorites = Favourite::where('user_id', $user->id)->count();
             
-            // عدد المحادثات (unique conversations)
+            // ╪╣╪»╪» ╪د┘┘à╪ص╪د╪»╪س╪د╪ز (unique conversations)
             $totalChats = Chat::whereHas('itemOffer', function ($query) use ($user) {
 
                     $query->where('seller_id', $user->id)
@@ -9507,7 +9555,7 @@ public function storeRequestDevice(Request $request)
     }
 
     /**
-     * حفظ موقع المستخدم للحسابات الفردية
+     * ╪ص┘╪╕ ┘à┘ê┘é╪╣ ╪د┘┘à╪│╪ز╪«╪»┘à ┘┘╪ص╪│╪د╪ذ╪د╪ز ╪د┘┘╪▒╪»┘è╪ر
      */
     public function saveUserLocation(Request $request) {
         try {
@@ -9519,7 +9567,7 @@ public function storeRequestDevice(Request $request)
                 ], 401);
             }
 
-            // التحقق من أن المستخدم لديه حساب فردي
+            // ╪د┘╪ز╪ص┘é┘é ┘à┘ ╪ث┘ ╪د┘┘à╪│╪ز╪«╪»┘à ┘╪»┘è┘ç ╪ص╪│╪د╪ذ ┘╪▒╪»┘è
             if ($user->user_type != 1) {
                 return response()->json([
                     'error' => true,
@@ -9536,7 +9584,7 @@ public function storeRequestDevice(Request $request)
                 'country' => 'nullable|string',
             ]);
 
-            // تحديث معلومات الموقع في الجدول
+            // ╪ز╪ص╪»┘è╪س ┘à╪╣┘┘ê┘à╪د╪ز ╪د┘┘à┘ê┘é╪╣ ┘┘è ╪د┘╪ش╪»┘ê┘
             $user->update([
                 'latitude' => $request->latitude,
                 'longitude' => $request->longitude,
@@ -9778,7 +9826,7 @@ public function storeRequestDevice(Request $request)
 
     public function storeManualPaymentRequest(Request $request) {
         if ($request->filled('bank_id') && !$request->filled('manual_bank_id')) {
-            // نقبل bank_id القادم من تطبيقات العميل ونعيد تسميته إلى manual_bank_id قبل التحقق.
+            // ┘┘é╪ذ┘ bank_id ╪د┘┘é╪د╪»┘à ┘à┘ ╪ز╪╖╪ذ┘è┘é╪د╪ز ╪د┘╪╣┘à┘è┘ ┘ê┘╪╣┘è╪» ╪ز╪│┘à┘è╪ز┘ç ╪ح┘┘ë manual_bank_id ┘é╪ذ┘ ╪د┘╪ز╪ص┘é┘é.
             $request->merge(['manual_bank_id' => $request->input('bank_id')]);
         }
 
@@ -10434,7 +10482,7 @@ public function storeRequestDevice(Request $request)
             ];
 
             ResponseService::successResponse(
-                'تم جلب طلبات الدفع اليدوي بنجاح',
+                '╪ز┘à ╪ش┘╪ذ ╪╖┘╪ذ╪د╪ز ╪د┘╪»┘╪╣ ╪د┘┘è╪»┘ê┘è ╪ذ┘╪ش╪د╪ص',
                 [
                     'manual_payment_requests' => $requests,
                     'items' => $requests,
@@ -11398,12 +11446,12 @@ public function storeRequestDevice(Request $request)
             return;
         }
 
-        $senderName = $chatMessage->sender?->name ?? $reporter->name ?? __('مستخدم');
-        $messagePreview = $chatMessage->message ?? __('تم استلام رسالة جديدة.');
+        $senderName = $chatMessage->sender?->name ?? $reporter->name ?? __('┘à╪│╪ز╪«╪»┘à');
+        $messagePreview = $chatMessage->message ?? __('╪ز┘à ╪د╪│╪ز┘╪د┘à ╪▒╪│╪د┘╪ر ╪ش╪»┘è╪»╪ر.');
 
         $response = NotificationService::sendFcmNotification(
             $tokens,
-            __('محادثة جديدة من :name', ['name' => $senderName]),
+            __('┘à╪ص╪د╪»╪س╪ر ╪ش╪»┘è╪»╪ر ┘à┘ :name', ['name' => $senderName]),
             Str::limit($messagePreview, 120),
             'support_chat_assignment',
             [
@@ -11436,7 +11484,7 @@ public function storeRequestDevice(Request $request)
                 'status' => DepartmentTicket::STATUS_OPEN,
             ],
             [
-                'subject' => sprintf('محادثة #%d تنتظر التعيين', $conversation->id),
+                'subject' => sprintf('┘à╪ص╪د╪»╪س╪ر #%d ╪ز┘╪ز╪╕╪▒ ╪د┘╪ز╪╣┘è┘è┘', $conversation->id),
                 'description' => $this->buildSupportTicketDescription($chatMessage, $reporter),
                 'reporter_id' => $reporter->id,
             ]
@@ -11445,13 +11493,13 @@ public function storeRequestDevice(Request $request)
 
     private function buildSupportTicketDescription(ChatMessage $chatMessage, User $reporter): string
     {
-        $senderName = $chatMessage->sender?->name ?? $reporter->name ?? __('مستخدم');
+        $senderName = $chatMessage->sender?->name ?? $reporter->name ?? __('┘à╪│╪ز╪«╪»┘à');
         $messagePreview = $chatMessage->message
             ? Str::limit($chatMessage->message, 160)
-            : __('تم فتح محادثة جديدة بدون رسالة نصية.');
+            : __('╪ز┘à ┘╪ز╪ص ┘à╪ص╪د╪»╪س╪ر ╪ش╪»┘è╪»╪ر ╪ذ╪»┘ê┘ ╪▒╪│╪د┘╪ر ┘╪╡┘è╪ر.');
 
         return sprintf(
-            'المستخدم %s أنشأ محادثة جديدة. آخر رسالة: %s',
+            '╪د┘┘à╪│╪ز╪«╪»┘à %s ╪ث┘╪┤╪ث ┘à╪ص╪د╪»╪س╪ر ╪ش╪»┘è╪»╪ر. ╪ت╪«╪▒ ╪▒╪│╪د┘╪ر: %s',
             $senderName,
             $messagePreview
         );
@@ -11936,4 +11984,5 @@ public function storeRequestDevice(Request $request)
         return self::$itemColumnAvailability = $columns;
     }
 }
+
 

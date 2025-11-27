@@ -62,9 +62,14 @@ class WalletSummaryCubit extends Cubit<WalletSummaryState> {
       }
     }
 
-    emit(WalletSummaryLoading(previous: state is WalletSummaryLoadSuccess ? state as WalletSummaryLoadSuccess : null));
+    if (isClosed) return;
+    emit(WalletSummaryLoading(
+        previous: state is WalletSummaryLoadSuccess
+            ? state as WalletSummaryLoadSuccess
+            : null));
     try {
       final summary = await _repository.fetchSummary(filter: _cachedFilter);
+      if (isClosed) return;
       emit(
         WalletSummaryLoadSuccess(
           summary: summary,
@@ -72,6 +77,7 @@ class WalletSummaryCubit extends Cubit<WalletSummaryState> {
         ),
       );
     } catch (e) {
+      if (isClosed) return;
       emit(WalletSummaryFailure(e));
     }
   }
@@ -82,6 +88,9 @@ class WalletSummaryCubit extends Cubit<WalletSummaryState> {
 
   void clearFilters() {
     _cachedFilter = null;
+    if (isClosed) {
+      return;
+    }
     if (state is WalletSummaryLoadSuccess) {
       final current = state as WalletSummaryLoadSuccess;
       emit(current.copyWith(appliedFilter: null));

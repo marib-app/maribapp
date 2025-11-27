@@ -1203,6 +1203,7 @@ class Api {
       final statusCode = e.response?.statusCode;
       final dynamic rawPayload = e.response?.data;
       final Map<String, dynamic>? payload = _normalizePayload(rawPayload);
+      _logValidationResponse(e, rawPayload);
       if (statusCode == 401) {
         if (_shouldForceLogoutOn401(payload)) {
           userExpired();
@@ -1231,10 +1232,14 @@ class Api {
         throw "server-not-available";
       }
 
+      final String defaultMessage = e.error is SocketException
+          ? "no-internet"
+          : "Something went wrong with error ${e.response?.statusCode}";
+      final String errorMessage =
+          _extractMessageFromPayload(payload) ?? defaultMessage;
+
       throw ApiHttpException(
-        errorMessage: e.error is SocketException
-            ? "no-internet"
-            : "Something went wrong with error ${e.response?.statusCode}",
+        errorMessage: errorMessage,
         statusCode: statusCode,
         payload: payload,
         cause: e,
@@ -1330,7 +1335,9 @@ class Api {
       return Map.from(response.data);
     } on DioException catch (e) {
       final int? statusCode = e.response?.statusCode;
-      final Map<String, dynamic>? payload = _normalizePayload(e.response?.data);
+      final dynamic rawPayload = e.response?.data;
+      final Map<String, dynamic>? payload = _normalizePayload(rawPayload);
+      _logValidationResponse(e, rawPayload);
       if (statusCode == 401 || statusCode == 403) {
         if (_shouldForceLogoutOn401(payload)) {
           userExpired();
@@ -1556,7 +1563,9 @@ class Api {
       return <String, dynamic>{'data': rawPayload};
     } on DioException catch (e) {
       final int? statusCode = e.response?.statusCode;
-      final Map<String, dynamic>? payload = _normalizePayload(e.response?.data);
+      final dynamic rawPayload = e.response?.data;
+      final Map<String, dynamic>? payload = _normalizePayload(rawPayload);
+      _logValidationResponse(e, rawPayload);
       if (statusCode == 401 || statusCode == 403) {
         if (_shouldForceLogoutOn401(payload)) {
           userExpired();
@@ -1705,8 +1714,9 @@ class Api {
         }
 
         final int? statusCode = e.response?.statusCode;
-        final Map<String, dynamic>? payload =
-            _normalizePayload(e.response?.data);
+      final dynamic rawPayload = e.response?.data;
+      final Map<String, dynamic>? payload = _normalizePayload(rawPayload);
+      _logValidationResponse(e, rawPayload);
         if (statusCode == 401 || statusCode == 403) {
           if (_shouldForceLogoutOn401(payload)) {
             userExpired();
@@ -2071,6 +2081,31 @@ class Api {
     }
 
     return null;
+  }
+
+  static void _logValidationResponse(DioException exception, dynamic payload) {
+    if (exception.response?.statusCode != 422) {
+      return;
+    }
+
+    final method = exception.requestOptions.method;
+    final uri = exception.requestOptions.uri;
+    final body = _stringifyPayload(payload);
+    debugPrint('[API][422][$method] $uri => $body');
+  }
+
+  static String _stringifyPayload(dynamic payload) {
+    if (payload == null) {
+      return 'null';
+    }
+    if (payload is String) {
+      return payload;
+    }
+    try {
+      return json.encode(payload);
+    } catch (_) {
+      return payload.toString();
+    }
   }
 
   static String? _extractMessageFromPayload(Map<String, dynamic>? payload) {

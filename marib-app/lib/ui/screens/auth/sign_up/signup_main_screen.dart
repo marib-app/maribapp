@@ -78,6 +78,178 @@ class LoginScreenState extends State<SignUpMainScreen> {
   Map<String, dynamic>? googleData;
   bool _isSubmitting = false;
 
+  Future<String?> _showAccountTypeSelectorSheet() async {
+    final Map<String, (String label, IconData icon)> options = {
+      "1": ("individual".translate(context), Icons.person),
+      "2": ("realEstate".translate(context), Icons.home_work_outlined),
+      "3": ("commercial".translate(context), Icons.storefront_outlined),
+    };
+
+    return showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: 16,
+              right: 16,
+              top: 16,
+              bottom: 16 + MediaQuery.of(ctx).viewInsets.bottom,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: context.color.textLightColor.withOpacity(0.4),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text("chooseAccountType".translate(context),
+                    style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 8),
+                ...options.entries.map((entry) {
+                  final isSelected = selectedAccountType == entry.key;
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isSelected
+                            ? context.color.territoryColor
+                            : context.color.borderColor.darken(30),
+                        width: isSelected ? 2 : 1,
+                      ),
+                      color: isSelected
+                          ? context.color.territoryColor.withOpacity(0.08)
+                          : context.color.secondaryColor,
+                    ),
+                    child: ListTile(
+                      leading: Icon(
+                        entry.value.$2,
+                        color: context.color.territoryColor,
+                      ),
+                      title: Text(entry.value.$1),
+                      trailing: isSelected
+                          ? Icon(Icons.check_circle,
+                              color: context.color.territoryColor)
+                          : null,
+                      onTap: () => Navigator.of(ctx).pop(entry.key),
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showAccountTypeDetailsSheet(String? typeValue) async {
+    final String key = _accountTypeAlertKey(typeValue);
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 16,
+              bottom: 16 + MediaQuery.of(ctx).viewInsets.bottom,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: context.color.textLightColor.withOpacity(0.4),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    "chooseaccountAlertTitle".translate(context),
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    key.translate(context),
+                    style: TextStyle(
+                      fontSize: context.font.small,
+                      color: context.color.textDefaultColor,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: UiUtils.buildButton(
+                          context,
+                          onPressed: () async {
+                            Navigator.of(ctx).pop();
+                            final newType =
+                                await _showAccountTypeSelectorSheet();
+                            if (newType != null) {
+                              onAccountTypeChanged(newType);
+                              await _showAccountTypeDetailsSheet(newType);
+                            }
+                          },
+                          buttonTitle: "back".translate(context),
+                          radius: 12,
+                          border: BorderSide(
+                            color: context.color.borderColor.darken(20),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 14, horizontal: 8),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: UiUtils.buildButton(
+                          context,
+                          onPressed: () => Navigator.of(ctx).pop(),
+                          buttonTitle: "confirm".translate(context),
+                          radius: 12,
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 14, horizontal: 8),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Map<String, dynamic> _buildMerchantDraft(Map<String, dynamic> payload) {
     final draft = Map<String, dynamic>.from(payload);
     draft.remove('password');
@@ -553,11 +725,17 @@ class LoginScreenState extends State<SignUpMainScreen> {
     _isSubmitting = true;
     Widgets.showLoader(context);
 
-    final locationPayload = await _prepareLocationPayload();
-    if (locationPayload == null) {
-      Widgets.hideLoder(context);
-      _isSubmitting = false;
-      return;
+    // نطلب الموقع فقط إذا أدخل المستخدم كود إحالة (للتحقق من نطاق مأرب)
+    final String referralCode = codeCtrl.text.trim();
+    Map<String, dynamic> locationPayload = {};
+    if (referralCode.isNotEmpty) {
+      final loc = await _prepareLocationPayload();
+      if (loc == null) {
+        Widgets.hideLoder(context);
+        _isSubmitting = false;
+        return;
+      }
+      locationPayload = loc;
     }
 
     try {
@@ -574,7 +752,6 @@ class LoginScreenState extends State<SignUpMainScreen> {
         ...locationPayload,
       };
 
-      final String referralCode = codeCtrl.text.trim();
       if (referralCode.isNotEmpty) {
         basePayload["code"] = referralCode;
       }
@@ -685,59 +862,16 @@ class LoginScreenState extends State<SignUpMainScreen> {
     final callbacks = SignUpCallbacks(
       onToggleObscure: onToggleObscure,
       onAgreeChanged: onAgreeChanged,
-
-      // عند تغيير نوع الحساب
       onAccountTypeChanged: (v) async {
-        // حفظ القيمة الجديدة في الـ state
         onAccountTypeChanged(v);
-
-        // عرض نافذة وسط الشاشة بمحتوى من السيرفر (مترجم)
-        await UiUtils.showBlurredDialoge(
-          context,
-          dialoge: BlurredDialogBox(
-            showCancleButton: false,
-            // لا نعرض زر إلغاء
-
-            // العنوان يأتي من الترجمة
-            title: "chooseaccountAlertTitle".translate(context),
-
-            // المحتوى من السيرفر مترجم، يمكن أن يحتوي نص طويل
-            content: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height *
-                    0.6, // أقصى 60% من ارتفاع الشاشة
-              ),
-              child: SingleChildScrollView(
-                child: Text(
-                  _accountTypeAlertKey(v).translate(context),
-                  style: TextStyle(
-                    fontSize: context.font.small,
-                    color: context.color.textDefaultColor,
-                    height: 1.5, // تباعد الأسطر للقراءة المريحة
-                  ),
-                ),
-              ),
-            ),
-
-            // زر قبول/موافق
-            acceptButtonName: 'ok'.translate(context),
-            isAcceptContainesPush: true,
-            onAccept: () async {
-              Navigator.of(context).pop(); // إغلاق النافذة عند الضغط على OK
-            },
-          ),
-        );
+        await _showAccountTypeDetailsSheet(v);
       },
-
       onShowCountryPicker: onShowCountryPicker,
       onSubmit: onSubmit,
       onNavigateToLogin: () => Navigator.pushNamed(context, Routes.login),
-
       onOpenStaticContent: ({required String title, required String param}) {
         return _openStaticContent(title: title, param: param);
       },
-
-      // مصادقة Google
       onGoogleAuth: () {
         context.read<AuthenticationCubit>().setData(
               payload: GoogleLoginPayload(),
@@ -745,8 +879,6 @@ class LoginScreenState extends State<SignUpMainScreen> {
             );
         context.read<AuthenticationCubit>().authenticate();
       },
-
-      // مصادقة Apple
       onAppleAuth: () {
         context.read<AuthenticationCubit>().setData(
               payload: AppleLoginPayload(),

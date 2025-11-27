@@ -1,3 +1,4 @@
+﻿import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:marib/data/model/wifi/wifi_network.dart';
@@ -357,11 +358,18 @@ class _WifiNetworkDetailsScreenState extends State<WifiNetworkDetailsScreen> {
       }
 
       await _showWifiCodeDialog(purchase);
-    } catch (error) {
+    } catch (error, stack) {
       if (!mounted) return;
+      final dynamic filtered = ErrorFilter.check(error).error;
+      final String message = filtered is String && filtered.trim().isNotEmpty
+          ? filtered.trim()
+          : error.toString();
+      debugPrint(
+          'فشل الكشف عن أكواد الواي فاي (${error.runtimeType}): $message');
+      debugPrintStack(stackTrace: stack);
       HelperUtils.showSnackBarMessage(
         context,
-        ErrorFilter.check(error).error,
+        message,
       );
     }
   }
@@ -1168,3 +1176,6 @@ class _WifiCodeTile extends StatelessWidget {
     );
   }
 }
+
+
+

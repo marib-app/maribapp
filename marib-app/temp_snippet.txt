@@ -1,0 +1,20 @@
+          : null;
+      final int? wifiPlanIdParam = widget.args.wifiPlanId ?? widget.args.itemId;
+
+      final settings = await _service.fetchManualPaymentSettings(
+        token: widget.args.token,
+        purpose: purposeParam,
+        currency: currency,
+        orderId: orderIdParam,
+        paymentMethod:
+            ManualPaymentService.paymentMethodForApi(_manualBankMethod),
+        amount: isWalletTopUp ? widget.args.amount : null,
+        serviceId: widget.args.serviceId ?? widget.args.itemId,
+        wifiPlanId: wifiPlanIdParam,
+        serviceRequestId: widget.args.serviceRequestId,
+      );
+
+      final List<CurrencyParseResult> currencyCandidates =
+          <CurrencyParseResult>[
+        CurrencyUtils.parseCurrency(settings.paymentIntent),
+        CurrencyUtils.parseCurrency(settings.paymentTransaction),

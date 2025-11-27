@@ -219,8 +219,9 @@ class _UiSmartButtonState extends State<_UiSmartButton> {
   void didUpdateWidget(covariant _UiSmartButton oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    final bool requirementsChanged =
-        !listEquals(oldWidget.requiredTextControllers, widget.requiredTextControllers) ||
+    final bool requirementsChanged = !listEquals(
+            oldWidget.requiredTextControllers,
+            widget.requiredTextControllers) ||
         !listEquals(oldWidget.enableConditions, widget.enableConditions) ||
         oldWidget.autoDisableWhenInvalid != widget.autoDisableWhenInvalid;
 
@@ -324,8 +325,7 @@ class _UiSmartButtonState extends State<_UiSmartButton> {
       widget.isError == null;
 
   bool get _isBusy =>
-      (widget.isInProgress ?? false) ||
-      (_shouldAutoManage ? _autoBusy : false);
+      (widget.isInProgress ?? false) || (_shouldAutoManage ? _autoBusy : false);
 
   bool get _isDisabled =>
       (widget.disabled ?? false) ||
@@ -388,10 +388,8 @@ class _UiSmartButtonState extends State<_UiSmartButton> {
     final Size screenSize = MediaQuery.of(context).size;
     final bool isNarrow = screenSize.width < 360;
 
-    final double effectiveHeight =
-        widget.height ?? (isNarrow ? 42.0 : 46.0);
-    final double effectiveRadius =
-        widget.radius ?? (isNarrow ? 12.0 : 16.0);
+    final double effectiveHeight = widget.height ?? (isNarrow ? 42.0 : 46.0);
+    final double effectiveRadius = widget.radius ?? (isNarrow ? 12.0 : 16.0);
     final double resolvedFontSize = widget.fontSize ??
         (isNarrow ? context.font.normal : context.font.large);
     final double horizontalPadding = isNarrow ? 12.0 : 16.0;
@@ -411,17 +409,14 @@ class _UiSmartButtonState extends State<_UiSmartButton> {
     final Color bg =
         showDisabledVisuals ? disabledBackgroundColor : baseButtonColor;
 
-    final Color fg =
-        widget.textColor ?? context.color.textAutoAdapt(bg);
+    final Color fg = widget.textColor ?? context.color.textAutoAdapt(bg);
     final Color disabledForeground = widget.disabledTextColor ??
         theme.colorScheme.onSurface.withOpacity(0.6);
 
-    final Color contentColor =
-        showDisabledVisuals ? disabledForeground : fg;
+    final Color contentColor = showDisabledVisuals ? disabledForeground : fg;
 
     final bool useWhiteProgress = bg.computeLuminance() < 0.5;
-    final Color progressColor =
-        useWhiteProgress ? Colors.white : contentColor;
+    final Color progressColor = useWhiteProgress ? Colors.white : contentColor;
     final String title = isBusy
         ? (widget.titleWhenProgress ?? widget.buttonTitle)
         : widget.buttonTitle;
@@ -472,8 +467,7 @@ class _UiSmartButtonState extends State<_UiSmartButton> {
 
     if (isSuccess) {
       rowChildren.add(
-        Icon(Icons.check_circle,
-            color: contentColor, size: isNarrow ? 20 : 22),
+        Icon(Icons.check_circle, color: contentColor, size: isNarrow ? 20 : 22),
       );
     }
 
@@ -522,7 +516,9 @@ class _UiSmartButtonState extends State<_UiSmartButton> {
               disabledBackgroundColor: disabledBackgroundColor,
               disabledForegroundColor: disabledForeground,
               minimumSize: Size(
-                widget.autoWidth == true ? 0 : (widget.width ?? double.infinity),
+                widget.autoWidth == true
+                    ? 0
+                    : (widget.width ?? double.infinity),
                 effectiveHeight,
               ),
               padding: widget.padding ??
@@ -724,9 +720,8 @@ class UiUtils {
     FontWeight fontWeight = FontWeight.w500,
     VoidCallback? onClosed,
   }) {
-    OverlayState? overlayState =
-        Overlay.maybeOf(context, rootOverlay: true) ??
-            Navigator.of(context, rootNavigator: true).overlay;
+    OverlayState? overlayState = Overlay.maybeOf(context, rootOverlay: true) ??
+        Navigator.of(context, rootNavigator: true).overlay;
 
     if (overlayState == null) {
       if (kDebugMode) {
@@ -863,8 +858,7 @@ class UiUtils {
     final Color resolvedForegroundColor = foregroundColor ??
         theme.appBarTheme.foregroundColor ??
         colorScheme.onSurface;
-    final Color resolvedBorderColor =
-        borderColor ?? colorScheme.borderColor;
+    final Color resolvedBorderColor = borderColor ?? colorScheme.borderColor;
 
     final bool hasBottom = bottom != null && bottom.isNotEmpty;
     final bool hasLeading = leading != null || showBackButton;
@@ -949,10 +943,9 @@ class UiUtils {
     );
 
     final double statusBarHeight = MediaQuery.of(context).padding.top;
-    final double additionsHeight = hasBottom
-        ? (resolvedBottomHeight ?? 48)
-        : 0;
-    final double totalHeight = toolbarHeight + additionsHeight + statusBarHeight;
+    final double additionsHeight = hasBottom ? (resolvedBottomHeight ?? 48) : 0;
+    final double totalHeight =
+        toolbarHeight + additionsHeight + statusBarHeight;
 
     Widget? bottomWidget;
     if (hasBottom) {
@@ -1111,7 +1104,8 @@ class UiUtils {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent, // ظ„ط¹ظ…ظ„ ط®ظ„ظپظٹط© ط´ظپط§ظپط© ظ…ط¹ ط²ظˆط§ظٹط§ ظ…ط¯ظˆط±ط©
+      backgroundColor: Colors.transparent,
+      // ظ„ط¹ظ…ظ„ ط®ظ„ظپظٹط© ط´ظپط§ظپط© ظ…ط¹ ط²ظˆط§ظٹط§ ظ…ط¯ظˆط±ط©
       builder: (context) {
         final theme = Theme.of(context);
         final isDark = theme.brightness == Brightness.dark;
@@ -1575,13 +1569,13 @@ class UiUtils {
       {required ImageProvider provider, VoidCallback? then}) {
     Navigator.of(context)
         .push(AppPageRoute.build(
-          builder: (BuildContext context) => FullScreenImageView(
-            provider: provider,
-          ),
-          barrierDismissible: true,
-          barrierColor: Colors.black.withOpacity(0.3),
-          motionPattern: AppMotionPattern.glide,
-        ))
+      builder: (BuildContext context) => FullScreenImageView(
+        provider: provider,
+      ),
+      barrierDismissible: true,
+      barrierColor: Colors.black.withOpacity(0.3),
+      motionPattern: AppMotionPattern.glide,
+    ))
         .then((value) {
       then?.call();
     });
@@ -1826,7 +1820,8 @@ class UiUtils {
       context,
       AppPageRoute.build(
         builder: (context) => GalleryView(
-          images: images.cast<String>(), // âœ… طھط­ظˆظٹظ„ ط§ظ„ظ‚ط§ط¦ظ…ط© ظ„ظ†ظˆط¹ String
+          images: images.cast<String>(),
+          // âœ… طھط­ظˆظٹظ„ ط§ظ„ظ‚ط§ط¦ظ…ط© ظ„ظ†ظˆط¹ String
           initialIndex: initalIndex,
         ),
         motionPattern: AppMotionPattern.glide,
@@ -2005,9 +2000,7 @@ class _AppBarTitleSection extends StatelessWidget {
     }
 
     return Align(
-      alignment: center
-          ? Alignment.center
-          : AlignmentDirectional.centerStart,
+      alignment: center ? Alignment.center : AlignmentDirectional.centerStart,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment:
@@ -2094,7 +2087,18 @@ extension FormatDate on String {
   }
 
   String _convertToArabicNumbers(int number) {
-    final arabicNumbers = ['ظ ', 'ظ،', 'ظ¢', 'ظ£', 'ظ¤', 'ظ¥', 'ظ¦', 'ظ§', 'ظ¨', 'ظ©'];
+    final arabicNumbers = [
+      'ظ ',
+      'ظ،',
+      'ظ¢',
+      'ظ£',
+      'ظ¤',
+      'ظ¥',
+      'ظ¦',
+      'ظ§',
+      'ظ¨',
+      'ظ©'
+    ];
     return number
         .toString()
         .split('')
@@ -2695,8 +2699,3 @@ class _AppBarBottomSection extends StatelessWidget {
     );
   }
 }
-
-
-
-
-

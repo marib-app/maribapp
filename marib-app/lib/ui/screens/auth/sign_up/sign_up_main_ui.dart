@@ -551,6 +551,90 @@ class AccountTypeDropdown extends StatelessWidget {
         "3": ("commercial".translate(context), Icons.storefront_outlined),
       };
 
+  Future<void> _openBottomSheet(BuildContext context) async {
+    final options = _options(context);
+    final String? selected = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        String? localValue = value;
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: 16,
+              right: 16,
+              top: 16,
+              bottom: 16 + MediaQuery.of(ctx).viewInsets.bottom,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: context.color.textLightColor.withOpacity(0.4),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text("chooseAccountType".translate(context))
+                      .size(context.font.large)
+                      .color(context.color.textDefaultColor),
+                  const SizedBox(height: 8),
+                  Text("mustSelectAccountType".translate(context))
+                      .size(context.font.small)
+                      .color(context.color.textColorDark.withOpacity(0.7)),
+                  const SizedBox(height: 16),
+                  ...options.entries.map((entry) {
+                    final isSelected = entry.key == localValue;
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isSelected
+                              ? context.color.territoryColor
+                              : context.color.borderColor.darken(30),
+                          width: isSelected ? 2 : 1,
+                        ),
+                        color: isSelected
+                            ? context.color.territoryColor.withOpacity(0.08)
+                            : context.color.secondaryColor,
+                      ),
+                      child: ListTile(
+                        leading: Icon(entry.value.$2,
+                            color: context.color.territoryColor),
+                        title: Text(entry.value.$1),
+                        trailing: isSelected
+                            ? Icon(Icons.check_circle,
+                                color: context.color.territoryColor)
+                            : null,
+                        onTap: () => Navigator.pop(ctx, entry.key),
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    if (selected != null) {
+      onChanged(selected);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final options = _options(context);
@@ -558,71 +642,87 @@ class AccountTypeDropdown extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        DropdownButtonFormField<String>(
+        FormField<String>(
           initialValue: value,
-          isExpanded: true,
-          icon: Icon(
-            Icons.keyboard_arrow_down_rounded,
-            color: context.color.textDefaultColor.withOpacity(0.7),
-          ),
           validator: (v) {
             if (v == null || v.isEmpty) {
               return "mustSelectAccountType".translate(context);
             }
             return null;
           },
-          decoration: InputDecoration(
-            labelText: "accountType".translate(context),
-            hintText: "chooseaccount".translate(context),
-            filled: true,
-            fillColor: context.color.secondaryColor,
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(
-                color: context.color.borderColor.darken(30),
-              ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(
-                color: context.color.territoryColor,
-                width: 1.4,
-              ),
-            ),
-          ),
-          items: options.entries
-              .map(
-                (entry) => DropdownMenuItem<String>(
-                  value: entry.key,
-                  child: Row(
-                    children: [
-                      Icon(entry.value.$2,
-                          color: context.color.territoryColor),
-                      const SizedBox(width: 8),
-                      Text(entry.value.$1),
-                    ],
+          builder: (state) {
+            final selected = state.value;
+            final label = selected != null ? options[selected]?.$1 : null;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    _openBottomSheet(context).then((_) {
+                      state.didChange(value);
+                    });
+                  },
+                  child: InputDecorator(
+                    isEmpty: selected == null,
+                    decoration: InputDecoration(
+                      // عرض نص واحد فقط داخل الحقل
+                      hintText: "chooseAccountType".translate(context),
+                      filled: true,
+                      fillColor: context.color.secondaryColor,
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 12),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: context.color.borderColor.darken(30),
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color: context.color.territoryColor,
+                          width: 1.4,
+                        ),
+                      ),
+                      errorText: state.errorText,
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            selected != null ? (label ?? "") : "",
+                            style: TextStyle(
+                              color: selected == null
+                                  ? context.color.textColorDark
+                                      .withOpacity(0.7)
+                                  : context.color.textDefaultColor,
+                            ),
+                          ),
+                        ),
+                        Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          color:
+                              context.color.textDefaultColor.withOpacity(0.7),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              )
-              .toList(),
-          onChanged: (newVal) {
-            if (newVal == null) return;
-            HapticFeedback.selectionClick();
-            onChanged(newVal);
+              ],
+            );
           },
         ),
         const SizedBox(height: 4),
         Text(
           "accountTypeHelper".translate(context),
           style: TextStyle(
-            fontSize: context.font.small,
-            color: context.color.textLightColor,
-          ),
+              fontSize: context.font.small,
+              color: context.color.textLightColor),
         ),
       ],
     );

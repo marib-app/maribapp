@@ -184,6 +184,10 @@ String? _normalizePurposeForApi(String? purpose) {
     return 'service';
   }
 
+  if (value == 'wifi_plan' || value.contains('wifi')) {
+    return 'wifi_plan';
+  }
+
   return null;
 }
 
@@ -1249,9 +1253,13 @@ class ManualPaymentService {
         wifiPlanId: wifiPlanId,
       );
 
+      final String lowerPurpose = purposeForBody.toLowerCase();
+      final bool isPackagePurpose = lowerPurpose == 'package';
+      final bool isWifiPlanPurpose = lowerPurpose == 'wifi_plan';
+
       if (packageId != null &&
           packageId > 0 &&
-          purposeForBody.toLowerCase() == 'package') {
+          (isPackagePurpose || isWifiPlanPurpose)) {
         body['package_id'] = packageId;
       }
 

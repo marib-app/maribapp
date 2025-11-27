@@ -48,7 +48,7 @@ class ErrorFilter {
       case "not-featured":
         return ErrorFilter("This advertisement is not currently featured.");
       default:
-        return ErrorFilter(errorCode);
+        return ErrorFilter(errorCode?.toString() ?? '');
     }
   }
 }

@@ -12,6 +12,7 @@ class WifiPlan extends Equatable {
     this.isUnlimited = false,
     this.codeBatches = const <WifiCodeBatchSummary>[],
     this.benefits = const <String>[],
+    this.networkId,
     this.meta,
   });
 
@@ -25,6 +26,7 @@ class WifiPlan extends Equatable {
   final bool isUnlimited;
   final List<WifiCodeBatchSummary> codeBatches;
   final List<String> benefits;
+  final int? networkId;
   final Map<String, dynamic>? meta;
 
   factory WifiPlan.fromJson(Map<String, dynamic> json) {
@@ -184,6 +186,11 @@ class WifiPlan extends Equatable {
       isUnlimited: resolvedUnlimited,
       codeBatches: codeBatches,
       benefits: parseBenefits(json['benefits']),
+      networkId: parseInt(
+        json['network_id'] ??
+            (json['network'] is Map ? (json['network'] as Map)['id'] : null) ??
+            json['wifi_network_id'],
+      ),
       meta: parseMap(json['meta']),
     );
   }
@@ -199,6 +206,7 @@ class WifiPlan extends Equatable {
     bool? isUnlimited,
     List<WifiCodeBatchSummary>? codeBatches,
     List<String>? benefits,
+    int? networkId,
     Map<String, dynamic>? meta,
   }) {
     return WifiPlan(
@@ -212,6 +220,7 @@ class WifiPlan extends Equatable {
       isUnlimited: isUnlimited ?? this.isUnlimited,
       codeBatches: codeBatches ?? this.codeBatches,
       benefits: benefits ?? this.benefits,
+      networkId: networkId ?? this.networkId,
       meta: meta ?? this.meta,
     );
   }
@@ -229,6 +238,7 @@ class WifiPlan extends Equatable {
       if (codeBatches.isNotEmpty)
         'code_batches': codeBatches.map((batch) => batch.toJson()).toList(),
       if (benefits.isNotEmpty) 'benefits': benefits,
+      if (networkId != null) 'network_id': networkId,
       if (meta != null) 'meta': meta,
     };
   }
@@ -245,6 +255,7 @@ class WifiPlan extends Equatable {
         isUnlimited,
         codeBatches,
         benefits,
+        networkId,
         meta,
       ];
 }

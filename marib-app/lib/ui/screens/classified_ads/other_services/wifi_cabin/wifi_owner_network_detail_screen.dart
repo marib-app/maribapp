@@ -78,11 +78,13 @@ class _WifiOwnerNetworkDetailScreenState
 
       final statsResponse = await statsFuture;
       final plans = await plansFuture;
+      // الاحتفاظ فقط بفئات هذه الشبكة مع إزالة التكرارات
+      final List<WifiPlan> networkPlans = _filterPlansForNetwork(plans);
       final codesResult = await codesFuture;
 
       final Map<String, int> parsedStats = <String, int>{
-        'plans': _intify(statsResponse['plans']?['total']) ?? plans.length,
-        'batches': plans.fold<int>(
+        'plans': networkPlans.length,
+        'batches': networkPlans.fold<int>(
             0, (sum, plan) => sum + plan.codeBatches.length),
         'total': _intify(statsResponse['codes']?['total']) ??
             codesResult.total,
@@ -93,7 +95,7 @@ class _WifiOwnerNetworkDetailScreenState
       };
 
       setState(() {
-        _plans = plans;
+        _plans = networkPlans;
         _codes = codesResult.codes;
         _codesTotal = codesResult.total;
         _codesAvailable = codesResult.available;
@@ -111,13 +113,14 @@ class _WifiOwnerNetworkDetailScreenState
   }
 
   Map<String, int> _stats() {
+    final plansCount = _plans.length;
     final totalCodes = _statsData['total'] ?? _codesTotal;
     final availableCodes = _statsData['available'] ?? _codesAvailable;
     final sold = _statsData['sold'] ?? _codesSold;
     final batches =
         _statsData['batches'] ?? _plans.fold<int>(0, (sum, plan) => sum + plan.codeBatches.length);
     return {
-      'plans': _statsData['plans'] ?? _plans.length,
+      'plans': plansCount,
       'batches': batches,
       'total': totalCodes,
       'available': availableCodes,
@@ -125,6 +128,50 @@ class _WifiOwnerNetworkDetailScreenState
     };
   }
 
+  int? _planNetworkId(WifiPlan plan) {
+    int? parseInt(dynamic value) {
+      if (value == null) return null;
+      if (value is int) return value;
+      if (value is num) return value.toInt();
+      return int.tryParse(value.toString());
+    }
+
+    final meta = plan.meta ?? const <String, dynamic>{};
+    for (final key in const [
+      'network_id',
+      'wifi_network_id',
+      'wifiNetworkId',
+      'network',
+      'wifi_network',
+      'networkId',
+      'wifiNetworkId',
+    ]) {
+      final v = meta[key];
+      if (v is Map) {
+        final parsedNested = parseInt(v['id'] ?? v['network_id'] ?? v['wifi_network_id']);
+        if (parsedNested != null) return parsedNested;
+      }
+      final parsed = parseInt(v);
+      if (parsed != null) return parsed;
+    }
+    return null;
+  }
+
+  List<WifiPlan> _filterPlansForNetwork(List<WifiPlan> plans) {
+    final int targetId = widget.network.id;
+    final List<WifiPlan> filtered = <WifiPlan>[];
+    final Set<int> seenIds = <int>{};
+    for (final plan in plans) {
+      final int? id = plan.id;
+      if (id != null && !seenIds.add(id)) continue; // dedupe by plan id
+      final int? networkId = plan.networkId ?? _planNetworkId(plan);
+      if (networkId != null && networkId != targetId) {
+        continue; // خطة تخص شبكة أخرى
+      }
+      filtered.add(plan);
+    }
+    return filtered;
+  }
   int? _intify(dynamic value) {
     if (value == null) return null;
     if (value is int) return value;
@@ -1154,6 +1201,7 @@ class _ErrorPlaceholder extends StatelessWidget {
     );
   }
 }
+
 
 
 

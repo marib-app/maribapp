@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:marib/data/model/wifi/wifi_network.dart';
 import 'package:marib/data/model/wifi/wifi_owner_code.dart';
 import 'package:marib/data/model/wifi/wifi_plan.dart';
@@ -146,39 +146,115 @@ class _WifiOwnerNetworkDetailScreenState
         backgroundColor: colors.backgroundColor,
         foregroundColor: colors.textDefaultColor,
         elevation: 0,
-        title: const Text('ظ„ظˆط­ط© ط§ظ„ط´ط¨ظƒط©'),
-        bottom: PreferredSize(
-  preferredSize: const Size.fromHeight(52),
-  child: Container(
-    margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-    decoration: BoxDecoration(
-      color: colors.secondaryColor,
-      borderRadius: BorderRadius.circular(14),
-      border: Border.all(
-        color: colors.borderColor.withValues(alpha: 0.25),
+        title: const Text('لوحة الشبكة'),
+        bottom: TabBar(
+          labelColor: colors.territoryColor,
+          unselectedLabelColor: colors.textLightColor,
+          indicatorColor: colors.territoryColor,
+          tabs: const [
+            Tab(text: 'الإحصائيات'),
+            Tab(text: 'الأكواد'),
+            Tab(text: 'الفئات'),
+            Tab(text: 'البلاغات'),
+            Tab(text: 'الإعدادات'),
+          ],
+        ),
       ),
-    ),
-    child: TabBar(
-      isScrollable: true,
-      indicatorSize: TabBarIndicatorSize.tab,
-      labelPadding: const EdgeInsets.symmetric(horizontal: 10),
-      labelColor: colors.textDefaultColor,
-      unselectedLabelColor: colors.textLightColor,
-      indicator: BoxDecoration(
-        color: colors.territoryColor,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      tabs: const [
-        Tab(text: '�?�?�?�?���?�?�?�?�?'),
-        Tab(text: '�?�?��?�?�?�?'),
-        Tab(text: '�?�?�?�?�?�?'),
-        Tab(text: '�?�?�?�?�?�?�?�?'),
-        Tab(text: '�?�?�?�?�?�?�?�?�?'),
-      ],
-    ),
-  ),
-),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+              ? _ErrorPlaceholder(message: _error!, onRetry: _load)
+              : Column(
+                  children: [
+                    Container(
+                      margin:
+                          const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: colors.secondaryColor,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                              color: colors.borderColor.withValues(alpha: 0.25)),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 64,
+                            height: 64,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              color: colors.backgroundColor,
+                              border: Border.all(
+                              color: colors.borderColor.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(16),
+                              child: hasLogo
+                                  ? Image.network(
+                                      logoUrl,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => Icon(
+                                        Icons.wifi_rounded,
+                                        color: colors.textLightColor,
+                                      ),
+                                    )
+                                  : Icon(
+                                      Icons.wifi_rounded,
+                                      color: colors.textLightColor,
+                                    ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  network.name,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                ),
+                                if (network.address?.isNotEmpty == true)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: Text(
+                                      network.address!,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                            color: colors.textLightColor,
+                                          ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: colors.territoryColor.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              network.status ?? '—',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelMedium
+                                  ?.copyWith(
+                                    color: colors.territoryColor,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                            ),
+                          )
+                        ],
+                      ),
                     ),
                     Expanded(
                       child: TabBarView(
@@ -199,7 +275,7 @@ class _WifiOwnerNetworkDetailScreenState
                           ManagePlansTab(
                             plans: _plans,
                             onAddPlan: _openAddPlanSheet,
-                            onDeletePlan: _confirmDeletePlan, 
+                            onDeletePlan: _confirmDeletePlan,
                             mutating: _plansMutating,
                           ),
                           const _ReportsTab(),
@@ -261,25 +337,61 @@ class _WifiOwnerNetworkDetailScreenState
       await _load();
     }
   }
-
   Future<void> _confirmDeletePlan(WifiPlan plan) async {
     if (_plansMutating) return;
-    final bool? confirmed = await showDialog<bool>(
+    final bool? confirmed = await showModalBottomSheet<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('ط­ط°ظپ ط§ظ„ظپط¦ط©'),
-        content: Text('ط³ظٹطھظ… ط­ط°ظپ ط§ظ„ظپط¦ط© "${plan.name}". ظ‡ظ„ ط£ظ†طھ ظ…طھط£ظƒط¯طں'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('ط¥ظ„ط؛ط§ط،'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('ط­ط°ظپ'),
-          ),
-        ],
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
       ),
+      builder: (sheetContext) {
+        final colors = sheetContext.color;
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '????? ?????',
+                style: Theme.of(sheetContext).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '?? ?????? ??? "${plan.name}". ?? ???? ?????????',
+                style: Theme.of(sheetContext)
+                    .textTheme
+                    .bodyMedium
+                    ?.copyWith(color: colors.textLightColor),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(sheetContext).pop(false),
+                      child: const Text('?????'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.redAccent,
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: () => Navigator.of(sheetContext).pop(true),
+                      child: const Text('???'),
+                    ),
+                  ),
+                ],
+              )
+            ],
+          ),
+        );
+      },
     );
     if (confirmed != true) return;
 
@@ -301,21 +413,21 @@ class _WifiOwnerNetworkDetailScreenState
   void _showLogoToast() {
     UiUtils.showSoftSnackBar(
       context,
-      message: 'ظٹظ…ظƒظ† طھط؛ظٹظٹط± ط§ظ„ط´ط¹ط§ط± ظ…ظ† ط¯ط§ط®ظ„ ط§ظ„طھط·ط¨ظٹظ‚ ظ‚ط±ظٹط¨ط§ظ‹.',
+      message: 'يمكن تغيير الشعار من داخل التطبيق قريباً.',
     );
   }
 
   void _showLoginToast() {
     UiUtils.showSoftSnackBar(
       context,
-      message: 'ظٹظ…ظƒظ† طھط؛ظٹظٹط± طµظˆط±ط© طھط³ط¬ظٹظ„ ط§ظ„ط¯ط®ظˆظ„ ظ…ظ† ط¯ط§ط®ظ„ ط§ظ„طھط·ط¨ظٹظ‚ ظ‚ط±ظٹط¨ط§ظ‹.',
+      message: 'يمكن تغيير صورة تسجيل الدخول من داخل التطبيق قريباً.',
     );
   }
 
   void _showToggleToast() {
     UiUtils.showSoftSnackBar(
       context,
-      message: 'ط³ظٹطھظ… ط¯ط¹ظ… ط¥ظٹظ‚ط§ظپ/طھظپط¹ظٹظ„ ط§ظ„ط´ط¨ظƒط© ط¹ط¨ط± ط§ظ„طھط·ط¨ظٹظ‚ ظ‚ط±ظٹط¨ط§ظ‹.',
+      message: 'سيتم دعم إيقاف/تفعيل الشبكة عبر التطبيق قريباً.',
     );
   }
 }
@@ -338,16 +450,16 @@ class _StatsTab extends StatelessWidget {
             spacing: 10,
             runSpacing: 10,
             children: [
-              _StatCard(label: 'ط§ظ„ط®ط·ط·', value: stats['plans'] ?? 0),
-              _StatCard(label: 'ط§ظ„ط¯ظڈظپط¹ط§طھ', value: stats['batches'] ?? 0),
-              _StatCard(label: 'ط§ظ„ط£ظƒظˆط§ط¯ ط§ظ„ظƒظ„ظٹط©', value: stats['total'] ?? 0),
-              _StatCard(label: 'ط§ظ„ظ…طھط§ط­', value: stats['available'] ?? 0),
-              _StatCard(label: 'ط§ظ„ظ…ط¨ط§ط¹', value: stats['sold'] ?? 0),
+              _StatCard(label: 'الخطط', value: stats['plans'] ?? 0),
+              _StatCard(label: 'الدُفعات', value: stats['batches'] ?? 0),
+              _StatCard(label: 'الأكواد الكلية', value: stats['total'] ?? 0),
+              _StatCard(label: 'المتاح', value: stats['available'] ?? 0),
+              _StatCard(label: 'المباع', value: stats['sold'] ?? 0),
             ],
           ),
           const SizedBox(height: 16),
           Text(
-            'ط§ظ„ظپط¦ط§طھ',
+            'الفئات',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: colors.textDefaultColor,
@@ -356,7 +468,7 @@ class _StatsTab extends StatelessWidget {
           const SizedBox(height: 8),
           if (plans.isEmpty)
             Text(
-              'ظ„ط§ طھظˆط¬ط¯ ظپط¦ط§طھ ط¨ط¹ط¯.',
+              'لا توجد فئات بعد.',
               style: Theme.of(context)
                   .textTheme
                   .bodyMedium
@@ -426,7 +538,7 @@ class _CodesTab extends StatelessWidget {
                   controller: searchController,
                   onSubmitted: (value) => onSearch(search: value),
                   decoration: InputDecoration(
-                    hintText: 'ط¨ط­ط« ط¹ظ† ظƒظˆط¯ ط£ظˆ ط¹ظ…ظٹظ„',
+                    hintText: 'بحث عن كود أو عميل',
                     prefixIcon: const Icon(Icons.search),
                     filled: true,
                     fillColor: colors.secondaryColor,
@@ -445,7 +557,7 @@ class _CodesTab extends StatelessWidget {
                 child: DropdownButtonFormField<String>(
                   value: selectedStatus.isEmpty ? '' : selectedStatus,
                   decoration: InputDecoration(
-                    labelText: 'ط§ظ„ط­ط§ظ„ط©',
+                    labelText: 'الحالة',
                     filled: true,
                     fillColor: colors.secondaryColor,
                     border: OutlineInputBorder(
@@ -456,9 +568,9 @@ class _CodesTab extends StatelessWidget {
                     ),
                   ),
                   items: const [
-                    DropdownMenuItem(value: '', child: Text('ط§ظ„ظƒظ„')),
-                    DropdownMenuItem(value: 'available', child: Text('ظ…طھط§ط­')),
-                    DropdownMenuItem(value: 'sold', child: Text('ظ…ط¨ط§ط¹')),
+                    DropdownMenuItem(value: '', child: Text('الكل')),
+                    DropdownMenuItem(value: 'available', child: Text('متاح')),
+                    DropdownMenuItem(value: 'sold', child: Text('مباع')),
                   ],
                   onChanged: (value) => onStatusChange(value ?? ''),
                 ),
@@ -470,9 +582,9 @@ class _CodesTab extends StatelessWidget {
             spacing: 10,
             runSpacing: 10,
             children: [
-              _StatCard(label: 'ط§ظ„ط¥ط¬ظ…ط§ظ„ظٹ', value: total),
-              _StatCard(label: 'ط§ظ„ظ…طھط§ط­', value: available),
-              _StatCard(label: 'ط§ظ„ظ…ط¨ط§ط¹', value: sold),
+              _StatCard(label: 'الإجمالي', value: total),
+              _StatCard(label: 'المتاح', value: available),
+              _StatCard(label: 'المباع', value: sold),
             ],
           ),
           const SizedBox(height: 12),
@@ -490,13 +602,13 @@ class _CodesTab extends StatelessWidget {
                 const SizedBox(height: 8),
                 OutlinedButton(
                   onPressed: () => onSearch(),
-                  child: const Text('ط¥ط¹ط§ط¯ط© ط§ظ„ظ…ط­ط§ظˆظ„ط©'),
+                  child: const Text('إعادة المحاولة'),
                 ),
               ],
             )
           else if (codes.isEmpty)
             Text(
-              'ظ„ط§ طھظˆط¬ط¯ ط£ظƒظˆط§ط¯ ط¨ط¹ط¯.',
+              'لا توجد أكواد بعد.',
               style:
                   textTheme.bodyMedium?.copyWith(color: colors.textLightColor),
             )
@@ -512,10 +624,10 @@ class _CodesTab extends StatelessWidget {
                         ? code.codeSuffix!
                         : (code.codeLast4?.isNotEmpty == true
                             ? code.codeLast4!
-                            : 'â€”');
+                            : '—');
                 final String buyer = (code.allocatedUserName ??
                         code.allocatedUserEmail ??
-                        'â€”')
+                        '—')
                     .toString();
                 final String dateLabel = (code.soldAt ??
                         code.deliveredAt ??
@@ -525,7 +637,7 @@ class _CodesTab extends StatelessWidget {
                     .toString()
                     .split('.')
                     .first ??
-                    'â€”';
+                    '—';
                 return Container(
                   margin: const EdgeInsets.only(bottom: 10),
                   padding: const EdgeInsets.all(12),
@@ -545,7 +657,7 @@ class _CodesTab extends StatelessWidget {
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
-                          code.status ?? 'â€”',
+                          code.status ?? '—',
                           style: textTheme.labelSmall?.copyWith(
                             color: statusColor,
                             fontWeight: FontWeight.w700,
@@ -558,7 +670,7 @@ class _CodesTab extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'ط§ظ„ظƒظˆط¯: $codeLabel',
+                              'الكود: $codeLabel',
                               style: textTheme.bodyMedium?.copyWith(
                                 fontWeight: FontWeight.w700,
                                 color: colors.textDefaultColor,
@@ -566,14 +678,14 @@ class _CodesTab extends StatelessWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'ط§ظ„ظ…ط´طھط±ظٹ: $buyer',
+                              'المشتري: $buyer',
                               style: textTheme.bodySmall?.copyWith(
                                 color: colors.textLightColor,
                               ),
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'ط§ظ„طھط§ط±ظٹط®: $dateLabel',
+                              'التاريخ: $dateLabel',
                               style: textTheme.bodySmall?.copyWith(
                                 color: colors.textLightColor,
                               ),
@@ -623,9 +735,9 @@ class _PlanRow extends StatelessWidget {
   }
 
   factory _PlanRow.header() => const _PlanRow(
-        name: 'ط§ظ„ظپط¦ط©',
-        price: 'ط§ظ„ط³ط¹ط±',
-        currency: 'ط§ظ„ط¹ظ…ظ„ط©',
+        name: 'الفئة',
+        price: 'السعر',
+        currency: 'العملة',
         available: -1,
         total: -1,
       );
@@ -641,9 +753,9 @@ class _PlanRow extends StatelessWidget {
         const TextStyle();
 
     final String availableText =
-        isHeader ? 'ط§ظ„ظ…طھط§ط­' : available.toString();
+        isHeader ? 'المتاح' : available.toString();
     final int soldValue = total - available;
-    final String soldText = isHeader ? 'ط§ظ„ظ…ط¨ط§ط¹' : soldValue.clamp(0, total).toString();
+    final String soldText = isHeader ? 'المباع' : soldValue.clamp(0, total).toString();
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -687,7 +799,7 @@ class _ReportsTab extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Text(
-          'ظ„ط§ طھظˆط¬ط¯ ط¨ظ„ط§ط؛ط§طھ ظ…ط³ط¬ظ„ط©.',
+          'لا توجد بلاغات مسجلة.',
           style: Theme.of(context)
               .textTheme
               .bodyMedium
@@ -717,19 +829,19 @@ class _SettingsTab extends StatelessWidget {
       children: [
         ListTile(
           leading: Icon(Icons.image_rounded, color: colors.territoryColor),
-          title: const Text('طھط؛ظٹظٹط± ط§ظ„ط´ط¹ط§ط±'),
+          title: const Text('تغيير الشعار'),
           onTap: onChangeLogo,
         ),
         ListTile(
           leading: Icon(Icons.login_rounded, color: colors.territoryColor),
-          title: const Text('طھط؛ظٹظٹط± طµظˆط±ط© طھط³ط¬ظٹظ„ ط§ظ„ط¯ط®ظˆظ„'),
+          title: const Text('تغيير صورة تسجيل الدخول'),
           onTap: onChangeLogin,
         ),
         ListTile(
           leading: Icon(Icons.power_settings_new_rounded,
               color: colors.territoryColor),
-          title: const Text('ط¥ظٹظ‚ط§ظپ / طھظپط¹ظٹظ„ ط§ظ„ط´ط¨ظƒط©'),
-          subtitle: const Text('طھط؛ظٹظٹط± ط­ط§ظ„ط© ط§ظ„ط´ط¨ظƒط© ظ…ظ† ط¯ط§ط®ظ„ ط§ظ„طھط·ط¨ظٹظ‚'),
+          title: const Text('إيقاف / تفعيل الشبكة'),
+          subtitle: const Text('تغيير حالة الشبكة من داخل التطبيق'),
           onTap: onToggleStatus,
         ),
       ],
@@ -807,7 +919,7 @@ class _AddPlanSheetState extends State<_AddPlanSheet> {
     if (price == null || duration == null) {
       UiUtils.showSoftSnackBar(
         context,
-        message: 'ï؟½?ï؟½?ï؟½?ï؟½? ï؟½?ï؟½? ï؟½?ï؟½?ï؟½?ï؟½?ï؟½?ï؟½? ï؟½?ï؟½?ï؟½?ï؟½?ï؟½?ï؟½?ï؟½?.',
+        message: '???????? ???? ???????????? ??????????????.',
       );
       return;
     }
@@ -831,14 +943,14 @@ class _AddPlanSheetState extends State<_AddPlanSheet> {
         await widget.repository.createPlanBatch(
           planId: plan.id,
           sourceFile: formFile,
-          label: 'ï؟½?ï؟½?ï؟½?ï؟½? ï؟½?ï؟½?ï؟½?ï؟½?ï؟½?',
+          label: '???????? ??????????',
         );
       }
 
       if (!mounted) return;
       UiUtils.showSoftSnackBar(
         context,
-        message: 'ï؟½?ï؟½?ï؟½? ï؟½?ï؟½?ï؟½?ï؟½?ï؟½? ï؟½?ï؟½?ï؟½?ï؟½?ï؟½? ï؟½?ï؟½?ï؟½?ï؟½?ï؟½?.',
+        message: '?????? ?????????? ?????????? ??????????.',
       );
       Navigator.of(context).pop(true);
     } catch (error) {
@@ -873,7 +985,7 @@ class _AddPlanSheetState extends State<_AddPlanSheet> {
                 children: [
                   Expanded(
                     child: Text(
-                      'ï؟½?ï؟½?ï؟½?ï؟½?ï؟½? ï؟½?ï؟½?ï؟½? ï؟½?ï؟½?ï؟½?ï؟½?ï؟½?',
+                      '?????????? ?????? ??????????',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w800,
                           ),
@@ -888,9 +1000,9 @@ class _AddPlanSheetState extends State<_AddPlanSheet> {
               const SizedBox(height: 12),
               _TextField(
                 controller: _nameCtrl,
-                label: 'ï؟½?ï؟½?ï؟½? ï؟½?ï؟½?ï؟½?ï؟½?ï؟½?',
+                label: '?????? ??????????',
                 validator: (value) =>
-                    value == null || value.trim().isEmpty ? 'ï؟½?ï؟½?ï؟½? ï؟½?ï؟½?ï؟½?ï؟½?ï؟½?ï؟½?' : null,
+                    value == null || value.trim().isEmpty ? '?????? ????????????' : null,
               ),
               const SizedBox(height: 12),
               Row(
@@ -898,12 +1010,12 @@ class _AddPlanSheetState extends State<_AddPlanSheet> {
                   Expanded(
                     child: _TextField(
                       controller: _priceCtrl,
-                      label: 'ï؟½?ï؟½?ï؟½?ï؟½?ï؟½?',
+                      label: '??????????',
                       keyboardType:
                           const TextInputType.numberWithOptions(decimal: true),
                       validator: (value) =>
                           (value == null || double.tryParse(value) == null)
-                              ? 'ï؟½ï؟½?ï؟½?ï؟½? ï؟½?ï؟½?ï؟½?ï؟½? ï؟½ï؟½ï؟½?ï؟½?ï؟½?ï؟½?'
+                              ? '??????? ???????? ??????????'
                               : null,
                     ),
                   ),
@@ -911,10 +1023,10 @@ class _AddPlanSheetState extends State<_AddPlanSheet> {
                   Expanded(
                     child: _TextField(
                       controller: _currencyCtrl,
-                      label: 'ï؟½?ï؟½?ï؟½?ï؟½?ï؟½?ï؟½?',
+                      label: '????????????',
                       validator: (value) =>
                           value == null || value.trim().isEmpty
-                              ? 'ï؟½?ï؟½?ï؟½? ï؟½?ï؟½?ï؟½?ï؟½?ï؟½?ï؟½?'
+                              ? '?????? ????????????'
                               : null,
                     ),
                   ),
@@ -923,24 +1035,24 @@ class _AddPlanSheetState extends State<_AddPlanSheet> {
               const SizedBox(height: 12),
               _TextField(
                 controller: _durationCtrl,
-                label: 'ï؟½?ï؟½?ï؟½? ï؟½?ï؟½?ï؟½ï؟½ï؟½?ï؟½?ï؟½?ï؟½?ï؟½? (ï؟½ï؟½?ï؟½?ï؟½?)',
+                label: '?????? ???????????????? (???????)',
                 keyboardType: TextInputType.number,
                 validator: (value) =>
                     (value == null || int.tryParse(value) == null)
-                        ? 'ï؟½ï؟½?ï؟½?ï؟½? ï؟½?ï؟½?ï؟½? ï؟½?ï؟½?ï؟½ï؟½?ï؟½?ï؟½?'
+                        ? '??????? ?????? ???????????'
                         : null,
               ),
               const SizedBox(height: 12),
               _TextField(
                 controller: _descriptionCtrl,
-                label: 'ï؟½?ï؟½?ï؟½?ï؟½ï؟½ï؟½? (ï؟½?ï؟½?ï؟½?ï؟½?ï؟½?ï؟½?ï؟½?)',
+                label: '?????????? (??????????????)',
                 maxLines: 3,
               ),
               const SizedBox(height: 12),
               OutlinedButton.icon(
                 onPressed: _pickVoucher,
                 icon: const Icon(Icons.upload_file_rounded),
-                label: Text(_voucherName ?? 'ï؟½?ï؟½?ï؟½?ï؟½?ï؟½? ï؟½?ï؟½?ï؟½?ï؟½? ï؟½?ï؟½?ï؟½?ï؟½?ï؟½?ï؟½?'),
+                label: Text(_voucherName ?? '?????????? ???????? ????????????'),
               ),
               const SizedBox(height: 20),
               SizedBox(
@@ -953,7 +1065,7 @@ class _AddPlanSheetState extends State<_AddPlanSheet> {
                           width: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('ï؟½?ï؟½?ï؟½?ï؟½?ï؟½? ï؟½?ï؟½?ï؟½?ï؟½?ï؟½?ï؟½?'),
+                      : const Text('?????????? ????????????'),
                 ),
               ),
             ],
@@ -1071,7 +1183,7 @@ class _ErrorPlaceholder extends StatelessWidget {
             const SizedBox(height: 12),
             OutlinedButton(
               onPressed: onRetry,
-              child: const Text('ط¥ط¹ط§ط¯ط© ط§ظ„ظ…ط­ط§ظˆظ„ط©'),
+              child: const Text('إعادة المحاولة'),
             )
           ],
         ),
@@ -1079,4 +1191,3 @@ class _ErrorPlaceholder extends StatelessWidget {
     );
   }
 }
-

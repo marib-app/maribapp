@@ -51,7 +51,7 @@ class ManagePlansTab extends StatelessWidget {
           const SizedBox(height: 12),
           if (plans.isEmpty)
             Text(
-              'لا توجد فئات بعد.',
+              'لا توجد فئات متاحة حالياً.',
               style:
                   textTheme.bodyMedium?.copyWith(color: colors.textLightColor),
             )
@@ -80,7 +80,7 @@ class ManagePlansTab extends StatelessWidget {
                                 color: colors.textDefaultColor,
                               ),
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 8),
                             Text(
                               '${plan.price} ${plan.currency ?? ''}',
                               style: textTheme.bodySmall?.copyWith(
@@ -90,6 +90,35 @@ class ManagePlansTab extends StatelessWidget {
                           ],
                         ),
                       ),
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Builder(builder: (_) {
+                            final int totalCodes = plan.codeBatches.fold<int>(
+                                0, (sum, b) => sum + b.totalCodes);
+                            final int availableCodes =
+                                plan.codeBatches.fold<int>(
+                                    0, (sum, b) => sum + b.availableCodes);
+                            final String counter =
+                                '$availableCodes/$totalCodes';
+                            return Text(
+                              counter,
+                              style: textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                color: colors.textDefaultColor,
+                              ),
+                            );
+                          }),
+                          const SizedBox(height: 4),
+                          Text(
+                            'المتاح / الإجمالي',
+                            style: textTheme.bodySmall?.copyWith(
+                              color: colors.textLightColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(width: 100),
                       IconButton(
                         onPressed: mutating ? null : () => onDeletePlan(plan),
                         icon: const Icon(Icons.delete_outline,

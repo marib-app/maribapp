@@ -78,7 +78,7 @@ class _WifiOwnerNetworkDetailScreenState
 
       final statsResponse = await statsFuture;
       final plans = await plansFuture;
-      // الاحتفاظ فقط بفئات هذه الشبكة مع إزالة التكرارات
+      // ط·آ§ط¸â€”ط·آ§ط·آ­ط·ع¾ط¸ظ¾ط·آ§ط·آ¸ ط¸ظ¾ط¸â€ڑط·آ· ط·آ¨ط¸ظ¾ط·آ¦ط·آ§ط·ع¾ ط¸â€،ط·آ°ط¸â€، ط·آ§ط¸â€”ط·آ´ط·آ¨ط¸ئ’ط·آ© ط¸â€¦ط·آ¹ ط·آ¥ط·آ²ط·آ§ط¸â€”ط·آ© ط·آ§ط¸â€”ط·ع¾ط¸ئ’ط·آ±ط·آ§ط·آ±ط·آ§ط·ع¾
       final List<WifiPlan> networkPlans = _filterPlansForNetwork(plans);
       final codesResult = await codesFuture;
 
@@ -165,8 +165,12 @@ class _WifiOwnerNetworkDetailScreenState
       final int? id = plan.id;
       if (id != null && !seenIds.add(id)) continue; // dedupe by plan id
       final int? networkId = plan.networkId ?? _planNetworkId(plan);
-      if (networkId != null && networkId != targetId) {
-        continue; // خطة تخص شبكة أخرى
+      if (networkId == null) {
+        // ط·ع¾ط·آ¬ط·آ§ط¸â€،ط¸â€” ط·آ£ط¸ظ¹ ط¸ظ¾ط·آ¦ط·آ© ط¸â€”ط·آ§ ط·ع¾ط·آ­ط¸â€¦ط¸â€” ط¸â€¦ط·آ¹ط·آ±ط¸ظ¾ ط·آ§ط¸â€”ط·آ´ط·آ¨ط¸ئ’ط·آ© ط¸â€”ط·آ¶ط¸â€¦ط·آ§ط¸â€  ط·آ±ط·آ¨ط·آ· ط·آ§ط¸â€”ط¸ظ¾ط·آ¦ط·آ§ط·ع¾ ط·آ¨ط·آ§ط¸â€”ط·آ´ط·آ¨ط¸ئ’ط·آ© ط·آ§ط¸â€”ط·آ­ط·آ§ط¸â€”ط¸ظ¹ط·آ© ط¸ظ¾ط¸â€ڑط·آ·.
+        continue;
+      }
+      if (networkId != targetId) {
+        continue;
       }
       filtered.add(plan);
     }
@@ -199,14 +203,15 @@ class _WifiOwnerNetworkDetailScreenState
             unselectedLabelColor: colors.textLightColor,
             indicatorColor: colors.territoryColor,
             tabs: const [
-              Tab(text: 'الإحصائيات'),
+              Tab(text: 'الإحصاءات'),
               Tab(text: 'الأكواد'),
-              Tab(text: 'الفئات'),
+              Tab(text: 'الٝئات'),
               Tab(text: 'البلاغات'),
               Tab(text: 'الإعدادات'),
             ],
           ),
-        ),        body: _loading
+        ),
+        body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
               ? _ErrorPlaceholder(message: _error!, onRetry: _load)
@@ -289,7 +294,7 @@ class _WifiOwnerNetworkDetailScreenState
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              network.status ?? 'â€”',
+                              network.status ?? 'ط£آ¢أ¢â€ڑآ¬أ¢â‚¬â€Œ',
                               style: Theme.of(context)
                                   .textTheme
                                   .labelMedium
@@ -326,6 +331,7 @@ class _WifiOwnerNetworkDetailScreenState
                           ),
                           const _ReportsTab(),
                           _SettingsTab(
+                            network: _network ?? widget.network,
                             onChangeLogo: _showLogoToast,
                             onChangeLogin: _showLoginToast,
                             onToggleStatus: _showToggleToast,
@@ -388,16 +394,16 @@ class _WifiOwnerNetworkDetailScreenState
     final bool? confirmed = await UiUtils.showBlurredDialoge(
       context,
       dialoge: BlurredRichDialog(
-        title: 'تأكيد الحذف',
-        body: 'أنت على وشك حذف "\". هل تريد المتابعة؟',
+        title: 'ط·ع¾ط·آ£ط¸ئ’ط¸ظ¹ط·آ¯ ط·آ§ط¸â€”ط·آ­ط·آ°ط¸ظ¾',
+        body: 'ط·آ£ط¸â€ ط·ع¾ ط·آ¹ط¸â€”ط¸â€° ط¸ث†ط·آ´ط¸ئ’ ط·آ­ط·آ°ط¸ظ¾ "\". ط¸â€،ط¸â€” ط·ع¾ط·آ±ط¸ظ¹ط·آ¯ ط·آ§ط¸â€”ط¸â€¦ط·ع¾ط·آ§ط·آ¨ط·آ¹ط·آ©ط·ع؛',
         actions: [
           BlurredAction(
-            label: 'إلغاء',
+            label: 'ط·آ¥ط¸â€”ط·ط›ط·آ§ط·طŒ',
             isPrimary: false,
             onPressed: () => Navigator.of(context).maybePop(false),
           ),
           BlurredAction(
-            label: 'حذف',
+            label: 'ط·آ­ط·آ°ط¸ظ¾',
             onPressed: () => Navigator.of(context).maybePop(false),
           ),
         ],
@@ -421,27 +427,39 @@ class _WifiOwnerNetworkDetailScreenState
   }
 
   void _showLogoToast() {
-    UiUtils.showSoftSnackBar(
-      context,
-      message: 'تغيير الشعار قيد التطوير.',
-    );
+    _pickAndSetImage(isLogo: true);
   }
 
   void _showLoginToast() {
-    UiUtils.showSoftSnackBar(
-      context,
-      message: 'تغيير شاشة تسجيل الدخول قيد التطوير.',
-    );
+    _pickAndSetImage(isLogo: false);
   }
 
   void _showToggleToast() {
     UiUtils.showSoftSnackBar(
       context,
-      message: 'تغيير حالة التفعيل/الإيقاف قيد التطوير.',
+      message: 'تعذر تنٝيذ تٝعيل/إيقاٝ الشبكة من التطبيق حالياً.',
     );
   }
-}
-
+  Future<void> _pickAndSetImage({required bool isLogo}) async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ["jpg", "jpeg", "png", "webp"],
+    );
+    if (result == null || result.files.isEmpty) return;
+    final path = result.files.first.path;
+    if (path == null) return;
+    final current = _network ?? widget.network;
+    setState(() {
+      _network = current.copyWith(
+        iconUrl: isLogo ? path : current.iconUrl,
+        loginScreenshotUrl: isLogo ? current.loginScreenshotUrl : path,
+      );
+    });
+    UiUtils.showSoftSnackBar(
+      context,
+      message: isLogo ? "ط·ع¾ط¸â€¦ ط·ع¾ط·ط›ط¸ظ¹ط¸ظ¹ط·آ± ط·آ§ط¸â€”ط·آ´ط·آ¹ط·آ§ط·آ±." : "ط·ع¾ط¸â€¦ ط·ع¾ط·ط›ط¸ظ¹ط¸ظ¹ط·آ± ط·آ´ط·آ§ط·آ´ط·آ© ط·ع¾ط·آ³ط·آ¬ط¸ظ¹ط¸â€” ط·آ§ط¸â€”ط·آ¯ط·آ®ط¸ث†ط¸â€”.",
+    );
+  }
 class _StatsTab extends StatelessWidget {
   const _StatsTab({required this.stats, required this.plans});
 
@@ -460,16 +478,16 @@ class _StatsTab extends StatelessWidget {
             spacing: 10,
             runSpacing: 10,
             children: [
-              _StatCard(label: 'الفئات', value: stats['plans'] ?? 0),
-              _StatCard(label: 'الدفعات', value: stats['batches'] ?? 0),
-              _StatCard(label: 'إجمالي الأكواد', value: stats['total'] ?? 0),
-              _StatCard(label: 'المتاحة', value: stats['available'] ?? 0),
-              _StatCard(label: 'المباعة', value: stats['sold'] ?? 0),
+              _StatCard(label: 'ط·آ§ط¸â€”ط¸ظ¾ط·آ¦ط·آ§ط·ع¾', value: stats['plans'] ?? 0),
+              _StatCard(label: 'ط·آ§ط¸â€”ط·آ¯ط¸ظ¾ط·آ¹ط·آ§ط·ع¾', value: stats['batches'] ?? 0),
+              _StatCard(label: 'ط·آ¥ط·آ¬ط¸â€¦ط·آ§ط¸â€”ط¸ظ¹ ط·آ§ط¸â€”ط·آ£ط¸ئ’ط¸ث†ط·آ§ط·آ¯', value: stats['total'] ?? 0),
+              _StatCard(label: 'ط·آ§ط¸â€”ط¸â€¦ط·ع¾ط·آ§ط·آ­ط·آ©', value: stats['available'] ?? 0),
+              _StatCard(label: 'ط·آ§ط¸â€”ط¸â€¦ط·آ¨ط·آ§ط·آ¹ط·آ©', value: stats['sold'] ?? 0),
             ],
           ),
           const SizedBox(height: 16),
           Text(
-            'الفئات والخطط',
+            'ط·آ§ط¸â€”ط¸ظ¾ط·آ¦ط·آ§ط·ع¾ ط¸ث†ط·آ§ط¸â€”ط·آ®ط·آ·ط·آ·',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: colors.textDefaultColor,
@@ -478,7 +496,7 @@ class _StatsTab extends StatelessWidget {
           const SizedBox(height: 8),
           if (plans.isEmpty)
             Text(
-              'لا توجد فئات متاحة حالياً.',
+              'ط¸â€”ط·آ§ ط·ع¾ط¸ث†ط·آ¬ط·آ¯ ط¸ظ¾ط·آ¦ط·آ§ط·ع¾ ط¸â€¦ط·ع¾ط·آ§ط·آ­ط·آ© ط·آ­ط·آ§ط¸â€”ط¸ظ¹ط·آ§ط¸â€¹.',
               style: Theme.of(context)
                   .textTheme
                   .bodyMedium
@@ -548,7 +566,7 @@ class _CodesTab extends StatelessWidget {
                   controller: searchController,
                   onSubmitted: (value) => onSearch(search: value),
                   decoration: InputDecoration(
-                    hintText: 'ابحث عن كود أو مشتري',
+                    hintText: 'ط·آ§ط·آ¨ط·آ­ط·آ« ط·آ¹ط¸â€  ط¸ئ’ط¸ث†ط·آ¯ ط·آ£ط¸ث† ط¸â€¦ط·آ´ط·ع¾ط·آ±ط¸ظ¹',
                     prefixIcon: const Icon(Icons.search),
                     filled: true,
                     fillColor: colors.secondaryColor,
@@ -567,7 +585,7 @@ class _CodesTab extends StatelessWidget {
                 child: DropdownButtonFormField<String>(
                   value: selectedStatus.isEmpty ? '' : selectedStatus,
                   decoration: InputDecoration(
-                    labelText: 'الحالة',
+                    labelText: 'ط·آ§ط¸â€”ط·آ­ط·آ§ط¸â€”ط·آ©',
                     filled: true,
                     fillColor: colors.secondaryColor,
                     border: OutlineInputBorder(
@@ -578,9 +596,9 @@ class _CodesTab extends StatelessWidget {
                     ),
                   ),
                   items: const [
-                    DropdownMenuItem(value: '', child: Text('الكل')),
-                    DropdownMenuItem(value: 'available', child: Text('متاحة')),
-                    DropdownMenuItem(value: 'sold', child: Text('مباعة')),
+                    DropdownMenuItem(value: '', child: Text('ط·آ§ط¸â€”ط¸ئ’ط¸â€”')),
+                    DropdownMenuItem(value: 'available', child: Text('ط¸â€¦ط·ع¾ط·آ§ط·آ­ط·آ©')),
+                    DropdownMenuItem(value: 'sold', child: Text('ط¸â€¦ط·آ¨ط·آ§ط·آ¹ط·آ©')),
                   ],
                   onChanged: (value) => onStatusChange(value ?? ''),
                 ),
@@ -592,9 +610,9 @@ class _CodesTab extends StatelessWidget {
             spacing: 10,
             runSpacing: 10,
             children: [
-              _StatCard(label: 'الإجمالي', value: total),
-              _StatCard(label: 'المتاحة', value: available),
-              _StatCard(label: 'المباعة', value: sold),
+              _StatCard(label: 'ط·آ§ط¸â€”ط·آ¥ط·آ¬ط¸â€¦ط·آ§ط¸â€”ط¸ظ¹', value: total),
+              _StatCard(label: 'ط·آ§ط¸â€”ط¸â€¦ط·ع¾ط·آ§ط·آ­ط·آ©', value: available),
+              _StatCard(label: 'ط·آ§ط¸â€”ط¸â€¦ط·آ¨ط·آ§ط·آ¹ط·آ©', value: sold),
             ],
           ),
           const SizedBox(height: 12),
@@ -612,13 +630,13 @@ class _CodesTab extends StatelessWidget {
                 const SizedBox(height: 8),
                 OutlinedButton(
                   onPressed: () => onSearch(),
-                  child: const Text('إعادة المحاولة'),
+                  child: const Text('ط·آ¥ط·آ¹ط·آ§ط·آ¯ط·آ© ط·آ§ط¸â€”ط¸â€¦ط·آ­ط·آ§ط¸ث†ط¸â€”ط·آ©'),
                 ),
               ],
             )
           else if (codes.isEmpty)
             Text(
-              'لا توجد أكواد مطابقة حالياً.',
+              'ط¸â€”ط·آ§ ط·ع¾ط¸ث†ط·آ¬ط·آ¯ ط·آ£ط¸ئ’ط¸ث†ط·آ§ط·آ¯ ط¸â€¦ط·آ·ط·آ§ط·آ¨ط¸â€ڑط·آ© ط·آ­ط·آ§ط¸â€”ط¸ظ¹ط·آ§ط¸â€¹.',
               style:
                   textTheme.bodyMedium?.copyWith(color: colors.textLightColor),
             )
@@ -634,10 +652,10 @@ class _CodesTab extends StatelessWidget {
                         ? code.codeSuffix!
                         : (code.codeLast4?.isNotEmpty == true
                             ? code.codeLast4!
-                            : 'غير معروف');
+                            : 'ط·ط›ط¸ظ¹ط·آ± ط¸â€¦ط·آ¹ط·آ±ط¸ث†ط¸ظ¾');
                 final String buyer = (code.allocatedUserName ??
                         code.allocatedUserEmail ??
-                        'â€”')
+                        'ط£آ¢أ¢â€ڑآ¬أ¢â‚¬â€Œ')
                     .toString();
                 final String dateLabel = (code.soldAt ??
                         code.deliveredAt ??
@@ -647,7 +665,7 @@ class _CodesTab extends StatelessWidget {
                     .toString()
                     .split('.')
                     .first ??
-                    'â€”';
+                    'ط£آ¢أ¢â€ڑآ¬أ¢â‚¬â€Œ';
                 return Container(
                   margin: const EdgeInsets.only(bottom: 10),
                   padding: const EdgeInsets.all(12),
@@ -667,7 +685,7 @@ class _CodesTab extends StatelessWidget {
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
-                          code.status ?? 'â€”',
+                          code.status ?? 'ط£آ¢أ¢â€ڑآ¬أ¢â‚¬â€Œ',
                           style: textTheme.labelSmall?.copyWith(
                             color: statusColor,
                             fontWeight: FontWeight.w700,
@@ -680,7 +698,7 @@ class _CodesTab extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'الكود: ',
+                              'ط·آ§ط¸â€”ط¸ئ’ط¸ث†ط·آ¯: ',
                               style: textTheme.bodyMedium?.copyWith(
                                 fontWeight: FontWeight.w700,
                                 color: colors.textDefaultColor,
@@ -688,14 +706,14 @@ class _CodesTab extends StatelessWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'المشتري: ',
+                              'ط·آ§ط¸â€”ط¸â€¦ط·آ´ط·ع¾ط·آ±ط¸ظ¹: ',
                               style: textTheme.bodySmall?.copyWith(
                                 color: colors.textLightColor,
                               ),
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'التاريخ: ',
+                              'ط·آ§ط¸â€”ط·ع¾ط·آ§ط·آ±ط¸ظ¹ط·آ®: ',
                               style: textTheme.bodySmall?.copyWith(
                                 color: colors.textLightColor,
                               ),
@@ -745,9 +763,9 @@ class _PlanRow extends StatelessWidget {
   }
 
   factory _PlanRow.header() => const _PlanRow(
-        name: 'الفئة',
-        price: 'السعر',
-        currency: 'العملة',
+        name: 'ط·آ§ط¸â€”ط¸ظ¾ط·آ¦ط·آ©',
+        price: 'ط·آ§ط¸â€”ط·آ³ط·آ¹ط·آ±',
+        currency: 'ط·آ§ط¸â€”ط·آ¹ط¸â€¦ط¸â€”ط·آ©',
         available: -1,
         total: -1,
       );
@@ -763,9 +781,9 @@ class _PlanRow extends StatelessWidget {
         const TextStyle();
 
     final String availableText =
-        isHeader ? 'المتاحة' : available.toString();
+        isHeader ? 'ط·آ§ط¸â€”ط¸â€¦ط·ع¾ط·آ§ط·آ­ط·آ©' : available.toString();
     final int soldValue = total - available;
-    final String soldText = isHeader ? 'المباعة' : soldValue.clamp(0, total).toString();
+    final String soldText = isHeader ? 'ط·آ§ط¸â€”ط¸â€¦ط·آ¨ط·آ§ط·آ¹ط·آ©' : soldValue.clamp(0, total).toString();
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -809,7 +827,7 @@ class _ReportsTab extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Text(
-          'لا توجد بلاغات متاحة حالياً.',
+          'ط¸â€”ط·آ§ ط·ع¾ط¸ث†ط·آ¬ط·آ¯ ط·آ¨ط¸â€”ط·آ§ط·ط›ط·آ§ط·ع¾ ط¸â€¦ط·ع¾ط·آ§ط·آ­ط·آ© ط·آ­ط·آ§ط¸â€”ط¸ظ¹ط·آ§ط¸â€¹.',
           style: Theme.of(context)
               .textTheme
               .bodyMedium
@@ -822,11 +840,13 @@ class _ReportsTab extends StatelessWidget {
 
 class _SettingsTab extends StatelessWidget {
   const _SettingsTab({
+    required this.network,
     required this.onChangeLogo,
     required this.onChangeLogin,
     required this.onToggleStatus,
   });
 
+  final WifiNetwork network;
   final VoidCallback onChangeLogo;
   final VoidCallback onChangeLogin;
   final VoidCallback onToggleStatus;
@@ -834,27 +854,138 @@ class _SettingsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.color;
+    final textTheme = Theme.of(context).textTheme;
+    final logoUrl = HelperUtils.absoluteImage(network.iconUrl);
+    final loginShot = HelperUtils.absoluteImage(network.loginScreenshotUrl);
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       children: [
-        ListTile(
-          leading: Icon(Icons.image_rounded, color: colors.territoryColor),
-          title: const Text('تغيير الشعار'),
+        _ImageSettingTile(
+          title: 'ط·آ´ط·آ¹ط·آ§ط·آ± ط·آ§ط¸â€”ط·آ´ط·آ¨ط¸ئ’ط·آ©',
+          actionText: 'ط·آ§ط¸â€ ط¸â€ڑط·آ± ط¸â€”ط¸â€”ط·ع¾ط·ط›ط¸ظ¹ط¸ظ¹ط·آ±',
+          imageUrl: logoUrl,
+          placeholderIcon: Icons.image_rounded,
           onTap: onChangeLogo,
         ),
-        ListTile(
-          leading: Icon(Icons.login_rounded, color: colors.territoryColor),
-          title: const Text('تغيير شاشة تسجيل الدخول'),
+        const SizedBox(height: 12),
+        _ImageSettingTile(
+          title: 'ط·آµط¸ث†ط·آ±ط·آ© ط·آ´ط·آ§ط·آ´ط·آ© ط·ع¾ط·آ³ط·آ¬ط¸ظ¹ط¸â€” ط·آ§ط¸â€”ط·آ¯ط·آ®ط¸ث†ط¸â€”',
+          actionText: 'ط·آ§ط¸â€ ط¸â€ڑط·آ± ط¸â€”ط¸â€”ط·ع¾ط·ط›ط¸ظ¹ط¸ظ¹ط·آ±',
+          imageUrl: loginShot,
+          placeholderIcon: Icons.login_rounded,
           onTap: onChangeLogin,
         ),
+        const SizedBox(height: 16),
         ListTile(
           leading: Icon(Icons.power_settings_new_rounded,
               color: colors.territoryColor),
-          title: const Text('تفعيل / إيقاف الشبكة'),
-          subtitle: const Text('تحكم بحالة الشبكة من داخل التطبيق'),
+          title: const Text('ط¸â€”ط¸ث†ط·آ­ط·آ© ط·آ§ط¸â€”ط·آ´ط·آ¨ط¸ئ’ط·آ©'),
+          subtitle: const Text('ط¸â€”ط¸ث†ط·آ­ط·آ© ط·آ§ط¸â€”ط·آ´ط·آ¨ط¸ئ’ط·آ©'),
           onTap: onToggleStatus,
         ),
       ],
+    );
+  }
+
+class _ImageSettingTile extends StatelessWidget {
+  const _ImageSettingTile({
+    required this.title,
+    required this.actionText,
+    required this.imageUrl,
+    required this.placeholderIcon,
+    required this.onTap,
+  });
+
+  final String title;
+  final String actionText;
+  final String imageUrl;
+  final IconData placeholderIcon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.color;
+    final hasImage = imageUrl.isNotEmpty;
+    return Material(
+      color: colors.secondaryColor,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: hasImage
+                    ? _buildImage(imageUrl, colors)
+                    : _placeholderIcon(colors),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: colors.textDefaultColor,
+                          ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      actionText,
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.copyWith(color: colors.textLightColor),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.edit, color: colors.territoryColor),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImage(String path, ColorScheme colors) {
+    final bool isFile =
+        path.startsWith('file://') || File(path).isAbsolute;
+    final imageWidget = isFile
+        ? Image.file(
+            File(path.replaceFirst('file://', '')),
+            width: 64,
+            height: 64,
+            fit: BoxFit.cover,
+          )
+        : Image.network(
+            path,
+            width: 64,
+            height: 64,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => _placeholderIcon(colors),
+            loadingBuilder: (c, w, p) =>
+                p == null ? w : _placeholderIcon(colors),
+          );
+    return imageWidget;
+  }
+
+  Widget _placeholderIcon(ColorScheme colors) {
+    return Container(
+      width: 64,
+      height: 64,
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: colors.outline.withOpacity(0.3)),
+      ),
+      child: Icon(placeholderIcon, color: colors.secondary),
     );
   }
 }
@@ -929,7 +1060,7 @@ class _AddPlanSheetState extends State<_AddPlanSheet> {
     if (price == null || duration == null) {
       UiUtils.showSoftSnackBar(
         context,
-        message: 'الرجاء إدخال قيم صالحة.',
+        message: 'ط·آ§ط¸â€”ط·آ±ط·آ¬ط·آ§ط·طŒ ط·آ¥ط·آ¯ط·آ®ط·آ§ط¸â€” ط¸â€ڑط¸ظ¹ط¸â€¦ ط·آµط·آ§ط¸â€”ط·آ­ط·آ©.',
       );
       return;
     }
@@ -953,14 +1084,14 @@ class _AddPlanSheetState extends State<_AddPlanSheet> {
         await widget.repository.createPlanBatch(
           planId: plan.id,
           sourceFile: formFile,
-          label: 'دفعة الأكواد',
+          label: 'ط·آ¯ط¸ظ¾ط·آ¹ط·آ© ط·آ§ط¸â€”ط·آ£ط¸ئ’ط¸ث†ط·آ§ط·آ¯',
         );
       }
 
       if (!mounted) return;
       UiUtils.showSoftSnackBar(
         context,
-        message: 'تم إنشاء الفئة وتحميل الأكواد.',
+        message: 'ط·ع¾ط¸â€¦ ط·آ¥ط¸â€ ط·آ´ط·آ§ط·طŒ ط·آ§ط¸â€”ط¸ظ¾ط·آ¦ط·آ© ط¸ث†ط·ع¾ط·آ­ط¸â€¦ط¸ظ¹ط¸â€” ط·آ§ط¸â€”ط·آ£ط¸ئ’ط¸ث†ط·آ§ط·آ¯.',
       );
       Navigator.of(context).pop(true);
     } catch (error) {
@@ -995,7 +1126,7 @@ class _AddPlanSheetState extends State<_AddPlanSheet> {
                 children: [
                   Expanded(
                     child: Text(
-                      'إضافة فئة جديدة',
+                      'ط·آ¥ط·آ¶ط·آ§ط¸ظ¾ط·آ© ط¸ظ¾ط·آ¦ط·آ© ط·آ¬ط·آ¯ط¸ظ¹ط·آ¯ط·آ©',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w800,
                           ),
@@ -1010,9 +1141,9 @@ class _AddPlanSheetState extends State<_AddPlanSheet> {
               const SizedBox(height: 12),
               _TextField(
                 controller: _nameCtrl,
-                label: 'اسم الفئة',
+                label: 'ط·آ§ط·آ³ط¸â€¦ ط·آ§ط¸â€”ط¸ظ¾ط·آ¦ط·آ©',
                 validator: (value) =>
-                    value == null || value.trim().isEmpty ? 'هذا الحقل مطلوب' : null,
+                    value == null || value.trim().isEmpty ? 'ط¸â€،ط·آ°ط·آ§ ط·آ§ط¸â€”ط·آ­ط¸â€ڑط¸â€” ط¸â€¦ط·آ·ط¸â€”ط¸ث†ط·آ¨' : null,
               ),
               const SizedBox(height: 12),
               Row(
@@ -1020,12 +1151,12 @@ class _AddPlanSheetState extends State<_AddPlanSheet> {
                   Expanded(
                     child: _TextField(
                       controller: _priceCtrl,
-                      label: 'السعر',
+                      label: 'ط·آ§ط¸â€”ط·آ³ط·آ¹ط·آ±',
                       keyboardType:
                           const TextInputType.numberWithOptions(decimal: true),
                       validator: (value) =>
                           (value == null || double.tryParse(value) == null)
-                              ? 'أدخل سعرًا صالحًا'
+                              ? 'ط·آ£ط·آ¯ط·آ®ط¸â€” ط·آ³ط·آ¹ط·آ±ط¸â€¹ط·آ§ ط·آµط·آ§ط¸â€”ط·آ­ط¸â€¹ط·آ§'
                               : null,
                     ),
                   ),
@@ -1033,10 +1164,10 @@ class _AddPlanSheetState extends State<_AddPlanSheet> {
                   Expanded(
                     child: _TextField(
                       controller: _currencyCtrl,
-                      label: 'العملة',
+                      label: 'ط·آ§ط¸â€”ط·آ¹ط¸â€¦ط¸â€”ط·آ©',
                       validator: (value) =>
                           value == null || value.trim().isEmpty
-                              ? 'هذا الحقل مطلوب'
+                              ? 'ط¸â€،ط·آ°ط·آ§ ط·آ§ط¸â€”ط·آ­ط¸â€ڑط¸â€” ط¸â€¦ط·آ·ط¸â€”ط¸ث†ط·آ¨'
                               : null,
                     ),
                   ),
@@ -1045,24 +1176,24 @@ class _AddPlanSheetState extends State<_AddPlanSheet> {
               const SizedBox(height: 12),
               _TextField(
                 controller: _durationCtrl,
-                label: 'مدة الصلاحية (أيام)',
+                label: 'ط¸â€¦ط·آ¯ط·آ© ط·آ§ط¸â€”ط·آµط¸â€”ط·آ§ط·آ­ط¸ظ¹ط·آ© (ط·آ£ط¸ظ¹ط·آ§ط¸â€¦)',
                 keyboardType: TextInputType.number,
                 validator: (value) =>
                     (value == null || int.tryParse(value) == null)
-                        ? 'أدخل مدة صالحة'
+                        ? 'ط·آ£ط·آ¯ط·آ®ط¸â€” ط¸â€¦ط·آ¯ط·آ© ط·آµط·آ§ط¸â€”ط·آ­ط·آ©'
                         : null,
               ),
               const SizedBox(height: 12),
               _TextField(
                 controller: _descriptionCtrl,
-                label: 'الوصف (اختياري)',
+                label: 'ط·آ§ط¸â€”ط¸ث†ط·آµط¸ظ¾ (ط·آ§ط·آ®ط·ع¾ط¸ظ¹ط·آ§ط·آ±ط¸ظ¹)',
                 maxLines: 3,
               ),
               const SizedBox(height: 12),
               OutlinedButton.icon(
                 onPressed: _pickVoucher,
                 icon: const Icon(Icons.upload_file_rounded),
-                label: Text(_voucherName ?? 'إرفاق ملف الأكواد'),
+                label: Text(_voucherName ?? 'ط·آ¥ط·آ±ط¸ظ¾ط·آ§ط¸â€ڑ ط¸â€¦ط¸â€”ط¸ظ¾ ط·آ§ط¸â€”ط·آ£ط¸ئ’ط¸ث†ط·آ§ط·آ¯'),
               ),
               const SizedBox(height: 20),
               SizedBox(
@@ -1075,7 +1206,7 @@ class _AddPlanSheetState extends State<_AddPlanSheet> {
                           width: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('إنشاء الفئة'),
+                      : const Text('ط·آ¥ط¸â€ ط·آ´ط·آ§ط·طŒ ط·آ§ط¸â€”ط¸ظ¾ط·آ¦ط·آ©'),
                 ),
               ),
             ],
@@ -1193,7 +1324,7 @@ class _ErrorPlaceholder extends StatelessWidget {
             const SizedBox(height: 12),
             OutlinedButton(
               onPressed: onRetry,
-              child: const Text('إعادة المحاولة'),
+              child: const Text('ط·آ¥ط·آ¹ط·آ§ط·آ¯ط·آ© ط·آ§ط¸â€”ط¸â€¦ط·آ­ط·آ§ط¸ث†ط¸â€”ط·آ©'),
             )
           ],
         ),
@@ -1201,6 +1332,21 @@ class _ErrorPlaceholder extends StatelessWidget {
     );
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

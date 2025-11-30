@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Wifi;
 
+use App\Enums\Wifi\WifiCodeStatus;
 use App\Enums\Wifi\WifiNetworkStatus;
+use App\Enums\Wifi\WifiPlanStatus;
 use App\Enums\Wifi\WifiReportStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Wifi\AdminUpdateWifiNetworkStatusRequest;
@@ -15,6 +17,11 @@ use App\Models\Wifi\ReputationCounter;
 use App\Models\Wifi\WifiNetwork;
 use App\Models\Wifi\WifiReport;
 use App\Services\Audit\AuditLogger;
+use App\Services\NotificationService;
+use App\Models\UserFcmToken;
+use App\Services\NotificationDispatchService;
+use App\Data\Notifications\NotificationIntent;
+use App\Enums\NotificationType;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -26,7 +33,7 @@ class AdminModerationController extends Controller
     {
     }
 
-    public function networks(Request $request): AnonymousResourceCollection
+    public function networks(Request $request): JsonResponse
     {
         $filters = $request->validate([
             'status' => ['nullable', 'string', 'in:active,inactive,suspended'],
@@ -35,7 +42,21 @@ class AdminModerationController extends Controller
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $query = WifiNetwork::query()->with('owner:id,name,email');
+        $query = WifiNetwork::query()
+            ->with('owner:id,name,email')
+            ->withCount([
+                'plans',
+                'plans as active_plans_count' => static function ($q): void {
+                    $q->where('status', WifiPlanStatus::ACTIVE->value);
+                },
+                'codes as codes_total',
+                'codes as codes_available' => static function ($q): void {
+                    $q->where('status', WifiCodeStatus::AVAILABLE->value);
+                },
+                'codes as codes_sold' => static function ($q): void {
+                    $q->where('status', WifiCodeStatus::SOLD->value);
+                },
+            ]);
 
         if (! empty($filters['status'])) {
             $query->where('status', $filters['status']);
@@ -58,7 +79,20 @@ class AdminModerationController extends Controller
             ->paginate($filters['per_page'] ?? 20)
             ->appends($request->query());
 
-        return WifiNetworkResource::collection($networks);
+        \Log::info('wifi.admin.networks.fetch', [
+            'user_id' => $request->user()?->id,
+            'filters' => $filters,
+            'total' => $networks->total(),
+        ]);
+
+        $resource = WifiNetworkResource::collection($networks);
+        $resolved = $resource->response($request)->getData(true);
+        $rows = $resolved['data'] ?? [];
+
+        return response()->json([
+            'total' => $networks->total(),
+            'rows' => $rows,
+        ]);
     }
 
     public function updateNetworkStatus(AdminUpdateWifiNetworkStatusRequest $request, WifiNetwork $network): WifiNetworkResource
@@ -84,10 +118,88 @@ class AdminModerationController extends Controller
         ]);
 
         $network->save();
+        $this->notifyOwnerNetworkUpdated($network, $target, $validated['reason'] ?? null);
 
         return WifiNetworkResource::make($network->refresh());
     }
 
+    private function notifyOwnerNetworkUpdated(WifiNetwork $network, WifiNetworkStatus $status, ?string $reason = null): void
+    {
+        if (! $network->user_id) {
+            return;
+        }
+
+        $title = match ($status) {
+            WifiNetworkStatus::ACTIVE => 'تم تفعيل شبكتك',
+            WifiNetworkStatus::SUSPENDED => 'تم إيقاف شبكتك مؤقتاً',
+            WifiNetworkStatus::INACTIVE => 'تم إيقاف شبكتك',
+            default => 'تم تحديث حالة الشبكة',
+        };
+
+        $updatedAt = now()->format('Y-m-d H:i');
+        $lines = [
+            "الشبكة: {$network->name}",
+            "الحالة الجديدة: {$status->label()}",
+            "التاريخ: {$updatedAt}",
+        ];
+
+        if (! empty($reason)) {
+            $lines[] = "السبب: {$reason}";
+        }
+
+        $lines[] = in_array($status, [WifiNetworkStatus::SUSPENDED, WifiNetworkStatus::INACTIVE], true)
+            ? 'الشبكة لن تظهر للمستخدمين حتى إعادة التفعيل.'
+            : 'الشبكة مفعلة الآن ومشاهدة للمستخدمين.';
+
+        $body = implode(' • ', $lines);
+        $deeplink = url('/wifi-cabin/networks/' . $network->id);
+
+        $payload = [
+            'network_id' => $network->id,
+            'network_name' => $network->name,
+            'status' => $status->value,
+            'status_label' => $status->label(),
+            'reason' => $reason,
+            'updated_at' => $updatedAt,
+            'deeplink' => $deeplink,
+            'action' => 'open_url',
+        ];
+
+        $intent = new NotificationIntent(
+            userId: $network->user_id,
+            type: NotificationType::ActionRequest,
+            title: $title,
+            body: $body,
+            deeplink: $deeplink,
+            entity: 'wifi_network_status',
+            entityId: $network->id . '-' . $status->value,
+            data: $payload,
+            meta: [
+                'source' => 'wifi_admin',
+                'event' => 'network_status_updated',
+            ],
+        );
+
+        app(NotificationDispatchService::class)->dispatch($intent);
+
+        $tokens = UserFcmToken::query()
+            ->where('user_id', $network->user_id)
+            ->pluck('fcm_token')
+            ->filter()
+            ->values()
+            ->all();
+
+        if ($tokens !== []) {
+            NotificationService::sendFcmNotification(
+                $tokens,
+                $title,
+                $body,
+                'wifi_network_status_updated',
+                $payload,
+                false
+            );
+        }
+    }
     public function reports(Request $request): AnonymousResourceCollection
     {
         $filters = $request->validate([
@@ -204,3 +316,16 @@ class AdminModerationController extends Controller
         return ReputationCounterResource::make($counter->refresh());
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -128,10 +128,10 @@ Route::group(['middleware' => ['auth:sanctum']], static function () {
         Route::patch('networks/{network}/commission', [OwnerNetworkController::class, 'setCommission'])->whereNumber('network');
         Route::patch('networks/{network}/availability', [OwnerNetworkController::class, 'toggleAvailability'])->whereNumber('network');
         Route::get('networks/{network}/stats', [OwnerNetworkController::class, 'stats'])->whereNumber('network');
+        Route::get('networks/{network}/codes', [OwnerNetworkController::class, 'codes'])->whereNumber('network');
 
-        Route::get('networks/{network}/plans', [OwnerPlanController::class, 'index'])->whereNumber('network');
-        Route::post('networks/{network}/plans', [OwnerPlanController::class, 'store'])->whereNumber('network');
-
+    Route::get('networks/{network}/plans', [OwnerPlanController::class, 'index'])->whereNumber('network');
+    Route::post('networks/{network}/plans', [OwnerPlanController::class, 'store'])->whereNumber('network');
         Route::get('plans/{plan}', [OwnerPlanController::class, 'show'])->whereNumber('plan');
         Route::match(['put', 'patch'], 'plans/{plan}', [OwnerPlanController::class, 'update'])->whereNumber('plan');
         Route::delete('plans/{plan}', [OwnerPlanController::class, 'destroy'])->whereNumber('plan');
@@ -143,7 +143,11 @@ Route::group(['middleware' => ['auth:sanctum']], static function () {
         Route::delete('batches/{batch}', [OwnerBatchController::class, 'destroy'])->whereNumber('batch');
     });
 
-    Route::middleware('permission:wifi.admin|wifi-cabin-manage')
+    // Wifi plan purchase code reveal (after successful payment)
+    Route::get('wifi/orders/{transaction}/code', [\App\Http\Controllers\Wifi\WifiOrderController::class, 'revealCode'])
+        ->whereNumber('transaction');
+
+    Route::middleware(['auth:sanctum', 'permission:wifi.admin|wifi-cabin-manage'])
         ->prefix('wifi/admin')
         ->group(function (): void {
             Route::get('networks', [AdminModerationController::class, 'networks']);

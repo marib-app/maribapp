@@ -4,6 +4,7 @@ import 'package:marib/data/model/wifi/wifi_payment_gateway.dart';
 import 'package:marib/data/model/wifi/wifi_plan.dart';
 import 'package:marib/data/model/wifi/wifi_purchase.dart';
 import 'package:marib/data/model/wifi/wifi_purchase_result.dart';
+import 'package:marib/data/model/wifi/wifi_owner_code.dart';
 import 'dart:collection';
 import 'package:dio/dio.dart';
 
@@ -26,6 +27,47 @@ class WifiRepository {
       return Map<String, dynamic>.from(value as Map);
     }
     return <String, dynamic>{};
+  }
+
+  Future<({List<WifiOwnerCode> codes, int total, int available, int sold})>
+      fetchOwnerNetworkCodes({
+    required int networkId,
+    int perPage = 25,
+    String? status,
+    String? search,
+  }) async {
+    final int normalizedPerPage = perPage.clamp(5, 100).toInt();
+    final Map<String, dynamic> query = <String, dynamic>{
+      'per_page': normalizedPerPage,
+      if (status != null && status.trim().isNotEmpty) 'status': status.trim(),
+      if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+    };
+
+    final Map<String, dynamic> response = await Api.get(
+      url: Api.ownerWifiNetworkCodesApi(networkId),
+      queryParameters: query,
+    );
+
+    final List<dynamic> rawList = _listify(response['data'] ?? response);
+    final List<WifiOwnerCode> codes = rawList
+        .map((dynamic element) => _mapify(element))
+        .where((map) => map.isNotEmpty)
+        .map(WifiOwnerCode.fromJson)
+        .toList();
+
+    final Map<String, dynamic> meta = _mapify(response['meta']);
+    final int total = _intify(meta['total']) ?? codes.length;
+    final int available = _intify(meta['available']) ?? 0;
+    final int sold = _intify(meta['sold']) ?? 0;
+
+    return (codes: codes, total: total, available: available, sold: sold);
+  }
+
+  Future<Map<String, dynamic>> fetchOwnerNetworkStats(int networkId) async {
+    final Map<String, dynamic> response = await Api.get(
+      url: Api.ownerWifiNetworkStatsApi(networkId),
+    );
+    return _mapify(response);
   }
 
   List<dynamic> _listify(dynamic value) {

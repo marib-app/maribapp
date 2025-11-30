@@ -7,10 +7,11 @@ import 'package:marib/app/navigation/motion/route_motion.dart';
 import 'package:marib/data/model/wifi/wifi_network.dart';
 import 'package:marib/data/model/wifi/wifi_plan.dart';
 import 'package:marib/data/wifi/wifi_repository.dart';
-import 'package:marib/settings.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/ui/screens/classified_ads/other_services/wifi_cabin/network_details_screen.dart';
 import 'package:marib/ui/screens/classified_ads/other_services/wifi_cabin/wifi_cabin_intro_screen.dart';
+import 'package:marib/ui/screens/classified_ads/other_services/wifi_cabin/wifi_owner_dashboard_screen.dart';
+import 'package:marib/ui/screens/classified_ads/other_services/wifi_cabin/wifi_owner_network_detail_screen.dart';
 import 'package:marib/ui/widgets/icons/wifi_cabin_glyph.dart';
 import 'package:marib/utils/errorFilter.dart';
 import 'package:marib/utils/extensions/extensions.dart';
@@ -43,10 +44,12 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
 
   Timer? _searchDebounce;
   bool _isLoading = false;
+  bool _navigatingDashboard = false;
   String? _errorMessage;
   String _searchQuery = '';
   List<WifiNetwork> _networks = const <WifiNetwork>[];
   bool _hasApprovedOwnerNetwork = false;
+  List<int> _ownerNetworkIds = const <int>[];
   @override
   void initState() {
     super.initState();
@@ -109,6 +112,7 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
       }
 
       _networks = merged.values.toList();
+      _ownerNetworkIds = ownerNetworks.map((n) => n.id).toList();
       _hasApprovedOwnerNetwork = ownerNetworks.any(
         (network) =>
             (network.status ?? '').toLowerCase().trim() == 'active' ||
@@ -131,15 +135,46 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
   }
 
   Future<void> _openDashboard() async {
-    final String dashboardUrl =
-        '${HelperUtils.checkHost(AppSettings.hostUrl)}wifi-cabin';
-    await UiUtils.launchURL(dashboardUrl);
+    if (_navigatingDashboard) return;
+    setState(() => _navigatingDashboard = true);
+    try {
+      final ownerNetworks =
+          await _repository.fetchOwnerNetworks(perPage: 10);
+      if (ownerNetworks.isEmpty) {
+        UiUtils.showSoftSnackBar(
+          context,
+          message: 'لا توجد شبكات لإدارتها حالياً.',
+        );
+        return;
+      }
+      final WifiNetwork target =
+          ownerNetworks.firstWhere(
+            (n) => (n.status ?? '').toLowerCase() == 'active',
+            orElse: () => ownerNetworks.first,
+          );
+      await Navigator.of(context)
+          .push(WifiOwnerNetworkDetailScreen.route(target))
+          .then((_) => _loadNetworks());
+    } catch (_) {
+      UiUtils.showSoftSnackBar(
+        context,
+        message: 'تعذر فتح لوحة الشبكة حالياً.',
+      );
+    } finally {
+      if (mounted) setState(() => _navigatingDashboard = false);
+    }
   }
 
   Future<void> _openNetworkDetails(WifiNetwork network) async {
-    await Navigator.of(context).push(
-      WifiNetworkDetailsScreen.route(network),
-    );
+    if (_ownerNetworkIds.contains(network.id)) {
+      await Navigator.of(context)
+          .push(WifiOwnerNetworkDetailScreen.route(network))
+          .then((_) => _loadNetworks(showLoader: false));
+    } else {
+      await Navigator.of(context).push(
+        WifiNetworkDetailsScreen.route(network),
+      );
+    }
   }
 
   Future<void> _openAddNetworkFlow() async {
@@ -243,8 +278,9 @@ class _WifiCabinScreenState extends State<WifiCabinScreen> {
                 borderRadius: BorderRadius.circular(18),
               ),
             ),
-            onPressed:
-                _hasApprovedOwnerNetwork ? _openDashboard : _openAddNetworkFlow,
+            onPressed: _hasApprovedOwnerNetwork
+                ? (_navigatingDashboard ? null : _openDashboard)
+                : _openAddNetworkFlow,
             icon: Icon(_hasApprovedOwnerNetwork
                 ? Icons.dashboard_customize_rounded
                 : Icons.add_circle_outline_rounded),

@@ -30,33 +30,104 @@ class MerchantLocationPickerScreen extends StatefulWidget {
 }
 
 class _MerchantLocationPickerScreenState extends State<MerchantLocationPickerScreen> {
+  static const LatLng _fallback = LatLng(15.3694, 44.1910); // Marib fallback
   GoogleMapController? _mapController;
   LatLng? _currentTarget;
   String? _currentAddress;
   bool _loading = true;
   bool _addressLoading = false;
+  bool _myLocationAllowed = true;
 
   @override
   void initState() {
     super.initState();
+    _currentTarget = widget.initialPosition ?? _fallback;
     _initLocation();
+  }
+
+  Future<bool> _ensurePermissionAndService() async {
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        HelperUtils.showSnackBarMessage(
+          context,
+          'الرجاء تفعيل خدمة الموقع (GPS) أولاً.',
+          messageDuration: 3,
+        );
+        _myLocationAllowed = false;
+        return false;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.denied) {
+        HelperUtils.showSnackBarMessage(
+          context,
+          'تم رفض إذن تحديد الموقع، الرجاء السماح بالوصول.',
+          messageDuration: 3,
+        );
+        _myLocationAllowed = false;
+        return false;
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        HelperUtils.showSnackBarMessage(
+          context,
+          'تم رفض الإذن نهائياً، فعّل صلاحية الموقع من إعدادات الجهاز.',
+          messageDuration: 4,
+        );
+        _myLocationAllowed = false;
+        return false;
+      }
+
+      _myLocationAllowed = true;
+      return true;
+    } catch (_) {
+      HelperUtils.showSnackBarMessage(
+        context,
+        'تعذر التحقق من الإذن، يمكنك اختيار الموقع يدويًا.',
+        messageDuration: 3,
+      );
+      _myLocationAllowed = false;
+      return false;
+    }
   }
 
   Future<void> _initLocation() async {
     try {
-      if (widget.initialPosition != null) {
-        _currentTarget = widget.initialPosition;
-      } else {
-        final permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
-          throw Exception('permission_denied');
+      if (widget.initialPosition == null) {
+        final allowed = await _ensurePermissionAndService();
+        if (!allowed) {
+          _currentTarget = _fallback;
+          _addressLoading = false;
+          if (mounted) setState(() => _loading = false);
+          return;
         }
-        final position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-        _currentTarget = LatLng(position.latitude, position.longitude);
+        try {
+          final position = await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.high,
+          ).timeout(const Duration(seconds: 8));
+          _currentTarget = LatLng(position.latitude, position.longitude);
+        } catch (_) {
+          _currentTarget = _fallback;
+        }
       }
-      await _reverseGeocode(_currentTarget!);
-    } catch (e) {
-      HelperUtils.showSnackBarMessage(context, 'locationPermissionDenied'.translate(context), messageDuration: 3);
+
+      if (_currentTarget != null) {
+        await _reverseGeocode(_currentTarget!);
+      }
+    } catch (_) {
+      _currentTarget ??= _fallback;
+      if (mounted) {
+        HelperUtils.showSnackBarMessage(
+          context,
+          'تعذر الحصول على موقعك، يمكنك تحديده يدويًا على الخريطة.',
+          messageDuration: 3,
+        );
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -101,12 +172,7 @@ class _MerchantLocationPickerScreenState extends State<MerchantLocationPickerScr
   @override
   Widget build(BuildContext context) {
     final theme = context.color;
-    if (_loading || _currentTarget == null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('تحديد موقع المتجر')),
-        body: const Center(child: CircularProgressIndicator()),
-      );
-    }
+    final LatLng target = _currentTarget ?? _fallback;
 
     return Scaffold(
       appBar: AppBar(
@@ -115,13 +181,17 @@ class _MerchantLocationPickerScreenState extends State<MerchantLocationPickerScr
       body: Stack(
         children: [
           GoogleMap(
-            initialCameraPosition: CameraPosition(target: _currentTarget!, zoom: 16),
+            initialCameraPosition: CameraPosition(target: target, zoom: 16),
             onMapCreated: (controller) => _mapController = controller,
             onCameraMove: _onCameraMove,
             onCameraIdle: _onCameraIdle,
-            myLocationButtonEnabled: true,
-            myLocationEnabled: true,
+            myLocationButtonEnabled: _myLocationAllowed,
+            myLocationEnabled: _myLocationAllowed,
           ),
+          if (_loading)
+            const Center(
+              child: CircularProgressIndicator(),
+            ),
           const IgnorePointer(
             child: Center(
               child: Icon(Icons.location_pin, size: 40, color: Colors.redAccent),
@@ -138,7 +208,7 @@ class _MerchantLocationPickerScreenState extends State<MerchantLocationPickerScr
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
-                'حرك الخريطة حتى يكون المؤشر في وسط موقع متجرك',
+                'حرّك الخريطة لتحديد الموقع بدقة، ثم اضغط تأكيد.',
                 style: TextStyle(color: theme.textDefaultColor),
                 textAlign: TextAlign.center,
               ),
@@ -165,8 +235,8 @@ class _MerchantLocationPickerScreenState extends State<MerchantLocationPickerScr
                   children: [
                     Text(
                       _addressLoading
-                          ? 'جاري تحديث العنوان...'
-                          : (_currentAddress ?? 'لم يتم تحديد العنوان بعد'),
+                          ? 'جاري جلب العنوان...'
+                          : (_currentAddress ?? 'لم يتم العثور على عنوان دقيق لهذا الموقع'),
                       style: TextStyle(color: theme.textDefaultColor, fontSize: context.font.normal),
                     ),
                     const SizedBox(height: 12),
@@ -174,7 +244,7 @@ class _MerchantLocationPickerScreenState extends State<MerchantLocationPickerScr
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: _confirmSelection,
-                        child: const Text('تأكيد العنوان'),
+                        child: const Text('تأكيد الموقع'),
                       ),
                     ),
                   ],

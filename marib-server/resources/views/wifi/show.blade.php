@@ -1,7 +1,7 @@
 @extends('layouts.main')
 
 @section('title')
-    {{ __('تفاصيل شبكة :name', ['name' => $network->name]) }}
+    {{ __('تفاصيل الشبكة :name', ['name' => $network->name]) }}
 @endsection
 
 @section('css')
@@ -17,8 +17,8 @@
             <div class="col-12 col-md-6 order-md-2 order-first text-center text-md-end">
                 <nav aria-label="breadcrumb" class="breadcrumb-header">
                     <ol class="breadcrumb mb-0 justify-content-center justify-content-md-end">
-                        <li class="breadcrumb-item"><a href="{{ route('home') }}">{{ __('لوحة التحكم') }}</a></li>
-                        <li class="breadcrumb-item"><a href="{{ route('wifi.index') }}">{{ __('إدارة الواي فاي') }}</a></li>
+                        <li class="breadcrumb-item"><a href="{{ route('home') }}">{{ __('الرئيسية') }}</a></li>
+                        <li class="breadcrumb-item"><a href="{{ route('wifi.index') }}">{{ __('شبكات كابينة الواي فاي') }}</a></li>
                         <li class="breadcrumb-item active" aria-current="page">{{ $network->name }}</li>
                     </ol>
                 </nav>
@@ -31,29 +31,29 @@
     @php
         $networkStatusLabels = [
             'active' => 'نشطة',
-            'inactive' => 'متوقفة',
+            'inactive' => 'غير نشطة',
             'suspended' => 'معلقة',
         ];
         $planStatusLabels = [
             'active' => 'نشطة',
-            'uploaded' => 'قيد الرفع',
-            'validated' => 'قيد المراجعة',
+            'uploaded' => 'تم الرفع',
+            'validated' => 'تم التحقق',
             'archived' => 'مؤرشفة',
         ];
         $batchStatusLabels = [
-            'uploaded' => 'مرفوعة',
-            'validated' => 'قيد التحقق',
-            'active' => 'مفعّلة',
-            'archived' => 'مؤرشفة',
+            'uploaded' => 'مرفوع',
+            'validated' => 'تم التحقق',
+            'active' => 'مفعل',
+            'archived' => 'مؤرشف',
         ];
         $contactLabels = [
             'owner' => 'مالك الشبكة',
-            'manager' => 'المسؤول',
-            'phone' => 'هاتف',
+            'manager' => 'المدير',
+            'phone' => 'الهاتف',
             'whatsapp' => 'واتساب',
             'email' => 'البريد الإلكتروني',
             'support' => 'الدعم',
-            'other' => 'قناة أخرى',
+            'other' => 'أخرى',
         ];
         $commissionRate = isset($commissionRate)
             ? number_format($commissionRate * 100, 2) . '%'
@@ -71,6 +71,10 @@
             <a href="{{ route('wifi.edit', $network) }}" class="btn btn-primary">
                 <i class="bi bi-pencil-square"></i>
                 {{ __('تحرير الشبكة') }}
+            </a>
+            <a href="{{ route('wifi.codes', $network) }}" class="btn btn-success">
+                <i class="bi bi-table"></i>
+                عرض ملف الأكواد
             </a>
         </div>
 
@@ -95,13 +99,13 @@
                     </div>
                     <div class="card-body border-top">
                         <dl class="row mb-0 small">
-                            <dt class="col-5 text-muted">{{ __('رقم الشبكة') }}</dt>
+                            <dt class="col-5 text-muted">{{ __('الرمز المرجعي') }}</dt>
                             <dd class="col-7">{{ $network->reference_code ?? '—' }}</dd>
-                            <dt class="col-5 text-muted">{{ __('العمولة الحالية') }}</dt>
+                            <dt class="col-5 text-muted">{{ __('عمولة الشبكة') }}</dt>
                             <dd class="col-7">{{ $commissionRate }}</dd>
-                            <dt class="col-5 text-muted">{{ __('مدى التغطية') }}</dt>
+                            <dt class="col-5 text-muted">{{ __('نطاق التغطية (كم)') }}</dt>
                             <dd class="col-7">{{ $network->coverage_radius_km ? number_format($network->coverage_radius_km, 1) . ' كم' : '—' }}</dd>
-                            <dt class="col-5 text-muted">{{ __('تاريخ التحديث') }}</dt>
+                            <dt class="col-5 text-muted">{{ __('آخر تحديث') }}</dt>
                             <dd class="col-7">{{ optional($network->updated_at ?? $network->created_at)->format('Y-m-d H:i') }}</dd>
                         </dl>
                     </div>
@@ -109,7 +113,7 @@
 
                 <div class="card shadow-sm border-0 mb-3">
                     <div class="card-header bg-white border-0">
-                        <h6 class="mb-0">{{ __('بيانات التواصل') }}</h6>
+                        <h6 class="mb-0">{{ __('معلومات التواصل') }}</h6>
                     </div>
                     <ul class="list-group list-group-flush wifi-contact-list">
                         @forelse($contacts as $contact)
@@ -118,7 +122,7 @@
                                 <span class="fw-semibold">{{ $contact['value'] }}</span>
                             </li>
                         @empty
-                            <li class="list-group-item text-muted">{{ __('لا تتوفر بيانات اتصال.') }}</li>
+                            <li class="list-group-item text-muted">{{ __('لا توجد معلومات تواصل متاحة.') }}</li>
                         @endforelse
                     </ul>
                 </div>
@@ -126,12 +130,12 @@
                 @if ($media['login_screenshot'])
                     <div class="card shadow-sm border-0">
                         <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
-                            <h6 class="mb-0">{{ __('صورة شاشة تسجيل الدخول') }}</h6>
-                            <a href="{{ $media['login_screenshot'] }}" target="_blank" rel="noopener" class="small">{{ __('عرض بالحجم الكامل') }}</a>
+                            <h6 class="mb-0">{{ __('لقطة شاشة تسجيل الدخول') }}</h6>
+                            <a href="{{ $media['login_screenshot'] }}" target="_blank" rel="noopener" class="small">{{ __('عرض الصورة بالحجم الكامل') }}</a>
                         </div>
                         <div class="card-body">
                             <div class="ratio ratio-4x3 rounded-4 overflow-hidden">
-                                <img src="{{ $media['login_screenshot'] }}" alt="{{ __('شاشة الدخول') }}" class="w-100 h-100 object-fit-cover">
+                                <img src="{{ $media['login_screenshot'] }}" alt="{{ __('صورة تسجيل الدخول') }}" class="w-100 h-100 object-fit-cover">
                             </div>
                         </div>
                     </div>
@@ -142,13 +146,13 @@
                 <div class="row g-3 mb-3">
                     <div class="col-md-4">
                         <div class="wifi-stat-card shadow-sm">
-                            <span class="text-muted">{{ __('إجمالي الخطط') }}</span>
+                            <span class="text-muted">{{ __('عدد الباقات') }}</span>
                             <strong>{{ number_format($statistics['plans']['total']) }}</strong>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="wifi-stat-card shadow-sm">
-                            <span class="text-muted">{{ __('الخطط النشطة') }}</span>
+                            <span class="text-muted">{{ __('باقات نشطة') }}</span>
                             <strong>{{ number_format($statistics['plans']['active']) }}</strong>
                         </div>
                     </div>
@@ -162,7 +166,7 @@
 
                 <div class="card shadow-sm border-0 mb-3">
                     <div class="card-header bg-white border-0">
-                        <h6 class="mb-0">{{ __('بيانات الشبكة') }}</h6>
+                        <h6 class="mb-0">{{ __('معلومات الشبكة') }}</h6>
                     </div>
                     <div class="card-body">
                         <div class="row g-3">
@@ -170,7 +174,7 @@
                                 <dl class="mb-0 small">
                                     <dt class="text-muted">{{ __('العنوان') }}</dt>
                                     <dd>{{ $network->address ?? '—' }}</dd>
-                                    <dt class="text-muted mt-3">{{ __('العملة') }}</dt>
+                                    <dt class="text-muted mt-3">{{ __('العملات') }}</dt>
                                     <dd>{{ implode('، ', $network->currencies ?? []) ?: '—' }}</dd>
                                     <dt class="text-muted mt-3">{{ __('الوصف') }}</dt>
                                     <dd>{{ $network->description ?? '—' }}</dd>
@@ -180,9 +184,9 @@
                                 <dl class="mb-0 small">
                                     <dt class="text-muted">{{ __('المالك') }}</dt>
                                     <dd>{{ optional($network->owner)->name ?? '—' }}</dd>
-                                    <dt class="text-muted mt-3">{{ __('البريد الإلكتروني') }}</dt>
+                                    <dt class="text-muted mt-3">{{ __('بريد المالك الإلكتروني') }}</dt>
                                     <dd>{{ optional($network->owner)->email ?? '—' }}</dd>
-                                    <dt class="text-muted mt-3">{{ __('رقم الهاتف') }}</dt>
+                                    <dt class="text-muted mt-3">{{ __('هاتف المالك') }}</dt>
                                     <dd>{{ optional($network->owner)->mobile ?? optional($network->owner)->phone ?? '—' }}</dd>
                                 </dl>
                             </div>
@@ -194,7 +198,7 @@
                     <div class="card-header bg-white border-0">
                         <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
                             <div>
-                                <h6 class="mb-0">{{ __('الملخص المالي') }}</h6>
+                                <h6 class="mb-0">{{ __('ملخص مالي') }}</h6>
                                 <small class="text-muted">{{ __('الفترة: من :from إلى :to', ['from' => $financialFrom->format('Y-m-d'), 'to' => $financialTo->format('Y-m-d')]) }}</small>
                             </div>
                             <div class="ms-auto">
@@ -208,10 +212,10 @@
                                         <input type="date" name="to" value="{{ $financialTo->format('Y-m-d') }}" class="form-control form-control-sm">
                                     </div>
                                     <div class="col-auto d-flex gap-2">
-                                        <button type="submit" class="btn btn-primary btn-sm">{{ __('تحديث') }}</button>
+                                        <button type="submit" class="btn btn-primary btn-sm">{{ __('تطبيق') }}</button>
                                         <a href="{{ route('wifi.financials.export', ['network' => $network, 'from' => $financialFrom->format('Y-m-d'), 'to' => $financialTo->format('Y-m-d')]) }}" class="btn btn-outline-secondary btn-sm">
                                             <i class="bi bi-download"></i>
-                                            {{ __('تحميل كشف') }}
+                                            {{ __('تصدير CSV') }}
                                         </a>
                                     </div>
                                 </form>
@@ -234,7 +238,7 @@
                             </div>
                             <div class="col-md-4">
                                 <div class="wifi-stat-card shadow-sm">
-                                    <span class="text-muted">{{ __('إجمالي العمولة') }}</span>
+                                    <span class="text-muted">{{ __('العمولة') }}</span>
                                     <strong>{{ number_format($financialTotals['commission'], 2) }}</strong>
                                 </div>
                             </div>
@@ -244,11 +248,11 @@
                                 <thead>
                                     <tr>
                                         <th>{{ __('التاريخ') }}</th>
-                                        <th>{{ __('الخطة') }}</th>
-                                        <th>{{ __('المستخدم') }}</th>
+                                        <th>{{ __('الباقة') }}</th>
+                                        <th>{{ __('العميل') }}</th>
                                         <th>{{ __('المبلغ') }}</th>
-                                        <th>{{ __('عملة') }}</th>
-                                        <th>{{ __('عمولتنا') }}</th>
+                                        <th>{{ __('العملة') }}</th>
+                                        <th>{{ __('العمولة') }}</th>
                                         <th>{{ __('حصة المالك') }}</th>
                                         <th>{{ __('المرجع') }}</th>
                                     </tr>
@@ -267,7 +271,7 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="8" class="text-center text-muted">{{ __('لا توجد عمليات بيع في الفترة المحددة.') }}</td>
+                                            <td colspan="8" class="text-center text-muted">{{ __('لا توجد مبيعات ضمن الفترة المحددة.') }}</td>
                                         </tr>
                                     @endforelse
                                 </tbody>
@@ -278,7 +282,7 @@
 
                 <div class="card shadow-sm border-0">
                     <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
-                        <h6 class="mb-0">{{ __('خطط الشبكة') }}</h6>
+                        <h6 class="mb-0">{{ __('باقات الشبكة') }}</h6>
                         <span class="badge bg-primary-subtle text-primary">{{ $network->plans->count() }}</span>
                     </div>
                     <div class="card-body">
@@ -303,21 +307,21 @@
                                     </div>
                                     <div class="text-md-end">
                                         <div class="fw-semibold">{{ number_format($plan->price ?? 0, 2) }} {{ $plan->currency }}</div>
-                                        <small class="text-muted">{{ __('مدة الصلاحية:') }} {{ $plan->duration_days ? "{$plan->duration_days} يوم" : '—' }}</small>
+                                        <small class="text-muted">{{ __('مدة الباقة:') }} {{ $plan->duration_days ? "{$plan->duration_days} يوم" : '—' }}</small>
                                     </div>
                                 </div>
 
                                 <div class="row g-3 mt-3 small">
                                     <div class="col-sm-4">
-                                        <span class="text-muted d-block">{{ __('حجم البيانات') }}</span>
-                                        <strong>{{ $plan->is_unlimited ? __('غير محدود') : ($plan->data_cap_gb ? number_format($plan->data_cap_gb, 2) . ' جيجا' : '—') }}</strong>
+                                        <span class="text-muted d-block">{{ __('الحد الأعلى للبيانات (جيجابايت/غير محدود)') }}</span>
+                                        <strong>{{ $plan->is_unlimited ? __('غير محدود') : ($plan->data_cap_gb ? number_format($plan->data_cap_gb, 2) . ' جيجابايت' : '—') }}</strong>
                                     </div>
                                     <div class="col-sm-4">
-                                        <span class="text-muted d-block">{{ __('الرصيد المتاح') }}</span>
+                                        <span class="text-muted d-block">{{ __('الأكواد المتاحة / الإجمالي') }}</span>
                                         <strong>{{ number_format($planAvailable) }} / {{ number_format($planTotal) }}</strong>
                                     </div>
                                     <div class="col-sm-4">
-                                        <span class="text-muted d-block">{{ __('المباع') }}</span>
+                                        <span class="text-muted d-block">{{ __('المباعة') }}</span>
                                         <strong>{{ number_format($planSold) }}</strong>
                                     </div>
                                 </div>
@@ -332,8 +336,8 @@
                                             <tr>
                                                 <th>{{ __('الدفعة') }}</th>
                                                 <th>{{ __('الحالة') }}</th>
-                                                <th>{{ __('الأكواد (متاح/إجمالي)') }}</th>
-                                                <th>{{ __('تاريخ الإضافة') }}</th>
+                                                <th>{{ __('الأكواد المتاحة/الإجمالي') }}</th>
+                                                <th>{{ __('تاريخ الإنشاء') }}</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -341,11 +345,11 @@
                                                 <tr>
                                                     <td>{{ $batch->label ?? '—' }}</td>
                                                     <td>
-                                            @php
-                                                $batchStatusKey = $batch->status instanceof \App\Enums\Wifi\WifiCodeBatchStatus
-                                                    ? $batch->status->value
-                                                    : $batch->status;
-                                            @endphp
+                                                        @php
+                                                            $batchStatusKey = $batch->status instanceof \App\Enums\Wifi\WifiCodeBatchStatus
+                                                                ? $batch->status->value
+                                                                : $batch->status;
+                                                        @endphp
                                                         <span class="badge bg-secondary-subtle text-dark">
                                                             {{ $batchStatusLabels[$batchStatusKey] ?? $batchStatusKey ?? '—' }}
                                                         </span>
@@ -355,7 +359,7 @@
                                                 </tr>
                                             @empty
                                                 <tr>
-                                                    <td colspan="4" class="text-muted text-center">{{ __('لا توجد دفعات مسجلة لهذه الخطة.') }}</td>
+                                                    <td colspan="4" class="text-muted text-center">{{ __('لا توجد دفعات أكواد لهذه الباقة.') }}</td>
                                                 </tr>
                                             @endforelse
                                         </tbody>
@@ -363,7 +367,7 @@
                                 </div>
                             </div>
                         @empty
-                            <p class="text-muted mb-0">{{ __('لا توجد خطط مرتبطة بهذه الشبكة بعد.') }}</p>
+                            <p class="text-muted mb-0">{{ __('لا توجد باقات مرتبطة بهذه الشبكة.') }}</p>
                         @endforelse
                     </div>
                 </div>

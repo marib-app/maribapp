@@ -51,9 +51,7 @@ class _Phase1ActivityInfoState extends State<Phase1ActivityInfo>
   bool _isReady = false;
   bool _locationLoading = false;
   bool _logoPicking = false;
-  bool _logoSuccessVisible = false;
   bool _coverPicking = false;
-  bool _coverSuccessVisible = false;
   bool _submitting = false;
   bool _canProceed = false;
 
@@ -64,6 +62,8 @@ class _Phase1ActivityInfoState extends State<Phase1ActivityInfo>
 
   Timer? _logoSuccessTimer;
   Timer? _coverSuccessTimer;
+  bool _logoSuccessVisible = false;
+  bool _coverSuccessVisible = false;
 
   bool get _hasLocation => _latitude != null && _longitude != null;
   bool get _hasLogo => _logoFile != null;
@@ -142,7 +142,7 @@ class _Phase1ActivityInfoState extends State<Phase1ActivityInfo>
     } catch (_) {
       HelperUtils.showSnackBarMessage(
         context,
-        "حدث خطأ أثناء اختيار الشعار، حاول مرة أخرى",
+        "تعذر تحميل الشعار، حاول مرة أخرى.",
         messageDuration: 3,
       );
     } finally {
@@ -170,7 +170,7 @@ class _Phase1ActivityInfoState extends State<Phase1ActivityInfo>
     } catch (_) {
       HelperUtils.showSnackBarMessage(
         context,
-        "حدث خطأ أثناء اختيار الغلاف، حاول مرة أخرى",
+        "تعذر تحميل الغلاف، حاول مرة أخرى.",
         messageDuration: 3,
       );
     } finally {
@@ -196,7 +196,10 @@ class _Phase1ActivityInfoState extends State<Phase1ActivityInfo>
         setState(() {
           _latitude = result.latitude;
           _longitude = result.longitude;
-          _addressCtrl.text = result.address ?? '';
+          // العنوان المدخل يدويًا مستقل عن موقع الخريطة؛ نملأه فقط إن كان فارغًا لمساعدة المستخدم.
+          if ((_addressCtrl.text).trim().isEmpty && (result.address?.isNotEmpty ?? false)) {
+            _addressCtrl.text = result.address!;
+          }
         });
         _recomputeValidity();
       }
@@ -218,7 +221,7 @@ class _Phase1ActivityInfoState extends State<Phase1ActivityInfo>
     if (!_hasLocation) {
       HelperUtils.showSnackBarMessage(
         context,
-        "الرجاء تحديد موقع المتجر أولاً",
+        "يرجى تحديد موقع المتجر على الخريطة.",
         messageDuration: 3,
       );
       return;
@@ -226,7 +229,7 @@ class _Phase1ActivityInfoState extends State<Phase1ActivityInfo>
     if (!_hasLogo) {
       HelperUtils.showSnackBarMessage(
         context,
-        "اختر شعار المتجر أولاً",
+        "يرجى اختيار شعار المتجر.",
         messageDuration: 3,
       );
       return;
@@ -234,7 +237,7 @@ class _Phase1ActivityInfoState extends State<Phase1ActivityInfo>
     if (!_hasCover) {
       HelperUtils.showSnackBarMessage(
         context,
-        "الرجاء إضافة غلاف المتجر أولاً",
+        "يرجى اختيار غلاف المتجر.",
         messageDuration: 3,
       );
       return;
@@ -328,185 +331,117 @@ class _Phase1ActivityInfoState extends State<Phase1ActivityInfo>
     );
   }
 
+  Widget _buildPlaceholder(BuildContext context,
+      {required String title, required String subtitle}) {
+    final theme = context.color;
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(Icons.camera_alt_outlined,
+            size: 36, color: theme.textColorDark.withOpacity(0.4)),
+        const SizedBox(height: 10),
+        Text(
+          title,
+          style: TextStyle(
+            color: theme.textColorDark.withOpacity(0.8),
+            fontWeight: FontWeight.w600,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 6),
+        Text(
+          subtitle,
+          style: TextStyle(
+            color: theme.textColorDark.withOpacity(0.6),
+            fontSize: context.font.small,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
   Widget _buildLogoPicker(BuildContext context) {
     final theme = context.color;
-    return GestureDetector(
-      onTap: _logoPicking ? null : _pickLogo,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        height: 180,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: theme.borderColor),
-          color: theme.secondaryColor,
+    final hasLogo = _logoFile != null;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "شعار المتجر (1:1)",
+          style: TextStyle(
+              fontWeight: FontWeight.w700,
+              color: theme.textColorDark,
+              fontSize: context.font.normal),
         ),
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 250),
-                child: _logoPicking
-                    ? const Center(
-                        child: SizedBox(
-                          width: 32,
-                          height: 32,
-                          child: CircularProgressIndicator(strokeWidth: 2.8),
-                        ),
-                      )
-                    : (_logoFile != null
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
-                            child: Image.file(_logoFile!, fit: BoxFit.cover),
-                          )
-                        : Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.storefront,
-                                  size: 44, color: theme.territoryColor),
-                              const SizedBox(height: 12),
-                              Text(
-                                "اختر شعار المتجر",
-                                style: TextStyle(
-                                  fontSize: context.font.normal,
-                                  color: theme.textColorDark.withOpacity(0.8),
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                "الشعار يظهر في كل مكان داخل التطبيق",
-                                style: TextStyle(
-                                  fontSize: context.font.small,
-                                  color: theme.textColorDark.withOpacity(0.6),
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          )),
-              ),
+        const SizedBox(height: 8),
+        GestureDetector(
+          onTap: _logoPicking ? null : _pickLogo,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: theme.territoryColor),
+              color: theme.secondaryColor,
             ),
-            Positioned(
-              right: 16,
-              top: 16,
-              child: AnimatedOpacity(
-                duration: const Duration(milliseconds: 200),
-                opacity: _logoSuccessVisible ? 1 : 0,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.85),
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: const [
-                      Icon(Icons.check_circle, size: 16, color: Colors.white),
-                      SizedBox(width: 6),
-                      Text(
-                        "تم التحديث",
-                        style: TextStyle(
-                            color: Colors.white, fontWeight: FontWeight.w600),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+            child: AspectRatio(
+              aspectRatio: 1,
+              child: hasLogo
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(14),
+                      child: Image.file(_logoFile!, fit: BoxFit.cover),
+                    )
+                  : _buildPlaceholder(
+                      context,
+                      title: "تحميل شعار المتجر",
+                      subtitle: "jpg, png, jpeg, gif بحد أقصى 2 ميجابايت",
+                    ),
             ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 
   Widget _buildCoverPicker(BuildContext context) {
     final theme = context.color;
-    return GestureDetector(
-      onTap: _coverPicking ? null : _pickCover,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        height: 180,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: theme.borderColor),
-          color: theme.secondaryColor,
+    final hasCover = _coverFile != null;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "غلاف المتجر (3:1)",
+          style: TextStyle(
+              fontWeight: FontWeight.w700,
+              color: theme.textColorDark,
+              fontSize: context.font.normal),
         ),
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 250),
-                child: _coverPicking
-                    ? const Center(
-                        child: SizedBox(
-                          width: 32,
-                          height: 32,
-                          child: CircularProgressIndicator(strokeWidth: 2.8),
-                        ),
-                      )
-                    : (_coverFile != null
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
-                            child: Image.file(_coverFile!, fit: BoxFit.cover),
-                          )
-                        : Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.image_outlined,
-                                  size: 44, color: theme.territoryColor),
-                              const SizedBox(height: 12),
-                              Text(
-                                "أضف غلاف المتجر",
-                                style: TextStyle(
-                                  fontSize: context.font.normal,
-                                  color: theme.textColorDark.withOpacity(0.8),
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                "الغلاف يظهر أعلى واجهة المتجر للعملاء",
-                                style: TextStyle(
-                                  fontSize: context.font.small,
-                                  color: theme.textColorDark.withOpacity(0.6),
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          )),
-              ),
+        const SizedBox(height: 8),
+        GestureDetector(
+          onTap: _coverPicking ? null : _pickCover,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: theme.territoryColor),
+              color: theme.secondaryColor,
             ),
-            Positioned(
-              right: 16,
-              top: 16,
-              child: AnimatedOpacity(
-                duration: const Duration(milliseconds: 200),
-                opacity: _coverSuccessVisible ? 1 : 0,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.85),
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: const [
-                      Icon(Icons.check_circle, size: 16, color: Colors.white),
-                      SizedBox(width: 6),
-                      Text(
-                        "تم التحديث",
-                        style: TextStyle(
-                            color: Colors.white, fontWeight: FontWeight.w600),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+            child: AspectRatio(
+              aspectRatio: 3 / 1,
+              child: hasCover
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(14),
+                      child: Image.file(_coverFile!, fit: BoxFit.cover),
+                    )
+                  : _buildPlaceholder(
+                      context,
+                      title: "تحميل غلاف المتجر",
+                      subtitle: "jpg, png, jpeg, gif بحد أقصى 2 ميجابايت",
+                    ),
             ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 
@@ -526,7 +461,7 @@ class _Phase1ActivityInfoState extends State<Phase1ActivityInfo>
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              "موقع المتجر يساعد العملاء على معرفة نطاق خدمتكم واستلام الطلبات.",
+              "حدد موقع المتجر بدقة على الخريطة لتسهيل الوصول والتوصيل.",
               style: TextStyle(
                 color: theme.textColorDark.withOpacity(0.8),
                 fontSize: context.font.small,
@@ -550,152 +485,149 @@ class _Phase1ActivityInfoState extends State<Phase1ActivityInfo>
     return Scaffold(
       body: SafeArea(
         bottom: false,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 140),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildSectionHeader(
-                  context,
-                  title: "معلومات نشاطك التجاري",
-                  subtitle:
-                      "أدخل اسم ووصف المتجر وحدد موقعه، وأضف الشعار والغلاف كما سيظهران للزوار.",
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 140),
+            physics: const BouncingScrollPhysics(),
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            children: [
+              _buildSectionHeader(
+                context,
+                title: "بيانات المتجر الأساسية",
+                subtitle:
+                    "أدخل اسم المتجر والوصف وصور الهوية ليظهر متجرك بالشكل الصحيح للعملاء.",
+              ),
+              const SizedBox(height: 24),
+              TextFormField(
+                controller: _storeNameCtrl,
+                decoration: InputDecoration(
+                  labelText: "storeName".translate(context),
+                  hintText: "storeNameHint".translate(context),
+                  helperText:
+                      "يفضل اسم واضح يطابق السجل التجاري وسيظهر للمتسوقين.",
+                  fillColor: theme.secondaryColor,
+                  filled: true,
+                  border:
+                      OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
                 ),
-                const SizedBox(height: 24),
-                TextFormField(
-                  controller: _storeNameCtrl,
-                  decoration: InputDecoration(
-                    labelText: "storeName".translate(context),
-                    hintText: "storeNameHint".translate(context),
-                    helperText:
-                        "اختر اسم واضح يطابق الاسم التجاري المعتمد للمتجر.",
-                    fillColor: theme.secondaryColor,
-                    filled: true,
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14)),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return "requiredField".translate(context);
-                    }
-                    return null;
-                  },
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return "requiredField".translate(context);
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(flex: 2, child: _buildCoverPicker(context)),
+                  const SizedBox(width: 12),
+                  Expanded(flex: 1, child: _buildLogoPicker(context)),
+                ],
+              ),
+              const SizedBox(height: 24),
+              TextFormField(
+                controller: _descriptionCtrl,
+                minLines: 3,
+                maxLines: 5,
+                textInputAction: TextInputAction.newline,
+                decoration: InputDecoration(
+                  labelText: "storeDescription".translate(context),
+                  hintText: "brieflyDescribeYourStore".translate(context),
+                  helperText: "وصف مختصر عن نشاط المتجر وخدماته وما يميزه.",
+                  fillColor: theme.secondaryColor,
+                  filled: true,
+                  border:
+                      OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
                 ),
-                const SizedBox(height: 20),
-                Row(
-                  children: [
-                    Expanded(child: _buildLogoPicker(context)),
-                    const SizedBox(width: 12),
-                    Expanded(child: _buildCoverPicker(context)),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                TextFormField(
-                  controller: _descriptionCtrl,
-                  minLines: 3,
-                  maxLines: 5,
-                  textInputAction: TextInputAction.newline,
-                  decoration: InputDecoration(
-                    labelText: "storeDescription".translate(context),
-                    hintText: "brieflyDescribeYourStore".translate(context),
-                    helperText:
-                        "عرّف العملاء بنشاطك وما يميز متجرك عن الآخرين.",
-                    fillColor: theme.secondaryColor,
-                    filled: true,
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14)),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return "requiredField".translate(context);
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 24),
-                _buildLocationNotice(context),
-                const SizedBox(height: 16),
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 250),
-                  child: _hasLocation
-                      ? Container(
-                          key: const ValueKey('location_summary'),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: theme.primaryColor.withOpacity(0.05),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: theme.borderColor),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "الموقع المحدد",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  color: theme.textColorDark,
-                                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return "requiredField".translate(context);
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 24),
+              _buildLocationNotice(context),
+              const SizedBox(height: 16),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                child: _hasLocation
+                    ? Container(
+                        key: const ValueKey('location_summary'),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: theme.primaryColor.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: theme.borderColor),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "الموقع المختار",
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: theme.textColorDark,
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                "${_latitude?.toStringAsFixed(5)}, ${_longitude?.toStringAsFixed(5)}",
-                                style: TextStyle(
-                                  fontSize: context.font.normal,
-                                  color: theme.textColorDark.withOpacity(0.7),
-                                ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              "${_latitude?.toStringAsFixed(5)}, ${_longitude?.toStringAsFixed(5)}",
+                              style: TextStyle(
+                                fontSize: context.font.normal,
+                                color: theme.textColorDark.withOpacity(0.7),
                               ),
-                            ],
-                          ),
-                        )
-                      : const SizedBox.shrink(),
+                            ),
+                          ],
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _addressCtrl,
+                minLines: 2,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  labelText: "storeAddress".translate(context),
+                  hintText: "اكتب عنوان المتجر (المدينة، الحي، الشارع)",
+                  helperText:
+                      "اختياري: أضف تفاصيل العنوان النصي بجانب الموقع على الخريطة.",
+                  fillColor: theme.secondaryColor,
+                  filled: true,
+                  border:
+                      OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
                 ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _addressCtrl,
-                  minLines: 2,
-                  maxLines: 3,
-                  decoration: InputDecoration(
-                    labelText: "storeAddress".translate(context),
-                    hintText:
-                        "اكتب عنوان المتجر بالتفصيل (الوصف، الشارع، الحي)",
-                    helperText:
-                        "سيساعد العنوان العملاء وسائقي التوصيل على الوصول بسهولة.",
-                    fillColor: theme.secondaryColor,
-                    filled: true,
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14)),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton.icon(
-                  onPressed: _locationLoading ? null : _openLocationPicker,
-                  icon: _locationLoading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Icon(Icons.map_outlined, color: theme.textDefaultColor),
-                  label: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: Text(
-                      "تحديد موقع المتجر على الخريطة",
-                      style: TextStyle(
-                        color: theme.textDefaultColor,
-                        fontWeight: FontWeight.w600,
-                      ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: _locationLoading ? null : _openLocationPicker,
+                icon: _locationLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(Icons.map_outlined, color: theme.textDefaultColor),
+                label: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Text(
+                    "تحديد موقع المتجر على الخريطة",
+                    style: TextStyle(
+                      color: theme.textDefaultColor,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.territoryColor,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14)),
-                  ),
                 ),
-              ],
-            ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.territoryColor,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                ),
+              ),
+            ],
           ),
         ),
       ),

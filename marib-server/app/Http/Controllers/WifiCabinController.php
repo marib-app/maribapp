@@ -271,7 +271,7 @@ class WifiCabinController extends Controller
                 'نسبة العمولة',
                 'مبلغ العمولة',
                 'حصة المالك',
-                'مرجع الدفع',
+                'مرجع الدٝع',
             ]);
 
             $query->chunk(500, static function ($sales) use ($handle): void {
@@ -329,6 +329,7 @@ class WifiCabinController extends Controller
         ]);
 
         $batch->wifi_plan_id = $plan->getKey();
+        $batch->wifi_network_id = $plan->wifi_network_id;
         $batch->uploaded_by = $request->user()?->getKey();
         $batch->status = WifiCodeBatchStatus::UPLOADED;
 
@@ -347,7 +348,7 @@ class WifiCabinController extends Controller
             return redirect()
                 ->back()
                 ->withInput()
-                ->withErrors(['source_file' => __('تعذر معالجة ملف الأكواد. يرجى التحقق من التنسيق وإعادة المحاولة.')]);
+                ->withErrors(['source_file' => __('تعذر معالجة ملٝ الأكواد. يرجى التحقق من التنسيق وإعادة المحاولة.')]);
         }
 
         $batch->refresh();
@@ -363,7 +364,7 @@ class WifiCabinController extends Controller
 
         return redirect()
             ->route('wifi.edit', ['network' => $plan->wifi_network_id])
-            ->with('status', __('تم رفع الدفعة ومعالجتها بنجاح.'));
+            ->with('status', __('تم رٝع الدٝعة ومعالجتها بنجاح.'));
     }
 
     public function edit(WifiNetwork $network): ViewContract
@@ -455,7 +456,7 @@ class WifiCabinController extends Controller
 
         return redirect()
             ->back()
-            ->with('status', __('تمت الموافقة على طلب المالك بنجاح.'));
+            ->with('status', __('تمت المواٝقة على طلب المالك بنجاح.'));
     }
 
     public function rejectOwnerRequest(Request $request, WifiCodeBatch $batch): RedirectResponse
@@ -469,7 +470,7 @@ class WifiCabinController extends Controller
         if ($batch->status === WifiCodeBatchStatus::ARCHIVED) {
             return redirect()
                 ->back()
-                ->with('status', __('تم رفض هذا الطلب مسبقًا.'));
+                ->with('status', __('تم رٝض هذا الطلب مسبقًا.'));
         }
 
         $batch->status = WifiCodeBatchStatus::ARCHIVED;
@@ -493,7 +494,7 @@ class WifiCabinController extends Controller
 
         return redirect()
             ->back()
-            ->with('status', __('تم رفض طلب المالك وتحديث الحالة.'));
+            ->with('status', __('تم رٝض طلب المالك وتحديث الحالة.'));
     }
 
     private function refreshPlanInventoryMeta(WifiPlan $plan): void
@@ -608,6 +609,43 @@ class WifiCabinController extends Controller
             ],
             'codes' => $codes,
         ];
+    }
+
+    public function codes(Request $request, WifiNetwork $network): View
+    {
+        $perPage = max(5, min(100, (int) $request->integer('per_page', 25)));
+        $search = trim((string) $request->input('search', ''));
+        $statusFilter = $request->input('status');
+
+        $query = WifiCode::query()
+            ->where('wifi_network_id', $network->getKey())
+            ->with(['plan:id,name'])
+            ->leftJoin('users', 'users.id', '=', 'wifi_codes.allocated_to_user_id')
+            ->select('wifi_codes.*', 'users.name as allocated_user_name', 'users.email as allocated_user_email')
+            ->orderByDesc('wifi_codes.id');
+
+        if ($search !== '') {
+            $term = '%' . $search . '%';
+            $query->where(function ($q) use ($term): void {
+                $q->where('wifi_codes.code_suffix', 'like', $term)
+                    ->orWhere('wifi_codes.code_last4', 'like', $term)
+                    ->orWhere('wifi_codes.serial_no_encrypted', 'like', $term)
+                    ->orWhere('wifi_codes.id', 'like', $term);
+            });
+        }
+
+        if (is_string($statusFilter) && $statusFilter !== '') {
+            $query->where('wifi_codes.status', $statusFilter);
+        }
+
+        $codes = $query->paginate($perPage)->appends($request->query());
+
+        return view('wifi.codes', [
+            'network' => $network,
+            'codes' => $codes,
+            'search' => $search,
+            'statusFilter' => $statusFilter,
+        ]);
     }
 
 }

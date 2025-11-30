@@ -74,10 +74,14 @@ class HomeRepository {
       }
 
       return parseSections(raw);
+    } on ApiHttpException catch (e) {
+      print('Error in fetchHome (ApiHttpException): ${e.errorMessage}');
+      print('Response structure might be unexpected');
+      return <HomeScreenSection>[];
     } catch (e) {
       print('Error in fetchHome: $e');
       print('Response structure might be unexpected');
-      rethrow;
+      return <HomeScreenSection>[];
     }
   }
 

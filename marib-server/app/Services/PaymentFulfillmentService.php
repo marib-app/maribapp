@@ -1509,6 +1509,13 @@ class PaymentFulfillmentService
         ]);
         $code->save();
 
+        // احفظ معرف الكود داخل ميتا المعاملة لتسهيل كشف الكرت لاحقاً
+        $transactionMeta = $transaction->meta ?? [];
+        $transactionMeta['wifi_code_id'] = $code->getKey();
+        $transactionMeta['wifi']['wifi_code_id'] = $code->getKey();
+        $transaction->meta = $transactionMeta;
+        $transaction->save();
+
         if ($code->wifi_code_batch_id !== null) {
             $batch = WifiCodeBatch::query()
                 ->whereKey($code->wifi_code_batch_id)

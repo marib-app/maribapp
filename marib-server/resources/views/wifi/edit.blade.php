@@ -310,22 +310,47 @@
 @push('scripts')
     <script>
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        let csrfReadyPromise = null;
+
+        function getCookie(name) {
+            return document.cookie.split('; ').reduce((acc, cur) => {
+                const [k, v] = cur.split('=');
+                if (k === name) {
+                    acc = decodeURIComponent(v || '');
+                }
+                return acc;
+            }, '');
+        }
+
+        function ensureCsrfCookie() {
+            if (!csrfReadyPromise) {
+                csrfReadyPromise = fetch('{{ url('/sanctum/csrf-cookie') }}', {
+                    credentials: 'include',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                }).catch(() => {});
+            }
+            return csrfReadyPromise;
+        }
+
 
         async function submitJsonForm(form, endpoint, payload, feedback) {
-            if (feedback) {
-                feedback.textContent = '{{ __('Ø¬Ø§Ø±ÙŠ Ø§Ù„Ù…Ø¹Ø§Ù„Ø¬Ø©...') }}';
-            }
+            
 
             try {
+                await ensureCsrfCookie();
+                const tokenHeader = csrfToken;
+                const bodyPayload = Object.assign({}, payload, { _token: tokenHeader });
                 const response = await fetch(endpoint, {
                     method: 'PATCH',
                     headers: {
                         'Accept': 'application/json',
                         'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': csrfToken,
+                        'X-CSRF-TOKEN': tokenHeader,
+                        'X-XSRF-TOKEN': tokenHeader,
                         'X-Requested-With': 'XMLHttpRequest',
                     },
-                    body: JSON.stringify(payload),
+                    credentials: 'include',
+                    body: JSON.stringify(bodyPayload),
                 });
 
                 let data = {};
@@ -339,21 +364,21 @@
                     throw new Error(data.message || Object.values(data.errors || {}).flat().join(' '));
                 }
 
-                if (feedback) {
-                    feedback.textContent = '{{ __('ØªÙ… Ø§Ù„ØªØ­Ø¯ÙŠØ« Ø¨Ù†Ø¬Ø§Ø­.') }}';
-                }
+                showToast('success', 'Êã ÇáÊÍÏíË ÈäÌÇÍ.');
             } catch (error) {
-                if (feedback) {
-                    feedback.textContent = error.message || '{{ __('Ø­Ø¯Ø« Ø®Ø·Ø£ ØºÙŠØ± Ù…ØªÙˆÙ‚Ø¹.') }}';
-                }
+                showToast('error', error.message || 'ÍÏË ÎØÃ ÛíÑ ãÊæÞÚ.');
             }
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            const statusForm = document.getElementById('network-status-form');
-            const commissionForm = document.getElementById('network-commission-form');
-            const statusFeedback = document.getElementById('network-status-feedback');
-            const commissionFeedback = document.getElementById('commission-feedback');
+    function initWifiEditForms() {
+        const statusForm = document.getElementById('network-status-form');
+        const commissionForm = document.getElementById('network-commission-form');
+        const statusFeedback = document.getElementById('network-status-feedback');
+        const commissionFeedback = document.getElementById('commission-feedback');
+
+            if (!statusForm || !commissionForm) {
+                return;
+            }
 
             statusForm.addEventListener('submit', async event => {
                 event.preventDefault();
@@ -381,6 +406,59 @@
                 };
                 await submitJsonForm(commissionForm, endpoint, payload, commissionFeedback);
             });
-        });
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initWifiEditForms, { once: true });
+        } else {
+            initWifiEditForms();
+        }
+
+        function showToast(type, message) {
+            const containerId = 'wifi-toast-container';
+            let container = document.getElementById(containerId);
+            if (!container) {
+                container = document.createElement('div');
+                container.id = containerId;
+                container.style.position = 'fixed';
+                container.style.top = '16px';
+                container.style.right = '16px';
+                container.style.zIndex = '1080';
+                container.style.display = 'flex';
+                container.style.flexDirection = 'column';
+                container.style.gap = '8px';
+                document.body.appendChild(container);
+            }
+
+            const toast = document.createElement('div');
+            toast.textContent = message;
+            toast.style.minWidth = '220px';
+            toast.style.maxWidth = '320px';
+            toast.style.padding = '12px 14px';
+            toast.style.borderRadius = '10px';
+            toast.style.boxShadow = '0 6px 18px rgba(0,0,0,0.12)';
+            toast.style.color = type === 'error' ? '#fff' : '#0f5132';
+            toast.style.background = type === 'error' ? '#d32f2f' : '#d1e7dd';
+            toast.style.border = type === 'error' ? '1px solid #b71c1c' : '1px solid #badbcc';
+            toast.style.fontWeight = '600';
+            toast.style.fontSize = '14px';
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
     </script>
 @endpush
+
+
+
+
+
+
+
+
+

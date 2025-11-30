@@ -17,12 +17,16 @@ use App\Http\Requests\Wifi\ToggleWifiNetworkAvailabilityRequest;
 use App\Http\Requests\Wifi\UpdateWifiNetworkRequest;
 use App\Http\Resources\Wifi\ReputationCounterResource;
 use App\Http\Resources\Wifi\WifiNetworkResource;
+use App\Data\Notifications\NotificationIntent;
+use App\Enums\NotificationType;
 use App\Models\Wifi\ReputationCounter;
 use App\Models\Wifi\WifiCode;
 use App\Models\Wifi\WifiCodeBatch;
 use App\Models\Wifi\WifiNetwork;
 use App\Models\Wifi\WifiReport;
 use App\Services\Audit\AuditLogger;
+use App\Services\NotificationDispatchService;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -43,7 +47,19 @@ class OwnerNetworkController extends Controller
 
         $networks = WifiNetwork::query()
             ->where('user_id', $user->id)
-            ->withCount('plans')
+            ->withCount([
+                'plans',
+                'plans as active_plans_count' => static function ($q): void {
+                    $q->where('status', WifiPlanStatus::ACTIVE->value);
+                },
+                'codes as codes_total',
+                'codes as codes_available' => static function ($q): void {
+                    $q->where('status', WifiCodeStatus::AVAILABLE->value);
+                },
+                'codes as codes_sold' => static function ($q): void {
+                    $q->where('status', WifiCodeStatus::SOLD->value);
+                },
+            ])
             ->orderByDesc('created_at')
             ->paginate($perPage)
             ->appends($request->query());
@@ -148,6 +164,7 @@ class OwnerNetworkController extends Controller
                 'description' => 'Wifi network commission updated by owner',
             ]);
             $network->save();
+            $this->notifyCommissionUpdated($network, $commission);
         }
 
         return WifiNetworkResource::make($network->refresh());
@@ -271,8 +288,143 @@ class OwnerNetworkController extends Controller
         ]);
     }
 
+    public function codes(Request $request, WifiNetwork $network): JsonResponse
+    {
+        $this->authorize('view', $network);
+
+        $perPage = max(5, min(100, (int) $request->integer('per_page', 25)));
+        $search = trim((string) $request->input('search', ''));
+        $statusFilter = $request->input('status');
+
+        $baseQuery = WifiCode::query()
+            ->where('wifi_network_id', $network->getKey());
+
+        $totalCount = (clone $baseQuery)->count();
+        $availableCount = (clone $baseQuery)
+            ->where('status', WifiCodeStatus::AVAILABLE->value)
+            ->count();
+        $soldCount = (clone $baseQuery)
+            ->where('status', WifiCodeStatus::SOLD->value)
+            ->count();
+
+        $query = $baseQuery
+            ->with(['plan:id,name'])
+            ->leftJoin('users', 'users.id', '=', 'wifi_codes.allocated_to_user_id')
+            ->select('wifi_codes.*', 'users.name as allocated_user_name', 'users.email as allocated_user_email')
+            ->orderByDesc('wifi_codes.id');
+
+        if ($search !== '') {
+            $term = '%' . $search . '%';
+            $query->where(static function ($q) use ($term): void {
+                $q->where('wifi_codes.code_suffix', 'like', $term)
+                    ->orWhere('wifi_codes.code_last4', 'like', $term)
+                    ->orWhere('wifi_codes.serial_no_encrypted', 'like', $term)
+                    ->orWhere('wifi_codes.id', 'like', $term);
+            });
+        }
+
+        if (is_string($statusFilter) && $statusFilter !== '') {
+            $query->where('wifi_codes.status', $statusFilter);
+        }
+
+        /** @var LengthAwarePaginator $codes */
+        $codes = $query->paginate($perPage)->appends($request->query());
+
+        $data = $codes->getCollection()->map(static function (WifiCode $code): array {
+            return [
+                'id' => $code->id,
+                'status' => $code->status,
+                'code_suffix' => $code->code_suffix,
+                'code_last4' => $code->code_last4,
+                'plan_id' => $code->wifi_plan_id,
+                'plan_name' => $code->plan->name ?? null,
+                'allocated_to_user_id' => $code->allocated_to_user_id,
+                'allocated_user_name' => $code->allocated_user_name,
+                'allocated_user_email' => $code->allocated_user_email,
+                'allocated_at' => $code->allocated_at,
+                'sold_at' => $code->sold_at,
+                'delivered_at' => $code->delivered_at,
+                'revealed_at' => $code->revealed_at,
+            ];
+        })->values();
+
+        return response()->json([
+            'data' => $data,
+            'meta' => [
+                'total' => $totalCount,
+                'available' => $availableCount,
+                'sold' => $soldCount,
+                'current_page' => $codes->currentPage(),
+                'last_page' => $codes->lastPage(),
+                'per_page' => $codes->perPage(),
+            ],
+        ]);
+    }
+
     private function storeNetworkMedia(UploadedFile $file, string $directory): string
     {
         return $file->store($directory, 'public');
+    }
+
+    private function notifyCommissionUpdated(WifiNetwork $network, float $commissionRate): void
+    {
+        if (! $network->user_id) {
+            return;
+        }
+
+        $updatedAt = now()->format('Y-m-d H:i');
+        $title = 'تم فرض عمولة جديدة على شبكتك';
+        $body = implode(' • ', [
+            "الشبكة: {$network->name}",
+            'العمولة الجديدة: ' . number_format($commissionRate * 100, 2) . '%',
+            "التاريخ: {$updatedAt}",
+            'سيتم احتساب العمولة تلقائياً عند كل عملية بيع.',
+        ]);
+
+        $deeplink = url('/wifi-cabin/networks/' . $network->id);
+        $payload = [
+            'network_id' => $network->id,
+            'network_name' => $network->name,
+            'commission_rate' => $commissionRate,
+            'commission_rate_percent' => number_format($commissionRate * 100, 2),
+            'updated_at' => $updatedAt,
+            'deeplink' => $deeplink,
+            'action' => 'open_url',
+        ];
+
+        $intent = new NotificationIntent(
+            userId: $network->user_id,
+            type: NotificationType::ActionRequest,
+            title: $title,
+            body: $body,
+            deeplink: $deeplink,
+            entity: 'wifi_network_commission',
+            entityId: $network->id . '-commission',
+            data: $payload,
+            meta: [
+                'source' => 'wifi_owner',
+                'event' => 'network_commission_updated',
+            ],
+        );
+
+        app(NotificationDispatchService::class)->dispatch($intent);
+
+        $tokens = UserFcmToken::query()
+            ->where('user_id', $network->user_id)
+            ->pluck('fcm_token')
+            ->filter()
+            ->values()
+            ->all();
+
+        if ($tokens !== []) {
+            NotificationService::sendFcmNotification(
+                $tokens,
+                $title,
+                $body,
+                'wifi_network_commission_updated',
+                $payload,
+                false
+            );
+        }
     }
 }

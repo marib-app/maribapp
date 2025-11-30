@@ -89,11 +89,11 @@ function prepareNetworkRow(row) {
     const settings = row.settings ?? {};
     const statistics = row.statistics ?? meta.statistics ?? {};
     const coverage = row.coverage_radius_km ?? meta.coverage_radius_km ?? null;
-    const ownerName = meta.owner?.name ?? row.owner?.name ?? EMPTY_SYMBOL;
-    const ownerEmail = meta.owner?.email ?? row.owner?.email ?? EMPTY_SYMBOL;
-    const ownerPhone = meta.owner?.mobile ?? meta.owner?.phone ?? EMPTY_SYMBOL;
+    const ownerName = row.owner_name ?? row.owner?.name ?? meta.owner?.name ?? EMPTY_SYMBOL;
+    const ownerEmail = row.owner_email ?? row.owner?.email ?? meta.owner?.email ?? EMPTY_SYMBOL;
+    const ownerPhone = row.owner?.mobile ?? row.owner?.phone ?? meta.owner?.mobile ?? meta.owner?.phone ?? EMPTY_SYMBOL;
 
-    const codesStats = statistics.codes ?? meta.codes ?? {};
+    const codesStats = row.codes_summary ?? statistics.codes ?? meta.codes ?? {};
     const sold = codesStats.sold ?? meta.codes_sold ?? null;
     const available = codesStats.available ?? meta.codes_available ?? null;
     const total = codesStats.total ?? meta.codes_total ?? null;

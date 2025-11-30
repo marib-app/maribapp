@@ -10,7 +10,7 @@ import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/api.dart';
 
 import 'package:marib/utils/ui_utils.dart';
-// شاشة تحويل الأموال عبر التحويل البنكي وخيارات المحافظ.
+// ط´ط§ط´ط© طھط­ظˆظٹظ„ ط§ظ„ط£ظ…ظˆط§ظ„ ط¹ط¨ط± ط§ظ„طھط­ظˆظٹظ„ ط§ظ„ط¨ظ†ظƒظٹ ظˆط®ظٹط§ط±ط§طھ ط§ظ„ظ…ط­ط§ظپط¸.
 
 import 'package:marib/utils/payment/bank_account.dart';
 import 'package:marib/utils/payment/manual_payment_service.dart';
@@ -37,8 +37,8 @@ class BankTransferScreen extends StatefulWidget {
 
   const BankTransferScreen({super.key, required this.args});
 
-  /// تعرض شاشة التحويل البنكي كصفحة سفلية تمنع الإغلاق العرضي وتساعد
-  /// المستخدم على إكمال خطوات الدفع قبل المغادرة.
+  /// طھط¹ط±ط¶ ط´ط§ط´ط© ط§ظ„طھط­ظˆظٹظ„ ط§ظ„ط¨ظ†ظƒظٹ ظƒطµظپط­ط© ط³ظپظ„ظٹط© طھظ…ظ†ط¹ ط§ظ„ط¥ط؛ظ„ط§ظ‚ ط§ظ„ط¹ط±ط¶ظٹ ظˆطھط³ط§ط¹ط¯
+  /// ط§ظ„ظ…ط³طھط®ط¯ظ… ط¹ظ„ظ‰ ط¥ظƒظ…ط§ظ„ ط®ط·ظˆط§طھ ط§ظ„ط¯ظپط¹ ظ‚ط¨ظ„ ط§ظ„ظ…ط؛ط§ط¯ط±ط©.
   ///
 
   static Future<T?> show<T>(BuildContext context, BankTransferArgs args) {
@@ -78,9 +78,9 @@ class _BankTransferScreenState extends State<BankTransferScreen>
 
   int? _selectedBankId;
   int?
-      _pressedBankId; // لتعقب حالة الضغط على بطاقة البنك (مؤثر Scale)
+      _pressedBankId; // ظ„طھط¹ظ‚ط¨ ط­ط§ظ„ط© ط§ظ„ط¶ط؛ط· ط¹ظ„ظ‰ ط¨ط·ط§ظ‚ط© ط§ظ„ط¨ظ†ظƒ (ظ…ط¤ط«ط± Scale)
   int?
-      _highlightedAccountNameBankId; // لتعقب تمييز اسم الحساب عند التفاعل مع العنصر
+      _highlightedAccountNameBankId; // ظ„طھط¹ظ‚ط¨ طھظ…ظٹظٹط² ط§ط³ظ… ط§ظ„ط­ط³ط§ط¨ ط¹ظ†ط¯ ط§ظ„طھظپط§ط¹ظ„ ظ…ط¹ ط§ظ„ط¹ظ†طµط±
   WalletSummary? _walletSummary;
   dynamic _walletError;
   String? _lastWalletEventKey;
@@ -109,18 +109,18 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     'pdf',
   ]; // Keep in sync with PaymentController::manual MIME validation.
 
-  // عناصر التحكم الخاصة ببيانات التحويل
-  final _senderCtrl = TextEditingController(); // متحكم إدخال للنص
+  // ط¹ظ†ط§طµط± ط§ظ„طھط­ظƒظ… ط§ظ„ط®ط§طµط© ط¨ط¨ظٹط§ظ†ط§طھ ط§ظ„طھط­ظˆظٹظ„
+  final _senderCtrl = TextEditingController(); // ظ…طھط­ظƒظ… ط¥ط¯ط®ط§ظ„ ظ„ظ„ظ†طµ
   final _transferCodeCtrl =
-      TextEditingController(); // متحكم إدخال للنص
-  final _notesCtrl = TextEditingController(); // متحكم إدخال للنص
-  bool _allowRoutePop = false; // حالة تحكم داخلية
+      TextEditingController(); // ظ…طھط­ظƒظ… ط¥ط¯ط®ط§ظ„ ظ„ظ„ظ†طµ
+  final _notesCtrl = TextEditingController(); // ظ…طھط­ظƒظ… ط¥ط¯ط®ط§ظ„ ظ„ظ„ظ†طµ
+  bool _allowRoutePop = false; // ط­ط§ظ„ط© طھط­ظƒظ… ط¯ط§ط®ظ„ظٹط©
 
   File? _receiptFile;
   String? _receiptName;
   bool _pickingReceipt = false;
   bool _submitting = false;
-  bool _attempted = false; // حالة تحكم داخلية
+  bool _attempted = false; // ط­ط§ظ„ط© طھط­ظƒظ… ط¯ط§ط®ظ„ظٹط©
 
   late final AnimationController _shimmerCtl;
 
@@ -306,19 +306,23 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       final int? wifiPlanIdParam = widget.args.wifiPlanId ?? widget.args.itemId;
       final List<String>? allowedGateways =
           widget.args.normalizedAllowedGateways;
+      final bool wifiPlanFlow = wifiPlanIdParam != null;
+      final List<String>? effectiveAllowedGateways = wifiPlanFlow
+          ? const <String>[BankTransferGateway.wallet]
+          : allowedGateways;
 
-      // استخدم allowedGateways المعرّفة مرة واحدة أدناه
+      // ????? allowedGateways ???????? ???? ???? ????? ?????
       String methodForSettings = _manualBankMethod;
-      if (allowedGateways != null && allowedGateways.isNotEmpty) {
-        if (allowedGateways.contains(_walletMethod)) {
+      if (effectiveAllowedGateways != null &&
+          effectiveAllowedGateways.isNotEmpty) {
+        if (effectiveAllowedGateways.contains(_walletMethod)) {
           methodForSettings = _walletMethod;
-        } else if (allowedGateways.contains(_eastYemenMethod)) {
+        } else if (effectiveAllowedGateways.contains(_eastYemenMethod)) {
           methodForSettings = _eastYemenMethod;
-        } else if (allowedGateways.contains(_manualBankMethod)) {
+        } else if (effectiveAllowedGateways.contains(_manualBankMethod)) {
           methodForSettings = _manualBankMethod;
         }
       }
-
       final settings = await _service.fetchManualPaymentSettings(
         token: widget.args.token,
         purpose: purposeParam ??
@@ -689,13 +693,13 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     }
     final String? accountNumber = bank.accountNumber?.trim();
     if (accountNumber != null && accountNumber.isNotEmpty) {
-      return 'رقم الحساب: $accountNumber';
+      return 'ط±ظ‚ظ… ط§ظ„ط­ط³ط§ط¨: $accountNumber';
     }
     final String? iban = bank.iban?.trim();
     if (iban != null && iban.isNotEmpty) {
       return 'IBAN $iban';
     }
-    return 'تفاصيل البنك غير متاحة.';
+    return 'طھظپط§طµظٹظ„ ط§ظ„ط¨ظ†ظƒ ط؛ظٹط± ظ…طھط§ط­ط©.';
   }
 
   String _resolveGatewayForIntent(bool walletPurpose) {
@@ -963,7 +967,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         UiUtils.showSoftSnackBar(
           context,
           message:
-              'حجم الملف يتجاوز 5 ميغابايت، يرجى اختيار ملف أصغر.',
+              'ط­ط¬ظ… ط§ظ„ظ…ظ„ظپ ظٹطھط¬ط§ظˆط² 5 ظ…ظٹط؛ط§ط¨ط§ظٹطھطŒ ظٹط±ط¬ظ‰ ط§ط®طھظٹط§ط± ظ…ظ„ظپ ط£طµط؛ط±.',
         );
       }
 
@@ -1041,7 +1045,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         UiUtils.showSoftSnackBar(
           context,
           message:
-              'الرجاء اختيار طريقة الدفع أولًا.',
+              'ط§ظ„ط±ط¬ط§ط، ط§ط®طھظٹط§ط± ط·ط±ظٹظ‚ط© ط§ظ„ط¯ظپط¹ ط£ظˆظ„ظ‹ط§.',
         );
       }
       return;
@@ -1051,7 +1055,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       UiUtils.showSoftSnackBar(
         context,
         message:
-            'يرجى اختيار البنك وإرفاق إيصال التحويل قبل المتابعة.',
+            'ظٹط±ط¬ظ‰ ط§ط®طھظٹط§ط± ط§ظ„ط¨ظ†ظƒ ظˆط¥ط±ظپط§ظ‚ ط¥ظٹطµط§ظ„ ط§ظ„طھط­ظˆظٹظ„ ظ‚ط¨ظ„ ط§ظ„ظ…طھط§ط¨ط¹ط©.',
       );
       return;
     }
@@ -1062,7 +1066,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
 
     if (_usingWallet && walletPurpose) {
       _showOverlayMessage(
-        'لا يمكن الدفع من المحفظة لغرض شحن المحفظة. يرجى اختيار بوابة دفع أخرى.',
+        'ظ„ط§ ظٹظ…ظƒظ† ط§ظ„ط¯ظپط¹ ظ…ظ† ط§ظ„ظ…ط­ظپط¸ط© ظ„ط؛ط±ط¶ ط´ط­ظ† ط§ظ„ظ…ط­ظپط¸ط©. ظٹط±ط¬ظ‰ ط§ط®طھظٹط§ط± ط¨ظˆط§ط¨ط© ط¯ظپط¹ ط£ط®ط±ظ‰.',
         type: MessageType.warning,
       );
       return;
@@ -1070,7 +1074,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     if (_usingWallet) {
       if (!_walletSummaryReady) {
         _showOverlayMessage(
-          'لا يمكن إتمام العملية قبل تحميل بيانات المحفظة. حاول مرة أخرى بعد لحظات.',
+          'ظ„ط§ ظٹظ…ظƒظ† ط¥طھظ…ط§ظ… ط§ظ„ط¹ظ…ظ„ظٹط© ظ‚ط¨ظ„ طھط­ظ…ظٹظ„ ط¨ظٹط§ظ†ط§طھ ط§ظ„ظ…ط­ظپط¸ط©. ط­ط§ظˆظ„ ظ…ط±ط© ط£ط®ط±ظ‰ ط¨ط¹ط¯ ظ„ط­ط¸ط§طھ.',
           type: MessageType.error,
         );
         return;
@@ -1078,13 +1082,13 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       if (!_walletCurrencyMatchesPayment) {
         final String walletLabel = _walletCurrencyLabel ??
             _walletCurrencyCode ??
-            'حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.';
+            'ط­ط¯ط« ط®ط·ط£ ط؛ظٹط± ظ…طھظˆظ‚ط¹. ظٹط±ط¬ظ‰ ط§ظ„ظ…ط­ط§ظˆظ„ط© ظ„ط§ط­ظ‚ظ‹ط§.';
         final String paymentLabel = _paymentCurrencyDisplay ??
             _paymentCurrencyLabel ??
             _paymentCurrencyCode ??
-            'حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.';
+            'ط­ط¯ط« ط®ط·ط£ ط؛ظٹط± ظ…طھظˆظ‚ط¹. ظٹط±ط¬ظ‰ ط§ظ„ظ…ط­ط§ظˆظ„ط© ظ„ط§ط­ظ‚ظ‹ط§.';
         _showOverlayMessage(
-          'عملة المحفظة ($walletLabel) تختلف عن عملة الدفع ($paymentLabel).',
+          'ط¹ظ…ظ„ط© ط§ظ„ظ…ط­ظپط¸ط© ($walletLabel) طھط®طھظ„ظپ ط¹ظ† ط¹ظ…ظ„ط© ط§ظ„ط¯ظپط¹ ($paymentLabel).',
           type: MessageType.error,
         );
         return;
@@ -1094,7 +1098,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         final amountText = widget.args.amount.toStringAsFixed(2);
         final String suffix = currency.isNotEmpty ? ' $currency' : '';
         _showOverlayMessage(
-          'الرصيد غير كافٍ لدفع $amountText$suffix.',
+          'ط§ظ„ط±طµظٹط¯ ط؛ظٹط± ظƒط§ظپظچ ظ„ط¯ظپط¹ $amountText$suffix.',
           type: MessageType.error,
         );
         return;
@@ -1103,7 +1107,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
 
     if (_usingManualBank && !_manualGatewayAllowed) {
       _showOverlayMessage(
-        'تم تعطيل طرق التحويل اليدوية لهذا الطلب.',
+        'طھظ… طھط¹ط·ظٹظ„ ط·ط±ظ‚ ط§ظ„طھط­ظˆظٹظ„ ط§ظ„ظٹط¯ظˆظٹط© ظ„ظ‡ط°ط§ ط§ظ„ط·ظ„ط¨.',
         type: MessageType.error,
       );
       return;
@@ -1114,7 +1118,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     final resolvedIntentId = _paymentIntentId?.trim();
     if (!ensured || resolvedIntentId == null || resolvedIntentId.isEmpty) {
       _showOverlayMessage(
-        'حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.',
+        'ط­ط¯ط« ط®ط·ط£ ط؛ظٹط± ظ…طھظˆظ‚ط¹. ظٹط±ط¬ظ‰ ط§ظ„ظ…ط­ط§ظˆظ„ط© ظ„ط§ط­ظ‚ظ‹ط§.',
         type: MessageType.error,
       );
       return;
@@ -1208,7 +1212,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       final String? submissionCurrencyCandidate = _paymentCurrencyCode;
       if ((submissionCurrencyCandidate ?? '').isEmpty) {
         _showOverlayMessage(
-          'حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.',
+          'ط­ط¯ط« ط®ط·ط£ ط؛ظٹط± ظ…طھظˆظ‚ط¹. ظٹط±ط¬ظ‰ ط§ظ„ظ…ط­ط§ظˆظ„ط© ظ„ط§ط­ظ‚ظ‹ط§.',
           type: MessageType.error,
         );
         return;
@@ -1340,7 +1344,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       if (updatedIntentId != null || updatedTransactionId != null) {
         if (mounted) {
           setState(() {
-            if (updatedIntentId != null) { 
+            if (updatedIntentId != null) {
               _paymentIntentId = updatedIntentId;
             }
             if (updatedTransactionId != null) {
@@ -1365,20 +1369,20 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         final t = (result.message ?? '').trim();
         if (t.isNotEmpty) return t;
         return _usingEastYemen
-            ? 'حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.'
+            ? 'ط­ط¯ط« ط®ط·ط£ ط؛ظٹط± ظ…طھظˆظ‚ط¹. ظٹط±ط¬ظ‰ ط§ظ„ظ…ط­ط§ظˆظ„ط© ظ„ط§ط­ظ‚ظ‹ط§.'
             : _usingWallet
-                ? 'حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.'
-                : 'حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.';
+                ? 'ط­ط¯ط« ط®ط·ط£ ط؛ظٹط± ظ…طھظˆظ‚ط¹. ظٹط±ط¬ظ‰ ط§ظ„ظ…ط­ط§ظˆظ„ط© ظ„ط§ط­ظ‚ظ‹ط§.'
+                : 'ط­ط¯ط« ط®ط·ط£ ط؛ظٹط± ظ…طھظˆظ‚ط¹. ظٹط±ط¬ظ‰ ط§ظ„ظ…ط­ط§ظˆظ„ط© ظ„ط§ط­ظ‚ظ‹ط§.';
       })();
 
       final String errorMessage = (() {
         final t = (result.message ?? '').trim();
         if (t.isNotEmpty) return t;
         return _usingEastYemen
-            ? 'حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.'
+            ? 'ط­ط¯ط« ط®ط·ط£ ط؛ظٹط± ظ…طھظˆظ‚ط¹. ظٹط±ط¬ظ‰ ط§ظ„ظ…ط­ط§ظˆظ„ط© ظ„ط§ط­ظ‚ظ‹ط§.'
             : _usingWallet
-                ? 'حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.'
-                : 'حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.';
+                ? 'ط­ط¯ط« ط®ط·ط£ ط؛ظٹط± ظ…طھظˆظ‚ط¹. ظٹط±ط¬ظ‰ ط§ظ„ظ…ط­ط§ظˆظ„ط© ظ„ط§ط­ظ‚ظ‹ط§.'
+                : 'ط­ط¯ط« ط®ط·ط£ ط؛ظٹط± ظ…طھظˆظ‚ط¹. ظٹط±ط¬ظ‰ ط§ظ„ظ…ط­ط§ظˆظ„ط© ظ„ط§ط­ظ‚ظ‹ط§.';
       })();
 
       final String? displayReference = (() {
@@ -1397,7 +1401,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       })();
 
       final String successMessageWithReference = displayReference != null
-          ? '$successMessage\nمرجع العملية: $displayReference'
+          ? '$successMessage\nظ…ط±ط¬ط¹ ط§ظ„ط¹ظ…ظ„ظٹط©: $displayReference'
           : successMessage;
 
       _showOverlayMessage(ok ? successMessageWithReference : errorMessage,
@@ -1425,7 +1429,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       }
     } catch (e) {
       if (!mounted) return;
-      _showOverlayMessage('حدث خطأ غير متوقع: $e',
+      _showOverlayMessage('ط­ط¯ط« ط®ط·ط£ ط؛ظٹط± ظ…طھظˆظ‚ط¹: $e',
           type: MessageType.error);
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -1625,7 +1629,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
                     children: [
                       Expanded(
                         child: Text(
-                          'حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.',
+                          'ط­ط¯ط« ط®ط·ط£ ط؛ظٹط± ظ…طھظˆظ‚ط¹. ظٹط±ط¬ظ‰ ط§ظ„ظ…ط­ط§ظˆظ„ط© ظ„ط§ط­ظ‚ظ‹ط§.',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
@@ -1635,7 +1639,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
                       ),
                       IconButton(
                         tooltip:
-                            'حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.',
+                            'ط­ط¯ط« ط®ط·ط£ ط؛ظٹط± ظ…طھظˆظ‚ط¹. ظٹط±ط¬ظ‰ ط§ظ„ظ…ط­ط§ظˆظ„ط© ظ„ط§ط­ظ‚ظ‹ط§.',
                         onPressed: () => Navigator.of(sheetContext).pop(),
                         icon: Icon(
                           Icons.close_rounded,
@@ -1646,7 +1650,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.',
+                    'ط­ط¯ط« ط®ط·ط£ ط؛ظٹط± ظ…طھظˆظ‚ط¹. ظٹط±ط¬ظ‰ ط§ظ„ظ…ط­ط§ظˆظ„ط© ظ„ط§ط­ظ‚ظ‹ط§.',
                     style: TextStyle(
                       height: 1.5,
                       color: onSurface.withValues(alpha: 0.8),
@@ -1654,19 +1658,19 @@ class _BankTransferScreenState extends State<BankTransferScreen>
                   ),
                   const SizedBox(height: 16),
                   ...[
-                    'حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.',
-                    'حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.',
-                    'حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.',
-                    'حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.',
-                    'حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.',
-                    'حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.',
+                    'ط­ط¯ط« ط®ط·ط£ ط؛ظٹط± ظ…طھظˆظ‚ط¹. ظٹط±ط¬ظ‰ ط§ظ„ظ…ط­ط§ظˆظ„ط© ظ„ط§ط­ظ‚ظ‹ط§.',
+                    'ط­ط¯ط« ط®ط·ط£ ط؛ظٹط± ظ…طھظˆظ‚ط¹. ظٹط±ط¬ظ‰ ط§ظ„ظ…ط­ط§ظˆظ„ط© ظ„ط§ط­ظ‚ظ‹ط§.',
+                    'ط­ط¯ط« ط®ط·ط£ ط؛ظٹط± ظ…طھظˆظ‚ط¹. ظٹط±ط¬ظ‰ ط§ظ„ظ…ط­ط§ظˆظ„ط© ظ„ط§ط­ظ‚ظ‹ط§.',
+                    'ط­ط¯ط« ط®ط·ط£ ط؛ظٹط± ظ…طھظˆظ‚ط¹. ظٹط±ط¬ظ‰ ط§ظ„ظ…ط­ط§ظˆظ„ط© ظ„ط§ط­ظ‚ظ‹ط§.',
+                    'ط­ط¯ط« ط®ط·ط£ ط؛ظٹط± ظ…طھظˆظ‚ط¹. ظٹط±ط¬ظ‰ ط§ظ„ظ…ط­ط§ظˆظ„ط© ظ„ط§ط­ظ‚ظ‹ط§.',
+                    'ط­ط¯ط« ط®ط·ط£ ط؛ظٹط± ظ…طھظˆظ‚ط¹. ظٹط±ط¬ظ‰ ط§ظ„ظ…ط­ط§ظˆظ„ط© ظ„ط§ط­ظ‚ظ‹ط§.',
                   ].map(
                     (step) => Padding(
                       padding: const EdgeInsetsDirectional.only(bottom: 8),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('???????€??¬???? '),
+                          const Text('???????â‚¬??آ¬???? '),
                           Expanded(
                             child: Text(
                               step,
@@ -1682,7 +1686,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.',
+                    'ط­ط¯ط« ط®ط·ط£ ط؛ظٹط± ظ…طھظˆظ‚ط¹. ظٹط±ط¬ظ‰ ط§ظ„ظ…ط­ط§ظˆظ„ط© ظ„ط§ط­ظ‚ظ‹ط§.',
                     style: TextStyle(
                       height: 1.5,
                       color: onSurface.withValues(alpha: 0.85),
@@ -1694,7 +1698,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
                     child: ElevatedButton(
                       onPressed: () => Navigator.of(sheetContext).pop(),
                       child: const Text(
-                          'حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.'),
+                          'ط­ط¯ط« ط®ط·ط£ ط؛ظٹط± ظ…طھظˆظ‚ط¹. ظٹط±ط¬ظ‰ ط§ظ„ظ…ط­ط§ظˆظ„ط© ظ„ط§ط­ظ‚ظ‹ط§.'),
                     ),
                   ),
                 ],
@@ -1823,7 +1827,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
 
     UiUtils.showSoftSnackBar(
       overlayContext,
-      message: 'القيمة المحددة: $label',
+      message: 'ط§ظ„ظ‚ظٹظ…ط© ط§ظ„ظ…ط­ط¯ط¯ط©: $label',
       duration: const Duration(seconds: 2),
     );
   }
@@ -1859,24 +1863,24 @@ class _BankTransferScreenState extends State<BankTransferScreen>
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Text(
-            'حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.',
+            'ط­ط¯ط« ط®ط·ط£ ط؛ظٹط± ظ…طھظˆظ‚ط¹. ظٹط±ط¬ظ‰ ط§ظ„ظ…ط­ط§ظˆظ„ط© ظ„ط§ط­ظ‚ظ‹ط§.',
             style: TextStyle(
               fontWeight: FontWeight.w700,
               color: onSurface,
             ),
           ),
           content: const Text(
-              'حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.'),
+              'ط­ط¯ط« ط®ط·ط£ ط؛ظٹط± ظ…طھظˆظ‚ط¹. ظٹط±ط¬ظ‰ ط§ظ„ظ…ط­ط§ظˆظ„ط© ظ„ط§ط­ظ‚ظ‹ط§.'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
               child: const Text(
-                  'حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.'),
+                  'ط­ط¯ط« ط®ط·ط£ ط؛ظٹط± ظ…طھظˆظ‚ط¹. ظٹط±ط¬ظ‰ ط§ظ„ظ…ط­ط§ظˆظ„ط© ظ„ط§ط­ظ‚ظ‹ط§.'),
             ),
             FilledButton(
               onPressed: () => Navigator.of(dialogContext).pop(true),
               child: const Text(
-                  'حدث خطأ غير متوقع. يرجى المحاولة لاحقًا.'),
+                  'ط­ط¯ط« ط®ط·ط£ ط؛ظٹط± ظ…طھظˆظ‚ط¹. ظٹط±ط¬ظ‰ ط§ظ„ظ…ط­ط§ظˆظ„ط© ظ„ط§ط­ظ‚ظ‹ط§.'),
             ),
           ],
         );

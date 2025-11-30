@@ -3530,17 +3530,9 @@ class ApiController extends Controller {
             }
 
             $categoryIds = InterfaceSectionService::categoryIdsForSection($sectionType);
+            // إذا لم تُحدد تصنيفات، نرجع لكل العناصر بدلاً من الرد الفارغ
             if ($categoryIds === []) {
-                ResponseService::successResponse(
-                    __('Featured sections fetched successfully.'),
-                    [
-                        'interface_type' => $sectionType,
-                        'filters' => $filters,
-                        'sections' => [],
-                    ]
-                );
-
-                return;
+                $categoryIds = null;
             }
 
             $rootIdentifiers = InterfaceSectionService::rootIdentifiers();
@@ -3622,17 +3614,57 @@ class ApiController extends Controller {
                 ];
             }
 
-            ResponseService::successResponse(
-                __('Featured sections fetched successfully.'),
-                [
+            // Fallback: إذا لم يتم تجميع أي أقسام، رجّع قسم "أحدث الإعلانات" بحد أعلى من العناصر
+            if ($sections === []) {
+                // استخدم استعلامًا أبسط لتفادي أي مرشحات قد تمنع عرض البيانات
+                $fallbackItems = Item::query()
+                    ->approved()
+                    ->with($relations)
+                    ->withCount('favourites')
+                    ->withCount('featured_items')
+                    ->orderByDesc('items.created_at')
+                    ->limit($limit)
+                    ->get();
+
+                if ($fallbackItems->isNotEmpty()) {
+                    $sectionData = array_values((new ItemCollection($fallbackItems))->toArray($request));
+                    $sections[] = [
+                        'id' => null,
+                        'title' => $titleMap['latest'] ?? 'Latest Listings',
+                        'style' => 'list',
+                        'section_type' => $sectionType,
+                        'filter' => 'latest',
+                        'slug' => $request->input('slug') ?? Str::slug($sectionType . '-latest'),
+                        'sequence' => 1,
+                        'root_identifier' => $rootIdentifier,
+                        'total_data' => count($sectionData),
+                        'min_price' => $fallbackItems->min('price'),
+                        'max_price' => $fallbackItems->max('price'),
+                        'section_data' => $sectionData,
+                    ];
+                }
+            }
+
+            return response()->json([
+                'error' => false,
+                'message' => __('Featured sections fetched successfully.'),
+                'data' => [
                     'interface_type' => $sectionType,
                     'filters' => $filters,
                     'sections' => array_values($sections),
-                ]
-            );
+                ],
+                'code' => 200,
+            ], 200);
         } catch (Throwable $th) {
-            ResponseService::logErrorResponse($th, 'API Controller -> getFeaturedSections');
-            ResponseService::errorResponse();
+            \Log::error('API Controller -> getFeaturedSections failed', [
+                'exception' => $th,
+            ]);
+
+            return response()->json([
+                'error' => true,
+                'message' => 'Unable to load featured sections.',
+                'code' => 500,
+            ], 500);
         }
     }
 

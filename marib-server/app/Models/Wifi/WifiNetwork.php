@@ -5,6 +5,7 @@ namespace App\Models\Wifi;
 use App\Enums\Wifi\WifiNetworkStatus;
 use App\Models\User;
 use App\Models\WalletAccount;
+use App\Models\Wifi\WifiCode;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -122,5 +123,10 @@ class WifiNetwork extends Model
     public function reputationCounters(): HasMany
     {
         return $this->hasMany(ReputationCounter::class, 'wifi_network_id');
+    }
+
+    public function codes(): HasMany
+    {
+        return $this->hasMany(WifiCode::class, 'wifi_network_id');
     }
 }

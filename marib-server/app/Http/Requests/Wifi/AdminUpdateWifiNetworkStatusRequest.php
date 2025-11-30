@@ -27,17 +27,6 @@ class AdminUpdateWifiNetworkStatusRequest extends FormRequest
 
     public function withValidator(Validator $validator): void
     {
-        $validator->after(function (Validator $validator): void {
-            $network = $this->route('network');
-            if (! $network) {
-                return;
-            }
-
-            $target = WifiNetworkStatus::from($this->input('status'));
-
-            if ($network->status === $target) {
-                $validator->errors()->add('status', __('The network already has this status.'));
-            }
-        });
+        // Allow re-applying the same status (e.g., to add a reason or re-send notifications).
     }
 }

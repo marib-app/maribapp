@@ -762,7 +762,7 @@ class _ReportsTab extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Text(
-          '?„?§ ???ˆ?¬?¯ ?¨?„?§???§?? ?…?³?¬?„?©.',
+          'لا توجد بلاغات متاحة حالياً.',
           style: Theme.of(context)
               .textTheme
               .bodyMedium
@@ -792,19 +792,19 @@ class _SettingsTab extends StatelessWidget {
       children: [
         ListTile(
           leading: Icon(Icons.image_rounded, color: colors.territoryColor),
-          title: const Text('لوحة الشبكة'),
+          title: const Text('تغيير الشعار'),
           onTap: onChangeLogo,
         ),
         ListTile(
           leading: Icon(Icons.login_rounded, color: colors.territoryColor),
-          title: const Text('لوحة الشبكة'),
+          title: const Text('تغيير شاشة تسجيل الدخول'),
           onTap: onChangeLogin,
         ),
         ListTile(
           leading: Icon(Icons.power_settings_new_rounded,
               color: colors.territoryColor),
-          title: const Text('لوحة الشبكة'),
-          subtitle: const Text('لوحة الشبكة'),
+          title: const Text('تفعيل / إيقاف الشبكة'),
+          subtitle: const Text('تحكم بحالة الشبكة من داخل التطبيق'),
           onTap: onToggleStatus,
         ),
       ],
@@ -882,7 +882,7 @@ class _AddPlanSheetState extends State<_AddPlanSheet> {
     if (price == null || duration == null) {
       UiUtils.showSoftSnackBar(
         context,
-        message: 'حذف?? ???? ????لوحة الشبكة??.',
+        message: 'الرجاء إدخال قيم صالحة.',
       );
       return;
     }
@@ -906,14 +906,14 @@ class _AddPlanSheetState extends State<_AddPlanSheet> {
         await widget.repository.createPlanBatch(
           planId: plan.id,
           sourceFile: formFile,
-          label: 'حذف?? حذف????',
+          label: 'دفعة الأكواد',
         );
       }
 
       if (!mounted) return;
       UiUtils.showSoftSnackBar(
         context,
-        message: 'حذف حذف???? حذف???? حذف????.',
+        message: 'تم إنشاء الفئة وتحميل الأكواد.',
       );
       Navigator.of(context).pop(true);
     } catch (error) {
@@ -948,7 +948,7 @@ class _AddPlanSheetState extends State<_AddPlanSheet> {
                 children: [
                   Expanded(
                     child: Text(
-                      'حذف???? حذف حذف????',
+                      'إضافة فئة جديدة',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w800,
                           ),
@@ -963,9 +963,9 @@ class _AddPlanSheetState extends State<_AddPlanSheet> {
               const SizedBox(height: 12),
               _TextField(
                 controller: _nameCtrl,
-                label: 'حذف حذف????',
+                label: 'اسم الفئة',
                 validator: (value) =>
-                    value == null || value.trim().isEmpty ? 'حذف الفئات' : null,
+                    value == null || value.trim().isEmpty ? 'هذا الحقل مطلوب' : null,
               ),
               const SizedBox(height: 12),
               Row(
@@ -973,12 +973,12 @@ class _AddPlanSheetState extends State<_AddPlanSheet> {
                   Expanded(
                     child: _TextField(
                       controller: _priceCtrl,
-                      label: 'حذف????',
+                      label: 'السعر',
                       keyboardType:
                           const TextInputType.numberWithOptions(decimal: true),
                       validator: (value) =>
                           (value == null || double.tryParse(value) == null)
-                              ? 'حذف? حذف?? حذف????'
+                              ? 'أدخل سعرًا صالحًا'
                               : null,
                     ),
                   ),
@@ -986,10 +986,10 @@ class _AddPlanSheetState extends State<_AddPlanSheet> {
                   Expanded(
                     child: _TextField(
                       controller: _currencyCtrl,
-                      label: 'الفئات',
+                      label: 'العملة',
                       validator: (value) =>
                           value == null || value.trim().isEmpty
-                              ? 'حذف الفئات'
+                              ? 'هذا الحقل مطلوب'
                               : null,
                     ),
                   ),
@@ -998,24 +998,24 @@ class _AddPlanSheetState extends State<_AddPlanSheet> {
               const SizedBox(height: 12),
               _TextField(
                 controller: _durationCtrl,
-                label: 'حذف الفئات???? (حذف?)',
+                label: 'مدة الصلاحية (أيام)',
                 keyboardType: TextInputType.number,
                 validator: (value) =>
                     (value == null || int.tryParse(value) == null)
-                        ? 'حذف? حذف حذف?????'
+                        ? 'أدخل مدة صالحة'
                         : null,
               ),
               const SizedBox(height: 12),
               _TextField(
                 controller: _descriptionCtrl,
-                label: 'حذف???? (الفئات??)',
+                label: 'الوصف (اختياري)',
                 maxLines: 3,
               ),
               const SizedBox(height: 12),
               OutlinedButton.icon(
                 onPressed: _pickVoucher,
                 icon: const Icon(Icons.upload_file_rounded),
-                label: Text(_voucherName ?? 'حذف???? لوحة الشبكة'),
+                label: Text(_voucherName ?? 'إرفاق ملف الأكواد'),
               ),
               const SizedBox(height: 20),
               SizedBox(
@@ -1028,7 +1028,7 @@ class _AddPlanSheetState extends State<_AddPlanSheet> {
                           width: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('??لوحة الشبكة'),
+                      : const Text('إنشاء الفئة'),
                 ),
               ),
             ],
@@ -1146,7 +1146,7 @@ class _ErrorPlaceholder extends StatelessWidget {
             const SizedBox(height: 12),
             OutlinedButton(
               onPressed: onRetry,
-              child: const Text('?¥?¹?§?¯?© ?§?„?…?­?§?ˆ?„?©'),
+              child: const Text('إعادة المحاولة'),
             )
           ],
         ),

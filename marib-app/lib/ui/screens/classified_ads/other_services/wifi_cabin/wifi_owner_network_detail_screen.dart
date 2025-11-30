@@ -974,7 +974,7 @@ class _ImageSettingTile extends StatelessWidget {
     );
   }
 
-  Widget _buildImage(String path, ColorSchemeExt colors) {
+  Widget _buildImage(String path, ColorScheme colorScheme) {
     final bool isFile =
         path.startsWith('file://') || File(path).isAbsolute;
     final imageWidget = isFile
@@ -989,23 +989,23 @@ class _ImageSettingTile extends StatelessWidget {
       width: 64,
       height: 64,
       fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => _placeholderIcon(colors),
+      errorBuilder: (_, __, ___) => _placeholderIcon(colorScheme),
       loadingBuilder: (c, w, p) =>
-      p == null ? w : _placeholderIcon(colors),
+      p == null ? w : _placeholderIcon(colorScheme),
     );
     return imageWidget;
   }
 
-  Widget _placeholderIcon(ColorSchemeExt colors) {
+  Widget _placeholderIcon(ColorSchemeExt colorScheme) {
     return Container(
       width: 64,
       height: 64,
       decoration: BoxDecoration(
-        color: colors.surface,
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: colors.outline.withOpacity(0.3)),
+        border: Border.all(color: colorScheme.outline.withOpacity(0.3)),
       ),
-      child: Icon(placeholderIcon, color: colors.secondary),
+      child: Icon(placeholderIcon, color: colorScheme.secondary),
     );
   }
 }

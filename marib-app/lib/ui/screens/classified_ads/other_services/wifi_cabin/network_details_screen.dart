@@ -1,11 +1,18 @@
-﻿import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:marib/data/model/wifi/wifi_network.dart';
 import 'package:marib/data/model/wifi/wifi_plan.dart';
 import 'package:marib/data/model/wifi/wifi_purchase.dart';
 import 'package:marib/data/wifi/wifi_repository.dart';
+import 'package:marib/data/cubits/chat/send_message.dart';
+import 'package:marib/data/cubits/chat/load_chat_messages.dart';
+import 'package:marib/data/cubits/chat/delete_message_cubit.dart';
+import 'package:marib/data/model/chat/chated_user_model.dart';
 import 'package:marib/ui/theme/theme.dart';
+import 'package:marib/ui/screens/chat/chat_screen.dart';
+import 'package:marib/ui/screens/widgets/animated_routes/transparant_route.dart';
 import 'package:marib/utils/errorFilter.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/helper_utils.dart';
@@ -39,14 +46,137 @@ class _WifiNetworkDetailsScreenState extends State<WifiNetworkDetailsScreen> {
     _plansFuture = _repository.fetchNetworkPlans(widget.network.id);
   }
 
+  void _openChatWithOwner() {
+    int? parseId(dynamic value) {
+      if (value == null) return null;
+      if (value is int) return value;
+      if (value is num) return value.toInt();
+      return int.tryParse(value.toString());
+    }
+
+    final Map<String, dynamic> meta =
+        widget.network.meta ?? const <String, dynamic>{};
+    int? ownerId = parseId(
+      meta['owner_id'] ??
+          meta['owner'] ??
+          meta['ownerId'] ??
+          meta['ownerID'] ??
+          meta['user_id'] ??
+          meta['userId'] ??
+          meta['merchant_id'] ??
+          meta['seller_id'] ??
+          meta['created_by'] ??
+          meta['createdBy'] ??
+          meta['owner_user_id'],
+    );
+
+    if (ownerId == null) {
+      for (final key in const ['owner', 'user', 'creator']) {
+        final dynamic node = meta[key];
+        if (node is Map) {
+          ownerId = parseId(
+              node['id'] ?? node['user_id'] ?? node['owner_id'] ?? node['uid']);
+          if (ownerId != null) break;
+        }
+      }
+    }
+
+    ownerId ??= widget.network.id; // fallback لضمان فتح المحادثة
+
+    final String ownerName =
+        (meta['owner_name'] ?? meta['name'] ?? widget.network.name).toString();
+    final String ownerAvatar = HelperUtils.absoluteImage(
+      meta['owner_avatar'] ??
+          meta['avatar'] ??
+          meta['photo'] ??
+          widget.network.iconUrl ??
+          '',
+    );
+    final String convoId = 'wifi_network_${widget.network.id}_$ownerId';
+    final String networkLogo =
+        HelperUtils.absoluteImage(widget.network.iconUrl);
+    final String? currency = widget.network.currencies.isNotEmpty
+        ? widget.network.currencies.first
+        : null;
+
+    Navigator.of(context).push(
+      TransparantRoute(
+        builder: (_) => MultiBlocProvider(
+          providers: [
+            BlocProvider(create: (_) => SendMessageCubit()),
+            BlocProvider(create: (_) => LoadChatMessagesCubit()),
+            BlocProvider(create: (_) => DeleteMessageCubit()),
+          ],
+          child: ChatScreen(
+            profilePicture: networkLogo.isNotEmpty ? networkLogo : ownerAvatar,
+            userName: widget.network.name,
+            itemImage: networkLogo,
+            itemTitle: widget.network.name,
+            userId: ownerId.toString(),
+            itemId: widget.network.id.toString(),
+            date: DateTime.now().toIso8601String(),
+            conversationId: convoId,
+            from: null,
+            itemOfferId: 0,
+            itemPrice: 0,
+            itemOfferPrice: 0,
+            buyerId: null,
+            status: null,
+            isPurchased: 0,
+            alreadyReview: false,
+            participants: [
+              ChatParticipant(
+                userId: ownerId,
+                name: ownerName,
+                profile: ownerAvatar,
+              ),
+            ],
+            lastMessage: null,
+            currency: currency ?? '',
+            currencySymbol: currency ?? '',
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = context.color;
     final textTheme = Theme.of(context).textTheme;
+    final String logo = HelperUtils.absoluteImage(widget.network.iconUrl);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.network.name),
+        titleSpacing: 0,
+        title: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: logo.isNotEmpty
+                  ? Image.network(
+                      logo,
+                      width: 36,
+                      height: 36,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) =>
+                          const _AppBarLogoPlaceholder(),
+                    )
+                  : const _AppBarLogoPlaceholder(),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                widget.network.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
       backgroundColor: colors.backgroundColor,
       body: RefreshIndicator(
@@ -58,7 +188,10 @@ class _WifiNetworkDetailsScreenState extends State<WifiNetworkDetailsScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
           children: [
-            _NetworkSummaryCard(network: widget.network),
+            _NetworkSummaryCard(
+              network: widget.network,
+              onChat: _openChatWithOwner,
+            ),
             const SizedBox(height: 16),
             Text(
               'الخطط المتاحة',
@@ -565,14 +698,21 @@ class _WifiPlaceholder extends StatelessWidget {
 }
 
 class _NetworkSummaryCard extends StatelessWidget {
-  const _NetworkSummaryCard({required this.network});
+  const _NetworkSummaryCard({
+    required this.network,
+    required this.onChat,
+  });
 
   final WifiNetwork network;
+  final VoidCallback onChat;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.color;
     final textTheme = Theme.of(context).textTheme;
+    final String logo = HelperUtils.absoluteImage(network.iconUrl);
+    final String? phone =
+        network.contacts.isNotEmpty ? network.contacts.first : null;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -584,23 +724,59 @@ class _NetworkSummaryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            network.name,
-            style: textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: colors.textDefaultColor,
-            ),
-          ),
-          if (network.address?.isNotEmpty == true)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                network.address!,
-                style: textTheme.bodyMedium?.copyWith(
-                  color: colors.textLightColor,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: logo.isNotEmpty
+                    ? Image.network(
+                        logo,
+                        width: 60,
+                        height: 60,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _placeholderLogo(colors),
+                      )
+                    : _placeholderLogo(colors),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      network.name,
+                      style: textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: colors.textDefaultColor,
+                      ),
+                    ),
+                    if (network.address?.isNotEmpty == true)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          network.address!,
+                          style: textTheme.bodyMedium?.copyWith(
+                            color: colors.textLightColor,
+                          ),
+                        ),
+                      ),
+                    if ((network.description ?? '').trim().isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Text(
+                          network.description!.trim(),
+                          style: textTheme.bodyMedium?.copyWith(
+                            color: colors.textLightColor,
+                            height: 1.4,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
-            ),
+            ],
+          ),
           const SizedBox(height: 12),
           Wrap(
             spacing: 8,
@@ -611,19 +787,179 @@ class _NetworkSummaryCard extends StatelessWidget {
                   icon: Icons.radar_rounded,
                   label: '${network.coverageKm!.toStringAsFixed(1)} كم مدى',
                 ),
-              if (network.currencies.isNotEmpty)
-                _InfoChip(
-                  icon: Icons.payments_outlined,
-                  label: network.currencies.join(' • '),
-                ),
-              if (network.contacts.isNotEmpty)
-                _InfoChip(
-                  icon: Icons.phone_in_talk_rounded,
-                  label: network.contacts.first,
-                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              _ActionButton(
+                icon: Icons.call_rounded,
+                label: 'اتصال',
+                onTap: phone == null || phone.isEmpty
+                    ? () => HelperUtils.showSnackBarMessage(
+                          context,
+                          'لا يوجد رقم للتواصل.',
+                        )
+                    : () => HelperUtils.launchPathURL(
+                          isTelephone: true,
+                          isSMS: false,
+                          isMail: false,
+                          value: phone,
+                          context: context,
+                        ),
+              ),
+              const SizedBox(width: 10),
+              _ActionButton(
+                icon: Icons.chat_rounded,
+                label: 'محادثة',
+                onTap: onChat,
+              ),
+              const SizedBox(width: 10),
+              _ActionButton(
+                icon: Icons.report_problem_rounded,
+                label: 'إبلاغ',
+                onTap: () => _openReportSheet(context),
+              ),
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _placeholderLogo(ColorScheme colors) {
+    return Container(
+      width: 60,
+      height: 60,
+      decoration: BoxDecoration(
+        color: colors.borderColor.withOpacity(.2),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Icon(Icons.wifi_rounded, color: colors.textLightColor),
+    );
+  }
+
+  Future<void> _openReportSheet(BuildContext context) async {
+    final controller = TextEditingController();
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        final colors = sheetContext.color;
+        final viewInsets = MediaQuery.of(sheetContext).viewInsets.bottom;
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 16,
+            bottom: viewInsets + 16,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'إبلاغ عن الشبكة',
+                style: Theme.of(sheetContext).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: colors.textDefaultColor,
+                    ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                maxLines: 4,
+                decoration: InputDecoration(
+                  hintText: 'اكتب تفاصيل البلاغ هنا',
+                  filled: true,
+                  fillColor: colors.secondaryColor,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: colors.borderColor),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: colors.territoryColor),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(sheetContext).pop();
+                    HelperUtils.showSnackBarMessage(
+                      context,
+                      'تم استلام البلاغ، شكرًا لتعاونك.',
+                    );
+                  },
+                  child: const Text('إرسال البلاغ'),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    controller.dispose();
+  }
+
+  Widget _AppBarLogoFallback() => const _AppBarLogoPlaceholder();
+}
+
+class _AppBarLogoPlaceholder extends StatelessWidget {
+  const _AppBarLogoPlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.color;
+    return Container(
+      width: 36,
+      height: 36,
+      decoration: BoxDecoration(
+        color: colors.borderColor.withOpacity(.2),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Icon(Icons.wifi_rounded, color: colors.textLightColor, size: 20),
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.color;
+    final textTheme = Theme.of(context).textTheme;
+    return Expanded(
+      child: ElevatedButton.icon(
+        onPressed: onTap,
+        style: ElevatedButton.styleFrom(
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          backgroundColor: colors.territoryColor.withOpacity(.12),
+          foregroundColor: colors.territoryColor,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        icon: Icon(icon, size: 20),
+        label: Text(
+          label,
+          style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+        ),
       ),
     );
   }
@@ -1176,6 +1512,3 @@ class _WifiCodeTile extends StatelessWidget {
     );
   }
 }
-
-
-

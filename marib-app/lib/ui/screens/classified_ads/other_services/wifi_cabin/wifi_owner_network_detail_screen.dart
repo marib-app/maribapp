@@ -139,28 +139,27 @@ class _WifiOwnerNetworkDetailScreenState
     final String logoUrl = HelperUtils.absoluteImage(network.iconUrl);
     final bool hasLogo = logoUrl.isNotEmpty;
 
-    return DefaultTabController(
+        return DefaultTabController(
       length: 5,
       child: Scaffold(
-      appBar: AppBar(
-        backgroundColor: colors.backgroundColor,
-        foregroundColor: colors.textDefaultColor,
-        elevation: 0,
-        title: const Text('?„?ˆ?­?© ?§?„?´?¨?ƒ?©'),
-        bottom: TabBar(
-          labelColor: colors.territoryColor,
-          unselectedLabelColor: colors.textLightColor,
-          indicatorColor: colors.territoryColor,
-          tabs: const [
-            Tab(text: '?§?„?¥?­?µ?§?¦???§??'),
-            Tab(text: '?§?„?£?ƒ?ˆ?§?¯'),
-            Tab(text: '?§?„???¦?§??'),
-            Tab(text: '?§?„?¨?„?§???§??'),
-            Tab(text: '?§?„?¥?¹?¯?§?¯?§??'),
-          ],
-        ),
-      ),
-      body: _loading
+        appBar: AppBar(
+          backgroundColor: colors.backgroundColor,
+          foregroundColor: colors.textDefaultColor,
+          elevation: 0,
+          title: const Text('لوحة الشبكة'),
+          bottom: TabBar(
+            labelColor: colors.territoryColor,
+            unselectedLabelColor: colors.textLightColor,
+            indicatorColor: colors.territoryColor,
+            tabs: const [
+              Tab(text: 'الإحصائيات'),
+              Tab(text: 'الأكواد'),
+              Tab(text: 'الفئات'),
+              Tab(text: 'البلاغات'),
+              Tab(text: 'الإعدادات'),
+            ],
+          ),
+        ),        body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
               ? _ErrorPlaceholder(message: _error!, onRetry: _load)
@@ -342,16 +341,16 @@ class _WifiOwnerNetworkDetailScreenState
     final bool? confirmed = await UiUtils.showBlurredDialoge(
       context,
       dialoge: BlurredRichDialog(
-        title: '???£?ƒ???¯ ?§?„?­?°??',
-        body: '???… ?§?®?????§?± ?­?°?? "${plan.name}". ?‡?„ ???±???¯ ?§?„?…???§?¨?¹?©??',
+        title: 'تأكيد الحذف',
+        body: 'أنت على وشك حذف "\". هل تريد المتابعة؟',
         actions: [
           BlurredAction(
-            label: '?¥?„???§??',
+            label: 'إلغاء',
             isPrimary: false,
             onPressed: () => Navigator.of(context).maybePop(false),
           ),
           BlurredAction(
-            label: '?­?°??',
+            label: 'حذف',
             onPressed: () => Navigator.of(context).maybePop(false),
           ),
         ],
@@ -377,21 +376,21 @@ class _WifiOwnerNetworkDetailScreenState
   void _showLogoToast() {
     UiUtils.showSoftSnackBar(
       context,
-      message: '???…?ƒ?† حذف???± ?§?„?´?¹?§?± ?…?† ?¯?§?®?„ ?§?„???·?¨???‚ ?‚?±???¨?§?‹.',
+      message: 'تغيير الشعار قيد التطوير.',
     );
   }
 
   void _showLoginToast() {
     UiUtils.showSoftSnackBar(
       context,
-      message: '???…?ƒ?† حذف???± ?µ?ˆ?±?© ???³?¬???„ ?§?„?¯?®?ˆ?„ ?…?† ?¯?§?®?„ ?§?„???·?¨???‚ ?‚?±???¨?§?‹.',
+      message: 'تغيير شاشة تسجيل الدخول قيد التطوير.',
     );
   }
 
   void _showToggleToast() {
     UiUtils.showSoftSnackBar(
       context,
-      message: '?³?????… ?¯?¹?… ?¥???‚?§??/?????¹???„ ?§?„?´?¨?ƒ?© ?¹?¨?± ?§?„???·?¨???‚ ?‚?±???¨?§?‹.',
+      message: 'تغيير حالة التفعيل/الإيقاف قيد التطوير.',
     );
   }
 }
@@ -414,16 +413,16 @@ class _StatsTab extends StatelessWidget {
             spacing: 10,
             runSpacing: 10,
             children: [
-              _StatCard(label: '?§?„?®?·?·', value: stats['plans'] ?? 0),
-              _StatCard(label: '?§?„?¯?????¹?§??', value: stats['batches'] ?? 0),
-              _StatCard(label: '?§?„?£?ƒ?ˆ?§?¯ ?§?„?ƒ?„???©', value: stats['total'] ?? 0),
-              _StatCard(label: '?§?„?…???§?­', value: stats['available'] ?? 0),
-              _StatCard(label: '?§?„?…?¨?§?¹', value: stats['sold'] ?? 0),
+              _StatCard(label: 'الفئات', value: stats['plans'] ?? 0),
+              _StatCard(label: 'الدفعات', value: stats['batches'] ?? 0),
+              _StatCard(label: 'إجمالي الأكواد', value: stats['total'] ?? 0),
+              _StatCard(label: 'المتاحة', value: stats['available'] ?? 0),
+              _StatCard(label: 'المباعة', value: stats['sold'] ?? 0),
             ],
           ),
           const SizedBox(height: 16),
           Text(
-            '?§?„???¦?§??',
+            'الفئات والخطط',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: colors.textDefaultColor,
@@ -432,7 +431,7 @@ class _StatsTab extends StatelessWidget {
           const SizedBox(height: 8),
           if (plans.isEmpty)
             Text(
-              '?„?§ ???ˆ?¬?¯ ???¦?§?? ?¨?¹?¯.',
+              'لا توجد فئات متاحة حالياً.',
               style: Theme.of(context)
                   .textTheme
                   .bodyMedium
@@ -502,7 +501,7 @@ class _CodesTab extends StatelessWidget {
                   controller: searchController,
                   onSubmitted: (value) => onSearch(search: value),
                   decoration: InputDecoration(
-                    hintText: '?¨?­?« ?¹?† ?ƒ?ˆ?¯ ?£?ˆ ?¹?…???„',
+                    hintText: 'ابحث عن كود أو مشتري',
                     prefixIcon: const Icon(Icons.search),
                     filled: true,
                     fillColor: colors.secondaryColor,
@@ -521,7 +520,7 @@ class _CodesTab extends StatelessWidget {
                 child: DropdownButtonFormField<String>(
                   value: selectedStatus.isEmpty ? '' : selectedStatus,
                   decoration: InputDecoration(
-                    labelText: '?§?„?­?§?„?©',
+                    labelText: 'الحالة',
                     filled: true,
                     fillColor: colors.secondaryColor,
                     border: OutlineInputBorder(
@@ -532,9 +531,9 @@ class _CodesTab extends StatelessWidget {
                     ),
                   ),
                   items: const [
-                    DropdownMenuItem(value: '', child: Text('?§?„?ƒ?„')),
-                    DropdownMenuItem(value: 'available', child: Text('?…???§?­')),
-                    DropdownMenuItem(value: 'sold', child: Text('?…?¨?§?¹')),
+                    DropdownMenuItem(value: '', child: Text('الكل')),
+                    DropdownMenuItem(value: 'available', child: Text('متاحة')),
+                    DropdownMenuItem(value: 'sold', child: Text('مباعة')),
                   ],
                   onChanged: (value) => onStatusChange(value ?? ''),
                 ),
@@ -546,9 +545,9 @@ class _CodesTab extends StatelessWidget {
             spacing: 10,
             runSpacing: 10,
             children: [
-              _StatCard(label: '?§?„?¥?¬?…?§?„??', value: total),
-              _StatCard(label: '?§?„?…???§?­', value: available),
-              _StatCard(label: '?§?„?…?¨?§?¹', value: sold),
+              _StatCard(label: 'الإجمالي', value: total),
+              _StatCard(label: 'المتاحة', value: available),
+              _StatCard(label: 'المباعة', value: sold),
             ],
           ),
           const SizedBox(height: 12),
@@ -566,13 +565,13 @@ class _CodesTab extends StatelessWidget {
                 const SizedBox(height: 8),
                 OutlinedButton(
                   onPressed: () => onSearch(),
-                  child: const Text('?¥?¹?§?¯?© ?§?„?…?­?§?ˆ?„?©'),
+                  child: const Text('إعادة المحاولة'),
                 ),
               ],
             )
           else if (codes.isEmpty)
             Text(
-              '?„?§ ???ˆ?¬?¯ ?£?ƒ?ˆ?§?¯ ?¨?¹?¯.',
+              'لا توجد أكواد مطابقة حالياً.',
               style:
                   textTheme.bodyMedium?.copyWith(color: colors.textLightColor),
             )
@@ -588,7 +587,7 @@ class _CodesTab extends StatelessWidget {
                         ? code.codeSuffix!
                         : (code.codeLast4?.isNotEmpty == true
                             ? code.codeLast4!
-                            : 'â€”');
+                            : 'غير معروف');
                 final String buyer = (code.allocatedUserName ??
                         code.allocatedUserEmail ??
                         'â€”')
@@ -634,7 +633,7 @@ class _CodesTab extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              '?§?„?ƒ?ˆ?¯: $codeLabel',
+                              'الكود: ',
                               style: textTheme.bodyMedium?.copyWith(
                                 fontWeight: FontWeight.w700,
                                 color: colors.textDefaultColor,
@@ -642,14 +641,14 @@ class _CodesTab extends StatelessWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              '?§?„?…?´???±??: $buyer',
+                              'المشتري: ',
                               style: textTheme.bodySmall?.copyWith(
                                 color: colors.textLightColor,
                               ),
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              '?§?„???§?±???®: $dateLabel',
+                              'التاريخ: ',
                               style: textTheme.bodySmall?.copyWith(
                                 color: colors.textLightColor,
                               ),
@@ -699,9 +698,9 @@ class _PlanRow extends StatelessWidget {
   }
 
   factory _PlanRow.header() => const _PlanRow(
-        name: '?§?„???¦?©',
-        price: '?§?„?³?¹?±',
-        currency: '?§?„?¹?…?„?©',
+        name: 'الفئة',
+        price: 'السعر',
+        currency: 'العملة',
         available: -1,
         total: -1,
       );
@@ -717,9 +716,9 @@ class _PlanRow extends StatelessWidget {
         const TextStyle();
 
     final String availableText =
-        isHeader ? '?§?„?…???§?­' : available.toString();
+        isHeader ? 'المتاحة' : available.toString();
     final int soldValue = total - available;
-    final String soldText = isHeader ? '?§?„?…?¨?§?¹' : soldValue.clamp(0, total).toString();
+    final String soldText = isHeader ? 'المباعة' : soldValue.clamp(0, total).toString();
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -793,19 +792,19 @@ class _SettingsTab extends StatelessWidget {
       children: [
         ListTile(
           leading: Icon(Icons.image_rounded, color: colors.territoryColor),
-          title: const Text('حذف???± ?§?„?´?¹?§?±'),
+          title: const Text('لوحة الشبكة'),
           onTap: onChangeLogo,
         ),
         ListTile(
           leading: Icon(Icons.login_rounded, color: colors.territoryColor),
-          title: const Text('حذف???± ?µ?ˆ?±?© ???³?¬???„ ?§?„?¯?®?ˆ?„'),
+          title: const Text('لوحة الشبكة'),
           onTap: onChangeLogin,
         ),
         ListTile(
           leading: Icon(Icons.power_settings_new_rounded,
               color: colors.territoryColor),
-          title: const Text('?¥???‚?§?? / ?????¹???„ ?§?„?´?¨?ƒ?©'),
-          subtitle: const Text('حذف???± ?­?§?„?© ?§?„?´?¨?ƒ?© ?…?† ?¯?§?®?„ ?§?„???·?¨???‚'),
+          title: const Text('لوحة الشبكة'),
+          subtitle: const Text('لوحة الشبكة'),
           onTap: onToggleStatus,
         ),
       ],
@@ -1155,3 +1154,6 @@ class _ErrorPlaceholder extends StatelessWidget {
     );
   }
 }
+
+
+

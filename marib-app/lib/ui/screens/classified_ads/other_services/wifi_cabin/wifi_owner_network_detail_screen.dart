@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:marib/data/model/wifi/wifi_network.dart';
 import 'package:marib/data/model/wifi/wifi_owner_code.dart';
 import 'package:marib/data/model/wifi/wifi_plan.dart';
@@ -146,17 +146,17 @@ class _WifiOwnerNetworkDetailScreenState
         backgroundColor: colors.backgroundColor,
         foregroundColor: colors.textDefaultColor,
         elevation: 0,
-        title: const Text('لوحة الشبكة'),
+        title: const Text('?„?ˆ?­?© ?§?„?´?¨?ƒ?©'),
         bottom: TabBar(
           labelColor: colors.territoryColor,
           unselectedLabelColor: colors.textLightColor,
           indicatorColor: colors.territoryColor,
           tabs: const [
-            Tab(text: 'الإحصائيات'),
-            Tab(text: 'الأكواد'),
-            Tab(text: 'الفئات'),
-            Tab(text: 'البلاغات'),
-            Tab(text: 'الإعدادات'),
+            Tab(text: '?§?„?¥?­?µ?§?¦???§??'),
+            Tab(text: '?§?„?£?ƒ?ˆ?§?¯'),
+            Tab(text: '?§?„???¦?§??'),
+            Tab(text: '?§?„?¨?„?§???§??'),
+            Tab(text: '?§?„?¥?¹?¯?§?¯?§??'),
           ],
         ),
       ),
@@ -243,7 +243,7 @@ class _WifiOwnerNetworkDetailScreenState
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              network.status ?? '—',
+                              network.status ?? 'â€”',
                               style: Theme.of(context)
                                   .textTheme
                                   .labelMedium
@@ -339,59 +339,23 @@ class _WifiOwnerNetworkDetailScreenState
   }
   Future<void> _confirmDeletePlan(WifiPlan plan) async {
     if (_plansMutating) return;
-    final bool? confirmed = await showModalBottomSheet<bool>(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
-      ),
-      builder: (sheetContext) {
-        final colors = sheetContext.color;
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '????? ?????',
-                style: Theme.of(sheetContext).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '?? ?????? ??? "${plan.name}". ?? ???? ?????????',
-                style: Theme.of(sheetContext)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(color: colors.textLightColor),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.of(sheetContext).pop(false),
-                      child: const Text('?????'),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.redAccent,
-                        foregroundColor: Colors.white,
-                      ),
-                      onPressed: () => Navigator.of(sheetContext).pop(true),
-                      child: const Text('???'),
-                    ),
-                  ),
-                ],
-              )
-            ],
+    final bool? confirmed = await UiUtils.showBlurredDialoge(
+      context,
+      dialoge: BlurredRichDialog(
+        title: '???£?ƒ???¯ ?§?„?­?°??',
+        body: '???… ?§?®?????§?± ?­?°?? "${plan.name}". ?‡?„ ???±???¯ ?§?„?…???§?¨?¹?©??',
+        actions: [
+          BlurredAction(
+            label: '?¥?„???§??',
+            isPrimary: false,
+            onPressed: () => Navigator.of(context).maybePop(false),
           ),
-        );
-      },
+          BlurredAction(
+            label: '?­?°??',
+            onPressed: () => Navigator.of(context).maybePop(false),
+          ),
+        ],
+      ),
     );
     if (confirmed != true) return;
 
@@ -413,21 +377,21 @@ class _WifiOwnerNetworkDetailScreenState
   void _showLogoToast() {
     UiUtils.showSoftSnackBar(
       context,
-      message: 'يمكن تغيير الشعار من داخل التطبيق قريباً.',
+      message: '???…?ƒ?† حذف???± ?§?„?´?¹?§?± ?…?† ?¯?§?®?„ ?§?„???·?¨???‚ ?‚?±???¨?§?‹.',
     );
   }
 
   void _showLoginToast() {
     UiUtils.showSoftSnackBar(
       context,
-      message: 'يمكن تغيير صورة تسجيل الدخول من داخل التطبيق قريباً.',
+      message: '???…?ƒ?† حذف???± ?µ?ˆ?±?© ???³?¬???„ ?§?„?¯?®?ˆ?„ ?…?† ?¯?§?®?„ ?§?„???·?¨???‚ ?‚?±???¨?§?‹.',
     );
   }
 
   void _showToggleToast() {
     UiUtils.showSoftSnackBar(
       context,
-      message: 'سيتم دعم إيقاف/تفعيل الشبكة عبر التطبيق قريباً.',
+      message: '?³?????… ?¯?¹?… ?¥???‚?§??/?????¹???„ ?§?„?´?¨?ƒ?© ?¹?¨?± ?§?„???·?¨???‚ ?‚?±???¨?§?‹.',
     );
   }
 }
@@ -450,16 +414,16 @@ class _StatsTab extends StatelessWidget {
             spacing: 10,
             runSpacing: 10,
             children: [
-              _StatCard(label: 'الخطط', value: stats['plans'] ?? 0),
-              _StatCard(label: 'الدُفعات', value: stats['batches'] ?? 0),
-              _StatCard(label: 'الأكواد الكلية', value: stats['total'] ?? 0),
-              _StatCard(label: 'المتاح', value: stats['available'] ?? 0),
-              _StatCard(label: 'المباع', value: stats['sold'] ?? 0),
+              _StatCard(label: '?§?„?®?·?·', value: stats['plans'] ?? 0),
+              _StatCard(label: '?§?„?¯?????¹?§??', value: stats['batches'] ?? 0),
+              _StatCard(label: '?§?„?£?ƒ?ˆ?§?¯ ?§?„?ƒ?„???©', value: stats['total'] ?? 0),
+              _StatCard(label: '?§?„?…???§?­', value: stats['available'] ?? 0),
+              _StatCard(label: '?§?„?…?¨?§?¹', value: stats['sold'] ?? 0),
             ],
           ),
           const SizedBox(height: 16),
           Text(
-            'الفئات',
+            '?§?„???¦?§??',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                   color: colors.textDefaultColor,
@@ -468,7 +432,7 @@ class _StatsTab extends StatelessWidget {
           const SizedBox(height: 8),
           if (plans.isEmpty)
             Text(
-              'لا توجد فئات بعد.',
+              '?„?§ ???ˆ?¬?¯ ???¦?§?? ?¨?¹?¯.',
               style: Theme.of(context)
                   .textTheme
                   .bodyMedium
@@ -538,7 +502,7 @@ class _CodesTab extends StatelessWidget {
                   controller: searchController,
                   onSubmitted: (value) => onSearch(search: value),
                   decoration: InputDecoration(
-                    hintText: 'بحث عن كود أو عميل',
+                    hintText: '?¨?­?« ?¹?† ?ƒ?ˆ?¯ ?£?ˆ ?¹?…???„',
                     prefixIcon: const Icon(Icons.search),
                     filled: true,
                     fillColor: colors.secondaryColor,
@@ -557,7 +521,7 @@ class _CodesTab extends StatelessWidget {
                 child: DropdownButtonFormField<String>(
                   value: selectedStatus.isEmpty ? '' : selectedStatus,
                   decoration: InputDecoration(
-                    labelText: 'الحالة',
+                    labelText: '?§?„?­?§?„?©',
                     filled: true,
                     fillColor: colors.secondaryColor,
                     border: OutlineInputBorder(
@@ -568,9 +532,9 @@ class _CodesTab extends StatelessWidget {
                     ),
                   ),
                   items: const [
-                    DropdownMenuItem(value: '', child: Text('الكل')),
-                    DropdownMenuItem(value: 'available', child: Text('متاح')),
-                    DropdownMenuItem(value: 'sold', child: Text('مباع')),
+                    DropdownMenuItem(value: '', child: Text('?§?„?ƒ?„')),
+                    DropdownMenuItem(value: 'available', child: Text('?…???§?­')),
+                    DropdownMenuItem(value: 'sold', child: Text('?…?¨?§?¹')),
                   ],
                   onChanged: (value) => onStatusChange(value ?? ''),
                 ),
@@ -582,9 +546,9 @@ class _CodesTab extends StatelessWidget {
             spacing: 10,
             runSpacing: 10,
             children: [
-              _StatCard(label: 'الإجمالي', value: total),
-              _StatCard(label: 'المتاح', value: available),
-              _StatCard(label: 'المباع', value: sold),
+              _StatCard(label: '?§?„?¥?¬?…?§?„??', value: total),
+              _StatCard(label: '?§?„?…???§?­', value: available),
+              _StatCard(label: '?§?„?…?¨?§?¹', value: sold),
             ],
           ),
           const SizedBox(height: 12),
@@ -602,13 +566,13 @@ class _CodesTab extends StatelessWidget {
                 const SizedBox(height: 8),
                 OutlinedButton(
                   onPressed: () => onSearch(),
-                  child: const Text('إعادة المحاولة'),
+                  child: const Text('?¥?¹?§?¯?© ?§?„?…?­?§?ˆ?„?©'),
                 ),
               ],
             )
           else if (codes.isEmpty)
             Text(
-              'لا توجد أكواد بعد.',
+              '?„?§ ???ˆ?¬?¯ ?£?ƒ?ˆ?§?¯ ?¨?¹?¯.',
               style:
                   textTheme.bodyMedium?.copyWith(color: colors.textLightColor),
             )
@@ -624,10 +588,10 @@ class _CodesTab extends StatelessWidget {
                         ? code.codeSuffix!
                         : (code.codeLast4?.isNotEmpty == true
                             ? code.codeLast4!
-                            : '—');
+                            : 'â€”');
                 final String buyer = (code.allocatedUserName ??
                         code.allocatedUserEmail ??
-                        '—')
+                        'â€”')
                     .toString();
                 final String dateLabel = (code.soldAt ??
                         code.deliveredAt ??
@@ -637,7 +601,7 @@ class _CodesTab extends StatelessWidget {
                     .toString()
                     .split('.')
                     .first ??
-                    '—';
+                    'â€”';
                 return Container(
                   margin: const EdgeInsets.only(bottom: 10),
                   padding: const EdgeInsets.all(12),
@@ -657,7 +621,7 @@ class _CodesTab extends StatelessWidget {
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
-                          code.status ?? '—',
+                          code.status ?? 'â€”',
                           style: textTheme.labelSmall?.copyWith(
                             color: statusColor,
                             fontWeight: FontWeight.w700,
@@ -670,7 +634,7 @@ class _CodesTab extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'الكود: $codeLabel',
+                              '?§?„?ƒ?ˆ?¯: $codeLabel',
                               style: textTheme.bodyMedium?.copyWith(
                                 fontWeight: FontWeight.w700,
                                 color: colors.textDefaultColor,
@@ -678,14 +642,14 @@ class _CodesTab extends StatelessWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'المشتري: $buyer',
+                              '?§?„?…?´???±??: $buyer',
                               style: textTheme.bodySmall?.copyWith(
                                 color: colors.textLightColor,
                               ),
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'التاريخ: $dateLabel',
+                              '?§?„???§?±???®: $dateLabel',
                               style: textTheme.bodySmall?.copyWith(
                                 color: colors.textLightColor,
                               ),
@@ -735,9 +699,9 @@ class _PlanRow extends StatelessWidget {
   }
 
   factory _PlanRow.header() => const _PlanRow(
-        name: 'الفئة',
-        price: 'السعر',
-        currency: 'العملة',
+        name: '?§?„???¦?©',
+        price: '?§?„?³?¹?±',
+        currency: '?§?„?¹?…?„?©',
         available: -1,
         total: -1,
       );
@@ -753,9 +717,9 @@ class _PlanRow extends StatelessWidget {
         const TextStyle();
 
     final String availableText =
-        isHeader ? 'المتاح' : available.toString();
+        isHeader ? '?§?„?…???§?­' : available.toString();
     final int soldValue = total - available;
-    final String soldText = isHeader ? 'المباع' : soldValue.clamp(0, total).toString();
+    final String soldText = isHeader ? '?§?„?…?¨?§?¹' : soldValue.clamp(0, total).toString();
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -799,7 +763,7 @@ class _ReportsTab extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Text(
-          'لا توجد بلاغات مسجلة.',
+          '?„?§ ???ˆ?¬?¯ ?¨?„?§???§?? ?…?³?¬?„?©.',
           style: Theme.of(context)
               .textTheme
               .bodyMedium
@@ -829,19 +793,19 @@ class _SettingsTab extends StatelessWidget {
       children: [
         ListTile(
           leading: Icon(Icons.image_rounded, color: colors.territoryColor),
-          title: const Text('تغيير الشعار'),
+          title: const Text('حذف???± ?§?„?´?¹?§?±'),
           onTap: onChangeLogo,
         ),
         ListTile(
           leading: Icon(Icons.login_rounded, color: colors.territoryColor),
-          title: const Text('تغيير صورة تسجيل الدخول'),
+          title: const Text('حذف???± ?µ?ˆ?±?© ???³?¬???„ ?§?„?¯?®?ˆ?„'),
           onTap: onChangeLogin,
         ),
         ListTile(
           leading: Icon(Icons.power_settings_new_rounded,
               color: colors.territoryColor),
-          title: const Text('إيقاف / تفعيل الشبكة'),
-          subtitle: const Text('تغيير حالة الشبكة من داخل التطبيق'),
+          title: const Text('?¥???‚?§?? / ?????¹???„ ?§?„?´?¨?ƒ?©'),
+          subtitle: const Text('حذف???± ?­?§?„?© ?§?„?´?¨?ƒ?© ?…?† ?¯?§?®?„ ?§?„???·?¨???‚'),
           onTap: onToggleStatus,
         ),
       ],
@@ -919,7 +883,7 @@ class _AddPlanSheetState extends State<_AddPlanSheet> {
     if (price == null || duration == null) {
       UiUtils.showSoftSnackBar(
         context,
-        message: '???????? ???? ???????????? ??????????????.',
+        message: 'حذف?? ???? ????لوحة الشبكة??.',
       );
       return;
     }
@@ -943,14 +907,14 @@ class _AddPlanSheetState extends State<_AddPlanSheet> {
         await widget.repository.createPlanBatch(
           planId: plan.id,
           sourceFile: formFile,
-          label: '???????? ??????????',
+          label: 'حذف?? حذف????',
         );
       }
 
       if (!mounted) return;
       UiUtils.showSoftSnackBar(
         context,
-        message: '?????? ?????????? ?????????? ??????????.',
+        message: 'حذف حذف???? حذف???? حذف????.',
       );
       Navigator.of(context).pop(true);
     } catch (error) {
@@ -985,7 +949,7 @@ class _AddPlanSheetState extends State<_AddPlanSheet> {
                 children: [
                   Expanded(
                     child: Text(
-                      '?????????? ?????? ??????????',
+                      'حذف???? حذف حذف????',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w800,
                           ),
@@ -1000,9 +964,9 @@ class _AddPlanSheetState extends State<_AddPlanSheet> {
               const SizedBox(height: 12),
               _TextField(
                 controller: _nameCtrl,
-                label: '?????? ??????????',
+                label: 'حذف حذف????',
                 validator: (value) =>
-                    value == null || value.trim().isEmpty ? '?????? ????????????' : null,
+                    value == null || value.trim().isEmpty ? 'حذف الفئات' : null,
               ),
               const SizedBox(height: 12),
               Row(
@@ -1010,12 +974,12 @@ class _AddPlanSheetState extends State<_AddPlanSheet> {
                   Expanded(
                     child: _TextField(
                       controller: _priceCtrl,
-                      label: '??????????',
+                      label: 'حذف????',
                       keyboardType:
                           const TextInputType.numberWithOptions(decimal: true),
                       validator: (value) =>
                           (value == null || double.tryParse(value) == null)
-                              ? '??????? ???????? ??????????'
+                              ? 'حذف? حذف?? حذف????'
                               : null,
                     ),
                   ),
@@ -1023,10 +987,10 @@ class _AddPlanSheetState extends State<_AddPlanSheet> {
                   Expanded(
                     child: _TextField(
                       controller: _currencyCtrl,
-                      label: '????????????',
+                      label: 'الفئات',
                       validator: (value) =>
                           value == null || value.trim().isEmpty
-                              ? '?????? ????????????'
+                              ? 'حذف الفئات'
                               : null,
                     ),
                   ),
@@ -1035,24 +999,24 @@ class _AddPlanSheetState extends State<_AddPlanSheet> {
               const SizedBox(height: 12),
               _TextField(
                 controller: _durationCtrl,
-                label: '?????? ???????????????? (???????)',
+                label: 'حذف الفئات???? (حذف?)',
                 keyboardType: TextInputType.number,
                 validator: (value) =>
                     (value == null || int.tryParse(value) == null)
-                        ? '??????? ?????? ???????????'
+                        ? 'حذف? حذف حذف?????'
                         : null,
               ),
               const SizedBox(height: 12),
               _TextField(
                 controller: _descriptionCtrl,
-                label: '?????????? (??????????????)',
+                label: 'حذف???? (الفئات??)',
                 maxLines: 3,
               ),
               const SizedBox(height: 12),
               OutlinedButton.icon(
                 onPressed: _pickVoucher,
                 icon: const Icon(Icons.upload_file_rounded),
-                label: Text(_voucherName ?? '?????????? ???????? ????????????'),
+                label: Text(_voucherName ?? 'حذف???? لوحة الشبكة'),
               ),
               const SizedBox(height: 20),
               SizedBox(
@@ -1065,7 +1029,7 @@ class _AddPlanSheetState extends State<_AddPlanSheet> {
                           width: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('?????????? ????????????'),
+                      : const Text('??لوحة الشبكة'),
                 ),
               ),
             ],
@@ -1183,7 +1147,7 @@ class _ErrorPlaceholder extends StatelessWidget {
             const SizedBox(height: 12),
             OutlinedButton(
               onPressed: onRetry,
-              child: const Text('إعادة المحاولة'),
+              child: const Text('?¥?¹?§?¯?© ?§?„?…?­?§?ˆ?„?©'),
             )
           ],
         ),

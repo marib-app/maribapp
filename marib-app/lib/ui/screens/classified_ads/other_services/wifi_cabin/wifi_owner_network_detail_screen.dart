@@ -201,7 +201,7 @@ class _WifiOwnerNetworkDetailScreenState
           backgroundColor: colors.backgroundColor,
           foregroundColor: colors.textDefaultColor,
           elevation: 0,
-          title: const Text('áæÍÉ ÇáÔÈßÉ'),
+          title: const Text('Ù„ÙˆØ­Ø© Ø§Ù„Ø´Ø¨ÙƒØ©'),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () => Navigator.of(context).maybePop(),
@@ -211,11 +211,11 @@ class _WifiOwnerNetworkDetailScreenState
             unselectedLabelColor: colors.textLightColor,
             indicatorColor: colors.territoryColor,
             tabs: const [
-              Tab(text: 'ÇáÅÍÕÇÁÇÊ'),
-              Tab(text: 'ÇáÃßæÇÏ'),
-              Tab(text: 'ÇáİÆÇÊ'),
-              Tab(text: 'ÇáÈáÇÛÇÊ'),
-              Tab(text: 'ÇáÅÚÏÇÏÇÊ'),
+              Tab(text: 'Ø§Ù„Ø¥Ø­ØµØ§Ø¡Ø§Øª'),
+              Tab(text: 'Ø§Ù„Ø£ÙƒÙˆØ§Ø¯'),
+              Tab(text: 'Ø§Ù„ÙØ¦Ø§Øª'),
+              Tab(text: 'Ø§Ù„Ø¨Ù„Ø§ØºØ§Øª'),
+              Tab(text: 'Ø§Ù„Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª'),
             ],
           ),
         ),
@@ -304,7 +304,7 @@ class _WifiOwnerNetworkDetailScreenState
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      network.status ?? 'ÛíÑ ãÍÏÏ',
+                      network.status ?? 'ØºÙŠØ± Ù…Ø­Ø¯Ø¯',
                       style: Theme.of(context)
                           .textTheme
                           .labelMedium
@@ -406,17 +406,17 @@ class _WifiOwnerNetworkDetailScreenState
     final bool? confirmed = await UiUtils.showBlurredDialoge(
       context,
       dialoge: BlurredRichDialog(
-        title: 'ÍĞİ ÇáİÆÉ ÇáãÍÏÏÉ¿',
+        title: 'Ø­Ø°Ù Ø§Ù„ÙØ¦Ø© Ø§Ù„Ù…Ø­Ø¯Ø¯Ø©ØŸ',
         body:
-        'ÓíÊã ÍĞİ ÇáİÆÉ æÌãíÚ ÇáÃßæÇÏ ÇáãÑÊÈØÉ ÈåÇ ÈÔßá äåÇÆí. ÊÃßÏ ãä ÑÛÈÊß İí ÇáãÊÇÈÚÉ.',
+        'Ø³ÙŠØªÙ… Ø­Ø°Ù Ø§Ù„ÙØ¦Ø© ÙˆØ¬Ù…ÙŠØ¹ Ø§Ù„Ø£ÙƒÙˆØ§Ø¯ Ø§Ù„Ù…Ø±ØªØ¨Ø·Ø© Ø¨Ù‡Ø§ Ø¨Ø´ÙƒÙ„ Ù†Ù‡Ø§Ø¦ÙŠ. ØªØ£ÙƒØ¯ Ù…Ù† Ø±ØºØ¨ØªÙƒ ÙÙŠ Ø§Ù„Ù…ØªØ§Ø¨Ø¹Ø©.',
         actions: [
           BlurredAction(
-            label: 'ÅáÛÇÁ',
+            label: 'Ø¥Ù„ØºØ§Ø¡',
             isPrimary: false,
             onPressed: () => Navigator.of(context).maybePop(false),
           ),
           BlurredAction(
-            label: 'ÍĞİ',
+            label: 'Ø­Ø°Ù',
             onPressed: () => Navigator.of(context).maybePop(true),
           ),
         ],
@@ -450,7 +450,7 @@ class _WifiOwnerNetworkDetailScreenState
   void _showToggleToast() {
     UiUtils.showSoftSnackBar(
       context,
-      message: 'ÊÚĞÑ ÊäİíĞ ÊİÚíá/ÅíŞÇİ ÇáÔÈßÉ ãä ÇáÊØÈíŞ ÍÇáíÇğ.',
+      message: 'ØªØ¹Ø°Ø± ØªÙ†ÙÙŠØ° ØªÙØ¹ÙŠÙ„/Ø¥ÙŠÙ‚Ø§Ù Ø§Ù„Ø´Ø¨ÙƒØ© Ù…Ù† Ø§Ù„ØªØ·Ø¨ÙŠÙ‚ Ø­Ø§Ù„ÙŠØ§Ù‹.',
     );
   }
 
@@ -472,8 +472,8 @@ class _WifiOwnerNetworkDetailScreenState
     UiUtils.showSoftSnackBar(
       context,
       message: isLogo
-          ? "Êã ÊÛííÑ ÔÚÇÑ ÇáÔÈßÉ ãÄŞÊÇğ."
-          : "Êã ÊÛííÑ ÕæÑÉ ÔÇÔÉ ÇáÏÎæá ãÄŞÊÇğ.",
+          ? "ØªÙ… ØªØºÙŠÙŠØ± Ø´Ø¹Ø§Ø± Ø§Ù„Ø´Ø¨ÙƒØ© Ù…Ø¤Ù‚ØªØ§Ù‹."
+          : "ØªÙ… ØªØºÙŠÙŠØ± ØµÙˆØ±Ø© Ø´Ø§Ø´Ø© Ø§Ù„Ø¯Ø®ÙˆÙ„ Ù…Ø¤Ù‚ØªØ§Ù‹.",
     );
   }
 }
@@ -496,16 +496,16 @@ class _StatsTab extends StatelessWidget {
             spacing: 10,
             runSpacing: 10,
             children: [
-              _StatCard(label: 'ÇáİÆÇÊ', value: stats['plans'] ?? 0),
-              _StatCard(label: 'ÇáÏİÚÇÊ', value: stats['batches'] ?? 0),
-              _StatCard(label: 'ÅÌãÇáí ÇáÃßæÇÏ', value: stats['total'] ?? 0),
-              _StatCard(label: 'ÇáãÊÇÍÉ', value: stats['available'] ?? 0),
-              _StatCard(label: 'ÇáãÈÇÚÉ', value: stats['sold'] ?? 0),
+              _StatCard(label: 'Ø§Ù„ÙØ¦Ø§Øª', value: stats['plans'] ?? 0),
+              _StatCard(label: 'Ø§Ù„Ø¯ÙØ¹Ø§Øª', value: stats['batches'] ?? 0),
+              _StatCard(label: 'Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ø£ÙƒÙˆØ§Ø¯', value: stats['total'] ?? 0),
+              _StatCard(label: 'Ø§Ù„Ù…ØªØ§Ø­Ø©', value: stats['available'] ?? 0),
+              _StatCard(label: 'Ø§Ù„Ù…Ø¨Ø§Ø¹Ø©', value: stats['sold'] ?? 0),
             ],
           ),
           const SizedBox(height: 16),
           Text(
-            'ÇáİÆÇÊ æÇáÎØØ',
+            'Ø§Ù„ÙØ¦Ø§Øª ÙˆØ§Ù„Ø®Ø·Ø·',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w700,
               color: colors.textDefaultColor,
@@ -514,7 +514,7 @@ class _StatsTab extends StatelessWidget {
           const SizedBox(height: 8),
           if (plans.isEmpty)
             Text(
-              'áÇ ÊæÌÏ İÆÇÊ ãÖÇİÉ ÍÇáíÇğ.',
+              'Ù„Ø§ ØªÙˆØ¬Ø¯ ÙØ¦Ø§Øª Ù…Ø¶Ø§ÙØ© Ø­Ø§Ù„ÙŠØ§Ù‹.',
               style: Theme.of(context)
                   .textTheme
                   .bodyMedium
@@ -584,7 +584,7 @@ class _CodesTab extends StatelessWidget {
                   controller: searchController,
                   onSubmitted: (value) => onSearch(search: value),
                   decoration: InputDecoration(
-                    hintText: 'ÇÈÍË ÈÑŞã ÇáßÑÊ Ãæ ÇÓã ÇáãÔÊÑí',
+                    hintText: 'Ø§Ø¨Ø­Ø« Ø¨Ø±Ù‚Ù… Ø§Ù„ÙƒØ±Øª Ø£Ùˆ Ø§Ø³Ù… Ø§Ù„Ù…Ø´ØªØ±ÙŠ',
                     prefixIcon: const Icon(Icons.search),
                     filled: true,
                     fillColor: colors.secondaryColor,
@@ -603,7 +603,7 @@ class _CodesTab extends StatelessWidget {
                 child: DropdownButtonFormField<String>(
                   value: selectedStatus.isEmpty ? '' : selectedStatus,
                   decoration: InputDecoration(
-                    labelText: 'ÇáÍÇáÉ',
+                    labelText: 'Ø§Ù„Ø­Ø§Ù„Ø©',
                     filled: true,
                     fillColor: colors.secondaryColor,
                     border: OutlineInputBorder(
@@ -614,9 +614,9 @@ class _CodesTab extends StatelessWidget {
                     ),
                   ),
                   items: const [
-                    DropdownMenuItem(value: '', child: Text('Çáßá')),
-                    DropdownMenuItem(value: 'available', child: Text('ÇáãÊÇÍÉ')),
-                    DropdownMenuItem(value: 'sold', child: Text('ÇáãÈÇÚÉ')),
+                    DropdownMenuItem(value: '', child: Text('Ø§Ù„ÙƒÙ„')),
+                    DropdownMenuItem(value: 'available', child: Text('Ø§Ù„Ù…ØªØ§Ø­Ø©')),
+                    DropdownMenuItem(value: 'sold', child: Text('Ø§Ù„Ù…Ø¨Ø§Ø¹Ø©')),
                   ],
                   onChanged: (value) => onStatusChange(value ?? ''),
                 ),
@@ -628,9 +628,9 @@ class _CodesTab extends StatelessWidget {
             spacing: 10,
             runSpacing: 10,
             children: [
-              _StatCard(label: 'ÅÌãÇáí ÇáÃßæÇÏ', value: total),
-              _StatCard(label: 'ÇáãÊÇÍÉ', value: available),
-              _StatCard(label: 'ÇáãÈÇÚÉ', value: sold),
+              _StatCard(label: 'Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ø£ÙƒÙˆØ§Ø¯', value: total),
+              _StatCard(label: 'Ø§Ù„Ù…ØªØ§Ø­Ø©', value: available),
+              _StatCard(label: 'Ø§Ù„Ù…Ø¨Ø§Ø¹Ø©', value: sold),
             ],
           ),
           const SizedBox(height: 12),
@@ -648,13 +648,13 @@ class _CodesTab extends StatelessWidget {
                 const SizedBox(height: 8),
                 OutlinedButton(
                   onPressed: () => onSearch(),
-                  child: const Text('ÅÚÇÏÉ ÇáãÍÇæáÉ'),
+                  child: const Text('Ø¥Ø¹Ø§Ø¯Ø© Ø§Ù„Ù…Ø­Ø§ÙˆÙ„Ø©'),
                 ),
               ],
             )
           else if (codes.isEmpty)
               Text(
-                'áÇ ÊæÌÏ ÃßæÇÏ ãÊÇÍÉ ÍÇáíÇğ.',
+                'Ù„Ø§ ØªÙˆØ¬Ø¯ Ø£ÙƒÙˆØ§Ø¯ Ù…ØªØ§Ø­Ø© Ø­Ø§Ù„ÙŠØ§Ù‹.',
                 style:
                 textTheme.bodyMedium?.copyWith(color: colors.textLightColor),
               )
@@ -670,10 +670,10 @@ class _CodesTab extends StatelessWidget {
                       ? code.codeSuffix!
                       : (code.codeLast4?.isNotEmpty == true
                       ? code.codeLast4!
-                      : 'ÛíÑ ãÊæİÑ');
+                      : 'ØºÙŠØ± Ù…ØªÙˆÙØ±');
                   final String buyer = (code.allocatedUserName ??
                       code.allocatedUserEmail ??
-                      'ÛíÑ ãÍÏÏ')
+                      'ØºÙŠØ± Ù…Ø­Ø¯Ø¯')
                       .toString();
                   final String dateLabel = (code.soldAt ??
                       code.deliveredAt ??
@@ -683,7 +683,7 @@ class _CodesTab extends StatelessWidget {
                       .toString()
                       .split('.')
                       .first ??
-                      'ÛíÑ ãÊæİÑ';
+                      'ØºÙŠØ± Ù…ØªÙˆÙØ±';
                   return Container(
                     margin: const EdgeInsets.only(bottom: 10),
                     padding: const EdgeInsets.all(12),
@@ -702,7 +702,7 @@ class _CodesTab extends StatelessWidget {
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
-                            code.status ?? 'ÛíÑ ãÍÏÏ',
+                            code.status ?? 'ØºÙŠØ± Ù…Ø­Ø¯Ø¯',
                             style: textTheme.labelSmall?.copyWith(
                               color: statusColor,
                               fontWeight: FontWeight.w700,
@@ -715,7 +715,7 @@ class _CodesTab extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'ÑãÒ ÇáßÑÊ: $codeLabel',
+                                'Ø±Ù…Ø² Ø§Ù„ÙƒØ±Øª: $codeLabel',
                                 style: textTheme.bodyMedium?.copyWith(
                                   fontWeight: FontWeight.w700,
                                   color: colors.textDefaultColor,
@@ -723,14 +723,14 @@ class _CodesTab extends StatelessWidget {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                'ÇáãÔÊÑí: $buyer',
+                                'Ø§Ù„Ù…Ø´ØªØ±ÙŠ: $buyer',
                                 style: textTheme.bodySmall?.copyWith(
                                   color: colors.textLightColor,
                                 ),
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                'ÇáÊÇÑíÎ: $dateLabel',
+                                'Ø§Ù„ØªØ§Ø±ÙŠØ®: $dateLabel',
                                 style: textTheme.bodySmall?.copyWith(
                                   color: colors.textLightColor,
                                 ),
@@ -780,9 +780,9 @@ class _PlanRow extends StatelessWidget {
   }
 
   factory _PlanRow.header() => const _PlanRow(
-    name: 'ÇáİÆÉ',
-    price: 'ÇáÓÚÑ',
-    currency: 'ÇáÚãáÉ',
+    name: 'Ø§Ù„ÙØ¦Ø©',
+    price: 'Ø§Ù„Ø³Ø¹Ø±',
+    currency: 'Ø§Ù„Ø¹Ù…Ù„Ø©',
     available: -1,
     total: -1,
   );
@@ -799,10 +799,10 @@ class _PlanRow extends StatelessWidget {
             const TextStyle();
 
     final String availableText =
-    isHeader ? 'ÇáãÊÇÍÉ' : available.toString();
+    isHeader ? 'Ø§Ù„Ù…ØªØ§Ø­Ø©' : available.toString();
     final int soldValue = total - available;
     final String soldText =
-    isHeader ? 'ÇáãÈÇÚÉ' : soldValue.clamp(0, total).toString();
+    isHeader ? 'Ø§Ù„Ù…Ø¨Ø§Ø¹Ø©' : soldValue.clamp(0, total).toString();
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -846,7 +846,7 @@ class _ReportsTab extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Text(
-          'áÇ ÊæÌÏ ÈáÇÛÇÊ ãÊÇÍÉ ÍÇáíÇğ.',
+          'Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¨Ù„Ø§ØºØ§Øª Ù…ØªØ§Ø­Ø© Ø­Ø§Ù„ÙŠØ§Ù‹.',
           style: Theme.of(context)
               .textTheme
               .bodyMedium
@@ -881,16 +881,16 @@ class _SettingsTab extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       children: [
         _ImageSettingTile(
-          title: 'ÔÚÇÑ ÇáÔÈßÉ',
-          actionText: 'ÇäŞÑ ááÊÛííÑ',
+          title: 'Ø´Ø¹Ø§Ø± Ø§Ù„Ø´Ø¨ÙƒØ©',
+          actionText: 'Ø§Ù†Ù‚Ø± Ù„Ù„ØªØºÙŠÙŠØ±',
           imageUrl: logoUrl,
           placeholderIcon: Icons.image_rounded,
           onTap: onChangeLogo,
         ),
         const SizedBox(height: 12),
         _ImageSettingTile(
-          title: 'ÕæÑÉ ÔÇÔÉ ÇáÏÎæá',
-          actionText: 'ÇäŞÑ ááÊÛííÑ',
+          title: 'ØµÙˆØ±Ø© Ø´Ø§Ø´Ø© Ø§Ù„Ø¯Ø®ÙˆÙ„',
+          actionText: 'Ø§Ù†Ù‚Ø± Ù„Ù„ØªØºÙŠÙŠØ±',
           imageUrl: loginShot,
           placeholderIcon: Icons.login_rounded,
           onTap: onChangeLogin,
@@ -899,8 +899,8 @@ class _SettingsTab extends StatelessWidget {
         ListTile(
           leading: Icon(Icons.power_settings_new_rounded,
               color: colors.territoryColor),
-          title: const Text('ÊİÚíá/ÅíŞÇİ ÇáÔÈßÉ'),
-          subtitle: const Text('ÅÏÇÑÉ ÍÇáÉ ÙåæÑ ÇáÔÈßÉ ááãÓÊÎÏãíä'),
+          title: const Text('ØªÙØ¹ÙŠÙ„/Ø¥ÙŠÙ‚Ø§Ù Ø§Ù„Ø´Ø¨ÙƒØ©'),
+          subtitle: const Text('Ø¥Ø¯Ø§Ø±Ø© Ø­Ø§Ù„Ø© Ø¸Ù‡ÙˆØ± Ø§Ù„Ø´Ø¨ÙƒØ© Ù„Ù„Ù…Ø³ØªØ®Ø¯Ù…ÙŠÙ†'),
           onTap: onToggleStatus,
         ),
       ],
@@ -996,7 +996,7 @@ class _ImageSettingTile extends StatelessWidget {
     return imageWidget;
   }
 
-  Widget _placeholderIcon(ColorSchemeExt colorScheme) {
+  Widget _placeholderIcon(ColorScheme colorScheme) {
     return Container(
       width: 64,
       height: 64,
@@ -1080,7 +1080,7 @@ class _AddPlanSheetState extends State<_AddPlanSheet> {
     if (price == null || duration == null) {
       UiUtils.showSoftSnackBar(
         context,
-        message: 'íÑÌì ÅÏÎÇá ÓÚÑ æãÏÉ ÕÇáÍÉ.',
+        message: 'ÙŠØ±Ø¬Ù‰ Ø¥Ø¯Ø®Ø§Ù„ Ø³Ø¹Ø± ÙˆÙ…Ø¯Ø© ØµØ§Ù„Ø­Ø©.',
       );
       return;
     }
@@ -1104,14 +1104,14 @@ class _AddPlanSheetState extends State<_AddPlanSheet> {
         await widget.repository.createPlanBatch(
           planId: plan.id,
           sourceFile: formFile,
-          label: 'ÏİÚÉ ÃßæÇÏ ÌÏíÏÉ',
+          label: 'Ø¯ÙØ¹Ø© Ø£ÙƒÙˆØ§Ø¯ Ø¬Ø¯ÙŠØ¯Ø©',
         );
       }
 
       if (!mounted) return;
       UiUtils.showSoftSnackBar(
         context,
-        message: 'Êã ÅÖÇİÉ ÇáİÆÉ ÈäÌÇÍ.',
+        message: 'ØªÙ… Ø¥Ø¶Ø§ÙØ© Ø§Ù„ÙØ¦Ø© Ø¨Ù†Ø¬Ø§Ø­.',
       );
       Navigator.of(context).pop(true);
     } catch (error) {
@@ -1146,7 +1146,7 @@ class _AddPlanSheetState extends State<_AddPlanSheet> {
                 children: [
                   Expanded(
                     child: Text(
-                      'ÅÖÇİÉ İÆÉ ÌÏíÏÉ',
+                      'Ø¥Ø¶Ø§ÙØ© ÙØ¦Ø© Ø¬Ø¯ÙŠØ¯Ø©',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w800,
                       ),
@@ -1161,9 +1161,9 @@ class _AddPlanSheetState extends State<_AddPlanSheet> {
               const SizedBox(height: 12),
               _TextField(
                 controller: _nameCtrl,
-                label: 'ÇÓã ÇáİÆÉ',
+                label: 'Ø§Ø³Ù… Ø§Ù„ÙØ¦Ø©',
                 validator: (value) =>
-                value == null || value.trim().isEmpty ? 'åĞÇ ÇáÍŞá ãØáæÈ' : null,
+                value == null || value.trim().isEmpty ? 'Ù‡Ø°Ø§ Ø§Ù„Ø­Ù‚Ù„ Ù…Ø·Ù„ÙˆØ¨' : null,
               ),
               const SizedBox(height: 12),
               Row(
@@ -1171,12 +1171,12 @@ class _AddPlanSheetState extends State<_AddPlanSheet> {
                   Expanded(
                     child: _TextField(
                       controller: _priceCtrl,
-                      label: 'ÇáÓÚÑ',
+                      label: 'Ø§Ù„Ø³Ø¹Ø±',
                       keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                       validator: (value) =>
                       (value == null || double.tryParse(value) == null)
-                          ? 'ÃÏÎá ÓÚÑğÇ ÕÇáÍğÇ'
+                          ? 'Ø£Ø¯Ø®Ù„ Ø³Ø¹Ø±Ù‹Ø§ ØµØ§Ù„Ø­Ù‹Ø§'
                           : null,
                     ),
                   ),
@@ -1184,10 +1184,10 @@ class _AddPlanSheetState extends State<_AddPlanSheet> {
                   Expanded(
                     child: _TextField(
                       controller: _currencyCtrl,
-                      label: 'ÇáÚãáÉ',
+                      label: 'Ø§Ù„Ø¹Ù…Ù„Ø©',
                       validator: (value) =>
                       value == null || value.trim().isEmpty
-                          ? 'åĞÇ ÇáÍŞá ãØáæÈ'
+                          ? 'Ù‡Ø°Ø§ Ø§Ù„Ø­Ù‚Ù„ Ù…Ø·Ù„ÙˆØ¨'
                           : null,
                     ),
                   ),
@@ -1196,24 +1196,24 @@ class _AddPlanSheetState extends State<_AddPlanSheet> {
               const SizedBox(height: 12),
               _TextField(
                 controller: _durationCtrl,
-                label: 'ãÏÉ ÇáÕáÇÍíÉ (ÃíÇã)',
+                label: 'Ù…Ø¯Ø© Ø§Ù„ØµÙ„Ø§Ø­ÙŠØ© (Ø£ÙŠØ§Ù…)',
                 keyboardType: TextInputType.number,
                 validator: (value) =>
                 (value == null || int.tryParse(value) == null)
-                    ? 'ÃÏÎá ãÏÉ ÕÇáÍÉ'
+                    ? 'Ø£Ø¯Ø®Ù„ Ù…Ø¯Ø© ØµØ§Ù„Ø­Ø©'
                     : null,
               ),
               const SizedBox(height: 12),
               _TextField(
                 controller: _descriptionCtrl,
-                label: 'ÇáæÕİ (ÇÎÊíÇÑí)',
+                label: 'Ø§Ù„ÙˆØµÙ (Ø§Ø®ØªÙŠØ§Ø±ÙŠ)',
                 maxLines: 3,
               ),
               const SizedBox(height: 12),
               OutlinedButton.icon(
                 onPressed: _pickVoucher,
                 icon: const Icon(Icons.upload_file_rounded),
-                label: Text(_voucherName ?? 'ÑİÚ ãáİ ÇáÃßæÇÏ (ÇÎÊíÇÑí)'),
+                label: Text(_voucherName ?? 'Ø±ÙØ¹ Ù…Ù„Ù Ø§Ù„Ø£ÙƒÙˆØ§Ø¯ (Ø§Ø®ØªÙŠØ§Ø±ÙŠ)'),
               ),
               const SizedBox(height: 20),
               SizedBox(
@@ -1226,7 +1226,7 @@ class _AddPlanSheetState extends State<_AddPlanSheet> {
                     width: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                      : const Text('ÅÖÇİÉ ÇáİÆÉ'),
+                      : const Text('Ø¥Ø¶Ø§ÙØ© Ø§Ù„ÙØ¦Ø©'),
                 ),
               ),
             ],
@@ -1344,7 +1344,7 @@ class _ErrorPlaceholder extends StatelessWidget {
             const SizedBox(height: 12),
             OutlinedButton(
               onPressed: onRetry,
-              child: const Text('ÅÚÇÏÉ ÇáãÍÇæáÉ'),
+              child: const Text('Ø¥Ø¹Ø§Ø¯Ø© Ø§Ù„Ù…Ø­Ø§ÙˆÙ„Ø©'),
             )
           ],
         ),

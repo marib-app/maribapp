@@ -495,189 +495,195 @@ class _Phase1ActivityInfoState extends State<Phase1ActivityInfo>
       return _buildLoadingSkeleton(context);
     }
 
-    return MediaQuery.removeViewInsets(
-      context: context,
-      removeBottom: true,
+    final mq = MediaQuery.of(context);
+    return MediaQuery(
+      data: mq.copyWith(viewInsets: EdgeInsets.zero),
       child: Scaffold(
         resizeToAvoidBottomInset: false,
-        body: SafeArea(
-          bottom: false,
-          child: Form(
-            key: _formKey,
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 160),
-              physics: const ClampingScrollPhysics(),
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              children: [
-                _buildSectionHeader(
-                  context,
-                  title: "معلومات نشاط المتجر",
-                  subtitle:
-                      "املأ البيانات الأساسية ليظهر متجرك بشكل احترافي للمستخدمين.",
-                ),
-                const SizedBox(height: 24),
-                TextFormField(
-                  controller: _storeNameCtrl,
-                  decoration: InputDecoration(
-                    labelText: "storeName".translate(context),
-                    hintText: "storeNameHint".translate(context),
-                    helperText: "سيظهر هذا الاسم للعملاء في واجهة المتجر.",
-                    fillColor: context.color.secondaryColor,
-                    filled: true,
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14)),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return "requiredField".translate(context);
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 20),
-                Row(
+        body: Stack(
+          children: [
+            SafeArea(
+              bottom: false,
+              child: Form(
+                key: _formKey,
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 240),
+                  physics: const ClampingScrollPhysics(),
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
                   children: [
-                    Expanded(flex: 2, child: _buildCoverPicker(context)),
-                    const SizedBox(width: 12),
-                    Expanded(flex: 1, child: _buildLogoPicker(context)),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                TextFormField(
-                  controller: _descriptionCtrl,
-                  minLines: 3,
-                  maxLines: 5,
-                  textInputAction: TextInputAction.newline,
-                  decoration: InputDecoration(
-                    labelText: "storeDescription".translate(context),
-                    hintText: "brieflyDescribeYourStore".translate(context),
-                    helperText: "صف نشاط متجرك باختصار.",
-                    fillColor: context.color.secondaryColor,
-                    filled: true,
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14)),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return "requiredField".translate(context);
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 24),
-                _buildLocationNotice(context),
-                const SizedBox(height: 16),
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 250),
-                  child: _hasLocation
-                      ? Container(
-                          key: const ValueKey('location_summary'),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: context.color.primaryColor.withOpacity(0.05),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: context.color.borderColor),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "الموقع المختار",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  color: context.color.textColorDark,
-                                ),
+                    _buildSectionHeader(
+                      context,
+                      title: "معلومات نشاط المتجر",
+                      subtitle:
+                          "املأ البيانات الأساسية ليظهر متجرك بشكل احترافي للمستخدمين.",
+                    ),
+                    const SizedBox(height: 24),
+                    TextFormField(
+                      controller: _storeNameCtrl,
+                      decoration: InputDecoration(
+                        labelText: "storeName".translate(context),
+                        hintText: "storeNameHint".translate(context),
+                        helperText: "سيظهر هذا الاسم للعملاء في واجهة المتجر.",
+                        fillColor: context.color.secondaryColor,
+                        filled: true,
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14)),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return "requiredField".translate(context);
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        Expanded(flex: 2, child: _buildCoverPicker(context)),
+                        const SizedBox(width: 12),
+                        Expanded(flex: 1, child: _buildLogoPicker(context)),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    TextFormField(
+                      controller: _descriptionCtrl,
+                      minLines: 3,
+                      maxLines: 5,
+                      textInputAction: TextInputAction.newline,
+                      decoration: InputDecoration(
+                        labelText: "storeDescription".translate(context),
+                        hintText: "brieflyDescribeYourStore".translate(context),
+                        helperText: "صف نشاط متجرك باختصار.",
+                        fillColor: context.color.secondaryColor,
+                        filled: true,
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14)),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return "requiredField".translate(context);
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                    _buildLocationNotice(context),
+                    const SizedBox(height: 16),
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 250),
+                      child: _hasLocation
+                          ? Container(
+                              key: const ValueKey('location_summary'),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color:
+                                    context.color.primaryColor.withOpacity(0.05),
+                                borderRadius: BorderRadius.circular(12),
+                                border:
+                                    Border.all(color: context.color.borderColor),
                               ),
-                              const SizedBox(height: 4),
-                              if (_pickedAddress != null &&
-                                  _pickedAddress!.isNotEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.only(bottom: 4),
-                                  child: Text(
-                                    _pickedAddress!,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "الموقع المختار",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      color: context.color.textColorDark,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  if (_pickedAddress != null &&
+                                      _pickedAddress!.isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(bottom: 4),
+                                      child: Text(
+                                        _pickedAddress!,
+                                        style: TextStyle(
+                                          fontSize: context.font.normal,
+                                          color: context.color.textColorDark
+                                              .withOpacity(0.9),
+                                          height: 1.3,
+                                        ),
+                                      ),
+                                    ),
+                                  Text(
+                                    "${_latitude?.toStringAsFixed(5)}, ${_longitude?.toStringAsFixed(5)}",
                                     style: TextStyle(
                                       fontSize: context.font.normal,
                                       color: context.color.textColorDark
-                                          .withOpacity(0.9),
-                                      height: 1.3,
+                                          .withOpacity(0.7),
                                     ),
                                   ),
-                                ),
-                              Text(
-                                "${_latitude?.toStringAsFixed(5)}, ${_longitude?.toStringAsFixed(5)}",
-                                style: TextStyle(
-                                  fontSize: context.font.normal,
-                                  color: context.color.textColorDark
-                                      .withOpacity(0.7),
-                                ),
+                                ],
                               ),
-                            ],
-                          ),
-                        )
-                      : const SizedBox.shrink(),
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _addressCtrl,
-                  minLines: 2,
-                  maxLines: 3,
-                  decoration: InputDecoration(
-                    labelText: "storeAddress".translate(context),
-                    hintText: "تفاصيل إضافية (اختياري)",
-                    helperText: "أضف تفاصيل العنوان يدوياً إن أردت.",
-                    fillColor: context.color.secondaryColor,
-                    filled: true,
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14)),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton.icon(
-                  onPressed: _locationLoading ? null : _openLocationPicker,
-                  icon: _locationLoading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Icon(Icons.map_outlined,
-                          color: context.color.textDefaultColor),
-                  label: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: Text(
-                      "تحديد موقع المتجر على الخريطة",
-                      style: TextStyle(
-                        color: context.color.textDefaultColor,
-                        fontWeight: FontWeight.w600,
+                            )
+                          : const SizedBox.shrink(),
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _addressCtrl,
+                      minLines: 2,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        labelText: "storeAddress".translate(context),
+                        hintText: "تفاصيل إضافية (اختياري)",
+                        helperText: "أضف تفاصيل العنوان يدوياً إن أردت.",
+                        fillColor: context.color.secondaryColor,
+                        filled: true,
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14)),
                       ),
                     ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: context.color.territoryColor,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14)),
-                  ),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: _locationLoading ? null : _openLocationPicker,
+                      icon: _locationLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Icon(Icons.map_outlined,
+                              color: context.color.textDefaultColor),
+                      label: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Text(
+                          "تحديد موقع المتجر على الخريطة",
+                          style: TextStyle(
+                            color: context.color.textDefaultColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: context.color.territoryColor,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14)),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
-        ),
-        bottomNavigationBar: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-            child: UiUtils.buildButton(
-              context,
-              onPressed: _onNext,
-              buttonTitle: "nextStage".translate(context),
-              radius: 16,
-              height: 50,
-              disabled: !_canProceed,
-              isInProgress: _submitting,
-              autoManageState: false,
-              autoDisableWhenInvalid: false,
+            Positioned(
+              left: 20,
+              right: 20,
+              bottom: MediaQuery.of(context).viewPadding.bottom + 12,
+              child: UiUtils.buildButton(
+                context,
+                onPressed: _onNext,
+                buttonTitle: "nextStage".translate(context),
+                radius: 16,
+                height: 50,
+                disabled: !_canProceed,
+                isInProgress: _submitting,
+                autoManageState: false,
+                autoDisableWhenInvalid: false,
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );

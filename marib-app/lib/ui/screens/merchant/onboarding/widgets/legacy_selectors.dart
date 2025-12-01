@@ -1,4 +1,4 @@
-import 'dart:ui';
+﻿import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -7,6 +7,8 @@ import 'package:marib/data/model/category_model.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/helper_utils.dart';
+import 'package:marib/ui/theme/theme.dart';
+import 'package:marib/utils/extensions/extensions.dart';
 
 class LegacyDayHours {
   bool enabled;
@@ -31,7 +33,7 @@ Future<Set<int>?> showLegacyCategoriesPalette({
   if (valid.isEmpty) {
     HelperUtils.showSnackBarMessage(
       context,
-      'لا توجد أقسام متاحة حالياً.',
+      'ظ„ط§ طھظˆط¬ط¯ ط£ظ‚ط³ط§ظ… ظ…طھط§ط­ط© ط­ط§ظ„ظٹط§ظ‹.',
     );
     return Future.value(null);
   }
@@ -159,7 +161,7 @@ class _LegacyCategoriesPaletteSheetState
                                   ),
                                   child: Center(
                                     child: Text(
-                                      'حدد نوع نشاطك التجاري',
+                                      'ط­ط¯ط¯ ظ†ظˆط¹ ظ†ط´ط§ط·ظƒ ط§ظ„طھط¬ط§ط±ظٹ',
                                       textAlign: TextAlign.center,
                                       style: TextStyle(
                                         fontSize: context.font.large,
@@ -193,7 +195,7 @@ class _LegacyCategoriesPaletteSheetState
                                   ),
                                 ),
                                 child: Text(
-                                  'ملاحظة: اختر الأقسام التي تمثل نشاط متجرك ليتم تفعيل واجهات النشر المناسبة لها.',
+                                  'ظ…ظ„ط§ط­ط¸ط©: ط§ط®طھط± ط§ظ„ط£ظ‚ط³ط§ظ… ط§ظ„طھظٹ طھظ…ط«ظ„ ظ†ط´ط§ط· ظ…طھط¬ط±ظƒ ظ„ظٹطھظ… طھظپط¹ظٹظ„ ظˆط§ط¬ظ‡ط§طھ ط§ظ„ظ†ط´ط± ط§ظ„ظ…ظ†ط§ط³ط¨ط© ظ„ظ‡ط§.',
                                   style: TextStyle(
                                     fontSize: context.font.small,
                                     color: colors.textDefaultColor,
@@ -277,7 +279,7 @@ class _LegacyCategoriesPaletteSheetState
                                           .pop(_localSelected),
                                       icon: const Icon(Icons.check_rounded),
                                       label: Text(
-                                        'تم • ${_localSelected.length}',
+                                        'طھظ… â€¢ ${_localSelected.length}',
                                       ),
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: colors.territoryColor,
@@ -307,7 +309,7 @@ class _LegacyCategoriesPaletteSheetState
                             color:
                                 colors.textDefaultColor.withValues(alpha: 0.85),
                             splashRadius: 22,
-                            tooltip: 'إغلاق',
+                            tooltip: 'ط¥ط؛ظ„ط§ظ‚',
                           ),
                         ),
                       ],
@@ -483,20 +485,41 @@ Future<Map<int, LegacyDayHours>?> showLegacyWorkingHoursSheet({
                 }
               }
 
-              return Column(
-                children: [
-                  const SizedBox(height: 12),
-                  Container(
-                    width: 42,
-                    height: 4,
+              return Theme(
+                data: Theme.of(context).copyWith(
+                  outlinedButtonTheme: OutlinedButtonThemeData(
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: colors.secondaryColor,
+                      foregroundColor: colors.textColorDark,
+                      side: BorderSide(color: colors.territoryColor),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  elevatedButtonTheme: ElevatedButtonThemeData(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: colors.territoryColor,
+                      foregroundColor: colors.textDefaultColor,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 12),
+                    Container(
+                      width: 42,
+                      height: 4,
                     decoration: BoxDecoration(
-                      color: Theme.of(context).dividerColor,
+                      color: Theme.of(context).dividerColor.withOpacity(0.8),
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'ضبط ساعات العمل',
+                    'ط¶ط¨ط· ط³ط§ط¹ط§طھ ط§ظ„ط¹ظ…ظ„',
                     style: TextStyle(
                       fontSize: context.font.large,
                       fontWeight: FontWeight.w700,
@@ -579,7 +602,7 @@ Future<Map<int, LegacyDayHours>?> showLegacyWorkingHoursSheet({
                                     entry.value.to == null)) {
                               HelperUtils.showSnackBarMessage(
                                 context,
-                                'يرجى تحديد ساعات يوم ${_weekdays[entry.key]}',
+                                'ظٹط±ط¬ظ‰ طھط­ط¯ظٹط¯ ط³ط§ط¹ط§طھ ظٹظˆظ… ${_weekdays[entry.key]}',
                                 messageDuration: 3,
                               );
                               return;
@@ -587,7 +610,7 @@ Future<Map<int, LegacyDayHours>?> showLegacyWorkingHoursSheet({
                           }
                           Navigator.pop(context, data);
                         },
-                        child: const Text('حفظ'),
+                        child: const Text('ط­ظپط¸'),
                       ),
                     ),
                   ),
@@ -602,13 +625,13 @@ Future<Map<int, LegacyDayHours>?> showLegacyWorkingHoursSheet({
 }
 
 final List<String> _weekdays = const [
-  'السبت',
-  'الأحد',
-  'الاثنين',
-  'الثلاثاء',
-  'الأربعاء',
-  'الخميس',
-  'الجمعة',
+  'ط§ظ„ط³ط¨طھ',
+  'ط§ظ„ط£ط­ط¯',
+  'ط§ظ„ط§ط«ظ†ظٹظ†',
+  'ط§ظ„ط«ظ„ط§ط«ط§ط،',
+  'ط§ظ„ط£ط±ط¨ط¹ط§ط،',
+  'ط§ظ„ط®ظ…ظٹط³',
+  'ط§ظ„ط¬ظ…ط¹ط©',
 ];
 
 Future<TimeOfDay?> _pickTime(
@@ -620,12 +643,202 @@ Future<TimeOfDay?> _pickTime(
   return showTimePicker(
     context: context,
     initialTime: initial ?? now,
-    helpText: isOpening ? 'وقت البداية' : 'وقت النهاية',
-    cancelText: 'إلغاء',
-    confirmText: 'تأكيد',
+    helpText: isOpening ? 'ظˆظ‚طھ ط§ظ„ط¨ط¯ط§ظٹط©' : 'ظˆظ‚طھ ط§ظ„ظ†ظ‡ط§ظٹط©',
+    cancelText: 'ط¥ظ„ط؛ط§ط،',
+    confirmText: 'طھط£ظƒظٹط¯',
     builder: (context, child) => Directionality(
       textDirection: TextDirection.rtl,
       child: child ?? const SizedBox.shrink(),
     ),
   );
 }
+
+Future<Map<int, LegacyDayHours>?> showLegacyWorkingHoursSheet({
+  required BuildContext context,
+  required Map<int, LegacyDayHours> initialDays,
+}) {
+  final Map<int, LegacyDayHours> data = {
+    for (final entry in initialDays.entries) entry.key: entry.value.copy(),
+  };
+
+  TimeOfDay? defaultFrom;
+  TimeOfDay? defaultTo;
+
+  return showModalBottomSheet<Map<int, LegacyDayHours>>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (_) {
+      return FractionallySizedBox(
+        heightFactor: 0.85,
+        child: SafeArea(
+          top: false,
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              final colors = context.color;
+
+              Future<void> pickDayTime(int index, bool isFrom) async {
+                final TimeOfDay? current =
+                    isFrom ? data[index]!.from : data[index]!.to;
+                final TimeOfDay? picked = await _pickTime(
+                  context,
+                  current ?? (isFrom ? defaultFrom : defaultTo),
+                  isOpening: isFrom,
+                );
+                if (picked != null) {
+                  setState(() {
+                    if (isFrom) {
+                      data[index]!.from = picked;
+                      defaultFrom ??= picked;
+                    } else {
+                      data[index]!.to = picked;
+                      defaultTo ??= picked;
+                    }
+                  });
+                }
+              }
+
+              return Theme(
+                data: Theme.of(context).copyWith(
+                  outlinedButtonTheme: OutlinedButtonThemeData(
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: colors.secondaryColor,
+                      foregroundColor: colors.textColorDark,
+                      side: BorderSide(color: colors.territoryColor),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  filledButtonTheme: FilledButtonThemeData(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: colors.territoryColor,
+                      foregroundColor: colors.textDefaultColor,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
+                    ),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 12),
+                    Container(
+                      width: 42,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: colors.borderColor,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'تنظيم أوقات العمل',
+                      style: TextStyle(
+                        fontSize: context.font.large,
+                        fontWeight: FontWeight.w700,
+                        color: colors.textColorDark,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: ListView.separated(
+                        padding: const EdgeInsets.all(20),
+                        separatorBuilder: (_, __) => Divider(
+                          color: colors.borderColor,
+                          height: 20,
+                        ),
+                        itemCount: 7,
+                        itemBuilder: (_, index) {
+                          final entry = data[index]!;
+                          final label = _weekdays[index];
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      label,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        color: colors.textColorDark,
+                                      ),
+                                    ),
+                                  ),
+                                  Switch.adaptive(
+                                    value: entry.enabled,
+                                    onChanged: (value) {
+                                      setState(() => entry.enabled = value);
+                                    },
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: OutlinedButton(
+                                      onPressed: entry.enabled
+                                          ? () => pickDayTime(index, true)
+                                          : null,
+                                      child: Text(
+                                        entry.from?.format(context) ?? '--:--',
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: OutlinedButton(
+                                      onPressed: entry.enabled
+                                          ? () => pickDayTime(index, false)
+                                          : null,
+                                      child: Text(
+                                        entry.to?.format(context) ?? '--:--',
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed: () {
+                            for (final entry in data.entries) {
+                              if (entry.value.enabled &&
+                                  (entry.value.from == null ||
+                                      entry.value.to == null)) {
+                                HelperUtils.showSnackBarMessage(
+                                  context,
+                                  'يرجى تحديد وقت الفتح/الإغلاق لـ ${_weekdays[entry.key]}',
+                                  messageDuration: 3,
+                                );
+                                return;
+                              }
+                            }
+                            Navigator.pop(context, data);
+                          },
+                          child: const Text('تأكيد'),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      );
+    },
+  );
+}
+

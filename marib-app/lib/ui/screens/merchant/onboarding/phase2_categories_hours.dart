@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:marib/data/model/category_model.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/api.dart';
@@ -157,7 +157,7 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
     } catch (_) {
       HelperUtils.showSnackBarMessage(
         context,
-        'طھط¹ط°ط± طھط­ظ…ظٹظ„ ط§ظ„ظپط¦ط§طھطŒ ط­ط§ظˆظ„ ظ…ط¬ط¯ط¯ط§ظ‹.',
+        'تعذر تحميل الفئات، حاول مجدداً.',
       );
       return const <CategoryModel>[];
     }
@@ -232,7 +232,7 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
     if (valid.isEmpty) {
       HelperUtils.showSnackBarMessage(
         context,
-        'ظ„ط§ طھظˆط¬ط¯ ط£ظ‚ط³ط§ظ… ظ…طھط§ط­ط© ط­ط§ظ„ظٹط§ظ‹',
+        'لا توجد أقسام متاحة حالياً',
       );
       return;
     }
@@ -318,7 +318,7 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                'ط§ط®طھظٹط§ط± ط§ظ„ط£ظ‚ط³ط§ظ…',
+                'اختيار الأقسام',
                 style: TextStyle(
                   fontSize: context.font.large,
                   fontWeight: FontWeight.w700,
@@ -330,7 +330,7 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
         ),
         const SizedBox(height: 8),
         Text(
-          'ظٹظ…ظƒظ†ظƒ طھط¹ط¯ظٹظ„ ظ‡ط°ظ‡ ط§ظ„ط£ظ‚ط³ط§ظ… ظ„ط§ط­ظ‚ط§ظ‹ ظ…ظ† ط¥ط¹ط¯ط§ط¯ط§طھ ط§ظ„ظ…طھط¬ط± ظپظٹ ط£ظٹ ظˆظ‚طھ.',
+          'يمكنك تعديل هذه الأقسام لاحقاً من إعدادات المتجر في أي وقت.',
           style: TextStyle(
             fontSize: context.font.small,
             color: colors.textColorDark.withValues(alpha: 0.7),
@@ -353,7 +353,7 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
                     ),
                   )
                 : const Icon(Icons.tune_rounded),
-            label: Text('ط§ط®طھظٹط§ط± ط§ظ„ط£ظ‚ط³ط§ظ… â€¢ $selectedCount'),
+            label: Text('اختيار الأقسام • $selectedCount'),
             style: FilledButton.styleFrom(
               backgroundColor: colors.territoryColor,
               foregroundColor: Colors.white,
@@ -373,7 +373,7 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
           _buildSelectedCategoriesSummary(categories)
         else
           Text(
-            'ظ„ظ… ظٹطھظ… ط§ط®طھظٹط§ط± ط£ظٹ ظ‚ط³ظ… ط¨ط¹ط¯.',
+            'لم يتم اختيار أي قسم بعد.',
             style:
                 TextStyle(color: colors.textColorDark.withValues(alpha: 0.6)),
           ),
@@ -418,7 +418,7 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
                       size: 16, color: context.color.territoryColor),
                   const SizedBox(width: 6),
                   Text(
-                    item.name ?? 'ظپط¦ط© ط¨ط¯ظˆظ† ط§ط³ظ…',
+                    item.name ?? 'فئة بدون اسم',
                     style: TextStyle(
                       fontSize: context.font.small,
                       fontWeight: FontWeight.w600,
@@ -446,7 +446,7 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                'ط³ط§ط¹ط§طھ ط§ظ„ط¹ظ…ظ„',
+                'ساعات العمل',
                 style: TextStyle(
                   fontSize: context.font.large,
                   fontWeight: FontWeight.w700,
@@ -458,7 +458,7 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
         ),
         const SizedBox(height: 8),
         Text(
-          'ظٹظ…ظƒظ†ظƒ ط¶ط¨ط· ط³ط§ط¹ط§طھ ط§ظ„ط¯ظˆط§ظ… ظ„ظƒظ„ ظٹظˆظ… ظˆط¥ط¨ظ‚ط§ط، ط­ط§ظ„ط© ط§ظ„ظ…طھط¬ط± ط¯ظ‚ظٹظ‚ط© ط£ظ…ط§ظ… ط§ظ„ظ…ط³طھط®ط¯ظ…ظٹظ†. ط§ط­ط±طµ ط¹ظ„ظ‰ طھط­ط¯ظٹط¯ ط£ظˆظ‚ط§طھ ط§ظ„ظپطھط­ ظˆط§ظ„ط¥ط؛ظ„ط§ظ‚ ط¨ط¯ظ‚ط©.',
+          'يمكنك ضبط ساعات الدوام لكل يوم وإبقاء حالة المتجر دقيقة أمام المستخدمين. احرص على تحديد أوقات الفتح والإغلاق بدقة.',
           style: TextStyle(
             fontSize: context.font.small,
             color: colors.textColorDark.withValues(alpha: 0.7),
@@ -472,10 +472,10 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
           child: FilledButton.icon(
             onPressed: _openWorkingHoursSheet,
             icon: const Icon(Icons.schedule),
-            label: const Text('ط¥ط¯ط§ط±ط© ط³ط§ط¹ط§طھ ط§ظ„ط¹ظ…ظ„'),
+            label: const Text('إدارة ساعات العمل'),
             style: FilledButton.styleFrom(
-              backgroundColor: colors.primaryColor,
-              foregroundColor: colors.onPrimary,
+              backgroundColor: colors.territoryColor,
+              foregroundColor: Colors.white,
               textStyle: TextStyle(
                 fontSize: context.font.normal,
                 fontWeight: FontWeight.w600,
@@ -495,13 +495,13 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
 
   Widget _buildWorkingHoursSummary() {
     const weekdays = [
-      'ط§ظ„ط£ط­ط¯',
-      'ط§ظ„ط¥ط«ظ†ظٹظ†',
-      'ط§ظ„ط«ظ„ط§ط«ط§ط،',
-      'ط§ظ„ط£ط±ط¨ط¹ط§ط،',
-      'ط§ظ„ط®ظ…ظٹط³',
-      'ط§ظ„ط¬ظ…ط¹ط©',
-      'ط§ظ„ط³ط¨طھ'
+      'الأحد',
+      'الإثنين',
+      'الثلاثاء',
+      'الأربعاء',
+      'الخميس',
+      'الجمعة',
+      'السبت'
     ];
 
     return Column(
@@ -510,7 +510,7 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
         final enabled = entry.enabled;
         final text = enabled
             ? '${entry.from.format(context)} - ${entry.to.format(context)}'
-            : 'ظ…ط؛ظ„ظ‚';
+            : 'مغلق';
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 6),
           child: Row(
@@ -565,8 +565,8 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildSectionHeader(
-                      'ط§ظ„ظپط¦ط§طھ ظˆط³ط§ط¹ط§طھ ط§ظ„ط¹ظ…ظ„',
-                      'ط§ط®طھط± ط§ظ„ط£ظ‚ط³ط§ظ… ط§ظ„طھظٹ طھظ…ط«ظ„ ظ†ط´ط§ط· ظ…طھط¬ط±ظƒطŒ ط«ظ… ظ‚ظ… ط¨ط¶ط¨ط· ط³ط§ط¹ط§طھ ط§ظ„ط¯ظˆط§ظ… ط§ظ„ط£ط³ط¨ظˆط¹ظٹط© ظ„ط¶ظ…ط§ظ† ط¥ط¸ظ‡ط§ط± ط­ط§ظ„ط© ط§ظ„ظ…طھط¬ط± ط¨ط¯ظ‚ط© ظ„ظ„ظ…ط³طھط®ط¯ظ…ظٹظ†.',
+                      'الفئات وساعات العمل',
+                      'اختر الأقسام التي تمثل نشاط متجرك، ثم قم بضبط ساعات الدوام الأسبوعية لضمان إظهار حالة المتجر بدقة للمستخدمين.',
                     ),
                     const SizedBox(height: 24),
                     _buildCategoryCard(loading, categories),

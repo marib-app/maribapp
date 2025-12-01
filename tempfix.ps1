@@ -1,0 +1,1 @@
+$p=Get-Content 'marib-app\lib\ui\screens\merchant\onboarding\phase4_payment_methods.dart' -Raw; $start=$p.IndexOf('Widget _buildGatewayTile'); $end=$p.IndexOf('Widget _buildSmartPaymentTab'); $p.Substring($start, $end-$start)

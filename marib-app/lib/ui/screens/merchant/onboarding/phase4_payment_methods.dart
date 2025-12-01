@@ -1,5 +1,6 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:marib/data/model/store_gateway_option.dart';
 import 'package:marib/settings.dart' as app_settings;
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
@@ -7,8 +8,6 @@ import 'package:marib/utils/api.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/payment/east_yemen_bank_config.dart';
-import 'package:marib/data/model/store_gateway_option.dart';
-import 'package:marib/utils/store_status_view_model.dart';
 import 'package:marib/utils/ui_utils.dart';
 
 class PaymentOptionsData {
@@ -64,8 +63,6 @@ class Phase4PaymentMethods extends StatefulWidget {
 class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
     with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   final _smartAccountCtrl = TextEditingController();
-  final List<StoreManualBankAccount> _existingManualAccounts =
-      <StoreManualBankAccount>[];
   final List<StoreGatewayOption> _storeGateways = <StoreGatewayOption>[];
   final Set<int> _selectedGatewayIds = <int>{};
   final Map<int, TextEditingController> _beneficiaryControllers =
@@ -78,8 +75,6 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
   bool _smartEnabled = false;
   bool _isReady = false;
   bool _submitting = false;
-  bool _manualLoading = true;
-  String? _manualError;
   bool _storeGatewaysLoading = true;
   String? _storeGatewaysError;
   bool _refreshQueued = false;
@@ -99,6 +94,41 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
       if (mounted) setState(() => _isReady = true);
       _handleVisibilityChanged();
     });
+  }
+
+  Future<bool> _confirmRemoveGateway(
+      BuildContext context, String gatewayName) async {
+    final theme = context.color;
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(
+            'إزالة بوابة الدفع',
+            style: TextStyle(
+              color: theme.textColorDark,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          content: Text(
+            'هل تريد إلغاء بوابة "$gatewayName"؟',
+            style: TextStyle(color: theme.textColorDark),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('إلغاء'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('تأكيد'),
+            ),
+          ],
+        );
+      },
+    );
+    return result == true;
   }
 
   @override
@@ -128,39 +158,12 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
     });
   }
 
-  Future<void> _loadManualGateways() async {
-    setState(() {
-      _manualLoading = true;
-      _manualError = null;
-    });
-    List<StoreManualBankAccount> aggregated = <StoreManualBankAccount>[];
-    Object? failure;
-
-    try {
-      aggregated = await _fetchStoreGatewayAccounts();
-    } catch (error) {
-      failure = error;
-    }
-
-    if (mounted) {
-      setState(() {
-        _existingManualAccounts
-          ..clear()
-          ..addAll(aggregated);
-        _manualError =
-            aggregated.isEmpty ? _resolveErrorMessage(failure) : null;
-        _manualLoading = false;
-      });
-    }
-  }
-
   Future<void> _loadStoreGateways() async {
     if (!mounted) return;
     setState(() {
       _storeGatewaysLoading = true;
       _storeGatewaysError = null;
     });
-    await _loadManualGateways();
     try {
       final Map<String, dynamic> response =
           await Api.get(url: Api.storeGatewaysCatalogApi());
@@ -173,25 +176,15 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
           .whereType<Map>()
           .map((dynamic map) =>
               StoreGatewayOption.fromJson(Map<String, dynamic>.from(map)))
+          .where((g) => g.isActive && g.id > 0)
           .toList();
       if (!mounted) return;
-      final Set<int> availableIds = parsed
-          .where((gateway) => gateway.isActive && gateway.id > 0)
-          .map((gateway) => gateway.id)
-          .toSet();
-      _selectedGatewayIds.removeWhere(
-        (int id) => !availableIds.contains(id),
-      );
-      _cleanupGatewayControllers();
       setState(() {
         _storeGateways
           ..clear()
-          ..addAll(parsed.where((gateway) => gateway.isActive));
+          ..addAll(parsed);
         _storeGatewaysLoading = false;
       });
-      for (final int id in _selectedGatewayIds) {
-        _ensureGatewayControllers(id);
-      }
     } catch (error) {
       if (!mounted) return;
       setState(() {
@@ -212,255 +205,123 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
     );
   }
 
-  void _cleanupGatewayControllers() {
-    final List<int> removable = _beneficiaryControllers.keys
-        .where((int id) => !_selectedGatewayIds.contains(id))
-        .toList();
-    for (final int id in removable) {
-      _beneficiaryControllers.remove(id)?.dispose();
-      _accountControllers.remove(id)?.dispose();
-    }
-    final List<int> removableAccounts = _accountControllers.keys
-        .where((int id) => !_selectedGatewayIds.contains(id))
-        .toList();
-    for (final int id in removableAccounts) {
-      _accountControllers.remove(id)?.dispose();
-    }
-  }
-
-  void _toggleGatewaySelection(int gatewayId, bool isSelected) {
-    setState(() {
-      if (isSelected) {
-        if (_selectedGatewayIds.add(gatewayId)) {
-          _ensureGatewayControllers(gatewayId);
-        }
-      } else {
-        if (_selectedGatewayIds.remove(gatewayId)) {
-          _beneficiaryControllers.remove(gatewayId)?.dispose();
-          _accountControllers.remove(gatewayId)?.dispose();
-        }
-      }
-    });
-  }
-
   List<StoreGatewayAccountDraft> _collectGatewayDrafts() {
     final List<StoreGatewayAccountDraft> drafts = <StoreGatewayAccountDraft>[];
-    for (final int gatewayId in _selectedGatewayIds) {
-      final String beneficiary =
-          _beneficiaryControllers[gatewayId]?.text.trim() ?? '';
-      final String accountNumber =
-          _accountControllers[gatewayId]?.text.trim() ?? '';
-      if (beneficiary.isEmpty || accountNumber.isEmpty) {
-        continue;
-      }
-      drafts.add(
-        StoreGatewayAccountDraft(
-          gatewayId: gatewayId,
-          beneficiaryName: beneficiary,
-          accountNumber: accountNumber,
-        ),
-      );
+    for (final int id in _selectedGatewayIds) {
+      final beneficiary = _beneficiaryControllers[id]?.text.trim() ?? '';
+      final account = _accountControllers[id]?.text.trim() ?? '';
+      if (beneficiary.isEmpty || account.isEmpty) continue;
+      drafts.add(StoreGatewayAccountDraft(
+          gatewayId: id, beneficiaryName: beneficiary, accountNumber: account));
     }
     return drafts;
   }
 
-  Future<List<StoreManualBankAccount>> _fetchStoreGatewayAccounts() async {
-    final Set<String> seenKeys = <String>{};
-    final List<StoreManualBankAccount> aggregated = <StoreManualBankAccount>[];
+  Future<void> _openGatewaySheet(StoreGatewayOption gateway) async {
+    _ensureGatewayControllers(gateway.id);
+    final beneficiaryCtrl = _beneficiaryControllers[gateway.id]!;
+    final accountCtrl = _accountControllers[gateway.id]!;
 
-    void merge(List<StoreManualBankAccount> accounts) {
-      for (final StoreManualBankAccount account in accounts) {
-        final String key = _accountKey(account);
-        if (seenKeys.add(key)) {
-          aggregated.add(account);
-        }
-      }
-    }
-
-    Map<String, dynamic>? onboarding;
-    try {
-      onboarding = await Api.get(url: Api.storeOnboardingApi);
-    } catch (_) {
-      onboarding = null;
-    }
-
-    merge(_extractGatewayAccounts(onboarding));
-
-    try {
-      final Map<String, dynamic> gateways =
-          await Api.get(url: Api.storeGatewaysCatalogApi());
-      merge(_extractGatewayAccounts(gateways));
-    } catch (_) {}
-
-    try {
-      final Map<String, dynamic> accounts =
-          await Api.get(url: Api.storeGatewayAccountsApi);
-      merge(_extractGatewayAccounts(accounts));
-    } catch (_) {}
-
-    if (aggregated.isEmpty) {
-      merge(_fallbackManualGateways());
-    }
-
-    return aggregated;
-  }
-
-  List<StoreManualBankAccount> _extractGatewayAccounts(
-      Map<String, dynamic>? payload) {
-    if (payload == null || payload.isEmpty) {
-      return const <StoreManualBankAccount>[];
-    }
-
-    final dynamic rootData = payload['data'];
-    List<dynamic> candidates = const <dynamic>[];
-
-    if (rootData is List) {
-      candidates = List<dynamic>.from(rootData);
-    } else {
-      final Map<String, dynamic> root =
-          rootData is Map<String, dynamic> ? rootData : payload;
-
-      candidates = _resolveCandidateList(root, const <String>[
-        'store_gateway_accounts',
-        'storeGateways',
-        'store_gateways',
-        'manual_gateway_accounts',
-        'manual_banks',
-        'manualBanks',
-        'data',
-      ]);
-    }
-
-    if (candidates.isEmpty) {
-      return const <StoreManualBankAccount>[];
-    }
-
-    final List<StoreManualBankAccount> parsed = <StoreManualBankAccount>[];
-
-    for (final dynamic candidate in candidates) {
-      if (candidate is Map) {
-        final Map<String, dynamic> normalized =
-            Map<String, dynamic>.from(candidate);
-
-        final dynamic accounts = normalized['accounts'];
-        final List<dynamic>? accountList = _unwrapCollection(accounts);
-        if (accountList != null) {
-          for (final dynamic account in accountList) {
-            if (account is Map) {
-              final Map<String, dynamic> accountMap =
-                  Map<String, dynamic>.from(account);
-              accountMap['gateway'] ??= <String, dynamic>{
-                'name': normalized['name'],
-                'logo_url': normalized['logo_url'],
-              };
-              parsed.add(StoreManualBankAccount.fromMap(accountMap));
-            }
-          }
-          continue;
-        }
-
-        if (normalized.containsKey('store_gateway') &&
-            normalized['gateway'] == null) {
-          normalized['gateway'] = normalized['store_gateway'];
-        }
-        parsed.add(StoreManualBankAccount.fromMap(normalized));
-      }
-    }
-
-    return parsed.where((account) => account.displayLabel.isNotEmpty).toList();
-  }
-
-  List<dynamic> _resolveCandidateList(
-      Map<String, dynamic> map, List<String> keys) {
-    for (final String key in keys) {
-      final dynamic candidate = map[key];
-      final List<dynamic>? list = _unwrapCollection(candidate);
-      if (list != null) {
-        return list;
-      }
-    }
-
-    final List<dynamic> fallback = <dynamic>[];
-    for (final dynamic value in map.values) {
-      if (value is Map<String, dynamic>) {
-        final List<dynamic> nested = _resolveCandidateList(value, keys);
-        if (nested.isNotEmpty) return nested;
-      } else if (value is Map) {
-        final List<dynamic> nested = _resolveCandidateList(
-          Map<String, dynamic>.from(
-            value.map((dynamic key, dynamic v) => MapEntry(
-                  key.toString(),
-                  v,
-                )),
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        final viewInsets = MediaQuery.of(sheetContext).viewInsets;
+        return Padding(
+          padding:
+              EdgeInsets.only(bottom: viewInsets.bottom, left: 16, right: 16),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 16),
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade400,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  gateway.name,
+                  style: TextStyle(
+                    fontSize: context.font.large,
+                    fontWeight: FontWeight.w700,
+                    color: context.color.textColorDark,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: beneficiaryCtrl,
+                  decoration: InputDecoration(
+                    labelText: 'اسم المستفيد',
+                    hintText: 'مثال: اسم صاحب الحساب البنكي',
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  textInputAction: TextInputAction.next,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: accountCtrl,
+                  keyboardType: TextInputType.text,
+                  decoration: InputDecoration(
+                    labelText: 'رقم الحساب / الآيبان',
+                    hintText: 'اكتب رقم الحساب أو الآيبان المعتمد لنفس المتجر',
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(
+                      RegExp(r'[A-Za-z0-9 ._\\-]'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(sheetContext),
+                        child: const Text('إلغاء'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: () {
+                          if (beneficiaryCtrl.text.trim().isEmpty ||
+                              accountCtrl.text.trim().isEmpty) {
+                            UiUtils.showSoftSnackBar(
+                              sheetContext,
+                              message: 'يرجى تعبئة كل الحقول المطلوبة.',
+                            );
+                            return;
+                          }
+                          setState(() => _selectedGatewayIds.add(gateway.id));
+                          Navigator.pop(sheetContext);
+                        },
+                        child: const Text('حفظ'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
           ),
-          keys,
         );
-        if (nested.isNotEmpty) return nested;
-      }
-    }
-
-    return fallback;
-  }
-
-  List<dynamic>? _unwrapCollection(dynamic value) {
-    if (value == null) return null;
-    if (value is List<dynamic>) {
-      return List<dynamic>.from(value);
-    }
-    if (value is Iterable) {
-      return List<dynamic>.from(value);
-    }
-    if (value is Map<String, dynamic>) {
-      final dynamic data = value['data'];
-      final List<dynamic>? dataList = _unwrapCollection(data);
-      if (dataList != null) {
-        return dataList;
-      }
-      final dynamic items = value['items'];
-      final List<dynamic>? itemList = _unwrapCollection(items);
-      if (itemList != null) {
-        return itemList;
-      }
-      return null;
-    }
-    if (value is Map) {
-      return _unwrapCollection(Map<String, dynamic>.from(
-        value.map(
-          (dynamic key, dynamic val) => MapEntry(key.toString(), val),
-        ),
-      ));
-    }
-    return null;
-  }
-
-  String _accountKey(StoreManualBankAccount account) {
-    if (account.storeGatewayAccountId != null) {
-      return 'id_${account.storeGatewayAccountId}';
-    }
-    final String gateway =
-        account.gatewayName?.toLowerCase().trim() ?? 'unknown';
-    final String beneficiary =
-        account.beneficiaryName?.toLowerCase().trim() ?? '';
-    final String number = account.accountNumber?.toLowerCase().trim() ?? '';
-    return '$gateway|$beneficiary|$number';
-  }
-
-  List<StoreManualBankAccount> _fallbackManualGateways() {
-    if (app_settings.AppSettings.manualPaymentBanks.isEmpty) {
-      return const <StoreManualBankAccount>[];
-    }
-    return app_settings.AppSettings.manualPaymentBanks
-        .map(
-          (bank) => StoreManualBankAccount.fromMap(<String, dynamic>{
-            'name': bank.bankName,
-            'beneficiary_name': bank.accountName,
-            'account_number': bank.accountNumber,
-            'iban': bank.iban,
-            'branch': bank.branch,
-            'gateway': <String, dynamic>{'name': bank.bankName},
-          }),
-        )
-        .toList();
+      },
+    );
   }
 
   @override
@@ -483,7 +344,7 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
     if (_smartEnabled && smartAccount.isEmpty) {
       HelperUtils.showSnackBarMessage(
         context,
-        'ظٹط±ط¬ظ‰ ط¥ط¯ط®ط§ظ„ ط±ظ‚ظ… ط§ظ„ط­ط³ط§ط¨ ط§ظ„ظ…ط±طھط¨ط· ط¨ط¨ظ†ظƒ ط§ظ„ط´ط±ظ‚.',
+        'يرجى إدخال رقم الحساب الذكي.',
       );
       return;
     }
@@ -492,7 +353,7 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
         drafts.length != _selectedGatewayIds.length) {
       HelperUtils.showSnackBarMessage(
         context,
-        'ط£ظƒظ…ظ„ ط¨ظٹط§ظ†ط§طھ ظƒظ„ ط¨ظˆط§ط¨ط© طھظ… ط§ط®طھظٹط§ط±ظ‡ط§ ظ‚ط¨ظ„ ط§ظ„ظ…طھط§ط¨ط¹ط©.',
+        'أكمل بيانات جميع طرق الدفع المحددة.',
       );
       return;
     }
@@ -513,7 +374,7 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
     super.build(context);
     if (!_isReady) {
       return Scaffold(
-      resizeToAvoidBottomInset: false,
+        resizeToAvoidBottomInset: false,
         body: Padding(
           padding: const EdgeInsets.fromLTRB(20, 32, 20, 32),
           child: Column(
@@ -544,7 +405,7 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'ط·ط±ظ‚ ط§ظ„ط¯ظپط¹ ظپظٹ ظ…طھط¬ط±ظƒ',
+                'خيارات الدفع في متجرك',
                 style: TextStyle(
                   fontSize: context.font.extraLarge,
                   fontWeight: FontWeight.w700,
@@ -553,7 +414,7 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
               ),
               const SizedBox(height: 8),
               Text(
-                'ط§ظ„ظ…ط¹ظ„ظˆظ…ط§طھ ط§ظ„طھط§ظ„ظٹط© طھظڈط¹ط±ط¶ ظ„ظ„ط¹ظ…ظ„ط§ط، ط£ط«ظ†ط§ط، ط§ظ„ط¯ظپط¹ ظˆظٹظ…ظƒظ† طھط¹ط¯ظٹظ„ظ‡ط§ ظ„ط§ط­ظ‚ط§ظ‹ ظ…ظ† ط§ظ„ط¥ط¹ط¯ط§ط¯ط§طھ.',
+                'اضبط قنوات الدفع التي يدعمها متجرك ليتابع العميل عملية الشراء بسهولة.',
                 style: TextStyle(
                   fontSize: context.font.normal,
                   color: theme.textColorDark.withValues(alpha: 0.75),
@@ -563,10 +424,20 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
               TabBar(
                 controller: _tabController,
                 indicatorColor: theme.territoryColor,
-                labelStyle: TextStyle(fontWeight: FontWeight.w600),
+                labelColor: theme.textColorDark,
+                unselectedLabelColor:
+                    theme.textColorDark.withValues(alpha: 0.65),
+                labelStyle: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: context.font.normal,
+                ),
+                unselectedLabelStyle: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: context.font.normal,
+                ),
                 tabs: const [
-                  Tab(text: 'ط§ظ„ط¯ظپط¹ ط§ظ„ظٹط¯ظˆظٹ'),
-                  Tab(text: 'ط§ظ„ط¯ظپط¹ ط§ظ„ط°ظƒظٹ'),
+                  Tab(text: 'الدفع اليدوي'),
+                  Tab(text: 'الدفع الذكي'),
                 ],
               ),
               Expanded(
@@ -602,137 +473,68 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
   Widget _buildManualPaymentTab() {
     final theme = context.color;
 
-    Widget buildSelectionCard() {
-      if (_storeGatewaysLoading) {
-        return const Center(child: CircularProgressIndicator());
-      }
-      if (_storeGatewaysError != null) {
-        return _InformativeCard(
-          message: 'طھط¹ط°ط± طھط­ظ…ظٹظ„ ظ‚ط§ط¦ظ…ط© ط¨ظˆط§ط¨ط§طھ ط§ظ„ط¯ظپط¹. ط­ط§ظˆظ„ ظ…ط±ط© ط£ط®ط±ظ‰.',
-          buttonLabel: 'ط¥ط¹ط§ط¯ط© ط§ظ„ظ…ط­ط§ظˆظ„ط©',
-          onPressed: _loadStoreGateways,
-        );
-      }
-      if (_storeGateways.isEmpty) {
-        return _InformativeCard(
-          message: 'ظ„ط§ طھطھظˆظپط± ط¨ظˆط§ط¨ط§طھ ط¯ظپط¹ ظٹط¯ظˆظٹ ظ„ط±ط¨ط·ظ‡ط§ ط­ط§ظ„ظٹط§ظ‹.',
-          icon: Icons.info_outline,
-        );
-      }
-
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: theme.secondaryColor,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: theme.borderColor),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'ط§ط®طھط± ط¨ظˆط§ط¨ط§طھ ط§ظ„ط¯ظپط¹ ط§ظ„ظٹط¯ظˆظٹ',
-              style: TextStyle(
-                fontSize: context.font.large,
-                fontWeight: FontWeight.w600,
-                color: theme.textColorDark,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'ظٹظ…ظƒظ†ظƒ ط¥ط¶ط§ظپط© ط£ظƒط«ط± ظ…ظ† ط¨ظˆط§ط¨ط©طŒ ظˆط³ظٹطھظ… ط¹ط±ط¶ ظ‡ط°ظ‡ ط§ظ„ط¨ظٹط§ظ†ط§طھ ظ„ظ„ط¹ظ…ظ„ط§ط، ظپظٹ ط´ط§ط´ط© ط§ظ„ط¯ظپط¹.',
-              style: TextStyle(
-                fontSize: context.font.small,
-                color: theme.textColorDark.withValues(alpha: 0.7),
-              ),
-            ),
-            const SizedBox(height: 16),
-            ..._storeGateways.map(_buildGatewayTile),
-            if (_selectedGatewayIds.isEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  'ظٹظ…ظƒظ†ظƒ ط§ط³طھظƒظ…ط§ظ„ ظ‡ط°ظ‡ ط§ظ„ط®ط·ظˆط© ظ„ط§ط­ظ‚ط§ظ‹ ظ…ظ† ط¥ط¹ط¯ط§ط¯ط§طھ ط§ظ„ظ…طھط¬ط±.',
-                  style: TextStyle(
-                    fontSize: context.font.small,
-                    color: theme.textColorDark.withValues(alpha: 0.6),
-                  ),
-                ),
-              ),
-          ],
-        ),
+    if (_storeGatewaysLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_storeGatewaysError != null) {
+      return _InformativeCard(
+        message: 'حدث خطأ أثناء تحميل طرق الدفع المتاحة.',
+        buttonLabel: 'إعادة المحاولة',
+        onPressed: _loadStoreGateways,
       );
     }
-
-    Widget? buildExistingAccounts() {
-      if (_manualLoading) {
-        return const Center(child: CircularProgressIndicator());
-      }
-      if (_manualError != null && _existingManualAccounts.isEmpty) {
-        return _InformativeCard(
-          message: 'طھط¹ط°ط± طھط­ظ…ظٹظ„ ط§ظ„ط­ط³ط§ط¨ط§طھ ط§ظ„ظ…ط±طھط¨ط·ط© ط¨ظ…طھط¬ط±ظƒ.',
-          buttonLabel: 'ط¥ط¹ط§ط¯ط© ط§ظ„ظ…ط­ط§ظˆظ„ط©',
-          onPressed: _loadManualGateways,
-        );
-      }
-      if (_existingManualAccounts.isEmpty) {
-        return null;
-      }
-      return Container(
-        margin: const EdgeInsets.only(top: 24),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: theme.secondaryColor,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: theme.borderColor),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'ط§ظ„ط­ط³ط§ط¨ط§طھ ط§ظ„ظ…ط±طھط¨ط·ط© ط­ط§ظ„ظٹط§ظ‹',
-              style: TextStyle(
-                fontSize: context.font.large,
-                fontWeight: FontWeight.w600,
-                color: theme.textColorDark,
-              ),
-            ),
-            const SizedBox(height: 12),
-            ..._existingManualAccounts.map(
-              (account) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      account.gatewayName ?? account.displayLabel,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: context.font.normal,
-                        color: theme.textColorDark,
-                      ),
-                    ),
-                    if (account.beneficiaryName != null)
-                      Text('ط§ظ„ظ…ط³طھظپظٹط¯: ${account.beneficiaryName}'),
-                    if (account.accountNumber != null)
-                      Text('ط±ظ‚ظ… ط§ظ„ط­ط³ط§ط¨: ${account.accountNumber}'),
-                    if (account.iban != null) Text('IBAN: ${account.iban}'),
-                    if (account.branch != null)
-                      Text('ط§ظ„ظپط±ط¹: ${account.branch}'),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+    if (_storeGateways.isEmpty) {
+      return _InformativeCard(
+        message: 'لا توجد طرق دفع متاحة حالياً.',
+        icon: Icons.info_outline,
       );
     }
 
     return ListView(
       padding: const EdgeInsets.only(top: 24, bottom: 24),
       children: [
-        buildSelectionCard(),
-        if (buildExistingAccounts() != null) buildExistingAccounts()!,
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: theme.secondaryColor,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: theme.borderColor),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'طرق الدفع المتاحة',
+                style: TextStyle(
+                  fontSize: context.font.large,
+                  fontWeight: FontWeight.w600,
+                  color: theme.textColorDark,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'يمكنك تفعيل أكثر من خيار واستكمال الحقول المطلوبة لكل طريقة.',
+                style: TextStyle(
+                  fontSize: context.font.small,
+                  color: theme.textColorDark.withValues(alpha: 0.7),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ..._storeGateways.map(_buildGatewayTile),
+              if (_selectedGatewayIds.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    'لم يتم اختيار أي طريقة بعد. اضغط على الطريقة لإدخال بياناتها.',
+                    style: TextStyle(
+                      fontSize: context.font.small,
+                      color: theme.textColorDark.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -740,91 +542,63 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
   Widget _buildGatewayTile(StoreGatewayOption gateway) {
     final theme = context.color;
     final bool isSelected = _selectedGatewayIds.contains(gateway.id);
-    if (isSelected) {
-      _ensureGatewayControllers(gateway.id);
-    }
-    final TextEditingController? beneficiaryCtrl =
-        _beneficiaryControllers[gateway.id];
-    final TextEditingController? accountCtrl = _accountControllers[gateway.id];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        CheckboxListTile(
-          value: isSelected,
-          onChanged: (value) =>
-              _toggleGatewaySelection(gateway.id, value ?? false),
+        ListTile(
+          onTap: () async {
+            if (isSelected) {
+              final bool confirmed =
+                  await _confirmRemoveGateway(context, gateway.name);
+              if (confirmed && mounted) {
+                setState(() => _selectedGatewayIds.remove(gateway.id));
+              }
+              return;
+            }
+            _openGatewaySheet(gateway);
+          },
           contentPadding: EdgeInsets.zero,
-          controlAffinity: ListTileControlAffinity.leading,
-          title: Row(
-            children: [
-              if (gateway.logoUrl != null)
-                Padding(
-                  padding: const EdgeInsetsDirectional.only(end: 12),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      gateway.logoUrl!,
+          leading: gateway.logoUrl != null
+              ? ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(
+                    gateway.logoUrl!,
+                    width: 44,
+                    height: 44,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => const SizedBox(
                       width: 44,
                       height: 44,
-                      fit: BoxFit.contain,
-                      errorBuilder: (_, __, ___) => const SizedBox(
-                        width: 44,
-                        height: 44,
-                      ),
                     ),
                   ),
                 )
-              else
-                Padding(
-                  padding: const EdgeInsetsDirectional.only(end: 12),
-                  child: Icon(
-                    Icons.account_balance,
-                    color: theme.primaryColor,
-                  ),
+              : Icon(
+                  Icons.account_balance,
+                  color: theme.primaryColor,
                 ),
-              Expanded(
-                child: Text(
-                  gateway.name,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: theme.textColorDark,
-                  ),
-                ),
-              ),
-            ],
+          title: Text(
+            gateway.name,
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: theme.textColorDark,
+            ),
+          ),
+          subtitle: Text(
+            'اضغط لإدخال بيانات الحساب لهذا الخيار',
+            style: TextStyle(
+              fontSize: context.font.small,
+              color: theme.textColorDark.withValues(alpha: 0.7),
+            ),
+          ),
+          trailing: Icon(
+            isSelected ? Icons.check_circle : Icons.chevron_right,
+            color: isSelected
+                ? theme.territoryColor
+                : theme.textColorDark.withValues(alpha: 0.65),
           ),
         ),
-        if (isSelected) ...[
-          const SizedBox(height: 8),
-          TextField(
-            controller: beneficiaryCtrl,
-            decoration: InputDecoration(
-              labelText: 'ط§ط³ظ… ط§ظ„ظ…ط³طھظپظٹط¯',
-              hintText: 'ظ…ط«ط§ظ„: ظ…ط¤ط³ط³ط© ظ…طھط¬ط±ظٹ ط§ظ„طھط¬ط§ط±ظٹط©',
-              border:
-                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            textInputAction: TextInputAction.next,
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: accountCtrl,
-            keyboardType: TextInputType.text,
-            decoration: InputDecoration(
-              labelText: 'ط±ظ‚ظ… ط§ظ„ط­ط³ط§ط¨/ط§ظ„ط¢ظٹط¨ط§ظ†',
-              hintText: 'ط£ط¯ط®ظ„ ط±ظ‚ظ… ط§ظ„ط­ط³ط§ط¨ ط£ظˆ ط§ظ„ط¢ظٹط¨ط§ظ† ط§ظ„ظ…ط±طھط¨ط· ط¨ط§ظ„ط¨ظˆط§ط¨ط©',
-              border:
-                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(
-                RegExp(r'[A-Za-z0-9 ._\-]'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-        ],
+        const SizedBox(height: 12),
       ],
     );
   }
@@ -836,7 +610,7 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Text(
-            'ظ„ظ… ظٹطھظ… ط±ط¨ط· ط¨ظˆط§ط¨ط© ط¨ظ†ظƒ ط§ظ„ط´ط±ظ‚ ط­طھظ‰ ط§ظ„ط¢ظ†. طھظˆط§طµظ„ ظ…ط¹ ظپط±ظٹظ‚ ط§ظ„ط¯ط¹ظ… ظ„ظ„طھظپط¹ظٹظ„.',
+            'لا يتوفر مزود للدفع الذكي حالياً. حاول مرة أخرى لاحقاً.',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: theme.textColorDark.withValues(alpha: 0.7),
@@ -885,10 +659,10 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
           SwitchListTile.adaptive(
             value: _smartEnabled,
             onChanged: (value) => setState(() => _smartEnabled = value),
-            title: const Text('طھظپط¹ظٹظ„ ط¨ظˆط§ط¨ط© ط¨ظ†ظƒ ط§ظ„ط´ط±ظ‚'),
+            title: const Text('تفعيل الدفع الذكي'),
             subtitle: Text(
               _eastConfig!.note ??
-                  'ط¹ظ†ط¯ ط§ظ„طھظپط¹ظٹظ„ ظٹطھظ…ظƒظ† ط¹ظ…ظ„ط§ط¤ظƒ ظ…ظ† ط§ظ„ط¯ظپط¹ ط¹ط¨ط± ط¨ظ†ظƒ ط§ظ„ط´ط±ظ‚ ظ…ط¨ط§ط´ط±ط©.',
+                  'تأكد من إدخال بيانات الحساب الصحيحة عند التفعيل.',
             ),
           ),
           const SizedBox(height: 12),
@@ -896,8 +670,8 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
             controller: _smartAccountCtrl,
             enabled: _smartEnabled,
             decoration: InputDecoration(
-              labelText: 'ط±ظ‚ظ… ط­ط³ط§ط¨ظƒ ظپظٹ ط¨ظ†ظƒ ط§ظ„ط´ط±ظ‚',
-              hintText: 'ط£ط¯ط®ظ„ ط±ظ‚ظ… ط§ظ„ط­ط³ط§ط¨ ط£ظˆ ظ…ط¹ط±ظپ ط§ظ„ط¹ظ…ظٹظ„',
+              labelText: 'رقم الحساب في البنك',
+              hintText: 'أدخل رقم الحساب كما في البنك',
               border:
                   OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
             ),
@@ -967,12 +741,10 @@ class _InformativeCard extends StatelessWidget {
 }
 
 String? _resolveErrorMessage(Object? error) {
-  if (error == null) {
-    return null;
-  }
+  if (error == null) return null;
   if (error is ApiHttpException) {
     if (error.statusCode == 401) {
-      return 'ط§ظ†طھظ‡طھ طµظ„ط§ط­ظٹط© ط§ظ„ط¬ظ„ط³ط©طŒ ظٹط±ط¬ظ‰ طھط³ط¬ظٹظ„ ط§ظ„ط¯ط®ظˆظ„ ط«ظ… ط§ظ„ظ…ط­ط§ظˆظ„ط© ظ…ط¬ط¯ط¯ط§ظ‹.';
+      return 'يرجى تسجيل الدخول ثم إعادة المحاولة.';
     }
     final dynamic message = error.payload?['message'];
     if (message is String && message.trim().isNotEmpty) {
@@ -985,6 +757,3 @@ String? _resolveErrorMessage(Object? error) {
   }
   return error.toString();
 }
-
-
-

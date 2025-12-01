@@ -6,7 +6,7 @@ import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/ui_utils.dart';
 
-import 'package:marib/ui/screens/merchant/onboarding/widgets/legacy_selectors.dart';
+import 'widgets/legacy_selectors.dart';
 
 class Phase2Data {
   final List<int> categoryIds;
@@ -25,18 +25,6 @@ class DaySchedule {
     required this.from,
     required this.to,
   });
-
-  DaySchedule copyWith({
-    bool? enabled,
-    TimeOfDay? from,
-    TimeOfDay? to,
-  }) {
-    return DaySchedule(
-      enabled: enabled ?? this.enabled,
-      from: from ?? this.from,
-      to: to ?? this.to,
-    );
-  }
 }
 
 class Phase2CategoriesHours extends StatefulWidget {
@@ -61,7 +49,6 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
     with AutomaticKeepAliveClientMixin {
   Future<List<CategoryModel>>? _categoriesFuture;
   final Set<int> _selectedCategoryIds = <int>{};
-  List<String> _selectedCategoryLabels = <String>[];
   static const int _storeRootCategoryId = 3;
   final Map<int, DaySchedule> _hours = {
     for (int i = 0; i < 7; i++)
@@ -158,7 +145,7 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
     } catch (_) {
       HelperUtils.showSnackBarMessage(
         context,
-        '��� ��� ����� ����� ������. ���� ������.',
+        'حدث خطأ أثناء تحميل الفئات. حاول مجدداً.',
       );
       return const <CategoryModel>[];
     }
@@ -233,7 +220,7 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
     if (valid.isEmpty) {
       HelperUtils.showSnackBarMessage(
         context,
-        '�� ���� ���� ����� ������.',
+        'لا توجد فئات متاحة حالياً.',
       );
       return;
     }
@@ -249,12 +236,6 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
         _selectedCategoryIds
           ..clear()
           ..addAll(result);
-
-        _selectedCategoryLabels = valid
-            .where((c) => c.id != null && result.contains(c.id))
-            .map((c) => c.name?.trim() ?? '')
-            .where((name) => name.isNotEmpty)
-            .toList();
       });
     }
   }
@@ -325,7 +306,7 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                'اختيار الأقسام',
+                'الفئات وساعات العمل',
                 style: TextStyle(
                   fontSize: context.font.large,
                   fontWeight: FontWeight.w700,
@@ -337,7 +318,7 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
         ),
         const SizedBox(height: 8),
         Text(
-          'يمكنك تعديل هذه الأقسام لاحقاً من إعدادات المتجر في أي وقت.',
+          'اختر الأقسام التي يعمل ضمنها متجرك. قم بضبط ساعات العمل الأسبوعية لتحسين ظهور المتجر لبقية المستخدمين.',
           style: TextStyle(
             fontSize: context.font.small,
             color: colors.textColorDark.withValues(alpha: 0.7),
@@ -380,55 +361,6 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
     );
   }
 
-  Widget _buildSelectedCategoriesSummary(List<CategoryModel> categories) {
-    final labels = _selectedCategoryLabels;
-    if (labels.isEmpty) return const SizedBox.shrink();
-
-    return SizedBox(
-      height: 40,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsetsDirectional.only(start: 4, end: 4),
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemCount: labels.length,
-        itemBuilder: (_, index) {
-          final name = labels[index];
-          final int? id = _selectedCategoryIds.length > index
-              ? _selectedCategoryIds.elementAt(index)
-              : null;
-          return InkWell(
-            borderRadius: BorderRadius.circular(18),
-            onTap: id != null ? () => _toggleCategory(id) : null,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: context.color.territoryColor),
-                color: context.color.territoryColor.withValues(alpha: 0.08),
-              ),
-              alignment: Alignment.center,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.check_rounded,
-                      size: 16, color: context.color.territoryColor),
-                  const SizedBox(width: 6),
-                  Text(
-                    name,
-                    style: TextStyle(
-                      fontSize: context.font.small,
-                      fontWeight: FontWeight.w600,
-                      color: context.color.territoryColor,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
   Widget _buildWorkingHoursCard() {
     final colors = context.color;
 
@@ -441,7 +373,7 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                '����� �����',
+                'أوقات العمل',
                 style: TextStyle(
                   fontSize: context.font.large,
                   fontWeight: FontWeight.w700,
@@ -453,7 +385,7 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
         ),
         const SizedBox(height: 8),
         Text(
-          '���� ����� ��� ����� �����ɡ ���� ���� ������� �� ������� ������.',
+          'اضبط أوقات عمل متجرك بسهولة، وأضف أيام الإجازة أو الفترات الخاصة.',
           style: TextStyle(
             fontSize: context.font.small,
             color: colors.textColorDark.withValues(alpha: 0.7),
@@ -467,7 +399,7 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
           child: FilledButton.icon(
             onPressed: _openWorkingHoursSheet,
             icon: const Icon(Icons.schedule),
-            label: const Text('��� ����� �����'),
+            label: const Text('ضبط أوقات العمل'),
             style: FilledButton.styleFrom(
               backgroundColor: colors.territoryColor,
               foregroundColor: Colors.white,
@@ -551,7 +483,7 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
         return WillPopScope(
           onWillPop: _handlePop,
           child: Scaffold(
-      resizeToAvoidBottomInset: false,
+            resizeToAvoidBottomInset: false,
             body: SafeArea(
               bottom: false,
               child: SingleChildScrollView(
@@ -561,7 +493,7 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
                   children: [
                     _buildSectionHeader(
                       'الفئات وساعات العمل',
-                      'اختر الأقسام التي تمثل نشاط متجرك، ثم قم بضبط ساعات الدوام الأسبوعية لضمان إظهار حالة المتجر بدقة للمستخدمين.',
+                      'اختر الأقسام التي يعمل ضمنها متجرك. قم بضبط ساعات العمل الأسبوعية لتحسين ظهور المتجر لبقية المستخدمين.',
                     ),
                     const SizedBox(height: 24),
                     _buildCategoryCard(loading, categories),
@@ -594,15 +526,3 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
   @override
   bool get wantKeepAlive => true;
 }
-
-
-
-
-
-
-
-
-
-
-
-

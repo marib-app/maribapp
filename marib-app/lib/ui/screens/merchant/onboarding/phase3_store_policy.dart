@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
 import 'package:marib/utils/extensions/extensions.dart';
@@ -132,7 +132,7 @@ class _Phase3StorePolicyState extends State<Phase3StorePolicy>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'ط³ظٹط§ط³ط§طھ ط§ظ„ظ…طھط¬ط±',
+                  'سياسات المتجر',
                   style: TextStyle(
                     fontSize: context.font.extraLarge,
                     fontWeight: FontWeight.w700,
@@ -141,7 +141,7 @@ class _Phase3StorePolicyState extends State<Phase3StorePolicy>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'ط§ظƒطھط¨ ط³ظٹط§ط³ط© ط§ظ„ط§ط³طھط±ط¬ط§ط¹ ظˆط§ظ„طھط¨ط¯ظٹظ„ ط§ظ„ط®ط§طµط© ط¨ظ…طھط¬ط±ظƒ. ط³ظٹط´ط§ظ‡ط¯ظ‡ط§ ط§ظ„ط¹ظ…ظ„ط§ط، ظ‚ط¨ظ„ ط§ظ„ط¯ظپط¹ ظ„ط²ظٹط§ط¯ط© ط§ظ„ط«ظ‚ط©.',
+                  'اكتب سياسة الاسترجاع والتبديل الخاصة بمتجرك. سيشاهدها العملاء قبل الدفع لزيادة الثقة.',
                   style: TextStyle(
                     fontSize: context.font.normal,
                     color: theme.textColorDark.withOpacity(0.75),
@@ -149,7 +149,7 @@ class _Phase3StorePolicyState extends State<Phase3StorePolicy>
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  'ط³ظٹط§ط³ط© ط§ظ„ط§ط³طھط±ط¬ط§ط¹ ظˆط§ظ„طھط¨ط¯ظٹظ„',
+                  'سياسة الاسترجاع والتبديل',
                   style: TextStyle(
                     fontSize: context.font.large,
                     fontWeight: FontWeight.w600,
@@ -158,7 +158,7 @@ class _Phase3StorePolicyState extends State<Phase3StorePolicy>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'ط§ط´ط±ط­ ط§ظ„ط®ط·ظˆط§طھطŒ ط§ظ„ظ…ط¯ط¯ ط§ظ„ط²ظ…ظ†ظٹط© ظˆط§ظ„ط´ط±ظˆط· ط§ظ„ط®ط§طµط© ط¨ظ…طھط¬ط±ظƒ. ظ‡ط°ظ‡ ط§ظ„ط³ظٹط§ط³ط© طھط¸ظ‡ط± ظ„ظ„ط¹ظ…ظٹظ„ ظ‚ط¨ظ„ ط§ظ„ط¯ظپط¹.',
+                  'اشرح الخطوات، المدد الزمنية والشروط الخاصة بمتجرك. هذه السياسة تظهر للعميل قبل الدفع.',
                   style: TextStyle(
                     fontSize: context.font.small,
                     color: theme.textColorDark.withOpacity(0.7),
@@ -171,17 +171,17 @@ class _Phase3StorePolicyState extends State<Phase3StorePolicy>
                   maxLines: 10,
                   decoration: InputDecoration(
                     hintText:
-                        'ظ…ط«ط§ظ„: ظٹظ…ظƒظ† ط§ظ„ط§ط³طھط±ط¬ط§ط¹ ط®ظ„ط§ظ„ 7 ط£ظٹط§ظ… ظ…ط¹ ط¥ط¨ط±ط§ط² ط§ظ„ظپط§طھظˆط±ط© ط§ظ„ط£طµظ„ظٹط©...',
+                        'مثال: يمكن الاسترجاع خلال 7 أيام مع إبراز الفاتورة الأصلية...',
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14)),
                     filled: true,
                     fillColor: theme.secondaryColor.withOpacity(0.4),
-                    helperText: 'ظٹظڈظپط¶ظ„ ط£ظ† ظ„ط§ طھظ‚ظ„ ط§ظ„ط³ظٹط§ط³ط© ط¹ظ† 30 ظƒظ„ظ…ط©.',
+                    helperText: 'يُفضل أن لا تقل السياسة عن 30 كلمة.',
                   ),
                   validator: (value) {
                     final text = value?.trim() ?? '';
                     if (text.length < 30) {
-                      return 'ظٹط±ط¬ظ‰ ظƒطھط§ط¨ط© ط³ظٹط§ط³ط© ط£ظˆط¶ط­ (30 ط­ط±ظپط§ظ‹ ط¹ظ„ظ‰ ط§ظ„ط£ظ‚ظ„).';
+                      return 'يرجى كتابة سياسة أوضح (30 حرفاً على الأقل).';
                     }
                     return null;
                   },
@@ -191,7 +191,7 @@ class _Phase3StorePolicyState extends State<Phase3StorePolicy>
                   value: _agree,
                   onChanged: (value) => setState(() => _agree = value ?? false),
                   title: Text(
-                    'ط£ظ‚ط± ط¨ط£ظ† ظ‡ط°ظ‡ ط§ظ„ط³ظٹط§ط³ط© ط£طµظ„ظٹط© ظˆطھط¹ط¨ظ‘ط± ط¹ظ† ط§ظ„طھط²ط§ظ…ط§طھ ظ…طھط¬ط±ظٹ.',
+                    'أقر بأن هذه السياسة أصلية وتعبّر عن التزامات متجري.',
                     style: TextStyle(color: theme.textColorDark),
                   ),
                   controlAffinity: ListTileControlAffinity.leading,

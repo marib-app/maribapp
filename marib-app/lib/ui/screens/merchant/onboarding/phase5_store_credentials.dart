@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -123,8 +123,8 @@ class _Phase5StoreCredentialsState extends State<Phase5StoreCredentials>
       _handleChecked = true;
       _handleAvailable = !taken;
       _handleMessage = taken
-          ? 'ط§ظ„ظ…ط¹ط±ظپ ظ…ط³طھط®ط¯ظ… ط¨ط§ظ„ظپط¹ظ„طŒ ط¬ط±ظ‘ط¨ ط§ط³ظ…ط§ظ‹ ظ…ط®طھظ„ظپط§ظ‹.'
-          : 'ط§ظ„ظ…ط¹ط±ظپ ظ…طھط§ط­طŒ ظˆط³ظٹظڈظ†ط´ط£ ط§ظ„ط¨ط±ظٹط¯ ${handle}@${Constant.storeStaffEmailDomain}.';
+          ? 'المعرف مستخدم بالفعل، جرّب اسماً مختلفاً.'
+          : 'المعرف متاح، وسيُنشأ البريد ${handle}@${Constant.storeStaffEmailDomain}.';
     });
   }
 
@@ -157,7 +157,7 @@ class _Phase5StoreCredentialsState extends State<Phase5StoreCredentials>
     if (!_canProceed) {
       HelperUtils.showSnackBarMessage(
         context,
-        'طھط­ظ‚ظ‚ ظ…ظ† ط§ظ„ظ…ط¹ط±ظ‘ظپ ظˆظƒظ„ظ…ط© ط§ظ„ظ…ط±ظˆط± ظ‚ط¨ظ„ ط§ظ„ظ…طھط§ط¨ط¹ط©.',
+        'تحقق من المعرّف وكلمة المرور قبل المتابعة.',
       );
       return;
     }
@@ -206,7 +206,7 @@ class _Phase5StoreCredentialsState extends State<Phase5StoreCredentials>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'ظ…ط¹ط±ظپ ط§ظ„ظ…طھط¬ط± ظˆظƒظ„ظ…ط© ط§ظ„ظ…ط±ظˆط±',
+                  'معرف المتجر وكلمة المرور',
                   style: TextStyle(
                     fontSize: context.font.extraLarge,
                     fontWeight: FontWeight.w700,
@@ -215,7 +215,7 @@ class _Phase5StoreCredentialsState extends State<Phase5StoreCredentials>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'ط³ظٹظڈط³طھط®ط¯ظ… ظ‡ط°ط§ ط§ظ„ط­ط³ط§ط¨ ظ„ظ„ط¯ط®ظˆظ„ ط¥ظ„ظ‰ ظ„ظˆط­ط© ط§ظ„طھط§ط¬ط± ط¹ظ„ظ‰ ط§ظ„ظˆظٹط¨. ط§ط®طھط± ظ…ط¹ط±ظپط§ظ‹ ظپط±ظٹط¯ط§ظ‹ ظˆظƒظ„ظ…ط© ظ…ط±ظˆط± ظ‚ظˆظٹط©.',
+                  'سيُستخدم هذا الحساب للدخول إلى لوحة التاجر على الويب. اختر معرفاً فريداً وكلمة مرور قوية.',
                   style: TextStyle(
                     fontSize: context.font.normal,
                     color: colors.textColorDark.withValues(alpha: 0.75),
@@ -287,7 +287,7 @@ class _Phase5StoreCredentialsState extends State<Phase5StoreCredentials>
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                'ط§ط®طھظٹط§ط± ظ…ط¹ط±ظپ ط§ظ„ظ…طھط¬ط±',
+                'اختيار معرف المتجر',
                 style: TextStyle(
                   fontSize: context.font.large,
                   fontWeight: FontWeight.w600,
@@ -301,8 +301,8 @@ class _Phase5StoreCredentialsState extends State<Phase5StoreCredentials>
         TextFormField(
           controller: _handleCtrl,
           decoration: InputDecoration(
-            labelText: 'ظ…ط¹ط±ظپ ط§ظ„ظ…طھط¬ط±',
-            hintText: 'ظ…ط«ط§ظ„: marib.store',
+            labelText: 'معرف المتجر',
+            hintText: 'مثال: marib.store',
             suffixText: '@${Constant.storeStaffEmailDomain}',
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
           ),
@@ -334,7 +334,7 @@ class _Phase5StoreCredentialsState extends State<Phase5StoreCredentials>
             Expanded(
               child: Text(
                 _handleMessage ??
-                    'ظٹط¬ط¨ ط£ظ† ظٹطھط±ط§ظˆط­ ط·ظˆظ„ ط§ظ„ظ…ط¹ط±ظپ ط¨ظٹظ† ${Constant.storeStaffEmailMinLength} ظˆ ${Constant.storeStaffEmailMaxLength} ط±ظ…ط²ط§ظ‹ (ط£ط­ط±ظپ ط¥ظ†ط¬ظ„ظٹط²ظٹط©طŒ ط£ط±ظ‚ط§ظ… ط£ظˆ ط§ظ„ط±ظ…ظˆط² - . _).',
+                    'يجب أن يتراوح طول المعرف بين ${Constant.storeStaffEmailMinLength} و ${Constant.storeStaffEmailMaxLength} رمزاً (أحرف إنجليزية، أرقام أو الرموز - . _).',
                 style: TextStyle(
                   fontSize: context.font.small,
                   color: availabilityColor,
@@ -356,7 +356,7 @@ class _Phase5StoreCredentialsState extends State<Phase5StoreCredentials>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'طھظپط§طµظٹظ„ طھط³ط¬ظٹظ„ ط§ظ„ط¯ط®ظˆظ„ ط¹ط¨ط± ط§ظ„ظˆظٹط¨',
+                'تفاصيل تسجيل الدخول عبر الويب',
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
                   color: theme.textColorDark,
@@ -373,7 +373,7 @@ class _Phase5StoreCredentialsState extends State<Phase5StoreCredentials>
               ),
               const SizedBox(height: 6),
               Text(
-                'ط³ظٹظڈط³طھط®ط¯ظ… ظ‡ط°ط§ ط§ظ„ط¨ط±ظٹط¯ ظ„ظ„ط¯ط®ظˆظ„ ط¥ظ„ظ‰ ظ„ظˆط­ط© ط§ظ„طھط§ط¬ط±طŒ ط§ط­ظپط¸ظ‡ ظپظٹ ظ…ظƒط§ظ† ط¢ظ…ظ†.',
+                'سيُستخدم هذا البريد للدخول إلى لوحة التاجر، احفظه في مكان آمن.',
                 style: TextStyle(
                   fontSize: context.font.small,
                   color: theme.textColorDark.withValues(alpha: 0.7),
@@ -397,7 +397,7 @@ class _Phase5StoreCredentialsState extends State<Phase5StoreCredentials>
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                'طھط¹ظٹظٹظ† ظƒظ„ظ…ط© ط§ظ„ظ…ط±ظˆط±',
+                'تعيين كلمة المرور',
                 style: TextStyle(
                   fontSize: context.font.large,
                   fontWeight: FontWeight.w600,
@@ -412,8 +412,8 @@ class _Phase5StoreCredentialsState extends State<Phase5StoreCredentials>
           controller: _passwordCtrl,
           obscureText: _obscurePassword,
           decoration: InputDecoration(
-            labelText: 'ظƒظ„ظ…ط© ط§ظ„ظ…ط±ظˆط±',
-            hintText: 'ط¹ظ„ظ‰ ط§ظ„ط£ظ‚ظ„ 8 ط±ظ…ظˆط² ظ…ط¹ ط£ط±ظ‚ط§ظ… ظˆط­ط±ظˆظپ',
+            labelText: 'كلمة المرور',
+            hintText: 'على الأقل 8 رموز مع أرقام وحروف',
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
             suffixIcon: IconButton(
               icon: Icon(
@@ -429,7 +429,7 @@ class _Phase5StoreCredentialsState extends State<Phase5StoreCredentials>
           controller: _confirmCtrl,
           obscureText: _obscureConfirm,
           decoration: InputDecoration(
-            labelText: 'طھط£ظƒظٹط¯ ظƒظ„ظ…ط© ط§ظ„ظ…ط±ظˆط±',
+            labelText: 'تأكيد كلمة المرور',
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
             suffixIcon: IconButton(
               icon: Icon(
@@ -451,19 +451,19 @@ class _Phase5StoreCredentialsState extends State<Phase5StoreCredentials>
     final List<_ChecklistItem> items = [
       _ChecklistItem(
         fulfilled: _passwordCtrl.text.length >= 8,
-        label: '8 ط±ظ…ظˆط² ط¹ظ„ظ‰ ط§ظ„ط£ظ‚ظ„.',
+        label: '8 رموز على الأقل.',
       ),
       _ChecklistItem(
         fulfilled: _letters.hasMatch(_passwordCtrl.text),
-        label: 'طھط­طھظˆظٹ ط¹ظ„ظ‰ ط­ط±ظپ ظˆط§ط­ط¯ ط¹ظ„ظ‰ ط§ظ„ط£ظ‚ظ„.',
+        label: 'تحتوي على حرف واحد على الأقل.',
       ),
       _ChecklistItem(
         fulfilled: _numbers.hasMatch(_passwordCtrl.text),
-        label: 'طھط­طھظˆظٹ ط¹ظ„ظ‰ ط±ظ‚ظ… ظˆط§ط­ط¯ ط¹ظ„ظ‰ ط§ظ„ط£ظ‚ظ„.',
+        label: 'تحتوي على رقم واحد على الأقل.',
       ),
       _ChecklistItem(
         fulfilled: _passwordsMatch && _confirmCtrl.text.isNotEmpty,
-        label: 'طھط·ط§ط¨ظ‚ ط¨ظٹظ† ط§ظ„ط­ظ‚ظ„ظٹظ†.',
+        label: 'تطابق بين الحقلين.',
       ),
     ];
 

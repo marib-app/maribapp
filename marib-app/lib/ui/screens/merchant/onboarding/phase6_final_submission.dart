@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:marib/data/cubits/profile_setting_cubit.dart';
 import 'package:marib/ui/screens/classified_ads/app_html.dart';
@@ -99,6 +99,7 @@ class _Phase6FinalSubmissionState extends State<Phase6FinalSubmission>
       child: BlocProvider<ProfileSettingCubit>.value(
         value: _profileCubit,
         child: Scaffold(
+      resizeToAvoidBottomInset: false,
           body: SafeArea(
             bottom: false,
             child: SingleChildScrollView(
@@ -107,7 +108,7 @@ class _Phase6FinalSubmissionState extends State<Phase6FinalSubmission>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'المراجعة النهائية والإرسال',
+                    'ط§ظ„ظ…ط±ط§ط¬ط¹ط© ط§ظ„ظ†ظ‡ط§ط¦ظٹط© ظˆط§ظ„ط¥ط±ط³ط§ظ„',
                     style: TextStyle(
                       fontSize: context.font.extraLarge,
                       fontWeight: FontWeight.w700,
@@ -116,7 +117,7 @@ class _Phase6FinalSubmissionState extends State<Phase6FinalSubmission>
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'راجع شروط الانضمام وأكّد موافقتك قبل إرسال طلبك لمراجعة الفريق. يمكنك الرجوع للخطوات السابقة إذا رغبت بتعديل أي معلومة.',
+                    'ط±ط§ط¬ط¹ ط´ط±ظˆط· ط§ظ„ط§ظ†ط¶ظ…ط§ظ… ظˆط£ظƒظ‘ط¯ ظ…ظˆط§ظپظ‚طھظƒ ظ‚ط¨ظ„ ط¥ط±ط³ط§ظ„ ط·ظ„ط¨ظƒ ظ„ظ…ط±ط§ط¬ط¹ط© ط§ظ„ظپط±ظٹظ‚. ظٹظ…ظƒظ†ظƒ ط§ظ„ط±ط¬ظˆط¹ ظ„ظ„ط®ط·ظˆط§طھ ط§ظ„ط³ط§ط¨ظ‚ط© ط¥ط°ط§ ط±ط؛ط¨طھ ط¨طھط¹ط¯ظٹظ„ ط£ظٹ ظ…ط¹ظ„ظˆظ…ط©.',
                     style: TextStyle(
                       fontSize: context.font.normal,
                       color: context.color.textColorDark.withOpacity(0.75),
@@ -131,7 +132,7 @@ class _Phase6FinalSubmissionState extends State<Phase6FinalSubmission>
                     onChanged: (value) =>
                         setState(() => _agreed = value ?? false),
                     title: Text(
-                      'أقرّ بأنني قرأت جميع الشروط وأوافق على الالتزام بها، وأتحمل مسؤولية صحة البيانات التي قمت بتعبئتها.',
+                      'ط£ظ‚ط±ظ‘ ط¨ط£ظ†ظ†ظٹ ظ‚ط±ط£طھ ط¬ظ…ظٹط¹ ط§ظ„ط´ط±ظˆط· ظˆط£ظˆط§ظپظ‚ ط¹ظ„ظ‰ ط§ظ„ط§ظ„طھط²ط§ظ… ط¨ظ‡ط§طŒ ظˆط£طھط­ظ…ظ„ ظ…ط³ط¤ظˆظ„ظٹط© طµط­ط© ط§ظ„ط¨ظٹط§ظ†ط§طھ ط§ظ„طھظٹ ظ‚ظ…طھ ط¨طھط¹ط¨ط¦طھظ‡ط§.',
                       style: TextStyle(
                         color: context.color.textColorDark,
                         height: 1.3,
@@ -194,7 +195,7 @@ class _Phase6FinalSubmissionState extends State<Phase6FinalSubmission>
           }
           if (content.trim().isEmpty) {
             return _TermsError(
-              message: 'لا تتوفر شروط حالياً. يرجى المحاولة لاحقاً.',
+              message: 'ظ„ط§ طھطھظˆظپط± ط´ط±ظˆط· ط­ط§ظ„ظٹط§ظ‹. ظٹط±ط¬ظ‰ ط§ظ„ظ…ط­ط§ظˆظ„ط© ظ„ط§ط­ظ‚ط§ظ‹.',
               onRetry: () => _profileCubit.fetchProfileSetting(
                 context,
                 _currentParam,
@@ -278,7 +279,7 @@ class _TermsError extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'تعذر تحميل الشروط',
+            'طھط¹ط°ط± طھط­ظ…ظٹظ„ ط§ظ„ط´ط±ظˆط·',
             style: TextStyle(
               fontWeight: FontWeight.w600,
               color: context.color.textColorDark,
@@ -296,10 +297,13 @@ class _TermsError extends StatelessWidget {
           TextButton.icon(
             onPressed: onRetry,
             icon: const Icon(Icons.refresh_rounded),
-            label: const Text('إعادة المحاولة'),
+            label: const Text('ط¥ط¹ط§ط¯ط© ط§ظ„ظ…ط­ط§ظˆظ„ط©'),
           ),
         ],
       ),
     );
   }
 }
+
+
+

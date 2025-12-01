@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:marib/settings.dart' as app_settings;
 import 'package:marib/ui/theme/theme.dart';
@@ -483,7 +483,7 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
     if (_smartEnabled && smartAccount.isEmpty) {
       HelperUtils.showSnackBarMessage(
         context,
-        'يرجى إدخال رقم الحساب المرتبط ببنك الشرق.',
+        'ظٹط±ط¬ظ‰ ط¥ط¯ط®ط§ظ„ ط±ظ‚ظ… ط§ظ„ط­ط³ط§ط¨ ط§ظ„ظ…ط±طھط¨ط· ط¨ط¨ظ†ظƒ ط§ظ„ط´ط±ظ‚.',
       );
       return;
     }
@@ -492,7 +492,7 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
         drafts.length != _selectedGatewayIds.length) {
       HelperUtils.showSnackBarMessage(
         context,
-        'أكمل بيانات كل بوابة تم اختيارها قبل المتابعة.',
+        'ط£ظƒظ…ظ„ ط¨ظٹط§ظ†ط§طھ ظƒظ„ ط¨ظˆط§ط¨ط© طھظ… ط§ط®طھظٹط§ط±ظ‡ط§ ظ‚ط¨ظ„ ط§ظ„ظ…طھط§ط¨ط¹ط©.',
       );
       return;
     }
@@ -513,6 +513,7 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
     super.build(context);
     if (!_isReady) {
       return Scaffold(
+      resizeToAvoidBottomInset: false,
         body: Padding(
           padding: const EdgeInsets.fromLTRB(20, 32, 20, 32),
           child: Column(
@@ -534,6 +535,7 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
     final theme = context.color;
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       body: SafeArea(
         bottom: false,
         child: Padding(
@@ -542,7 +544,7 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'طرق الدفع في متجرك',
+                'ط·ط±ظ‚ ط§ظ„ط¯ظپط¹ ظپظٹ ظ…طھط¬ط±ظƒ',
                 style: TextStyle(
                   fontSize: context.font.extraLarge,
                   fontWeight: FontWeight.w700,
@@ -551,7 +553,7 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
               ),
               const SizedBox(height: 8),
               Text(
-                'المعلومات التالية تُعرض للعملاء أثناء الدفع ويمكن تعديلها لاحقاً من الإعدادات.',
+                'ط§ظ„ظ…ط¹ظ„ظˆظ…ط§طھ ط§ظ„طھط§ظ„ظٹط© طھظڈط¹ط±ط¶ ظ„ظ„ط¹ظ…ظ„ط§ط، ط£ط«ظ†ط§ط، ط§ظ„ط¯ظپط¹ ظˆظٹظ…ظƒظ† طھط¹ط¯ظٹظ„ظ‡ط§ ظ„ط§ط­ظ‚ط§ظ‹ ظ…ظ† ط§ظ„ط¥ط¹ط¯ط§ط¯ط§طھ.',
                 style: TextStyle(
                   fontSize: context.font.normal,
                   color: theme.textColorDark.withValues(alpha: 0.75),
@@ -563,8 +565,8 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
                 indicatorColor: theme.territoryColor,
                 labelStyle: TextStyle(fontWeight: FontWeight.w600),
                 tabs: const [
-                  Tab(text: 'الدفع اليدوي'),
-                  Tab(text: 'الدفع الذكي'),
+                  Tab(text: 'ط§ظ„ط¯ظپط¹ ط§ظ„ظٹط¯ظˆظٹ'),
+                  Tab(text: 'ط§ظ„ط¯ظپط¹ ط§ظ„ط°ظƒظٹ'),
                 ],
               ),
               Expanded(
@@ -606,14 +608,14 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
       }
       if (_storeGatewaysError != null) {
         return _InformativeCard(
-          message: 'تعذر تحميل قائمة بوابات الدفع. حاول مرة أخرى.',
-          buttonLabel: 'إعادة المحاولة',
+          message: 'طھط¹ط°ط± طھط­ظ…ظٹظ„ ظ‚ط§ط¦ظ…ط© ط¨ظˆط§ط¨ط§طھ ط§ظ„ط¯ظپط¹. ط­ط§ظˆظ„ ظ…ط±ط© ط£ط®ط±ظ‰.',
+          buttonLabel: 'ط¥ط¹ط§ط¯ط© ط§ظ„ظ…ط­ط§ظˆظ„ط©',
           onPressed: _loadStoreGateways,
         );
       }
       if (_storeGateways.isEmpty) {
         return _InformativeCard(
-          message: 'لا تتوفر بوابات دفع يدوي لربطها حالياً.',
+          message: 'ظ„ط§ طھطھظˆظپط± ط¨ظˆط§ط¨ط§طھ ط¯ظپط¹ ظٹط¯ظˆظٹ ظ„ط±ط¨ط·ظ‡ط§ ط­ط§ظ„ظٹط§ظ‹.',
           icon: Icons.info_outline,
         );
       }
@@ -629,7 +631,7 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'اختر بوابات الدفع اليدوي',
+              'ط§ط®طھط± ط¨ظˆط§ط¨ط§طھ ط§ظ„ط¯ظپط¹ ط§ظ„ظٹط¯ظˆظٹ',
               style: TextStyle(
                 fontSize: context.font.large,
                 fontWeight: FontWeight.w600,
@@ -638,7 +640,7 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
             ),
             const SizedBox(height: 6),
             Text(
-              'يمكنك إضافة أكثر من بوابة، وسيتم عرض هذه البيانات للعملاء في شاشة الدفع.',
+              'ظٹظ…ظƒظ†ظƒ ط¥ط¶ط§ظپط© ط£ظƒط«ط± ظ…ظ† ط¨ظˆط§ط¨ط©طŒ ظˆط³ظٹطھظ… ط¹ط±ط¶ ظ‡ط°ظ‡ ط§ظ„ط¨ظٹط§ظ†ط§طھ ظ„ظ„ط¹ظ…ظ„ط§ط، ظپظٹ ط´ط§ط´ط© ط§ظ„ط¯ظپط¹.',
               style: TextStyle(
                 fontSize: context.font.small,
                 color: theme.textColorDark.withValues(alpha: 0.7),
@@ -650,7 +652,7 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(
-                  'يمكنك استكمال هذه الخطوة لاحقاً من إعدادات المتجر.',
+                  'ظٹظ…ظƒظ†ظƒ ط§ط³طھظƒظ…ط§ظ„ ظ‡ط°ظ‡ ط§ظ„ط®ط·ظˆط© ظ„ط§ط­ظ‚ط§ظ‹ ظ…ظ† ط¥ط¹ط¯ط§ط¯ط§طھ ط§ظ„ظ…طھط¬ط±.',
                   style: TextStyle(
                     fontSize: context.font.small,
                     color: theme.textColorDark.withValues(alpha: 0.6),
@@ -668,8 +670,8 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
       }
       if (_manualError != null && _existingManualAccounts.isEmpty) {
         return _InformativeCard(
-          message: 'تعذر تحميل الحسابات المرتبطة بمتجرك.',
-          buttonLabel: 'إعادة المحاولة',
+          message: 'طھط¹ط°ط± طھط­ظ…ظٹظ„ ط§ظ„ط­ط³ط§ط¨ط§طھ ط§ظ„ظ…ط±طھط¨ط·ط© ط¨ظ…طھط¬ط±ظƒ.',
+          buttonLabel: 'ط¥ط¹ط§ط¯ط© ط§ظ„ظ…ط­ط§ظˆظ„ط©',
           onPressed: _loadManualGateways,
         );
       }
@@ -688,7 +690,7 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'الحسابات المرتبطة حالياً',
+              'ط§ظ„ط­ط³ط§ط¨ط§طھ ط§ظ„ظ…ط±طھط¨ط·ط© ط­ط§ظ„ظٹط§ظ‹',
               style: TextStyle(
                 fontSize: context.font.large,
                 fontWeight: FontWeight.w600,
@@ -711,12 +713,12 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
                       ),
                     ),
                     if (account.beneficiaryName != null)
-                      Text('المستفيد: ${account.beneficiaryName}'),
+                      Text('ط§ظ„ظ…ط³طھظپظٹط¯: ${account.beneficiaryName}'),
                     if (account.accountNumber != null)
-                      Text('رقم الحساب: ${account.accountNumber}'),
+                      Text('ط±ظ‚ظ… ط§ظ„ط­ط³ط§ط¨: ${account.accountNumber}'),
                     if (account.iban != null) Text('IBAN: ${account.iban}'),
                     if (account.branch != null)
-                      Text('الفرع: ${account.branch}'),
+                      Text('ط§ظ„ظپط±ط¹: ${account.branch}'),
                   ],
                 ),
               ),
@@ -798,8 +800,8 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
           TextField(
             controller: beneficiaryCtrl,
             decoration: InputDecoration(
-              labelText: 'اسم المستفيد',
-              hintText: 'مثال: مؤسسة متجري التجارية',
+              labelText: 'ط§ط³ظ… ط§ظ„ظ…ط³طھظپظٹط¯',
+              hintText: 'ظ…ط«ط§ظ„: ظ…ط¤ط³ط³ط© ظ…طھط¬ط±ظٹ ط§ظ„طھط¬ط§ط±ظٹط©',
               border:
                   OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
@@ -810,8 +812,8 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
             controller: accountCtrl,
             keyboardType: TextInputType.text,
             decoration: InputDecoration(
-              labelText: 'رقم الحساب/الآيبان',
-              hintText: 'أدخل رقم الحساب أو الآيبان المرتبط بالبوابة',
+              labelText: 'ط±ظ‚ظ… ط§ظ„ط­ط³ط§ط¨/ط§ظ„ط¢ظٹط¨ط§ظ†',
+              hintText: 'ط£ط¯ط®ظ„ ط±ظ‚ظ… ط§ظ„ط­ط³ط§ط¨ ط£ظˆ ط§ظ„ط¢ظٹط¨ط§ظ† ط§ظ„ظ…ط±طھط¨ط· ط¨ط§ظ„ط¨ظˆط§ط¨ط©',
               border:
                   OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
@@ -834,7 +836,7 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Text(
-            'لم يتم ربط بوابة بنك الشرق حتى الآن. تواصل مع فريق الدعم للتفعيل.',
+            'ظ„ظ… ظٹطھظ… ط±ط¨ط· ط¨ظˆط§ط¨ط© ط¨ظ†ظƒ ط§ظ„ط´ط±ظ‚ ط­طھظ‰ ط§ظ„ط¢ظ†. طھظˆط§طµظ„ ظ…ط¹ ظپط±ظٹظ‚ ط§ظ„ط¯ط¹ظ… ظ„ظ„طھظپط¹ظٹظ„.',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: theme.textColorDark.withValues(alpha: 0.7),
@@ -883,10 +885,10 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
           SwitchListTile.adaptive(
             value: _smartEnabled,
             onChanged: (value) => setState(() => _smartEnabled = value),
-            title: const Text('تفعيل بوابة بنك الشرق'),
+            title: const Text('طھظپط¹ظٹظ„ ط¨ظˆط§ط¨ط© ط¨ظ†ظƒ ط§ظ„ط´ط±ظ‚'),
             subtitle: Text(
               _eastConfig!.note ??
-                  'عند التفعيل يتمكن عملاؤك من الدفع عبر بنك الشرق مباشرة.',
+                  'ط¹ظ†ط¯ ط§ظ„طھظپط¹ظٹظ„ ظٹطھظ…ظƒظ† ط¹ظ…ظ„ط§ط¤ظƒ ظ…ظ† ط§ظ„ط¯ظپط¹ ط¹ط¨ط± ط¨ظ†ظƒ ط§ظ„ط´ط±ظ‚ ظ…ط¨ط§ط´ط±ط©.',
             ),
           ),
           const SizedBox(height: 12),
@@ -894,8 +896,8 @@ class _Phase4PaymentMethodsState extends State<Phase4PaymentMethods>
             controller: _smartAccountCtrl,
             enabled: _smartEnabled,
             decoration: InputDecoration(
-              labelText: 'رقم حسابك في بنك الشرق',
-              hintText: 'أدخل رقم الحساب أو معرف العميل',
+              labelText: 'ط±ظ‚ظ… ط­ط³ط§ط¨ظƒ ظپظٹ ط¨ظ†ظƒ ط§ظ„ط´ط±ظ‚',
+              hintText: 'ط£ط¯ط®ظ„ ط±ظ‚ظ… ط§ظ„ط­ط³ط§ط¨ ط£ظˆ ظ…ط¹ط±ظپ ط§ظ„ط¹ظ…ظٹظ„',
               border:
                   OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
             ),
@@ -970,7 +972,7 @@ String? _resolveErrorMessage(Object? error) {
   }
   if (error is ApiHttpException) {
     if (error.statusCode == 401) {
-      return 'انتهت صلاحية الجلسة، يرجى تسجيل الدخول ثم المحاولة مجدداً.';
+      return 'ط§ظ†طھظ‡طھ طµظ„ط§ط­ظٹط© ط§ظ„ط¬ظ„ط³ط©طŒ ظٹط±ط¬ظ‰ طھط³ط¬ظٹظ„ ط§ظ„ط¯ط®ظˆظ„ ط«ظ… ط§ظ„ظ…ط­ط§ظˆظ„ط© ظ…ط¬ط¯ط¯ط§ظ‹.';
     }
     final dynamic message = error.payload?['message'];
     if (message is String && message.trim().isNotEmpty) {
@@ -983,3 +985,6 @@ String? _resolveErrorMessage(Object? error) {
   }
   return error.toString();
 }
+
+
+

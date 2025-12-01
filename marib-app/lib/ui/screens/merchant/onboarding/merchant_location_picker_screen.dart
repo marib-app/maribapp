@@ -175,7 +175,11 @@ class _MerchantLocationPickerScreenState extends State<MerchantLocationPickerScr
     final LatLng target = _currentTarget ?? _fallback;
 
     return Scaffold(
+      backgroundColor: theme.backgroundColor,
       appBar: AppBar(
+        backgroundColor: theme.backgroundColor,
+        foregroundColor: theme.textDefaultColor,
+        elevation: 0.3,
         title: const Text('تحديد موقع المتجر'),
       ),
       body: Stack(
@@ -204,13 +208,25 @@ class _MerchantLocationPickerScreenState extends State<MerchantLocationPickerScr
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: theme.primaryColor.withOpacity(0.9),
+                color: theme.secondaryColor.withOpacity(0.92),
                 borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: theme.borderColor.withOpacity(0.4)),
               ),
-              child: Text(
-                'حرّك الخريطة لتحديد الموقع بدقة، ثم اضغط تأكيد.',
-                style: TextStyle(color: theme.textDefaultColor),
-                textAlign: TextAlign.center,
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline,
+                      color: theme.territoryColor, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'حرّك الخريطة حتى تثبت الدبوس على موقع متجرك، ثم اضغط تأكيد.',
+                      style: TextStyle(
+                        color: theme.textDefaultColor,
+                        fontSize: context.font.normal,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -223,29 +239,82 @@ class _MerchantLocationPickerScreenState extends State<MerchantLocationPickerScr
               child: Container(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                 decoration: BoxDecoration(
-                  color: theme.primaryColor.withOpacity(0.95),
+                  color: theme.backgroundColor.withOpacity(0.97),
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(16),
                     topRight: Radius.circular(16),
                   ),
+                  border: Border.all(color: theme.borderColor.withOpacity(0.5)),
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
+                      'العنوان التقريبي',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: theme.textDefaultColor,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
                       _addressLoading
                           ? 'جاري جلب العنوان...'
                           : (_currentAddress ?? 'لم يتم العثور على عنوان دقيق لهذا الموقع'),
-                      style: TextStyle(color: theme.textDefaultColor, fontSize: context.font.normal),
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _confirmSelection,
-                        child: const Text('تأكيد الموقع'),
+                      style: TextStyle(
+                        color: theme.textDefaultColor.withOpacity(0.8),
+                        fontSize: context.font.normal,
                       ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '${target.latitude.toStringAsFixed(5)}, ${target.longitude.toStringAsFixed(5)}',
+                      style: TextStyle(
+                        color: theme.textLightColor,
+                        fontSize: context.font.small,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () => _mapController?.animateCamera(
+                              CameraUpdate.newLatLng(target),
+                            ),
+                            icon: Icon(Icons.my_location,
+                                color: theme.territoryColor),
+                            label: Text(
+                              'إعادة تمركز',
+                              style: TextStyle(color: theme.territoryColor),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(color: theme.territoryColor),
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: FilledButton(
+                            onPressed: _confirmSelection,
+                            style: FilledButton.styleFrom(
+                              backgroundColor: theme.territoryColor,
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            child: Text(
+                              'تأكيد الموقع',
+                              style: TextStyle(
+                                color: theme.textDefaultColor,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),

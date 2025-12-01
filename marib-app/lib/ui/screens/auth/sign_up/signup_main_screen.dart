@@ -61,6 +61,7 @@ class LoginScreenState extends State<SignUpMainScreen> {
   bool isObscure = true;
   bool agreed = false;
   String? selectedAccountType; // 1=individual,2=realEstate,3=commercial
+  bool _isAccountTypeModalOpen = false;
 
   // ===== Country / Phone =====
   String? phone;
@@ -157,9 +158,9 @@ class LoginScreenState extends State<SignUpMainScreen> {
     );
   }
 
-  Future<void> _showAccountTypeDetailsSheet(String? typeValue) async {
+  Future<String?> _showAccountTypeDetailsSheet(String? typeValue) async {
     final String key = _accountTypeAlertKey(typeValue);
-    await showModalBottomSheet<void>(
+    return showModalBottomSheet<String?>(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
@@ -211,13 +212,7 @@ class LoginScreenState extends State<SignUpMainScreen> {
                         child: UiUtils.buildButton(
                           context,
                           onPressed: () async {
-                            Navigator.of(ctx).pop();
-                            final newType =
-                                await _showAccountTypeSelectorSheet();
-                            if (newType != null) {
-                              onAccountTypeChanged(newType);
-                              await _showAccountTypeDetailsSheet(newType);
-                            }
+                            Navigator.of(ctx).pop(null);
                           },
                           buttonTitle: "back".translate(context),
                           radius: 12,
@@ -232,7 +227,7 @@ class LoginScreenState extends State<SignUpMainScreen> {
                       Expanded(
                         child: UiUtils.buildButton(
                           context,
-                          onPressed: () => Navigator.of(ctx).pop(),
+                          onPressed: () => Navigator.of(ctx).pop(typeValue),
                           buttonTitle: "confirm".translate(context),
                           radius: 12,
                           padding: const EdgeInsets.symmetric(
@@ -863,8 +858,13 @@ class LoginScreenState extends State<SignUpMainScreen> {
       onToggleObscure: onToggleObscure,
       onAgreeChanged: onAgreeChanged,
       onAccountTypeChanged: (v) async {
-        onAccountTypeChanged(v);
-        await _showAccountTypeDetailsSheet(v);
+        if (_isAccountTypeModalOpen || v == selectedAccountType) return;
+        _isAccountTypeModalOpen = true;
+        final confirmed = await _showAccountTypeDetailsSheet(v);
+        if (confirmed != null) {
+          onAccountTypeChanged(confirmed);
+        }
+        _isAccountTypeModalOpen = false;
       },
       onShowCountryPicker: onShowCountryPicker,
       onSubmit: onSubmit,
@@ -889,33 +889,32 @@ class LoginScreenState extends State<SignUpMainScreen> {
     );
 
     // واجهة الشاشة
-    final overlay = LoginStatusBar.overlayFor(
-      context,
-      baseColor: statusBarBase,
+    final SystemUiOverlayStyle overlay = SystemUiOverlayStyle(
+      statusBarColor: Colors.white,
+      statusBarIconBrightness: Brightness.dark,
+      statusBarBrightness: Brightness.light,
+      systemNavigationBarColor: Colors.white,
+      systemNavigationBarIconBrightness: Brightness.dark,
     );
+
+    SystemChrome.setSystemUIOverlayStyle(overlay);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: overlay,
       child: SafeArea(
         child: GestureDetector(
           onTap: () => FocusScope.of(context).unfocus(),
-          // إخفاء الكيبورد عند الضغط خارج الحقول
           child: PopScope(
             canPop: isBack,
             onPopInvokedWithResult: (didPop, __) =>
                 setState(() => isBack = true),
-            child: AnnotatedRegion<SystemUiOverlayStyle>(
-              value: SystemUiOverlayStyle.light.copyWith(
-                statusBarColor: Colors.transparent,
-              ),
-              child: Scaffold(
-                backgroundColor: context.color.backgroundColor,
-                body: SignUpMainUI(
-                  vm: vm,
-                  callbacks:
-                      callbacks, // تمرير البيانات والأحداث للـ UI الرئيسي
-                  statusBarBase: statusBarBase,
-                ),
+            child: Scaffold(
+              resizeToAvoidBottomInset: false,
+              backgroundColor: context.color.backgroundColor,
+              body: SignUpMainUI(
+                vm: vm,
+                callbacks: callbacks,
+                statusBarBase: statusBarBase,
               ),
             ),
           ),

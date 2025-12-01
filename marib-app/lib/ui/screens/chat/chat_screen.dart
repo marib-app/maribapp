@@ -146,6 +146,9 @@ class _ChatScreenState extends State<ChatScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    if (widget.from == 'wifi') {
+      _isListingUnavailable = true; // لا نعرض بطاقة الإعلان في محادثات الشبكات
+    }
 
     _recordButtonAnimation = AnimationController(
       vsync: this,
@@ -858,7 +861,7 @@ class _ChatScreenState extends State<ChatScreen>
     _notificationStatusController.close();
     controller.dispose();
     _feedbackController.dispose();
-  _recordButtonAnimation?.dispose();
+    _recordButtonAnimation?.dispose();
     _pageScrollController.removeListener(_handleScroll);
     _pageScrollController.dispose();
     _presenceEventSubscription?.cancel();

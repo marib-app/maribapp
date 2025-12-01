@@ -39,6 +39,7 @@ extension _ChatScreenUi on _ChatScreenState {
     // شارة خضراء عند الاتصال، رمادية عند عدمه
     final Color presenceColor = isOnline ? Colors.green : Colors.grey;
     final resolvedCurrencySymbol = _resolveCurrencySymbol();
+    final bool hideListingCard = widget.from == "wifi";
 
     return AnnotatedRegion(
       value: UiUtils.getSystemUiOverlayStyle(
@@ -82,9 +83,9 @@ extension _ChatScreenUi on _ChatScreenState {
                       textDirection: Directionality.of(context),
                       child: RotatedBox(
                         quarterTurns:
-                        Directionality.of(context) == TextDirection.rtl
-                            ? 2
-                            : -4,
+                            Directionality.of(context) == TextDirection.rtl
+                                ? 2
+                                : -4,
                         child: UiUtils.getSvg(
                           AppIcons.arrowLeft,
                           fit: BoxFit.none,
@@ -98,15 +99,17 @@ extension _ChatScreenUi on _ChatScreenState {
               backgroundColor: context.color.secondaryColor,
               elevation: 0,
               iconTheme: IconThemeData(color: context.color.territoryColor),
-              bottom: PreferredSize(
-                preferredSize: const Size.fromHeight(70),
-                child: _ChatHeader(
-                  state: this,
-                  presenceText: presenceText,
-                  presenceColor: presenceColor,
-                  resolvedCurrencySymbol: resolvedCurrencySymbol,
-                ),
-              ),
+              bottom: hideListingCard
+                  ? null
+                  : PreferredSize(
+                      preferredSize: const Size.fromHeight(70),
+                      child: _ChatHeader(
+                        state: this,
+                        presenceText: presenceText,
+                        presenceColor: presenceColor,
+                        resolvedCurrencySymbol: resolvedCurrencySymbol,
+                      ),
+                    ),
               actions: [
                 MultiBlocProvider(
                   providers: [
@@ -122,14 +125,17 @@ extension _ChatScreenUi on _ChatScreenState {
                       return BlocListener<BlockUserCubit, BlockUserState>(
                         listener: (context, blockState) {
                           if (blockState is BlockUserSuccess) {
-                            context.read<BlockedUsersListCubit>().addBlockedUser(
-                              BlockedUserModel(
-                                id: int.parse(widget.userId),
-                                name: widget.userName,
-                                profile: widget.profilePicture,
-                              ),
-                            );
-                            HelperUtils.showSnackBarMessage(context, blockState.message);
+                            context
+                                .read<BlockedUsersListCubit>()
+                                .addBlockedUser(
+                                  BlockedUserModel(
+                                    id: int.parse(widget.userId),
+                                    name: widget.userName,
+                                    profile: widget.profilePicture,
+                                  ),
+                                );
+                            HelperUtils.showSnackBarMessage(
+                                context, blockState.message);
                           } else if (blockState is BlockUserFail) {
                             HelperUtils.showSnackBarMessage(
                                 context, blockState.error.toString());
@@ -148,7 +154,8 @@ extension _ChatScreenUi on _ChatScreenState {
                                   context, unblockState.error.toString());
                             }
                           },
-                          child: BlocConsumer<BlockedUsersListCubit, BlockedUsersListState>(
+                          child: BlocConsumer<BlockedUsersListCubit,
+                              BlockedUsersListState>(
                             listener: (context, state) {},
                             builder: (context, blockedUsersListState) {
                               final bool isBlocked = context
@@ -165,25 +172,30 @@ extension _ChatScreenUi on _ChatScreenState {
 
                               return Padding(
                                 // قلّل/كبّر end لو حاب تعدّل المارجن كمان
-                                padding: const EdgeInsetsDirectional.only(end: 14.0),
+                                padding:
+                                    const EdgeInsetsDirectional.only(end: 14.0),
                                 child: Transform.translate(
                                   offset: Offset(blockButtonOffsetX, 0),
                                   child: TextButton.icon(
                                     style: TextButton.styleFrom(
-                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                                      tapTargetSize:
+                                          MaterialTapTargetSize.shrinkWrap,
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 4),
                                       minimumSize: const Size(0, 0),
-                                      foregroundColor: context.color.textDefaultColor,
+                                      foregroundColor:
+                                          context.color.textDefaultColor,
                                     ),
                                     onPressed: () async {
                                       if (!isBlocked) {
-                                        final block = await UiUtils.showBlurredDialoge(
+                                        final block =
+                                            await UiUtils.showBlurredDialoge(
                                           context,
                                           dialoge: BlurredDialogBox(
                                             acceptButtonName:
-                                            "blockLbl".translate(context),
+                                                "blockLbl".translate(context),
                                             title:
-                                            "${"blockLbl".translate(context)}\t${widget.userName}?",
+                                                "${"blockLbl".translate(context)}\t${widget.userName}?",
                                             content: Text(
                                               "blockWarning".translate(context),
                                             ),
@@ -191,17 +203,21 @@ extension _ChatScreenUi on _ChatScreenState {
                                         );
                                         if (block == true) {
                                           Future.delayed(Duration.zero, () {
-                                            context.read<BlockUserCubit>().blockUser(
-                                              blockUserId: int.parse(widget.userId),
-                                            );
+                                            context
+                                                .read<BlockUserCubit>()
+                                                .blockUser(
+                                                  blockUserId:
+                                                      int.parse(widget.userId),
+                                                );
                                           });
                                         }
                                       } else {
-                                        final unBlock = await UiUtils.showBlurredDialoge(
+                                        final unBlock =
+                                            await UiUtils.showBlurredDialoge(
                                           context,
                                           dialoge: BlurredDialogBox(
                                             acceptButtonName:
-                                            "unBlockLbl".translate(context),
+                                                "unBlockLbl".translate(context),
                                             content: Text(
                                               "${"unBlockLbl".translate(context)}\t${widget.userName}\t${"toSendMessage".translate(context)}"
                                                   .translate(context),
@@ -213,8 +229,9 @@ extension _ChatScreenUi on _ChatScreenState {
                                             context
                                                 .read<UnblockUserCubit>()
                                                 .unBlockUser(
-                                              blockUserId: int.parse(widget.userId),
-                                            );
+                                                  blockUserId:
+                                                      int.parse(widget.userId),
+                                                );
                                           });
                                         }
                                       }
@@ -250,49 +267,49 @@ extension _ChatScreenUi on _ChatScreenState {
                   children: [
                     widget.profilePicture == ""
                         ? CircleAvatar(
-                      backgroundColor: context.color.territoryColor,
-                      child: SvgPicture.asset(
-                        AppIcons.profile,
-                        colorFilter: ColorFilter.mode(
-                          context.color.buttonColor,
-                          BlendMode.srcIn,
-                        ),
-                      ),
-                    )
+                            backgroundColor: context.color.territoryColor,
+                            child: SvgPicture.asset(
+                              AppIcons.profile,
+                              colorFilter: ColorFilter.mode(
+                                context.color.buttonColor,
+                                BlendMode.srcIn,
+                              ),
+                            ),
+                          )
                         : GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          TransparantRoute(
-                            barrierDismiss: true,
-                            builder: (context) {
-                              return GestureDetector(
-                                onTap: () {
-                                  Navigator.pop(context);
-                                },
-                                child: Stack(
-                                  children: [
-                                    Container(
-                                      color:
-                                          const Color.fromARGB(69, 0, 0, 0),
-                                    ),
-                                  ],
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                TransparantRoute(
+                                  barrierDismiss: true,
+                                  builder: (context) {
+                                    return GestureDetector(
+                                      onTap: () {
+                                        Navigator.pop(context);
+                                      },
+                                      child: Stack(
+                                        children: [
+                                          Container(
+                                            color: const Color.fromARGB(
+                                                69, 0, 0, 0),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
                                 ),
                               );
                             },
+                            child: CustomImageHeroAnimation(
+                              type: CImageType.Network,
+                              image: widget.profilePicture,
+                              child: CircleAvatar(
+                                backgroundImage: CachedNetworkImageProvider(
+                                  widget.profilePicture,
+                                ),
+                              ),
+                            ),
                           ),
-                        );
-                      },
-                      child: CustomImageHeroAnimation(
-                        type: CImageType.Network,
-                        image: widget.profilePicture,
-                        child: CircleAvatar(
-                          backgroundImage: CachedNetworkImageProvider(
-                            widget.profilePicture,
-                          ),
-                        ),
-                      ),
-                    ),
                     const SizedBox(width: 10),
                     GestureDetector(
                       onTap: () {},
@@ -305,8 +322,7 @@ extension _ChatScreenUi on _ChatScreenState {
                             Text(widget.userName)
                                 .color(context.color.textColorDark)
                                 .size(context.font.normal),
-                            if (presenceText != null &&
-                                presenceText.isNotEmpty)
+                            if (presenceText != null && presenceText.isNotEmpty)
                               Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
@@ -416,17 +432,17 @@ extension _ChatScreenUi on _ChatScreenState {
                                 stream: ChatMessageHandler.getChatStream(),
                                 builder: (context,
                                     AsyncSnapshot<List<ChatMessageModal>>
-                                    snapshot) {
+                                        snapshot) {
                                   final bool isLoadingMore =
                                       state is LoadChatMessagesSuccess &&
                                           state.isLoadingMore;
                                   final Widget? loadingMoreWidget =
-                                  isLoadingMore
-                                      ? Text("loading".translate(context))
-                                      : null;
+                                      isLoadingMore
+                                          ? Text("loading".translate(context))
+                                          : null;
 
                                   if (snapshot.connectionState ==
-                                      ConnectionState.waiting &&
+                                          ConnectionState.waiting &&
                                       !snapshot.hasData) {
                                     return loadingMoreWidget ?? offerWidget();
                                   }
@@ -438,10 +454,9 @@ extension _ChatScreenUi on _ChatScreenState {
                                   // so filter here to avoid cross-chat duplicates.
                                   final List<ChatMessageModal> allMessages =
                                       snapshot.data ?? <ChatMessageModal>[];
-                                  final int currentUserId =
-                                      int.tryParse(HiveUtils.getUserId() ??
-                                              '') ??
-                                          0;
+                                  final int currentUserId = int.tryParse(
+                                          HiveUtils.getUserId() ?? '') ??
+                                      0;
                                   final int otherUserId =
                                       int.tryParse(widget.userId) ?? 0;
                                   final int widgetItemOfferId =
@@ -458,7 +473,8 @@ extension _ChatScreenUi on _ChatScreenState {
 
                                     // If this chat is tied to an itemOfferId, require it to match.
                                     if (widgetItemOfferId > 0) {
-                                      if (mOffer != widgetItemOfferId) return false;
+                                      if (mOffer != widgetItemOfferId)
+                                        return false;
                                     } else if (widgetItemId > 0) {
                                       // Otherwise, require itemId match when available.
                                       if (mItem != widgetItemId) return false;
@@ -486,8 +502,8 @@ extension _ChatScreenUi on _ChatScreenState {
                                   }
 
                                   final List<_ChatListEntry> renderItems =
-                                  _buildRenderableMessages(
-                                      messages, context);
+                                      _buildRenderableMessages(
+                                          messages, context);
 
                                   // إصلاح الـ Column: يجب أن يكون max وليس min مع Expanded
                                   return Column(
@@ -501,18 +517,18 @@ extension _ChatScreenUi on _ChatScreenState {
                                               'chat_messages_list'),
                                           reverse: true,
                                           physics:
-                                          const AlwaysScrollableScrollPhysics(),
+                                              const AlwaysScrollableScrollPhysics(),
                                           controller: _pageScrollController,
                                           addAutomaticKeepAlives: true,
                                           itemCount: renderItems.length + 1,
-                                          padding: const EdgeInsets.only(
-                                              bottom: 10),
+                                          padding:
+                                              const EdgeInsets.only(bottom: 10),
                                           itemBuilder: (context, index) {
                                             if (index == renderItems.length) {
                                               return offerWidget();
                                             }
                                             final _ChatListEntry entry =
-                                            renderItems[index];
+                                                renderItems[index];
                                             if (entry.isDateSeparator) {
                                               return _buildMessageDateChip(
                                                 context,
@@ -548,8 +564,10 @@ extension _ChatScreenUi on _ChatScreenState {
     );
   }
 
-
   Widget buildOfferWidget() {
+    if (widget.from == "wifi") {
+      return const SizedBox.shrink();
+    }
     final offerCurrencySymbol = _resolveCurrencySymbol();
     final double? offerPrice = widget.itemOfferPrice;
 
@@ -558,7 +576,7 @@ extension _ChatScreenUi on _ChatScreenState {
     }
 
     final String offerLabel =
-    _formatPriceWithCurrency(offerPrice, offerCurrencySymbol);
+        _formatPriceWithCurrency(offerPrice, offerCurrencySymbol);
 
     final bool isCurrentUserBuyer =
         int.parse(HiveUtils.getUserId()!) == int.parse(widget.buyerId!);
@@ -568,7 +586,8 @@ extension _ChatScreenUi on _ChatScreenState {
       return Align(
         alignment: AlignmentDirectional.topEnd,
         child: Container(
-          margin: const EdgeInsetsDirectional.only(top: 15, bottom: 15, end: 15),
+          margin:
+              const EdgeInsetsDirectional.only(top: 15, bottom: 15, end: 15),
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             border: Border.all(
@@ -604,7 +623,7 @@ extension _ChatScreenUi on _ChatScreenState {
         alignment: AlignmentDirectional.topStart,
         child: Container(
           margin:
-          const EdgeInsetsDirectional.only(top: 15, bottom: 15, start: 15),
+              const EdgeInsetsDirectional.only(top: 15, bottom: 15, start: 15),
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             border: Border.all(
@@ -704,8 +723,7 @@ extension _ChatScreenUi on _ChatScreenState {
       messageKey = ValueKey(modal.hashCode);
     }
 
-    final bool isSelected =
-        modal.id != null && modal.id == selectedMessageId;
+    final bool isSelected = modal.id != null && modal.id == selectedMessageId;
 
     final ChatMessage chatWidget = ChatMessage(
       key: messageKey,
@@ -750,7 +768,7 @@ extension _ChatScreenUi on _ChatScreenState {
 class _ChatHeader extends StatelessWidget {
   final _ChatScreenState state;
   final String? presenceText; // غير مستخدمة هنا
-  final Color presenceColor;  // غير مستخدم
+  final Color presenceColor; // غير مستخدم
   final String resolvedCurrencySymbol;
 
   const _ChatHeader({
@@ -829,7 +847,8 @@ class _ChatHeader extends StatelessWidget {
                     color: ctx.color.borderColor.withOpacity(0.4),
                   ),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 child: Row(
                   textDirection: TextDirection.rtl,
                   children: [
@@ -867,15 +886,16 @@ class _ChatHeader extends StatelessWidget {
                             textAlign: TextAlign.right,
                           )
                               .color(
-                            ctx.color.textDefaultColor.withOpacity(0.6),
-                          )
+                                ctx.color.textDefaultColor.withOpacity(0.6),
+                              )
                               .size(ctx.font.small),
                         ],
                       ),
                     ),
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: ctx.color.territoryColor.withOpacity(0.12),
                         borderRadius: BorderRadius.circular(999),
@@ -900,7 +920,8 @@ class _ChatHeader extends StatelessWidget {
                       color: ctx.color.backgroundColor.withOpacity(0.92),
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: Center(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -1070,9 +1091,6 @@ class _ChatBottomBarState extends State<_ChatBottomBar> {
     );
   }
 
-
-
-
   Widget _buildMessageInputField(BuildContext context, bool isBlocked) {
     return TextField(
       enabled: !isBlocked,
@@ -1096,8 +1114,6 @@ class _ChatBottomBarState extends State<_ChatBottomBar> {
       ),
     );
   }
-
-
 
   Widget _buildBlockButton(BuildContext context, int otherUserId) {
     final String promptText =
@@ -1137,8 +1153,6 @@ class _ChatBottomBarState extends State<_ChatBottomBar> {
       ),
     );
   }
-
-
 
   Widget _buildAttachmentWidget(
     BuildContext context,
@@ -1223,9 +1237,6 @@ class _ChatBottomBarState extends State<_ChatBottomBar> {
       ),
     );
   }
-
-
-
 
   Widget _buildBottomAppBar(BuildContext context, bool isBlocked) {
     return BottomAppBar(
@@ -1368,9 +1379,6 @@ class _ChatBottomBarState extends State<_ChatBottomBar> {
     widget.state._setMessageAttachment(null);
   }
 }
-
-
-
 
 class _ChatListEntry {
   final ChatMessageModal? message;

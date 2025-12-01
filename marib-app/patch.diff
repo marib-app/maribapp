@@ -1,0 +1,29 @@
+*** Begin Patch
+*** Update File: lib/ui/screens/chat/chat_screen_ui.dart
+@@
+-    return AnnotatedRegion(
++    final bool hideListingCard = widget.from == 'wifi';
++
++    return AnnotatedRegion(
+@@
+-              bottom: PreferredSize(
+-                preferredSize: const Size.fromHeight(70),
+-                child: _ChatHeader(
+-                  state: this,
+-                  presenceText: presenceText,
+-                  presenceColor: presenceColor,
+-                  resolvedCurrencySymbol: resolvedCurrencySymbol,
+-                ),
+-              ),
++              bottom: hideListingCard
++                  ? null
++                  : PreferredSize(
++                      preferredSize: const Size.fromHeight(70),
++                      child: _ChatHeader(
++                        state: this,
++                        presenceText: presenceText,
++                        presenceColor: presenceColor,
++                        resolvedCurrencySymbol: resolvedCurrencySymbol,
++                      ),
++                    ),
+*** End Patch

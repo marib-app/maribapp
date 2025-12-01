@@ -92,46 +92,40 @@ class SignUpMainUI extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final overlay = LoginStatusBar.overlayFor(
-      context,
-      baseColor: statusBarBase,
-    );
     final bool showSkeleton =
         vm.isSystemSettingsLoading && !vm.isSystemSettingsReady;
 
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: overlay,
-      child: Column(
-        children: [
-          LoginStatusBar.topSpacer(
-            context,
-            baseColor: statusBarBase,
-          ),
-          _SignUpAppBar(onNavigateToLogin: callbacks.onNavigateToLogin),
-          Expanded(
-            child: Form(
-              key: vm.formKey,
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 250),
-                switchInCurve: Curves.easeOut,
-                switchOutCurve: Curves.easeIn,
-                child: showSkeleton
-                    ? const _SignUpShimmer(key: ValueKey('signup_shimmer'))
-                    : _SignUpScrollContent(
-                        key: const ValueKey('signup_content'),
-                        vm: vm,
-                        callbacks: callbacks,
-                      ),
-              ),
+    return Column(
+      children: [
+        LoginStatusBar.topSpacer(
+          context,
+          baseColor: statusBarBase,
+        ),
+        _SignUpAppBar(onNavigateToLogin: callbacks.onNavigateToLogin),
+        Expanded(
+          child: Form(
+            key: vm.formKey,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 250),
+              switchInCurve: Curves.easeOut,
+              switchOutCurve: Curves.easeIn,
+              child: showSkeleton
+                  ? const _SignUpShimmer(key: ValueKey('signup_shimmer'))
+                  : _SignUpScrollContent(
+                      key: const ValueKey('signup_content'),
+                      vm: vm,
+                      callbacks: callbacks,
+                    ),
             ),
           ),
-          _StickyLegalActionBar(
-            agreed: vm.agreed,
-            isBusy: showSkeleton,
-            onSubmit: callbacks.onSubmit,
-          ),
-        ],
-      ),
+        ),
+        // شريط ثابت أسفل الشاشة (يبقى تحت حتى عند ظهور الكيبورد)
+        _StickyLegalActionBar(
+          agreed: vm.agreed,
+          isBusy: showSkeleton,
+          onSubmit: callbacks.onSubmit,
+        ),
+      ],
     );
   }
 }
@@ -551,7 +545,7 @@ class AccountTypeDropdown extends StatelessWidget {
         "3": ("commercial".translate(context), Icons.storefront_outlined),
       };
 
-  Future<void> _openBottomSheet(BuildContext context) async {
+  Future<String?> _openBottomSheet(BuildContext context) async {
     final options = _options(context);
     final String? selected = await showModalBottomSheet<String>(
       context: context,
@@ -560,7 +554,6 @@ class AccountTypeDropdown extends StatelessWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) {
-        String? localValue = value;
         return SafeArea(
           top: false,
           child: Padding(
@@ -595,7 +588,7 @@ class AccountTypeDropdown extends StatelessWidget {
                       .color(context.color.textColorDark.withOpacity(0.7)),
                   const SizedBox(height: 16),
                   ...options.entries.map((entry) {
-                    final isSelected = entry.key == localValue;
+                    final isSelected = entry.key == value;
                     return Container(
                       margin: const EdgeInsets.only(bottom: 10),
                       decoration: BoxDecoration(
@@ -633,6 +626,7 @@ class AccountTypeDropdown extends StatelessWidget {
     if (selected != null) {
       onChanged(selected);
     }
+    return selected;
   }
 
   @override
@@ -643,6 +637,7 @@ class AccountTypeDropdown extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         FormField<String>(
+          key: ValueKey(value ?? 'account_type_none'),
           initialValue: value,
           validator: (v) {
             if (v == null || v.isEmpty) {
@@ -660,10 +655,12 @@ class AccountTypeDropdown extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                   onTap: () {
                     HapticFeedback.selectionClick();
-                    _openBottomSheet(context).then((_) {
-                      state.didChange(value);
+                    _openBottomSheet(context).then((selected) {
+                      if (selected != null) {
+                        onChanged(selected);
+                      }
                     });
-                  },
+                    },
                   child: InputDecorator(
                     isEmpty: selected == null,
                     decoration: InputDecoration(

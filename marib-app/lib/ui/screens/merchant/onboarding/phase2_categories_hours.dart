@@ -61,6 +61,7 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
     with AutomaticKeepAliveClientMixin {
   Future<List<CategoryModel>>? _categoriesFuture;
   final Set<int> _selectedCategoryIds = <int>{};
+  List<String> _selectedCategoryLabels = <String>[];
   static const int _storeRootCategoryId = 3;
   final Map<int, DaySchedule> _hours = {
     for (int i = 0; i < 7; i++)
@@ -157,7 +158,7 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
     } catch (_) {
       HelperUtils.showSnackBarMessage(
         context,
-        'ØªØ¹Ø°Ø± ØªØ­Ù…ÙŠÙ„ Ø§Ù„ÙØ¦Ø§ØªØŒ Ø­Ø§ÙˆÙ„ Ù…Ø¬Ø¯Ø¯Ø§Ù‹.',
+        'ÍÏË ÎØÃ ÃËäÇÁ ÊÍãíá ÇáİÆÇÊ. ÍÇæá ãÌÏÏÇğ.',
       );
       return const <CategoryModel>[];
     }
@@ -232,7 +233,7 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
     if (valid.isEmpty) {
       HelperUtils.showSnackBarMessage(
         context,
-        'Ù„Ø§ ØªÙˆØ¬Ø¯ Ø£Ù‚Ø³Ø§Ù… Ù…ØªØ§Ø­Ø© Ø­Ø§Ù„ÙŠØ§Ù‹',
+        'áÇ ÊæÌÏ İÆÇÊ ãÊÇÍÉ ÍÇáíÇğ.',
       );
       return;
     }
@@ -248,6 +249,12 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
         _selectedCategoryIds
           ..clear()
           ..addAll(result);
+
+        _selectedCategoryLabels = valid
+            .where((c) => c.id != null && result.contains(c.id))
+            .map((c) => c.name?.trim() ?? '')
+            .where((name) => name.isNotEmpty)
+            .toList();
       });
     }
   }
@@ -369,26 +376,13 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
           ),
         ),
         const SizedBox(height: 12),
-        if (_selectedCategoryIds.isNotEmpty)
-          _buildSelectedCategoriesSummary(categories)
-        else
-          Text(
-            'Ù„Ù… ÙŠØªÙ… Ø§Ø®ØªÙŠØ§Ø± Ø£ÙŠ Ù‚Ø³Ù… Ø¨Ø¹Ø¯.',
-            style:
-                TextStyle(color: colors.textColorDark.withValues(alpha: 0.6)),
-          ),
       ],
     );
   }
 
   Widget _buildSelectedCategoriesSummary(List<CategoryModel> categories) {
-    final selected = categories
-        .where((c) => c.id != null && _selectedCategoryIds.contains(c.id))
-        .toList();
-
-    if (selected.isEmpty) {
-      return const SizedBox.shrink();
-    }
+    final labels = _selectedCategoryLabels;
+    if (labels.isEmpty) return const SizedBox.shrink();
 
     return SizedBox(
       height: 40,
@@ -396,13 +390,15 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsetsDirectional.only(start: 4, end: 4),
         separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemCount: selected.length,
+        itemCount: labels.length,
         itemBuilder: (_, index) {
-          final item = selected[index];
-          final id = item.id!;
+          final name = labels[index];
+          final int? id = _selectedCategoryIds.length > index
+              ? _selectedCategoryIds.elementAt(index)
+              : null;
           return InkWell(
             borderRadius: BorderRadius.circular(18),
-            onTap: () => _toggleCategory(id),
+            onTap: id != null ? () => _toggleCategory(id) : null,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
@@ -418,7 +414,7 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
                       size: 16, color: context.color.territoryColor),
                   const SizedBox(width: 6),
                   Text(
-                    item.name ?? 'ÙØ¦Ø© Ø¨Ø¯ÙˆÙ† Ø§Ø³Ù…',
+                    name,
                     style: TextStyle(
                       fontSize: context.font.small,
                       fontWeight: FontWeight.w600,
@@ -433,7 +429,6 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
       ),
     );
   }
-
   Widget _buildWorkingHoursCard() {
     final colors = context.color;
 
@@ -446,7 +441,7 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                'Ø³Ø§Ø¹Ø§Øª Ø§Ù„Ø¹Ù…Ù„',
+                'ÃæŞÇÊ ÇáÚãá',
                 style: TextStyle(
                   fontSize: context.font.large,
                   fontWeight: FontWeight.w700,
@@ -458,7 +453,7 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
         ),
         const SizedBox(height: 8),
         Text(
-          'ÙŠÙ…ÙƒÙ†Ùƒ Ø¶Ø¨Ø· Ø³Ø§Ø¹Ø§Øª Ø§Ù„Ø¯ÙˆØ§Ù… Ù„ÙƒÙ„ ÙŠÙˆÙ… ÙˆØ¥Ø¨Ù‚Ø§Ø¡ Ø­Ø§Ù„Ø© Ø§Ù„Ù…ØªØ¬Ø± Ø¯Ù‚ÙŠÙ‚Ø© Ø£Ù…Ø§Ù… Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…ÙŠÙ†. Ø§Ø­Ø±Øµ Ø¹Ù„Ù‰ ØªØ­Ø¯ÙŠØ¯ Ø£ÙˆÙ‚Ø§Øª Ø§Ù„ÙØªØ­ ÙˆØ§Ù„Ø¥ØºÙ„Ø§Ù‚ Ø¨Ø¯Ù‚Ø©.',
+          'ÇÖÈØ ÃæŞÇÊ Úãá ãÊÌÑß ÈÓåæáÉ¡ æÃÖİ ÃíÇã ÇáÅÌÇÒÉ Ãæ ÇáİÊÑÇÊ ÇáÎÇÕÉ.',
           style: TextStyle(
             fontSize: context.font.small,
             color: colors.textColorDark.withValues(alpha: 0.7),
@@ -472,7 +467,7 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
           child: FilledButton.icon(
             onPressed: _openWorkingHoursSheet,
             icon: const Icon(Icons.schedule),
-            label: const Text('Ø¥Ø¯Ø§Ø±Ø© Ø³Ø§Ø¹Ø§Øª Ø§Ù„Ø¹Ù…Ù„'),
+            label: const Text('ÖÈØ ÃæŞÇÊ ÇáÚãá'),
             style: FilledButton.styleFrom(
               backgroundColor: colors.territoryColor,
               foregroundColor: Colors.white,
@@ -599,6 +594,14 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
   @override
   bool get wantKeepAlive => true;
 }
+
+
+
+
+
+
+
+
 
 
 

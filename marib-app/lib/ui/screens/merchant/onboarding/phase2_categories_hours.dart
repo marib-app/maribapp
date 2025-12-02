@@ -1,44 +1,42 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:marib/data/model/category_model.dart';
 import 'package:marib/ui/theme/theme.dart';
-import 'package:marib/utils/api.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/ui_utils.dart';
 
 import 'widgets/legacy_selectors.dart';
 
+typedef DaySchedule = LegacyDayHours;
+
 class Phase2Data {
-  final List<int> categoryIds;
-  final Map<int, DaySchedule> workingHours;
+  final Set<int> selectedCategories;
+  final Map<int, LegacyDayHours> workingHours;
+  final bool workingHoursSet;
 
-  Phase2Data({required this.categoryIds, required this.workingHours});
-}
-
-class DaySchedule {
-  final bool enabled;
-  final TimeOfDay from;
-  final TimeOfDay to;
-
-  DaySchedule({
-    required this.enabled,
-    required this.from,
-    required this.to,
+  Phase2Data({
+    required this.selectedCategories,
+    required this.workingHours,
+    required this.workingHoursSet,
   });
+
+  Set<int> get categoryIds => selectedCategories;
 }
 
 class Phase2CategoriesHours extends StatefulWidget {
+  final Future<List<CategoryModel>> Function() loadCategories;
   final VoidCallback onBack;
   final void Function(Phase2Data data) onNext;
-  final ValueNotifier<int> visibilityNotifier;
-  final int pageIndex;
+  final ValueNotifier<int>? visibilityNotifier;
+  final int? pageIndex;
 
   const Phase2CategoriesHours({
     super.key,
+    required this.loadCategories,
     required this.onBack,
     required this.onNext,
-    required this.visibilityNotifier,
-    required this.pageIndex,
+    this.visibilityNotifier,
+    this.pageIndex,
   });
 
   @override
@@ -47,317 +45,199 @@ class Phase2CategoriesHours extends StatefulWidget {
 
 class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
     with AutomaticKeepAliveClientMixin {
-  Future<List<CategoryModel>>? _categoriesFuture;
-  final Set<int> _selectedCategoryIds = <int>{};
-  static const int _storeRootCategoryId = 3;
-  final Map<int, DaySchedule> _hours = {
-    for (int i = 0; i < 7; i++)
-      i: DaySchedule(
-        enabled: false,
-        from: const TimeOfDay(hour: 9, minute: 0),
-        to: const TimeOfDay(hour: 18, minute: 0),
-      ),
-  };
-
-  bool get _canProceed => _selectedCategoryIds.isNotEmpty;
-
-  late final VoidCallback _visibilityListener;
-  bool _refreshQueued = false;
+  late Future<List<CategoryModel>> _categoriesFuture;
+  Set<int> _selected = <int>{};
+  late Map<int, LegacyDayHours> _hours;
 
   @override
   void initState() {
     super.initState();
-    _visibilityListener = _handleVisibilityChanged;
-    widget.visibilityNotifier.addListener(_visibilityListener);
-    WidgetsBinding.instance
-        .addPostFrameCallback((_) => _handleVisibilityChanged());
+    _categoriesFuture = widget.loadCategories();
+    _hours = {for (int i = 0; i < 7; i++) i: LegacyDayHours(enabled: false)};
   }
 
   @override
-  void didUpdateWidget(covariant Phase2CategoriesHours oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.visibilityNotifier != widget.visibilityNotifier) {
-      oldWidget.visibilityNotifier.removeListener(_visibilityListener);
-      widget.visibilityNotifier.addListener(_visibilityListener);
-      WidgetsBinding.instance
-          .addPostFrameCallback((_) => _handleVisibilityChanged());
-    }
-  }
+  bool get wantKeepAlive => true;
 
-  @override
-  void dispose() {
-    widget.visibilityNotifier.removeListener(_visibilityListener);
-    super.dispose();
-  }
-
-  void _handleVisibilityChanged() {
-    if (widget.visibilityNotifier.value == widget.pageIndex) {
-      _scheduleRefresh();
-    }
-  }
-
-  void _scheduleRefresh() {
-    if (_refreshQueued) return;
-    _refreshQueued = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _refreshQueued = false;
-      _reloadCategories();
-    });
-  }
-
-  void _reloadCategories() {
-    setState(() {
-      _categoriesFuture = _loadCategories();
-    });
-  }
-
-  Future<List<CategoryModel>> _loadCategories() async {
-    try {
-      final Map<String, dynamic> response = await Api.get(
-        url: Api.getCategoriesApi,
-        queryParameters: <String, dynamic>{
-          Api.page: 1,
-          Api.categoryId: _storeRootCategoryId,
-          Api.perPageQuery: 100,
-        },
-      );
-
-      final List<CategoryModel> parsed =
-          _parseCategoriesPayload(response['data']);
-      final List<CategoryModel> filtered = parsed
-          .where((category) => category.id != _storeRootCategoryId)
-          .toList();
-
-      if (filtered.isNotEmpty) {
-        filtered.sort((a, b) => (a.name ?? '').compareTo(b.name ?? ''));
-        return filtered;
-      }
-
-      final List<CategoryModel> fallback =
-          _extractSelfCategoryChildren(response);
-      if (fallback.isNotEmpty) {
-        fallback.sort((a, b) => (a.name ?? '').compareTo(b.name ?? ''));
-        return fallback;
-      }
-
-      return const <CategoryModel>[];
-    } catch (_) {
-      HelperUtils.showSnackBarMessage(
-        context,
-        'حدث خطأ أثناء تحميل الفئات. حاول مجدداً.',
-      );
-      return const <CategoryModel>[];
-    }
-  }
-
-  List<CategoryModel> _parseCategoriesPayload(dynamic data) {
-    if (data is Map<String, dynamic>) {
-      final List<dynamic> items = data['items'] ?? data['data'] ?? [];
-      return _mapCategories(items);
-    }
-    if (data is List) {
-      return _mapCategories(data);
-    }
-    return const <CategoryModel>[];
-  }
-
-  List<CategoryModel> _mapCategories(List<dynamic> source) {
-    return source
-        .whereType<Map<String, dynamic>>()
-        .map(CategoryModel.fromJson)
-        .where((category) => category.id != null)
-        .toList();
-  }
-
-  List<CategoryModel> _extractSelfCategoryChildren(
-      Map<String, dynamic> response) {
-    final dynamic rawSelf = response['self_category'] ??
-        (response['data'] is Map<String, dynamic>
-            ? (response['data'] as Map<String, dynamic>)['self_category']
-            : null);
-    if (rawSelf is Map<String, dynamic>) {
-      final CategoryModel root = CategoryModel.fromJson(rawSelf);
-      return (root.children ?? const <CategoryModel>[])
-          .where((category) => category.id != null)
-          .toList();
-    }
-    return const <CategoryModel>[];
-  }
-
-  void _toggleCategory(int id) {
-    if (id < 0) return;
-    setState(() {
-      if (_selectedCategoryIds.contains(id)) {
-        _selectedCategoryIds.remove(id);
-      } else {
-        _selectedCategoryIds.add(id);
-      }
-    });
-  }
-
-  void _submit() {
-    if (_selectedCategoryIds.isEmpty) {
-      HelperUtils.showSnackBarMessage(
-        context,
-        'pleaseSelectAtLeastOneBusinessCategory'.translate(context),
-      );
-      return;
-    }
-
-    widget.onNext(
-      Phase2Data(
-        categoryIds: _selectedCategoryIds.toList(),
-        workingHours: Map.of(_hours),
-      ),
-    );
-  }
-
-  Future<void> _openCategoriesPicker(List<CategoryModel> categories) async {
-    final valid = categories
-        .where((e) => e.id != null && (e.name?.trim().isNotEmpty ?? false))
-        .toList();
-    if (valid.isEmpty) {
-      HelperUtils.showSnackBarMessage(
-        context,
-        'لا توجد فئات متاحة حالياً.',
-      );
-      return;
-    }
-
+  Future<void> _openCategoriesSelector(List<CategoryModel> categories) async {
     final result = await showLegacyCategoriesPalette(
       context: context,
-      categories: valid,
-      initialSelection: _selectedCategoryIds.toSet(),
+      categories: categories,
+      initialSelection: _selected,
     );
-
-    if (result != null && mounted) {
-      setState(() {
-        _selectedCategoryIds
-          ..clear()
-          ..addAll(result);
-      });
+    if (result != null) {
+      setState(() => _selected = result);
     }
   }
 
   Future<void> _openWorkingHoursSheet() async {
-    final initial = <int, LegacyDayHours>{
-      for (int i = 0; i < 7; i++)
-        i: LegacyDayHours(
-          enabled: _hours[i]!.enabled,
-          from: _hours[i]!.from,
-          to: _hours[i]!.to,
-        ),
-    };
-
     final result = await showLegacyWorkingHoursSheet(
       context: context,
-      initialDays: initial,
+      initialDays: _hours,
     );
-
-    if (result != null && mounted) {
-      setState(() {
-        result.forEach((key, value) {
-          _hours[key] = DaySchedule(
-            enabled: value.enabled,
-            from: value.from ?? _hours[key]!.from,
-            to: value.to ?? _hours[key]!.to,
-          );
-        });
-      });
+    if (result != null) {
+      setState(() => _hours = result);
     }
   }
 
-  Widget _buildSectionHeader(String title, String subtitle) {
-    final theme = context.color;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: context.font.extraLarge,
-            fontWeight: FontWeight.w700,
-            color: theme.textColorDark,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          subtitle,
-          style: TextStyle(
-            fontSize: context.font.normal,
-            color: theme.textColorDark.withValues(alpha: 0.7),
-          ),
-        ),
-      ],
+  bool get _workingHoursValid {
+    for (final entry in _hours.values) {
+      if (entry.enabled && (entry.from == null || entry.to == null)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  Future<bool> _handlePop() async {
+    widget.onBack();
+    return false;
+  }
+
+  void _handleNext() {
+    if (_selected.isEmpty) {
+      HelperUtils.showSnackBarMessage(
+        context,
+        'اختر على الأقل فئة واحدة.',
+      );
+      return;
+    }
+    if (!_workingHoursValid) {
+      HelperUtils.showSnackBarMessage(
+        context,
+        'أكمل أوقات الدوام للأيام المفعّلة.',
+      );
+      return;
+    }
+    widget.onNext(
+      Phase2Data(
+        selectedCategories: _selected,
+        workingHours: _hours,
+        workingHoursSet: _hours.values.any((e) => e.enabled),
+      ),
     );
   }
 
-  Widget _buildCategoryCard(bool loading, List<CategoryModel> categories) {
-    final colors = context.color;
-    final selectedCount = _selectedCategoryIds.length;
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return FutureBuilder<List<CategoryModel>>(
+      future: _categoriesFuture,
+      builder: (context, snapshot) {
+        final bool loading = snapshot.connectionState == ConnectionState.waiting;
+        final bool hasError = snapshot.hasError;
+        final categories = snapshot.data;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(Icons.category_rounded, color: colors.territoryColor),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
+        return WillPopScope(
+          onWillPop: _handlePop,
+          child: Scaffold(
+            backgroundColor: context.color.secondaryColor,
+            appBar: AppBar(
+              backgroundColor: context.color.secondaryColor,
+              elevation: 0,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back_ios),
+                onPressed: _handlePop,
+              ),
+              title: Text(
                 'الفئات وساعات العمل',
                 style: TextStyle(
-                  fontSize: context.font.large,
+                  color: context.color.textDefaultColor,
                   fontWeight: FontWeight.w700,
-                  color: colors.textColorDark,
                 ),
               ),
             ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'اختر الأقسام التي يعمل ضمنها متجرك. قم بضبط ساعات العمل الأسبوعية لتحسين ظهور المتجر لبقية المستخدمين.',
-          style: TextStyle(
-            fontSize: context.font.small,
-            color: colors.textColorDark.withValues(alpha: 0.7),
-            height: 1.4,
-          ),
-        ),
-        const SizedBox(height: 14),
-        SizedBox(
-          height: 52,
-          width: double.infinity,
-          child: FilledButton.icon(
-            onPressed: loading ? null : () => _openCategoriesPicker(categories),
-            icon: loading
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  )
-                : const Icon(Icons.tune_rounded),
-            label: Text('اختيار الأقسام • $selectedCount'),
-            style: FilledButton.styleFrom(
-              backgroundColor: colors.territoryColor,
-              foregroundColor: Colors.white,
-              textStyle: TextStyle(
-                fontSize: context.font.normal,
-                fontWeight: FontWeight.w600,
+            body: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+              child: loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : hasError
+                      ? Center(
+                          child: Text(
+                            'تعذّر تحميل الفئات، حاول مجدداً.',
+                            style: TextStyle(color: context.color.textColorDark),
+                          ),
+                        )
+                      : _buildContent(categories!),
+            ),
+            bottomNavigationBar: SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: UiUtils.buildButton(
+                  context,
+                  buttonTitle: 'nextStage'.translate(context),
+                  onPressed: _handleNext,
+                ),
               ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 16),
             ),
           ),
-        ),
-        const SizedBox(height: 12),
-      ],
+        );
+      },
+    );
+  }
+
+  Widget _buildContent(List<CategoryModel> categories) {
+    final colors = context.color;
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 4),
+          Text(
+            'اختيار الأقسام',
+            style: TextStyle(
+              fontSize: context.font.extraLarge,
+              fontWeight: FontWeight.w700,
+              color: colors.textColorDark,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'اختر الأقسام التي ينتمي لها نشاطك ليظهر متجرك للمستخدمين بشكل صحيح.',
+            style: TextStyle(
+              fontSize: context.font.normal,
+              color: colors.textColorDark.withValues(alpha: 0.75),
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 52,
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: () => _openCategoriesSelector(categories),
+              style: OutlinedButton.styleFrom(
+                backgroundColor: colors.secondaryColor,
+                side: BorderSide(color: colors.territoryColor),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.category_outlined, color: colors.territoryColor),
+                  const SizedBox(width: 10),
+                  Text(
+                    _selected.isEmpty
+                        ? 'اختر الأقسام'
+                        : 'تم اختيار ${_selected.length} قسم',
+                    style: TextStyle(
+                      fontSize: context.font.normal,
+                      color: colors.textColorDark,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Spacer(),
+                  Icon(Icons.chevron_right, color: colors.textLightColor),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          _buildWorkingHoursCard(),
+        ],
+      ),
     );
   }
 
@@ -385,7 +265,7 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
         ),
         const SizedBox(height: 8),
         Text(
-          'اضبط أوقات عمل متجرك بسهولة، وأضف أيام الإجازة أو الفترات الخاصة.',
+          'اضبط أوقات العمل لتعرض حالة المتجر للزوار بدقة ويستفيد منها نظام التوصيل.',
           style: TextStyle(
             fontSize: context.font.small,
             color: colors.textColorDark.withValues(alpha: 0.7),
@@ -396,21 +276,31 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
         SizedBox(
           height: 52,
           width: double.infinity,
-          child: FilledButton.icon(
+          child: OutlinedButton(
             onPressed: _openWorkingHoursSheet,
-            icon: const Icon(Icons.schedule),
-            label: const Text('ضبط أوقات العمل'),
-            style: FilledButton.styleFrom(
-              backgroundColor: colors.territoryColor,
-              foregroundColor: Colors.white,
-              textStyle: TextStyle(
-                fontSize: context.font.normal,
-                fontWeight: FontWeight.w600,
-              ),
+            style: OutlinedButton.styleFrom(
+              backgroundColor: colors.secondaryColor,
+              side: BorderSide(color: colors.territoryColor),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 16),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.schedule, color: colors.territoryColor),
+                const SizedBox(width: 10),
+                Text(
+                  'ضبط أوقات العمل',
+                  style: TextStyle(
+                    fontSize: context.font.normal,
+                    fontWeight: FontWeight.w600,
+                    color: colors.textColorDark,
+                  ),
+                ),
+                const Spacer(),
+                Icon(Icons.chevron_right, color: colors.textLightColor),
+              ],
             ),
           ),
         ),
@@ -423,7 +313,7 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
   Widget _buildWorkingHoursSummary() {
     const weekdays = [
       'الأحد',
-      'الإثنين',
+      'الاثنين',
       'الثلاثاء',
       'الأربعاء',
       'الخميس',
@@ -435,8 +325,8 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
       children: List.generate(7, (index) {
         final entry = _hours[index]!;
         final enabled = entry.enabled;
-        final text = enabled
-            ? '${entry.from.format(context)} - ${entry.to.format(context)}'
+        final text = enabled && entry.from != null && entry.to != null
+            ? '${entry.from!.format(context)} - ${entry.to!.format(context)}'
             : 'مغلق';
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 6),
@@ -465,64 +355,4 @@ class _Phase2CategoriesHoursState extends State<Phase2CategoriesHours>
       }),
     );
   }
-
-  Future<bool> _handlePop() async {
-    widget.onBack();
-    return false;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    super.build(context);
-    return FutureBuilder<List<CategoryModel>>(
-      future: _categoriesFuture,
-      builder: (context, snapshot) {
-        final bool loading = _categoriesFuture == null ||
-            snapshot.connectionState != ConnectionState.done;
-        final List<CategoryModel> categories = snapshot.data ?? [];
-        return WillPopScope(
-          onWillPop: _handlePop,
-          child: Scaffold(
-            resizeToAvoidBottomInset: false,
-            body: SafeArea(
-              bottom: false,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 140),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildSectionHeader(
-                      'الفئات وساعات العمل',
-                      'اختر الأقسام التي يعمل ضمنها متجرك. قم بضبط ساعات العمل الأسبوعية لتحسين ظهور المتجر لبقية المستخدمين.',
-                    ),
-                    const SizedBox(height: 24),
-                    _buildCategoryCard(loading, categories),
-                    const SizedBox(height: 24),
-                    _buildWorkingHoursCard(),
-                  ],
-                ),
-              ),
-            ),
-            bottomNavigationBar: SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                child: UiUtils.buildButton(
-                  context,
-                  onPressed: _submit,
-                  buttonTitle: 'nextStage'.translate(context),
-                  disabled: !_canProceed,
-                  autoManageState: false,
-                  autoDisableWhenInvalid: false,
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  @override
-  bool get wantKeepAlive => true;
 }

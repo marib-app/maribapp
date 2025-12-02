@@ -45,7 +45,7 @@ class CategoryModel {
           .toList();
 
       return CategoryModel(
-          id: _parseId(json['id']),
+          id: parseId(json['id']),
           //name: json['name'],
           name: json['translated_name'] ?? json['name'],
           url: json['image'],
@@ -79,7 +79,7 @@ class CategoryModel {
     return 'CategoryModel( id: $id, translated_name:$name, url: $url, descrtiption:$description, interfaceType:$interfaceType, children: $children,subcategories_count:$subcategoriesCount)';
   }
 
-  static int? _parseId(dynamic value) {
+  static int? parseId(dynamic value) {
     if (value == null) {
       return null;
     }

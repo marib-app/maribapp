@@ -206,10 +206,12 @@ class _Phase1ActivityInfoState extends State<Phase1ActivityInfo>
         setState(() {
           _latitude = lat;
           _longitude = lng;
-          final String? addr = result['address'] as String?;
-          _pickedAddress = addr?.trim().isNotEmpty == true
-              ? addr!.trim()
-              : null;
+          final String? addr = (result['formatted_address'] as String?) ??
+              (result['address'] as String?) ??
+              (result['area'] as String?) ??
+              (result['city'] as String?);
+          _pickedAddress =
+              (addr != null && addr.trim().isNotEmpty) ? addr.trim() : null;
         });
         _recomputeValidity();
       }
@@ -584,53 +586,40 @@ class _Phase1ActivityInfoState extends State<Phase1ActivityInfo>
                       duration: const Duration(milliseconds: 250),
                       child: _hasLocation
                           ? Container(
-                              key: const ValueKey('location_summary'),
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color:
-                                    context.color.primaryColor.withOpacity(0.05),
-                                borderRadius: BorderRadius.circular(12),
-                                border:
-                                    Border.all(color: context.color.borderColor),
+                        key: const ValueKey('location_summary'),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: context.color.primaryColor.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: context.color.borderColor),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "الموقع المختار",
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: context.color.textColorDark,
                               ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    "الموقع المختار",
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      color: context.color.textColorDark,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  if (_pickedAddress != null &&
-                                      _pickedAddress!.isNotEmpty)
-                                    Padding(
-                                      padding: const EdgeInsets.only(bottom: 4),
-                                      child: Text(
-                                        _pickedAddress!,
-                                        style: TextStyle(
-                                          fontSize: context.font.normal,
-                                          color: context.color.textColorDark
-                                              .withOpacity(0.9),
-                                          height: 1.3,
-                                        ),
-                                      ),
-                                    ),
-                                  Text(
-                                    "${_latitude?.toStringAsFixed(5)}, ${_longitude?.toStringAsFixed(5)}",
-                                    style: TextStyle(
-                                      fontSize: context.font.normal,
-                                      color: context.color.textColorDark
-                                          .withOpacity(0.7),
-                                    ),
-                                  ),
-                                ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              (_pickedAddress != null && _pickedAddress!.isNotEmpty)
+                                  ? _pickedAddress!
+                                  : "لم يتم العثور على عنوان، تأكد من تحديد موقعك بدقة.",
+                              style: TextStyle(
+                                fontSize: context.font.normal,
+                                color: context.color.textColorDark.withOpacity(0.9),
+                                height: 1.3,
                               ),
-                            )
+                            ),
+                          ],
+                        ),
+                      )
                           : const SizedBox.shrink(),
                     ),
+
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _addressCtrl,
@@ -702,3 +691,4 @@ class _Phase1ActivityInfoState extends State<Phase1ActivityInfo>
   @override
   bool get wantKeepAlive => true;
 }
+

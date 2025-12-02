@@ -1,4 +1,4 @@
-import 'dart:ui';
+ï»¿import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -31,7 +31,7 @@ Future<Set<int>?> showLegacyCategoriesPalette({
   if (valid.isEmpty) {
     HelperUtils.showSnackBarMessage(
       context,
-      'áÇ ÊæÌÏ İÆÇÊ ãÊÇÍÉ ááÇÎÊíÇÑ.',
+      'Ù„Ø§ ØªÙˆØ¬Ø¯ ÙØ¦Ø§Øª Ù…ØªØ§Ø­Ø© Ù„Ù„Ø§Ø®ØªÙŠØ§Ø±.',
     );
     return Future.value(null);
   }
@@ -61,8 +61,7 @@ class _CategoriesSelectorSheet extends StatefulWidget {
   });
 
   @override
-  State<_CategoriesSelectorSheet> createState() =>
-      _CategoriesSelectorSheetState();
+  State<_CategoriesSelectorSheet> createState() => _CategoriesSelectorSheetState();
 }
 
 class _CategoriesSelectorSheetState extends State<_CategoriesSelectorSheet> {
@@ -97,7 +96,7 @@ class _CategoriesSelectorSheetState extends State<_CategoriesSelectorSheet> {
                     children: [
                       Expanded(
                         child: Text(
-                          'ÇÎÊÑ İÆÇÊ ãÊÌÑß',
+                          'Ø§Ø®ØªÙŠØ§Ø± Ø§Ù„Ø£Ù‚Ø³Ø§Ù…',
                           style: TextStyle(
                             fontSize: context.font.large,
                             fontWeight: FontWeight.w700,
@@ -110,7 +109,7 @@ class _CategoriesSelectorSheetState extends State<_CategoriesSelectorSheet> {
                         icon: const Icon(Icons.close_rounded),
                         color: colors.textDefaultColor,
                         splashRadius: 20,
-                        tooltip: 'ÅÛáÇŞ',
+                        tooltip: 'Ø¥ØºÙ„Ø§Ù‚',
                       ),
                     ],
                   ),
@@ -119,7 +118,7 @@ class _CategoriesSelectorSheetState extends State<_CategoriesSelectorSheet> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Text(
-                    'ÍÏÏ ÇáİÆÇÊ ÇáÊí ÊäÇÓÈ äÔÇØ ãÊÌÑß áíÊã ÚÑÖ ÇáãäÊÌÇÊ ÈÔßá ÏŞíŞ.',
+                    'ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ø®ØªÙŠØ§Ø± Ø§Ù„Ø£Ù‚Ø³Ø§Ù… Ø§Ù„ØªÙŠ ÙŠÙ†ØªÙ…ÙŠ Ø¥Ù„ÙŠÙ‡Ø§ Ù…ØªØ¬Ø±Ùƒ. ÙŠØ¸Ù‡Ø± Ø§Ù„Ø­Ø¯ Ø§Ù„Ø£Ù‚ØµÙ‰ ÙÙŠ Ø§Ù„Ø²Ø±.',
                     style: TextStyle(
                       fontSize: context.font.small,
                       color: colors.textDefaultColor.withValues(alpha: 0.75),
@@ -129,41 +128,44 @@ class _CategoriesSelectorSheetState extends State<_CategoriesSelectorSheet> {
                 ),
                 const SizedBox(height: 12),
                 Expanded(
-                  child: ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                    itemCount: widget.categories.length,
-                    separatorBuilder: (_, __) => Divider(
-                      height: 1,
-                      color: colors.borderColor,
-                    ),
-                    itemBuilder: (_, index) {
-                      final c = widget.categories[index];
-                      final id = c.id!;
-                      final selected = _selected.contains(id);
-                      return CheckboxListTile(
-                        value: selected,
-                        activeColor: colors.territoryColor,
-                        checkColor: colors.textDefaultColor,
-                        title: Text(
-                          c.name ?? '',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: colors.textColorDark,
+                  child: ScrollConfiguration(
+                    behavior: AppScrollBehavior(),
+                    child: ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                      itemCount: widget.categories.length,
+                      separatorBuilder: (_, __) => Divider(
+                        height: 1,
+                        color: colors.borderColor,
+                      ),
+                      itemBuilder: (_, index) {
+                        final c = widget.categories[index];
+                        final id = c.id!;
+                        final selected = _selected.contains(id);
+                        return CheckboxListTile(
+                          value: selected,
+                          activeColor: colors.territoryColor,
+                          checkColor: colors.textDefaultColor,
+                          title: Text(
+                            c.name ?? '',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: colors.textColorDark,
+                            ),
                           ),
-                        ),
-                        controlAffinity: ListTileControlAffinity.trailing,
-                        contentPadding: EdgeInsets.zero,
-                        onChanged: (_) {
-                          setState(() {
-                            if (selected) {
-                              _selected.remove(id);
-                            } else {
-                              _selected.add(id);
-                            }
-                          });
-                        },
-                      );
-                    },
+                          controlAffinity: ListTileControlAffinity.trailing,
+                          contentPadding: EdgeInsets.zero,
+                          onChanged: (_) {
+                            setState(() {
+                              if (selected) {
+                                _selected.remove(id);
+                              } else {
+                                _selected.add(id);
+                              }
+                            });
+                          },
+                        );
+                      },
+                    ),
                   ),
                 ),
                 Padding(
@@ -173,7 +175,7 @@ class _CategoriesSelectorSheetState extends State<_CategoriesSelectorSheet> {
                     child: FilledButton.icon(
                       icon: const Icon(Icons.check_rounded),
                       onPressed: () => Navigator.of(context).pop(_selected),
-                      label: Text('ÊÃßíÏ (${_selected.length})'),
+                      label: Text('Ø­ÙØ¸ (${_selected.length})'),
                       style: FilledButton.styleFrom(
                         backgroundColor: colors.territoryColor,
                         foregroundColor: colors.textDefaultColor,
@@ -195,13 +197,13 @@ class _CategoriesSelectorSheetState extends State<_CategoriesSelectorSheet> {
 }
 
 final List<String> _weekdays = const [
-  'ÇáÃÍÏ',
-  'ÇáÇËäíä',
-  'ÇáËáÇËÇÁ',
-  'ÇáÃÑÈÚÇÁ',
-  'ÇáÎãíÓ',
-  'ÇáÌãÚÉ',
-  'ÇáÓÈÊ',
+  'Ø§Ù„Ø£Ø­Ø¯',
+  'Ø§Ù„Ø§Ø«Ù†ÙŠÙ†',
+  'Ø§Ù„Ø«Ù„Ø§Ø«Ø§Ø¡',
+  'Ø§Ù„Ø£Ø±Ø¨Ø¹Ø§Ø¡',
+  'Ø§Ù„Ø®Ù…ÙŠØ³',
+  'Ø§Ù„Ø¬Ù…Ø¹Ø©',
+  'Ø§Ù„Ø³Ø¨Øª',
 ];
 
 Future<TimeOfDay?> _pickTime(
@@ -213,9 +215,9 @@ Future<TimeOfDay?> _pickTime(
   return showTimePicker(
     context: context,
     initialTime: initial ?? now,
-    helpText: isOpening ? 'ÇÎÊÑ æŞÊ ÇáİÊÍ' : 'ÇÎÊÑ æŞÊ ÇáÅÛáÇŞ',
-    cancelText: 'ÅáÛÇÁ',
-    confirmText: 'ÊÃßíÏ',
+    helpText: isOpening ? 'ÙŠØ¨Ø¯Ø£ Ø§Ù„Ø¯ÙˆØ§Ù… Ù…Ù†' : 'ÙŠÙ†ØªÙ‡ÙŠ Ø§Ù„Ø¯ÙˆØ§Ù… Ø¹Ù†Ø¯',
+    cancelText: 'Ø¥Ù„ØºØ§Ø¡',
+    confirmText: 'ØªØ£ÙƒÙŠØ¯',
     builder: (context, child) => Directionality(
       textDirection: TextDirection.rtl,
       child: child ?? const SizedBox.shrink(),
@@ -305,76 +307,117 @@ Future<Map<int, LegacyDayHours>?> showLegacyWorkingHoursSheet({
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'ÊäÙíã ÃæŞÇÊ ÇáÚãá',
+                      'Ø£ÙˆÙ‚Ø§Øª Ø§Ù„Ø¹Ù…Ù„',
                       style: TextStyle(
                         fontSize: context.font.large,
                         fontWeight: FontWeight.w700,
                         color: colors.textColorDark,
                       ),
                     ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Ø­Ø¯Ø¯ ÙˆÙ‚Øª Ø¨Ø¯Ø§ÙŠØ© ÙˆÙ†Ù‡Ø§ÙŠØ© Ø§Ù„Ø¯ÙˆØ§Ù… Ù„ÙƒÙ„ ÙŠÙˆÙ….',
+                      style: TextStyle(
+                        color: colors.textColorDark.withValues(alpha: 0.7),
+                        fontSize: context.font.normal,
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     Expanded(
-                      child: ListView.separated(
-                        padding: const EdgeInsets.all(20),
-                        separatorBuilder: (_, __) => Divider(
-                          color: colors.borderColor,
-                          height: 20,
+                      child: ScrollConfiguration(
+                        behavior: AppScrollBehavior(),
+                        child: ListView.separated(
+                          padding: const EdgeInsets.all(20),
+                          separatorBuilder: (_, __) => Divider(
+                            color: colors.borderColor,
+                            height: 20,
+                          ),
+                          itemCount: 7,
+                          itemBuilder: (_, index) {
+                            final entry = data[index]!;
+                            final label = _weekdays[index];
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        label,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          color: colors.textColorDark,
+                                        ),
+                                      ),
+                                    ),
+                                    Switch.adaptive(
+                                      value: entry.enabled,
+                                      onChanged: (value) {
+                                        setState(() => entry.enabled = value);
+                                      },
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'ÙŠØ¨Ø¯Ø£ Ù…Ù†',
+                                            style: TextStyle(
+                                              fontSize: context.font.small,
+                                              color: colors.textLightColor,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          OutlinedButton(
+                                            onPressed: entry.enabled
+                                                ? () => pickDayTime(index, true)
+                                                : null,
+                                            child: Text(
+                                              entry.from?.format(context) ??
+                                                  '--:--',
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'ÙŠÙ†ØªÙ‡ÙŠ Ø¹Ù†Ø¯',
+                                            style: TextStyle(
+                                              fontSize: context.font.small,
+                                              color: colors.textLightColor,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          OutlinedButton(
+                                            onPressed: entry.enabled
+                                                ? () => pickDayTime(index, false)
+                                                : null,
+                                            child: Text(
+                                              entry.to?.format(context) ??
+                                                  '--:--',
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            );
+                          },
                         ),
-                        itemCount: 7,
-                        itemBuilder: (_, index) {
-                          final entry = data[index]!;
-                          final label = _weekdays[index];
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      label,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        color: colors.textColorDark,
-                                      ),
-                                    ),
-                                  ),
-                                  Switch.adaptive(
-                                    value: entry.enabled,
-                                    onChanged: (value) {
-                                      setState(() => entry.enabled = value);
-                                    },
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: OutlinedButton(
-                                      onPressed: entry.enabled
-                                          ? () => pickDayTime(index, true)
-                                          : null,
-                                      child: Text(
-                                        entry.from?.format(context) ?? '--:--',
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: OutlinedButton(
-                                      onPressed: entry.enabled
-                                          ? () => pickDayTime(index, false)
-                                          : null,
-                                      child: Text(
-                                        entry.to?.format(context) ?? '--:--',
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          );
-                        },
                       ),
                     ),
                     Padding(
@@ -389,7 +432,7 @@ Future<Map<int, LegacyDayHours>?> showLegacyWorkingHoursSheet({
                                       entry.value.to == null)) {
                                 HelperUtils.showSnackBarMessage(
                                   context,
-                                  'íÑÌì ÊÍÏíÏ æŞÊ ÇáİÊÍ/ÇáÅÛáÇŞ áÜ ${_weekdays[entry.key]}',
+                                  'ÙŠØ±Ø¬Ù‰ Ø¥Ø¯Ø®Ø§Ù„ ÙˆÙ‚Øª Ø§Ù„Ø¨Ø¯Ø§ÙŠØ© ÙˆØ§Ù„Ù†Ù‡Ø§ÙŠØ© Ù„ÙŠÙˆÙ… ${_weekdays[entry.key]}',
                                   messageDuration: 3,
                                 );
                                 return;
@@ -397,7 +440,7 @@ Future<Map<int, LegacyDayHours>?> showLegacyWorkingHoursSheet({
                             }
                             Navigator.pop(context, data);
                           },
-                          child: const Text('ÊÃßíÏ'),
+                          child: const Text('Ø­ÙØ¸'),
                         ),
                       ),
                     ),

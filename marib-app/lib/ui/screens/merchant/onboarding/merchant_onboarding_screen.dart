@@ -14,6 +14,8 @@ import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/utils/notification/notification_service.dart';
 import 'package:marib/utils/ui_utils.dart';
 
+import 'package:marib/data/model/category_model.dart';
+import 'package:marib/data/repositories/category_repository.dart';
 import 'package:marib/ui/screens/merchant/onboarding/phase1_activity_info.dart';
 import 'package:marib/ui/screens/merchant/onboarding/phase2_categories_hours.dart';
 import 'package:marib/ui/screens/merchant/onboarding/phase3_store_policy.dart';
@@ -70,6 +72,49 @@ class _MerchantOnboardingScreenState extends State<MerchantOnboardingScreen> {
   PaymentOptionsData? _paymentOptions;
   StoreCredentialsData? _credentialsData;
   bool _isEndingFlow = false;
+
+  Future<List<CategoryModel>> _loadCategoriesPhase2() async {
+    try {
+      final repo = CategoryRepository();
+      final output = await repo.fetchCategories(page: 1, categoryId: 3);
+      if (output.modelList.isNotEmpty) {
+        final CategoryModel? storeRoot = output.modelList
+            .firstWhere((c) => c.id == 3, orElse: () => CategoryModel());
+        if (storeRoot?.children != null && storeRoot!.children!.isNotEmpty) {
+          return storeRoot.children!;
+        }
+        return output.modelList;
+      }
+
+      // Fallback: direct API call
+      final Map<String, dynamic> response =
+          await Api.get(url: Api.getCategoriesApi);
+      final List<dynamic> raw =
+          response['data'] is List ? response['data'] as List<dynamic> : [];
+      final List<CategoryModel> parsed = raw
+          .whereType<Map<String, dynamic>>()
+          .map(CategoryModel.fromJson)
+          .where((c) => c.id != null)
+          .toList();
+
+      // Only keep subcategories of parent with id 3 (المتجر الإلكتروني)
+      final CategoryModel? storeRoot =
+          parsed.firstWhere((c) => c.id == 3, orElse: () => CategoryModel());
+      final List<CategoryModel> storeChildren =
+          storeRoot?.children ?? <CategoryModel>[];
+      if (storeChildren.isNotEmpty) return storeChildren;
+      if (parsed.isNotEmpty) return parsed;
+
+      // Last resort: provide a minimal placeholder to unblock UI
+      return <CategoryModel>[
+        CategoryModel(id: 1, name: 'متجر إلكتروني'),
+        CategoryModel(id: 2, name: 'أزياء وإكسسوارات'),
+        CategoryModel(id: 3, name: 'أجهزة وإلكترونيات'),
+      ];
+    } catch (_) {
+      return <CategoryModel>[];
+    }
+  }
 
   @override
   void initState() {
@@ -338,9 +383,9 @@ class _MerchantOnboardingScreenState extends State<MerchantOnboardingScreen> {
         'weekday': entry.key,
         'is_open': schedule.enabled,
       };
-      if (schedule.enabled) {
-        row['opens_at'] = _formatTimeOfDay(schedule.from);
-        row['closes_at'] = _formatTimeOfDay(schedule.to);
+      if (schedule.enabled && schedule.from != null && schedule.to != null) {
+        row['opens_at'] = _formatTimeOfDay(schedule.from!);
+        row['closes_at'] = _formatTimeOfDay(schedule.to!);
       }
       result.add(row);
     }
@@ -677,6 +722,7 @@ class _MerchantOnboardingScreenState extends State<MerchantOnboardingScreen> {
                 children: [
                   Phase1ActivityInfo(onNext: _onPhase1Next),
                   Phase2CategoriesHours(
+                    loadCategories: _loadCategoriesPhase2,
                     onBack: () => _goToPage(0),
                     onNext: _onPhase2Next,
                     visibilityNotifier: _pageVisibilityNotifier,

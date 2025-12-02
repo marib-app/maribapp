@@ -26,10 +26,12 @@ class MerchantLocationPickerScreen extends StatefulWidget {
   const MerchantLocationPickerScreen({super.key, this.initialPosition});
 
   @override
-  State<MerchantLocationPickerScreen> createState() => _MerchantLocationPickerScreenState();
+  State<MerchantLocationPickerScreen> createState() =>
+      _MerchantLocationPickerScreenState();
 }
 
-class _MerchantLocationPickerScreenState extends State<MerchantLocationPickerScreen> {
+class _MerchantLocationPickerScreenState
+    extends State<MerchantLocationPickerScreen> {
   static const LatLng _fallback = LatLng(15.3694, 44.1910); // Marib fallback
   GoogleMapController? _mapController;
   LatLng? _currentTarget;
@@ -51,7 +53,7 @@ class _MerchantLocationPickerScreenState extends State<MerchantLocationPickerScr
       if (!serviceEnabled) {
         HelperUtils.showSnackBarMessage(
           context,
-          'الرجاء تفعيل خدمة الموقع (GPS) أولاً.',
+          'خدمة الموقع (GPS) غير مفعّلة.',
           messageDuration: 3,
         );
         _myLocationAllowed = false;
@@ -66,7 +68,7 @@ class _MerchantLocationPickerScreenState extends State<MerchantLocationPickerScr
       if (permission == LocationPermission.denied) {
         HelperUtils.showSnackBarMessage(
           context,
-          'تم رفض إذن تحديد الموقع، الرجاء السماح بالوصول.',
+          'لم يتم منح إذن تحديد الموقع. يرجى السماح بالوصول للموقع.',
           messageDuration: 3,
         );
         _myLocationAllowed = false;
@@ -76,7 +78,7 @@ class _MerchantLocationPickerScreenState extends State<MerchantLocationPickerScr
       if (permission == LocationPermission.deniedForever) {
         HelperUtils.showSnackBarMessage(
           context,
-          'تم رفض الإذن نهائياً، فعّل صلاحية الموقع من إعدادات الجهاز.',
+          'تم رفض إذن الموقع نهائياً. فعّل الإذن من الإعدادات لإكمال التحديد.',
           messageDuration: 4,
         );
         _myLocationAllowed = false;
@@ -88,7 +90,7 @@ class _MerchantLocationPickerScreenState extends State<MerchantLocationPickerScr
     } catch (_) {
       HelperUtils.showSnackBarMessage(
         context,
-        'تعذر التحقق من الإذن، يمكنك اختيار الموقع يدويًا.',
+        'حدث خطأ أثناء طلب الموقع. حاول مرة أخرى.',
         messageDuration: 3,
       );
       _myLocationAllowed = false;
@@ -124,7 +126,7 @@ class _MerchantLocationPickerScreenState extends State<MerchantLocationPickerScr
       if (mounted) {
         HelperUtils.showSnackBarMessage(
           context,
-          'تعذر الحصول على موقعك، يمكنك تحديده يدويًا على الخريطة.',
+          'تعذر تحديد موقعك، استخدم الخريطة يدوياً لتحديد موقع المتجر.',
           messageDuration: 3,
         );
       }
@@ -136,10 +138,16 @@ class _MerchantLocationPickerScreenState extends State<MerchantLocationPickerScr
   Future<void> _reverseGeocode(LatLng target) async {
     try {
       setState(() => _addressLoading = true);
-      final placemarks = await placemarkFromCoordinates(target.latitude, target.longitude);
+      final placemarks =
+          await placemarkFromCoordinates(target.latitude, target.longitude);
       if (placemarks.isNotEmpty) {
         final p = placemarks.first;
-        _currentAddress = '${p.street}, ${p.locality}, ${p.country}';
+        final parts = <String>[
+          if ((p.street ?? '').trim().isNotEmpty) p.street!.trim(),
+          if ((p.locality ?? '').trim().isNotEmpty) p.locality!.trim(),
+          if ((p.country ?? '').trim().isNotEmpty) p.country!.trim(),
+        ];
+        _currentAddress = parts.where((e) => e.isNotEmpty).join(', ');
       }
     } catch (_) {
       _currentAddress = null;
@@ -219,7 +227,7 @@ class _MerchantLocationPickerScreenState extends State<MerchantLocationPickerScr
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'حرّك الخريطة حتى تثبت الدبوس على موقع متجرك، ثم اضغط تأكيد.',
+                      'ضع المؤشر على موقع المتجر بدقة، لأن الموقع يؤثر في احتساب تكلفة التوصيل.',
                       style: TextStyle(
                         color: theme.textDefaultColor,
                         fontSize: context.font.normal,
@@ -251,7 +259,7 @@ class _MerchantLocationPickerScreenState extends State<MerchantLocationPickerScr
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'العنوان التقريبي',
+                      'الموقع المختار',
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
                         color: theme.textDefaultColor,
@@ -261,7 +269,8 @@ class _MerchantLocationPickerScreenState extends State<MerchantLocationPickerScr
                     Text(
                       _addressLoading
                           ? 'جاري جلب العنوان...'
-                          : (_currentAddress ?? 'لم يتم العثور على عنوان دقيق لهذا الموقع'),
+                          : (_currentAddress ??
+                              'لم يتم العثور على عنوان، تأكد من تحديد موقعك بدقة.'),
                       style: TextStyle(
                         color: theme.textDefaultColor.withOpacity(0.8),
                         fontSize: context.font.normal,
@@ -286,7 +295,7 @@ class _MerchantLocationPickerScreenState extends State<MerchantLocationPickerScr
                             icon: Icon(Icons.my_location,
                                 color: theme.territoryColor),
                             label: Text(
-                              'إعادة تمركز',
+                              'إعادة التركيز',
                               style: TextStyle(color: theme.territoryColor),
                             ),
                             style: OutlinedButton.styleFrom(
@@ -326,3 +335,4 @@ class _MerchantLocationPickerScreenState extends State<MerchantLocationPickerScr
     );
   }
 }
+

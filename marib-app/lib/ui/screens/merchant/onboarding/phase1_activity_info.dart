@@ -10,7 +10,7 @@ import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/ui_utils.dart';
 
-import 'merchant_location_picker_screen.dart';
+import 'package:marib/ui/screens/cart/components/address_location_picker.dart';
 
 class ActivityInfoData {
   final String storeName;
@@ -182,23 +182,33 @@ class _Phase1ActivityInfoState extends State<Phase1ActivityInfo>
   Future<void> _openLocationPicker() async {
     setState(() => _locationLoading = true);
     try {
-      final result =
-          await Navigator.of(context).push<MerchantLocationPickerResult>(
-        MaterialPageRoute(
-          builder: (_) => MerchantLocationPickerScreen(
-            initialPosition: (_latitude != null && _longitude != null)
-                ? LatLng(_latitude!, _longitude!)
-                : null,
-          ),
-        ),
+      final result = await CartAddressLocationPicker.show(
+        context,
+        initial: (_latitude != null && _longitude != null)
+            ? {
+                'latitude': _latitude,
+                'longitude': _longitude,
+                'address': _pickedAddress,
+              }
+            : null,
       );
 
       if (result != null) {
+        final double? lat = result['latitude'] is double
+            ? result['latitude'] as double
+            : (result['latitude'] as num?)?.toDouble();
+        final double? lng = result['longitude'] is double
+            ? result['longitude'] as double
+            : (result['longitude'] as num?)?.toDouble();
+        if (lat == null || lng == null) {
+          throw Exception("Missing coordinates");
+        }
         setState(() {
-          _latitude = result.latitude;
-          _longitude = result.longitude;
-          _pickedAddress = result.address?.trim().isNotEmpty == true
-              ? result.address!.trim()
+          _latitude = lat;
+          _longitude = lng;
+          final String? addr = result['address'] as String?;
+          _pickedAddress = addr?.trim().isNotEmpty == true
+              ? addr!.trim()
               : null;
         });
         _recomputeValidity();

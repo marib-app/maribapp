@@ -1,7 +1,7 @@
 import 'dart:async';
-import 'package:geocoding/geocoding.dart';
 
 import 'package:flutter/material.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -12,10 +12,7 @@ import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/ui_utils.dart';
 
 class CartAddressLocationPicker extends StatefulWidget {
-  const CartAddressLocationPicker({
-    super.key,
-    this.initial,
-  });
+  const CartAddressLocationPicker({super.key, this.initial});
 
   final Map<String, dynamic>? initial;
 
@@ -123,7 +120,7 @@ class _CartAddressLocationPickerState extends State<CartAddressLocationPicker>
       if (mounted) {
         HelperUtils.showSnackBarMessage(
           context,
-          'الرجاء تفعيل صلاحية الموقع من الإعدادات.',
+          'تم رفض إذن الموقع نهائياً، يرجى تفعيل الإذن من الإعدادات.',
         );
       }
       return false;
@@ -136,7 +133,7 @@ class _CartAddressLocationPickerState extends State<CartAddressLocationPicker>
         if (mounted) {
           HelperUtils.showSnackBarMessage(
             context,
-            'لم يتم منح صلاحية الموقع.',
+            'لم يتم منح إذن الموقع.',
           );
         }
         return false;
@@ -198,13 +195,12 @@ class _CartAddressLocationPickerState extends State<CartAddressLocationPicker>
 
   bool _shouldSkipReverseGeocode(LatLng target) {
     final DateTime? lastTime = _lastReverseGeocodeTime;
-    if (lastTime != null &&
-        DateTime.now().difference(lastTime) < _reverseGeocodeMinInterval) {
-      return true;
-    }
     final LatLng? lastTarget = _lastReverseGeocodeTarget;
-    if (lastTarget == null) {
+    if (lastTime == null || lastTarget == null) {
       return false;
+    }
+    if (DateTime.now().difference(lastTime) < _reverseGeocodeMinInterval) {
+      return true;
     }
     final double distance = Geolocator.distanceBetween(
       lastTarget.latitude,
@@ -218,6 +214,7 @@ class _CartAddressLocationPickerState extends State<CartAddressLocationPicker>
   Future<void> _goToCurrentLocation() async {
     final bool allowed = await _ensurePermission();
     if (!allowed) return;
+
     try {
       final Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
@@ -229,7 +226,7 @@ class _CartAddressLocationPickerState extends State<CartAddressLocationPicker>
       if (!mounted) return;
       HelperUtils.showSnackBarMessage(
         context,
-        'تعذر تحديد موقعك الحالي.',
+        'تعذر الحصول على موقعك الحالي.',
       );
     }
   }
@@ -237,7 +234,7 @@ class _CartAddressLocationPickerState extends State<CartAddressLocationPicker>
   String _addressSummary() {
     final Placemark? mark = _placemark;
     if (mark == null) {
-      return 'حدد المكان بدقة لتحسين التوصيل';
+      return 'لم يتم الحصول على عنوان بعد';
     }
     final List<String> parts = <String>[
       if ((mark.subAdministrativeArea ?? '').trim().isNotEmpty)
@@ -248,7 +245,7 @@ class _CartAddressLocationPickerState extends State<CartAddressLocationPicker>
       if ((mark.country ?? '').trim().isNotEmpty) mark.country!.trim(),
     ];
     if (parts.isEmpty) {
-      return 'تم التقاط الإحداثيات بنجاح';
+      return 'تعذر توليد عنوان لهذا الموقع';
     }
     return parts.join('، ');
   }
@@ -301,7 +298,7 @@ class _CartAddressLocationPickerState extends State<CartAddressLocationPicker>
       backgroundColor: context.color.secondaryColor,
       appBar: UiUtils.buildAppBar(
         context,
-        title: 'تحديد موقع التوصيل',
+        title: 'تحديد موقع المتجر',
         showBackButton: true,
       ),
       body: _initializing
@@ -315,6 +312,7 @@ class _CartAddressLocationPickerState extends State<CartAddressLocationPicker>
                         child: GoogleMap(
                           mapType: _mapType,
                           myLocationEnabled: true,
+                          myLocationButtonEnabled: false,
                           zoomControlsEnabled: false,
                           initialCameraPosition: _camera ??
                               const CameraPosition(
@@ -346,7 +344,7 @@ class _CartAddressLocationPickerState extends State<CartAddressLocationPicker>
                         ),
                       ),
                       PositionedDirectional(
-                        top: 20,
+                        top: 96,
                         end: 20,
                         child: Column(
                           children: [
@@ -368,6 +366,37 @@ class _CartAddressLocationPickerState extends State<CartAddressLocationPicker>
                               onPressed: _goToCurrentLocation,
                             ),
                           ],
+                        ),
+                      ),
+                      Positioned(
+                        top: 16,
+                        left: 16,
+                        right: 16,
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: context.color.secondaryColor.withOpacity(0.92),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: context.color.borderColor.withOpacity(0.4),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.info_outline,
+                                  color: context.color.territoryColor, size: 20),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  'حدد موقع متجرك بدقة لتحسين تقدير تكلفة التوصيل.',
+                                  style: TextStyle(
+                                    color: context.color.textDefaultColor,
+                                    fontSize: context.font.normal,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],

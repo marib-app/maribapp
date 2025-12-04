@@ -1,4 +1,4 @@
-import 'package:marib/data/cubits/home/fetch_home_screen_cubit.dart';
+﻿import 'package:marib/data/cubits/home/fetch_home_screen_cubit.dart';
 import 'package:marib/data/cubits/item/fetch_item_summary_cubit.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/constant.dart';
@@ -17,10 +17,10 @@ import 'package:marib/utils/responsiveSize.dart';
 import 'package:marib/utils/sliver_grid_delegate_with_fixed_cross_axis_count_and_fixed_height.dart';
 import 'package:marib/ui/screens/widgets/errors/no_data_found.dart';
 import 'package:marib/ui/screens/native_ads_screen.dart';
-import 'package:flutter/foundation.dart'; // لـ ValueListenable / ValueNotifier
+import 'package:flutter/foundation.dart'; // ظ„ظ€ ValueListenable / ValueNotifier
 import 'package:marib/data/cubits/category/fetch_category_cubit.dart';
 import 'package:marib/data/model/category_model.dart';
-import 'package:shimmer/shimmer.dart'; // تأثير التوهج أثناء تحميل الصور
+import 'package:shimmer/shimmer.dart'; // طھط£ط«ظٹط± ط§ظ„طھظˆظ‡ط¬ ط£ط«ظ†ط§ط، طھط­ظ…ظٹظ„ ط§ظ„طµظˆط±
 import 'package:marib/ui/screens/sliders/slider_widget.dart';
 
 import '../SubcatsHorizontalGrid.dart';
@@ -28,7 +28,7 @@ import 'package:marib/ui/screens/item/cards/horizontal_card.dart';
 import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
 import 'smart_search_app_bar.dart';
 import '../../../../item/cards/sections_adapter.dart';
-import 'package:marib/data/model/item_filter_model.dart'; // ← مهم
+import 'package:marib/data/model/item_filter_model.dart'; // â†گ ظ…ظ‡ظ…
 import 'package:marib/utils/slider_interface_mapper.dart';
 import 'special_request_card.dart';
 import 'package:flutter/rendering.dart';
@@ -43,7 +43,7 @@ class HomeTabView extends StatefulWidget {
   final String categoryId;
   final TextEditingController searchController;
 
-  // وضع العرض الخارجي (Grid/List)
+  // ظˆط¶ط¹ ط§ظ„ط¹ط±ط¶ ط§ظ„ط®ط§ط±ط¬ظٹ (Grid/List)
   final ValueListenable<ViewMode> viewModeListenable;
   final double bottomPadding;
   final bool showShimmer;
@@ -51,11 +51,11 @@ class HomeTabView extends StatefulWidget {
 
   final String? specialRequestSectionSlug;
 
-  // NEW: لا تبني/تجلب السلايدر إلا بعد Success
+  // NEW: ظ„ط§ طھط¨ظ†ظٹ/طھط¬ظ„ط¨ ط§ظ„ط³ظ„ط§ظٹط¯ط± ط¥ظ„ط§ ط¨ط¹ط¯ Success
   final bool enableAdSlider;
 
-  final String? adInterfaceType; // ← جديد
-  // NEW 👇
+  final String? adInterfaceType; // â†گ ط¬ط¯ظٹط¯
+  // NEW ًں‘‡
   final bool enableSubcats;
 
   final String? currentSortBy;
@@ -78,16 +78,16 @@ class HomeTabView extends StatefulWidget {
     required this.viewModeListenable,
     this.specialRequestSectionSlug,
     this.bottomPadding = 0.0,
-    this.enableAdSlider = false, // افتراضي: مخفي
+    this.enableAdSlider = false, // ط§ظپطھط±ط§ط¶ظٹ: ظ…ط®ظپظٹ
     this.adInterfaceType,
     this.sellerCategoryIds,
 
-    // NEW 👇
+    // NEW ًں‘‡
     required this.sliderRefreshToken,
     required this.showShimmer,
-    this.currentSortBy, // ← جديد
-    this.currentFilter, // ← جديد
-    this.enableSubcats = true, // ← جديد (افتراضي)
+    this.currentSortBy, // â†گ ط¬ط¯ظٹط¯
+    this.currentFilter, // â†گ ط¬ط¯ظٹط¯
+    this.enableSubcats = true, // â†گ ط¬ط¯ظٹط¯ (ط§ظپطھط±ط§ط¶ظٹ)
     this.onScrollDirectionChanged,
     this.sortBy,
     this.filter,
@@ -112,11 +112,11 @@ class _HomeTabViewState extends State<HomeTabView> {
   ScrollController? _attachedController;
   double _lastReportedScrollOffset = 0.0;
 
-  int? _activeSubcatId; // الفئة الفرعية المختارة حالياً
-  int? _lastTopCatId; // لملاحظة تغيّر التصنيف العلوي وإعادة ضبط الفرعيات
+  int? _activeSubcatId; // ط§ظ„ظپط¦ط© ط§ظ„ظپط±ط¹ظٹط© ط§ظ„ظ…ط®طھط§ط±ط© ط­ط§ظ„ظٹط§ظ‹
+  int? _lastTopCatId; // ظ„ظ…ظ„ط§ط­ط¸ط© طھط؛ظٹظ‘ط± ط§ظ„طھطµظ†ظٹظپ ط§ظ„ط¹ظ„ظˆظٹ ظˆط¥ط¹ط§ط¯ط© ط¶ط¨ط· ط§ظ„ظپط±ط¹ظٹط§طھ
   bool? _lastReportedScrollIsUp;
 
-  // ✅ قفل تحميل المزيد + تباطؤ بسيط لتجنّب سيل الاستدعاءات
+  // âœ… ظ‚ظپظ„ طھط­ظ…ظٹظ„ ط§ظ„ظ…ط²ظٹط¯ + طھط¨ط§ط·ط¤ ط¨ط³ظٹط· ظ„طھط¬ظ†ظ‘ط¨ ط³ظٹظ„ ط§ظ„ط§ط³طھط¯ط¹ط§ط،ط§طھ
   bool _isLoadingMore = false;
   bool _loadingIndicatorPulseForward = true;
   Set<int>? _sellerCategoryIdSet;
@@ -254,7 +254,7 @@ class _HomeTabViewState extends State<HomeTabView> {
         }
       }
     } on NoSuchMethodError {
-      // ItemSummary لا يعرّف خاصية category في بعض الردود.
+      // ItemSummary ظ„ط§ ظٹط¹ط±ظ‘ظپ ط®ط§طµظٹط© category ظپظٹ ط¨ط¹ط¶ ط§ظ„ط±ط¯ظˆط¯.
       return null;
     } on TypeError {
       return null;
@@ -428,21 +428,21 @@ class _HomeTabViewState extends State<HomeTabView> {
   double _adSliderHeight(BuildContext context) {
     final w = MediaQuery.of(context).size.width;
     const horizontalPadding =
-        24.0; // 12 يسار + 12 يمين (نفس الـ Padding اللي تستخدمه)
+        24.0; // 12 ظٹط³ط§ط± + 12 ظٹظ…ظٹظ† (ظ†ظپط³ ط§ظ„ظ€ Padding ط§ظ„ظ„ظٹ طھط³طھط®ط¯ظ…ظ‡)
     final contentW = w - horizontalPadding;
 
-    // اختَر نفس نسبة الصور الفعلية للسلايدر (عدّلها لو عندك نسبة مختلفة):
+    // ط§ط®طھظژط± ظ†ظپط³ ظ†ط³ط¨ط© ط§ظ„طµظˆط± ط§ظ„ظپط¹ظ„ظٹط© ظ„ظ„ط³ظ„ط§ظٹط¯ط± (ط¹ط¯ظ‘ظ„ظ‡ط§ ظ„ظˆ ط¹ظ†ط¯ظƒ ظ†ط³ط¨ط© ظ…ط®طھظ„ظپط©):
     const ratio = 16 / 9;
 
-    // حسب النسبة: الارتفاع = العرض / النسبة
+    // ط­ط³ط¨ ط§ظ„ظ†ط³ط¨ط©: ط§ظ„ط§ط±طھظپط§ط¹ = ط§ظ„ط¹ط±ط¶ / ط§ظ„ظ†ط³ط¨ط©
     final h = contentW / ratio;
 
-    // سقف وحد أدنى عشان ما يكون صغير/كبير زيادة
+    // ط³ظ‚ظپ ظˆط­ط¯ ط£ط¯ظ†ظ‰ ط¹ط´ط§ظ† ظ…ط§ ظٹظƒظˆظ† طµط؛ظٹط±/ظƒط¨ظٹط± ط²ظٹط§ط¯ط©
     return h.clamp(140.0, 220.0);
   }
 
   // =========================
-  // تحميل لانهائي بهدوء
+  // طھط­ظ…ظٹظ„ ظ„ط§ظ†ظ‡ط§ط¦ظٹ ط¨ظ‡ط¯ظˆط،
   // =========================
   bool _shouldTriggerLoadMore(ScrollMetrics metrics) {
     final AxisDirection axisDirection = metrics.axisDirection;
@@ -451,7 +451,7 @@ class _HomeTabViewState extends State<HomeTabView> {
       return false;
     }
 
-    // استخدم extentAfter لضمان التحميل حتى في القوائم القصيرة
+    // ط§ط³طھط®ط¯ظ… extentAfter ظ„ط¶ظ…ط§ظ† ط§ظ„طھط­ظ…ظٹظ„ ط­طھظ‰ ظپظٹ ط§ظ„ظ‚ظˆط§ط¦ظ… ط§ظ„ظ‚طµظٹط±ط©
     return metrics.extentAfter <= 200;
   }
 
@@ -463,7 +463,7 @@ class _HomeTabViewState extends State<HomeTabView> {
     _isLoadingMore = true;
     widget.onLoadMore?.call(true);
 
-    // تباطؤ بسيط يخفف الجهد أثناء السحب
+    // طھط¨ط§ط·ط¤ ط¨ط³ظٹط· ظٹط®ظپظپ ط§ظ„ط¬ظ‡ط¯ ط£ط«ظ†ط§ط، ط§ظ„ط³ط­ط¨
     await Future.delayed(const Duration(milliseconds: 100));
     try {
       await cubit.loadMoreSummaries();
@@ -520,7 +520,7 @@ class _HomeTabViewState extends State<HomeTabView> {
   }
 
   // =========================
-  // اختيار مفتاح السلايدر بكلفة منخفضة
+  // ط§ط®طھظٹط§ط± ظ…ظپطھط§ط­ ط§ظ„ط³ظ„ط§ظٹط¯ط± ط¨ظƒظ„ظپط© ظ…ظ†ط®ظپط¶ط©
   // =========================
   String? _pickSliderKey(Set<String> keys, int catId) {
     if (catId != 0) {
@@ -540,13 +540,13 @@ class _HomeTabViewState extends State<HomeTabView> {
     return null;
   }
 
-  // ✅ أضف هنا:
+  // âœ… ط£ط¶ظپ ظ‡ظ†ط§:
   double get _gridCardHeight {
     final h = MediaQuery.of(context).size.height;
-    return h / 3.5.rh(context); // أو h / 3.5 فقط
+    return h / 3.5.rh(context); // ط£ظˆ h / 3.5 ظپظ‚ط·
   }
 
-// شيمر السلايدر
+// ط´ظٹظ…ط± ط§ظ„ط³ظ„ط§ظٹط¯ط±
 
   Widget _buildAdSliderShimmer() {
     final theme = Theme.of(context);
@@ -572,7 +572,7 @@ class _HomeTabViewState extends State<HomeTabView> {
                 height: hImage,
                 width: double.infinity,
                 child:
-                    Container(color: content), // لازم لون مصمت عشان الشيمر يبان
+                    Container(color: content), // ظ„ط§ط²ظ… ظ„ظˆظ† ظ…طµظ…طھ ط¹ط´ط§ظ† ط§ظ„ط´ظٹظ…ط± ظٹط¨ط§ظ†
               ),
             ),
           ),
@@ -606,19 +606,19 @@ class _HomeTabViewState extends State<HomeTabView> {
     );
   }
 
-// ثابت عرض الحافة لليمين/اليسار
+// ط«ط§ط¨طھ ط¹ط±ط¶ ط§ظ„ط­ط§ظپط© ظ„ظ„ظٹظ…ظٹظ†/ط§ظ„ظٹط³ط§ط±
   double kAdSliderHPad = 10.0;
 
-// نصف القطر
+// ظ†طµظپ ط§ظ„ظ‚ط·ط±
   double kAdSliderRadius = 12.0;
 
-// ارتفاع نقاط المؤشر = ارتفاع الـ dots نفسها (SmoothPageIndicator.dotHeight)
+// ط§ط±طھظپط§ط¹ ظ†ظ‚ط§ط· ط§ظ„ظ…ط¤ط´ط± = ط§ط±طھظپط§ط¹ ط§ظ„ظ€ dots ظ†ظپط³ظ‡ط§ (SmoothPageIndicator.dotHeight)
   static const double _kIndicatorDotHeight = 8.0;
 
-// حجز بسيط جدًا لنقاط السلايدر (الفراغ الذي يسبق المؤشر)
+// ط­ط¬ط² ط¨ط³ظٹط· ط¬ط¯ظ‹ط§ ظ„ظ†ظ‚ط§ط· ط§ظ„ط³ظ„ط§ظٹط¯ط± (ط§ظ„ظپط±ط§ط؛ ط§ظ„ط°ظٹ ظٹط³ط¨ظ‚ ط§ظ„ظ…ط¤ط´ط±)
   double _dotsSpacingHeight(BuildContext ctx) => 8.rh(ctx);
 
-// الارتفاع الكامل للمؤشر + الفراغ السابق له، مطابق لما في SliderComponent
+// ط§ظ„ط§ط±طھظپط§ط¹ ط§ظ„ظƒط§ظ…ظ„ ظ„ظ„ظ…ط¤ط´ط± + ط§ظ„ظپط±ط§ط؛ ط§ظ„ط³ط§ط¨ظ‚ ظ„ظ‡طŒ ظ…ط·ط§ط¨ظ‚ ظ„ظ…ط§ ظپظٹ SliderComponent
   double _dotsReserveHeight(BuildContext ctx) =>
       _kIndicatorDotHeight + _dotsSpacingHeight(ctx);
 
@@ -630,7 +630,7 @@ class _HomeTabViewState extends State<HomeTabView> {
     return kSliderBannerHeight + _dotsReserveHeight(ctx);
   }
 
-// اختياري: لوج سريع للتأكد من الأرقام
+// ط§ط®طھظٹط§ط±ظٹ: ظ„ظˆط¬ ط³ط±ظٹط¹ ظ„ظ„طھط£ظƒط¯ ظ…ظ† ط§ظ„ط£ط±ظ‚ط§ظ…
   void _logHeights(BuildContext ctx) {
     final img = _adSliderImageHeight(ctx);
     final tot = _adSliderTotalHeight(ctx);
@@ -641,12 +641,12 @@ class _HomeTabViewState extends State<HomeTabView> {
 
   @override
   Widget build(BuildContext context) {
-    // ========= فواصل محسوبة مرّة واحدة =========
+    // ========= ظپظˆط§طµظ„ ظ…ط­ط³ظˆط¨ط© ظ…ط±ظ‘ط© ظˆط§ط­ط¯ط© =========
     final scrH = MediaQuery.sizeOf(context).height;
     final gapSmall = (scrH * 0.01).clamp(6, 16).toDouble();
     final gapMedium = (scrH * 0.02).clamp(12, 32).toDouble();
 
-    // ✅ فيزياء التمرير حسب المنصة (أخف على أندرويد)
+    // âœ… ظپظٹط²ظٹط§ط، ط§ظ„طھظ…ط±ظٹط± ط­ط³ط¨ ط§ظ„ظ…ظ†طµط© (ط£ط®ظپ ط¹ظ„ظ‰ ط£ظ†ط¯ط±ظˆظٹط¯)
     final platform = Theme.of(context).platform;
 
     final int? selectedCategoryId = widget.selectedCategoryId.value;
@@ -668,11 +668,11 @@ class _HomeTabViewState extends State<HomeTabView> {
             widget.enableAdSlider && widget.showShimmer;
         final bool showFeaturedAdsPanel = widget.showFeaturedAds;
 
-        // ✅ البطاقة الخاصة لا تظهر إلا في تبويب "الكل"
+        // âœ… ط§ظ„ط¨ط·ط§ظ‚ط© ط§ظ„ط®ط§طµط© ظ„ط§ طھط¸ظ‡ط± ط¥ظ„ط§ ظپظٹ طھط¨ظˆظٹط¨ "ط§ظ„ظƒظ„"
         final bool isAllCategory =
             selectedCategoryId == null || selectedCategoryId == 0;
 
-        // ✅ استمع للتمرير هنا (بدل بعثرة المنطق داخل عناصر داخلية)
+        // âœ… ط§ط³طھظ…ط¹ ظ„ظ„طھظ…ط±ظٹط± ظ‡ظ†ط§ (ط¨ط¯ظ„ ط¨ط¹ط«ط±ط© ط§ظ„ظ…ظ†ط·ظ‚ ط¯ط§ط®ظ„ ط¹ظ†ط§طµط± ط¯ط§ط®ظ„ظٹط©)
         return NotificationListener<ScrollNotification>(
           onNotification: (n) {
             if (n is ScrollUpdateNotification ||
@@ -686,13 +686,13 @@ class _HomeTabViewState extends State<HomeTabView> {
           },
           child: CustomScrollView(
             controller: _controller,
-            cacheExtent: 800, // ✅ تحميل مسبق معتدل يقلل التقطيع
+            cacheExtent: 800, // âœ… طھط­ظ…ظٹظ„ ظ…ط³ط¨ظ‚ ظ…ط¹طھط¯ظ„ ظٹظ‚ظ„ظ„ ط§ظ„طھظ‚ط·ظٹط¹
             slivers: [
               if (widget.overlapHandle != null)
                 SliverOverlapInjector(
                   handle: widget.overlapHandle!,
                 ),
-              // ============= السلايدر =============
+              // ============= ط§ظ„ط³ظ„ط§ظٹط¯ط± =============
 
               SliverToBoxAdapter(
                 child: !widget.enableAdSlider
@@ -708,7 +708,7 @@ class _HomeTabViewState extends State<HomeTabView> {
                                       BorderRadius.circular(kAdSliderRadius),
                                   child: SizedBox(
                                     height: _adSliderTotalHeight(context),
-                                    // صورة + دوتس (نفس الإجمالي)
+                                    // طµظˆط±ط© + ط¯ظˆطھط³ (ظ†ظپط³ ط§ظ„ط¥ط¬ظ…ط§ظ„ظٹ)
                                     width: double.infinity,
                                     child: RepaintBoundary(
                                       child: SliderWidget(
@@ -726,25 +726,17 @@ class _HomeTabViewState extends State<HomeTabView> {
                             : const SizedBox.shrink(),
               ),
 
-              // فاصل صغير
+              // ظپط§طµظ„ طµط؛ظٹط±
               SliverToBoxAdapter(child: SizedBox(height: gapSmall)),
-              if (showFeaturedAdsPanel) ...[
-                SliverToBoxAdapter(
-                  child: _FeaturedAdsPanel(
-                    interfaceType: sliderInterfaceType,
-                  ),
-                ),
-                SliverToBoxAdapter(child: SizedBox(height: gapSmall)),
-              ],
 
-              // ============= التصنيفات الفرعية (دائمًا ظاهرة) =============
+              // ============= ط§ظ„طھطµظ†ظٹظپط§طھ ط§ظ„ظپط±ط¹ظٹط© (ط¯ط§ط¦ظ…ظ‹ط§ ط¸ط§ظ‡ط±ط©) =============
 
               SliverToBoxAdapter(
                 child: RepaintBoundary(
                   child: ValueListenableBuilder<int?>(
                     valueListenable: widget.selectedCategoryId,
                     builder: (context, selectedId, ___) {
-                      // عند تغيّر التصنيف العلوي صفّر اختيار الفرعيّة (اختياري)
+                      // ط¹ظ†ط¯ طھط؛ظٹظ‘ط± ط§ظ„طھطµظ†ظٹظپ ط§ظ„ط¹ظ„ظˆظٹ طµظپظ‘ط± ط§ط®طھظٹط§ط± ط§ظ„ظپط±ط¹ظٹظ‘ط© (ط§ط®طھظٹط§ط±ظٹ)
                       final int normalizedSelected = selectedId ?? 0;
                       if (_lastTopCatId != normalizedSelected) {
                         _lastTopCatId = normalizedSelected;
@@ -934,11 +926,11 @@ class _HomeTabViewState extends State<HomeTabView> {
                           return SubcatsDeferredBlock(
                             enabled:
                                 widget.enableSubcats && !widget.showShimmer,
-                            // ← لا نبدأ إلا بعد فتح القسم
+                            // â†گ ظ„ط§ ظ†ط¨ط¯ط£ ط¥ظ„ط§ ط¨ط¹ط¯ ظپطھط­ ط§ظ„ظ‚ط³ظ…
                             rowHeight: rowHeight,
                             maxRows: maxRows,
                             shimmerBuilder: subcatShimmerBuilder,
-                            // انتظر نجاح جلب التصنيفات (أو اكتمال مؤقت)
+                            // ط§ظ†طھط¸ط± ظ†ط¬ط§ط­ ط¬ظ„ط¨ ط§ظ„طھطµظ†ظٹظپط§طھ (ط£ظˆ ط§ظƒطھظ…ط§ظ„ ظ…ط¤ظ‚طھ)
                             onDeferLoad: () async {
                               final FetchCategoryCubit catCubit =
                                   context.read<FetchCategoryCubit>();
@@ -964,10 +956,10 @@ class _HomeTabViewState extends State<HomeTabView> {
                                   interfaceType: interfaceType,
                                 );
                               } catch (_) {
-                                // تجاهل أي أخطاء عابرة، سيستمر الشيمر حتى تتوفر البيانات
+                                // طھط¬ط§ظ‡ظ„ ط£ظٹ ط£ط®ط·ط§ط، ط¹ط§ط¨ط±ط©طŒ ط³ظٹط³طھظ…ط± ط§ظ„ط´ظٹظ…ط± ط­طھظ‰ طھطھظˆظپط± ط§ظ„ط¨ظٹط§ظ†ط§طھ
                               }
                             },
-                            // المحتوى الحقيقي بعد الجاهزية
+                            // ط§ظ„ظ…ط­طھظˆظ‰ ط§ظ„ط­ظ‚ظٹظ‚ظٹ ط¨ط¹ط¯ ط§ظ„ط¬ط§ظ‡ط²ظٹط©
                             builderWhenReady: () {
                               if (widget.showShimmer) {
                                 return subcatShimmerBuilder(
@@ -1005,7 +997,7 @@ class _HomeTabViewState extends State<HomeTabView> {
                                 );
                               }
 
-                              // حدّد الجذر (تصنيف القسم) ثم اختر الأب الحالي
+                              // ط­ط¯ظ‘ط¯ ط§ظ„ط¬ط°ط± (طھطµظ†ظٹظپ ط§ظ„ظ‚ط³ظ…) ط«ظ… ط§ط®طھط± ط§ظ„ط£ط¨ ط§ظ„ط­ط§ظ„ظٹ
                               final int rootId =
                                   int.tryParse(widget.categoryId) ?? 0;
                               final CategoryModel root =
@@ -1112,7 +1104,7 @@ class _HomeTabViewState extends State<HomeTabView> {
                               final bool isTopLevel =
                                   (selectedId == null || selectedId == 0);
 
-                              // إن كان "الكل" → الأب = الجذر، غير ذلك → الأب = التصنيف المختار إن وُجد، وإلا الجذر
+                              // ط¥ظ† ظƒط§ظ† "ط§ظ„ظƒظ„" â†’ ط§ظ„ط£ط¨ = ط§ظ„ط¬ط°ط±طŒ ط؛ظٹط± ط°ظ„ظƒ â†’ ط§ظ„ط£ط¨ = ط§ظ„طھطµظ†ظٹظپ ط§ظ„ظ…ط®طھط§ط± ط¥ظ† ظˆظڈط¬ط¯طŒ ظˆط¥ظ„ط§ ط§ظ„ط¬ط°ط±
                               final CategoryModel currentParent = isTopLevel
                                   ? effectiveRoot
                                   : (effectiveRootChildren.firstWhere(
@@ -1120,7 +1112,7 @@ class _HomeTabViewState extends State<HomeTabView> {
                                       orElse: () => effectiveRoot,
                                     ));
 
-                              // لو الأب الحالي بلا أبناء، اعرض أبناء الجذر كي لا يختفي الشريط
+                              // ظ„ظˆ ط§ظ„ط£ط¨ ط§ظ„ط­ط§ظ„ظٹ ط¨ظ„ط§ ط£ط¨ظ†ط§ط،طŒ ط§ط¹ط±ط¶ ط£ط¨ظ†ط§ط، ط§ظ„ط¬ط°ط± ظƒظٹ ظ„ط§ ظٹط®طھظپظٹ ط§ظ„ط´ط±ظٹط·
                               final List<CategoryModel> subcats =
                                   (currentParent.children?.isNotEmpty ?? false)
                                       ? (currentParent.children!)
@@ -1179,7 +1171,7 @@ class _HomeTabViewState extends State<HomeTabView> {
                                   SubcatsHorizontalGrid(
                                     subcats: visibleSubcats,
                                     selectedId: _activeSubcatId,
-                                    // تظليل الفرعيّة المختارة
+                                    // طھط¸ظ„ظٹظ„ ط§ظ„ظپط±ط¹ظٹظ‘ط© ط§ظ„ظ…ط®طھط§ط±ط©
                                     brand: brand,
                                     isTopLevel: isTopLevel,
                                     onTap: (_) {},
@@ -1191,7 +1183,7 @@ class _HomeTabViewState extends State<HomeTabView> {
                                             )
                                         : null,
 
-                                    // في تبويب "الكل": اضغط فرعيّة ⇒ انقل شريط التصنيفات للفئة واضبط الجلب لها
+                                    // ظپظٹ طھط¨ظˆظٹط¨ "ط§ظ„ظƒظ„": ط§ط¶ط؛ط· ظپط±ط¹ظٹظ‘ط© â‡’ ط§ظ†ظ‚ظ„ ط´ط±ظٹط· ط§ظ„طھطµظ†ظٹظپط§طھ ظ„ظ„ظپط¦ط© ظˆط§ط¶ط¨ط· ط§ظ„ط¬ظ„ط¨ ظ„ظ‡ط§
                                     onTopCategoryPick: (c) {
                                       if (!isTopLevel) return;
                                       final int? categoryId = c.id;
@@ -1200,19 +1192,36 @@ class _HomeTabViewState extends State<HomeTabView> {
                                         return;
                                       }
 
-                                      if (widget.selectedCategoryId.value !=
-                                          categoryId) {
-                                        widget.selectedCategoryId.value =
-                                            categoryId;
+                                      final String baseCategoryId =
+                                          widget.categoryId;
+                                      final String targetCategoryId =
+                                          categoryId.toString();
+                                      final String? rawName = c.name;
+                                      final String categoryName =
+                                          (rawName?.trim().isNotEmpty ?? false)
+                                              ? rawName!.trim()
+                                              : (widget.rootCategoryName ?? '');
+                                      final List<String> categoryPath =
+                                          <String>[baseCategoryId];
+                                      if (targetCategoryId != baseCategoryId) {
+                                        categoryPath.add(targetCategoryId);
                                       }
 
-                                      _activeSubcatId = null;
-                                      setState(() {});
-                                      _fetchItemsForCategory(categoryId);
-                                      _scheduleScrollReset();
+                                      FocusScope.of(context).unfocus();
+                                      Navigator.pushNamed(
+                                        context,
+                                        Routes.itemsList,
+                                        arguments: {
+                                          'catID': targetCategoryId,
+                                          'catName': categoryName,
+                                          'categoryIds': categoryPath,
+                                          'interfaceType':
+                                              widget.interfaceType ?? '',
+                                        },
+                                      );
                                     },
 
-                                    // في فئة علوية ≠ "الكل": اضغط فرعيّة ⇒ فلترة مباشرة وتظليل الفرعيّة
+                                    // ظپظٹ ظپط¦ط© ط¹ظ„ظˆظٹط© â‰  "ط§ظ„ظƒظ„": ط§ط¶ط؛ط· ظپط±ط¹ظٹظ‘ط© â‡’ ظپظ„طھط±ط© ظ…ط¨ط§ط´ط±ط© ظˆطھط¸ظ„ظٹظ„ ط§ظ„ظپط±ط¹ظٹظ‘ط©
                                     onSubcatPick: (c) {
                                       final int? categoryId = c.id;
                                       final bool isAllCategory =
@@ -1259,7 +1268,7 @@ class _HomeTabViewState extends State<HomeTabView> {
                                     },
                                   ),
                                   SizedBox(
-                                    // تجنّب cast من num: احسب clamp يدويًا
+                                    // طھط¬ظ†ظ‘ط¨ cast ظ…ظ† num: ط§ط­ط³ط¨ clamp ظٹط¯ظˆظٹظ‹ط§
                                     height: () {
                                       final h =
                                           MediaQuery.sizeOf(context).height *
@@ -1280,18 +1289,33 @@ class _HomeTabViewState extends State<HomeTabView> {
                 ),
               ),
 
-              // فاصل متوسط (يتأثر بحالة ظهور شريط التنقل السفلي)
+              // ظپط§طµظ„ ظ…طھظˆط³ط· (ظٹطھط£ط«ط± ط¨ط­ط§ظ„ط© ط¸ظ‡ظˆط± ط´ط±ظٹط· ط§ظ„طھظ†ظ‚ظ„ ط§ظ„ط³ظپظ„ظٹ)
+              // الإعلانات المميزة بعد الفئات
+              // فاصل صغير بعد الفئات
+              SliverToBoxAdapter(child: SizedBox(height: gapSmall)),
+
+              // الإعلانات المميزة بعد الفئات
+              if (showFeaturedAdsPanel) ...[
+                SliverToBoxAdapter(
+                  child: _FeaturedAdsPanel(
+                    interfaceType: sliderInterfaceType,
+                  ),
+                ),
+                SliverToBoxAdapter(child: SizedBox(height: gapSmall)),
+              ],
+
+              // فاصل متوسط قبل قائمة الإعلانات
               SliverToBoxAdapter(
                 child: SizedBox(height: gapMedium),
               ),
 
-              // ============= القائمة الرئيسية (كما هي عندك) =============
-              // ملاحظة: داخل _itemsSliver احرص على استخدام SliverList/SliverGrid
-              // مع addRepaintBoundaries: true, addAutomaticKeepAlives: false,
-              // ومفاتيح مستقرة + itemExtent/prototypeItem إن أمكن
+              // ============= ط§ظ„ظ‚ط§ط¦ظ…ط© ط§ظ„ط±ط¦ظٹط³ظٹط© (ظƒظ…ط§ ظ‡ظٹ ط¹ظ†ط¯ظƒ) =============
+              // ظ…ظ„ط§ط­ط¸ط©: ط¯ط§ط®ظ„ _itemsSliver ط§ط­ط±طµ ط¹ظ„ظ‰ ط§ط³طھط®ط¯ط§ظ… SliverList/SliverGrid
+              // ظ…ط¹ addRepaintBoundaries: true, addAutomaticKeepAlives: false,
+              // ظˆظ…ظپط§طھظٹط­ ظ…ط³طھظ‚ط±ط© + itemExtent/prototypeItem ط¥ظ† ط£ظ…ظƒظ†
               ..._buildItemsSlivers(isList),
 
-              // فاصل أخير (يتأثر بحالة ظهور شريط التنقل السفلي)
+              // ظپط§طµظ„ ط£ط®ظٹط± (ظٹطھط£ط«ط± ط¨ط­ط§ظ„ط© ط¸ظ‡ظˆط± ط´ط±ظٹط· ط§ظ„طھظ†ظ‚ظ„ ط§ظ„ط³ظپظ„ظٹ)
               SliverToBoxAdapter(
                 child: SizedBox(height: gapMedium),
               ),
@@ -1306,7 +1330,7 @@ class _HomeTabViewState extends State<HomeTabView> {
     );
   }
 
-  // قائمة الإعلانات (مربوطة بوضع العرض)
+  // ظ‚ط§ط¦ظ…ط© ط§ظ„ط¥ط¹ظ„ط§ظ†ط§طھ (ظ…ط±ط¨ظˆط·ط© ط¨ظˆط¶ط¹ ط§ظ„ط¹ط±ط¶)
 
   List<Widget> _buildItemsSlivers(bool isList) {
     final FetchItemSummaryState state =
@@ -1483,9 +1507,9 @@ class _HomeTabViewState extends State<HomeTabView> {
     ];
   }
 
-  // بناء أقسام العناصر (مع إدراج إعلان بين كل مقطع وآخر)
+  // ط¨ظ†ط§ط، ط£ظ‚ط³ط§ظ… ط§ظ„ط¹ظ†ط§طµط± (ظ…ط¹ ط¥ط¯ط±ط§ط¬ ط¥ط¹ظ„ط§ظ† ط¨ظٹظ† ظƒظ„ ظ…ظ‚ط·ط¹ ظˆط¢ط®ط±)
 
-  // بناء أقسام العناصر مع فواصل وإعلانات
+  // ط¨ظ†ط§ط، ط£ظ‚ط³ط§ظ… ط§ظ„ط¹ظ†ط§طµط± ظ…ط¹ ظپظˆط§طµظ„ ظˆط¥ط¹ظ„ط§ظ†ط§طھ
 
   List<_HomeTabEntry> _buildItemEntries(
     List<ItemSummary> items, {
@@ -1592,7 +1616,7 @@ class _HomeTabViewState extends State<HomeTabView> {
       }
 
       if (entry.type == _HomeTabEntryType.item) {
-        // تم تحريك المؤشر داخل الحلقة الداخلية.
+        // طھظ… طھط­ط±ظٹظƒ ط§ظ„ظ…ط¤ط´ط± ط¯ط§ط®ظ„ ط§ظ„ط­ظ„ظ‚ط© ط§ظ„ط¯ط§ط®ظ„ظٹط©.
       }
     }
     if (hasMoreData && !showLoadingMoreError) {
@@ -1619,7 +1643,7 @@ class _HomeTabViewState extends State<HomeTabView> {
           children: [
             const SizedBox(height: 2),
             Text(
-              'لقد شاهدت كل النتائج',
+              'ظ„ظ‚ط¯ ط´ط§ظ‡ط¯طھ ظƒظ„ ط§ظ„ظ†طھط§ط¦ط¬',
               textAlign: TextAlign.center,
               style: textTheme.bodyMedium?.copyWith(color: messageColor),
             ),
@@ -1638,7 +1662,7 @@ class _HomeTabViewState extends State<HomeTabView> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(
-              'تعذر تحميل المزيد، حاول مجددًا',
+              'طھط¹ط°ط± طھط­ظ…ظٹظ„ ط§ظ„ظ…ط²ظٹط¯طŒ ط­ط§ظˆظ„ ظ…ط¬ط¯ط¯ظ‹ط§',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium,
             ),
@@ -1646,7 +1670,7 @@ class _HomeTabViewState extends State<HomeTabView> {
             OutlinedButton(
               onPressed: () =>
                   context.read<FetchItemSummaryCubit>().loadMoreSummaries(),
-              child: const Text('إعادة المحاولة'),
+              child: const Text('ط¥ط¹ط§ط¯ط© ط§ظ„ظ…ط­ط§ظˆظ„ط©'),
             ),
           ],
         ),
@@ -1727,7 +1751,7 @@ class _HomeTabViewState extends State<HomeTabView> {
     );
   }
 
-  // ====== الشيمرات ======
+  // ====== ط§ظ„ط´ظٹظ…ط±ط§طھ ======
   Widget _listShimmer(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(8.0),
@@ -1817,7 +1841,7 @@ class _HomeTabViewState extends State<HomeTabView> {
   }
 }
 
-// أثر التحميل
+// ط£ط«ط± ط§ظ„طھط­ظ…ظٹظ„
 
 Widget buildItemsShimmer(BuildContext context) {
   return Padding(
@@ -2054,7 +2078,7 @@ Widget buildGridShimmer(BuildContext context) {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // صورة المنتج
+        // طµظˆط±ط© ط§ظ„ظ…ظ†طھط¬
         CustomShimmer(
           height: 120.rh(context),
           borderRadius: 12,
@@ -2062,7 +2086,7 @@ Widget buildGridShimmer(BuildContext context) {
 
         const SizedBox(height: 8),
 
-        // نصوص المنتج
+        // ظ†طµظˆطµ ط§ظ„ظ…ظ†طھط¬
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8),
           child: Column(
@@ -2107,3 +2131,5 @@ class _KeepAliveNativeAdState extends State<_KeepAliveNativeAd>
     );
   }
 }
+
+

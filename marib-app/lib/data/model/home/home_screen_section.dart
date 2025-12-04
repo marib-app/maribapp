@@ -23,10 +23,40 @@ class HomeScreenSection {
         this.slug,
         this.minPrice,
         this.maxPrice,
-        this.sequence,
-        this.rootIdentifier,
+      this.sequence,
+      this.rootIdentifier,
       this.totalData,
       this.sectionData});
+
+  HomeScreenSection copyWith({
+    int? sectionId,
+    String? style,
+    String? title,
+    String? sectionType,
+    String? filter,
+    String? slug,
+    int? sequence,
+    String? rootIdentifier,
+    int? totalData,
+    double? minPrice,
+    double? maxPrice,
+    List<ItemModel>? sectionData,
+  }) {
+    return HomeScreenSection(
+      sectionId: sectionId ?? this.sectionId,
+      style: style ?? this.style,
+      title: title ?? this.title,
+      sectionType: sectionType ?? this.sectionType,
+      filter: filter ?? this.filter,
+      slug: slug ?? this.slug,
+      sequence: sequence ?? this.sequence,
+      rootIdentifier: rootIdentifier ?? this.rootIdentifier,
+      totalData: totalData ?? this.totalData,
+      minPrice: minPrice ?? this.minPrice,
+      maxPrice: maxPrice ?? this.maxPrice,
+      sectionData: sectionData ?? this.sectionData,
+    );
+  }
 
   HomeScreenSection.fromJson(Map<String, dynamic> json) {
     sectionId = json['id'];

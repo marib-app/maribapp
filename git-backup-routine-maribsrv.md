@@ -26,14 +26,12 @@ Get-Content .\storage\logs\laravel.log -Tail 50
 Get-Content .\storage\logs\laravel.log -Tail 100 | Select-String "ERROR"
 
 
-
-
 git status; git add -A; git commit -m "msg"; git push
 
 
 php artisan cache:clear; php artisan config:clear ;  php artisan route:clear
 
-
+ 
 
 استطلاع قواعد البيانات 
 mysql -h 127.0.0.1 -u root -p -e "SHOW DATABASES;"

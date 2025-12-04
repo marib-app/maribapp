@@ -14,6 +14,9 @@ class HomeRepository {
     String? slug,
     String? rootIdentifier,
     int? areaId,
+    String? orderMode,
+    String? styleKey,
+    int? rootCategoryId,
   }) async {
     try {
       final String? trimmedSlug = slug?.trim();
@@ -32,6 +35,12 @@ class HomeRepository {
         if (trimmedSlug != null && trimmedSlug.isNotEmpty) 'slug': trimmedSlug,
         if (trimmedRootIdentifier != null && trimmedRootIdentifier.isNotEmpty)
           'root_identifier': trimmedRootIdentifier,
+        if (orderMode != null && orderMode.trim().isNotEmpty)
+          'order_mode': orderMode.trim(),
+        if (styleKey != null && styleKey.trim().isNotEmpty)
+          'style': styleKey.trim(),
+        if (rootCategoryId != null && rootCategoryId > 0)
+          'root_id': rootCategoryId,
         // Location filters kept for future use (currently disabled)
         // if (city != null && city.isNotEmpty) 'city': city,
         // if (areaId != null) 'area_id': areaId,
@@ -226,5 +235,20 @@ class HomeRepository {
     }
 
     return fallback;
+  }
+
+  String _buildCacheKey(Map<String, dynamic> parameters) {
+    final String sectionType =
+        (parameters['section_type'] ?? parameters['interface_type'] ?? '')
+            .toString()
+            .trim();
+    final String slug = (parameters['slug'] ?? '').toString().trim();
+    final String root = (parameters['root_identifier'] ?? '').toString().trim();
+    final String order = (parameters['order_mode'] ?? '').toString().trim();
+    final String style = (parameters['style'] ?? '').toString().trim();
+    final String rootId = (parameters['root_id'] ?? '').toString().trim();
+    return [sectionType, slug, root, order, style, rootId]
+        .where((v) => v.isNotEmpty)
+        .join('|');
   }
 }

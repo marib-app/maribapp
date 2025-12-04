@@ -1,2 +1,7 @@
 
 marib-server.rar
+marib-server/vendor/
+marib-server/storage/
+marib-app/.dart_tool/
+marib-app/build/
+marib-app/ios/Pods/

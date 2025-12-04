@@ -26,6 +26,7 @@ import 'widgets/storefront_header.dart';
 import 'package:marib/utils/slider_interface_mapper.dart';
 import 'package:marib/utils/featured_section_utils.dart';
 import 'package:marib/utils/logger.dart';
+import 'package:marib/utils/featured_ads_config.dart';
 import 'package:marib/app/routes.dart';
 import 'dart:convert';
 
@@ -291,6 +292,9 @@ class Section_screenState extends State<Section_screen> {
     Constant.computerRootCategoryId,
     Constant.publicRootCategoryId,
   };
+  FeaturedAdsConfig? _featuredAdsConfig;
+  String? _featuredStyleOverride;
+  String? _featuredOrderMode;
 
   late final String _sliderInterfaceType;
 
@@ -474,6 +478,9 @@ class Section_screenState extends State<Section_screen> {
               ? cleanedSlug
               : null,
           rootIdentifier: resolvedRootIdentifier,
+          orderMode: _featuredOrderMode,
+          styleKey: _featuredStyleOverride,
+          rootCategoryId: effectiveRootId,
         );
   }
 
@@ -512,7 +519,17 @@ class Section_screenState extends State<Section_screen> {
     // إعداد معرف الفئة الأساسي
     // =========================
     _catId = _parseInitialCategoryId(widget.categoryId);
-    _enableFeaturedAds = _featuredAdRootIds.contains(_catId);
+    final String? normalizedInterfaceType =
+        SliderInterfaceMapper.normalize(widget.interfaceType) ??
+            widget.interfaceType?.trim();
+    _featuredAdsConfig = FeaturedAdsConfigProvider.resolve(
+      _catId,
+      interfaceType: normalizedInterfaceType,
+    );
+    _featuredStyleOverride = _featuredAdsConfig?.styleOverride;
+    _featuredOrderMode = _featuredAdsConfig?.orderMode;
+    _enableFeaturedAds = _featuredAdsConfig?.enableFeaturedAds ??
+        _featuredAdRootIds.contains(_catId);
     _sellerCategoryIds = _normalizeSellerCategoryIds(widget.sellerCategoryIds);
     _snapshotStorefront = _deriveSnapshotDetails(widget.storefrontSnapshot);
 
@@ -571,14 +588,12 @@ class Section_screenState extends State<Section_screen> {
       });
     }
 
-    final String? normalizedInterfaceType =
-        SliderInterfaceMapper.normalize(widget.interfaceType) ??
-            widget.interfaceType?.trim();
     _sliderInterfaceType =
         (normalizedInterfaceType == null || normalizedInterfaceType.isEmpty)
             ? 'homepage'
             : normalizedInterfaceType;
-    _hasAdSlider = _sliderInterfaceType.isNotEmpty;
+    _hasAdSlider = (_featuredAdsConfig?.enableAdSlider ?? true) &&
+        _sliderInterfaceType.isNotEmpty;
     if (_hasAdSlider) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted || _requestedSlider) {

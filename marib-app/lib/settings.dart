@@ -40,7 +40,7 @@ class AppSettings {
   static const String shareAppText = "Share this App";
 
   // static const String hostUrl =  "https://maribsrv.com";
-  static const String hostUrl = "http://192.168.1.13:8000";
+  static const String hostUrl = "http://192.168.1.16:8000";
 
   static final List<String> _hostUrlCandidates = _buildHostUrlCandidates();
   static List<String> get hostUrlCandidates => _hostUrlCandidates;

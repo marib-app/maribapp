@@ -127,11 +127,17 @@ class FetchHomeScreenCubit extends HydratedCubit<FetchHomeScreenState> {
     required String interfaceType,
     String? slug,
     String? rootIdentifier,
+    String? orderMode,
+    String? styleKey,
+    int? rootCategoryId,
   }) async {
     await fetch(
       interfaceType: interfaceType,
       slug: slug,
       rootIdentifier: rootIdentifier,
+      orderMode: orderMode,
+      styleKey: styleKey,
+      rootCategoryId: rootCategoryId,
     );
   }
 
@@ -143,6 +149,9 @@ class FetchHomeScreenCubit extends HydratedCubit<FetchHomeScreenState> {
     String? interfaceType,
     String? slug,
     String? rootIdentifier,
+    String? orderMode,
+    String? styleKey,
+    int? rootCategoryId,
   }) async {
     try {
       emit(FetchHomeScreenInProgress());
@@ -171,6 +180,9 @@ class FetchHomeScreenCubit extends HydratedCubit<FetchHomeScreenState> {
         areaId: areaId,
         slug: resolvedSlug,
         rootIdentifier: resolvedRootIdentifier,
+        orderMode: orderMode,
+        styleKey: styleKey,
+        rootCategoryId: rootCategoryId,
       );
 
       emit(

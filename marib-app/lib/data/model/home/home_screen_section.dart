@@ -18,11 +18,11 @@ class HomeScreenSection {
       {this.sectionId,
       this.style,
       this.title,
-        this.sectionType,
-        this.filter,
-        this.slug,
-        this.minPrice,
-        this.maxPrice,
+      this.sectionType,
+      this.filter,
+      this.slug,
+      this.minPrice,
+      this.maxPrice,
       this.sequence,
       this.rootIdentifier,
       this.totalData,
@@ -66,8 +66,8 @@ class HomeScreenSection {
     filter = json['filter'];
     slug = json['slug'];
     sequence = _parseInt(json['sequence']);
-    rootIdentifier = _asString(json['root_identifier']) ??
-        _asString(json['rootIdentifier']);
+    rootIdentifier =
+        _asString(json['root_identifier']) ?? _asString(json['rootIdentifier']);
     totalData = json['total_data'];
     minPrice = _parseDouble(json['min_price'] ?? json['minPrice']);
     maxPrice = _parseDouble(json['max_price'] ?? json['maxPrice']);

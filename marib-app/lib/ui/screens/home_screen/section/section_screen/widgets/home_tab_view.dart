@@ -1,4 +1,4 @@
-﻿import 'package:marib/data/cubits/home/fetch_home_screen_cubit.dart';
+import 'package:marib/data/cubits/home/fetch_home_screen_cubit.dart';
 import 'package:marib/data/cubits/item/fetch_item_summary_cubit.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/constant.dart';
@@ -57,6 +57,7 @@ class HomeTabView extends StatefulWidget {
   final String? adInterfaceType; // â†گ ط¬ط¯ظٹط¯
   // NEW ًں‘‡
   final bool enableSubcats;
+  final String? featuredStyleOverride;
 
   final String? currentSortBy;
   final ItemFilterModel? currentFilter;
@@ -87,7 +88,8 @@ class HomeTabView extends StatefulWidget {
     required this.showShimmer,
     this.currentSortBy, // â†گ ط¬ط¯ظٹط¯
     this.currentFilter, // â†گ ط¬ط¯ظٹط¯
-    this.enableSubcats = true, // â†گ ط¬ط¯ظٹط¯ (ط§ظپطھط±ط§ط¶ظٹ)
+    this.enableSubcats = true,
+    this.featuredStyleOverride, // â†گ ط¬ط¯ظٹط¯ (ط§ظپطھط±ط§ط¶ظٹ)
     this.onScrollDirectionChanged,
     this.sortBy,
     this.filter,
@@ -112,16 +114,17 @@ class _HomeTabViewState extends State<HomeTabView> {
   ScrollController? _attachedController;
   double _lastReportedScrollOffset = 0.0;
 
-  int? _activeSubcatId; // ط§ظ„ظپط¦ط© ط§ظ„ظپط±ط¹ظٹط© ط§ظ„ظ…ط®طھط§ط±ط© ط­ط§ظ„ظٹط§ظ‹
-  int? _lastTopCatId; // ظ„ظ…ظ„ط§ط­ط¸ط© طھط؛ظٹظ‘ط± ط§ظ„طھطµظ†ظٹظپ ط§ظ„ط¹ظ„ظˆظٹ ظˆط¥ط¹ط§ط¯ط© ط¶ط¨ط· ط§ظ„ظپط±ط¹ظٹط§طھ
+  int?
+      _activeSubcatId; // ط§ظ„ظپط¦ط© ط§ظ„ظپط±ط¹ظٹط© ط§ظ„ظ…ط®طھط§ط±ط© ط­ط§ظ„ظٹط§ظ‹
+  int?
+      _lastTopCatId; // ظ„ظ…ظ„ط§ط­ط¸ط© طھط؛ظٹظ‘ط± ط§ظ„طھطµظ†ظٹظپ ط§ظ„ط¹ظ„ظˆظٹ ظˆط¥ط¹ط§ط¯ط© ط¶ط¨ط· ط§ظ„ظپط±ط¹ظٹط§طھ
   bool? _lastReportedScrollIsUp;
 
   // âœ… ظ‚ظپظ„ طھط­ظ…ظٹظ„ ط§ظ„ظ…ط²ظٹط¯ + طھط¨ط§ط·ط¤ ط¨ط³ظٹط· ظ„طھط¬ظ†ظ‘ط¨ ط³ظٹظ„ ط§ظ„ط§ط³طھط¯ط¹ط§ط،ط§طھ
   bool _isLoadingMore = false;
   bool _loadingIndicatorPulseForward = true;
   Set<int>? _sellerCategoryIdSet;
-  ScrollController get _controller =>
-      _primaryController ?? _internalController;
+  ScrollController get _controller => _primaryController ?? _internalController;
 
   void _attachController(ScrollController controller) {
     if (_attachedController == controller) return;
@@ -173,8 +176,7 @@ class _HomeTabViewState extends State<HomeTabView> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final ScrollController? primary =
-        PrimaryScrollController.maybeOf(context);
+    final ScrollController? primary = PrimaryScrollController.maybeOf(context);
     if (primary != _primaryController) {
       _primaryController = primary;
       _attachController(_controller);
@@ -333,11 +335,10 @@ class _HomeTabViewState extends State<HomeTabView> {
     return result;
   }
 
-
   bool _categoryMatchesAllowed(
-      CategoryModel category,
-      Set<int> allowedIds,
-      ) {
+    CategoryModel category,
+    Set<int> allowedIds,
+  ) {
     final int? categoryId = category.id;
     if (categoryId != null && allowedIds.contains(categoryId)) {
       return true;
@@ -358,9 +359,9 @@ class _HomeTabViewState extends State<HomeTabView> {
   }
 
   List<CategoryModel> _prioritizeCategoriesByAllowedIds(
-      List<CategoryModel> categories,
-      Set<int> allowedIds,
-      ) {
+    List<CategoryModel> categories,
+    Set<int> allowedIds,
+  ) {
     if (categories.isEmpty || allowedIds.isEmpty) {
       return categories;
     }
@@ -371,25 +372,25 @@ class _HomeTabViewState extends State<HomeTabView> {
     for (final CategoryModel category in categories) {
       final List<CategoryModel>? children = category.children;
       final List<CategoryModel>? reorderedChildren =
-      (children == null || children.isEmpty)
-          ? children
-          : _prioritizeCategoriesByAllowedIds(children, allowedIds);
+          (children == null || children.isEmpty)
+              ? children
+              : _prioritizeCategoriesByAllowedIds(children, allowedIds);
 
-      final CategoryModel normalizedCategory =
-      (reorderedChildren == null || identical(reorderedChildren, category.children))
+      final CategoryModel normalizedCategory = (reorderedChildren == null ||
+              identical(reorderedChildren, category.children))
           ? category
           : CategoryModel(
-        id: category.id,
-        name: category.name,
-        url: category.url,
-        description: category.description,
-        interfaceType: category.interfaceType,
-        subcategoriesCount: category.subcategoriesCount,
-        children: reorderedChildren,
-      );
+              id: category.id,
+              name: category.name,
+              url: category.url,
+              description: category.description,
+              interfaceType: category.interfaceType,
+              subcategoriesCount: category.subcategoriesCount,
+              children: reorderedChildren,
+            );
 
       final bool matches =
-      _categoryMatchesAllowed(normalizedCategory, allowedIds);
+          _categoryMatchesAllowed(normalizedCategory, allowedIds);
       if (matches) {
         prioritized.add(normalizedCategory);
       } else {
@@ -406,7 +407,6 @@ class _HomeTabViewState extends State<HomeTabView> {
 
     return <CategoryModel>[...prioritized, ...remainder];
   }
-
 
   CategoryModel _copyCategoryWithChildren(
     CategoryModel source,
@@ -571,8 +571,9 @@ class _HomeTabViewState extends State<HomeTabView> {
               child: SizedBox(
                 height: hImage,
                 width: double.infinity,
-                child:
-                    Container(color: content), // ظ„ط§ط²ظ… ظ„ظˆظ† ظ…طµظ…طھ ط¹ط´ط§ظ† ط§ظ„ط´ظٹظ…ط± ظٹط¨ط§ظ†
+                child: Container(
+                    color:
+                        content), // ظ„ط§ط²ظ… ظ„ظˆظ† ظ…طµظ…طھ ط¹ط´ط§ظ† ط§ظ„ط´ظٹظ…ط± ظٹط¨ط§ظ†
               ),
             ),
           ),
@@ -686,7 +687,8 @@ class _HomeTabViewState extends State<HomeTabView> {
           },
           child: CustomScrollView(
             controller: _controller,
-            cacheExtent: 800, // âœ… طھط­ظ…ظٹظ„ ظ…ط³ط¨ظ‚ ظ…ط¹طھط¯ظ„ ظٹظ‚ظ„ظ„ ط§ظ„طھظ‚ط·ظٹط¹
+            cacheExtent:
+                800, // âœ… طھط­ظ…ظٹظ„ ظ…ط³ط¨ظ‚ ظ…ط¹طھط¯ظ„ ظٹظ‚ظ„ظ„ ط§ظ„طھظ‚ط·ظٹط¹
             slivers: [
               if (widget.overlapHandle != null)
                 SliverOverlapInjector(
@@ -1056,12 +1058,12 @@ class _HomeTabViewState extends State<HomeTabView> {
 
                               final bool hasAllowedHints =
                                   allowedCategoryIds.isNotEmpty;
-                              final List<CategoryModel> prioritizedRootChildren =
-                              hasAllowedHints
-                                  ? _prioritizeCategoriesByAllowedIds(
-                                  processedRootChildren,
-                                  allowedCategoryIds)
-                                  : processedRootChildren;
+                              final List<CategoryModel>
+                                  prioritizedRootChildren = hasAllowedHints
+                                      ? _prioritizeCategoriesByAllowedIds(
+                                          processedRootChildren,
+                                          allowedCategoryIds)
+                                      : processedRootChildren;
 
                               final bool needsSyntheticRoot =
                                   sellerFilterApplied || hasAllowedHints;
@@ -1069,12 +1071,12 @@ class _HomeTabViewState extends State<HomeTabView> {
                                   prioritizedRootChildren;
 
                               final CategoryModel effectiveRoot =
-                              needsSyntheticRoot
+                                  needsSyntheticRoot
                                       ? _copyCategoryWithChildren(
                                           root, effectiveRootChildren)
                                       : root;
 
-                              if (sellerFilterApplied  &&
+                              if (sellerFilterApplied &&
                                   selectedId != null &&
                                   selectedId > 0) {
                                 final bool selectedAllowed =
@@ -1243,8 +1245,7 @@ class _HomeTabViewState extends State<HomeTabView> {
                                       final String categoryName =
                                           (rawName?.trim().isNotEmpty ?? false)
                                               ? rawName!.trim()
-                                              : (widget.rootCategoryName ??
-                                                  '');
+                                              : (widget.rootCategoryName ?? '');
 
                                       final List<String> categoryPath =
                                           <String>[baseCategoryId];
@@ -1299,6 +1300,7 @@ class _HomeTabViewState extends State<HomeTabView> {
                 SliverToBoxAdapter(
                   child: _FeaturedAdsPanel(
                     interfaceType: sliderInterfaceType,
+                    overrideStyle: widget.featuredStyleOverride,
                   ),
                 ),
                 SliverToBoxAdapter(child: SizedBox(height: gapSmall)),
@@ -1910,9 +1912,11 @@ class _HomeTabEntry {
 class _FeaturedAdsPanel extends StatelessWidget {
   const _FeaturedAdsPanel({
     required this.interfaceType,
+    this.overrideStyle,
   });
 
   final String interfaceType;
+  final String? overrideStyle;
 
   static const int _maxSectionBlocks = 3;
   static const double _horizontalPadding = 18.0;
@@ -1948,9 +1952,16 @@ class _FeaturedAdsPanel extends StatelessWidget {
             return const _FeaturedAdsShimmer();
           }
 
-          final List<HomeScreenSection> filteredSections = state.sections
-              .where(_hasRenderableItems)
-              .toList(growable: false);
+          List<HomeScreenSection> filteredSections =
+              state.sections.where(_hasRenderableItems).toList(growable: false);
+
+          if (overrideStyle != null && overrideStyle!.trim().isNotEmpty) {
+            filteredSections = filteredSections
+                .map(
+                  (section) => section.copyWith(style: overrideStyle!.trim()),
+                )
+                .toList(growable: false);
+          }
 
           if (filteredSections.isEmpty) {
             return const SizedBox.shrink();
@@ -1979,8 +1990,7 @@ class _FeaturedAdsPanel extends StatelessWidget {
               const SizedBox(height: 8),
               for (int i = 0; i < limitedSections.length; i++) ...[
                 SectionsAdapter(section: limitedSections[i]),
-                if (i != limitedSections.length - 1)
-                  const SizedBox(height: 12),
+                if (i != limitedSections.length - 1) const SizedBox(height: 12),
               ],
             ],
           );
@@ -2131,5 +2141,3 @@ class _KeepAliveNativeAdState extends State<_KeepAliveNativeAd>
     );
   }
 }
-
-

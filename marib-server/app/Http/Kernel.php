@@ -81,6 +81,8 @@ class Kernel extends HttpKernel {
         'verified'         => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         'language'         => \App\Http\Middleware\LanguageManager::class,
         'permission'       => PermissionMiddleware::class,
+        'abilities'        => \Laravel\Sanctum\Http\Middleware\CheckAbilities::class,
+        'ability'          => \Laravel\Sanctum\Http\Middleware\CheckForAnyAbility::class,
     
 
         'service.manager'  => \App\Http\Middleware\EnsureServiceManager::class,

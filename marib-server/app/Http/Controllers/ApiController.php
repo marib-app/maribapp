@@ -29,6 +29,7 @@ use App\Models\Country;
 use App\Models\CustomField;
 use App\Models\Faq;
 use App\Models\Favourite;
+use App\Models\FeaturedAdsConfig;
 use App\Models\FeaturedItems;
 use App\Models\Item;
 use App\Models\ItemCustomFieldValue;
@@ -185,43 +186,43 @@ class ApiController extends Controller {
 
     private const CURRENCY_SYNONYMS = [
         'yer' => 'YER',
-        '╪▒┘è╪د┘ ┘è┘à┘┘è' => 'YER',
-        '╪▒┘è╪د┘ ┘è┘à┘┘ë' => 'YER',
-        '╪▒.┘è' => 'YER',
-        '╪▒. ┘è.' => 'YER',
+        'â•ھâ–’â”کأ¨â•ھط¯â”کآ„ â”کأ¨â”کأ â”کآ†â”کأ¨' => 'YER',
+        'â•ھâ–’â”کأ¨â•ھط¯â”کآ„ â”کأ¨â”کأ â”کآ†â”کأ«' => 'YER',
+        'â•ھâ–’.â”کأ¨' => 'YER',
+        'â•ھâ–’. â”کأ¨.' => 'YER',
         'sar' => 'SAR',
-        '╪▒┘è╪د┘ ╪│╪╣┘ê╪»┘è' => 'SAR',
-        '╪▒.╪│' => 'SAR',
-        '╪▒. ╪│.' => 'SAR',
-        'sar ╪▒.╪│' => 'SAR',
+        'â•ھâ–’â”کأ¨â•ھط¯â”کآ„ â•ھâ”‚â•ھâ•£â”کأھâ•ھآ»â”کأ¨' => 'SAR',
+        'â•ھâ–’.â•ھâ”‚' => 'SAR',
+        'â•ھâ–’. â•ھâ”‚.' => 'SAR',
+        'sar â•ھâ–’.â•ھâ”‚' => 'SAR',
         'omr' => 'OMR',
-        '╪▒┘è╪د┘ ╪╣┘à╪د┘┘è' => 'OMR',
-        '╪▒.╪╣' => 'OMR',
+        'â•ھâ–’â”کأ¨â•ھط¯â”کآ„ â•ھâ•£â”کأ â•ھط¯â”کآ†â”کأ¨' => 'OMR',
+        'â•ھâ–’.â•ھâ•£' => 'OMR',
         'aed' => 'AED',
-        '╪»╪▒┘ç┘à ╪د┘à╪د╪▒╪د╪ز┘è' => 'AED',
-        '╪».╪ح' => 'AED',
+        'â•ھآ»â•ھâ–’â”کأ§â”کأ  â•ھط¯â”کأ â•ھط¯â•ھâ–’â•ھط¯â•ھط²â”کأ¨' => 'AED',
+        'â•ھآ».â•ھط­' => 'AED',
         'kwd' => 'KWD',
-        '╪»┘è┘╪د╪▒ ┘â┘ê┘è╪ز┘è' => 'KWD',
-        '╪».┘â' => 'KWD',
+        'â•ھآ»â”کأ¨â”کآ†â•ھط¯â•ھâ–’ â”کأ¢â”کأھâ”کأ¨â•ھط²â”کأ¨' => 'KWD',
+        'â•ھآ».â”کأ¢' => 'KWD',
         'bhd' => 'BHD',
-        '╪»┘è┘╪د╪▒ ╪ذ╪ص╪▒┘è┘┘è' => 'BHD',
-        '╪».╪ذ' => 'BHD',
+        'â•ھآ»â”کأ¨â”کآ†â•ھط¯â•ھâ–’ â•ھط°â•ھطµâ•ھâ–’â”کأ¨â”کآ†â”کأ¨' => 'BHD',
+        'â•ھآ».â•ھط°' => 'BHD',
         'egp' => 'EGP',
-        '╪ش┘┘è┘ç ┘à╪╡╪▒┘è' => 'EGP',
-        '╪ش.┘à' => 'EGP',
+        'â•ھط´â”کآ†â”کأ¨â”کأ§ â”کأ â•ھâ•،â•ھâ–’â”کأ¨' => 'EGP',
+        'â•ھط´.â”کأ ' => 'EGP',
         'usd' => 'USD',
-        '╪ث.╪▒' => 'USD',
-        '╪»┘ê┘╪د╪▒' => 'USD',
-        '╪»┘ê┘╪د╪▒ ╪د┘à╪▒┘è┘â┘è' => 'USD',
+        'â•ھط«.â•ھâ–’' => 'USD',
+        'â•ھآ»â”کأھâ”کآ„â•ھط¯â•ھâ–’' => 'USD',
+        'â•ھآ»â”کأھâ”کآ„â•ھط¯â•ھâ–’ â•ھط¯â”کأ â•ھâ–’â”کأ¨â”کأ¢â”کأ¨' => 'USD',
         '$' => 'USD',
         'eur' => 'EUR',
-        'ظéش' => 'EUR',
-        '╪ش┘┘è┘ç ╪د╪│╪ز╪▒┘┘è┘┘è' => 'GBP',
+        'ط¸أ©ط´' => 'EUR',
+        'â•ھط´â”کآ†â”کأ¨â”کأ§ â•ھط¯â•ھâ”‚â•ھط²â•ھâ–’â”کآ„â”کأ¨â”کآ†â”کأ¨' => 'GBP',
         'gbp' => 'GBP',
-        '┬ث' => 'GBP',
+        'â”¬ط«' => 'GBP',
         'try' => 'TRY',
-        'ظé║' => 'TRY',
-        '┘┘è╪▒╪ر ╪ز╪▒┘â┘è╪ر' => 'TRY',
+        'ط¸أ©â•‘' => 'TRY',
+        'â”کآ„â”کأ¨â•ھâ–’â•ھط± â•ھط²â•ھâ–’â”کأ¢â”کأ¨â•ھط±' => 'TRY',
     ];
 
     private function getWalletCurrencyCode(): string
@@ -762,7 +763,7 @@ class ApiController extends Controller {
 
     public function userSignup(Request $request) {
         try {
-            \Log::info('≡اôإ UserSignup Request:', [
+            \Log::info('â‰،ط§أ´ط¥ UserSignup Request:', [
                 'type' => $request->type,
                 'firebase_id' => $request->firebase_id,
                 'mobile' => $request->mobile ?? 'not provided',
@@ -779,9 +780,9 @@ class ApiController extends Controller {
                 'platform_type' => 'nullable|in:android,ios'
             ];
             
-            // ╪ح╪╢╪د┘╪ر validation ┘┘┘ç╪د╪ز┘ ╪ح╪░╪د ┘â╪د┘ ┘┘ê╪╣ ╪د┘╪ز╪│╪ش┘è┘ ┘ç┘ê google
+            // â•ھط­â•ھâ•¢â•ھط¯â”کآپâ•ھط± validation â”کآ„â”کآ„â”کأ§â•ھط¯â•ھط²â”کآپ â•ھط­â•ھâ–‘â•ھط¯ â”کأ¢â•ھط¯â”کآ† â”کآ†â”کأھâ•ھâ•£ â•ھط¯â”کآ„â•ھط²â•ھâ”‚â•ھط´â”کأ¨â”کآ„ â”کأ§â”کأھ google
             if ($request->type == 'google') {
-                $validationRules['mobile'] = 'nullable'; // ╪ش╪╣┘ ╪د┘┘ç╪د╪ز┘ ╪د╪«╪ز┘è╪د╪▒┘è ┘┘┘ Google
+                $validationRules['mobile'] = 'nullable'; // â•ھط´â•ھâ•£â”کآ„ â•ھط¯â”کآ„â”کأ§â•ھط¯â•ھط²â”کآپ â•ھط¯â•ھآ«â•ھط²â”کأ¨â•ھط¯â•ھâ–’â”کأ¨ â”کآ„â”کآ„â”کآ€ Google
             } elseif ($request->type == 'phone') {
                 $validationRules['mobile'] = 'required|unique:users,mobile';
             } elseif ($request->type == 'email') {
@@ -795,13 +796,13 @@ class ApiController extends Controller {
             }
 
             
-            // ╪▒╪│╪د╪خ┘ ╪«╪╖╪ث ┘à╪«╪╡╪╡╪ر
+            // â•ھâ–’â•ھâ”‚â•ھط¯â•ھط®â”کآ„ â•ھآ«â•ھâ•–â•ھط« â”کأ â•ھآ«â•ھâ•،â•ھâ•،â•ھط±
             $customMessages = [
-                'mobile.required' => '╪▒┘é┘à ╪د┘┘ç╪د╪ز┘ ┘à╪╖┘┘ê╪ذ.',
-                'mobile.unique'   => '┘ç╪░╪د ╪د┘╪▒┘é┘à ┘à╪│╪ز╪«╪»┘à ┘╪ص╪│╪د╪ذ ╪ت╪«╪▒.',
-                'email.required' => '╪د┘╪ح┘è┘à┘è┘ ┘à╪╖┘┘ê╪ذ.',
-                'email.email' => '┘è╪▒╪ش┘ë ╪ح╪»╪«╪د┘ ╪ح┘è┘à┘è┘ ╪╡╪ص┘è╪ص.',
-                'code.exists' => '┘â┘ê╪» ╪د┘╪ح╪ص╪د┘╪ر ╪║┘è╪▒ ╪╡╪ص┘è╪ص.'
+                'mobile.required' => 'â•ھâ–’â”کأ©â”کأ  â•ھط¯â”کآ„â”کأ§â•ھط¯â•ھط²â”کآپ â”کأ â•ھâ•–â”کآ„â”کأھâ•ھط°.',
+                'mobile.unique'   => 'â”کأ§â•ھâ–‘â•ھط¯ â•ھط¯â”کآ„â•ھâ–’â”کأ©â”کأ  â”کأ â•ھâ”‚â•ھط²â•ھآ«â•ھآ»â”کأ  â”کآ„â•ھطµâ•ھâ”‚â•ھط¯â•ھط° â•ھطھâ•ھآ«â•ھâ–’.',
+                'email.required' => 'â•ھط¯â”کآ„â•ھط­â”کأ¨â”کأ â”کأ¨â”کآ„ â”کأ â•ھâ•–â”کآ„â”کأھâ•ھط°.',
+                'email.email' => 'â”کأ¨â•ھâ–’â•ھط´â”کأ« â•ھط­â•ھآ»â•ھآ«â•ھط¯â”کآ„ â•ھط­â”کأ¨â”کأ â”کأ¨â”کآ„ â•ھâ•،â•ھطµâ”کأ¨â•ھطµ.',
+                'code.exists' => 'â”کأ¢â”کأھâ•ھآ» â•ھط¯â”کآ„â•ھط­â•ھطµâ•ھط¯â”کآ„â•ھط± â•ھâ•‘â”کأ¨â•ھâ–’ â•ھâ•،â•ھطµâ”کأ¨â•ھطµ.'
             ];
             
             $validator = Validator::make($request->all(), $validationRules, $customMessages);
@@ -826,14 +827,14 @@ class ApiController extends Controller {
 
                 $request->merge(['email' => $generatedEmail]);
 
-                \Log::info('≡اôد Generated fallback email for phone signup', [
+                \Log::info('â‰،ط§أ´ط¯ Generated fallback email for phone signup', [
                     'mobile' => $request->mobile,
                     'country_code' => $request->country_code,
                     'generated_email' => $generatedEmail,
                 ]);
             }
 
-            // ╪د┘╪ذ╪ص╪س ╪╣┘ ┘à╪│╪ز╪«╪»┘à ┘à┘ê╪ش┘ê╪» ╪ذ┘ Google firebase_id
+            // â•ھط¯â”کآ„â•ھط°â•ھطµâ•ھط³ â•ھâ•£â”کآ† â”کأ â•ھâ”‚â•ھط²â•ھآ«â•ھآ»â”کأ  â”کأ â”کأھâ•ھط´â”کأھâ•ھآ» â•ھط°â”کآ€ Google firebase_id
             $existingGoogleUser = null;
             if ($type == 'google') {
                 $existingGoogleUser = SocialLogin::where('firebase_id', $firebase_id)
@@ -841,7 +842,7 @@ class ApiController extends Controller {
                     ->with('user')
                     ->first();
                     
-                \Log::info('≡ا¤ Searching for existing Google user by firebase_id:', [
+                \Log::info('â‰،ط§آ¤آچ Searching for existing Google user by firebase_id:', [
                     'firebase_id' => $firebase_id,
                     'found' => $existingGoogleUser ? 'yes' : 'no',
                     'user_id' => $existingGoogleUser ? $existingGoogleUser->user->id : null
@@ -858,34 +859,34 @@ class ApiController extends Controller {
                 ResponseService::errorResponse("User is deactivated. Please Contact the administrator");
             }
             
-            // ╪د┘╪ذ╪ص╪س ╪╣┘ ┘à╪│╪ز╪«╪»┘à ┘à┘ê╪ش┘ê╪» ╪ذ┘┘╪│ ╪▒┘é┘à ╪د┘┘ç╪د╪ز┘ ╪ث┘ê ╪د┘╪ح┘è┘à┘è┘
+            // â•ھط¯â”کآ„â•ھط°â•ھطµâ•ھط³ â•ھâ•£â”کآ† â”کأ â•ھâ”‚â•ھط²â•ھآ«â•ھآ»â”کأ  â”کأ â”کأھâ•ھط´â”کأھâ•ھآ» â•ھط°â”کآ†â”کآپâ•ھâ”‚ â•ھâ–’â”کأ©â”کأ  â•ھط¯â”کآ„â”کأ§â•ھط¯â•ھط²â”کآپ â•ھط«â”کأھ â•ھط¯â”کآ„â•ھط­â”کأ¨â”کأ â”کأ¨â”کآ„
             $existingUser = null;
             if ($request->type == 'phone' && !empty($request->mobile)) {
                 $existingUser = User::where('mobile', $request->mobile)->first();
             } elseif ($request->type == 'email' && !empty($request->email)) {
                 $existingUser = User::where('email', $request->email)->first();
             } elseif ($request->type == 'google') {
-                // ┘┘┘ Google╪î ╪د╪ذ╪ص╪س ╪ذ╪د┘┘ email ╪ث┘ê┘╪د┘ï╪î ╪س┘à ╪ذ╪د┘┘ mobile ╪ح╪░╪د ┘â╪د┘ ┘à╪ز┘ê┘╪▒╪د┘ï
+                // â”کآ„â”کآ„â”کآ€ Googleâ•ھأ® â•ھط¯â•ھط°â•ھطµâ•ھط³ â•ھط°â•ھط¯â”کآ„â”کآ€ email â•ھط«â”کأھâ”کآ„â•ھط¯â”کأ¯â•ھأ® â•ھط³â”کأ  â•ھط°â•ھط¯â”کآ„â”کآ€ mobile â•ھط­â•ھâ–‘â•ھط¯ â”کأ¢â•ھط¯â”کآ† â”کأ â•ھط²â”کأھâ”کآپâ•ھâ–’â•ھط¯â”کأ¯
                 if (!empty($request->email)) {
                     $existingUser = User::where('email', $request->email)->first();
-                    \Log::info('≡ا¤ Searching for Google user by email:', [
+                    \Log::info('â‰،ط§آ¤آچ Searching for Google user by email:', [
                         'email' => $request->email,
                         'found' => $existingUser ? 'yes' : 'no'
                     ]);
                 }
                 if (!$existingUser && !empty($request->mobile)) {
                     $existingUser = User::where('mobile', $request->mobile)->first();
-                    \Log::info('≡ا¤ Searching for Google user by mobile:', [
+                    \Log::info('â‰،ط§آ¤آچ Searching for Google user by mobile:', [
                         'mobile' => $request->mobile,
                         'found' => $existingUser ? 'yes' : 'no'
                     ]);
                 }
             }
 
-            // ╪د┘╪ز╪ص┘é┘é ┘à┘ ╪ص╪د┘╪ر ╪د┘┘à╪│╪ز╪«╪»┘à ╪د┘┘à┘ê╪ش┘ê╪»
+            // â•ھط¯â”کآ„â•ھط²â•ھطµâ”کأ©â”کأ© â”کأ â”کآ† â•ھطµâ•ھط¯â”کآ„â•ھط± â•ھط¯â”کآ„â”کأ â•ھâ”‚â•ھط²â•ھآ«â•ھآ»â”کأ  â•ھط¯â”کآ„â”کأ â”کأھâ•ھط´â”کأھâ•ھآ»
             $shouldUpdateExistingUser = false;
             if ($existingUser) {
-                \Log::info('≡ا¤ Found existing user:', [
+                \Log::info('â‰،ط§آ¤آچ Found existing user:', [
                     'user_id' => $existingUser->id,
                     'email' => $existingUser->email,
                     'mobile' => $existingUser->mobile,
@@ -896,26 +897,26 @@ class ApiController extends Controller {
                 
                 if ($existingUser->is_verified == 0 && $existingUser->email_verified_at === null) {
                     $shouldUpdateExistingUser = true;
-                    \Log::info('ظ£à User is not verified, allowing update');
+                    \Log::info('ط¸آ£أ  User is not verified, allowing update');
                 } elseif ($existingUser->is_verified == 1 && $existingUser->email_verified_at !== null) {
-                    // ┘┘┘ Google users╪î ╪د┘╪│┘à╪د╪ص ╪ذ╪د┘╪ز╪ص╪»┘è╪س ╪ص╪ز┘ë ┘┘ê ┘â╪د┘ ┘à╪ص┘é┘é╪د┘ï
+                    // â”کآ„â”کآ„â”کآ€ Google usersâ•ھأ® â•ھط¯â”کآ„â•ھâ”‚â”کأ â•ھط¯â•ھطµ â•ھط°â•ھط¯â”کآ„â•ھط²â•ھطµâ•ھآ»â”کأ¨â•ھط³ â•ھطµâ•ھط²â”کأ« â”کآ„â”کأھ â”کأ¢â•ھط¯â”کآ† â”کأ â•ھطµâ”کأ©â”کأ©â•ھط¯â”کأ¯
                     if ($request->type == 'google') {
                         $shouldUpdateExistingUser = true;
-                        \Log::info('ظ£à Allowing Google user to update verified account:', [
+                        \Log::info('ط¸آ£أ  Allowing Google user to update verified account:', [
                             'user_id' => $existingUser->id,
                             'email' => $existingUser->email
                         ]);
                     } else {
-                        // ╪د┘┘à╪│╪ز╪«╪»┘à ┘à╪ص┘é┘é ┘à╪│╪ذ┘é╪د┘ï - ╪ح╪▒╪ش╪د╪╣ ╪▒╪│╪د┘╪ر ╪«╪╖╪ث
+                        // â•ھط¯â”کآ„â”کأ â•ھâ”‚â•ھط²â•ھآ«â•ھآ»â”کأ  â”کأ â•ھطµâ”کأ©â”کأ© â”کأ â•ھâ”‚â•ھط°â”کأ©â•ھط¯â”کأ¯ - â•ھط­â•ھâ–’â•ھط´â•ھط¯â•ھâ•£ â•ھâ–’â•ھâ”‚â•ھط¯â”کآ„â•ھط± â•ھآ«â•ھâ•–â•ھط«
                         if ($request->type == 'phone') {
-                            ResponseService::errorResponse('┘ç╪░╪د ╪د┘╪ص╪│╪د╪ذ ┘à┘ê╪ش┘ê╪» ┘à╪│╪ذ┘é╪د. ┘è╪▒╪ش┘ë ╪ز╪│╪ش┘è┘ ╪ذ╪▒┘é┘à ┘ç╪د╪ز┘ ╪ت╪«╪▒.');
+                            ResponseService::errorResponse('â”کأ§â•ھâ–‘â•ھط¯ â•ھط¯â”کآ„â•ھطµâ•ھâ”‚â•ھط¯â•ھط° â”کأ â”کأھâ•ھط´â”کأھâ•ھآ» â”کأ â•ھâ”‚â•ھط°â”کأ©â•ھط¯. â”کأ¨â•ھâ–’â•ھط´â”کأ« â•ھط²â•ھâ”‚â•ھط´â”کأ¨â”کآ„ â•ھط°â•ھâ–’â”کأ©â”کأ  â”کأ§â•ھط¯â•ھط²â”کآپ â•ھطھâ•ھآ«â•ھâ–’.');
                         } else {
-                            ResponseService::errorResponse('┘ç╪░╪د ╪د┘╪ص╪│╪د╪ذ ┘à┘ê╪ش┘ê╪». ┘è╪▒╪ش┘ë ╪ز╪│╪ش┘è┘ ╪ذ╪ح┘è┘à┘è┘ ╪ت╪«╪▒.');
+                            ResponseService::errorResponse('â”کأ§â•ھâ–‘â•ھط¯ â•ھط¯â”کآ„â•ھطµâ•ھâ”‚â•ھط¯â•ھط° â”کأ â”کأھâ•ھط´â”کأھâ•ھآ». â”کأ¨â•ھâ–’â•ھط´â”کأ« â•ھط²â•ھâ”‚â•ھط´â”کأ¨â”کآ„ â•ھط°â•ھط­â”کأ¨â”کأ â”کأ¨â”کآ„ â•ھطھâ•ھآ«â•ھâ–’.');
                         }
                     }
                 }
             } else {
-                \Log::info('≡ا¤ No existing user found for:', [
+                \Log::info('â‰،ط§آ¤آچ No existing user found for:', [
                     'type' => $request->type,
                     'email' => $request->email ?? 'not provided',
                     'mobile' => $request->mobile ?? 'not provided'
@@ -923,7 +924,7 @@ class ApiController extends Controller {
             }
 
             if ($type == 'google' && $existingGoogleUser) {
-                \Log::info('≡ا¤ Updating existing Google user:', [
+                \Log::info('â‰،ط§آ¤آ„ Updating existing Google user:', [
                     'firebase_id' => $firebase_id,
                     'user_id' => $existingGoogleUser->user->id,
                     'mobile' => $request->mobile,
@@ -935,7 +936,7 @@ class ApiController extends Controller {
                 $user = $existingGoogleUser->user;
                 $userData = $request->all();
                 
-                // ╪ز╪ص╪»┘è╪س ╪ذ┘è╪د┘╪د╪ز ╪د┘┘à╪│╪ز╪«╪»┘à
+                // â•ھط²â•ھطµâ•ھآ»â”کأ¨â•ھط³ â•ھط°â”کأ¨â•ھط¯â”کآ†â•ھط¯â•ھط² â•ھط¯â”کآ„â”کأ â•ھâ”‚â•ھط²â•ھآ«â•ھآ»â”کأ 
                 if (!empty($request->password)) {
                     $userData['password'] = Hash::make($request->password);
                 }
@@ -945,7 +946,7 @@ class ApiController extends Controller {
                     $userData['name'] = $this->fallbackSellerName($request, $userData, $user);
                 }
                 
-                // ╪ز╪ص╪»┘è╪س ╪د┘╪ذ┘è╪د┘╪د╪ز ╪د┘┘à╪╖┘┘ê╪ذ╪ر
+                // â•ھط²â•ھطµâ•ھآ»â”کأ¨â•ھط³ â•ھط¯â”کآ„â•ھط°â”کأ¨â•ھط¯â”کآ†â•ھط¯â•ھط² â•ھط¯â”کآ„â”کأ â•ھâ•–â”کآ„â”کأھâ•ھط°â•ھط±
                 $user->update([
                     'name' => $userData['name'] ?? $user->name,
                     'mobile' => $userData['mobile'] ?? $user->mobile,
@@ -957,7 +958,7 @@ class ApiController extends Controller {
                     'flag_emoji' => $userData['flag_emoji'] ?? $user->flag_emoji,
                 ]);
                 
-                \Log::info('ظ£à Google user updated successfully:', [
+                \Log::info('ط¸آ£أ  Google user updated successfully:', [
                     'user_id' => $user->id,
                     'updated_fields' => [
                         'name' => $user->name,
@@ -966,7 +967,7 @@ class ApiController extends Controller {
                     ]
                 ]);
                 
-                // ┘à╪╣╪د┘╪ش╪ر ┘â┘ê╪» ╪د┘╪ح╪ص╪د┘╪ر ╪ح╪░╪د ╪ز┘à ╪ح╪▒╪│╪د┘┘ç
+                // â”کأ â•ھâ•£â•ھط¯â”کآ„â•ھط´â•ھط± â”کأ¢â”کأھâ•ھآ» â•ھط¯â”کآ„â•ھط­â•ھطµâ•ھط¯â”کآ„â•ھط± â•ھط­â•ھâ–‘â•ھط¯ â•ھط²â”کأ  â•ھط­â•ھâ–’â•ھâ”‚â•ھط¯â”کآ„â”کأ§
                 if (!empty($request->code)) {
                     $referralAttempt = $this->handleReferralCode(
                         $request->code,
@@ -987,8 +988,8 @@ class ApiController extends Controller {
                 DB::beginTransaction();
 
                 if ($shouldUpdateExistingUser) {
-                    // ╪ز╪ص╪»┘è╪س ╪د┘┘à╪│╪ز╪«╪»┘à ╪د┘┘à┘ê╪ش┘ê╪»
-                    \Log::info('≡ا¤ Updating existing user:', [
+                    // â•ھط²â•ھطµâ•ھآ»â”کأ¨â•ھط³ â•ھط¯â”کآ„â”کأ â•ھâ”‚â•ھط²â•ھآ«â•ھآ»â”کأ  â•ھط¯â”کآ„â”کأ â”کأھâ•ھط´â”کأھâ•ھآ»
+                    \Log::info('â‰،ط§آ¤آ„ Updating existing user:', [
                         'user_id' => $existingUser->id,
                         'type' => $request->type,
                         'mobile' => $request->mobile,
@@ -1005,7 +1006,7 @@ class ApiController extends Controller {
                     }
                     $userData['profile'] = $request->hasFile('profile') ? $request->file('profile')->store('user_profile', 'public') : $request->profile;
                     
-                    // ╪ز╪╣┘è┘è┘ ╪ص╪د┘╪ر ╪د┘╪ز╪ص┘é┘é ╪ص╪│╪ذ ┘┘ê╪╣ ╪د┘╪ز╪│╪ش┘è┘
+                    // â•ھط²â•ھâ•£â”کأ¨â”کأ¨â”کآ† â•ھطµâ•ھط¯â”کآ„â•ھط± â•ھط¯â”کآ„â•ھط²â•ھطµâ”کأ©â”کأ© â•ھطµâ•ھâ”‚â•ھط° â”کآ†â”کأھâ•ھâ•£ â•ھط¯â”کآ„â•ھط²â•ھâ”‚â•ھط´â”کأ¨â”کآ„
                     if (in_array($request->type, ['google', 'apple'])) {
                         $userData['is_verified'] = 1;
                         $userData['email_verified_at'] = now();
@@ -1017,7 +1018,7 @@ class ApiController extends Controller {
                     $existingUser->update($userData);
                     $user = $existingUser;
                     
-                    \Log::info('ظ£à Existing user updated successfully:', [
+                    \Log::info('ط¸آ£أ  Existing user updated successfully:', [
                         'user_id' => $user->id,
                         'updated_fields' => [
                             'name' => $user->name,
@@ -1026,7 +1027,7 @@ class ApiController extends Controller {
                         ]
                     ]);
                     
-                    // ┘à╪╣╪د┘╪ش╪ر ┘â┘ê╪» ╪د┘╪ح╪ص╪د┘╪ر ╪ح╪░╪د ╪ز┘à ╪ح╪▒╪│╪د┘┘ç
+                    // â”کأ â•ھâ•£â•ھط¯â”کآ„â•ھط´â•ھط± â”کأ¢â”کأھâ•ھآ» â•ھط¯â”کآ„â•ھط­â•ھطµâ•ھط¯â”کآ„â•ھط± â•ھط­â•ھâ–‘â•ھط¯ â•ھط²â”کأ  â•ھط­â•ھâ–’â•ھâ”‚â•ھط¯â”کآ„â”کأ§
                     if (!empty($request->code)) {
                         $referralAttempt = $this->handleReferralCode(
                             $request->code,
@@ -1055,7 +1056,7 @@ class ApiController extends Controller {
                     }
                     $auth = User::find($user->id);
                 } else {
-                    // ╪ح┘╪┤╪د╪ة ┘à╪│╪ز╪«╪»┘à ╪ش╪»┘è╪»
+                    // â•ھط­â”کآ†â•ھâ”¤â•ھط¯â•ھط© â”کأ â•ھâ”‚â•ھط²â•ھآ«â•ھآ»â”کأ  â•ھط´â•ھآ»â”کأ¨â•ھآ»
                     $userData = $request->all();
                     if (!empty($request->password)) {
                         $userData['password'] = Hash::make($request->password);
@@ -1066,7 +1067,7 @@ class ApiController extends Controller {
                         $userData['name'] = $this->fallbackSellerName($request, $userData);
                     }
                     
-                    // ╪ز╪╣┘è┘è┘ ╪ص╪د┘╪ر ╪د┘╪ز╪ص┘é┘é ╪ص╪│╪ذ ┘┘ê╪╣ ╪د┘╪ز╪│╪ش┘è┘
+                    // â•ھط²â•ھâ•£â”کأ¨â”کأ¨â”کآ† â•ھطµâ•ھط¯â”کآ„â•ھط± â•ھط¯â”کآ„â•ھط²â•ھطµâ”کأ©â”کأ© â•ھطµâ•ھâ”‚â•ھط° â”کآ†â”کأھâ•ھâ•£ â•ھط¯â”کآ„â•ھط²â•ھâ”‚â•ھط´â”کأ¨â”کآ„
                     if (in_array($request->type, ['google', 'apple'])) {
                         $userData['is_verified'] = 1;
                         $userData['email_verified_at'] = now();
@@ -1075,17 +1076,17 @@ class ApiController extends Controller {
                         $userData['email_verified_at'] = null;
                     }
                     
-                    // ┘┘┘ Google users╪î ╪ح╪░╪د ┘┘à ┘è╪ز┘à ╪ز┘à╪▒┘è╪▒ ╪▒┘é┘à ╪د┘┘ç╪د╪ز┘╪î ╪د╪│╪ز╪«╪»┘à email ┘â┘ mobile ┘à╪ج┘é╪ز
+                    // â”کآ„â”کآ„â”کآ€ Google usersâ•ھأ® â•ھط­â•ھâ–‘â•ھط¯ â”کآ„â”کأ  â”کأ¨â•ھط²â”کأ  â•ھط²â”کأ â•ھâ–’â”کأ¨â•ھâ–’ â•ھâ–’â”کأ©â”کأ  â•ھط¯â”کآ„â”کأ§â•ھط¯â•ھط²â”کآپâ•ھأ® â•ھط¯â•ھâ”‚â•ھط²â•ھآ«â•ھآ»â”کأ  email â”کأ¢â”کآ€ mobile â”کأ â•ھط¬â”کأ©â•ھط²
                     if ($type == 'google' && empty($request->mobile)) {
                         $userData['mobile'] = $request->email ?? 'temp_' . time();
-                        \Log::info('≡اô▒ Using temporary mobile for Google user:', [
+                        \Log::info('â‰،ط§أ´â–’ Using temporary mobile for Google user:', [
                             'email' => $request->email,
                             'temp_mobile' => $userData['mobile']
                         ]);
                     }
                     
                     if ($type == 'google') {
-                        \Log::info('≡اـ Creating new Google user:', [
+                        \Log::info('â‰،ط§آ†ظ€ Creating new Google user:', [
                             'firebase_id' => $firebase_id,
                             'mobile' => $userData['mobile'],
                             'name' => $request->name
@@ -1095,13 +1096,13 @@ class ApiController extends Controller {
                     $user = User::create($userData);
                     
                     if ($type == 'google') {
-                        \Log::info('ظ£à New Google user created:', [
+                        \Log::info('ط¸آ£أ  New Google user created:', [
                             'user_id' => $user->id,
                             'firebase_id' => $firebase_id
                         ]);
                     }
                     
-                    // ┘à╪╣╪د┘╪ش╪ر ┘â┘ê╪» ╪د┘╪ح╪ص╪د┘╪ر ╪ح╪░╪د ╪ز┘à ╪ح╪▒╪│╪د┘┘ç
+                    // â”کأ â•ھâ•£â•ھط¯â”کآ„â•ھط´â•ھط± â”کأ¢â”کأھâ•ھآ» â•ھط¯â”کآ„â•ھط­â•ھطµâ•ھط¯â”کآ„â•ھط± â•ھط­â•ھâ–‘â•ھط¯ â•ھط²â”کأ  â•ھط­â•ھâ–’â•ھâ”‚â•ھط¯â”کآ„â”کأ§
                     if (!empty($request->code)) {
                         $referralAttempt = $this->handleReferralCode(
                             $request->code,
@@ -1195,23 +1196,23 @@ class ApiController extends Controller {
                            ->first();
 
                 if (!$user) {
-                    ResponseService::errorResponse('╪▒┘é┘à ╪د┘┘ç╪د╪ز┘ ╪║┘è╪▒ ┘à╪│╪ش┘. ┘è╪▒╪ش┘ë ╪ح┘╪┤╪د╪ة ╪ص╪│╪د╪ذ ╪ش╪»┘è╪» ╪ث┘ê┘╪د┘ï.', null, config('constants.RESPONSE_CODE.INVALID_LOGIN'));
+                    ResponseService::errorResponse('â•ھâ–’â”کأ©â”کأ  â•ھط¯â”کآ„â”کأ§â•ھط¯â•ھط²â”کآپ â•ھâ•‘â”کأ¨â•ھâ–’ â”کأ â•ھâ”‚â•ھط´â”کآ„. â”کأ¨â•ھâ–’â•ھط´â”کأ« â•ھط­â”کآ†â•ھâ”¤â•ھط¯â•ھط© â•ھطµâ•ھâ”‚â•ھط¯â•ھط° â•ھط´â•ھآ»â”کأ¨â•ھآ» â•ھط«â”کأھâ”کآ„â•ھط¯â”کأ¯.', null, config('constants.RESPONSE_CODE.INVALID_LOGIN'));
                 }
 
                 if ($user->trashed()) {
-                    ResponseService::errorResponse('╪ز┘à ╪ح┘╪║╪د╪ة ╪ز┘╪╣┘è┘ ╪ص╪│╪د╪ذ┘â. ┘è╪▒╪ش┘ë ╪د┘╪ز┘ê╪د╪╡┘ ┘à╪╣ ╪د┘╪ح╪»╪د╪▒╪ر.', null, config('constants.RESPONSE_CODE.DEACTIVATED_ACCOUNT'));
+                    ResponseService::errorResponse('â•ھط²â”کأ  â•ھط­â”کآ„â•ھâ•‘â•ھط¯â•ھط© â•ھط²â”کآپâ•ھâ•£â”کأ¨â”کآ„ â•ھطµâ•ھâ”‚â•ھط¯â•ھط°â”کأ¢. â”کأ¨â•ھâ–’â•ھط´â”کأ« â•ھط¯â”کآ„â•ھط²â”کأھâ•ھط¯â•ھâ•،â”کآ„ â”کأ â•ھâ•£ â•ھط¯â”کآ„â•ھط­â•ھآ»â•ھط¯â•ھâ–’â•ھط±.', null, config('constants.RESPONSE_CODE.DEACTIVATED_ACCOUNT'));
                 }
 
                 // Check if user has password set
                 if (!$user->password) {
                     ResponseService::errorResponse('
                     
-                    ┘┘à ┘è╪ز┘à ╪ز╪╣┘è┘è┘ ┘â┘┘à╪ر ┘à╪▒┘ê╪▒ ┘┘ç╪░╪د ╪د┘╪ص╪│╪د╪ذ. ┘è╪▒╪ش┘ë ╪ز╪│╪ش┘è┘ ╪د┘╪»╪«┘ê┘ ╪ذ╪د╪│╪ز╪«╪»╪د┘à OTP ╪ث┘ê ╪ح╪╣╪د╪»╪ر ╪ز╪╣┘è┘è┘ ┘â┘┘à╪ر ╪د┘┘à╪▒┘ê╪▒.', null, config('constants.RESPONSE_CODE.INVALID_LOGIN'));
+                    â”کآ„â”کأ  â”کأ¨â•ھط²â”کأ  â•ھط²â•ھâ•£â”کأ¨â”کأ¨â”کآ† â”کأ¢â”کآ„â”کأ â•ھط± â”کأ â•ھâ–’â”کأھâ•ھâ–’ â”کآ„â”کأ§â•ھâ–‘â•ھط¯ â•ھط¯â”کآ„â•ھطµâ•ھâ”‚â•ھط¯â•ھط°. â”کأ¨â•ھâ–’â•ھط´â”کأ« â•ھط²â•ھâ”‚â•ھط´â”کأ¨â”کآ„ â•ھط¯â”کآ„â•ھآ»â•ھآ«â”کأھâ”کآ„ â•ھط°â•ھط¯â•ھâ”‚â•ھط²â•ھآ«â•ھآ»â•ھط¯â”کأ  OTP â•ھط«â”کأھ â•ھط­â•ھâ•£â•ھط¯â•ھآ»â•ھط± â•ھط²â•ھâ•£â”کأ¨â”کأ¨â”کآ† â”کأ¢â”کآ„â”کأ â•ھط± â•ھط¯â”کآ„â”کأ â•ھâ–’â”کأھâ•ھâ–’.', null, config('constants.RESPONSE_CODE.INVALID_LOGIN'));
                 }
 
                 // Verify password
                 if (!Hash::check($request->password, $user->password)) {
-                    ResponseService::errorResponse('┘â┘┘à╪ر ╪د┘┘à╪▒┘ê╪▒ ╪║┘è╪▒ ╪╡╪ص┘è╪ص╪ر.', null, config('constants.RESPONSE_CODE.INVALID_LOGIN'));
+                    ResponseService::errorResponse('â”کأ¢â”کآ„â”کأ â•ھط± â•ھط¯â”کآ„â”کأ â•ھâ–’â”کأھâ•ھâ–’ â•ھâ•‘â”کأ¨â•ھâ–’ â•ھâ•،â•ھطµâ”کأ¨â•ھطµâ•ھط±.', null, config('constants.RESPONSE_CODE.INVALID_LOGIN'));
                 }
 
                 Auth::guard('web')->login($user);
@@ -1226,11 +1227,11 @@ class ApiController extends Controller {
                 })->first();
 
                 if (!$socialLogin) {
-                    ResponseService::errorResponse('╪د┘┘à╪│╪ز╪«╪»┘à ╪║┘è╪▒ ┘à╪│╪ش┘. ┘è╪▒╪ش┘ë ╪ح┘╪┤╪د╪ة ╪ص╪│╪د╪ذ ╪ش╪»┘è╪» ╪ث┘ê┘╪د┘ï.', null, config('constants.RESPONSE_CODE.INVALID_LOGIN'));
+                    ResponseService::errorResponse('â•ھط¯â”کآ„â”کأ â•ھâ”‚â•ھط²â•ھآ«â•ھآ»â”کأ  â•ھâ•‘â”کأ¨â•ھâ–’ â”کأ â•ھâ”‚â•ھط´â”کآ„. â”کأ¨â•ھâ–’â•ھط´â”کأ« â•ھط­â”کآ†â•ھâ”¤â•ھط¯â•ھط© â•ھطµâ•ھâ”‚â•ھط¯â•ھط° â•ھط´â•ھآ»â”کأ¨â•ھآ» â•ھط«â”کأھâ”کآ„â•ھط¯â”کأ¯.', null, config('constants.RESPONSE_CODE.INVALID_LOGIN'));
                 }
 
                 if (!empty($socialLogin->user->deleted_at)) {
-                    ResponseService::errorResponse("╪ز┘à ╪ح┘╪║╪د╪ة ╪ز┘╪╣┘è┘ ╪د┘┘à╪│╪ز╪«╪»┘à. ┘è╪▒╪ش┘ë ╪د┘╪ز┘ê╪د╪╡┘ ┘à╪╣ ╪د┘╪ح╪»╪د╪▒╪ر", null, config('constants.RESPONSE_CODE.DEACTIVATED_ACCOUNT'));
+                    ResponseService::errorResponse("â•ھط²â”کأ  â•ھط­â”کآ„â•ھâ•‘â•ھط¯â•ھط© â•ھط²â”کآپâ•ھâ•£â”کأ¨â”کآ„ â•ھط¯â”کآ„â”کأ â•ھâ”‚â•ھط²â•ھآ«â•ھآ»â”کأ . â”کأ¨â•ھâ–’â•ھط´â”کأ« â•ھط¯â”کآ„â•ھط²â”کأھâ•ھط¯â•ھâ•،â”کآ„ â”کأ â•ھâ•£ â•ھط¯â”کآ„â•ھط­â•ھآ»â•ھط¯â•ھâ–’â•ھط±", null, config('constants.RESPONSE_CODE.DEACTIVATED_ACCOUNT'));
                 }
 
                 Auth::guard('web')->login($socialLogin->user);
@@ -1238,7 +1239,7 @@ class ApiController extends Controller {
             }
 
             if (!$auth->hasRole('User')) {
-                ResponseService::errorResponse('╪ذ┘è╪د┘╪د╪ز ╪ز╪│╪ش┘è┘ ╪د┘╪»╪«┘ê┘ ╪║┘è╪▒ ╪╡╪ص┘è╪ص╪ر', null, config('constants.RESPONSE_CODE.INVALID_LOGIN'));
+                ResponseService::errorResponse('â•ھط°â”کأ¨â•ھط¯â”کآ†â•ھط¯â•ھط² â•ھط²â•ھâ”‚â•ھط´â”کأ¨â”کآ„ â•ھط¯â”کآ„â•ھآ»â•ھآ«â”کأھâ”کآ„ â•ھâ•‘â”کأ¨â•ھâ–’ â•ھâ•،â•ھطµâ”کأ¨â•ھطµâ•ھط±', null, config('constants.RESPONSE_CODE.INVALID_LOGIN'));
             }
 
             // Update FCM token
@@ -1256,7 +1257,7 @@ class ApiController extends Controller {
             // Generate token
             $token = $auth->createToken($auth->name ?? '')->plainTextToken;
 
-            ResponseService::successResponse('╪ز┘à ╪ز╪│╪ش┘è┘ ╪د┘╪»╪«┘ê┘ ╪ذ┘╪ش╪د╪ص', $auth, ['token' => $token]);
+            ResponseService::successResponse('â•ھط²â”کأ  â•ھط²â•ھâ”‚â•ھط´â”کأ¨â”کآ„ â•ھط¯â”کآ„â•ھآ»â•ھآ«â”کأھâ”کآ„ â•ھط°â”کآ†â•ھط´â•ھط¯â•ھطµ', $auth, ['token' => $token]);
         } catch (Throwable $th) {
             ResponseService::logErrorResponse($th, "API Controller -> Login");
             ResponseService::errorResponse();
@@ -1304,7 +1305,7 @@ class ApiController extends Controller {
             }
             $data['show_personal_details'] = $request->show_personal_details;
 
-            // ┘à╪╣╪د┘╪ش╪ر ╪د┘╪ذ┘è╪د┘╪د╪ز ╪د┘╪ح╪╢╪د┘┘è╪ر ┘┘╪ص╪│╪د╪ذ╪د╪ز ╪د┘╪ز╪ش╪د╪▒┘è╪ر ┘ê╪د┘╪╣┘é╪د╪▒┘è╪ر
+            // â”کأ â•ھâ•£â•ھط¯â”کآ„â•ھط´â•ھط± â•ھط¯â”کآ„â•ھط°â”کأ¨â•ھط¯â”کآ†â•ھط¯â•ھط² â•ھط¯â”کآ„â•ھط­â•ھâ•¢â•ھط¯â”کآپâ”کأ¨â•ھط± â”کآ„â”کآ„â•ھطµâ•ھâ”‚â•ھط¯â•ھط°â•ھط¯â•ھط² â•ھط¯â”کآ„â•ھط²â•ھط´â•ھط¯â•ھâ–’â”کأ¨â•ھط± â”کأھâ•ھط¯â”کآ„â•ھâ•£â”کأ©â•ھط¯â•ھâ–’â”کأ¨â•ھط±
             if ($request->has('additional_data') && !empty($request->additional_data)) {
                 $additionalInfo = $app_user->additional_info ?: [];
                 if (!is_array($additionalInfo)) {
@@ -1315,7 +1316,7 @@ class ApiController extends Controller {
                     $additionalInfo['contact_info'] = [];
                 }
                 
-                // ╪ز╪ص╪»┘è╪س ╪د┘╪ذ┘è╪د┘╪د╪ز ╪د┘╪ح╪╢╪د┘┘è╪ر ╪ص╪│╪ذ ┘┘ê╪╣ ╪د┘╪ص╪│╪د╪ذ
+                // â•ھط²â•ھطµâ•ھآ»â”کأ¨â•ھط³ â•ھط¯â”کآ„â•ھط°â”کأ¨â•ھط¯â”کآ†â•ھط¯â•ھط² â•ھط¯â”کآ„â•ھط­â•ھâ•¢â•ھط¯â”کآپâ”کأ¨â•ھط± â•ھطµâ•ھâ”‚â•ھط° â”کآ†â”کأھâ•ھâ•£ â•ھط¯â”کآ„â•ھطµâ•ھâ”‚â•ھط¯â•ھط°
                 foreach ($request->additional_data as $key => $value) {
                     $additionalInfo['contact_info'][$key] = $value;
                 }
@@ -1670,7 +1671,7 @@ class ApiController extends Controller {
             return null;
         }
 
-        return $lines->map(static fn ($line) => 'ظت ' . $line)->implode("\n");
+        return $lines->map(static fn ($line) => 'ط¸آ€طھ ' . $line)->implode("\n");
      }
 
 
@@ -3209,7 +3210,7 @@ class ApiController extends Controller {
             ResponseService::validationError($validator->errors()->first());
         }
         try {
-            DB::beginTransaction(); // ╪ز╪╡╪ص┘è╪ص: ┘è╪ش╪ذ ╪ث┘ ┘è┘â┘ê┘ beginTransaction ┘ê┘┘è╪│ commit
+            DB::beginTransaction(); // â•ھط²â•ھâ•،â•ھطµâ”کأ¨â•ھطµ: â”کأ¨â•ھط´â•ھط° â•ھط«â”کآ† â”کأ¨â”کأ¢â”کأھâ”کآ† beginTransaction â”کأھâ”کآ„â”کأ¨â•ھâ”‚ commit
             $user = Auth::user();
             $item = Item::where('user_id', $user->id)->where('status', 'approved')->findOrFail($request->item_id);
 
@@ -3230,7 +3231,7 @@ class ApiController extends Controller {
             }
 
             
-            // ╪د┘╪ز╪ص┘é┘é ┘à┘ ╪ث┘ ╪د┘╪ح╪╣┘╪د┘ ┘┘è╪│ ┘à┘à┘è╪▓╪د┘ï ╪ذ╪د┘┘╪╣┘
+            // â•ھط¯â”کآ„â•ھط²â•ھطµâ”کأ©â”کأ© â”کأ â”کآ† â•ھط«â”کآ† â•ھط¯â”کآ„â•ھط­â•ھâ•£â”کآ„â•ھط¯â”کآ† â”کآ„â”کأ¨â•ھâ”‚ â”کأ â”کأ â”کأ¨â•ھâ–“â•ھط¯â”کأ¯ â•ھط°â•ھط¯â”کآ„â”کآپâ•ھâ•£â”کآ„
             $featuredItems = FeaturedItems::where([
                 'item_id'    => $request->item_id,
                 'package_id' => $user_package->package_id,
@@ -3245,7 +3246,7 @@ class ApiController extends Controller {
                 ResponseService::errorResponse("Item is already featured");
             }
 
-            // ╪ح┘╪┤╪د╪ة ╪ح╪╣┘╪د┘ ┘à┘à┘è╪▓ ┘à╪ش╪د┘╪د┘ï ╪ذ╪»┘ê┘ ╪ذ╪د┘é╪ر
+            // â•ھط­â”کآ†â•ھâ”¤â•ھط¯â•ھط© â•ھط­â•ھâ•£â”کآ„â•ھط¯â”کآ† â”کأ â”کأ â”کأ¨â•ھâ–“ â”کأ â•ھط´â•ھط¯â”کآ†â•ھط¯â”کأ¯ â•ھط°â•ھآ»â”کأھâ”کآ† â•ھط°â•ھط¯â”کأ©â•ھط±
             FeaturedItems::create([
                 'item_id'                   => $request->item_id,
                 'package_id'                => $user_package->package_id,
@@ -3485,6 +3486,9 @@ class ApiController extends Controller {
                 'latest',
                 'most_viewed',
                 'price_range',
+                'premium',
+                'highest_price',
+                'lowest_price',
             ])));
 
             $filtersInput = $request->input('filters');
@@ -3530,7 +3534,7 @@ class ApiController extends Controller {
             }
 
             $categoryIds = InterfaceSectionService::categoryIdsForSection($sectionType);
-            // إذا لم تُحدد تصنيفات، نرجع لكل العناصر بدلاً من الرد الفارغ
+            // ط¥ط°ط§ ظ„ظ… طھظڈط­ط¯ط¯ طھطµظ†ظٹظپط§طھطŒ ظ†ط±ط¬ط¹ ظ„ظƒظ„ ط§ظ„ط¹ظ†ط§طµط± ط¨ط¯ظ„ط§ظ‹ ظ…ظ† ط§ظ„ط±ط¯ ط§ظ„ظپط§ط±ط؛
             if ($categoryIds === []) {
                 $categoryIds = null;
             }
@@ -3538,6 +3542,82 @@ class ApiController extends Controller {
             $rootIdentifiers = InterfaceSectionService::rootIdentifiers();
             $rootIdentifier = $rootIdentifiers[$sectionType] ?? null;
             $interfaceVariants = InterfaceSectionService::sectionTypeVariants($sectionType);
+
+            $rootId = $request->integer('root_id') ?? $request->integer('root_category_id');
+
+            $config = FeaturedAdsConfig::query()
+                ->where('enabled', true)
+                ->when($sectionType, function ($query) use ($sectionType) {
+                    $query->where(function ($inner) use ($sectionType) {
+                        $inner->whereNull('interface_type')
+                            ->orWhere('interface_type', $sectionType);
+                    });
+                })
+                ->when($rootIdentifier, function ($query) use ($rootIdentifier) {
+                    $query->where(function ($inner) use ($rootIdentifier) {
+                        $inner->whereNull('root_identifier')
+                            ->orWhere('root_identifier', $rootIdentifier);
+                    });
+                })
+                ->when($rootId, function ($query) use ($rootId) {
+                    $query->where(function ($inner) use ($rootId) {
+                        $inner->whereNull('root_category_id')
+                            ->orWhere('root_category_id', $rootId);
+                    });
+                })
+                ->orderBy('position')
+                ->orderBy('id')
+                ->first();
+
+            if (! $config) {
+                return response()->json([
+                    'error' => false,
+                    'message' => __('Featured ads are disabled for this section.'),
+                    'data' => [
+                        'interface_type' => $sectionType,
+                        'filters' => [],
+                        'sections' => [],
+                    ],
+                    'code' => 200,
+                ], 200);
+            }
+
+            if (is_string($config->interface_type) && $config->interface_type !== '') {
+                $sectionType = InterfaceSectionService::normalizeSectionType($config->interface_type);
+                $interfaceVariants = InterfaceSectionService::sectionTypeVariants($sectionType);
+            }
+
+            if (is_string($config->root_identifier) && $config->root_identifier !== '') {
+                $rootIdentifier = $config->root_identifier;
+            }
+
+            $categoryIdsOverride = null;
+            if (! empty($config->root_category_id)) {
+                $categoryIdsOverride = $this->collectCategoryTreeIds((int) $config->root_category_id);
+            } elseif (! empty($rootId)) {
+                $categoryIdsOverride = $this->collectCategoryTreeIds((int) $rootId);
+            }
+
+            if ($categoryIdsOverride !== null) {
+                $categoryIds = $categoryIdsOverride;
+            }
+
+            if ($categoryIds === []) {
+                $categoryIds = null;
+            }
+
+            $preferredOrder = $config->order_mode;
+            if (is_string($preferredOrder)) {
+                $normalizedOrder = (string) Str::of($preferredOrder)
+                    ->lower()
+                    ->replaceMatches('/[\\s]+/u', '_')
+                    ->replace('-', '_')
+                    ->trim('_');
+
+                if ($normalizedOrder !== '' && in_array($normalizedOrder, $filterPool, true)) {
+                    $filters = [$normalizedOrder];
+                }
+            }
 
             $relations = [
                 'user:id,name,email,mobile,profile,country_code,show_personal_details',
@@ -3564,10 +3644,13 @@ class ApiController extends Controller {
             }
 
             $titleMap = [
-                'featured'    => __('Featured Items'),
-                'latest'      => __('Latest Listings'),
-                'most_viewed' => __('Popular Items'),
-                'price_range' => __('Budget Friendly'),
+                'featured'      => __('Featured Items'),
+                'premium'       => __('Featured Items'),
+                'latest'        => __('Latest Listings'),
+                'most_viewed'   => __('Popular Items'),
+                'price_range'   => __('Budget Friendly'),
+                'highest_price' => __('Highest Price'),
+                'lowest_price'  => __('Lowest Price'),
             ];
 
             $sections = [];
@@ -3576,12 +3659,17 @@ class ApiController extends Controller {
 
                 switch ($filter) {
                     case 'featured':
+                    case 'premium':
                         $query->whereHas('featured_items')->orderByDesc('items.updated_at');
                         break;
                     case 'most_viewed':
                         $query->orderByDesc('items.clicks');
                         break;
+                    case 'highest_price':
+                        $query->orderByDesc('items.price');
+                        break;
                     case 'price_range':
+                    case 'lowest_price':
                         $query->orderBy('items.price');
                         break;
                     case 'latest':
@@ -3600,13 +3688,15 @@ class ApiController extends Controller {
 
                 $sections[] = [
                     'id' => null,
-                    'title' => $titleMap[$filter] ?? Str::title(str_replace('_', ' ', $filter)),
-                    'style' => 'list',
+                    'title' => $config->title ?? $titleMap[$filter] ?? Str::title(str_replace('_', ' ', $filter)),
+                    'style' => $config->style_key ?? 'list',
                     'section_type' => $sectionType,
                     'filter' => $filter,
-                    'slug' => $request->input('slug') ?? Str::slug($sectionType . '-' . $filter),
+                    'slug' => $config->slug
+                        ?? $request->input('slug')
+                        ?? Str::slug($sectionType . '-' . $filter),
                     'sequence' => $index + 1,
-                    'root_identifier' => $rootIdentifier,
+                    'root_identifier' => $config->root_identifier ?? $rootIdentifier,
                     'total_data' => count($sectionData),
                     'min_price' => $items->min('price'),
                     'max_price' => $items->max('price'),
@@ -3614,36 +3704,6 @@ class ApiController extends Controller {
                 ];
             }
 
-            // Fallback: إذا لم يتم تجميع أي أقسام، رجّع قسم "أحدث الإعلانات" بحد أعلى من العناصر
-            if ($sections === []) {
-                // استخدم استعلامًا أبسط لتفادي أي مرشحات قد تمنع عرض البيانات
-                $fallbackItems = Item::query()
-                    ->approved()
-                    ->with($relations)
-                    ->withCount('favourites')
-                    ->withCount('featured_items')
-                    ->orderByDesc('items.created_at')
-                    ->limit($limit)
-                    ->get();
-
-                if ($fallbackItems->isNotEmpty()) {
-                    $sectionData = array_values((new ItemCollection($fallbackItems))->toArray($request));
-                    $sections[] = [
-                        'id' => null,
-                        'title' => $titleMap['latest'] ?? 'Latest Listings',
-                        'style' => 'list',
-                        'section_type' => $sectionType,
-                        'filter' => 'latest',
-                        'slug' => $request->input('slug') ?? Str::slug($sectionType . '-latest'),
-                        'sequence' => 1,
-                        'root_identifier' => $rootIdentifier,
-                        'total_data' => count($sectionData),
-                        'min_price' => $fallbackItems->min('price'),
-                        'max_price' => $fallbackItems->max('price'),
-                        'section_data' => $sectionData,
-                    ];
-                }
-            }
 
             return response()->json([
                 'error' => false,
@@ -3679,7 +3739,7 @@ class ApiController extends Controller {
 
             $sliderMetricService->recordClick($slider, $userId, $sessionId, $now);
 
-            ResponseService::successResponse(__('╪ز┘à ╪ز╪│╪ش┘è┘ ╪د┘┘┘é╪▒╪ر ╪ذ┘╪ش╪د╪ص.'));
+            ResponseService::successResponse(__('â•ھط²â”کأ  â•ھط²â•ھâ”‚â•ھط´â”کأ¨â”کآ„ â•ھط¯â”کآ„â”کآ†â”کأ©â•ھâ–’â•ھط± â•ھط°â”کآ†â•ھط´â•ھط¯â•ھطµ.'));
         } catch (Throwable $th) {
             ResponseService::logErrorResponse($th, 'API Controller -> recordSliderClick');
             ResponseService::errorResponse();
@@ -7120,7 +7180,7 @@ class ApiController extends Controller {
         }
 
         if (!$this->serviceAuthorizationService->userCanManageService($user, $service)) {
-            return ResponseService::errorResponse('╪║┘è╪▒ ┘à╪╡╪▒╪ص ┘┘â ╪ذ╪ح╪»╪د╪▒╪ر ┘ç╪░┘ç ╪د┘╪«╪»┘à╪ر.', null, 403);
+            return ResponseService::errorResponse('â•ھâ•‘â”کأ¨â•ھâ–’ â”کأ â•ھâ•،â•ھâ–’â•ھطµ â”کآ„â”کأ¢ â•ھط°â•ھط­â•ھآ»â•ھط¯â•ھâ–’â•ھط± â”کأ§â•ھâ–‘â”کأ§ â•ھط¯â”کآ„â•ھآ«â•ھآ»â”کأ â•ھط±.', null, 403);
         }
 
         $service->load([
@@ -7171,7 +7231,7 @@ class ApiController extends Controller {
         }
 
         if ((int) $service->owner_id !== (int) $user->id) {
-            return ResponseService::errorResponse('╪║┘è╪▒ ┘à╪╡╪▒╪ص ┘┘â ╪ذ╪ح╪»╪د╪▒╪ر ┘ç╪░┘ç ╪د┘╪«╪»┘à╪ر.', null, 403);
+            return ResponseService::errorResponse('â•ھâ•‘â”کأ¨â•ھâ–’ â”کأ â•ھâ•،â•ھâ–’â•ھطµ â”کآ„â”کأ¢ â•ھط°â•ھط­â•ھآ»â•ھط¯â•ھâ–’â•ھط± â”کأ§â•ھâ–‘â”کأ§ â•ھط¯â”کآ„â•ھآ«â•ھآ»â”کأ â•ھط±.', null, 403);
         }
 
         $validator = Validator::make($request->all(), [
@@ -7186,7 +7246,7 @@ class ApiController extends Controller {
         $payload = $validator->validated();
 
         if (empty($payload)) {
-            ResponseService::validationError('┘╪د ╪ز┘ê╪ش╪» ╪ذ┘è╪د┘╪د╪ز ┘╪ز╪ص╪»┘è╪س ╪د┘╪«╪»┘à╪ر.');
+            ResponseService::validationError('â”کآ„â•ھط¯ â•ھط²â”کأھâ•ھط´â•ھآ» â•ھط°â”کأ¨â•ھط¯â”کآ†â•ھط¯â•ھط² â”کآ„â•ھط²â•ھطµâ•ھآ»â”کأ¨â•ھط³ â•ھط¯â”کآ„â•ھآ«â•ھآ»â”کأ â•ھط±.');
         }
 
         if ($request->has('status')) {
@@ -7219,7 +7279,7 @@ class ApiController extends Controller {
         }
 
         if ((int) $service->owner_id !== (int) $user->id) {
-            return ResponseService::errorResponse('╪║┘è╪▒ ┘à╪╡╪▒╪ص ┘┘â ╪ذ╪ح╪»╪د╪▒╪ر ┘ç╪░┘ç ╪د┘╪«╪»┘à╪ر.', null, 403);
+            return ResponseService::errorResponse('â•ھâ•‘â”کأ¨â•ھâ–’ â”کأ â•ھâ•،â•ھâ–’â•ھطµ â”کآ„â”کأ¢ â•ھط°â•ھط­â•ھآ»â•ھط¯â•ھâ–’â•ھط± â”کأ§â•ھâ–‘â”کأ§ â•ھط¯â”کآ„â•ھآ«â•ھآ»â”کأ â•ھط±.', null, 403);
         }
 
         DB::beginTransaction();
@@ -7267,7 +7327,7 @@ class ApiController extends Controller {
             ResponseService::validationError($validator->errors()->first());
         }
 
-        // ┘┘╪ز╪▒ ╪«╪»┘à╪ر ┘ê╪د╪ص╪»╪ر ╪ذ╪د┘┘à╪╣╪▒┘ّ┘ (╪ح┘ ╪╖┘┘╪ذ)
+        // â”کآپâ”کآ„â•ھط²â•ھâ–’ â•ھآ«â•ھآ»â”کأ â•ھط± â”کأھâ•ھط¯â•ھطµâ•ھآ»â•ھط± â•ھط°â•ھط¯â”کآ„â”کأ â•ھâ•£â•ھâ–’â”کظ‘â”کآپ (â•ھط­â”کآ† â•ھâ•–â”کآڈâ”کآ„â•ھط°)
         if ($request->filled('id')) {
             $s = Service::where('status', true)
                 ->where(function($q){
@@ -7286,7 +7346,7 @@ class ApiController extends Controller {
             ResponseService::successResponse('Service fetched successfully.', $payload);
         }
 
-        // ┘é╪د╪خ┘à╪ر ╪«╪»┘à╪د╪ز
+        // â”کأ©â•ھط¯â•ھط®â”کأ â•ھط± â•ھآ«â•ھآ»â”کأ â•ھط¯â•ھط²
         $query = Service::with([
                 'category',
                 'serviceCustomFields.value',
@@ -7380,10 +7440,10 @@ class ApiController extends Controller {
 }
 
 /**
- * ┘è╪ص┘ê┘ّ┘ ┘â╪د╪خ┘ Service ╪ح┘┘ë ┘à╪╡┘┘ê┘╪ر JSON ╪ش╪د┘ç╪▓╪ر ┘┘╪ز╪╖╪ذ┘è┘é.
+ * â”کأ¨â•ھطµâ”کأھâ”کظ‘â”کآ„ â”کأ¢â•ھط¯â•ھط®â”کآ† Service â•ھط­â”کآ„â”کأ« â”کأ â•ھâ•،â”کآپâ”کأھâ”کآپâ•ھط± JSON â•ھط´â•ھط¯â”کأ§â•ھâ–“â•ھط± â”کآ„â”کآ„â•ھط²â•ھâ•–â•ھط°â”کأ¨â”کأ©.
  *  *
  * @param  Service  $s
- * @param  bool     $includeOwnerEmail ┘ç┘ ┘è╪ش╪ذ ╪ز╪╢┘à┘è┘ ╪د┘╪ذ╪▒┘è╪» ╪د┘╪ح┘┘â╪ز╪▒┘ê┘┘è ┘┘┘à╪د┘┘â╪ا
+ * @param  bool     $includeOwnerEmail â”کأ§â”کآ„ â”کأ¨â•ھط´â•ھط° â•ھط²â•ھâ•¢â”کأ â”کأ¨â”کآ† â•ھط¯â”کآ„â•ھط°â•ھâ–’â”کأ¨â•ھآ» â•ھط¯â”کآ„â•ھط­â”کآ„â”کأ¢â•ھط²â•ھâ–’â”کأھâ”کآ†â”کأ¨ â”کآ„â”کآ„â”کأ â•ھط¯â”کآ„â”کأ¢â•ھط§
  */
 private function mapService(Service $s, bool $includeOwnerEmail = false): array
 {
@@ -7422,15 +7482,15 @@ private function mapService(Service $s, bool $includeOwnerEmail = false): array
         'views'             => (int) ($s->views ?? 0),
         'expiry_date'       => $expiry,
 
-        // ظ£à ╪ص╪د┘╪╕ ╪╣┘┘ë ╪د┘┘à┘╪د╪ز┘è╪ص ╪د┘┘é╪»┘è┘à╪ر ┘à╪╣ ╪▒┘ê╪د╪ذ╪╖ ┘â╪د┘à┘╪ر
+        // ط¸آ£أ  â•ھطµâ•ھط¯â”کآپâ•ھâ•• â•ھâ•£â”کآ„â”کأ« â•ھط¯â”کآ„â”کأ â”کآپâ•ھط¯â•ھط²â”کأ¨â•ھطµ â•ھط¯â”کآ„â”کأ©â•ھآ»â”کأ¨â”کأ â•ھط± â”کأ â•ھâ•£ â•ھâ–’â”کأھâ•ھط¯â•ھط°â•ھâ•– â”کأ¢â•ھط¯â”کأ â”کآ„â•ھط±
         'image'             => $url($s->image),
         'icon'              => $url($s->icon),
 
-        // (╪ح╪╢╪د┘┘è ┘à╪ز┘ê╪د┘┘é ┘┘╪«┘┘)
+        // (â•ھط­â•ھâ•¢â•ھط¯â”کآپâ”کأ¨ â”کأ â•ھط²â”کأھâ•ھط¯â”کآپâ”کأ© â”کآ„â”کآ„â•ھآ«â”کآ„â”کآپ)
         'image_url'         => $url($s->image),
         'icon_url'          => $url($s->icon),
 
-        // ╪د┘╪ص┘é┘ê┘ ╪د┘╪ش╪»┘è╪»╪ر
+        // â•ھط¯â”کآ„â•ھطµâ”کأ©â”کأھâ”کآ„ â•ھط¯â”کآ„â•ھط´â•ھآ»â”کأ¨â•ھآ»â•ھط±
         'is_paid'           => (bool) $s->is_paid,
         'price'             => $s->price !== null ? (float) $s->price : null,
         'currency'          => $s->currency,
@@ -7449,7 +7509,7 @@ private function mapService(Service $s, bool $includeOwnerEmail = false): array
 
         'service_uid'       => $s->service_uid,
 
-        // (╪ح╪╢╪د┘┘è) ╪ز┘ê╪د╪▒┘è╪« ┘é╪» ┘è╪ص╪ز╪د╪ش┘ç╪د ╪د┘╪ز╪╖╪ذ┘è┘é
+        // (â•ھط­â•ھâ•¢â•ھط¯â”کآپâ”کأ¨) â•ھط²â”کأھâ•ھط¯â•ھâ–’â”کأ¨â•ھآ« â”کأ©â•ھآ» â”کأ¨â•ھطµâ•ھط²â•ھط¯â•ھط´â”کأ§â•ھط¯ â•ھط¯â”کآ„â•ھط²â•ھâ•–â•ھط°â”کأ¨â”کأ©
         'created_at'        => optional($s->created_at)->toISOString(),
         'updated_at'        => optional($s->updated_at)->toISOString(),
     ];
@@ -7473,7 +7533,7 @@ private function deleteServiceMedia(Service $service): void
         try {
             $disk->delete($path);
         } catch (Throwable) {
-            // ╪ز╪ش╪د┘ç┘ ╪ث┘è ╪ث╪«╪╖╪د╪ة ┘┘è ╪د┘╪ص╪░┘ ┘à┘ ╪د┘╪ز╪«╪▓┘è┘ ╪د┘╪╣╪د┘à.
+            // â•ھط²â•ھط´â•ھط¯â”کأ§â”کآ„ â•ھط«â”کأ¨ â•ھط«â•ھآ«â•ھâ•–â•ھط¯â•ھط© â”کآپâ”کأ¨ â•ھط¯â”کآ„â•ھطµâ•ھâ–‘â”کآپ â”کأ â”کآ† â•ھط¯â”کآ„â•ھط²â•ھآ«â•ھâ–“â”کأ¨â”کآ† â•ھط¯â”کآ„â•ھâ•£â•ھط¯â”کأ .
         }
     }
 }
@@ -8517,7 +8577,7 @@ private function formatServiceFieldValueForApi(ServiceCustomField $field, ?Servi
                 'department' => ['nullable', 'string', Rule::in(array_keys($departments))],
             ],
             [
-                'department.in' => '╪د┘┘é╪│┘à ╪د┘┘à╪ص╪»╪» ╪║┘è╪▒ ┘à╪»╪╣┘ê┘à.',
+                'department.in' => 'â•ھط¯â”کآ„â”کأ©â•ھâ”‚â”کأ  â•ھط¯â”کآ„â”کأ â•ھطµâ•ھآ»â•ھآ» â•ھâ•‘â”کأ¨â•ھâ–’ â”کأ â•ھآ»â•ھâ•£â”کأھâ”کأ .',
             ]
         );
 
@@ -8539,7 +8599,7 @@ private function formatServiceFieldValueForApi(ServiceCustomField $field, ?Servi
             if (!$policy) {
                 return response()->json([
                     'status' => false,
-                    'message' => '┘┘à ┘è╪ز┘à ╪د┘╪╣╪س┘ê╪▒ ╪╣┘┘ë ╪│┘è╪د╪│╪ر ╪ز╪│╪╣┘è╪▒ ┘╪┤╪╖╪ر.',
+                    'message' => 'â”کآ„â”کأ  â”کأ¨â•ھط²â”کأ  â•ھط¯â”کآ„â•ھâ•£â•ھط³â”کأھâ•ھâ–’ â•ھâ•£â”کآ„â”کأ« â•ھâ”‚â”کأ¨â•ھط¯â•ھâ”‚â•ھط± â•ھط²â•ھâ”‚â•ھâ•£â”کأ¨â•ھâ–’ â”کآ†â•ھâ”¤â•ھâ•–â•ھط±.',
                 ], 404);
 
 
@@ -8647,7 +8707,7 @@ private function formatServiceFieldValueForApi(ServiceCustomField $field, ?Servi
             
             return response()->json([
                 'status' => true,
-                'message' => '╪ز┘à ╪ش┘╪ذ ╪│┘è╪د╪│╪ر ╪د┘╪ز╪│╪╣┘è╪▒ ╪ذ┘╪ش╪د╪ص.',
+                'message' => 'â•ھط²â”کأ  â•ھط´â”کآ„â•ھط° â•ھâ”‚â”کأ¨â•ھط¯â•ھâ”‚â•ھط± â•ھط¯â”کآ„â•ھط²â•ھâ”‚â•ھâ•£â”کأ¨â•ھâ–’ â•ھط°â”کآ†â•ھط´â•ھط¯â•ھطµ.',
                 'data' => [
                     'policy' => $policyData,
                     'weight_tiers' => $weightTiers,
@@ -8684,7 +8744,7 @@ private function formatServiceFieldValueForApi(ServiceCustomField $field, ?Servi
                 
                 return response()->json([
                     'error' => true,
-                    'message' => __('┘┘ê╪╣ ╪د┘╪ص╪│╪د╪ذ ╪د┘┘à╪╖┘┘ê╪ذ ╪║┘è╪▒ ╪╡╪د┘╪ص.'),
+                    'message' => __('â”کآ†â”کأھâ•ھâ•£ â•ھط¯â”کآ„â•ھطµâ•ھâ”‚â•ھط¯â•ھط° â•ھط¯â”کآ„â”کأ â•ھâ•–â”کآ„â”کأھâ•ھط° â•ھâ•‘â”کأ¨â•ھâ–’ â•ھâ•،â•ھط¯â”کآ„â•ھطµ.'),
                 ], 422);
             }
 
@@ -8704,7 +8764,7 @@ private function formatServiceFieldValueForApi(ServiceCustomField $field, ?Servi
 
             return response()->json([
                 'error' => false,
-                'message' => __('╪ز┘à ╪ش┘╪ذ ╪د┘╪ص╪│╪د╪ذ╪د╪ز ╪ذ┘╪ش╪د╪ص.'),
+                'message' => __('â•ھط²â”کأ  â•ھط´â”کآ„â•ھط° â•ھط¯â”کآ„â•ھطµâ•ھâ”‚â•ھط¯â•ھط°â•ھط¯â•ھط² â•ھط°â”کآ†â•ھط´â•ھط¯â•ھطµ.'),
                 'data' => $users,
             ]);
         } catch (\Throwable $th) {
@@ -8763,7 +8823,7 @@ public function storeRequestDevice(Request $request)
 
     return response()->json([
         'status' => true,
-        'message' => '╪ز┘à ╪ح╪▒╪│╪د┘ ╪د┘╪╖┘╪ذ ╪ذ┘╪ش╪د╪ص',
+        'message' => 'â•ھط²â”کأ  â•ھط­â•ھâ–’â•ھâ”‚â•ھط¯â”کآ„ â•ھط¯â”کآ„â•ھâ•–â”کآ„â•ھط° â•ھط°â”کآ†â•ھط´â•ھط¯â•ھطµ',
         'data' => $requestDevice
     ]);
 }
@@ -8781,7 +8841,7 @@ public function storeRequestDevice(Request $request)
         $otpEnabled = filter_var($settings['whatsapp_otp_enabled'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
         if (!$otpEnabled) {
-            return ResponseService::errorResponse('╪«╪»┘à╪ر ╪▒┘à╪▓ ╪د┘╪ز╪ص┘é┘é ╪╣╪ذ╪▒ ┘ê╪د╪ز╪│╪د╪ذ ╪║┘è╪▒ ┘à┘╪╣┘╪ر ╪ص╪د┘┘è╪د┘ï.');
+            return ResponseService::errorResponse('â•ھآ«â•ھآ»â”کأ â•ھط± â•ھâ–’â”کأ â•ھâ–“ â•ھط¯â”کآ„â•ھط²â•ھطµâ”کأ©â”کأ© â•ھâ•£â•ھط°â•ھâ–’ â”کأھâ•ھط¯â•ھط²â•ھâ”‚â•ھط¯â•ھط° â•ھâ•‘â”کأ¨â•ھâ–’ â”کأ â”کآپâ•ھâ•£â”کآ„â•ھط± â•ھطµâ•ھط¯â”کآ„â”کأ¨â•ھط¯â”کأ¯.');
         }
 
         $phone = $request->country_code . $request->phone;
@@ -8790,7 +8850,7 @@ public function storeRequestDevice(Request $request)
         $check = $whatsApp->checkNumber($phone);
 
         if (!($check['status'] ?? false)) {
-            return ResponseService::errorResponse("╪╣╪░╪▒┘ï╪د╪î ┘ç╪░╪د ╪د┘╪▒┘é┘à ╪║┘è╪▒ ┘à╪▒╪ز╪ذ╪╖ ╪ذ╪ص╪│╪د╪ذ ┘ê╪د╪ز╪│╪د╪ذ.");
+            return ResponseService::errorResponse("â•ھâ•£â•ھâ–‘â•ھâ–’â”کأ¯â•ھط¯â•ھأ® â”کأ§â•ھâ–‘â•ھط¯ â•ھط¯â”کآ„â•ھâ–’â”کأ©â”کأ  â•ھâ•‘â”کأ¨â•ھâ–’ â”کأ â•ھâ–’â•ھط²â•ھط°â•ھâ•– â•ھط°â•ھطµâ•ھâ”‚â•ھط¯â•ھط° â”کأھâ•ھط¯â•ھط²â•ھâ”‚â•ھط¯â•ھط°.");
         }
 
         $otp = rand(100000, 999999);
@@ -8804,18 +8864,18 @@ public function storeRequestDevice(Request $request)
             'expires_at' => now()->addMinutes(5)->timestamp,
         ]);
 
-        $defaultNewUserMessage = "┘à╪▒╪ص╪ذ┘ï╪د ╪ذ┘â ┘┘è *┘à╪د╪▒╪ذ ╪ذ┘è┘ ┘è╪»┘è┘â*! ≡اë\n\n"
-            . "┘╪ص┘ ╪│╪╣╪»╪د╪ة ╪ذ╪د┘╪╢┘à╪د┘à┘â ╪ح┘┘ë ╪╣╪د╪خ┘╪ز┘╪د.\n"
-            . "┘╪ز╪ث┘â┘è╪» ┘ç┘ê┘è╪ز┘â ┘ê╪╢┘à╪د┘ ╪ث┘à╪د┘ ╪ص╪│╪د╪ذ┘â╪î ┘╪▒╪│┘ ┘┘â ╪▒┘à╪▓ ╪د┘╪ز╪ص┘é┘é ╪د┘╪«╪د╪╡ ╪ذ┘â:\n\n"
-            . "*╪▒┘à╪▓ ╪د┘╪ز╪ص┘é┘é:* :otp\n\n"
-            . "ظأبي╕ *┘à┘╪د╪ص╪╕╪ر:* ┘╪د ╪ز╪┤╪د╪▒┘â ┘ç╪░╪د ╪د┘╪▒┘à╪▓ ┘à╪╣ ╪ث┘è ╪┤╪«╪╡. ╪ح╪░╪د ┘┘à ╪ز╪╖┘╪ذ ┘ç╪░╪د ╪د┘╪▒┘à╪▓╪î ┘è╪▒╪ش┘ë ╪ز╪ش╪د┘ç┘ ┘ç╪░┘ç ╪د┘╪▒╪│╪د┘╪ر.\n\n"
-            . "╪┤┘â╪▒┘ï╪د ┘╪د╪«╪ز┘è╪د╪▒┘â *┘à╪د╪▒╪ذ ╪ذ┘è┘ ┘è╪»┘è┘â* ┘ê┘╪ز┘à┘┘ë ┘┘â ╪ز╪ش╪▒╪ذ╪ر ┘à┘à┘è╪▓╪ر ┘ê╪ت┘à┘╪ر! ≡اءè";
+        $defaultNewUserMessage = "â”کأ â•ھâ–’â•ھطµâ•ھط°â”کأ¯â•ھط¯ â•ھط°â”کأ¢ â”کآپâ”کأ¨ *â”کأ â•ھط¯â•ھâ–’â•ھط° â•ھط°â”کأ¨â”کآ† â”کأ¨â•ھآ»â”کأ¨â”کأ¢*! â‰،ط§آژأ«\n\n"
+            . "â”کآ†â•ھطµâ”کآ† â•ھâ”‚â•ھâ•£â•ھآ»â•ھط¯â•ھط© â•ھط°â•ھط¯â”کآ†â•ھâ•¢â”کأ â•ھط¯â”کأ â”کأ¢ â•ھط­â”کآ„â”کأ« â•ھâ•£â•ھط¯â•ھط®â”کآ„â•ھط²â”کآ†â•ھط¯.\n"
+            . "â”کآ„â•ھط²â•ھط«â”کأ¢â”کأ¨â•ھآ» â”کأ§â”کأھâ”کأ¨â•ھط²â”کأ¢ â”کأھâ•ھâ•¢â”کأ â•ھط¯â”کآ† â•ھط«â”کأ â•ھط¯â”کآ† â•ھطµâ•ھâ”‚â•ھط¯â•ھط°â”کأ¢â•ھأ® â”کآ†â•ھâ–’â•ھâ”‚â”کآ„ â”کآ„â”کأ¢ â•ھâ–’â”کأ â•ھâ–“ â•ھط¯â”کآ„â•ھط²â•ھطµâ”کأ©â”کأ© â•ھط¯â”کآ„â•ھآ«â•ھط¯â•ھâ•، â•ھط°â”کأ¢:\n\n"
+            . "*â•ھâ–’â”کأ â•ھâ–“ â•ھط¯â”کآ„â•ھط²â•ھطµâ”کأ©â”کأ©:* :otp\n\n"
+            . "ط¸ط£ط¨ظٹâ••آڈ *â”کأ â”کآ„â•ھط¯â•ھطµâ•ھâ••â•ھط±:* â”کآ„â•ھط¯ â•ھط²â•ھâ”¤â•ھط¯â•ھâ–’â”کأ¢ â”کأ§â•ھâ–‘â•ھط¯ â•ھط¯â”کآ„â•ھâ–’â”کأ â•ھâ–“ â”کأ â•ھâ•£ â•ھط«â”کأ¨ â•ھâ”¤â•ھآ«â•ھâ•،. â•ھط­â•ھâ–‘â•ھط¯ â”کآ„â”کأ  â•ھط²â•ھâ•–â”کآ„â•ھط° â”کأ§â•ھâ–‘â•ھط¯ â•ھط¯â”کآ„â•ھâ–’â”کأ â•ھâ–“â•ھأ® â”کأ¨â•ھâ–’â•ھط´â”کأ« â•ھط²â•ھط´â•ھط¯â”کأ§â”کآ„ â”کأ§â•ھâ–‘â”کأ§ â•ھط¯â”کآ„â•ھâ–’â•ھâ”‚â•ھط¯â”کآ„â•ھط±.\n\n"
+            . "â•ھâ”¤â”کأ¢â•ھâ–’â”کأ¯â•ھط¯ â”کآ„â•ھط¯â•ھآ«â•ھط²â”کأ¨â•ھط¯â•ھâ–’â”کأ¢ *â”کأ â•ھط¯â•ھâ–’â•ھط° â•ھط°â”کأ¨â”کآ† â”کأ¨â•ھآ»â”کأ¨â”کأ¢* â”کأھâ”کآ†â•ھط²â”کأ â”کآ†â”کأ« â”کآ„â”کأ¢ â•ھط²â•ھط´â•ھâ–’â•ھط°â•ھط± â”کأ â”کأ â”کأ¨â•ھâ–“â•ھط± â”کأھâ•ھطھâ”کأ â”کآ†â•ھط±! â‰،ط§ط،أ¨";
 
-        $defaultForgotPasswordMessage = "┘à╪▒╪ص╪ذ┘ï╪د ╪ذ┘â ┘┘è *┘à╪د╪▒╪ذ ╪ذ┘è┘ ┘è╪»┘è┘â*! ≡اë\n\n"
-            . "┘╪ز╪ث┘â┘è╪» ┘ç┘ê┘è╪ز┘â ┘ê╪د╪│╪ز╪╣╪د╪»╪ر ╪د┘┘ê╪╡┘ê┘ ╪ح┘┘ë ╪ص╪│╪د╪ذ┘â╪î ┘╪▒╪│┘ ┘┘â ╪▒┘à╪▓ ╪د┘╪ز╪ص┘é┘é ╪د┘╪«╪د╪╡ ╪ذ┘â:\n\n"
-            . "*╪▒┘à╪▓ ╪د┘╪ز╪ص┘é┘é:* :otp\n\n"
-            . "ظأبي╕ *┘à┘╪د╪ص╪╕╪ر:* ┘╪د ╪ز╪┤╪د╪▒┘â ┘ç╪░╪د ╪د┘╪▒┘à╪▓ ┘à╪╣ ╪ث┘è ╪┤╪«╪╡. ╪ح╪░╪د ┘┘à ╪ز╪╖┘╪ذ ┘ç╪░╪د ╪د┘╪▒┘à╪▓╪î ┘è╪▒╪ش┘ë ╪ز╪ش╪د┘ç┘ ┘ç╪░┘ç ╪د┘╪▒╪│╪د┘╪ر.\n\n"
-            . "╪┤┘â╪▒┘ï╪د ┘╪د╪«╪ز┘è╪د╪▒┘â *┘à╪د╪▒╪ذ ╪ذ┘è┘ ┘è╪»┘è┘â* ┘ê┘╪ز┘à┘┘ë ┘┘â ╪ز╪ش╪▒╪ذ╪ر ┘à┘à┘è╪▓╪ر ┘ê╪ت┘à┘╪ر! ≡اءè";
+        $defaultForgotPasswordMessage = "â”کأ â•ھâ–’â•ھطµâ•ھط°â”کأ¯â•ھط¯ â•ھط°â”کأ¢ â”کآپâ”کأ¨ *â”کأ â•ھط¯â•ھâ–’â•ھط° â•ھط°â”کأ¨â”کآ† â”کأ¨â•ھآ»â”کأ¨â”کأ¢*! â‰،ط§آژأ«\n\n"
+            . "â”کآ„â•ھط²â•ھط«â”کأ¢â”کأ¨â•ھآ» â”کأ§â”کأھâ”کأ¨â•ھط²â”کأ¢ â”کأھâ•ھط¯â•ھâ”‚â•ھط²â•ھâ•£â•ھط¯â•ھآ»â•ھط± â•ھط¯â”کآ„â”کأھâ•ھâ•،â”کأھâ”کآ„ â•ھط­â”کآ„â”کأ« â•ھطµâ•ھâ”‚â•ھط¯â•ھط°â”کأ¢â•ھأ® â”کآ†â•ھâ–’â•ھâ”‚â”کآ„ â”کآ„â”کأ¢ â•ھâ–’â”کأ â•ھâ–“ â•ھط¯â”کآ„â•ھط²â•ھطµâ”کأ©â”کأ© â•ھط¯â”کآ„â•ھآ«â•ھط¯â•ھâ•، â•ھط°â”کأ¢:\n\n"
+            . "*â•ھâ–’â”کأ â•ھâ–“ â•ھط¯â”کآ„â•ھط²â•ھطµâ”کأ©â”کأ©:* :otp\n\n"
+            . "ط¸ط£ط¨ظٹâ••آڈ *â”کأ â”کآ„â•ھط¯â•ھطµâ•ھâ••â•ھط±:* â”کآ„â•ھط¯ â•ھط²â•ھâ”¤â•ھط¯â•ھâ–’â”کأ¢ â”کأ§â•ھâ–‘â•ھط¯ â•ھط¯â”کآ„â•ھâ–’â”کأ â•ھâ–“ â”کأ â•ھâ•£ â•ھط«â”کأ¨ â•ھâ”¤â•ھآ«â•ھâ•،. â•ھط­â•ھâ–‘â•ھط¯ â”کآ„â”کأ  â•ھط²â•ھâ•–â”کآ„â•ھط° â”کأ§â•ھâ–‘â•ھط¯ â•ھط¯â”کآ„â•ھâ–’â”کأ â•ھâ–“â•ھأ® â”کأ¨â•ھâ–’â•ھط´â”کأ« â•ھط²â•ھط´â•ھط¯â”کأ§â”کآ„ â”کأ§â•ھâ–‘â”کأ§ â•ھط¯â”کآ„â•ھâ–’â•ھâ”‚â•ھط¯â”کآ„â•ھط±.\n\n"
+            . "â•ھâ”¤â”کأ¢â•ھâ–’â”کأ¯â•ھط¯ â”کآ„â•ھط¯â•ھآ«â•ھط²â”کأ¨â•ھط¯â•ھâ–’â”کأ¢ *â”کأ â•ھط¯â•ھâ–’â•ھط° â•ھط°â”کأ¨â”کآ† â”کأ¨â•ھآ»â”کأ¨â”کأ¢* â”کأھâ”کآ†â•ھط²â”کأ â”کآ†â”کأ« â”کآ„â”کأ¢ â•ھط²â•ھط´â•ھâ–’â•ھط°â•ھط± â”کأ â”کأ â”کأ¨â•ھâ–“â•ھط± â”کأھâ•ھطھâ”کأ â”کآ†â•ھط±! â‰،ط§ط،أ¨";
 
         $templates = [
             'new_user' => $settings['whatsapp_otp_message_new_user'] ?? $defaultNewUserMessage,
@@ -8829,7 +8889,7 @@ public function storeRequestDevice(Request $request)
         SendOtpWhatsAppJob::dispatch($phone, $message);
 
 
-        return ResponseService::successResponse('╪ز┘à ╪ح╪▒╪│╪د┘ ╪▒┘à╪▓ ╪د┘╪ز╪ص┘é┘é ╪╣╪ذ╪▒ WhatsApp ╪ذ┘╪ش╪د╪ص.');
+        return ResponseService::successResponse('â•ھط²â”کأ  â•ھط­â•ھâ–’â•ھâ”‚â•ھط¯â”کآ„ â•ھâ–’â”کأ â•ھâ–“ â•ھط¯â”کآ„â•ھط²â•ھطµâ”کأ©â”کأ© â•ھâ•£â•ھط°â•ھâ–’ WhatsApp â•ھط°â”کآ†â•ھط´â•ھط¯â•ھطµ.');
     }
 
 
@@ -8848,7 +8908,7 @@ public function storeRequestDevice(Request $request)
 
         if (!$user) {
             return ResponseService::errorResponse(
-                '╪د┘┘à╪│╪ز╪«╪»┘à ╪║┘è╪▒ ┘à┘ê╪ش┘ê╪» ┘┘ç╪░╪د ╪د┘╪▒┘é┘à',
+                'â•ھط¯â”کآ„â”کأ â•ھâ”‚â•ھط²â•ھآ«â•ھآ»â”کأ  â•ھâ•‘â”کأ¨â•ھâ–’ â”کأ â”کأھâ•ھط´â”کأھâ•ھآ» â”کآ„â”کأ§â•ھâ–‘â•ھط¯ â•ھط¯â”کآ„â•ھâ–’â”کأ©â”کأ ',
                 404
             );
         }
@@ -8858,7 +8918,7 @@ public function storeRequestDevice(Request $request)
             $user->is_verified = 1;
             $user->save();
 
-            return ResponseService::successResponse('╪ز┘à ╪د┘╪ز╪ص┘é┘é ╪ذ┘╪ش╪د╪ص (╪ز┘à ╪ز╪╣╪╖┘è┘ ╪د┘╪ز╪ص┘é┘é ╪╣╪ذ╪▒ ┘ê╪د╪ز╪│╪د╪ذ ╪ص╪د┘┘è╪د┘ï).');
+            return ResponseService::successResponse('â•ھط²â”کأ  â•ھط¯â”کآ„â•ھط²â•ھطµâ”کأ©â”کأ© â•ھط°â”کآ†â•ھط´â•ھط¯â•ھطµ (â•ھط²â”کأ  â•ھط²â•ھâ•£â•ھâ•–â”کأ¨â”کآ„ â•ھط¯â”کآ„â•ھط²â•ھطµâ”کأ©â”کأ© â•ھâ•£â•ھط°â•ھâ–’ â”کأھâ•ھط¯â•ھط²â•ھâ”‚â•ھط¯â•ھط° â•ھطµâ•ھط¯â”کآ„â”کأ¨â•ھط¯â”کأ¯).');
         }
 
         $otpRecord = OTP::where('phone', $phone)
@@ -8869,14 +8929,14 @@ public function storeRequestDevice(Request $request)
 
         if (!$otpRecord) {
             return ResponseService::errorResponse(
-                '╪▒┘à╪▓ ╪د┘╪ز╪ص┘é┘é ╪║┘è╪▒ ╪╡╪ص┘è╪ص ╪ث┘ê ┘╪د ┘è┘à┘â┘ ╪د┘╪╣╪س┘ê╪▒ ╪╣┘┘è┘ç',
+                'â•ھâ–’â”کأ â•ھâ–“ â•ھط¯â”کآ„â•ھط²â•ھطµâ”کأ©â”کأ© â•ھâ•‘â”کأ¨â•ھâ–’ â•ھâ•،â•ھطµâ”کأ¨â•ھطµ â•ھط«â”کأھ â”کآ„â•ھط¯ â”کأ¨â”کأ â”کأ¢â”کآ† â•ھط¯â”کآ„â•ھâ•£â•ھط³â”کأھâ•ھâ–’ â•ھâ•£â”کآ„â”کأ¨â”کأ§',
                 404
             );
         }
 
         if ($otpRecord->expires_at < now()->timestamp) {
             return ResponseService::errorResponse(
-                '╪▒┘à╪▓ ╪د┘╪ز╪ص┘é┘é ┘à┘╪ز┘ç┘è ╪د┘╪╡┘╪د╪ص┘è╪ر',
+                'â•ھâ–’â”کأ â•ھâ–“ â•ھط¯â”کآ„â•ھط²â•ھطµâ”کأ©â”کأ© â”کأ â”کآ†â•ھط²â”کأ§â”کأ¨ â•ھط¯â”کآ„â•ھâ•،â”کآ„â•ھط¯â•ھطµâ”کأ¨â•ھط±',
                 410
             );
         }
@@ -8889,23 +8949,23 @@ public function storeRequestDevice(Request $request)
         $user->is_verified = 1;
         $user->save();
 
-        return ResponseService::successResponse('╪ز┘à ╪د┘╪ز╪ص┘é┘é ╪ذ┘╪ش╪د╪ص');
+        return ResponseService::successResponse('â•ھط²â”کأ  â•ھط¯â”کآ„â•ھط²â•ھطµâ”کأ©â”کأ© â•ھط°â”کآ†â•ھط´â•ھط¯â•ھطµ');
 
     }
 
     /**
-     * ╪ح┘â┘à╪د┘ ╪د┘╪ز╪│╪ش┘è┘ ┘┘┘à╪│╪ز╪«╪»┘à┘è┘
+     * â•ھط­â”کأ¢â”کأ â•ھط¯â”کآ„ â•ھط¯â”کآ„â•ھط²â•ھâ”‚â•ھط´â”کأ¨â”کآ„ â”کآ„â”کآ„â”کأ â•ھâ”‚â•ھط²â•ھآ«â•ھآ»â”کأ â”کأ¨â”کآ†
      */
     public function completeRegistration(Request $request)
     {
         try {
             DB::beginTransaction();
             
-            // ╪ز╪│╪ش┘è┘ ╪د┘╪ذ┘è╪د┘╪د╪ز ╪د┘┘à╪▒╪│┘╪ر ┘┘╪ز╪╡╪ص┘è╪ص
+            // â•ھط²â•ھâ”‚â•ھط´â”کأ¨â”کآ„ â•ھط¯â”کآ„â•ھط°â”کأ¨â•ھط¯â”کآ†â•ھط¯â•ھط² â•ھط¯â”کآ„â”کأ â•ھâ–’â•ھâ”‚â”کآ„â•ھط± â”کآ„â”کآ„â•ھط²â•ھâ•،â•ھطµâ”کأ¨â•ھطµ
             \Log::info('Complete Registration Request:', $request->all());
             \Log::info('User Account Type:', ['account_type' => $request->account_type]);
             
-            // ╪د┘╪ز╪ص┘é┘é ╪د┘╪ث╪│╪د╪│┘è
+            // â•ھط¯â”کآ„â•ھط²â•ھطµâ”کأ©â”کأ© â•ھط¯â”کآ„â•ھط«â•ھâ”‚â•ھط¯â•ھâ”‚â”کأ¨
             $validator = Validator::make($request->all(), [
                 'phone_number' => 'nullable|string',
                 'country_code' => 'nullable|string',
@@ -8913,8 +8973,8 @@ public function storeRequestDevice(Request $request)
                 'email' => 'nullable|email|unique:users,email,' . Auth::id(),
             ]);
 
-            // ╪د┘╪ز╪ص┘é┘é ╪د┘┘à╪┤╪▒┘ê╪╖ ╪ص╪│╪ذ ┘┘ê╪╣ ╪د┘╪ص╪│╪د╪ذ - ┘à╪▒┘ ┘┘╪ص╪│╪د╪ذ╪د╪ز ╪د┘╪ز╪ش╪د╪▒┘è╪ر
-            // ┘┘é╪ذ┘ ╪د┘╪ذ┘è╪د┘╪د╪ز ╪د┘┘à╪▒╪│┘╪ر ┘â┘à╪د ┘ç┘è ┘ê┘╪ص┘╪╕┘ç╪د
+            // â•ھط¯â”کآ„â•ھط²â•ھطµâ”کأ©â”کأ© â•ھط¯â”کآ„â”کأ â•ھâ”¤â•ھâ–’â”کأھâ•ھâ•– â•ھطµâ•ھâ”‚â•ھط° â”کآ†â”کأھâ•ھâ•£ â•ھط¯â”کآ„â•ھطµâ•ھâ”‚â•ھط¯â•ھط° - â”کأ â•ھâ–’â”کآ† â”کآ„â”کآ„â•ھطµâ•ھâ”‚â•ھط¯â•ھط°â•ھط¯â•ھط² â•ھط¯â”کآ„â•ھط²â•ھط´â•ھط¯â•ھâ–’â”کأ¨â•ھط±
+            // â”کآ†â”کأ©â•ھط°â”کآ„ â•ھط¯â”کآ„â•ھط°â”کأ¨â•ھط¯â”کآ†â•ھط¯â•ھط² â•ھط¯â”کآ„â”کأ â•ھâ–’â•ھâ”‚â”کآ„â•ھط± â”کأ¢â”کأ â•ھط¯ â”کأ§â”کأ¨ â”کأھâ”کآ†â•ھطµâ”کآپâ•ھâ••â”کأ§â•ھط¯
 
             if ($validator->fails()) {
                 return ResponseService::validationError($validator->errors()->first());
@@ -8922,7 +8982,7 @@ public function storeRequestDevice(Request $request)
 
             $user = Auth::user();
             
-            // ╪ز╪ص╪»┘è╪س ╪د┘╪ذ┘è╪د┘╪د╪ز ╪د┘╪ث╪│╪د╪│┘è╪ر ┘┘é╪╖ ╪ح╪░╪د ┘â╪د┘╪ز ┘à╪▒╪│┘╪ر
+            // â•ھط²â•ھطµâ•ھآ»â”کأ¨â•ھط³ â•ھط¯â”کآ„â•ھط°â”کأ¨â•ھط¯â”کآ†â•ھط¯â•ھط² â•ھط¯â”کآ„â•ھط«â•ھâ”‚â•ھط¯â•ھâ”‚â”کأ¨â•ھط± â”کآپâ”کأ©â•ھâ•– â•ھط­â•ھâ–‘â•ھط¯ â”کأ¢â•ھط¯â”کآ†â•ھط² â”کأ â•ھâ–’â•ھâ”‚â”کآ„â•ھط±
             if ($request->has('phone_number') && !empty($request->phone_number)) {
                 $user->mobile = $request->phone_number;
             }
@@ -8941,14 +9001,14 @@ public function storeRequestDevice(Request $request)
                 $user->email = $request->email;
             }
             
-            // ╪ح╪╣╪»╪د╪» ╪د┘┘à╪╣┘┘ê┘à╪د╪ز ╪د┘╪ح╪╢╪د┘┘è╪ر ┘┘╪ص╪│╪د╪ذ╪د╪ز ╪د┘╪ز╪ش╪د╪▒┘è╪ر ┘ê╪د┘╪╣┘é╪د╪▒┘è╪ر
-            // ╪د┘╪ص┘╪د╪╕ ╪╣┘┘ë ╪د┘╪ذ┘è╪د┘╪د╪ز ╪د┘┘à┘ê╪ش┘ê╪»╪ر ┘ê╪ز╪ص╪»┘è╪س┘ç╪د ┘┘é╪╖
+            // â•ھط­â•ھâ•£â•ھآ»â•ھط¯â•ھآ» â•ھط¯â”کآ„â”کأ â•ھâ•£â”کآ„â”کأھâ”کأ â•ھط¯â•ھط² â•ھط¯â”کآ„â•ھط­â•ھâ•¢â•ھط¯â”کآپâ”کأ¨â•ھط± â”کآ„â”کآ„â•ھطµâ•ھâ”‚â•ھط¯â•ھط°â•ھط¯â•ھط² â•ھط¯â”کآ„â•ھط²â•ھط´â•ھط¯â•ھâ–’â”کأ¨â•ھط± â”کأھâ•ھط¯â”کآ„â•ھâ•£â”کأ©â•ھط¯â•ھâ–’â”کأ¨â•ھط±
+            // â•ھط¯â”کآ„â•ھطµâ”کآپâ•ھط¯â•ھâ•• â•ھâ•£â”کآ„â”کأ« â•ھط¯â”کآ„â•ھط°â”کأ¨â•ھط¯â”کآ†â•ھط¯â•ھط² â•ھط¯â”کآ„â”کأ â”کأھâ•ھط´â”کأھâ•ھآ»â•ھط± â”کأھâ•ھط²â•ھطµâ•ھآ»â”کأ¨â•ھط³â”کأ§â•ھط¯ â”کآپâ”کأ©â•ھâ•–
             $additionalInfo = $user->additional_info ?: [];
             if (!is_array($additionalInfo)) {
                 $additionalInfo = [];
             }
             
-            // ╪د┘╪ز╪ث┘â╪» ┘à┘ ┘ê╪ش┘ê╪» ╪د┘┘à┘╪د╪ز┘è╪ص ╪د┘╪ث╪│╪د╪│┘è╪ر
+            // â•ھط¯â”کآ„â•ھط²â•ھط«â”کأ¢â•ھآ» â”کأ â”کآ† â”کأھâ•ھط´â”کأھâ•ھآ» â•ھط¯â”کآ„â”کأ â”کآپâ•ھط¯â•ھط²â”کأ¨â•ھطµ â•ھط¯â”کآ„â•ھط«â•ھâ”‚â•ھط¯â•ھâ”‚â”کأ¨â•ھط±
             if (!isset($additionalInfo['contact_info'])) {
                 $additionalInfo['contact_info'] = [];
             }
@@ -8957,15 +9017,15 @@ public function storeRequestDevice(Request $request)
             }
             
             if ((int) $request->account_type === User::ACCOUNT_TYPE_REAL_ESTATE) {
-                // ╪ص╪│╪د╪ذ ╪╣┘é╪د╪▒┘è - ┘à╪╣╪د┘╪ش╪ر ╪د┘╪ذ┘è╪د┘╪د╪ز ╪د┘╪«╪د╪╡╪ر ╪ذ╪د┘╪╣┘é╪د╪▒╪د╪ز
-                // ╪د┘╪ص┘╪د╪╕ ╪╣┘┘ë ╪د┘╪ذ┘è╪د┘╪د╪ز ╪د┘┘à┘ê╪ش┘ê╪»╪ر ┘ê╪ز╪ص╪»┘è╪س ╪د┘┘à╪▒╪│┘╪ر ┘┘é╪╖
+                // â•ھطµâ•ھâ”‚â•ھط¯â•ھط° â•ھâ•£â”کأ©â•ھط¯â•ھâ–’â”کأ¨ - â”کأ â•ھâ•£â•ھط¯â”کآ„â•ھط´â•ھط± â•ھط¯â”کآ„â•ھط°â”کأ¨â•ھط¯â”کآ†â•ھط¯â•ھط² â•ھط¯â”کآ„â•ھآ«â•ھط¯â•ھâ•،â•ھط± â•ھط°â•ھط¯â”کآ„â•ھâ•£â”کأ©â•ھط¯â•ھâ–’â•ھط¯â•ھط²
+                // â•ھط¯â”کآ„â•ھطµâ”کآپâ•ھط¯â•ھâ•• â•ھâ•£â”کآ„â”کأ« â•ھط¯â”کآ„â•ھط°â”کأ¨â•ھط¯â”کآ†â•ھط¯â•ھط² â•ھط¯â”کآ„â”کأ â”کأھâ•ھط´â”کأھâ•ھآ»â•ھط± â”کأھâ•ھط²â•ھطµâ•ھآ»â”کأ¨â•ھط³ â•ھط¯â”کآ„â”کأ â•ھâ–’â•ھâ”‚â”کآ„â•ھط± â”کآپâ”کأ©â•ھâ•–
                 $contactInfo = $additionalInfo['contact_info'];
 
                 if ((int) $user->account_type === User::ACCOUNT_TYPE_SELLER) {
                     $user->name = $this->fallbackSellerName($request, $user->toArray(), $user);
                 }
                 
-                // ╪ذ┘è╪د┘╪د╪ز ╪د┘╪ص╪│╪د╪ذ ╪د┘╪╣┘é╪د╪▒┘è
+                // â•ھط°â”کأ¨â•ھط¯â”کآ†â•ھط¯â•ھط² â•ھط¯â”کآ„â•ھطµâ•ھâ”‚â•ھط¯â•ھط° â•ھط¯â”کآ„â•ھâ•£â”کأ©â•ھط¯â•ھâ–’â”کأ¨
                 if ($request->has('office_name')) {
                     $contactInfo['office_name'] = $request->office_name;
                 }
@@ -8982,20 +9042,20 @@ public function storeRequestDevice(Request $request)
                     $contactInfo['office_location'] = $request->office_location;
                 }
                 
-                // ┘à╪╣╪د┘╪ش╪ر ╪د┘┘à┘ê┘é╪╣ ╪د┘╪ش╪║╪▒╪د┘┘è
+                // â”کأ â•ھâ•£â•ھط¯â”کآ„â•ھط´â•ھط± â•ھط¯â”کآ„â”کأ â”کأھâ”کأ©â•ھâ•£ â•ھط¯â”کآ„â•ھط´â•ھâ•‘â•ھâ–’â•ھط¯â”کآپâ”کأ¨
                 if ($request->has('latitude') && $request->has('longitude')) {
                     $contactInfo['latitude'] = $request->latitude;
                     $contactInfo['longitude'] = $request->longitude;
                 }
                 
-                // ┘à╪╣╪د┘╪ش╪ر ╪╡┘ê╪▒╪ر ╪د┘┘à┘â╪ز╪ذ
+                // â”کأ â•ھâ•£â•ھط¯â”کآ„â•ھط´â•ھط± â•ھâ•،â”کأھâ•ھâ–’â•ھط± â•ھط¯â”کآ„â”کأ â”کأ¢â•ھط²â•ھط°
                 if ($request->has('office_logo')) {
                     try {
                         $imageData = base64_decode($request->office_logo);
                         $imageName = 'office_logo_' . $user->id . '_' . time() . '.jpg';
                         $imagePath = 'uploads/office_logos/' . $imageName;
                         
-                        // ╪ح┘╪┤╪د╪ة ╪د┘┘à╪ش┘╪» ╪ح╪░╪د ┘┘à ┘è┘â┘ ┘à┘ê╪ش┘ê╪»
+                        // â•ھط­â”کآ†â•ھâ”¤â•ھط¯â•ھط© â•ھط¯â”کآ„â”کأ â•ھط´â”کآ„â•ھآ» â•ھط­â•ھâ–‘â•ھط¯ â”کآ„â”کأ  â”کأ¨â”کأ¢â”کآ† â”کأ â”کأھâ•ھط´â”کأھâ•ھآ»
                         if (!file_exists(public_path('uploads/office_logos'))) {
                             mkdir(public_path('uploads/office_logos'), 0777, true);
                         }
@@ -9010,11 +9070,11 @@ public function storeRequestDevice(Request $request)
                 $additionalInfo['contact_info'] = $contactInfo;
                 
             } elseif ((int) $request->account_type === User::ACCOUNT_TYPE_SELLER) {
-                // ╪ص╪│╪د╪ذ ╪ز╪ش╪د╪▒┘è - ┘à╪╣╪د┘╪ش╪ر ╪د┘╪ذ┘è╪د┘╪د╪ز ╪د┘╪«╪د╪╡╪ر ╪ذ╪د┘╪ز╪ش╪د╪▒╪ر
-                // ╪د┘╪ص┘╪د╪╕ ╪╣┘┘ë ╪د┘╪ذ┘è╪د┘╪د╪ز ╪د┘┘à┘ê╪ش┘ê╪»╪ر ┘ê╪ز╪ص╪»┘è╪س ╪د┘┘à╪▒╪│┘╪ر ┘┘é╪╖
+                // â•ھطµâ•ھâ”‚â•ھط¯â•ھط° â•ھط²â•ھط´â•ھط¯â•ھâ–’â”کأ¨ - â”کأ â•ھâ•£â•ھط¯â”کآ„â•ھط´â•ھط± â•ھط¯â”کآ„â•ھط°â”کأ¨â•ھط¯â”کآ†â•ھط¯â•ھط² â•ھط¯â”کآ„â•ھآ«â•ھط¯â•ھâ•،â•ھط± â•ھط°â•ھط¯â”کآ„â•ھط²â•ھط´â•ھط¯â•ھâ–’â•ھط±
+                // â•ھط¯â”کآ„â•ھطµâ”کآپâ•ھط¯â•ھâ•• â•ھâ•£â”کآ„â”کأ« â•ھط¯â”کآ„â•ھط°â”کأ¨â•ھط¯â”کآ†â•ھط¯â•ھط² â•ھط¯â”کآ„â”کأ â”کأھâ•ھط´â”کأھâ•ھآ»â•ھط± â”کأھâ•ھط²â•ھطµâ•ھآ»â”کأ¨â•ھط³ â•ھط¯â”کآ„â”کأ â•ھâ–’â•ھâ”‚â”کآ„â•ھط± â”کآپâ”کأ©â•ھâ•–
                 $contactInfo = $additionalInfo['contact_info'];
                 
-                // ╪ذ┘è╪د┘╪د╪ز ╪د┘╪ص╪│╪د╪ذ ╪د┘╪ز╪ش╪د╪▒┘è
+                // â•ھط°â”کأ¨â•ھط¯â”کآ†â•ھط¯â•ھط² â•ھط¯â”کآ„â•ھطµâ•ھâ”‚â•ھط¯â•ھط° â•ھط¯â”کآ„â•ھط²â•ھط´â•ھط¯â•ھâ–’â”کأ¨
                 if ($request->has('business_name')) {
                     $contactInfo['business_name'] = $request->business_name;
                 }
@@ -9043,7 +9103,7 @@ public function storeRequestDevice(Request $request)
                     $contactInfo['payment_account_details'] = $request->payment_account_details;
                 }
                 
-                // ┘à╪╣╪د┘╪ش╪ر ╪ث┘ê┘é╪د╪ز ╪د┘╪╣┘à┘ ┘┘╪ص╪│╪د╪ذ╪د╪ز ╪د┘╪ز╪ش╪د╪▒┘è╪ر
+                // â”کأ â•ھâ•£â•ھط¯â”کآ„â•ھط´â•ھط± â•ھط«â”کأھâ”کأ©â•ھط¯â•ھط² â•ھط¯â”کآ„â•ھâ•£â”کأ â”کآ„ â”کآ„â”کآ„â•ھطµâ•ھâ”‚â•ھط¯â•ھط°â•ھط¯â•ھط² â•ھط¯â”کآ„â•ھط²â•ھط´â•ھط¯â•ھâ–’â”کأ¨â•ھط±
                 if ($request->has('opening_time')) {
                     $contactInfo['opening_time'] = $request->opening_time;
                 }
@@ -9052,20 +9112,20 @@ public function storeRequestDevice(Request $request)
                     $contactInfo['closing_time'] = $request->closing_time;
                 }
                 
-                // ┘à╪╣╪د┘╪ش╪ر ╪د┘┘à┘ê┘é╪╣ ╪د┘╪ش╪║╪▒╪د┘┘è
+                // â”کأ â•ھâ•£â•ھط¯â”کآ„â•ھط´â•ھط± â•ھط¯â”کآ„â”کأ â”کأھâ”کأ©â•ھâ•£ â•ھط¯â”کآ„â•ھط´â•ھâ•‘â•ھâ–’â•ھط¯â”کآپâ”کأ¨
                 if ($request->has('latitude') && $request->has('longitude')) {
                     $contactInfo['latitude'] = $request->latitude;
                     $contactInfo['longitude'] = $request->longitude;
                 }
                 
-                // ┘à╪╣╪د┘╪ش╪ر ╪╡┘ê╪▒╪ر ╪د┘┘à╪ص┘
+                // â”کأ â•ھâ•£â•ھط¯â”کآ„â•ھط´â•ھط± â•ھâ•،â”کأھâ•ھâ–’â•ھط± â•ھط¯â”کآ„â”کأ â•ھطµâ”کآ„
                 if ($request->has('business_logo')) {
                     try {
                         $imageData = base64_decode($request->business_logo);
                         $imageName = 'business_logo_' . $user->id . '_' . time() . '.jpg';
                         $imagePath = 'uploads/business_logos/' . $imageName;
                         
-                        // ╪ح┘╪┤╪د╪ة ╪د┘┘à╪ش┘╪» ╪ح╪░╪د ┘┘à ┘è┘â┘ ┘à┘ê╪ش┘ê╪»
+                        // â•ھط­â”کآ†â•ھâ”¤â•ھط¯â•ھط© â•ھط¯â”کآ„â”کأ â•ھط´â”کآ„â•ھآ» â•ھط­â•ھâ–‘â•ھط¯ â”کآ„â”کأ  â”کأ¨â”کأ¢â”کآ† â”کأ â”کأھâ•ھط´â”کأھâ•ھآ»
                         if (!file_exists(public_path('uploads/business_logos'))) {
                             mkdir(public_path('uploads/business_logos'), 0777, true);
                         }
@@ -9077,14 +9137,14 @@ public function storeRequestDevice(Request $request)
                     }
                 }
                 
-                // ┘à╪╣╪د┘╪ش╪ر ┘à┘┘ ╪د┘╪│╪ش┘ ╪د┘╪ز╪ش╪د╪▒┘è
+                // â”کأ â•ھâ•£â•ھط¯â”کآ„â•ھط´â•ھط± â”کأ â”کآ„â”کآپ â•ھط¯â”کآ„â•ھâ”‚â•ھط´â”کآ„ â•ھط¯â”کآ„â•ھط²â•ھط´â•ھط¯â•ھâ–’â”کأ¨
                 if ($request->has('commercial_register_file') && $request->has('commercial_register_filename')) {
                     try {
                         $fileData = base64_decode($request->commercial_register_file);
                         $fileName = 'commercial_register_' . $user->id . '_' . time() . '_' . $request->commercial_register_filename;
                         $filePath = 'uploads/commercial_registers/' . $fileName;
                         
-                        // ╪ح┘╪┤╪د╪ة ╪د┘┘à╪ش┘╪» ╪ح╪░╪د ┘┘à ┘è┘â┘ ┘à┘ê╪ش┘ê╪»
+                        // â•ھط­â”کآ†â•ھâ”¤â•ھط¯â•ھط© â•ھط¯â”کآ„â”کأ â•ھط´â”کآ„â•ھآ» â•ھط­â•ھâ–‘â•ھط¯ â”کآ„â”کأ  â”کأ¨â”کأ¢â”کآ† â”کأ â”کأھâ•ھط´â”کأھâ•ھآ»
                         if (!file_exists(public_path('uploads/commercial_registers'))) {
                             mkdir(public_path('uploads/commercial_registers'), 0777, true);
                         }
@@ -9099,7 +9159,7 @@ public function storeRequestDevice(Request $request)
                 
                 $additionalInfo['contact_info'] = $contactInfo;
                 
-                // ┘à╪╣╪د┘╪ش╪ر ╪د┘┘╪خ╪د╪ز ┘┘╪ص╪│╪د╪ذ╪د╪ز ╪د┘╪ز╪ش╪د╪▒┘è╪ر
+                // â”کأ â•ھâ•£â•ھط¯â”کآ„â•ھط´â•ھط± â•ھط¯â”کآ„â”کآپâ•ھط®â•ھط¯â•ھط² â”کآ„â”کآ„â•ھطµâ•ھâ”‚â•ھط¯â•ھط°â•ھط¯â•ھط² â•ھط¯â”کآ„â•ھط²â•ھط´â•ھط¯â•ھâ–’â”کأ¨â•ھط±
                 if ($request->has('business_categories')) {
                     $categories = explode(',', $request->business_categories);
                     $additionalInfo['categories'] = array_map('trim', $categories);
@@ -9111,11 +9171,11 @@ public function storeRequestDevice(Request $request)
             
             DB::commit();
             
-            // ╪ز╪│╪ش┘è┘ ┘╪ش╪د╪ص ╪د┘╪╣┘à┘┘è╪ر
+            // â•ھط²â•ھâ”‚â•ھط´â”کأ¨â”کآ„ â”کآ†â•ھط´â•ھط¯â•ھطµ â•ھط¯â”کآ„â•ھâ•£â”کأ â”کآ„â”کأ¨â•ھط±
             \Log::info('Complete Registration Success for User ID: ' . $user->id);
             \Log::info('Updated Additional Info:', ['additional_info' => $additionalInfo]);
             
-            return ResponseService::successResponse('╪ز┘à ╪ح┘â┘à╪د┘ ╪د┘╪ز╪│╪ش┘è┘ ╪ذ┘╪ش╪د╪ص', $user);
+            return ResponseService::successResponse('â•ھط²â”کأ  â•ھط­â”کأ¢â”کأ â•ھط¯â”کآ„ â•ھط¯â”کآ„â•ھط²â•ھâ”‚â•ھط´â”کأ¨â”کآ„ â•ھط°â”کآ†â•ھط´â•ھط¯â•ھطµ', $user);
             
         } catch (Throwable $th) {
             DB::rollBack();
@@ -9125,7 +9185,7 @@ public function storeRequestDevice(Request $request)
     }
 
     /**
-     * ╪ز╪ص╪»┘è╪س ┘â┘┘à╪ر ╪د┘┘à╪▒┘ê╪▒ ╪ذ╪╣╪» ╪د┘╪ز╪ص┘é┘é ┘à┘ OTP
+     * â•ھط²â•ھطµâ•ھآ»â”کأ¨â•ھط³ â”کأ¢â”کآ„â”کأ â•ھط± â•ھط¯â”کآ„â”کأ â•ھâ–’â”کأھâ•ھâ–’ â•ھط°â•ھâ•£â•ھآ» â•ھط¯â”کآ„â•ھط²â•ھطµâ”کأ©â”کأ© â”کأ â”کآ† OTP
      */
     public function updatePassword(Request $request)
     {
@@ -9140,7 +9200,7 @@ public function storeRequestDevice(Request $request)
                 return ResponseService::validationError($validator->errors()->first());
             }
 
-            // ╪د┘╪ذ╪ص╪س ╪╣┘ ╪د┘┘à╪│╪ز╪«╪»┘à ╪ذ┘╪د╪ة┘ï ╪╣┘┘ë ╪▒┘é┘à ╪د┘┘ç╪د╪ز┘
+            // â•ھط¯â”کآ„â•ھط°â•ھطµâ•ھط³ â•ھâ•£â”کآ† â•ھط¯â”کآ„â”کأ â•ھâ”‚â•ھط²â•ھآ«â•ھآ»â”کأ  â•ھط°â”کآ†â•ھط¯â•ھط©â”کأ¯ â•ھâ•£â”کآ„â”کأ« â•ھâ–’â”کأ©â”کأ  â•ھط¯â”کآ„â”کأ§â•ھط¯â•ھط²â”کآپ
             $user = User::where('mobile', $request->phone)
                        ->whereHas('roles', function ($q) {
                            $q->where('name', 'User');
@@ -9148,24 +9208,24 @@ public function storeRequestDevice(Request $request)
                        ->first();
 
             if (!$user) {
-                return ResponseService::errorResponse('╪▒┘é┘à ╪د┘┘ç╪د╪ز┘ ╪║┘è╪▒ ┘à╪│╪ش┘.', null, 404);
+                return ResponseService::errorResponse('â•ھâ–’â”کأ©â”کأ  â•ھط¯â”کآ„â”کأ§â•ھط¯â•ھط²â”کآپ â•ھâ•‘â”کأ¨â•ھâ–’ â”کأ â•ھâ”‚â•ھط´â”کآ„.', null, 404);
             }
 
             if ($user->trashed()) {
-                return ResponseService::errorResponse('╪ز┘à ╪ح┘╪║╪د╪ة ╪ز┘╪╣┘è┘ ╪ص╪│╪د╪ذ┘â. ┘è╪▒╪ش┘ë ╪د┘╪ز┘ê╪د╪╡┘ ┘à╪╣ ╪د┘╪ح╪»╪د╪▒╪ر.', null, config('constants.RESPONSE_CODE.DEACTIVATED_ACCOUNT'));
+                return ResponseService::errorResponse('â•ھط²â”کأ  â•ھط­â”کآ„â•ھâ•‘â•ھط¯â•ھط© â•ھط²â”کآپâ•ھâ•£â”کأ¨â”کآ„ â•ھطµâ•ھâ”‚â•ھط¯â•ھط°â”کأ¢. â”کأ¨â•ھâ–’â•ھط´â”کأ« â•ھط¯â”کآ„â•ھط²â”کأھâ•ھط¯â•ھâ•،â”کآ„ â”کأ â•ھâ•£ â•ھط¯â”کآ„â•ھط­â•ھآ»â•ھط¯â•ھâ–’â•ھط±.', null, config('constants.RESPONSE_CODE.DEACTIVATED_ACCOUNT'));
             }
 
-            // ╪ز╪ص╪»┘è╪س ┘â┘┘à╪ر ╪د┘┘à╪▒┘ê╪▒
+            // â•ھط²â•ھطµâ•ھآ»â”کأ¨â•ھط³ â”کأ¢â”کآ„â”کأ â•ھط± â•ھط¯â”کآ„â”کأ â•ھâ–’â”کأھâ•ھâ–’
             $user->password = Hash::make($request->password);
             $user->save();
 
-            // ╪ز╪│╪ش┘è┘ ╪»╪«┘ê┘ ╪د┘┘à╪│╪ز╪«╪»┘à ╪ز┘┘é╪د╪خ┘è╪د┘ï
+            // â•ھط²â•ھâ”‚â•ھط´â”کأ¨â”کآ„ â•ھآ»â•ھآ«â”کأھâ”کآ„ â•ھط¯â”کآ„â”کأ â•ھâ”‚â•ھط²â•ھآ«â•ھآ»â”کأ  â•ھط²â”کآ„â”کأ©â•ھط¯â•ھط®â”کأ¨â•ھط¯â”کأ¯
             Auth::guard('web')->login($user);
             
-            // ╪ح┘╪┤╪د╪ة ╪ز┘ê┘â┘ ╪ش╪»┘è╪»
+            // â•ھط­â”کآ†â•ھâ”¤â•ھط¯â•ھط© â•ھط²â”کأھâ”کأ¢â”کآ† â•ھط´â•ھآ»â”کأ¨â•ھآ»
             $token = $user->createToken($user->name ?? '')->plainTextToken;
 
-            // ╪ز╪ص╪»┘è╪س FCM token ╪ح╪░╪د ┘â╪د┘ ┘à╪ز┘ê┘╪▒╪د┘ï
+            // â•ھط²â•ھطµâ•ھآ»â”کأ¨â•ھط³ FCM token â•ھط­â•ھâ–‘â•ھط¯ â”کأ¢â•ھط¯â”کآ† â”کأ â•ھط²â”کأھâ”کآپâ•ھâ–’â•ھط¯â”کأ¯
             if (!empty($request->fcm_id)) {
                 UserFcmToken::updateOrCreate(
                     ['fcm_token' => $request->fcm_id],
@@ -9177,7 +9237,7 @@ public function storeRequestDevice(Request $request)
                 );
             }
 
-            return ResponseService::successResponse('╪ز┘à ╪ز╪ص╪»┘è╪س ┘â┘┘à╪ر ╪د┘┘à╪▒┘ê╪▒ ╪ذ┘╪ش╪د╪ص ┘ê╪ز╪│╪ش┘è┘ ╪د┘╪»╪«┘ê┘', $user, ['token' => $token]);
+            return ResponseService::successResponse('â•ھط²â”کأ  â•ھط²â•ھطµâ•ھآ»â”کأ¨â•ھط³ â”کأ¢â”کآ„â”کأ â•ھط± â•ھط¯â”کآ„â”کأ â•ھâ–’â”کأھâ•ھâ–’ â•ھط°â”کآ†â•ھط´â•ھط¯â•ھطµ â”کأھâ•ھط²â•ھâ”‚â•ھط´â”کأ¨â”کآ„ â•ھط¯â”کآ„â•ھآ»â•ھآ«â”کأھâ”کآ„', $user, ['token' => $token]);
             
         } catch (Throwable $th) {
             ResponseService::logErrorResponse($th, "API Controller -> updatePassword");
@@ -9246,11 +9306,11 @@ public function storeRequestDevice(Request $request)
 
 
     /**
-     * ┘à╪╣╪د┘╪ش╪ر ┘â┘ê╪» ╪د┘╪ح╪ص╪د┘╪ر
+     * â”کأ â•ھâ•£â•ھط¯â”کآ„â•ھط´â•ھط± â”کأ¢â”کأھâ•ھآ» â•ھط¯â”کآ„â•ھط­â•ھطµâ•ھط¯â”کآ„â•ھط±
      * 
-     * @param string $code ┘â┘ê╪» ╪د┘╪ح╪ص╪د┘╪ر
-     * @param User $user ╪د┘┘à╪│╪ز╪«╪»┘à ╪د┘╪ش╪»┘è╪»
-     * @param string $contactInfo ┘à╪╣┘┘ê┘à╪د╪ز ╪د┘╪د╪ز╪╡╪د┘
+     * @param string $code â”کأ¢â”کأھâ•ھآ» â•ھط¯â”کآ„â•ھط­â•ھطµâ•ھط¯â”کآ„â•ھط±
+     * @param User $user â•ھط¯â”کآ„â”کأ â•ھâ”‚â•ھط²â•ھآ«â•ھآ»â”کأ  â•ھط¯â”کآ„â•ھط´â•ھآ»â”کأ¨â•ھآ»
+     * @param string $contactInfo â”کأ â•ھâ•£â”کآ„â”کأھâ”کأ â•ھط¯â•ھط² â•ھط¯â”کآ„â•ھط¯â•ھط²â•ھâ•،â•ھط¯â”کآ„
      * @param array<string, mixed> $locationPayload
      * @return array<string, mixed>
      * 
@@ -9321,7 +9381,7 @@ public function storeRequestDevice(Request $request)
 
 
         try {
-            // ╪د┘╪ذ╪ص╪س ╪╣┘ ╪د┘┘à╪│╪ز╪«╪»┘à ╪د┘╪░┘è ┘è┘à┘┘â ┘â┘ê╪» ╪د┘╪ح╪ص╪د┘╪ر
+            // â•ھط¯â”کآ„â•ھط°â•ھطµâ•ھط³ â•ھâ•£â”کآ† â•ھط¯â”کآ„â”کأ â•ھâ”‚â•ھط²â•ھآ«â•ھآ»â”کأ  â•ھط¯â”کآ„â•ھâ–‘â”کأ¨ â”کأ¨â”کأ â”کآ„â”کأ¢ â”کأ¢â”کأھâ•ھآ» â•ھط¯â”کآ„â•ھط­â•ھطµâ•ھط¯â”کآ„â•ھط±
             $referrer = User::where('referral_code', $code)->first();
             
             if (!$referrer) {
@@ -9355,7 +9415,7 @@ public function storeRequestDevice(Request $request)
 
             }
             
-            // ╪د┘╪ص╪╡┘ê┘ ╪╣┘┘ë ╪ث┘ê┘ ╪ز╪ص╪»┘è ┘╪┤╪╖
+            // â•ھط¯â”کآ„â•ھطµâ•ھâ•،â”کأھâ”کآ„ â•ھâ•£â”کآ„â”کأ« â•ھط«â”کأھâ”کآ„ â•ھط²â•ھطµâ•ھآ»â”کأ¨ â”کآ†â•ھâ”¤â•ھâ•–
 
 
             if ($lat === null || $lng === null || $deviceTime === null) {
@@ -9411,7 +9471,7 @@ public function storeRequestDevice(Request $request)
                 
             }
             
-            // ╪ح┘╪┤╪د╪ة ╪│╪ش┘ ╪د┘╪ح╪ص╪د┘╪ر ┘à╪╣ challenge_id ┘ê points
+            // â•ھط­â”کآ†â•ھâ”¤â•ھط¯â•ھط© â•ھâ”‚â•ھط´â”کآ„ â•ھط¯â”کآ„â•ھط­â•ھطµâ•ھط¯â”کآ„â•ھط± â”کأ â•ھâ•£ challenge_id â”کأھ points
                  $referral = Referral::create([
                 'referrer_id' => $referrer->id,
                 'referred_user_id' => $user->id,
@@ -9419,7 +9479,7 @@ public function storeRequestDevice(Request $request)
                 'points' => $challenge->points_per_referral,
             ]);
             
-            // ╪ز┘é┘┘è┘ ╪╣╪»╪» ╪د┘╪ح╪ص╪د┘╪د╪ز ╪د┘┘à╪╖┘┘ê╪ذ╪ر ╪ذ┘à┘é╪»╪د╪▒ ┘ê╪د╪ص╪»
+            // â•ھط²â”کأ©â”کآ„â”کأ¨â”کآ„ â•ھâ•£â•ھآ»â•ھآ» â•ھط¯â”کآ„â•ھط­â•ھطµâ•ھط¯â”کآ„â•ھط¯â•ھط² â•ھط¯â”کآ„â”کأ â•ھâ•–â”کآ„â”کأھâ•ھط°â•ھط± â•ھط°â”کأ â”کأ©â•ھآ»â•ھط¯â•ھâ–’ â”کأھâ•ھط¯â•ھطµâ•ھآ»
             $challenge->decrement('required_referrals');
             
             $auditContext['referral_id'] = $referral->id;
@@ -9554,14 +9614,14 @@ public function storeRequestDevice(Request $request)
                 return ResponseService::errorResponse('User not authenticated', null, 401);
             }
             
-            // ╪╣╪»╪» ╪د┘╪ح╪╣┘╪د┘╪د╪ز
+            // â•ھâ•£â•ھآ»â•ھآ» â•ھط¯â”کآ„â•ھط­â•ھâ•£â”کآ„â•ھط¯â”کآ†â•ھط¯â•ھط²
             $totalAds = Item::where('user_id', $user->id)->count();
             $activeAds = Item::where('user_id', $user->id)->where('status', 'approved')->count();
             
-            // ╪╣╪»╪» ╪د┘┘à┘╪╢┘╪ر
+            // â•ھâ•£â•ھآ»â•ھآ» â•ھط¯â”کآ„â”کأ â”کآپâ•ھâ•¢â”کآ„â•ھط±
             $totalFavorites = Favourite::where('user_id', $user->id)->count();
             
-            // ╪╣╪»╪» ╪د┘┘à╪ص╪د╪»╪س╪د╪ز (unique conversations)
+            // â•ھâ•£â•ھآ»â•ھآ» â•ھط¯â”کآ„â”کأ â•ھطµâ•ھط¯â•ھآ»â•ھط³â•ھط¯â•ھط² (unique conversations)
             $totalChats = Chat::whereHas('itemOffer', function ($query) use ($user) {
 
                     $query->where('seller_id', $user->id)
@@ -9587,7 +9647,7 @@ public function storeRequestDevice(Request $request)
     }
 
     /**
-     * ╪ص┘╪╕ ┘à┘ê┘é╪╣ ╪د┘┘à╪│╪ز╪«╪»┘à ┘┘╪ص╪│╪د╪ذ╪د╪ز ╪د┘┘╪▒╪»┘è╪ر
+     * â•ھطµâ”کآپâ•ھâ•• â”کأ â”کأھâ”کأ©â•ھâ•£ â•ھط¯â”کآ„â”کأ â•ھâ”‚â•ھط²â•ھآ«â•ھآ»â”کأ  â”کآ„â”کآ„â•ھطµâ•ھâ”‚â•ھط¯â•ھط°â•ھط¯â•ھط² â•ھط¯â”کآ„â”کآپâ•ھâ–’â•ھآ»â”کأ¨â•ھط±
      */
     public function saveUserLocation(Request $request) {
         try {
@@ -9599,7 +9659,7 @@ public function storeRequestDevice(Request $request)
                 ], 401);
             }
 
-            // ╪د┘╪ز╪ص┘é┘é ┘à┘ ╪ث┘ ╪د┘┘à╪│╪ز╪«╪»┘à ┘╪»┘è┘ç ╪ص╪│╪د╪ذ ┘╪▒╪»┘è
+            // â•ھط¯â”کآ„â•ھط²â•ھطµâ”کأ©â”کأ© â”کأ â”کآ† â•ھط«â”کآ† â•ھط¯â”کآ„â”کأ â•ھâ”‚â•ھط²â•ھآ«â•ھآ»â”کأ  â”کآ„â•ھآ»â”کأ¨â”کأ§ â•ھطµâ•ھâ”‚â•ھط¯â•ھط° â”کآپâ•ھâ–’â•ھآ»â”کأ¨
             if ($user->user_type != 1) {
                 return response()->json([
                     'error' => true,
@@ -9616,7 +9676,7 @@ public function storeRequestDevice(Request $request)
                 'country' => 'nullable|string',
             ]);
 
-            // ╪ز╪ص╪»┘è╪س ┘à╪╣┘┘ê┘à╪د╪ز ╪د┘┘à┘ê┘é╪╣ ┘┘è ╪د┘╪ش╪»┘ê┘
+            // â•ھط²â•ھطµâ•ھآ»â”کأ¨â•ھط³ â”کأ â•ھâ•£â”کآ„â”کأھâ”کأ â•ھط¯â•ھط² â•ھط¯â”کآ„â”کأ â”کأھâ”کأ©â•ھâ•£ â”کآپâ”کأ¨ â•ھط¯â”کآ„â•ھط´â•ھآ»â”کأھâ”کآ„
             $user->update([
                 'latitude' => $request->latitude,
                 'longitude' => $request->longitude,
@@ -9858,7 +9918,7 @@ public function storeRequestDevice(Request $request)
 
     public function storeManualPaymentRequest(Request $request) {
         if ($request->filled('bank_id') && !$request->filled('manual_bank_id')) {
-            // ┘┘é╪ذ┘ bank_id ╪د┘┘é╪د╪»┘à ┘à┘ ╪ز╪╖╪ذ┘è┘é╪د╪ز ╪د┘╪╣┘à┘è┘ ┘ê┘╪╣┘è╪» ╪ز╪│┘à┘è╪ز┘ç ╪ح┘┘ë manual_bank_id ┘é╪ذ┘ ╪د┘╪ز╪ص┘é┘é.
+            // â”کآ†â”کأ©â•ھط°â”کآ„ bank_id â•ھط¯â”کآ„â”کأ©â•ھط¯â•ھآ»â”کأ  â”کأ â”کآ† â•ھط²â•ھâ•–â•ھط°â”کأ¨â”کأ©â•ھط¯â•ھط² â•ھط¯â”کآ„â•ھâ•£â”کأ â”کأ¨â”کآ„ â”کأھâ”کآ†â•ھâ•£â”کأ¨â•ھآ» â•ھط²â•ھâ”‚â”کأ â”کأ¨â•ھط²â”کأ§ â•ھط­â”کآ„â”کأ« manual_bank_id â”کأ©â•ھط°â”کآ„ â•ھط¯â”کآ„â•ھط²â•ھطµâ”کأ©â”کأ©.
             $request->merge(['manual_bank_id' => $request->input('bank_id')]);
         }
 
@@ -10514,7 +10574,7 @@ public function storeRequestDevice(Request $request)
             ];
 
             ResponseService::successResponse(
-                '╪ز┘à ╪ش┘╪ذ ╪╖┘╪ذ╪د╪ز ╪د┘╪»┘╪╣ ╪د┘┘è╪»┘ê┘è ╪ذ┘╪ش╪د╪ص',
+                'â•ھط²â”کأ  â•ھط´â”کآ„â•ھط° â•ھâ•–â”کآ„â•ھط°â•ھط¯â•ھط² â•ھط¯â”کآ„â•ھآ»â”کآپâ•ھâ•£ â•ھط¯â”کآ„â”کأ¨â•ھآ»â”کأھâ”کأ¨ â•ھط°â”کآ†â•ھط´â•ھط¯â•ھطµ',
                 [
                     'manual_payment_requests' => $requests,
                     'items' => $requests,
@@ -11478,12 +11538,12 @@ public function storeRequestDevice(Request $request)
             return;
         }
 
-        $senderName = $chatMessage->sender?->name ?? $reporter->name ?? __('┘à╪│╪ز╪«╪»┘à');
-        $messagePreview = $chatMessage->message ?? __('╪ز┘à ╪د╪│╪ز┘╪د┘à ╪▒╪│╪د┘╪ر ╪ش╪»┘è╪»╪ر.');
+        $senderName = $chatMessage->sender?->name ?? $reporter->name ?? __('â”کأ â•ھâ”‚â•ھط²â•ھآ«â•ھآ»â”کأ ');
+        $messagePreview = $chatMessage->message ?? __('â•ھط²â”کأ  â•ھط¯â•ھâ”‚â•ھط²â”کآ„â•ھط¯â”کأ  â•ھâ–’â•ھâ”‚â•ھط¯â”کآ„â•ھط± â•ھط´â•ھآ»â”کأ¨â•ھآ»â•ھط±.');
 
         $response = NotificationService::sendFcmNotification(
             $tokens,
-            __('┘à╪ص╪د╪»╪س╪ر ╪ش╪»┘è╪»╪ر ┘à┘ :name', ['name' => $senderName]),
+            __('â”کأ â•ھطµâ•ھط¯â•ھآ»â•ھط³â•ھط± â•ھط´â•ھآ»â”کأ¨â•ھآ»â•ھط± â”کأ â”کآ† :name', ['name' => $senderName]),
             Str::limit($messagePreview, 120),
             'support_chat_assignment',
             [
@@ -11516,7 +11576,7 @@ public function storeRequestDevice(Request $request)
                 'status' => DepartmentTicket::STATUS_OPEN,
             ],
             [
-                'subject' => sprintf('┘à╪ص╪د╪»╪س╪ر #%d ╪ز┘╪ز╪╕╪▒ ╪د┘╪ز╪╣┘è┘è┘', $conversation->id),
+                'subject' => sprintf('â”کأ â•ھطµâ•ھط¯â•ھآ»â•ھط³â•ھط± #%d â•ھط²â”کآ†â•ھط²â•ھâ••â•ھâ–’ â•ھط¯â”کآ„â•ھط²â•ھâ•£â”کأ¨â”کأ¨â”کآ†', $conversation->id),
                 'description' => $this->buildSupportTicketDescription($chatMessage, $reporter),
                 'reporter_id' => $reporter->id,
             ]
@@ -11525,13 +11585,13 @@ public function storeRequestDevice(Request $request)
 
     private function buildSupportTicketDescription(ChatMessage $chatMessage, User $reporter): string
     {
-        $senderName = $chatMessage->sender?->name ?? $reporter->name ?? __('┘à╪│╪ز╪«╪»┘à');
+        $senderName = $chatMessage->sender?->name ?? $reporter->name ?? __('â”کأ â•ھâ”‚â•ھط²â•ھآ«â•ھآ»â”کأ ');
         $messagePreview = $chatMessage->message
             ? Str::limit($chatMessage->message, 160)
-            : __('╪ز┘à ┘╪ز╪ص ┘à╪ص╪د╪»╪س╪ر ╪ش╪»┘è╪»╪ر ╪ذ╪»┘ê┘ ╪▒╪│╪د┘╪ر ┘╪╡┘è╪ر.');
+            : __('â•ھط²â”کأ  â”کآپâ•ھط²â•ھطµ â”کأ â•ھطµâ•ھط¯â•ھآ»â•ھط³â•ھط± â•ھط´â•ھآ»â”کأ¨â•ھآ»â•ھط± â•ھط°â•ھآ»â”کأھâ”کآ† â•ھâ–’â•ھâ”‚â•ھط¯â”کآ„â•ھط± â”کآ†â•ھâ•،â”کأ¨â•ھط±.');
 
         return sprintf(
-            '╪د┘┘à╪│╪ز╪«╪»┘à %s ╪ث┘╪┤╪ث ┘à╪ص╪د╪»╪س╪ر ╪ش╪»┘è╪»╪ر. ╪ت╪«╪▒ ╪▒╪│╪د┘╪ر: %s',
+            'â•ھط¯â”کآ„â”کأ â•ھâ”‚â•ھط²â•ھآ«â•ھآ»â”کأ  %s â•ھط«â”کآ†â•ھâ”¤â•ھط« â”کأ â•ھطµâ•ھط¯â•ھآ»â•ھط³â•ھط± â•ھط´â•ھآ»â”کأ¨â•ھآ»â•ھط±. â•ھطھâ•ھآ«â•ھâ–’ â•ھâ–’â•ھâ”‚â•ھط¯â”کآ„â•ھط±: %s',
             $senderName,
             $messagePreview
         );
@@ -12014,6 +12074,41 @@ public function storeRequestDevice(Request $request)
         }
 
         return self::$itemColumnAvailability = $columns;
+    }
+
+    /**
+     * Return the given category id plus all its descendants.
+     */
+    protected function collectCategoryTreeIds(int $rootCategoryId): array
+    {
+        $categories = Category::select('id', 'parent_category_id')->get();
+
+        $children = [];
+        foreach ($categories as $category) {
+            $parentKey = $category->parent_category_id ?? 0;
+            $children[$parentKey][] = $category->id;
+        }
+
+        $ids = [];
+        $stack = [$rootCategoryId];
+
+        while (! empty($stack)) {
+            $current = array_pop($stack);
+
+            if (in_array($current, $ids, true)) {
+                continue;
+            }
+
+            $ids[] = $current;
+
+            if (isset($children[$current])) {
+                foreach ($children[$current] as $childId) {
+                    $stack[] = $childId;
+                }
+            }
+        }
+
+        return $ids;
     }
 }
 

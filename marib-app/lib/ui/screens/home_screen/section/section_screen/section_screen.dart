@@ -31,9 +31,9 @@ import 'package:marib/app/routes.dart';
 import 'dart:convert';
 
 class Section_screen extends StatefulWidget {
-  final String categoryId; // معرف الفئة الحالية
-  final String categoryName; // اسم الفئة الحالية
-  final List<String> categoryIds; // قائمة معرفات الفئات
+  final String categoryId; // ظ…ط¹ط±ظپ ط§ظ„ظپط¦ط© ط§ظ„ط­ط§ظ„ظٹط©
+  final String categoryName; // ط§ط³ظ… ط§ظ„ظپط¦ط© ط§ظ„ط­ط§ظ„ظٹط©
+  final List<String> categoryIds; // ظ‚ط§ط¦ظ…ط© ظ…ط¹ط±ظپط§طھ ط§ظ„ظپط¦ط§طھ
   final String? interfaceType;
   final int? sellerId;
   final String? storefrontId;
@@ -238,7 +238,7 @@ class Section_screen extends StatefulWidget {
 
 class Section_screenState extends State<Section_screen> {
   // =========================
-  // متغيرات الحالة / الأداء
+  // ظ…طھط؛ظٹط±ط§طھ ط§ظ„ط­ط§ظ„ط© / ط§ظ„ط£ط¯ط§ط،
   // =========================
 
   static const double _kFilterSortBarVerticalPadding = 16.0;
@@ -249,40 +249,40 @@ class Section_screenState extends State<Section_screen> {
   static const Duration _bottomBarAnimationDuration =
       Duration(milliseconds: 320);
 
-  // ✅ تحويل categoryId مرة واحدة
+  // âœ… طھط­ظˆظٹظ„ categoryId ظ…ط±ط© ظˆط§ط­ط¯ط©
   static const int _defaultCategoryId = 0;
 
   late final int _catId;
   bool _catIdUsedFallback = false;
   bool _hasLoggedFallbackFetch = false;
 
-  // ✅ حقل البحث + ديباونس
+  // âœ… ط­ظ‚ظ„ ط§ظ„ط¨ط­ط« + ط¯ظٹط¨ط§ظˆظ†ط³
   final TextEditingController searchController = TextEditingController();
   List<int>? _sellerCategoryIds;
   StorefrontDetails? _snapshotStorefront;
 
-  // ✅ تحميل المزيد
+  // âœ… طھط­ظ…ظٹظ„ ط§ظ„ظ…ط²ظٹط¯
   bool _isLoadingMore = false;
 
-  // ✅ إظهار shimmer
+  // âœ… ط¥ط¸ظ‡ط§ط± shimmer
   bool showShimmer = true;
   int _sliderRefreshToken = 0;
 
-  // ✅ فرز وفلاتر
+  // âœ… ظپط±ط² ظˆظپظ„ط§طھط±
   String? sortBy;
   ItemFilterModel? filter;
   ItemFilterModel? _initialFilter;
 
-  // ✅ تبليغ الفئة المختارة
+  // âœ… طھط¨ظ„ظٹط؛ ط§ظ„ظپط¦ط© ط§ظ„ظ…ط®طھط§ط±ط©
   final ValueNotifier<int?> selectedCategoryId = ValueNotifier<int?>(0);
 
-  // ✅ تحكم ظهور شريط التصنيفات الحقيقي
+  // âœ… طھط­ظƒظ… ط¸ظ‡ظˆط± ط´ط±ظٹط· ط§ظ„طھطµظ†ظٹظپط§طھ ط§ظ„ط­ظ‚ظٹظ‚ظٹ
   bool _showSlider = false;
 
-  // ✅ تحكم في ظهور شريط الفلترة/الفرز السفلي حسب التمرير
+  // âœ… طھط­ظƒظ… ظپظٹ ط¸ظ‡ظˆط± ط´ط±ظٹط· ط§ظ„ظپظ„طھط±ط©/ط§ظ„ظپط±ط² ط§ظ„ط³ظپظ„ظٹ ط­ط³ط¨ ط§ظ„طھظ…ط±ظٹط±
   final ValueNotifier<bool> _showBottomBar = ValueNotifier<bool>(true);
 
-  // ✅ لإجبار إظهار الشيمر فترة دنيا بعد أول Loading
+  // âœ… ظ„ط¥ط¬ط¨ط§ط± ط¥ط¸ظ‡ط§ط± ط§ظ„ط´ظٹظ…ط± ظپطھط±ط© ط¯ظ†ظٹط§ ط¨ط¹ط¯ ط£ظˆظ„ Loading
   bool _sawLoading = false;
   DateTime? _loadingStart;
   static const Duration _minShimmer = Duration(milliseconds: 350);
@@ -516,7 +516,7 @@ class Section_screenState extends State<Section_screen> {
   void initState() {
     super.initState();
     // =========================
-    // إعداد معرف الفئة الأساسي
+    // ط¥ط¹ط¯ط§ط¯ ظ…ط¹ط±ظپ ط§ظ„ظپط¦ط© ط§ظ„ط£ط³ط§ط³ظٹ
     // =========================
     _catId = _parseInitialCategoryId(widget.categoryId);
     final String? normalizedInterfaceType =
@@ -533,13 +533,13 @@ class Section_screenState extends State<Section_screen> {
     _sellerCategoryIds = _normalizeSellerCategoryIds(widget.sellerCategoryIds);
     _snapshotStorefront = _deriveSnapshotDetails(widget.storefrontSnapshot);
 
-    // (اختياري) لو هذه المتغيرات عندك أصلاً — وإلا احذف السطور الثلاثة:
+    // (ط§ط®طھظٹط§ط±ظٹ) ظ„ظˆ ظ‡ط°ظ‡ ط§ظ„ظ…طھط؛ظٹط±ط§طھ ط¹ظ†ط¯ظƒ ط£طµظ„ط§ظ‹ â€” ظˆط¥ظ„ط§ ط§ط­ط°ظپ ط§ظ„ط³ط·ظˆط± ط§ظ„ط«ظ„ط§ط«ط©:
     // searchbody = {};
     // selectedcategoryId = widget.categoryId;
     // selectedcategoryName = widget.categoryName;
     // searchbody[Api.categoryId] = widget.categoryId;
 
-    // 2) الجلب الأولي بعوامل الموقع
+    // 2) ط§ظ„ط¬ظ„ط¨ ط§ظ„ط£ظˆظ„ظٹ ط¨ط¹ظˆط§ظ…ظ„ ط§ظ„ظ…ظˆظ‚ط¹
     final country = HiveUtils.getCountryName() ?? "";
     final areaId = HiveUtils.getAreaId() != null
         ? int.parse(HiveUtils.getAreaId().toString())
@@ -580,7 +580,7 @@ class Section_screenState extends State<Section_screen> {
       ),
     );
 
-    // لضمان توفر البيانات قبل بناء HomeTabView.
+    // ظ„ط¶ظ…ط§ظ† طھظˆظپط± ط§ظ„ط¨ظٹط§ظ†ط§طھ ظ‚ط¨ظ„ ط¨ظ†ط§ط، HomeTabView.
     if (_enableFeaturedAds) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
@@ -610,7 +610,7 @@ class Section_screenState extends State<Section_screen> {
       });
     }
 
-    // 3) حالة البداية: اعتبر أننا سنرى Loading حالًا
+    // 3) ط­ط§ظ„ط© ط§ظ„ط¨ط¯ط§ظٹط©: ط§ط¹طھط¨ط± ط£ظ†ظ†ط§ ط³ظ†ط±ظ‰ Loading ط­ط§ظ„ظ‹ط§
     showShimmer = true;
     _showSlider = false;
     _showAdSlider = _hasAdSlider;
@@ -662,13 +662,13 @@ class Section_screenState extends State<Section_screen> {
   }
 
   // =========================
-  // تحميل لانهائي
+  // طھط­ظ…ظٹظ„ ظ„ط§ظ†ظ‡ط§ط¦ظٹ
   // =========================
   void _handleLoadMoreState(bool isLoading) {
     if (_isLoadingMore == isLoading) return;
 
     if (!mounted) {
-      // يحمي setState من استدعاءات onLoadMore المتأخرة بعد التخلص من الودجت.
+      // ظٹط­ظ…ظٹ setState ظ…ظ† ط§ط³طھط¯ط¹ط§ط،ط§طھ onLoadMore ط§ظ„ظ…طھط£ط®ط±ط© ط¨ط¹ط¯ ط§ظ„طھط®ظ„طµ ظ…ظ† ط§ظ„ظˆط¯ط¬طھ.
       return;
     }
 
@@ -676,7 +676,7 @@ class Section_screenState extends State<Section_screen> {
   }
 
   // =========================
-  // سحب للتحديث
+  // ط³ط­ط¨ ظ„ظ„طھط­ط¯ظٹط«
   // =========================
   Future<void> _handleRefresh() async {
     try {
@@ -708,14 +708,14 @@ class Section_screenState extends State<Section_screen> {
             perPage: FetchItemSummaryCubit.defaultPerPage,
           );
 
-      // إعادة تحميل أقسام الإعلانات المميزة عند السحب للتحديث
+      // ط¥ط¹ط§ط¯ط© طھط­ظ…ظٹظ„ ط£ظ‚ط³ط§ظ… ط§ظ„ط¥ط¹ظ„ط§ظ†ط§طھ ط§ظ„ظ…ظ…ظٹط²ط© ط¹ظ†ط¯ ط§ظ„ط³ط­ط¨ ظ„ظ„طھط­ط¯ظٹط«
       if (_enableFeaturedAds) {
         _requestFeaturedSections(
           rootId: resolvedCategoryId,
         );
       }
 
-      // (اختياري)
+      // (ط§ط®طھظٹط§ط±ظٹ)
       // Constant.itemFilter = null;
       // searchbody = {};
     } finally {
@@ -762,8 +762,9 @@ class Section_screenState extends State<Section_screen> {
 
             setState(() {
               showShimmer = true;
-              _showSlider = false; // اخفِ شريط التصنيفات
-              _showAdSlider = _hasAdSlider; // حافظ على حالة السلايدر الإعلاني
+              _showSlider = false; // ط§ط®ظپظگ ط´ط±ظٹط· ط§ظ„طھطµظ†ظٹظپط§طھ
+              _showAdSlider =
+                  _hasAdSlider; // ط­ط§ظپط¸ ط¹ظ„ظ‰ ط­ط§ظ„ط© ط§ظ„ط³ظ„ط§ظٹط¯ط± ط§ظ„ط¥ط¹ظ„ط§ظ†ظٹ
             });
             return;
           }
@@ -771,7 +772,7 @@ class Section_screenState extends State<Section_screen> {
           if (state is FetchItemSummarySuccess) {
             debugPrint('[Realestate] state=Success');
 
-            // فرض مدة دنيا للشيمر
+            // ظپط±ط¶ ظ…ط¯ط© ط¯ظ†ظٹط§ ظ„ظ„ط´ظٹظ…ط±
             final elapsed = _loadingStart == null
                 ? _minShimmer
                 : DateTime.now().difference(_loadingStart!);
@@ -790,9 +791,9 @@ class Section_screenState extends State<Section_screen> {
               if (wasShimmering) {
                 _sliderRefreshToken++;
               }
-              _showSlider = true; // أظهر التصنيفات
+              _showSlider = true; // ط£ط¸ظ‡ط± ط§ظ„طھطµظ†ظٹظپط§طھ
               _showAdSlider =
-                  _hasAdSlider; // أظهر السلايدر الإعلاني (يبدأ الجلب الآن)
+                  _hasAdSlider; // ط£ط¸ظ‡ط± ط§ظ„ط³ظ„ط§ظٹط¯ط± ط§ظ„ط¥ط¹ظ„ط§ظ†ظٹ (ظٹط¨ط¯ط£ ط§ظ„ط¬ظ„ط¨ ط§ظ„ط¢ظ†)
             });
 
             _sawLoading = false;
@@ -943,7 +944,7 @@ class Section_screenState extends State<Section_screen> {
 
               return Scaffold(
                 backgroundColor: context.color.primaryColor,
-                appBar: null, // AppBar داخل ItemsBodyBox
+                appBar: null, // AppBar ط¯ط§ط®ظ„ ItemsBodyBox
                 body: Stack(
                   children: [
                     Positioned.fill(
@@ -984,16 +985,18 @@ class Section_screenState extends State<Section_screen> {
                                         _requestSectionSlug,
                                     interfaceType: _sliderInterfaceType,
                                     enableTopBar: _showSlider,
-                                    enableAdSlider: _hasStorefrontContext ? false : _showAdSlider,
-                                    // إن كانت موجودة عندك
+                                    enableAdSlider: _hasStorefrontContext
+                                        ? false
+                                        : _showAdSlider,
+                                    // ط¥ظ† ظƒط§ظ†طھ ظ…ظˆط¬ظˆط¯ط© ط¹ظ†ط¯ظƒ
                                     adInterfaceType: _sliderInterfaceType,
-                                    // ← تمرير الواجهة المعتمدة دائمًا
+                                    // â†گ طھظ…ط±ظٹط± ط§ظ„ظˆط§ط¬ظ‡ط© ط§ظ„ظ…ط¹طھظ…ط¯ط© ط¯ط§ط¦ظ…ظ‹ط§
                                     sortBy: sortBy,
-                                    // ← جديد
+                                    // â†گ ط¬ط¯ظٹط¯
                                     filter: filter,
-                                    // ← جديد
+                                    // â†گ ط¬ط¯ظٹط¯
                                     enableSubcats: _showSlider,
-                                    // ← نفس منطق التأجيل (أظهر بعد Success)
+                                    // â†گ ظ†ظپط³ ظ…ظ†ط·ظ‚ ط§ظ„طھط£ط¬ظٹظ„ (ط£ط¸ظ‡ط± ط¨ط¹ط¯ Success)
                                     onLoadMore: _handleLoadMoreState,
                                     onScrollDirectionChanged: (isScrollingUp) {
                                       if (_showBottomBar.value !=
@@ -1001,7 +1004,11 @@ class Section_screenState extends State<Section_screen> {
                                         _showBottomBar.value = isScrollingUp;
                                       }
                                     },
-                                    enableFeaturedAds: _hasStorefrontContext ? false : _enableFeaturedAds,
+                                    enableFeaturedAds: _hasStorefrontContext
+                                        ? false
+                                        : _enableFeaturedAds,
+                                    featuredStyleOverride:
+                                        _featuredStyleOverride,
                                   ),
                                 ),
                               ),
@@ -1274,6 +1281,3 @@ class _StorefrontHeaderMessage extends StatelessWidget {
     );
   }
 }
-
-
-

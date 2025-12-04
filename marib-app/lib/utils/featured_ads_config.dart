@@ -6,7 +6,8 @@ class FeaturedAdsConfig {
   final bool enableFeaturedAds;
   final bool enableAdSlider;
   final String? styleOverride;
-  final String? orderMode; // e.g., latest, most_viewed, highest_price, lowest_price, premium
+  final String?
+      orderMode; // e.g., latest, most_viewed, highest_price, lowest_price, premium
   final String? titleOverride;
 
   const FeaturedAdsConfig({
@@ -58,8 +59,7 @@ class FeaturedAdsConfigProvider {
     int rootId, {
     String? interfaceType,
   }) {
-    final String? normalizedInterface =
-        interfaceType?.trim().toLowerCase();
+    final String? normalizedInterface = interfaceType?.trim().toLowerCase();
 
     FeaturedAdsConfig? bestMatch;
     for (final FeaturedAdsConfig config in _defaults) {

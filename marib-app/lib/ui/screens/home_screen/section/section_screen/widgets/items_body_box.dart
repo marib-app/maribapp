@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:shimmer/shimmer.dart'; // تأثير التوهج أثناء تحميل الصور
+import 'package:shimmer/shimmer.dart'; // طھط£ط«ظٹط± ط§ظ„طھظˆظ‡ط¬ ط£ط«ظ†ط§ط، طھط­ظ…ظٹظ„ ط§ظ„طµظˆط±
 
 import 'package:marib/data/cubits/item/fetch_item_summary_cubit.dart';
 
@@ -16,7 +16,7 @@ import 'home_tab_view.dart';
 
 import 'slider_widget.dart';
 import 'smart_search_app_bar.dart';
-import 'package:marib/data/model/item_filter_model.dart'; // ← مهم
+import 'package:marib/data/model/item_filter_model.dart'; // â†گ ظ…ظ‡ظ…
 
 ///==============================================================================
 ///                                   ItemsBodyBox
@@ -36,14 +36,15 @@ class ItemsBodyBox extends StatefulWidget {
   final String? interfaceType;
   final Widget? storefrontHeader;
 
-  // جديد: لا تبني شريط التصنيفات/السلايدر إلا إذا true
+  // ط¬ط¯ظٹط¯: ظ„ط§ طھط¨ظ†ظٹ ط´ط±ظٹط· ط§ظ„طھطµظ†ظٹظپط§طھ/ط§ظ„ط³ظ„ط§ظٹط¯ط± ط¥ظ„ط§ ط¥ط°ط§ true
   final bool enableTopBar;
   final String? specialRequestSectionSlug;
 
-  final bool enableAdSlider; // ← جديد
-  final String? adInterfaceType; // ← جديد
+  final bool enableAdSlider; // â†گ ط¬ط¯ظٹط¯
+  final String? adInterfaceType; // â†گ ط¬ط¯ظٹط¯
 
   final bool enableFeaturedAds;
+  final String? featuredStyleOverride;
   final bool enableSubcats;
   final String? sortBy;
   final ItemFilterModel? filter;
@@ -59,13 +60,15 @@ class ItemsBodyBox extends StatefulWidget {
     required this.showCartAction,
     this.interfaceType,
     this.onCartTap,
-    this.enableTopBar = false, // ← افتراضي: مخفي
+    this.enableTopBar = false, // â†گ ط§ظپطھط±ط§ط¶ظٹ: ظ…ط®ظپظٹ
     this.enableAdSlider = false,
     this.adInterfaceType,
     this.enableFeaturedAds = false,
-    this.sortBy, // ← جديد
-    this.filter, // ← جديد
-    this.enableSubcats = true, // ← جديد (بحالته الافتراضية)
+    this.featuredStyleOverride,
+    this.sortBy, // â†گ ط¬ط¯ظٹط¯
+    this.filter, // â†گ ط¬ط¯ظٹط¯
+    this.enableSubcats =
+        true, // â†گ ط¬ط¯ظٹط¯ (ط¨ط­ط§ظ„طھظ‡ ط§ظ„ط§ظپطھط±ط§ط¶ظٹط©)
     this.onLoadMore,
     required this.sliderRefreshToken,
     this.specialRequestSectionSlug,
@@ -81,15 +84,15 @@ class ItemsBodyBox extends StatefulWidget {
 }
 
 class _ItemsBodyBoxState extends State<ItemsBodyBox> {
-  // ✅ نحسب الـ categoryId مرة واحدة
+  // âœ… ظ†ط­ط³ط¨ ط§ظ„ظ€ categoryId ظ…ط±ط© ظˆط§ط­ط¯ط©
   late final int _catId = int.tryParse(widget.categoryId) ?? 0;
   List<int>? _sellerCategoryIds;
 
-  // ✅ وضع العرض (grid/list) مع ValueNotifier لتقليل setState
+  // âœ… ظˆط¶ط¹ ط§ظ„ط¹ط±ط¶ (grid/list) ظ…ط¹ ValueNotifier ظ„طھظ‚ظ„ظٹظ„ setState
   final ValueNotifier<ViewMode> _viewMode =
       ValueNotifier<ViewMode>(ViewMode.grid);
 
-  // ✅ بحث آمن: debounce + token لمنع سباقات النتائج
+  // âœ… ط¨ط­ط« ط¢ظ…ظ†: debounce + token ظ„ظ…ظ†ط¹ ط³ط¨ط§ظ‚ط§طھ ط§ظ„ظ†طھط§ط¦ط¬
   Timer? _debounce;
   int _searchToken = 0;
   String _lastExecutedQuery = "";
@@ -117,7 +120,7 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
   }
 
   // =============================
-  // بحث آمن: Debounce + Token
+  // ط¨ط­ط« ط¢ظ…ظ†: Debounce + Token
   // =============================
   void _onSearchInput(String value) {
     _debounce?.cancel();
@@ -218,9 +221,9 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
           ),
         ),
 
-        // ===== الجسم: شريط التصنيفات + المحتوى =====
+        // ===== ط§ظ„ط¬ط³ظ…: ط´ط±ظٹط· ط§ظ„طھطµظ†ظٹظپط§طھ + ط§ظ„ظ…ط­طھظˆظ‰ =====
 
-// ===== الجسم: شريط التصنيفات + المحتوى =====
+// ===== ط§ظ„ط¬ط³ظ…: ط´ط±ظٹط· ط§ظ„طھطµظ†ظٹظپط§طھ + ط§ظ„ظ…ط­طھظˆظ‰ =====
         body: NestedScrollView(
           headerSliverBuilder: (context, innerBoxIsScrolled) {
             final List<Widget> slivers = <Widget>[];
@@ -293,6 +296,7 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
                   enableAdSlider: widget.enableAdSlider,
                   adInterfaceType: widget.adInterfaceType,
                   showFeaturedAds: widget.enableFeaturedAds,
+                  featuredStyleOverride: widget.featuredStyleOverride,
                   onLoadMore: widget.onLoadMore,
                   overlapHandle: overlapHandleBody,
                 ),
@@ -300,11 +304,9 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
             },
           ),
         ),
-        ),
-
+      ),
     );
   }
-
 
   List<int>? _normalizeSellerCategoryIds(List<int>? ids) {
     if (ids == null) {
@@ -350,10 +352,11 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
     final highlight = colorScheme.shimmerHighlightColor;
     final content = colorScheme.shimmerContentColor;
 
-    const double chipHeight = 34.0; // نفس ارتفاع العنصر داخل PcSliderWidget
+    const double chipHeight =
+        34.0; // ظ†ظپط³ ط§ط±طھظپط§ط¹ ط§ظ„ط¹ظ†طµط± ط¯ط§ط®ظ„ PcSliderWidget
     const widths = [76.0, 92.0, 68.0, 108.0, 80.0, 96.0, 74.0];
 
-    // ⬇️ نفس الهيكل تمامًا كما في PcSliderWidget:
+    // â¬‡ï¸ڈ ظ†ظپط³ ط§ظ„ظ‡ظٹظƒظ„ طھظ…ط§ظ…ظ‹ط§ ظƒظ…ط§ ظپظٹ PcSliderWidget:
     // Padding(0,10,0,12)  +  Container(height:35, padding:bottom 2, border...) + ListView.h
     return Padding(
       padding: const EdgeInsets.fromLTRB(0, 10, 0, 12),
@@ -390,7 +393,6 @@ class _ItemsBodyBoxState extends State<ItemsBodyBox> {
       ),
     );
   }
-
 }
 
 class _CategoryTabsHeaderDelegate extends SliverPersistentHeaderDelegate {
@@ -479,6 +481,3 @@ class _CategoryTabsHeaderDelegate extends SliverPersistentHeaderDelegate {
         contentColor != oldDelegate.contentColor;
   }
 }
-
-
-

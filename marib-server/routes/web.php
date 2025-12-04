@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 use App\Http\Controllers\BlogController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\Controller;
@@ -39,6 +39,7 @@ use App\Http\Controllers\Store\StoreSettingsController as MerchantStoreSettingsC
 use App\Http\Controllers\StoreSettingsController;
 
 use App\Http\Controllers\SettingController;
+use App\Http\Controllers\Admin\FeaturedAdsConfigController as AdminFeaturedAdsConfigController;
 use App\Http\Controllers\SliderController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\SystemUpdateController;
@@ -88,8 +89,8 @@ use App\Http\Controllers\WifiCabinController;
 | Web Routes
 |--------------------------------------------------------------------------
 |
-| ظ…ظ„ظپ ظ…ط³ط§ط±ط§طھ ط§ظ„ظˆظٹط¨: ظٹط¹ط±ظ‘ظپ طµظپط­ط§طھ ط§ظ„ظˆظٹط¨ (Blade/HTML) ظˆظٹط¹ظ…ظ„ ط¨ظˆط³ط·ط§ط، web (ط¬ظ„ط³ط§طھ/CSRF).
-| ط£ظٹ ظ…ط³ط§ط± ظ‡ظ†ط§ ظٹظ…ظƒظ† ظ…ظ†ط§ط¯ط§طھظ‡ ظ…ظ† ط§ظ„ظ…طھطµظپط­ ظ…ط¨ط§ط´ط±ط©.
+| ط¸â€¦ط¸â€‍ط¸ظ¾ ط¸â€¦ط·آ³ط·آ§ط·آ±ط·آ§ط·ع¾ ط·آ§ط¸â€‍ط¸ث†ط¸ظ¹ط·آ¨: ط¸ظ¹ط·آ¹ط·آ±ط¸â€کط¸ظ¾ ط·آµط¸ظ¾ط·آ­ط·آ§ط·ع¾ ط·آ§ط¸â€‍ط¸ث†ط¸ظ¹ط·آ¨ (Blade/HTML) ط¸ث†ط¸ظ¹ط·آ¹ط¸â€¦ط¸â€‍ ط·آ¨ط¸ث†ط·آ³ط·آ·ط·آ§ط·طŒ web (ط·آ¬ط¸â€‍ط·آ³ط·آ§ط·ع¾/CSRF).
+| ط·آ£ط¸ظ¹ ط¸â€¦ط·آ³ط·آ§ط·آ± ط¸â€،ط¸â€ ط·آ§ ط¸ظ¹ط¸â€¦ط¸ئ’ط¸â€  ط¸â€¦ط¸â€ ط·آ§ط·آ¯ط·آ§ط·ع¾ط¸â€، ط¸â€¦ط¸â€  ط·آ§ط¸â€‍ط¸â€¦ط·ع¾ط·آµط¸ظ¾ط·آ­ ط¸â€¦ط·آ¨ط·آ§ط·آ´ط·آ±ط·آ©.
 |
 */
 
@@ -105,7 +106,7 @@ Route::get('/', static function () {
 
 
 
-// === طھط´ط®ظٹطµ TLS/PHP ظ…ط¤ظ‚طھ ===
+// === ط·ع¾ط·آ´ط·آ®ط¸ظ¹ط·آµ TLS/PHP ط¸â€¦ط·آ¤ط¸â€ڑط·ع¾ ===
 Route::get('/_ini', function () {
     return response()->json([
         'sapi'           => php_sapi_name(),
@@ -120,17 +121,17 @@ Route::get('/_tls', function () {
         $r = \Illuminate\Support\Facades\Http::withOptions([
             'verify'  => base_path('certs/cacert.pem'),
             'timeout' => 10,
-        ])->get('https://oauth2.googleapis.com/token'); // ظ†ط¬ط§ط­ TLS ظٹظƒظپظٹ ط­طھظ‰ ظ„ظˆ ط±ط¬ط¹ 405/400
+        ])->get('https://oauth2.googleapis.com/token'); // ط¸â€ ط·آ¬ط·آ§ط·آ­ TLS ط¸ظ¹ط¸ئ’ط¸ظ¾ط¸ظ¹ ط·آ­ط·ع¾ط¸â€° ط¸â€‍ط¸ث† ط·آ±ط·آ¬ط·آ¹ 405/400
         return response()->json(['ok' => true, 'status' => $r->status()]);
     } catch (\Throwable $e) {
         return response()->json(['ok' => false, 'err' => $e->getMessage()], 500);
     }
 });
-// === ط§ط­ط°ظپ ط¨ط¹ط¯ ط§ظ„ط§ظ†طھظ‡ط§ط، ===
+// === ط·آ§ط·آ­ط·آ°ط¸ظ¾ ط·آ¨ط·آ¹ط·آ¯ ط·آ§ط¸â€‍ط·آ§ط¸â€ ط·ع¾ط¸â€،ط·آ§ط·طŒ ===
 
 
 
-/* ------------------------- طµظپط­ط§طھ ط¹ط§ظ…ط© (ط¨ط¯ظˆظ† طھط³ط¬ظٹظ„ ط¯ط®ظˆظ„) ------------------------- */
+/* ------------------------- ط·آµط¸ظ¾ط·آ­ط·آ§ط·ع¾ ط·آ¹ط·آ§ط¸â€¦ط·آ© (ط·آ¨ط·آ¯ط¸ث†ط¸â€  ط·ع¾ط·آ³ط·آ¬ط¸ظ¹ط¸â€‍ ط·آ¯ط·آ®ط¸ث†ط¸â€‍) ------------------------- */
 
 Route::get('page/privacy-policy', static function () {
     $privacy_policy = CachingService::getSystemSettings('privacy_policy');
@@ -155,7 +156,7 @@ Route::get('page/usage-guide', static function () {
 
 
 
-/* ----------------------------- Webhooks ظ…ط²ظˆظ‘ط¯ظٹ ط§ظ„ط¯ظپط¹ ----------------------------- */
+/* ----------------------------- Webhooks ط¸â€¦ط·آ²ط¸ث†ط¸â€کط·آ¯ط¸ظ¹ ط·آ§ط¸â€‍ط·آ¯ط¸ظ¾ط·آ¹ ----------------------------- */
 
 Route::group(['prefix' => 'webhook'], static function () {
     Route::post('/stripe', [WebhookController::class, 'stripe']);
@@ -171,7 +172,7 @@ Route::get('response/phonepe/success/web', [SettingController::class, 'phonepePa
 
 
 
-/* ----------------------- ط¯ظˆط§ظ„ ط¹ط§ظ…ط© (ط¨ط¯ظˆظ† ظ…طµط§ط¯ظ‚ط©) Common ------------------------ */
+/* ----------------------- ط·آ¯ط¸ث†ط·آ§ط¸â€‍ ط·آ¹ط·آ§ط¸â€¦ط·آ© (ط·آ¨ط·آ¯ط¸ث†ط¸â€  ط¸â€¦ط·آµط·آ§ط·آ¯ط¸â€ڑط·آ©) Common ------------------------ */
 
 Route::group(['prefix' => 'common'], static function () {
     Route::get('/js/lang', [Controller::class, 'readLanguageFile'])->name('common.language.read');
@@ -179,7 +180,7 @@ Route::group(['prefix' => 'common'], static function () {
 
 
 
-/* --------------------------------- ط§ظ„ظ…ظڈط«ط¨ظ‘طھ --------------------------------- */
+/* --------------------------------- ط·آ§ط¸â€‍ط¸â€¦ط¸عˆط·آ«ط·آ¨ط¸â€کط·ع¾ --------------------------------- */
 
 Route::group(['prefix' => 'install'], static function () {
     Route::get('purchase-code', [InstallerController::class, 'purchaseCodeIndex'])->name('install.purchase-code.index');
@@ -191,13 +192,13 @@ Route::group(['prefix' => 'install'], static function () {
 
 /*
 |--------------------------------------------------------------------------
-| ظ…ط³ط§ط±ط§طھ طھطھط·ظ„ط¨ طھط³ط¬ظٹظ„ ط¯ط®ظˆظ„ + ط§ط®طھظٹط§ط± ط§ظ„ظ„ط؛ط©
+| ط¸â€¦ط·آ³ط·آ§ط·آ±ط·آ§ط·ع¾ ط·ع¾ط·ع¾ط·آ·ط¸â€‍ط·آ¨ ط·ع¾ط·آ³ط·آ¬ط¸ظ¹ط¸â€‍ ط·آ¯ط·آ®ط¸ث†ط¸â€‍ + ط·آ§ط·آ®ط·ع¾ط¸ظ¹ط·آ§ط·آ± ط·آ§ط¸â€‍ط¸â€‍ط·ط›ط·آ©
 |--------------------------------------------------------------------------
 */
 
 Route::group(['middleware' => ['auth', 'language']], static function () {
 
-    /* ------------------------------ ط§ظ„ط®ط¯ظ…ط§طھ Services ------------------------------ */
+    /* ------------------------------ ط·آ§ط¸â€‍ط·آ®ط·آ¯ط¸â€¦ط·آ§ط·ع¾ Services ------------------------------ */
     Route::group([
         'prefix' => 'services',
         'as' => 'services.',
@@ -304,7 +305,7 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
 
     });
 
-    // ظˆط§ط¬ظ‡ط§طھ ط¥ط¯ط§ط±ط© ظƒط¨ظٹظ†ط© ط§ظ„ظˆط§ظٹ ظپط§ظٹ ط¹ط¨ط± ط§ظ„ط¬ظ„ط³ط© (ظ„طھط¬ظ†ط¨ ط£ط®ط·ط§ط، Unauthenticated ظپظٹ ط§ظ„ظˆط§ط¬ظ‡ط© ط§ظ„ط¥ط¯ط§ط±ظٹط©)
+    // ط¸ث†ط·آ§ط·آ¬ط¸â€،ط·آ§ط·ع¾ ط·آ¥ط·آ¯ط·آ§ط·آ±ط·آ© ط¸ئ’ط·آ¨ط¸ظ¹ط¸â€ ط·آ© ط·آ§ط¸â€‍ط¸ث†ط·آ§ط¸ظ¹ ط¸ظ¾ط·آ§ط¸ظ¹ ط·آ¹ط·آ¨ط·آ± ط·آ§ط¸â€‍ط·آ¬ط¸â€‍ط·آ³ط·آ© (ط¸â€‍ط·ع¾ط·آ¬ط¸â€ ط·آ¨ ط·آ£ط·آ®ط·آ·ط·آ§ط·طŒ Unauthenticated ط¸ظ¾ط¸ظ¹ ط·آ§ط¸â€‍ط¸ث†ط·آ§ط·آ¬ط¸â€،ط·آ© ط·آ§ط¸â€‍ط·آ¥ط·آ¯ط·آ§ط·آ±ط¸ظ¹ط·آ©)
     Route::group([
         'prefix' => 'wifi-cabin/api',
         'middleware' => ['auth', 'permission:wifi-cabin-manage'],
@@ -342,13 +343,13 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
 
 
 
-    /* ---------------------- ط¯ظˆط§ظ„ ط¹ط§ظ…ط© ط¨ط¹ط¯ ط§ظ„ظ…طµط§ط¯ظ‚ط© (Common) ---------------------- */
+    /* ---------------------- ط·آ¯ط¸ث†ط·آ§ط¸â€‍ ط·آ¹ط·آ§ط¸â€¦ط·آ© ط·آ¨ط·آ¹ط·آ¯ ط·آ§ط¸â€‍ط¸â€¦ط·آµط·آ§ط·آ¯ط¸â€ڑط·آ© (Common) ---------------------- */
     Route::group(['prefix' => 'common'], static function () {
         Route::put('/change-row-order', [Controller::class, 'changeRowOrder'])->name('common.row-order.change');
         Route::put('/change-status', [Controller::class, 'changeStatus'])->name('common.status.change');
     });
 
-    /* طھظ†ط¨ظٹظ‡: طھظˆط¬ط¯ ظ…ط¬ظ…ظˆط¹ط© "common" ظ…ظƒط±ط±ط© ظپظٹ ظ…ظ„ظپظƒ ط§ظ„ط£طµظ„ظٹ â€” ط£ط¨ظ‚ظٹطھظ‡ط§ ظƒظ…ط§ ظ‡ظٹ ظ„طھط¬ظ†ظ‘ط¨ ط£ظٹ طھط£ط«ظٹط± ط¬ط§ظ†ط¨ظٹ. */
+    /* ط·ع¾ط¸â€ ط·آ¨ط¸ظ¹ط¸â€،: ط·ع¾ط¸ث†ط·آ¬ط·آ¯ ط¸â€¦ط·آ¬ط¸â€¦ط¸ث†ط·آ¹ط·آ© "common" ط¸â€¦ط¸ئ’ط·آ±ط·آ±ط·آ© ط¸ظ¾ط¸ظ¹ ط¸â€¦ط¸â€‍ط¸ظ¾ط¸ئ’ ط·آ§ط¸â€‍ط·آ£ط·آµط¸â€‍ط¸ظ¹ أ¢â‚¬â€‌ ط·آ£ط·آ¨ط¸â€ڑط¸ظ¹ط·ع¾ط¸â€،ط·آ§ ط¸ئ’ط¸â€¦ط·آ§ ط¸â€،ط¸ظ¹ ط¸â€‍ط·ع¾ط·آ¬ط¸â€ ط¸â€کط·آ¨ ط·آ£ط¸ظ¹ ط·ع¾ط·آ£ط·آ«ط¸ظ¹ط·آ± ط·آ¬ط·آ§ط¸â€ ط·آ¨ط¸ظ¹. */
     Route::group(['prefix' => 'common'], static function () {
         Route::put('/change-row-order', [Controller::class, 'changeRowOrder'])->name('common.row-order.change');
         Route::put('/change-status', [Controller::class, 'changeStatus'])->name('common.status.change');
@@ -392,7 +393,7 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
 
 
 
-    /* ------------------------------- ظƒط¨ظٹظ†ط© ط§ظ„ظˆط§ظٹ ظپط§ظٹ  ------------------------------ */
+    /* ------------------------------- ط¸ئ’ط·آ¨ط¸ظ¹ط¸â€ ط·آ© ط·آ§ط¸â€‍ط¸ث†ط·آ§ط¸ظ¹ ط¸ظ¾ط·آ§ط¸ظ¹  ------------------------------ */
 
 
 
@@ -423,7 +424,7 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
     });
 
 
-    /* ------------------------------- ط§ظ„ط¹ظ…ظ„ط© Currency ------------------------------ */
+    /* ------------------------------- ط·آ§ط¸â€‍ط·آ¹ط¸â€¦ط¸â€‍ط·آ© Currency ------------------------------ */
 
 
     Route::group(['middleware' => ['permission:governorate-list|governorate-create|governorate-edit|governorate-delete']], static function () {
@@ -483,7 +484,7 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
 
     });
 
-    /* ------------------------------- ط£ط³ط¹ط§ط± ط§ظ„ظ…ط¹ط§ط¯ظ† Metal Rates ------------------------------ */
+    /* ------------------------------- ط·آ£ط·آ³ط·آ¹ط·آ§ط·آ± ط·آ§ط¸â€‍ط¸â€¦ط·آ¹ط·آ§ط·آ¯ط¸â€  Metal Rates ------------------------------ */
 
 
     Route::group([
@@ -525,7 +526,7 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
 
 
 
-    /* --------------------------------- ط§ظ„ط±ط¦ظٹط³ظٹط© Home ------------------------------- */
+    /* --------------------------------- ط·آ§ط¸â€‍ط·آ±ط·آ¦ط¸ظ¹ط·آ³ط¸ظ¹ط·آ© Home ------------------------------- */
     Route::get('/home', [HomeController::class, 'index'])->name('home');
 
     Route::get('change-password', [HomeController::class, 'changePasswordIndex'])->name('change-password.index');
@@ -536,7 +537,7 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
 
 
 
-    /* --------------------------------- ط§ظ„طھطµظ†ظٹظپط§طھ Category ------------------------------- */
+    /* --------------------------------- ط·آ§ط¸â€‍ط·ع¾ط·آµط¸â€ ط¸ظ¹ط¸ظ¾ط·آ§ط·ع¾ Category ------------------------------- */
     Route::resource('category', CategoryController::class);
 
     Route::group(['prefix' => 'category'], static function () {
@@ -558,7 +559,7 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
 
 
 
-    /* --------------------------------- ط§ظ„ط­ظ‚ظˆظ„ ط§ظ„ظ…ط®طµظ‘طµط© Custom Fields ------------------------------- */
+    /* --------------------------------- ط·آ§ط¸â€‍ط·آ­ط¸â€ڑط¸ث†ط¸â€‍ ط·آ§ط¸â€‍ط¸â€¦ط·آ®ط·آµط¸â€کط·آµط·آ© Custom Fields ------------------------------- */
     Route::group(['prefix' => 'custom-fields'], static function () {
         Route::post('/{id}/value/add', [CustomFieldController::class, 'addCustomFieldValue'])->name('custom-fields.value.add');
         Route::get('/{id}/value/show', [CustomFieldController::class, 'getCustomFieldValues'])->name('custom-fields.value.show');
@@ -574,7 +575,7 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
 
 
 
-    /* --------------------------- طھظˆط«ظٹظ‚ ط§ظ„ط¨ط§ط¦ط¹ Seller Verification --------------------------- */
+    /* --------------------------- ط·ع¾ط¸ث†ط·آ«ط¸ظ¹ط¸â€ڑ ط·آ§ط¸â€‍ط·آ¨ط·آ§ط·آ¦ط·آ¹ Seller Verification --------------------------- */
     Route::group(['prefix' => 'seller-verification'], static function () {
         Route::put('/{id}/approval', [UserVerificationController::class, 'updateSellerApproval'])->name('seller_verification.approval');
 
@@ -600,7 +601,7 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
 
 
 
-    /* --------------------------------- ط§ظ„ط¥ط¹ظ„ط§ظ†ط§طھ Items --------------------------------- */
+    /* --------------------------------- ط·آ§ط¸â€‍ط·آ¥ط·آ¹ط¸â€‍ط·آ§ط¸â€ ط·آ§ط·ع¾ Items --------------------------------- */
     Route::group(['prefix' => 'item'], static function () {
         Route::put('/{id}/approval', [ItemController::class, 'updateItemApproval'])->name('item.approval');
         Route::post('/{item}/feature', [ItemController::class, 'feature'])
@@ -733,10 +734,10 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
         ->middleware('permission:category-create');
 
 
-    /* ---------------------------- ط·ظ„ط¨ط§طھ ط§ظ„ط®ط¯ظ…ط§طھ Service Requests ---------------------------- */
+    /* ---------------------------- ط·آ·ط¸â€‍ط·آ¨ط·آ§ط·ع¾ ط·آ§ط¸â€‍ط·آ®ط·آ¯ط¸â€¦ط·آ§ط·ع¾ Service Requests ---------------------------- */
 
 
-        // ط·ظ„ط¨ط§طھ ط§ظ„ط®ط¯ظ…ط§طھ (ظ„ظˆط­ط© ط§ظ„ط¥ط¯ط§ط±ط©) â€” ط§ظ„طµط­ظٹط­ط©
+        // ط·آ·ط¸â€‍ط·آ¨ط·آ§ط·ع¾ ط·آ§ط¸â€‍ط·آ®ط·آ¯ط¸â€¦ط·آ§ط·ع¾ (ط¸â€‍ط¸ث†ط·آ­ط·آ© ط·آ§ط¸â€‍ط·آ¥ط·آ¯ط·آ§ط·آ±ط·آ©) أ¢â‚¬â€‌ ط·آ§ط¸â€‍ط·آµط·آ­ط¸ظ¹ط·آ­ط·آ©
         Route::prefix('service-requests')
             ->name('service.requests.')
             ->middleware('permission:service-requests-list|service-requests-update|service-requests-delete')
@@ -753,7 +754,7 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
 
 
 
-    /* --------------------------------- طھظ‚ظٹظٹظ…ط§طھ ط§ظ„ط¨ط§ط¦ط¹ Seller Reviews --------------------------------- */
+    /* --------------------------------- ط·ع¾ط¸â€ڑط¸ظ¹ط¸ظ¹ط¸â€¦ط·آ§ط·ع¾ ط·آ§ط¸â€‍ط·آ¨ط·آ§ط·آ¦ط·آ¹ Seller Reviews --------------------------------- */
     Route::resource('seller-review', SellerController::class);
     Route::get('review-report', [SellerController::class, 'showReports'])->name('seller-review.report');
 
@@ -853,7 +854,7 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
           Route::get('reports/customers', [StoreInsightsController::class, 'customerReports'])->name('reports.customers');
       });
 
-    /* --------------------------------- ط§ظ„ط¥ط¹ط¯ط§ط¯ط§طھ Settings --------------------------------- */
+    /* --------------------------------- ط·آ§ط¸â€‍ط·آ¥ط·آ¹ط·آ¯ط·آ§ط·آ¯ط·آ§ط·ع¾ Settings --------------------------------- */
 Route::group(['prefix' => 'settings'], static function () {
         Route::get('/', [SettingController::class, 'index'])->name('settings.index');
         Route::post('/store', [SettingController::class, 'store'])->name('settings.store');
@@ -907,7 +908,7 @@ Route::group(['prefix' => 'settings'], static function () {
 
 
 
-    /* --------------------------------- ط§ظ„ظ„ط؛ط§طھ Language --------------------------------- */
+    /* --------------------------------- ط·آ§ط¸â€‍ط¸â€‍ط·ط›ط·آ§ط·ع¾ Language --------------------------------- */
     Route::group(['prefix' => 'language'], static function () {
         Route::get('set-language/{lang}', [LanguageController::class, 'setLanguage'])->name('language.set-current');
         Route::get('download/panel', [LanguageController::class, 'downloadPanelFile'])->name('language.download.panel.json');
@@ -927,7 +928,7 @@ Route::group(['prefix' => 'settings'], static function () {
 
 
 
-    /* --------------------------------- ط§ظ„ظ…ظˆط¸ظپظˆظ† Staff --------------------------------- */
+    /* --------------------------------- ط·آ§ط¸â€‍ط¸â€¦ط¸ث†ط·آ¸ط¸ظ¾ط¸ث†ط¸â€  Staff --------------------------------- */
     Route::group(['prefix' => 'staff'], static function () {
         Route::put('/{id}/change-password', [StaffController::class, 'changePassword'])->name('staff.change-password');
     });
@@ -936,7 +937,7 @@ Route::group(['prefix' => 'settings'], static function () {
 
 
 
-    /* --------------------------------- ط§ظ„ط¹ظ…ظ„ط§ط، Customers --------------------------------- */
+    /* --------------------------------- ط·آ§ط¸â€‍ط·آ¹ط¸â€¦ط¸â€‍ط·آ§ط·طŒ Customers --------------------------------- */
     Route::group(['prefix' => 'customer'], static function () {
         Route::post('/assign-package', [CustomersController::class, 'assignPackage'])->name('customer.assign.package');
         Route::post('/additional-info', [CustomersController::class, 'updateAdditionalInfo'])->name('customer.update.additional.info');
@@ -953,15 +954,17 @@ Route::group(['prefix' => 'settings'], static function () {
 
 
 
-    /* --------------------------------- ط§ظ„ط³ظ„ط§ظٹط¯ط± Slider --------------------------------- */
+    /* --------------------------------- ط·آ§ط¸â€‍ط·آ³ط¸â€‍ط·آ§ط¸ظ¹ط·آ¯ط·آ± Slider --------------------------------- */
     Route::resource('slider', SliderController::class);
+    Route::resource('featured-ads-configs', AdminFeaturedAdsConfigController::class)
+        ->except(['show']);
     Route::get('slider/metrics/summary', [SliderController::class, 'metricsSummary'])->name('slider.metrics.summary');
     Route::get('slider/defaults/create', [SliderController::class, 'createDefault'])->name('slider.defaults.create');
     Route::post('slider/defaults', [SliderController::class, 'storeDefault'])->name('slider.defaults.store');
     Route::delete('slider/defaults/{sliderDefault}', [SliderController::class, 'destroyDefault'])->name('slider.defaults.destroy');
 
 
-    /* --------------------------------- ط§ظ„ط¨ط§ظ‚ط§طھ Packages --------------------------------- */
+    /* --------------------------------- ط·آ§ط¸â€‍ط·آ¨ط·آ§ط¸â€ڑط·آ§ط·ع¾ Packages --------------------------------- */
     Route::group(['prefix' => 'package'], static function () {
         Route::get('/advertisement', [PackageController::class, 'advertisementIndex'])->name('package.advertisement.index');
         Route::get('/advertisement/show', [PackageController::class, 'advertisementShow'])->name('package.advertisement.show');
@@ -979,7 +982,7 @@ Route::group(['prefix' => 'settings'], static function () {
 
 
 
-    /* --------------------------------- ط£ط³ط¨ط§ط¨ ط§ظ„ط¨ظ„ط§ط؛ط§طھ Report Reasons --------------------------------- */
+    /* --------------------------------- ط·آ£ط·آ³ط·آ¨ط·آ§ط·آ¨ ط·آ§ط¸â€‍ط·آ¨ط¸â€‍ط·آ§ط·ط›ط·آ§ط·ع¾ Report Reasons --------------------------------- */
     Route::group(['prefix' => 'report-reasons'], static function () {
         Route::get('/user-report', [ReportReasonController::class, 'usersReports'])->name('report-reasons.user-reports.index');
         Route::get('/user-report/show', [ReportReasonController::class, 'userReportsShow'])->name('report-reasons.user-reports.show');
@@ -989,7 +992,7 @@ Route::group(['prefix' => 'settings'], static function () {
 
 
 
-    /* --------------------------------- ط§ظ„ط¥ط´ط¹ط§ط±ط§طھ Notifications --------------------------------- */
+    /* --------------------------------- ط·آ§ط¸â€‍ط·آ¥ط·آ´ط·آ¹ط·آ§ط·آ±ط·آ§ط·ع¾ Notifications --------------------------------- */
     Route::group(['prefix' => 'notification'], static function () {
         Route::delete('/batch-delete', [NotificationController::class, 'batchDelete'])->name('notification.batch.delete');
 });
@@ -1031,31 +1034,31 @@ Route::middleware(['permission:manual-payments-review'])->group(static function 
 
 
 
-    /* --------------------------------- ط§ظ„ط£ط¯ظˆط§ط± Roles --------------------------------- */
+    /* --------------------------------- ط·آ§ط¸â€‍ط·آ£ط·آ¯ط¸ث†ط·آ§ط·آ± Roles --------------------------------- */
     Route::get("/roles-list", [RoleController::class, 'list'])->name('roles.list');
     Route::resource('roles', RoleController::class);
 
 
 
-    /* --------------------------------- ط§ظ„ظ†طµط§ط¦ط­ Tips --------------------------------- */
+    /* --------------------------------- ط·آ§ط¸â€‍ط¸â€ ط·آµط·آ§ط·آ¦ط·آ­ Tips --------------------------------- */
     Route::resource('tips', TipController::class);
 
 
 
-    /* ------------------------------ ط§ظ„ظ…ط¯ظˆظ‘ظ†ط© Blog (ط§ظ„ظ…ط·ظ„ظˆط¨) ------------------------------ */
-    // âœ… ظ‡ط°ط§ ط§ظ„ط³ط·ط± ظٹظ†ط´ط¦ ط¬ظ…ظٹط¹ ظ…ط³ط§ط±ط§طھ CRUD ط§ظ„ظ‚ظٹط§ط³ظٹط© ظˆط£ظ‡ظ…ظ‡ط§: blog.index
-    // ط¥ط°ط§ ظƒط§ظ†طھ ط§ظ„ظˆط§ط¬ظ‡ط© (ط§ظ„ظ‚ط§ط¦ظ…ط© ط§ظ„ط¬ط§ظ†ط¨ظٹط©) طھظ†ط§ط¯ظٹ route('blog.index') ط³ظٹط¹ظ…ظ„ ط§ظ„ط¢ظ†.
+    /* ------------------------------ ط·آ§ط¸â€‍ط¸â€¦ط·آ¯ط¸ث†ط¸â€کط¸â€ ط·آ© Blog (ط·آ§ط¸â€‍ط¸â€¦ط·آ·ط¸â€‍ط¸ث†ط·آ¨) ------------------------------ */
+    // أ¢إ“â€¦ ط¸â€،ط·آ°ط·آ§ ط·آ§ط¸â€‍ط·آ³ط·آ·ط·آ± ط¸ظ¹ط¸â€ ط·آ´ط·آ¦ ط·آ¬ط¸â€¦ط¸ظ¹ط·آ¹ ط¸â€¦ط·آ³ط·آ§ط·آ±ط·آ§ط·ع¾ CRUD ط·آ§ط¸â€‍ط¸â€ڑط¸ظ¹ط·آ§ط·آ³ط¸ظ¹ط·آ© ط¸ث†ط·آ£ط¸â€،ط¸â€¦ط¸â€،ط·آ§: blog.index
+    // ط·آ¥ط·آ°ط·آ§ ط¸ئ’ط·آ§ط¸â€ ط·ع¾ ط·آ§ط¸â€‍ط¸ث†ط·آ§ط·آ¬ط¸â€،ط·آ© (ط·آ§ط¸â€‍ط¸â€ڑط·آ§ط·آ¦ط¸â€¦ط·آ© ط·آ§ط¸â€‍ط·آ¬ط·آ§ط¸â€ ط·آ¨ط¸ظ¹ط·آ©) ط·ع¾ط¸â€ ط·آ§ط·آ¯ط¸ظ¹ route('blog.index') ط·آ³ط¸ظ¹ط·آ¹ط¸â€¦ط¸â€‍ ط·آ§ط¸â€‍ط·آ¢ط¸â€ .
     Route::resource('blog', BlogController::class);
-    // ظ…ظ„ط§ط­ط¸ط©: ظ„ظˆ ط±ط؛ط¨طھ ظ„ط§ط­ظ‚ظ‹ط§ ط¨ظˆط¶ط¹ طµظ„ط§ط­ظٹط§طھ ط£ظˆ Prefix ظ…ط¹ظٹظ‘ظ†طŒ ظٹظ…ظƒظ† طھط؛ظ„ظٹظپظ‡ط§ ط¨ظ€ Route::prefix()->name()->middleware()
+    // ط¸â€¦ط¸â€‍ط·آ§ط·آ­ط·آ¸ط·آ©: ط¸â€‍ط¸ث† ط·آ±ط·ط›ط·آ¨ط·ع¾ ط¸â€‍ط·آ§ط·آ­ط¸â€ڑط¸â€¹ط·آ§ ط·آ¨ط¸ث†ط·آ¶ط·آ¹ ط·آµط¸â€‍ط·آ§ط·آ­ط¸ظ¹ط·آ§ط·ع¾ ط·آ£ط¸ث† Prefix ط¸â€¦ط·آ¹ط¸ظ¹ط¸â€کط¸â€ ط·إ’ ط¸ظ¹ط¸â€¦ط¸ئ’ط¸â€  ط·ع¾ط·ط›ط¸â€‍ط¸ظ¹ط¸ظ¾ط¸â€،ط·آ§ ط·آ¨ط¸â‚¬ Route::prefix()->name()->middleware()
 
 
 
-    /* --------------------------------- ط§ظ„ط£ط³ط¦ظ„ط© ط§ظ„ط´ط§ط¦ط¹ط© FAQ --------------------------------- */
+    /* --------------------------------- ط·آ§ط¸â€‍ط·آ£ط·آ³ط·آ¦ط¸â€‍ط·آ© ط·آ§ط¸â€‍ط·آ´ط·آ§ط·آ¦ط·آ¹ط·آ© FAQ --------------------------------- */
     Route::resource('faq', FaqController::class);
 
 
 
-    /* --------------------------------- ط§ظ„ط¯ظˆظ„/ط§ظ„ظ…ط¯ظ†/ط§ظ„ظ…ظ†ط§ط·ظ‚ --------------------------------- */
+    /* --------------------------------- ط·آ§ط¸â€‍ط·آ¯ط¸ث†ط¸â€‍/ط·آ§ط¸â€‍ط¸â€¦ط·آ¯ط¸â€ /ط·آ§ط¸â€‍ط¸â€¦ط¸â€ ط·آ§ط·آ·ط¸â€ڑ --------------------------------- */
     Route::group(['prefix' => 'countries'], static function () {
         Route::get("/", [PlaceController::class, 'countryIndex'])->name('countries.index');
         Route::get("/show", [PlaceController::class, 'countryShow'])->name('countries.show');
@@ -1075,7 +1078,7 @@ Route::middleware(['permission:manual-payments-review'])->group(static function 
         Route::get("/search", [PlaceController::class, 'citySearch'])->name('cities.search');
     });
 
-    /* ط§ظ„ظ…ظ†ط§ط·ظ‚ Area */
+    /* ط·آ§ط¸â€‍ط¸â€¦ط¸â€ ط·آ§ط·آ·ط¸â€ڑ Area */
     Route::group(['prefix' => 'area'], static function () {
         Route::get('/', [PlaceController::class, 'createArea'])->name('area.index');
         Route::post('/create', [PlaceController::class, 'addArea'])->name('area.create');
@@ -1090,7 +1093,7 @@ Route::middleware(['permission:manual-payments-review'])->group(static function 
 
 
 
-    /* --------------------------------- طھظˆط§طµظ„ ظ…ط¹ظ†ط§ (ط¥ط¯ط§ط±ظٹ) --------------------------------- */
+    /* --------------------------------- ط·ع¾ط¸ث†ط·آ§ط·آµط¸â€‍ ط¸â€¦ط·آ¹ط¸â€ ط·آ§ (ط·آ¥ط·آ¯ط·آ§ط·آ±ط¸ظ¹) --------------------------------- */
     Route::group(['prefix' => 'contact-us'], function () {
         Route::get('/', [FaqController::class, 'contactUsIndex'])->name('contact-us.index');
         Route::get('/show', [FaqController::class, 'contactUsShow'])->name('contact-us.show');
@@ -1099,7 +1102,7 @@ Route::middleware(['permission:manual-payments-review'])->group(static function 
 
 
 
-    /* --------------------------------- ط¥ط¯ط§ط±ط© ط§ظ„ط·ظ„ط¨ط§طھ --------------------------------- */
+    /* --------------------------------- ط·آ¥ط·آ¯ط·آ§ط·آ±ط·آ© ط·آ§ط¸â€‍ط·آ·ط¸â€‍ط·آ¨ط·آ§ط·ع¾ --------------------------------- */
 
 
     Route::get('orders/{order}/invoice.pdf', [OrderDocumentController::class, 'invoice'])->name('orders.invoice.pdf');
@@ -1121,7 +1124,7 @@ Route::middleware(['permission:manual-payments-review'])->group(static function 
 
 
 
-    /* --------------------------------- ط®ط¯ظ…ط§طھ ط§ظ„طھظˆطµظٹظ„ --------------------------------- */
+    /* --------------------------------- ط·آ®ط·آ¯ط¸â€¦ط·آ§ط·ع¾ ط·آ§ط¸â€‍ط·ع¾ط¸ث†ط·آµط¸ظ¹ط¸â€‍ --------------------------------- */
 
 
     Route::group(['prefix' => 'delivery-prices', 'as' => 'delivery-prices.'], function () {
@@ -1143,7 +1146,7 @@ Route::middleware(['permission:manual-payments-review'])->group(static function 
 
 
 
-    /* --------------------------------- ط§ظ„ظƒظˆط¨ظˆظ†  --------------------------------- */
+    /* --------------------------------- ط·آ§ط¸â€‍ط¸ئ’ط¸ث†ط·آ¨ط¸ث†ط¸â€   --------------------------------- */
 
     Route::resource('coupons', CouponController::class)->except(['show', 'destroy']);
 
@@ -1151,7 +1154,7 @@ Route::middleware(['permission:manual-payments-review'])->group(static function 
 
 
 
-    /* --------------------------------- ط§ظ„طھظ‚ط§ط±ظٹط± --------------------------------- */
+    /* --------------------------------- ط·آ§ط¸â€‍ط·ع¾ط¸â€ڑط·آ§ط·آ±ط¸ظ¹ط·آ± --------------------------------- */
     Route::group(['prefix' => 'reports', 'as' => 'reports.'], function () {
         Route::get('/', [OrderReportController::class, 'index'])->name('index');
         Route::get('/sales', [OrderReportController::class, 'sales'])->name('sales');
@@ -1172,19 +1175,19 @@ Route::middleware(['permission:manual-payments-review'])->group(static function 
 
 
 
-    /* --------------------------------- API ط¯ط§ط®ظ„ظٹ ظ„ظ„ظˆط­ط© --------------------------------- */
+    /* --------------------------------- API ط·آ¯ط·آ§ط·آ®ط¸â€‍ط¸ظ¹ ط¸â€‍ط¸â€‍ط¸ث†ط·آ­ط·آ© --------------------------------- */
     Route::group(['prefix' => 'api'], function () {
         Route::get('/items/search', [ItemController::class, 'search'])->name('api.items.search.alt');
     });
 
-    // ط§ط®طھطµط§ط± ظ„ظ„ط¨ط­ط« ظ†ظپط³ظ‡ ط®ط§ط±ط¬ /api
+    // ط·آ§ط·آ®ط·ع¾ط·آµط·آ§ط·آ± ط¸â€‍ط¸â€‍ط·آ¨ط·آ­ط·آ« ط¸â€ ط¸ظ¾ط·آ³ط¸â€، ط·آ®ط·آ§ط·آ±ط·آ¬ /api
     Route::get('/items/search', [ItemController::class, 'search'])->name('api.items.search');
 
-}); // ظ†ظ‡ط§ظٹط© ظ…ط¬ظ…ظˆط¹ط© (auth, language)
+}); // ط¸â€ ط¸â€،ط·آ§ط¸ظ¹ط·آ© ط¸â€¦ط·آ¬ط¸â€¦ط¸ث†ط·آ¹ط·آ© (auth, language)
 
 
 
-/* ------------------------------- ط±ظˆط§ط¨ط· ط¹ط§ظ…ط© ط£ط®ط±ظ‰ ------------------------------- */
+/* ------------------------------- ط·آ±ط¸ث†ط·آ§ط·آ¨ط·آ· ط·آ¹ط·آ§ط¸â€¦ط·آ© ط·آ£ط·آ®ط·آ±ط¸â€° ------------------------------- */
 
 Route::get('/product-details/{slug}', [SettingController::class, 'webPageURL'])->name('deep-link');
 Route::get('payment-requests/open/{paymentTransaction}', [ManualPaymentRequestController::class, 'deepLink'])->name('payment-requests.deep-link');
@@ -1194,7 +1197,7 @@ Route::get(
     [ManualPaymentRequestController::class, 'reviewTransaction']
 )->name('payment-requests.review-transaction')->middleware('can:manual-payments-review');
 
-/* ----------------------- ط£ط¯ظˆط§طھ طµظٹط§ظ†ط© (ظ„ظ„ط§ط³طھط®ط¯ط§ظ… ط¨ط­ط°ط±) ----------------------- */
+/* ----------------------- ط·آ£ط·آ¯ط¸ث†ط·آ§ط·ع¾ ط·آµط¸ظ¹ط·آ§ط¸â€ ط·آ© (ط¸â€‍ط¸â€‍ط·آ§ط·آ³ط·ع¾ط·آ®ط·آ¯ط·آ§ط¸â€¦ ط·آ¨ط·آ­ط·آ°ط·آ±) ----------------------- */
 
 Route::get('/migrate', static function () {
     Artisan::call('migrate');
@@ -1226,7 +1229,7 @@ Route::get('storage-link', static function () {
 
 
 
-/* ----------------------------- ط£ط¯ط§ط© طھط±ط¬ظ…ط© طھظ„ظ‚ط§ط¦ظٹط© ----------------------------- */
+/* ----------------------------- ط·آ£ط·آ¯ط·آ§ط·آ© ط·ع¾ط·آ±ط·آ¬ط¸â€¦ط·آ© ط·ع¾ط¸â€‍ط¸â€ڑط·آ§ط·آ¦ط¸ظ¹ط·آ© ----------------------------- */
 
 Route::get('auto-translate/{id}/{type}/{locale}', function ($id, $type, $locale) {
     \Log::info("Running auto-translate with ID: $id, Type: $type, Locale: $locale");
@@ -1253,7 +1256,7 @@ Route::get('auto-translate/{id}/{type}/{locale}', function ($id, $type, $locale)
 
 
 
-/* --------------------------- ظ…ط±ط§ظ‚ط¨ط© ط§ظ„ظ…ط­ط§ط¯ط«ط§طھ (ظ„ظˆط­ط©) --------------------------- */
+/* --------------------------- ط¸â€¦ط·آ±ط·آ§ط¸â€ڑط·آ¨ط·آ© ط·آ§ط¸â€‍ط¸â€¦ط·آ­ط·آ§ط·آ¯ط·آ«ط·آ§ط·ع¾ (ط¸â€‍ط¸ث†ط·آ­ط·آ©) --------------------------- */
 
 Route::prefix('chat-monitor')->name('chat-monitor.')->middleware(['auth'])->group(function () {
     Route::get('/', [App\Http\Controllers\ChatMonitorController::class, 'index'])->name('index');
@@ -1268,7 +1271,7 @@ Route::prefix('chat-monitor')->name('chat-monitor.')->middleware(['auth'])->grou
     Route::post('/tickets/{ticket}/status', [App\Http\Controllers\ChatMonitorController::class, 'updateTicketStatus'])->name('tickets.update-status');
 
 
-    // ظپط­طµ ط³ط±ظٹط¹ ظ„ظ…ط­ط§ط¯ط«ط© ظ…ط¹ظٹظ†ط© (ظ„ظ„ط§ط®طھط¨ط§ط±/ط§ظ„طھط´ط®ظٹطµ)
+    // ط¸ظ¾ط·آ­ط·آµ ط·آ³ط·آ±ط¸ظ¹ط·آ¹ ط¸â€‍ط¸â€¦ط·آ­ط·آ§ط·آ¯ط·آ«ط·آ© ط¸â€¦ط·آ¹ط¸ظ¹ط¸â€ ط·آ© (ط¸â€‍ط¸â€‍ط·آ§ط·آ®ط·ع¾ط·آ¨ط·آ§ط·آ±/ط·آ§ط¸â€‍ط·ع¾ط·آ´ط·آ®ط¸ظ¹ط·آµ)
     Route::get('/test-conversation/{id}', function($id) {
         try {
 
@@ -1293,7 +1296,7 @@ Route::prefix('chat-monitor')->name('chat-monitor.')->middleware(['auth'])->grou
             if (!$conversation) {
                 return response()->json([
                     'error'   => true,
-                    'message' => 'ط§ظ„ظ…ط­ط§ط¯ط«ط© ط؛ظٹط± ظ…ظˆط¬ظˆط¯ط©'
+                    'message' => 'ط·آ§ط¸â€‍ط¸â€¦ط·آ­ط·آ§ط·آ¯ط·آ«ط·آ© ط·ط›ط¸ظ¹ط·آ± ط¸â€¦ط¸ث†ط·آ¬ط¸ث†ط·آ¯ط·آ©'
                 ]);
             }
 
@@ -1340,4 +1343,5 @@ Route::prefix('chat-monitor')->name('chat-monitor.')->middleware(['auth'])->grou
 
 
 
-/* ------------------------------ ط±ظˆط§ط¨ط· ط¥ط¶ط§ظپظٹط© ظ…طھظپط±ظ‚ط© ------------------------------ */
+/* ------------------------------ ط·آ±ط¸ث†ط·آ§ط·آ¨ط·آ· ط·آ¥ط·آ¶ط·آ§ط¸ظ¾ط¸ظ¹ط·آ© ط¸â€¦ط·ع¾ط¸ظ¾ط·آ±ط¸â€ڑط·آ© ------------------------------ */
+

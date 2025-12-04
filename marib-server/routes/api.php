@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\StoreOnboardingController;
 use App\Http\Controllers\Api\StorefrontController;
 use App\Http\Controllers\Api\NotificationInboxController;
 use App\Http\Controllers\Api\NotificationPreferenceController;
+use App\Http\Controllers\Api\FeaturedAdsConfigController;
 use App\Http\Controllers\Api\NotificationTopicController;
 use App\Http\Controllers\Api\NotificationPaymentController;
 use App\Http\Controllers\Api\ActionRequestController;
@@ -81,6 +82,15 @@ Route::get('metal-rates', [PublicMetalRateController::class, 'index']);
 Route::get('get-featured-section', [ApiController::class, 'getFeaturedSections']);
 Route::get('web/experience', WebExperienceController::class)
     ->middleware('web-experience.cors');
+
+// Featured ads config (admin only)
+Route::middleware(['auth:sanctum', 'ability:admin:full'])->group(function (): void {
+    Route::get('featured-ads-configs', [FeaturedAdsConfigController::class, 'index']);
+    Route::post('featured-ads-configs', [FeaturedAdsConfigController::class, 'store']);
+    Route::get('featured-ads-configs/{featuredAdsConfig}', [FeaturedAdsConfigController::class, 'show']);
+    Route::put('featured-ads-configs/{featuredAdsConfig}', [FeaturedAdsConfigController::class, 'update']);
+    Route::delete('featured-ads-configs/{featuredAdsConfig}', [FeaturedAdsConfigController::class, 'destroy']);
+});
 
     
 

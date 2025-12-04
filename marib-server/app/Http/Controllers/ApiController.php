@@ -3570,16 +3570,16 @@ class ApiController extends Controller {
                 ->first();
 
             if (! $config) {
-                return response()->json([
-                    'error' => false,
-                    'message' => __('Featured ads are disabled for this section.'),
-                    'data' => [
-                        'interface_type' => $sectionType,
-                        'filters' => [],
-                        'sections' => [],
-                    ],
-                    'code' => 200,
-                ], 200);
+                $config = new FeaturedAdsConfig([
+                    'interface_type'   => $sectionType,
+                    'root_category_id' => $rootId,
+                    'root_identifier'  => $rootIdentifier,
+                    'order_mode'       => 'latest',
+                    'style_key'        => 'style_1',
+                    'enabled'          => true,
+                    'enable_ad_slider' => true,
+                    'title'            => __('Featured Items'),
+                ]);
             }
 
             if (is_string($config->interface_type) && $config->interface_type !== '') {
@@ -3704,6 +3704,119 @@ class ApiController extends Controller {
                 ];
             }
 
+
+            // Fallback داخل نفس القسم/الفلاتر إذا لم توجد نتائج للفلتر المطلوب
+            if ($sections === []) {
+                $fallbackItems = (clone $baseQuery)
+                    ->orderByDesc('items.created_at')
+                    ->limit($limit)
+                    ->get();
+
+                if ($fallbackItems->isNotEmpty()) {
+                    $sectionData = array_values((new ItemCollection($fallbackItems))->toArray($request));
+                    $sections[] = [
+                        'id' => null,
+                        'title' => $config->title ?? $titleMap['latest'] ?? 'Latest Listings',
+                        'style' => $config->style_key ?? 'list',
+                        'section_type' => $sectionType,
+                        'filter' => 'latest',
+                        'slug' => $config->slug
+                            ?? $request->input('slug')
+                            ?? Str::slug($sectionType . '-latest'),
+                        'sequence' => 1,
+                        'root_identifier' => $config->root_identifier ?? $rootIdentifier,
+                        'total_data' => count($sectionData),
+                        'min_price' => $fallbackItems->min('price'),
+                        'max_price' => $fallbackItems->max('price'),
+                        'section_data' => $sectionData,
+                    ];
+                }
+            }
+
+            // Fallback إضافي بالواجهة فقط (بدون تقييد الفئة) حتى لا يختفي الشريط تماماً
+            if ($sections === []) {
+                $looserQuery = Item::query()
+                    ->approved()
+                    ->with($relations)
+                    ->withCount('favourites')
+                    ->withCount('featured_items');
+
+                if ($sectionType !== null && $sectionType !== 'all') {
+                    $looserQuery->whereIn('interface_type', $interfaceVariants);
+                }
+
+                $looserItems = $looserQuery
+                    ->orderByDesc('items.created_at')
+                    ->limit($limit)
+                    ->get();
+
+                if ($looserItems->isNotEmpty()) {
+                    $sectionData = array_values((new ItemCollection($looserItems))->toArray($request));
+                    $sections[] = [
+                        'id' => null,
+                        'title' => $config->title ?? $titleMap['latest'] ?? 'Latest Listings',
+                        'style' => $config->style_key ?? 'list',
+                        'section_type' => $sectionType,
+                        'filter' => 'latest',
+                        'slug' => $config->slug
+                            ?? $request->input('slug')
+                            ?? Str::slug($sectionType . '-latest'),
+                        'sequence' => 1,
+                        'root_identifier' => $config->root_identifier ?? $rootIdentifier,
+                        'total_data' => count($sectionData),
+                        'min_price' => $looserItems->min('price'),
+                        'max_price' => $looserItems->max('price'),
+                        'section_data' => $sectionData,
+                    ];
+                }
+            }
+
+            // ضمان وجود سكشن واحد حتى لو لم توجد بيانات، لتظهر الواجهة مع شريط الإعلانات
+            if ($sections === []) {
+                // حاول جلب إعلان واحد على الأقل من نفس الواجهة
+                $singleItem = Item::query()
+                    ->approved()
+                    ->with($relations)
+                    ->withCount('favourites')
+                    ->withCount('featured_items')
+                    ->when($sectionType !== null && $sectionType !== 'all', function ($q) use ($interfaceVariants) {
+                        $q->whereIn('interface_type', $interfaceVariants);
+                    })
+                    ->orderByDesc('items.created_at')
+                    ->first();
+
+                // إذا لم نجد ضمن الواجهة، نجرب بدون تقييد الواجهة
+                if (! $singleItem) {
+                    $singleItem = Item::query()
+                        ->approved()
+                        ->with($relations)
+                        ->withCount('favourites')
+                        ->withCount('featured_items')
+                        ->orderByDesc('items.created_at')
+                        ->first();
+                }
+
+                $sectionData = $singleItem
+                    ? array_values((new ItemCollection([$singleItem]))->toArray($request))
+                    : [];
+
+                $sections[] = [
+                    'id' => null,
+                    'title' => $config->title ?? $titleMap['latest'] ?? 'Latest Listings',
+                    'style' => $config->style_key ?? 'list',
+                    'section_type' => $sectionType,
+                    'filter' => $config->order_mode ?? 'latest',
+                    'slug' => $config->slug
+                        ?? $request->input('slug')
+                        ?? Str::slug($sectionType . '-latest'),
+                    'sequence' => 1,
+                    'root_identifier' => $config->root_identifier ?? $rootIdentifier,
+                    'total_data' => count($sectionData),
+                    'min_price' => $singleItem?->price,
+                    'max_price' => $singleItem?->price,
+                    'section_data' => $sectionData,
+                ];
+            }
 
             return response()->json([
                 'error' => false,

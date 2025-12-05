@@ -145,20 +145,22 @@ class _SideFilterPanelState extends State<SideFilterPanel> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
     final double panelWidth = MediaQuery.of(context).size.width * 0.86;
     return Container(
       width: panelWidth,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cs.surface,
         borderRadius: const BorderRadius.only(
           topRight: Radius.circular(18),
           bottomRight: Radius.circular(18),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.15),
-            blurRadius: 12,
-            offset: const Offset(4, 0),
+            color: cs.shadow.withOpacity(0.15),
+            blurRadius: 14,
+            offset: const Offset(4, 2),
           )
         ],
       ),
@@ -170,9 +172,7 @@ class _SideFilterPanelState extends State<SideFilterPanel> {
               children: [
                 Text(
                   _txtFilters,
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleMedium
+                  style: theme.textTheme.titleMedium
                       ?.copyWith(fontWeight: FontWeight.w700),
                 ),
                 const Spacer(),
@@ -189,7 +189,7 @@ class _SideFilterPanelState extends State<SideFilterPanel> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _sectionTitle(_txtSort),
+                  _sectionTitle(_txtSort, cs),
                   Wrap(
                     spacing: 8,
                     children: [
@@ -209,7 +209,7 @@ class _SideFilterPanelState extends State<SideFilterPanel> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  _sectionTitle(_txtPrice),
+                  _sectionTitle(_txtPrice, cs),
                   Row(
                     children: [
                       Expanded(
@@ -232,7 +232,7 @@ class _SideFilterPanelState extends State<SideFilterPanel> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  _sectionTitle(_txtCurrency),
+                  _sectionTitle(_txtCurrency, cs),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
@@ -246,7 +246,7 @@ class _SideFilterPanelState extends State<SideFilterPanel> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  _sectionTitle(_txtDiscounts),
+                  _sectionTitle(_txtDiscounts, cs),
                   SwitchListTile.adaptive(
                     contentPadding: EdgeInsets.zero,
                     value: onlyDiscount,
@@ -263,7 +263,7 @@ class _SideFilterPanelState extends State<SideFilterPanel> {
                     title: const Text(_txtShowDiscountOnly),
                   ),
                   const SizedBox(height: 16),
-                  _sectionTitle(_txtAttributes),
+                  _sectionTitle(_txtAttributes, cs),
                   _buildCustomAttributes(),
                 ],
               ),
@@ -307,15 +307,15 @@ class _SideFilterPanelState extends State<SideFilterPanel> {
     );
   }
 
-  Widget _sectionTitle(String text) {
+  Widget _sectionTitle(String text, ColorScheme cs) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Text(
         text,
-        style: Theme.of(context)
-            .textTheme
-            .titleSmall
-            ?.copyWith(fontWeight: FontWeight.w700),
+        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: cs.onSurface,
+            ),
       ),
     );
   }
@@ -332,7 +332,10 @@ class _SideFilterPanelState extends State<SideFilterPanel> {
         labelText: label,
         isDense: true,
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Colors.grey.shade400.withOpacity(0.6)),
+        ),
       ),
     );
   }
@@ -529,15 +532,15 @@ class _SideFilterPanelState extends State<SideFilterPanel> {
                                   )
                                 : null,
                             border: Border.all(
-                              color: Colors.black.withOpacity(0.12),
-                              width: 0.6,
+                              color: Colors.white.withOpacity(0.10),
+                              width: 0.8,
                             ),
                             boxShadow: isSelected
                                 ? [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.12),
-                                      blurRadius: 4,
-                                      spreadRadius: 0.2,
+                                      color: Colors.black.withOpacity(0.22),
+                                      blurRadius: 5,
+                                      spreadRadius: 0.4,
                                     )
                                   ]
                                 : null,

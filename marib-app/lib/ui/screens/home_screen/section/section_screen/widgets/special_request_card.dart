@@ -19,11 +19,9 @@ class SpecialRequestCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const double cardRadius = 20.0;
-    const double innerPadding = 6.0;
     const double gridGap = 6.0;
 
-    final double cardExtent = ScreenScaler.s(58);
+    final double cardExtent = 52;
     final double spacing = math.min(ScreenScaler.s(14), gridGap);
 
     final ThemeData theme = Theme.of(context);
@@ -35,7 +33,7 @@ class SpecialRequestCard extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(cardRadius),
+        borderRadius: BorderRadius.circular(cardExtent),
         onTap: () => _openRequestSheet(context),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.start,
@@ -46,28 +44,18 @@ class SpecialRequestCard extends StatelessWidget {
               curve: Curves.easeOut,
               height: cardExtent,
               width: cardExtent,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(cardRadius),
-                color: context.color.surface,
-                border: Border.all(
-                  color: colors.borderColor.withOpacity(0.5),
-                  width: 1.2,
-                ),
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.transparent,
               ),
-              padding: const EdgeInsets.all(innerPadding),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: context.color.surface,
-                  borderRadius: BorderRadius.circular(
-                    (cardRadius - innerPadding)
-                        .clamp(0.0, cardRadius)
-                        .toDouble(),
+              child: ClipOval(
+                child: Container(
+                  color: Colors.transparent,
+                  child: Icon(
+                    Icons.assignment_add,
+                    size: cardExtent * 0.52,
+                    color: context.color.textDefaultColor.withOpacity(0.8),
                   ),
-                ),
-                child: Icon(
-                  Icons.assignment_add,
-                  size: cardExtent * 0.5,
-                  color: context.color.textLightColor.withOpacity(0.7),
                 ),
               ),
             ),
@@ -79,10 +67,13 @@ class SpecialRequestCard extends StatelessWidget {
                   width: cardExtent + 12,
                   child: Text(
                     'طلب خاص',
-                    maxLines: 2,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
-                    style: textStyle,
+                    style: textStyle?.copyWith(
+                      fontSize: context.font.smaller,
+                      height: 1.05,
+                    ),
                   ),
                 ),
               ),
@@ -158,7 +149,7 @@ class SpecialRequestCard extends StatelessWidget {
 
                   return Container(
                     decoration: BoxDecoration(
-                      color: context.color.secondaryColor,
+                      color: outerContext.color.secondaryColor,
                       borderRadius: const BorderRadius.vertical(
                         top: Radius.circular(22),
                       ),
@@ -171,8 +162,8 @@ class SpecialRequestCard extends StatelessWidget {
                             width: 60,
                             margin: const EdgeInsets.only(top: 12, bottom: 16),
                             decoration: BoxDecoration(
-                              color:
-                                  context.color.textColorDark.withOpacity(0.2),
+                              color: outerContext.color.textColorDark
+                                  .withOpacity(0.2),
                               borderRadius: BorderRadius.circular(3),
                             ),
                           ),
@@ -185,287 +176,165 @@ class SpecialRequestCard extends StatelessWidget {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      "ننفذ طلبك الخاص!",
+                                      "تفاصيل الطلب",
                                       style: TextStyle(
-                                        fontSize: context.font.larger,
+                                        fontSize: outerContext.font.larger,
                                         fontWeight: FontWeight.bold,
-                                        color: context.color.textDefaultColor,
+                                        color:
+                                            outerContext.color.textDefaultColor,
                                       ),
                                     ),
                                     const SizedBox(height: 6),
                                     Text(
-                                      "اكتب تفاصيل الطلب وأرفق صورة اختيارية. في قسم شي إن يمكنك إضافة رابط المنتج أو السلة لننفذه لك.",
+                                      "املأ التفاصيل وسنعود إليك بأقرب وقت.",
                                       style: TextStyle(
-                                        fontSize: context.font.normal,
+                                        fontSize: outerContext.font.normal,
                                         height: 1.6,
-                                        color: context.color.textDefaultColor
-                                            .withOpacity(0.8),
+                                        color:
+                                            outerContext.color.textLightColor,
                                       ),
-                                    ),
-                                    const SizedBox(height: 20),
-                                    _buildField(
-                                      controller: titleController,
-                                      label: "عنوان الطلب",
-                                      icon: Icons.title,
-                                      rootContext: context,
-                                      validator: (val) =>
-                                          val == null || val.isEmpty
-                                              ? "مطلوب"
-                                              : null,
-                                    ),
-                                    const SizedBox(height: 14),
-                                    if (isSheinSection) ...[
-                                      _buildField(
-                                        controller: linkController,
-                                        label:
-                                            "ضع رابط منتج شي إن أو رابط السلة",
-                                        icon: Icons.link,
-                                        rootContext: context,
-                                        validator: (val) =>
-                                            val == null || val.trim().isEmpty
-                                                ? "الرابط مطلوب"
-                                                : null,
-                                      ),
-                                      const SizedBox(height: 14),
-                                    ],
-                                    _buildField(
-                                      controller: descController,
-                                      label: "وصف الطلب",
-                                      icon: Icons.description_outlined,
-                                      rootContext: context,
-                                      maxLines: 3,
-                                      validator: (val) =>
-                                          val == null || val.isEmpty
-                                              ? "مطلوب"
-                                              : null,
-                                    ),
-                                    const SizedBox(height: 14),
-                                    _buildField(
-                                      controller: qtyController,
-                                      label: "الكمية المطلوبة (اختياري)",
-                                      icon: Icons.confirmation_number_outlined,
-                                      rootContext: context,
-                                      keyboardType: TextInputType.number,
-                                    ),
-                                    const SizedBox(height: 14),
-                                    _buildField(
-                                      controller: phoneController,
-                                      label: "رقم الهاتف للتواصل",
-                                      icon: Icons.phone_android,
-                                      rootContext: context,
-                                      keyboardType: TextInputType.phone,
-                                      validator: (val) =>
-                                          val == null || val.isEmpty
-                                              ? "رقم الهاتف مطلوب"
-                                              : null,
-                                    ),
-                                    const SizedBox(height: 14),
-                                    _buildField(
-                                      controller: notesController,
-                                      label: "ملاحظات إضافية (اختياري)",
-                                      icon: Icons.notes_outlined,
-                                      rootContext: context,
-                                      maxLines: 2,
                                     ),
                                     const SizedBox(height: 16),
-                                    InkWell(
-                                      onTap: isSubmitting
-                                          ? null
-                                          : () async {
-                                              final picker = ImagePicker();
-                                              final file =
-                                                  await picker.pickImage(
-                                                source: ImageSource.gallery,
-                                              );
-                                              if (file != null) {
-                                                setState(() {
-                                                  isUploading = true;
-                                                  uploadSuccess = false;
-                                                });
-                                                await Future.delayed(
-                                                    const Duration(seconds: 2));
-                                                setState(() {
-                                                  pickedFile = file;
-                                                  isUploading = false;
-                                                  uploadSuccess = true;
-                                                });
-                                              }
-                                            },
-                                      child: Container(
-                                        height: 150,
-                                        width: double.infinity,
-                                        decoration: BoxDecoration(
-                                          border: Border.all(
-                                            color: context.color.textColorDark
-                                                .withOpacity(0.2),
+                                    TextFormField(
+                                      controller: titleController,
+                                      decoration: const InputDecoration(
+                                        labelText: "عنوان الطلب",
+                                      ),
+                                      validator: (v) {
+                                        if (v == null || v.trim().isEmpty) {
+                                          return "الرجاء إدخال عنوان الطلب";
+                                        }
+                                        return null;
+                                      },
+                                    ),
+                                    const SizedBox(height: 12),
+                                    if (isSheinSection)
+                                      Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          TextFormField(
+                                            controller: linkController,
+                                            decoration: const InputDecoration(
+                                              labelText:
+                                                  "رابط المنتج (شي إن أو رابط السلة)",
+                                            ),
                                           ),
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                          color: context.color.secondaryColor,
+                                          const SizedBox(height: 12),
+                                        ],
+                                      ),
+                                    TextFormField(
+                                      controller: descController,
+                                      decoration: const InputDecoration(
+                                        labelText: "وصف الطلب",
+                                      ),
+                                      maxLines: 3,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    TextFormField(
+                                      controller: qtyController,
+                                      decoration: const InputDecoration(
+                                        labelText: "الكمية (اختياري)",
+                                      ),
+                                      keyboardType: TextInputType.number,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    TextFormField(
+                                      controller: notesController,
+                                      decoration: const InputDecoration(
+                                        labelText: "ملاحظات إضافية",
+                                      ),
+                                      maxLines: 2,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    TextFormField(
+                                      controller: phoneController,
+                                      decoration: const InputDecoration(
+                                        labelText: "رقم التواصل (اختياري)",
+                                      ),
+                                      keyboardType: TextInputType.phone,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Row(
+                                      children: [
+                                        ElevatedButton.icon(
+                                          onPressed: isSubmitting
+                                              ? null
+                                              : () async {
+                                                  final picker = ImagePicker();
+                                                  final file =
+                                                      await picker.pickImage(
+                                                          source: ImageSource
+                                                              .gallery);
+                                                  if (file != null) {
+                                                    setState(() {
+                                                      pickedFile = file;
+                                                    });
+                                                  }
+                                                },
+                                          icon:
+                                              const Icon(Icons.image_outlined),
+                                          label: Text(
+                                            pickedFile == null
+                                                ? "أرفق صورة (اختياري)"
+                                                : "تم اختيار صورة",
+                                          ),
                                         ),
-                                        child: Center(
-                                          child: isUploading
-                                              ? Column(
-                                                  mainAxisAlignment:
-                                                      MainAxisAlignment.center,
-                                                  children: const [
-                                                    CircularProgressIndicator(),
-                                                    SizedBox(height: 10),
-                                                    Text("جاري رفع الصورة..."),
-                                                  ],
-                                                )
-                                              : uploadSuccess
-                                                  ? Column(
-                                                      mainAxisAlignment:
-                                                          MainAxisAlignment
-                                                              .center,
-                                                      children: const [
-                                                        Icon(Icons.check_circle,
-                                                            color: Colors.green,
-                                                            size: 40),
-                                                        SizedBox(height: 8),
-                                                        Text("تم رفع الصورة"),
-                                                      ],
-                                                    )
-                                                  : pickedFile == null
-                                                      ? Column(
-                                                          mainAxisAlignment:
-                                                              MainAxisAlignment
-                                                                  .center,
-                                                          children: [
-                                                            Icon(
-                                                              Icons
-                                                                  .add_a_photo_outlined,
-                                                              size: 35,
-                                                              color: context
-                                                                  .color
-                                                                  .textDefaultColor
-                                                                  .withOpacity(
-                                                                      0.7),
-                                                            ),
-                                                            const SizedBox(
-                                                                height: 8),
-                                                            Text(
-                                                              "أرفق صورة (اختياري)",
-                                                              style: TextStyle(
-                                                                color: context
-                                                                    .color
-                                                                    .textDefaultColor
-                                                                    .withOpacity(
-                                                                        0.7),
-                                                              ),
-                                                            ),
-                                                          ],
-                                                        )
-                                                      : ClipRRect(
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(12),
-                                                          child: Image.file(
-                                                            File(pickedFile!
-                                                                .path),
-                                                            fit: BoxFit.cover,
-                                                            width:
-                                                                double.infinity,
-                                                          ),
-                                                        ),
-                                        ),
+                                        const SizedBox(width: 12),
+                                        if (pickedFile != null)
+                                          Text(
+                                            File(pickedFile!.path)
+                                                .path
+                                                .split('/')
+                                                .last,
+                                            style: TextStyle(
+                                              fontSize:
+                                                  outerContext.font.smaller,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 20),
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: ElevatedButton(
+                                        onPressed: isSubmitting
+                                            ? null
+                                            : () {
+                                                if (!formKey.currentState!
+                                                    .validate()) {
+                                                  return;
+                                                }
+                                                final subject =
+                                                    composeSubject();
+                                                final message =
+                                                    composeMessage();
+
+                                                outerContext
+                                    .read<RequestDeviceCubit>()
+                                    .requestDevice(
+                                      phone: phoneController.text.trim(),
+                                      subject: subject,
+                                      message: message,
+                                      section: sectionSlug,
+                                    );
+                                              },
+                                        child: isSubmitting
+                                            ? const SizedBox(
+                                                height: 20,
+                                                width: 20,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                ),
+                                              )
+                                            : const Text("إرسال"),
                                       ),
                                     ),
-                                    const SizedBox(height: 90),
                                   ],
                                 ),
                               ),
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
-                            decoration: BoxDecoration(
-                              color: context.color.secondaryColor,
-                              border: Border(
-                                top: BorderSide(
-                                  color: context.color.textColorDark
-                                      .withOpacity(0.1),
-                                ),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: OutlinedButton(
-                                    style: OutlinedButton.styleFrom(
-                                      side: BorderSide(
-                                        color: context.color.textLightColor,
-                                        width: 1.5,
-                                      ),
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 14),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                    ),
-                                    onPressed: isSubmitting
-                                        ? null
-                                        : () => Navigator.pop(outerContext),
-                                    child: Text(
-                                      "إلغاء",
-                                      style: TextStyle(
-                                        color: context.color.textLightColor,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: ElevatedButton.icon(
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor:
-                                          context.color.territoryColor,
-                                      foregroundColor:
-                                          context.color.secondaryColor,
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 14),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                    ),
-                                    onPressed: isSubmitting
-                                        ? null
-                                        : () {
-                                            if (formKey.currentState
-                                                    ?.validate() ??
-                                                false) {
-                                              ctx
-                                                  .read<RequestDeviceCubit>()
-                                                  .requestDevice(
-                                                    phone: phoneController.text
-                                                        .trim(),
-                                                    subject: composeSubject(),
-                                                    message: composeMessage(),
-                                                    section:
-                                                        _resolveSectionForRequest(),
-                                                  );
-                                            }
-                                          },
-                                    icon: isSubmitting
-                                        ? const SizedBox(
-                                            width: 18,
-                                            height: 18,
-                                            child: CircularProgressIndicator(
-                                                strokeWidth: 2.2),
-                                          )
-                                        : const Icon(Icons.send),
-                                    label: Text(
-                                      isSubmitting
-                                          ? "جارٍ الإرسال..."
-                                          : "أرسل الطلب",
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.bold),
-                                    ),
-                                  ),
-                                ),
-                              ],
                             ),
                           ),
                         ],
@@ -479,57 +348,5 @@ class SpecialRequestCard extends StatelessWidget {
         );
       },
     );
-  }
-
-  Widget _buildField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    required BuildContext rootContext,
-    int maxLines = 1,
-    String? Function(String?)? validator,
-    TextInputType? keyboardType,
-  }) {
-    return TextFormField(
-      controller: controller,
-      maxLines: maxLines,
-      keyboardType: keyboardType,
-      validator: validator,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon, color: rootContext.color.territoryColor),
-        filled: true,
-        fillColor: rootContext.color.secondaryColor,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: rootContext.color.textColorDark.withOpacity(0.2),
-          ),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: rootContext.color.territoryColor,
-            width: 1.6,
-          ),
-        ),
-      ),
-      style: TextStyle(color: rootContext.color.textDefaultColor),
-    );
-  }
-
-  String _resolveSectionForRequest() {
-    final String normalized = sectionSlug.trim().toLowerCase();
-    switch (normalized) {
-      case 'shein':
-        return 'shein';
-      case 'computer':
-        return 'computer';
-      default:
-        return 'computer';
-    }
   }
 }

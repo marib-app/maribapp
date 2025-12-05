@@ -400,18 +400,7 @@ class _SubcatCircle extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     final hasImage = useImage && (imageUrl?.isNotEmpty ?? false);
 
-    final borderColor = selected
-        ? Colors.transparent
-        : colorScheme.borderColor.withOpacity(0.6);
-
-    final gradient = selected
-        ? LinearGradient(
-            colors: [
-              colorScheme.territoryColor,
-              colorScheme.borderColor.withOpacity(0.6),
-            ],
-          )
-        : null;
+    final borderColor = Colors.transparent;
 
     final innerRadius = (_subcatCardRadius - _innerPadding)
         .clamp(0.0, _subcatCardRadius)
@@ -464,9 +453,9 @@ class _SubcatCircle extends StatelessWidget {
             height: cardExtent,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(_subcatCardRadius),
-              gradient: gradient,
-              color: selected ? null : colorScheme.surface,
-              border: Border.all(color: borderColor, width: 1.4),
+              gradient: null,
+              color: Colors.transparent,
+              border: Border.all(color: borderColor, width: 0),
             ),
             padding: const EdgeInsets.all(_innerPadding),
             child: avatar,

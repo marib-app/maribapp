@@ -45,7 +45,7 @@ class CategoryController extends Controller {
         ResponseService::noPermissionThenSendJson('category-create');
         $request->validate([
             'name'               => 'required',
-            'image'              => 'required|mimes:jpg,jpeg,png|max:4096',
+            'image'              => 'nullable|mimes:jpg,jpeg,png|max:4096',
             'parent_category_id' => 'nullable|integer',
             'description'        => 'nullable',
             'slug'               => 'required',
@@ -60,6 +60,9 @@ class CategoryController extends Controller {
 
             if ($request->hasFile('image')) {
                 $data['image'] = FileService::compressAndUpload($request->file('image'), $this->uploadFolder);
+            } else {
+                // Allow creating category without an image
+                $data['image'] = $data['image'] ?? '';
             }
 
             $category = Category::create($data);

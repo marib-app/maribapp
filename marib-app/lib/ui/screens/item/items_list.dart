@@ -22,6 +22,7 @@ import 'package:marib/utils/api.dart';
 
 import 'package:marib/utils/responsiveSize.dart';
 import 'package:marib/utils/ui_utils.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:marib/ui/screens/item/cards/sections_adapter.dart';
 import 'package:marib/ui/screens/widgets/errors/no_data_found.dart';
 import 'package:marib/ui/screens/item/cards/horizontal_card.dart';
@@ -90,12 +91,20 @@ class _SubcatChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final double size = 52;
-    final Color borderColor = isActive
-        ? context.color.territoryColor
-        : context.color.borderColor.darken(20);
-    final Color fillColor = isActive
-        ? context.color.territoryColor.withOpacity(0.1)
-        : context.color.secondaryColor;
+    final Color borderColor = Colors.transparent;
+    final Color fillColor = Colors.transparent;
+    final bool hasImage = imageUrl != null && imageUrl!.trim().isNotEmpty;
+
+    Widget fallbackAvatar(ColorScheme colors) => Container(
+          color: colors.secondaryColor,
+          child: Icon(
+            Icons.category_outlined,
+            color: isActive
+                ? colors.territoryColor.darken(20)
+                : colors.textDefaultColor.withOpacity(0.7),
+            size: 28,
+          ),
+        );
 
     return GestureDetector(
       onTap: onTap,
@@ -113,7 +122,7 @@ class _SubcatChip extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: fillColor,
-                border: Border.all(color: borderColor, width: 1.2),
+                border: Border.all(color: borderColor, width: 0),
                 boxShadow: isActive
                     ? [
                         BoxShadow(
@@ -125,25 +134,23 @@ class _SubcatChip extends StatelessWidget {
                     : null,
               ),
               child: ClipOval(
-                child: imageUrl != null && imageUrl!.trim().isNotEmpty
-                    ? UiUtils.getImage(
-                        imageUrl!,
-                        height: size,
-                        width: size,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    fallbackAvatar(context.color),
+                    if (hasImage)
+                      CachedNetworkImage(
+                        imageUrl: imageUrl!,
                         fit: BoxFit.cover,
-                        cacheWidth: 120,
-                        cacheHeight: 120,
-                      )
-                    : Icon(
-                        Icons.category_outlined,
-                        color: isActive
-                            ? context.color.territoryColor.darken(20)
-                            : context.color.textDefaultColor.withOpacity(0.7),
-                        size: 28,
+                        placeholder: (_, __) => fallbackAvatar(context.color),
+                        errorWidget: (_, __, ___) =>
+                            fallbackAvatar(context.color),
                       ),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             Text(
               label,
               maxLines: 1,
@@ -154,7 +161,8 @@ class _SubcatChip extends StatelessWidget {
                     ? context.color.territoryColor.darken(10)
                     : context.color.textDefaultColor,
                 fontWeight: FontWeight.w600,
-                fontSize: context.font.smaller + 1,
+                fontSize: context.font.smaller,
+                height: 1.05,
               ),
             ),
           ],

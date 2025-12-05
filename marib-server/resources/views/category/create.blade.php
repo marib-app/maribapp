@@ -54,7 +54,7 @@
                                 <div class="col-md-6">
                                     <div class="col-md-12 form-group mandatory">
                                         <label for="Field Name" class="mandatory form-label">{{ __('Image') }}</label>
-                                        <input type="file" name="image" id="image" class="form-control" data-parsley-required="true" accept=".jpg,.jpeg,.png">
+                                        <input type="file" name="image" id="image" class="form-control" accept=".jpg,.jpeg,.png">
                                     </div>
                                 </div>
                                 <div class="col-md-6">
@@ -93,5 +93,4 @@
         </div>
     </section>
 @endsection
-
 

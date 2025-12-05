@@ -38,7 +38,7 @@ mysql -h 127.0.0.1 -u root -p -e "SHOW DATABASES;"
 
 حذف القاعده 
 mysql --default-character-set=utf8mb4 -h 127.0.0.1 -u root -p -e "DROP DATABASE IF EXISTS maribsrv;"
-
+ 
 
 
 

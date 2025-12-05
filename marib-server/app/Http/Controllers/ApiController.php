@@ -3518,9 +3518,10 @@ class ApiController extends Controller {
 
             $filters = array_values(array_unique($filters));
 
-            $limitDefault = max(1, (int) config('interface_sections.section_item_limit', 12));
+            $minItems = 6;
+            $limitDefault = max($minItems, (int) config('interface_sections.section_item_limit', 12));
             $limit = $request->integer('limit');
-            $limit = $limit !== null ? max(1, min($limit, 50)) : $limitDefault;
+            $limit = $limit !== null ? max($minItems, min($limit, 50)) : $limitDefault;
 
             $sectionTypeInput = $request->input('section_type') ?? $request->input('interface_type');
             $sectionType = InterfaceSectionService::normalizeSectionType($sectionTypeInput);

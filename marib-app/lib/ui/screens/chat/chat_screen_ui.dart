@@ -383,32 +383,25 @@ extension _ChatScreenUi on _ChatScreenState {
                                   return;
                                 }
                                 final position = _pageScrollController.position;
-                                final double newMaxExtent =
-                                    position.maxScrollExtent;
-                                final double previousMax =
+                                final double newMax = position.maxScrollExtent;
+                                final double prevMax =
                                     _maxScrollExtentBeforeLoadMore;
-                                final double deltaExtent =
-                                    newMaxExtent - previousMax;
-                                final double minExtent =
-                                    position.minScrollExtent;
-
-                                double targetOffset =
-                                    scrollPositionWhenLoadMore + deltaExtent;
-
+                                final double savedOffset =
+                                    scrollPositionWhenLoadMore;
+                                // Maintain distance from bottom when more items are prepended.
+                                double offsetFromEnd = prevMax - savedOffset;
+                                if (!offsetFromEnd.isFinite ||
+                                    offsetFromEnd < 0) {
+                                  offsetFromEnd = 0;
+                                }
+                                double targetOffset = newMax - offsetFromEnd;
                                 if (!targetOffset.isFinite) {
-                                  targetOffset = scrollPositionWhenLoadMore;
+                                  targetOffset = savedOffset;
                                 }
-
-                                if (targetOffset >= newMaxExtent) {
-                                  targetOffset = (newMaxExtent - 0.5)
-                                      .clamp(minExtent, newMaxExtent)
-                                      .toDouble();
-                                }
-
-                                targetOffset = targetOffset
-                                    .clamp(minExtent, newMaxExtent)
-                                    .toDouble();
-
+                                targetOffset = targetOffset.clamp(
+                                  position.minScrollExtent,
+                                  newMax,
+                                );
                                 _pageScrollController.jumpTo(targetOffset);
                               });
                               _shouldRestoreScrollAfterLoadMore = false;
@@ -436,15 +429,32 @@ extension _ChatScreenUi on _ChatScreenState {
                                   final bool isLoadingMore =
                                       state is LoadChatMessagesSuccess &&
                                           state.isLoadingMore;
-                                  final Widget? loadingMoreWidget =
-                                      isLoadingMore
-                                          ? Text("loading".translate(context))
-                                          : null;
+                                  final Widget loadMoreBanner = SizedBox(
+                                    height: 28,
+                                    child: isLoadingMore
+                                        ? Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              SizedBox(
+                                                width: 16,
+                                                height: 16,
+                                                child:
+                                                    const CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Text("loading".translate(context)),
+                                            ],
+                                          )
+                                        : const SizedBox.shrink(),
+                                  );
 
                                   if (snapshot.connectionState ==
                                           ConnectionState.waiting &&
                                       !snapshot.hasData) {
-                                    return loadingMoreWidget ?? offerWidget();
+                                    return loadMoreBanner;
                                   }
 
                                   // Filter the global chat stream to only messages
@@ -509,8 +519,7 @@ extension _ChatScreenUi on _ChatScreenState {
                                   return Column(
                                     mainAxisSize: MainAxisSize.max,
                                     children: [
-                                      loadingMoreWidget ??
-                                          const SizedBox.shrink(),
+                                      loadMoreBanner,
                                       Expanded(
                                         child: ListView.builder(
                                           key: const PageStorageKey<String>(

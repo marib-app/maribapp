@@ -1,17 +1,17 @@
-// lib/ui/screens/profile/show_profile_ui.dart
+﻿// lib/ui/screens/profile/show_profile_ui.dart
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/widgets.dart';
-// التبويب الداخلي لقائمة الإعلانات
+// ╪د┘╪ز╪ذ┘ê┘è╪ذ ╪د┘╪»╪د╪«┘┘è ┘┘é╪د╪خ┘à╪ر ╪د┘╪ح╪╣┘╪د┘╪د╪ز
 import 'my_item_tab.dart';
 
-// حالات المستخدم والإحصائيات
+// ╪ص╪د┘╪د╪ز ╪د┘┘à╪│╪ز╪«╪»┘à ┘ê╪د┘╪ح╪ص╪╡╪د╪خ┘è╪د╪ز
 import 'package:marib/data/cubits/system/user_details.dart';
 import 'package:marib/data/cubits/profile/profile_stats_cubit.dart';
 import 'package:marib/data/cubits/item/fetch_my_item_cubit.dart';
 
-// ثيم + أدوات مساعدة
+// ╪س┘è┘à + ╪ث╪»┘ê╪د╪ز ┘à╪│╪د╪╣╪»╪ر
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/responsiveSize.dart';
@@ -19,8 +19,8 @@ import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/merchant_display_helper.dart';
 import 'package:marib/app/app_scroll_behavior.dart';
 
-/// واجهة شاشة الملف الشخصي (عرض فقط) — تستقبل كل شيء عبر Params.
-/// لا يوجد منطق بيانات هنا؛ أي منطق يجب أن يبقى خارج هذا الملف.
+/// ┘ê╪د╪ش┘ç╪ر ╪┤╪د╪┤╪ر ╪د┘┘à┘┘ ╪د┘╪┤╪«╪╡┘è (╪╣╪▒╪╢ ┘┘é╪╖) ظ¤ ╪ز╪│╪ز┘é╪ذ┘ ┘â┘ ╪┤┘è╪ة ╪╣╪ذ╪▒ Params.
+/// ┘╪د ┘è┘ê╪ش╪» ┘à┘╪╖┘é ╪ذ┘è╪د┘╪د╪ز ┘ç┘╪د╪ؤ ╪ث┘è ┘à┘╪╖┘é ┘è╪ش╪ذ ╪ث┘ ┘è╪ذ┘é┘ë ╪«╪د╪▒╪ش ┘ç╪░╪د ╪د┘┘à┘┘.
 
 
 class ProfileScreenUI extends StatelessWidget {
@@ -34,7 +34,7 @@ class ProfileScreenUI extends StatelessWidget {
   final ValueNotifier<bool> fullPageLoadingNotifier;
   final VoidCallback onRequestFullRefresh;
 
-  /// مزوّد صورة البروفايل (File/Network/SVG) من الـ State الخارجي
+  /// ┘à╪▓┘ê┘ّ╪» ╪╡┘ê╪▒╪ر ╪د┘╪ذ╪▒┘ê┘╪د┘è┘ (File/Network/SVG) ┘à┘ ╪د┘┘ State ╪د┘╪«╪د╪▒╪ش┘è
   final Widget Function() buildProfileImage;
 
   const ProfileScreenUI({
@@ -53,10 +53,22 @@ class ProfileScreenUI extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
+
     String normalizeStatus(String? value) {
       if (value == null || value.isEmpty) return 'all';
       return value;
     }
+
+    int? countForTab(String? status) {
+      final String key = normalizeStatus(status);
+      final cubit = myAdsCubitReference[key];
+      final state = cubit?.state;
+      if (state is FetchMyItemsSuccess) {
+        return state.total;
+      }
+      return null;
+    }
+
     void updateLoading(String statusKey, bool isLoading) {
       final String activeStatus =
       normalizeStatus(adTabs[tabController.index]["status"]);
@@ -79,6 +91,9 @@ class ProfileScreenUI extends StatelessWidget {
     }
 
     Widget buildContent() {
+      final List<int?> tabCounts =
+          adTabs.map<int?>((tab) => countForTab(tab["status"])).toList();
+
       return NestedScrollView(
         floatHeaderSlivers: true,
         headerSliverBuilder: (context, innerBoxIsScrolled) => [
@@ -88,7 +103,9 @@ class ProfileScreenUI extends StatelessWidget {
         children: [
           const SizedBox(height: 0),
           _HeaderSection(buildProfileImage: buildProfileImage),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
+          const _StatsRow(),
+          const SizedBox(height: 12),
           _ProfileButtons(
             onEditProfilePressed: onEditProfilePressed,
             onShareProfilePressed: onShareProfilePressed,
@@ -102,10 +119,12 @@ class ProfileScreenUI extends StatelessWidget {
           floating: true,
           delegate: _StatsTabsHeaderDelegate(
           backgroundColor: backgroundColor,
-          statsBuilder: (ctx) => _StatsRow(),
-          tabBarBuilder: (ctx) => _ProfileTabBar(
-          controller: tabController,
-          adTabs: adTabs,
+          statsBuilder: (ctx) => const SizedBox.shrink(),
+          tabBarBuilder: (ctx) => _AdsTabChips(
+            controller: tabController,
+            adTabs: adTabs,
+            counts: tabCounts,
+            onTap: (index) => tabController.animateTo(index),
           ),
             ),
           ),
@@ -142,8 +161,8 @@ class ProfileScreenUI extends StatelessWidget {
   }
 }
 
-/// رأس الشاشة: صورة + اسم المستخدم.
-/// تم استخدام BlocBuilder للتحديث الفوري عند تغيّر بيانات المستخدم.
+/// ╪▒╪ث╪│ ╪د┘╪┤╪د╪┤╪ر: ╪╡┘ê╪▒╪ر + ╪د╪│┘à ╪د┘┘à╪│╪ز╪«╪»┘à.
+/// ╪ز┘à ╪د╪│╪ز╪«╪»╪د┘à BlocBuilder ┘┘╪ز╪ص╪»┘è╪س ╪د┘┘┘ê╪▒┘è ╪╣┘╪» ╪ز╪║┘è┘ّ╪▒ ╪ذ┘è╪د┘╪د╪ز ╪د┘┘à╪│╪ز╪«╪»┘à.
 class _HeaderSection extends StatelessWidget {
   final Widget Function() buildProfileImage;
 
@@ -156,7 +175,7 @@ class _HeaderSection extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // إطار صورة بروفايل دائري
+          // ╪ح╪╖╪د╪▒ ╪╡┘ê╪▒╪ر ╪ذ╪▒┘ê┘╪د┘è┘ ╪»╪د╪خ╪▒┘è
           Container(
             height: 84.rh(context),
             width: 84.rw(context),
@@ -178,7 +197,7 @@ class _HeaderSection extends StatelessWidget {
           ),
           const SizedBox(width: 18),
 
-          // الاسم — يُعاد بناؤه تلقائيًا عند تغير حالة UserDetailsCubit
+          // ╪د┘╪د╪│┘à ظ¤ ┘è┘╪╣╪د╪» ╪ذ┘╪د╪ج┘ç ╪ز┘┘é╪د╪خ┘è┘ï╪د ╪╣┘╪» ╪ز╪║┘è╪▒ ╪ص╪د┘╪ر UserDetailsCubit
           Expanded(
             child: BlocBuilder<UserDetailsCubit, UserDetailsState>(
               buildWhen: (prev, curr) => prev.user != curr.user,
@@ -213,7 +232,7 @@ class _HeaderSection extends StatelessWidget {
   }
 }
 
-/// صف الإحصائيات: (المفضلة / الإعلانات / الرسائل / التقييم)
+/// ╪╡┘ ╪د┘╪ح╪ص╪╡╪د╪خ┘è╪د╪ز: (╪د┘┘à┘╪╢┘╪ر / ╪د┘╪ح╪╣┘╪د┘╪د╪ز / ╪د┘╪▒╪│╪د╪خ┘ / ╪د┘╪ز┘é┘è┘è┘à)
 class _StatsRow extends StatelessWidget {
   const _StatsRow();
 
@@ -230,26 +249,43 @@ class _StatsRow extends StatelessWidget {
           fav = s.totalFavorites;
           ads = s.totalAds;
           chats = s.totalChats;
-          // TODO: اربط التقييم الحقيقي عند توفره من الـ API
+          // TODO: ╪د╪▒╪ذ╪╖ ╪د┘╪ز┘é┘è┘è┘à ╪د┘╪ص┘é┘è┘é┘è ╪╣┘╪» ╪ز┘ê┘╪▒┘ç ┘à┘ ╪د┘┘ API
           // rating = s.rating;
         }
-
-        String showInt(int v) => isReady ? '$v' : '—';
-        String showRating(double v) => isReady ? v.toStringAsFixed(1) : '—';
+        String showInt(int v) => isReady ? "$v" : "-";
+        String showRating(double v) => isReady ? v.toStringAsFixed(1) : "-";
 
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              StatBox(value: showInt(fav), label: "المفضلة".translate(context)),
-              StatBox(
-                  value: showInt(ads), label: "الإعلانات".translate(context)),
-              StatBox(
-                  value: showInt(chats), label: "الرسائل".translate(context)),
-              StatBox(
+              Expanded(
+                child: StatBox(
+                  value: showInt(fav),
+                  label: "\u0627\u0644\u0645\u0641\u0636\u0644\u0629".translate(context),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: StatBox(
+                  value: showInt(ads),
+                  label: "\u0627\u0644\u0625\u0639\u0644\u0627\u0646\u0627\u062a".translate(context),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: StatBox(
+                  value: showInt(chats),
+                  label: "\u0627\u0644\u0631\u0633\u0627\u0626\u0644".translate(context),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: StatBox(
                   value: showRating(rating),
-                  label: "التقييم".translate(context)),
+                  label: "\u0627\u0644\u062a\u0642\u064a\u064a\u0645".translate(context),
+                ),
+              ),
             ],
           ),
         );
@@ -258,7 +294,9 @@ class _StatsRow extends StatelessWidget {
   }
 }
 
-/// صندوق رقم + عنوان بسيط مع إمكانية الضغط (اختياري)
+
+
+/// ╪╡┘╪»┘ê┘é ╪▒┘é┘à + ╪╣┘┘ê╪د┘ ╪ذ╪│┘è╪╖ ┘à╪╣ ╪ح┘à┘â╪د┘┘è╪ر ╪د┘╪╢╪║╪╖ (╪د╪«╪ز┘è╪د╪▒┘è)
 class StatBox extends StatelessWidget {
   final String value;
   final String label;
@@ -296,7 +334,7 @@ class StatBox extends StatelessWidget {
   }
 }
 
-/// أزرار الإجراءات (تعديل / مشاركة) مع حالات تعطيل/تحميل اختيارية.
+/// ╪ث╪▓╪▒╪د╪▒ ╪د┘╪ح╪ش╪▒╪د╪ة╪د╪ز (╪ز╪╣╪»┘è┘ / ┘à╪┤╪د╪▒┘â╪ر) ┘à╪╣ ╪ص╪د┘╪د╪ز ╪ز╪╣╪╖┘è┘/╪ز╪ص┘à┘è┘ ╪د╪«╪ز┘è╪د╪▒┘è╪ر.
 class _ProfileButtons extends StatelessWidget {
   final VoidCallback onEditProfilePressed;
   final VoidCallback onShareProfilePressed;
@@ -319,7 +357,7 @@ class _ProfileButtons extends StatelessWidget {
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
 
-    // مقاسات متجاوبة بسيطة
+    // ┘à┘é╪د╪│╪د╪ز ┘à╪ز╪ش╪د┘ê╪ذ╪ر ╪ذ╪│┘è╪╖╪ر
     double clamp(num v, num min, num max) =>
         math.max(min.toDouble(), math.min(max.toDouble(), v.toDouble()));
 
@@ -339,14 +377,14 @@ class _ProfileButtons extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         side: BorderSide(color: cs.outline.withOpacity(.6)),
       ),
-      minimumSize: Size(0, minH), // ارتفاع موحّد ومتجاوب
+      minimumSize: Size(0, minH), // ╪د╪▒╪ز┘╪د╪╣ ┘à┘ê╪ص┘ّ╪» ┘ê┘à╪ز╪ش╪د┘ê╪ذ
     ).copyWith(
-      // استخدام MaterialStateProperty لملاءمة إصدارات Flutter الأقدم
+      // ╪د╪│╪ز╪«╪»╪د┘à MaterialStateProperty ┘┘à┘╪د╪ة┘à╪ر ╪ح╪╡╪»╪د╪▒╪د╪ز Flutter ╪د┘╪ث┘é╪»┘à
       overlayColor: MaterialStatePropertyAll(cs.primary.withOpacity(.06)),
     );
 
     Widget labelText(String text) => FittedBox(
-          fit: BoxFit.scaleDown, // يضمن بقاء النص في سطر واحد
+          fit: BoxFit.scaleDown, // ┘è╪╢┘à┘ ╪ذ┘é╪د╪ة ╪د┘┘╪╡ ┘┘è ╪│╪╖╪▒ ┘ê╪د╪ص╪»
           alignment: Alignment.centerLeft,
           child: Text(
             text,
@@ -391,17 +429,17 @@ class _ProfileButtons extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Row(
-        mainAxisSize: MainAxisSize.max, // يغطي العرض كامل
+        mainAxisSize: MainAxisSize.max, // ┘è╪║╪╖┘è ╪د┘╪╣╪▒╪╢ ┘â╪د┘à┘
         children: [
-          // زر التعديل أعرض
+          // ╪▓╪▒ ╪د┘╪ز╪╣╪»┘è┘ ╪ث╪╣╪▒╪╢
           Expanded(
             flex: 7,
             child: Semantics(
               button: true,
-              label: 'تعديل الملف الشخصي',
+              label: '╪ز╪╣╪»┘è┘ ╪د┘┘à┘┘ ╪د┘╪┤╪«╪╡┘è',
               child: buildBtn(
                 icon: Icons.edit,
-                text: "تعديل الملف الشخصي".translate(context),
+                text: "╪ز╪╣╪»┘è┘ ╪د┘┘à┘┘ ╪د┘╪┤╪«╪╡┘è".translate(context),
                 onPressed: onEditProfilePressed,
                 enabled: editEnabled,
                 loading: isEditLoading,
@@ -410,15 +448,15 @@ class _ProfileButtons extends StatelessWidget {
           ),
           const SizedBox(width: 10),
 
-          // زر المشاركة أضيق
+          // ╪▓╪▒ ╪د┘┘à╪┤╪د╪▒┘â╪ر ╪ث╪╢┘è┘é
           Expanded(
             flex: 5,
             child: Semantics(
               button: true,
-              label: 'مشاركة الملف',
+              label: '┘à╪┤╪د╪▒┘â╪ر ╪د┘┘à┘┘',
               child: buildBtn(
                 icon: Icons.share,
-                text: "مشاركة الملف".translate(context),
+                text: "┘à╪┤╪د╪▒┘â╪ر ╪د┘┘à┘┘".translate(context),
                 onPressed: onShareProfilePressed,
                 enabled: shareEnabled,
                 loading: isShareLoading,
@@ -431,100 +469,135 @@ class _ProfileButtons extends StatelessWidget {
   }
 }
 
-/// تبويبات الحالات + شارة عدّاد اختيارية لكل تبويب.
-class _ProfileTabBar extends StatelessWidget {
+/// ╪ز╪ذ┘ê┘è╪ذ╪د╪ز ╪د┘╪ص╪د┘╪د╪ز + ╪┤╪د╪▒╪ر ╪╣╪»┘ّ╪د╪» ╪د╪«╪ز┘è╪د╪▒┘è╪ر ┘┘â┘ ╪ز╪ذ┘ê┘è╪ذ.
+/// Ads tabs bar with pill styling and per-tab counts.
+class _AdsTabChips extends StatelessWidget {
   final TabController controller;
   final List<Map<String, String>> adTabs;
-
-  // عدادات اختيارية (بنفس ترتيب التبويبات)
-  final List<int>? counts;
-
-  // حدث تغيير التبويب (اختياري)
+  final List<int?> counts;
   final void Function(int index)? onTap;
 
-  static const EdgeInsets _labelPadding =
-      EdgeInsets.symmetric(horizontal: 10, vertical: 4);
-  static const double _extraVerticalInset = 6;
-  static double get preferredHeight =>
-      kTextTabBarHeight + _labelPadding.vertical + _extraVerticalInset;
+  static const double preferredHeight = 64;
 
-  const _ProfileTabBar({
+  const _AdsTabChips({
     required this.controller,
     required this.adTabs,
-    this.counts,
+    required this.counts,
     this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final textTheme = theme.textTheme.labelLarge ??
-        theme.textTheme.bodyLarge ??
-        const TextStyle(fontSize: 14);
-    final isDark = theme.brightness == Brightness.dark;
-    final Color borderColor = isDark ? Colors.white12 : Colors.black12;
-    final Color background = theme.colorScheme.surface;
-    final Color onBackground = theme.colorScheme.onSurface;
+    final Color base = context.color.secondaryColor;
     final Color brand = context.color.territoryColor;
+    final Color textDefault = context.color.textDefaultColor;
 
-    final selectedStyle =
-    textTheme.copyWith(fontWeight: FontWeight.w600, height: 1.05);
-    final unselectedStyle =
-    textTheme.copyWith(fontWeight: FontWeight.w500, height: 1.05);
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        final int selectedIndex = controller.index;
+        return SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: List.generate(adTabs.length, (i) {
+              final title = adTabs[i]['title']!.translate(context);
+              final int? count = i < counts.length ? counts[i] : null;
+              final bool selected = i == selectedIndex;
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: _AdTabChip(
+                  label: title,
+                  count: count,
+                  selected: selected,
+                  background: base,
+                  brand: brand,
+                  textColor: textDefault,
+                  onTap: () => onTap?.call(i),
+                ),
+              );
+            }),
+          ),
+        );
+      },
+    );
+  }
+}
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 10),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: borderColor),
-      ),
-      child: TabBar(
-        controller: controller,
-        isScrollable: true,
-        physics: AppScrollBehavior.defaultPhysics,
+class _AdTabChip extends StatelessWidget {
+  final String label;
+  final int? count;
+  final bool selected;
+  final Color background;
+  final Color brand;
+  final Color textColor;
+  final VoidCallback? onTap;
 
-        labelPadding: _labelPadding,
-        indicator: UnderlineTabIndicator(
-            borderSide: BorderSide(color: brand, width: 2.5),
-            insets: const EdgeInsets.symmetric(horizontal: 20)),
-        overlayColor: MaterialStateProperty.all(Colors.transparent),
-        labelColor: onBackground,
-        unselectedLabelColor: onBackground.withOpacity(0.55),
-        labelStyle: selectedStyle,
-        unselectedLabelStyle: unselectedStyle,
+  const _AdTabChip({
+    required this.label,
+    this.count,
+    required this.selected,
+    required this.background,
+    required this.brand,
+    required this.textColor,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final Color fill = selected ? brand.withOpacity(0.16) : background;
+    final Color border = selected ? brand : textColor.withOpacity(0.25);
+    final Color labelColor = selected ? brand : textColor.withOpacity(0.9);
+    final Color badgeBg =
+        selected ? brand.withOpacity(0.22) : textColor.withOpacity(0.12);
+    final Color badgeText =
+        selected ? brand : textColor.withOpacity(0.8);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
         onTap: onTap,
-        tabs: List.generate(adTabs.length, (i) {
-          final title = adTabs[i]['title']!.translate(context);
-          final count =
-              (counts != null && i < counts!.length) ? counts![i] : null;
-
-          return Tab(
-            child: Semantics(
-              label: count == null ? title : '$title ($count)',
-              selected: controller.index == i,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minWidth: 80),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Flexible(
-                      child: Text(
-                        title,
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
-                      ),
-                    ),
-                    if (count != null) ...[
-                      const SizedBox(width: 5),
-                      _Badge(count: count),
-                    ],
-                  ],
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: fill,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: border, width: 1.2),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: labelColor,
+                  fontSize: 14,
                 ),
               ),
-            ),
-          );
-        }),
+              if (count != null) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: badgeBg,
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Text(
+                    '$count',
+                    style: TextStyle(
+                      color: badgeText,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -541,14 +614,14 @@ class _StatsTabsHeaderDelegate extends SliverPersistentHeaderDelegate {
   final WidgetBuilder statsBuilder;
   final WidgetBuilder tabBarBuilder;
 
-  static const double _statsSectionExtent = 95;
-  static const double _topSpacing = 4;
+  static const double _statsSectionExtent = 0;
+  static const double _topSpacing = 0;
   static const double _betweenSpacing = 6;
   static const double _bottomSpacing = 12;
 
   double get _tabsSectionExtent =>
-      _ProfileTabBar.preferredHeight +
-      _topSpacing +
+      _AdsTabChips.preferredHeight +
+          _topSpacing +
       _betweenSpacing +
       _bottomSpacing;
 
@@ -615,26 +688,8 @@ class _StatsTabsHeaderDelegate extends SliverPersistentHeaderDelegate {
   }
 }
 
-/// شارة عدّاد صغيرة
-class _Badge extends StatelessWidget {
-  final int count;
+/// ╪┤╪د╪▒╪ر ╪╣╪»┘ّ╪د╪» ╪╡╪║┘è╪▒╪ر
 
-  const _Badge({required this.count});
 
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: cs.primary.withOpacity(.12),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        '$count',
-        style: TextStyle(fontSize: 12, color: cs.primary),
-      ),
-    );
-  }
-}
+
 

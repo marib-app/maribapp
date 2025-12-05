@@ -1,4 +1,4 @@
-﻿import 'package:marib/app/routes.dart';
+import 'package:marib/app/routes.dart';
 import 'package:marib/ui/screens/home_screen/home_screen.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
@@ -21,9 +21,7 @@ import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
 
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:marib/utils/currency_utils.dart';
-
-
-
+import 'package:marib/utils/delivery_department.dart';
 
 class SectionsAdapter extends StatelessWidget {
   final HomeScreenSection section;
@@ -103,10 +101,10 @@ class SectionsAdapter extends StatelessWidget {
         listWidget,
       ],
     );
-  }  @override
+  }
+
+  @override
   Widget build(BuildContext context) {
-
-
     final data = section.sectionData;
     if (data == null || data.isEmpty) return const SizedBox.shrink();
 
@@ -211,9 +209,6 @@ class SectionsAdapter extends StatelessWidget {
   }
 }
 
-
-
-
 class TitleHeader extends StatelessWidget {
   final String title;
   final Function() onTap;
@@ -225,8 +220,6 @@ class TitleHeader extends StatelessWidget {
     required this.onTap,
     this.hideSeeAll,
   });
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -246,10 +239,9 @@ class TitleHeader extends StatelessWidget {
           if (!(hideSeeAll ?? false))
             GestureDetector(
               onTap: onTap,
-
               child: Container(
                   padding:
-                  const EdgeInsets.symmetric(horizontal: 4, vertical: 2.2),
+                      const EdgeInsets.symmetric(horizontal: 4, vertical: 2.2),
                   child: Text("seeAll".translate(context))
                       .size(context.font.smaller + 1)),
             )
@@ -258,12 +250,6 @@ class TitleHeader extends StatelessWidget {
     );
   }
 }
-
-
-
-
-
-
 
 class ICard extends StatefulWidget {
   final double? width;
@@ -297,7 +283,8 @@ class _ItemCardState extends State<ICard> {
     timeago.setLocaleMessages('ar', timeago.ArMessages());
 
     // نحسب تاريخ الإنشاء مرة واحدة
-    _createdAt = _extractCreatedAt(widget.item) ?? _parseAnyDate(widget.created);
+    _createdAt =
+        _extractCreatedAt(widget.item) ?? _parseAnyDate(widget.created);
   }
 
   bool get _isNew {
@@ -339,14 +326,30 @@ class _ItemCardState extends State<ICard> {
     if (item == null) return null;
     final d = item as dynamic;
     dynamic v;
-    try { v ??= d.createdAt; } catch (_) {}
-    try { v ??= d.created_at; } catch (_) {}
-    try { v ??= d.date; } catch (_) {}
-    try { v ??= d.createdOn; } catch (_) {}
-    try { v ??= d.postedAt; } catch (_) {}
-    try { v ??= d.timestamp; } catch (_) {}
-    try { v ??= d.time; } catch (_) {}
-    try { v ??= d.created; } catch (_) {}
+    try {
+      v ??= d.createdAt;
+    } catch (_) {}
+    try {
+      v ??= d.created_at;
+    } catch (_) {}
+    try {
+      v ??= d.date;
+    } catch (_) {}
+    try {
+      v ??= d.createdOn;
+    } catch (_) {}
+    try {
+      v ??= d.postedAt;
+    } catch (_) {}
+    try {
+      v ??= d.timestamp;
+    } catch (_) {}
+    try {
+      v ??= d.time;
+    } catch (_) {}
+    try {
+      v ??= d.created;
+    } catch (_) {}
     return _parseAnyDate(v);
   }
 
@@ -393,7 +396,6 @@ class _ItemCardState extends State<ICard> {
 
   @override
   Widget build(BuildContext context) {
-
     final item = widget.item;
     final String? discountText = _discountLabel(item);
 
@@ -430,8 +432,6 @@ class _ItemCardState extends State<ICard> {
           arguments: {"model": widget.item}, // ✅ يمرِّر ItemModel
         );
       },
-
-
       borderRadius: BorderRadius.circular(18),
       child: Container(
         width: widget.width ?? 250,
@@ -484,6 +484,24 @@ class _ItemCardState extends State<ICard> {
                         child: const _NewBadge(),
                       ),
 
+                    if (_isCommercial(widget.item))
+                      PositionedDirectional(
+                        end: 10,
+                        bottom: discountText != null ? 36 : 12,
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.55),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.add_shopping_cart_outlined,
+                            size: 18,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+
                     if (discountText != null)
                       Positioned(
                         left: 0,
@@ -528,15 +546,18 @@ class _ItemCardState extends State<ICard> {
                         if (_extractCreatedAt(widget.item) != null)
                           Row(
                             children: [
-                              const Icon(Icons.access_time, size: 14, color: Colors.grey),
+                              const Icon(Icons.access_time,
+                                  size: 14, color: Colors.grey),
                               const SizedBox(width: 5),
                               Text(
-                                timeago.format(_extractCreatedAt(widget.item)!, locale: 'ar'),
+                                timeago.format(_extractCreatedAt(widget.item)!,
+                                    locale: 'ar'),
                                 style: TextStyle(
                                   fontSize: widget.bigCard == true
                                       ? context.font.small
                                       : context.font.smaller,
-                                  color: context.color.textDefaultColor.withOpacity(0.6),
+                                  color: context.color.textDefaultColor
+                                      .withOpacity(0.6),
                                 ),
                               ),
                             ],
@@ -545,7 +566,6 @@ class _ItemCardState extends State<ICard> {
                     ),
                   ),
                 ),
-
               ],
             ),
 
@@ -563,9 +583,6 @@ class _ItemCardState extends State<ICard> {
       ),
     );
   }
-
-
-
 
   Widget _buildTitle(String title, BuildContext context) {
     const int titleLengthThreshold = 18; // عدد الأحرف المسموح بها قبل التمرير
@@ -602,20 +619,6 @@ class _ItemCardState extends State<ICard> {
     }
   }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   // 🔵 دالة لتنسيق السعر والعملة بألوان وأحجام مختلفة مع دعم الوضع الليلي، الحركة، والخطوط من الثيم
 
   /// ✅ دالة لبناء عنصر السعر والعملة بشكل منسق
@@ -627,10 +630,10 @@ class _ItemCardState extends State<ICard> {
     if (rawPrice <= 0) return const SizedBox.shrink();
 
     final formattedPrice = HelperUtils.formatPrice(rawPrice);
-    final price = formattedPrice.isEmpty ? '—' : formattedPrice; // ✅ تنسيق السعر مثل "55 ألف"
+    final price = formattedPrice.isEmpty
+        ? '—'
+        : formattedPrice; // ✅ تنسيق السعر مثل "55 ألف"
     //    final currency = widget.item?.currency ?? "";
-
-
 
     final currency = _resolveCurrency(widget.item);
 
@@ -643,17 +646,17 @@ class _ItemCardState extends State<ICard> {
             TextSpan(
               text: "$price ",
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: context.color.territoryColor,
-                fontWeight: FontWeight.bold,
-              ),
+                    color: context.color.territoryColor,
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
 
             // ✅ العملة - لون هادئ وخط أصغر قليلاً
             TextSpan(
               text: currency,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: context.color.textDefaultColor.withOpacity(0.6),
-              ),
+                    color: context.color.textDefaultColor.withOpacity(0.6),
+                  ),
             ),
           ],
         ),
@@ -661,22 +664,19 @@ class _ItemCardState extends State<ICard> {
     );
   }
 
-
   String _resolveCurrency(ItemModel? item) {
     final String? raw = item?.currency;
-    final String? code = item?.currencyCode ??
-        CurrencyUtils.normalizeCurrencyCode(raw);
+    final String? code =
+        item?.currencyCode ?? CurrencyUtils.normalizeCurrencyCode(raw);
 
-    final String? preferred =
-    CurrencyUtils.preferredDisplayFor(code ?? raw);
+    final String? preferred = CurrencyUtils.preferredDisplayFor(code ?? raw);
     if (preferred != null && preferred.trim().isNotEmpty) {
       return preferred.trim();
     }
 
     final String? normalizedFromRaw =
-    raw != null ? CurrencyUtils.preferredDisplayFor(raw) : null;
-    if (normalizedFromRaw != null &&
-        normalizedFromRaw.trim().isNotEmpty) {
+        raw != null ? CurrencyUtils.preferredDisplayFor(raw) : null;
+    if (normalizedFromRaw != null && normalizedFromRaw.trim().isNotEmpty) {
       return normalizedFromRaw.trim();
     }
 
@@ -703,8 +703,7 @@ class _ItemCardState extends State<ICard> {
           return BlocBuilder<FavoriteCubit, FavoriteState>(
             bloc: favoriteCubit,
             builder: (context, likeAndDislikeState) {
-              final bool isLikeFromCubit =
-                  favoriteCubit.isItemFavorite(itemId);
+              final bool isLikeFromCubit = favoriteCubit.isItemFavorite(itemId);
 
               return BlocConsumer<UpdateFavoriteCubit, UpdateFavoriteState>(
                 bloc: context.read<UpdateFavoriteCubit>(),
@@ -740,19 +739,19 @@ class _ItemCardState extends State<ICard> {
                               isLike ? AppIcons.like_fill : AppIcons.like,
                               width: 22,
                               height: 22,
-                              color:
-                                  isLike ? Colors.redAccent : Colors.white,
+                              color: isLike ? Colors.redAccent : Colors.white,
                             ),
                       onPressed: inProgress
                           ? null
                           : () {
                               UiUtils.checkUser(
                                 onNotGuest: () {
-                                  context.read<UpdateFavoriteCubit>()
+                                  context
+                                      .read<UpdateFavoriteCubit>()
                                       .setFavoriteItem(
-                                    item: item,
-                                    type: isLike ? 0 : 1,
-                                  );
+                                        item: item,
+                                        type: isLike ? 0 : 1,
+                                      );
 
                                   UiUtils.showSoftSnackBar(
                                     context,
@@ -774,17 +773,39 @@ class _ItemCardState extends State<ICard> {
       ),
     );
   }
+
+  bool _isCommercial(ItemModel? item) {
+    final String? normalized = _normalizedDepartment(item);
+    return normalized == 'shein' ||
+        normalized == 'computer' ||
+        normalized == 'store';
+  }
+
+  String? _normalizedDepartment(ItemModel? item) {
+    if (item == null) return null;
+
+    // 1) Explicit department slug or itemType.
+    final String? fromSlug =
+        normalizeDeliveryDepartment(item.departmentSlug ?? item.itemType);
+    if (fromSlug != null) return fromSlug;
+
+    // 2) Category ids (current + all parents).
+    final List<int> categoryIds = <int>[];
+    if (item.categoryId != null) categoryIds.add(item.categoryId!);
+    if (item.allCategoryIds != null && item.allCategoryIds!.isNotEmpty) {
+      final parts = item.allCategoryIds!.split(',');
+      for (final p in parts) {
+        final int? id = int.tryParse(p.trim());
+        if (id != null) categoryIds.add(id);
+      }
+    }
+    final String? fromCats =
+        resolveDeliveryDepartmentFromCategoryIds(categoryIds);
+    if (fromCats != null) return fromCats;
+
+    return null;
+  }
 }
-
-
-
-
-
-
-
-
-
-
 
 class _NewBadge extends StatelessWidget {
   const _NewBadge();

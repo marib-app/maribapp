@@ -19,15 +19,7 @@ import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/geo_rules.dart';
 import 'package:marib/utils/currency_utils.dart';
-
-
-
-
-
-
-
-
-
+import 'package:marib/utils/delivery_department.dart';
 
 /// ✅ تعريف كلاس حالة الإعلان (محجوز / مباعة...)
 class StatusButton {
@@ -126,11 +118,13 @@ class ItemImageSection extends StatelessWidget {
     final String? discountText = _discountLabel();
 
     final String? preferredThumb =
-    (item.thumbnailUrl?.trim().isNotEmpty ?? false) ? item.thumbnailUrl : null;
+        (item.thumbnailUrl?.trim().isNotEmpty ?? false)
+            ? item.thumbnailUrl
+            : null;
     final String? fallbackThumb =
-    (item.thumbnailFallbackUrl?.trim().isNotEmpty ?? false)
-        ? item.thumbnailFallbackUrl
-        : item.image;
+        (item.thumbnailFallbackUrl?.trim().isNotEmpty ?? false)
+            ? item.thumbnailFallbackUrl
+            : item.image;
     final String resolvedUrl =
         preferredThumb ?? fallbackThumb ?? item.image ?? '';
 
@@ -195,6 +189,25 @@ class ItemImageSection extends StatelessWidget {
                   ),
                 ),
               ),
+
+            // Basket icon for commercial departments
+            if (_isCommercialDepartment(item))
+              PositionedDirectional(
+                end: 8,
+                bottom: discountText != null ? 34 : 12,
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.55),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.add_shopping_cart_outlined,
+                    size: 18,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
           ],
         ),
 
@@ -228,6 +241,36 @@ class ItemImageSection extends StatelessWidget {
           ),
       ],
     );
+  }
+
+  bool _isCommercialDepartment(ItemModel item) {
+    final String? normalized = _normalizedDepartment(item);
+    return normalized == 'shein' ||
+        normalized == 'computer' ||
+        normalized == 'store';
+  }
+
+  String? _normalizedDepartment(ItemModel item) {
+    // 1) explicit slug or itemType.
+    final String? fromSlug =
+        normalizeDeliveryDepartment(item.departmentSlug ?? item.itemType);
+    if (fromSlug != null) return fromSlug;
+
+    // 2) category ids list (current + ancestors).
+    final List<int> categoryIds = <int>[];
+    if (item.categoryId != null) categoryIds.add(item.categoryId!);
+    if (item.allCategoryIds != null && item.allCategoryIds!.isNotEmpty) {
+      final parts = item.allCategoryIds!.split(',');
+      for (final p in parts) {
+        final int? id = int.tryParse(p.trim());
+        if (id != null) categoryIds.add(id);
+      }
+    }
+    final String? fromCats =
+        resolveDeliveryDepartmentFromCategoryIds(categoryIds);
+    if (fromCats != null) return fromCats;
+
+    return null;
   }
 }
 
@@ -288,9 +331,9 @@ class FavoriteButtonWidget extends StatelessWidget {
                     context: context,
                     onNotGuest: () {
                       context.read<UpdateFavoriteCubit>().setFavoriteItem(
-                        item: item,
-                        type: isLike ? 0 : 1,
-                      );
+                            item: item,
+                            type: isLike ? 0 : 1,
+                          );
                     },
                   );
                 },
@@ -300,29 +343,28 @@ class FavoriteButtonWidget extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: context.color.secondaryColor,
                     shape: BoxShape.circle,
-                    boxShadow:
-                    context.watch<AppThemeCubit>().state.appTheme ==
-                        AppTheme.dark
+                    boxShadow: context.watch<AppThemeCubit>().state.appTheme ==
+                            AppTheme.dark
                         ? null
                         : [
-                      const BoxShadow(
-                        color: Color.fromARGB(12, 0, 0, 0),
-                        offset: Offset(0, 2),
-                        blurRadius: 10,
-                        spreadRadius: 4,
-                      ),
-                    ],
+                            const BoxShadow(
+                              color: Color.fromARGB(12, 0, 0, 0),
+                              offset: Offset(0, 2),
+                              blurRadius: 10,
+                              spreadRadius: 4,
+                            ),
+                          ],
                   ),
                   child: FittedBox(
                     fit: BoxFit.none,
                     child: state is UpdateFavoriteInProgress
                         ? Center(child: UiUtils.progress())
                         : UiUtils.getSvg(
-                      isLike ? AppIcons.like_fill : AppIcons.like,
-                      width: 22,
-                      height: 22,
-                      color: context.color.territoryColor,
-                    ),
+                            isLike ? AppIcons.like_fill : AppIcons.like,
+                            width: 22,
+                            height: 22,
+                            color: context.color.territoryColor,
+                          ),
                   ),
                 ),
               );
@@ -348,7 +390,7 @@ class ItemDetailsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String? address =
-    (item.address?.trim().isNotEmpty ?? false) ? item.address : null;
+        (item.address?.trim().isNotEmpty ?? false) ? item.address : null;
     final bool hideLocation = GeoRules.isDisabledForItem(item);
 
     return Column(
@@ -362,7 +404,7 @@ class ItemDetailsSection extends StatelessWidget {
           builder: (context) {
             final title = item.name?.firstUpperCase() ?? "بدون عنوان";
             final dynamicFontSize =
-            title.length > 30 ? context.font.smaller : context.font.normal;
+                title.length > 30 ? context.font.smaller : context.font.normal;
             final style = TextStyle(
               fontSize: dynamicFontSize,
               color: context.color.textDefaultColor,
@@ -411,7 +453,6 @@ class ItemDetailsSection extends StatelessWidget {
               ),
             ),
             if (showLikeButton) favButton(item: item, size: 32),
-
           ],
         ),
 
@@ -433,8 +474,7 @@ class ItemDetailsSection extends StatelessWidget {
                     builder: (context) {
                       final style = TextStyle(
                         fontSize: context.font.smaller,
-                        color:
-                        context.color.textDefaultColor.withOpacity(0.5),
+                        color: context.color.textDefaultColor.withOpacity(0.5),
                       );
                       if ((address?.length ?? 0) > 28) {
                         return SizedBox(
@@ -447,10 +487,9 @@ class ItemDetailsSection extends StatelessWidget {
                             velocity: 25.0,
                             pauseAfterRound: const Duration(seconds: 1),
                             startPadding: 10.0,
-                            accelerationDuration:
-                            const Duration(seconds: 1),
+                            accelerationDuration: const Duration(seconds: 1),
                             decelerationDuration:
-                            const Duration(milliseconds: 500),
+                                const Duration(milliseconds: 500),
                           ),
                         );
                       }
@@ -468,9 +507,6 @@ class ItemDetailsSection extends StatelessWidget {
     );
   }
 }
-
-
-
 
 Widget favButton({required ItemModel item, required double size}) {
   final int? itemId = item.id;
@@ -496,9 +532,10 @@ Widget favButton({required ItemModel item, required double size}) {
               },
               builder: (context, state) {
                 final inProgress = state is UpdateFavoriteInProgress;
-                final bool isLike = state is UpdateFavoriteSuccess && state.item.id == itemId
-                    ? state.wasProcess
-                    : isLikeFromCubit;
+                final bool isLike =
+                    state is UpdateFavoriteSuccess && state.item.id == itemId
+                        ? state.wasProcess
+                        : isLikeFromCubit;
 
                 return CircleAvatar(
                   backgroundColor: Colors.black54,
@@ -510,7 +547,8 @@ Widget favButton({required ItemModel item, required double size}) {
                             height: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(Colors.white),
                             ),
                           )
                         : UiUtils.getSvg(
@@ -524,7 +562,9 @@ Widget favButton({required ItemModel item, required double size}) {
                         : () {
                             UiUtils.checkUser(
                               onNotGuest: () {
-                                context.read<UpdateFavoriteCubit>().setFavoriteItem(
+                                context
+                                    .read<UpdateFavoriteCubit>()
+                                    .setFavoriteItem(
                                       item: item,
                                       type: isLike ? 0 : 1,
                                     );
@@ -549,6 +589,7 @@ Widget favButton({required ItemModel item, required double size}) {
     },
   );
 }
+
 /// ✅ ويدجت سعر مبسط (بدون شيمر)
 class _PriceInline extends StatelessWidget {
   final num? price;
@@ -582,8 +623,7 @@ class _PriceInline extends StatelessWidget {
         Text(
           _currencyLabel,
           style: style.copyWith(
-            fontSize:
-            style.fontSize != null ? style.fontSize! * 0.75 : null,
+            fontSize: style.fontSize != null ? style.fontSize! * 0.75 : null,
             color: textColor.withOpacity(0.6),
           ),
         ),
@@ -598,9 +638,10 @@ class _PriceInline extends StatelessWidget {
     }
     return formatted;
   }
+
   String get _currencyLabel {
     final String? preferred =
-    CurrencyUtils.preferredDisplayFor(currencyCode ?? currency);
+        CurrencyUtils.preferredDisplayFor(currencyCode ?? currency);
     if (preferred != null && preferred.trim().isNotEmpty) {
       return preferred.trim();
     }
@@ -619,7 +660,6 @@ class _PriceInline extends StatelessWidget {
 
     return CurrencyUtils.preferredDisplayFor('YER') ?? Constant.currencySymbol;
   }
-
 }
 
 /// ✅ الكارد الأفقي
@@ -679,6 +719,5 @@ class ItemHorizontalCard extends StatelessWidget {
         ),
       ),
     );
-
   }
 }

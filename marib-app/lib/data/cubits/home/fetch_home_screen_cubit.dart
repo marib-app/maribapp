@@ -1,7 +1,6 @@
-import 'package:marib/data/model/home/home_screen_section.dart';
+﻿import 'package:marib/data/model/home/home_screen_section.dart';
 import 'package:marib/data/model/item/item_model.dart';
 import 'package:marib/data/repositories/home/home_repository.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:marib/utils/slider_interface_mapper.dart';
 import 'package:hydrated_bloc/hydrated_bloc.dart';
 
@@ -348,7 +347,7 @@ class FetchHomeScreenCubit extends HydratedCubit<FetchHomeScreenState> {
             sections.add(HomeScreenSection.fromJson(item));
           } else if (item is Map) {
             sections.add(HomeScreenSection.fromJson(
-                Map<String, dynamic>.from(item as Map)));
+                Map<String, dynamic>.from(item)));
           }
         }
       }
@@ -396,3 +395,4 @@ class FetchHomeScreenCubit extends HydratedCubit<FetchHomeScreenState> {
     };
   }
 }
+

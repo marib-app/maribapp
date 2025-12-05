@@ -33,13 +33,15 @@ class ItemsList extends StatefulWidget {
   final String categoryId, categoryName;
   final List<String> categoryIds;
   final String interfaceType;
+  final String? initialSortBy;
 
   const ItemsList(
       {super.key,
         required this.categoryId,
         required this.categoryName,
         required this.categoryIds,
-        required this.interfaceType});
+        required this.interfaceType,
+        this.initialSortBy});
 
   @override
   ItemsListState createState() => ItemsListState();
@@ -52,6 +54,7 @@ class ItemsList extends StatefulWidget {
         categoryName: arguments?['catName'],
         categoryIds: arguments?['categoryIds'],
         interfaceType: arguments?['interfaceType'],
+        initialSortBy: arguments?['initialSortBy'],
       ),
     );
   }
@@ -79,6 +82,7 @@ class ItemsListState extends State<ItemsList> {
   @override
   void initState() {
     super.initState();
+    sortBy = widget.initialSortBy;
     searchbody = {};
     Constant.itemFilter = null;
     searchController = TextEditingController();
@@ -90,6 +94,7 @@ class ItemsListState extends State<ItemsList> {
           widget.categoryId,
         ),
         search: "",
+        sortBy: sortBy,
         filter: ItemFilterModel(
           // Remove location filtering to show all items regardless of location
           // country: HiveUtils.getCountryName() ?? "",
@@ -627,10 +632,14 @@ class ItemsListState extends State<ItemsList> {
         sections.addAll(_buildSuccessSections(context, skeletons));
       }
 
-      if (state.isLoadingMore) {
-        sections.add(_buildLoadingMoreSection(context));
+      final bool hasMore =
+          context.read<FetchItemFromCategoryCubit>().hasMoreData();
+      if (hasMore && !state.loadingMoreError) {
+        sections.add(_buildLoadingMoreStatusSection(context, state));
       } else if (state.loadingMoreError) {
         sections.add(_buildLoadMoreErrorSection(context));
+      } else if (!hasMore) {
+        sections.add(_buildEndOfResultsSection(context));
       }
 
       return sections;
@@ -802,14 +811,59 @@ class ItemsListState extends State<ItemsList> {
     );
   }
 
-  CatalogSection _buildLoadingMoreSection(BuildContext context) {
+  CatalogSection _buildLoadingMoreStatusSection(
+      BuildContext context, FetchItemFromCategorySuccess state) {
+    const double indicatorExtent = 52;
+    const double verticalPadding = 26;
+
     return CatalogBoxSection(
       key: const ValueKey('items_loading_more'),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16),
+        padding: const EdgeInsets.symmetric(vertical: verticalPadding),
         child: Center(
-          child: UiUtils.progress(
-            normalProgressColor: context.color.territoryColor,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 250),
+            child: state.isLoadingMore
+                ? TweenAnimationBuilder<double>(
+                    key: const ValueKey('loading_more_indicator'),
+                    tween: Tween<double>(
+                      begin: 0.45,
+                      end: 1.0,
+                    ),
+                    duration: const Duration(milliseconds: 900),
+                    curve: Curves.easeInOut,
+                    builder: (context, opacity, child) {
+                      return Opacity(opacity: opacity, child: child);
+                    },
+                    child: Container(
+                      height: indicatorExtent,
+                      width: indicatorExtent,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surfaceVariant
+                            .withOpacity(0.35),
+                        borderRadius:
+                            BorderRadius.circular(indicatorExtent / 2),
+                      ),
+                      alignment: Alignment.center,
+                      child: SizedBox(
+                        height: indicatorExtent - 20,
+                        width: indicatorExtent - 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 3,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            context.color.territoryColor,
+                          ),
+                        ),
+                      ),
+                    ),
+                  )
+                : const SizedBox(
+                    key: ValueKey('loading_more_spacer'),
+                    height: indicatorExtent,
+                    width: indicatorExtent,
+                  ),
           ),
         ),
       ),
@@ -821,11 +875,54 @@ class ItemsListState extends State<ItemsList> {
       key: const ValueKey('items_loading_more_error'),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-        child: Text(
-          'somethingWentWrong'.translate(context),
-          textAlign: TextAlign.center,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(
+              'somethingWentWrong'.translate(context),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton(
+              onPressed: _retryLoadMore,
+              child: Text('retryLbl'.translate(context)),
+            ),
+          ],
         ),
       ),
+    );
+  }
+
+  CatalogSection _buildEndOfResultsSection(BuildContext context) {
+    final Color messageColor =
+        Theme.of(context).colorScheme.onSurface.withOpacity(0.6);
+
+    return CatalogBoxSection(
+      key: const ValueKey('items_end_of_results'),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 32, 24, 40),
+        child: Center(
+          child: Text(
+            'noMoreResultsLbl'.translate(context),
+            textAlign: TextAlign.center,
+            style: Theme.of(context)
+                .textTheme
+                .bodyMedium
+                ?.copyWith(color: messageColor),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _retryLoadMore() {
+    final cubit = context.read<FetchItemFromCategoryCubit>();
+    cubit.fetchItemFromCategoryMore(
+      catId: int.parse(widget.categoryId),
+      search: searchController.text,
+      sortBy: sortBy,
+      filter: ItemFilterModel(categoryId: widget.categoryId),
     );
   }
 

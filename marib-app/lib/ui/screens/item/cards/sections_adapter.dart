@@ -1,4 +1,4 @@
-import 'package:marib/app/routes.dart';
+﻿import 'package:marib/app/routes.dart';
 import 'package:marib/ui/screens/home_screen/home_screen.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
@@ -39,29 +39,71 @@ class SectionsAdapter extends StatelessWidget {
 
   /// واجهة العنوان + قائمة العناصر
   Widget _buildSection(BuildContext context, Widget listWidget) {
+    void _navigateSeeAll() {
+      String? _mapFilterToSort(String? filter) {
+        switch ((filter ?? '').toLowerCase()) {
+          case 'latest':
+            return 'new-to-old';
+          case 'highest_price':
+            return 'price-high-to-low';
+          case 'lowest_price':
+          case 'price_range':
+            return 'price-low-to-high';
+          default:
+            return null;
+        }
+      }
+
+      final String? initialSort = _mapFilterToSort(section.filter);
+
+      if (section.sectionId != null) {
+        Navigator.pushNamed(
+          context,
+          Routes.sectionWiseItemsScreen,
+          arguments: {
+            "title": section.title,
+            "sectionId": section.sectionId,
+          },
+        );
+        return;
+      }
+
+      final ItemModel? firstItem = (section.sectionData?.isNotEmpty ?? false)
+          ? section.sectionData!.first
+          : null;
+      final int? catId = firstItem?.category?.id;
+      if (catId != null) {
+        Navigator.pushNamed(
+          context,
+          Routes.itemsList,
+          arguments: {
+            'catID': catId.toString(),
+            'catName': section.title ?? firstItem?.category?.name ?? '',
+            'categoryIds': <String>[catId.toString()],
+            'interfaceType': section.sectionType ?? '',
+            'initialSortBy': initialSort,
+          },
+        );
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('لا توجد بيانات لعرض الكل'),
+        ),
+      );
+    }
+
     return Column(
       children: [
         TitleHeader(
           title: section.title ?? "",
-          onTap: () {
-            Navigator.pushNamed(
-              context,
-              Routes.sectionWiseItemsScreen,
-              arguments: {
-                "title": section.title,
-                "sectionId": section.sectionId,
-              },
-            );
-          },
+          onTap: _navigateSeeAll,
         ),
         listWidget,
       ],
     );
-  }
-
-
-
-  @override
+  }  @override
   Widget build(BuildContext context) {
 
 

@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:marib/ui/theme/theme.dart';
+import 'package:marib/data/model/social_link_model.dart';
 import 'package:marib/utils/app_icon.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/responsiveSize.dart';
@@ -19,6 +20,7 @@ class InfoScreenUI extends StatelessWidget {
     required this.onAboutUsTap,
     required this.onTermsTap,
     required this.onPrivacyTap,
+    this.socialLinks = const <SocialLink>[],
   });
 
   final VoidCallback onGuideTap;
@@ -28,6 +30,7 @@ class InfoScreenUI extends StatelessWidget {
   final VoidCallback onAboutUsTap;
   final VoidCallback onTermsTap;
   final VoidCallback onPrivacyTap;
+  final List<SocialLink> socialLinks;
 
   @override
   Widget build(BuildContext context) {

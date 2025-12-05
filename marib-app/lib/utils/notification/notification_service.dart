@@ -12,6 +12,7 @@ import 'package:marib/utils/notification/awsomeNotification.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:marib/ui/screens/chat/chat_screen.dart';
 import 'package:marib/ui/screens/chat/chat_badge_controller.dart';
 import 'package:marib/ui/screens/notifications/action_request_details_screen.dart';
@@ -2173,13 +2174,6 @@ class NotificationService {
       final ParticipantStatus? status =
           _conversationPresenceState[conversationKey];
       if (status != null) {
-        if (userId != null && userId.isNotEmpty) {
-          final ParticipantStatus? existing = _userPresenceState[userId];
-          if (!_areStatusesEqual(existing, status)) {
-            _userPresenceState[userId] = status;
-            _bumpPresenceVersion();
-          }
-        }
         return status;
       }
     }
@@ -2328,8 +2322,17 @@ class NotificationService {
   }
 
   static void _bumpPresenceVersion() {
-    _presenceVersion = (_presenceVersion + 1) & 0x7fffffff;
-    presenceVersionNotifier.value = _presenceVersion;
+    void update() {
+      _presenceVersion = (_presenceVersion + 1) & 0x7fffffff;
+      presenceVersionNotifier.value = _presenceVersion;
+    }
+
+    final binding = WidgetsBinding.instance;
+    if (binding.locked || binding.schedulerPhase == SchedulerPhase.persistentCallbacks) {
+      binding.addPostFrameCallback((_) => update());
+    } else {
+      update();
+    }
   }
 
   static void _cacheParticipantsFromData(Map<String, dynamic> data) {

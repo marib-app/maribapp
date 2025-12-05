@@ -1,9 +1,8 @@
 import 'dart:io';
 import 'dart:async';
-import 'package:flutter/foundation.dart';
-import 'package:marib/data/model/social_link_model.dart';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:in_app_review/in_app_review.dart';
 import 'package:marib/app/routes.dart';
@@ -28,6 +27,7 @@ import 'package:marib/utils/ui_utils.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:marib/data/cubits/system/fetch_system_settings_cubit.dart';
+import 'package:marib/data/model/social_link_model.dart';
 import 'usage_guide_screen.dart';
 
 
@@ -61,12 +61,12 @@ class InfoScreenState extends State<InfoScreen> with TickerProviderStateMixin {
     super.initState();
     _settingsCubit = context.read<FetchSystemSettingsCubit>();
     _usageGuideHtml = _normalizeGuideHtml(Constant.usageGuide);
-    _socialLinks = Constant.socialLinks;
+    _socialLinks = _filterNonCartLinks(Constant.socialLinks);
 
     final FetchSystemSettingsState initialState = _settingsCubit.state;
     if (initialState is FetchSystemSettingsSuccess) {
       _usageGuideHtml = _normalizeGuideHtml(initialState.usageGuide);
-      _socialLinks = initialState.socialLinks;
+      _socialLinks = _filterNonCartLinks(initialState.socialLinks);
 
     }
 
@@ -319,18 +319,42 @@ class InfoScreenState extends State<InfoScreen> with TickerProviderStateMixin {
     }
     if (state is FetchSystemSettingsSuccess) {
       final String? normalized = _normalizeGuideHtml(state.usageGuide);
-      final bool guideChanged = _usageGuideHtml != normalized;
-      final bool socialChanged = !listEquals(_socialLinks, state.socialLinks);
-      if (!guideChanged && !socialChanged) {
-
+      final List<SocialLink> filteredLinks =
+          _filterNonCartLinks(state.socialLinks);
+      final bool guideUnchanged = _usageGuideHtml == normalized;
+      final bool socialsUnchanged = listEquals(_socialLinks, filteredLinks);
+      if (guideUnchanged && socialsUnchanged) {
         return;
       }
       setState(() {
         _usageGuideHtml = normalized;
-        _socialLinks = state.socialLinks;
-
+        _socialLinks = filteredLinks;
       });
     }
+  }
+
+  List<SocialLink> _filterNonCartLinks(List<SocialLink> links) {
+    return links.where((link) => !_isCartLink(link)).toList(growable: false);
+  }
+
+  bool _isCartLink(SocialLink link) {
+    final String combined = [
+      link.label,
+      link.url,
+      link.iconClass ?? '',
+    ].join(' ').toLowerCase();
+
+    final bool hasArabicCart =
+        RegExp(r'سلة|السلة|سله|عربة|عربه').hasMatch(combined);
+    final bool hasEnglishCart =
+        combined.contains('cart') || combined.contains('basket') || combined.contains('checkout');
+    final bool isShein = combined.contains('shein');
+
+    final Uri? uri = Uri.tryParse(link.url.trim());
+    final bool hostShein =
+        uri != null && uri.host.toLowerCase().contains('shein');
+
+    return hasArabicCart || hasEnglishCart || isShein || hostShein;
   }
 
 

@@ -196,69 +196,78 @@ extension _ChatListScreenUi on _ChatListScreenState {
                     color: colors.territoryColor,
                   ),
                 const SizedBox(height: 6),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 10,
-                  children: List.generate(tabs.length, (index) {
-                    final bool isActive = index == current;
-                    final tab = tabs[index];
-                    return ChoiceChip(
-                      label: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            tab.label,
-                            style: (isActive ? selected : unselected).copyWith(
-                              color: isActive
-                                  ? colors.territoryColor
-                                  : onBackground,
-                            ),
-                          ),
-                          if (tab.count > 0) ...[
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: (isActive
-                                        ? colors.territoryColor
-                                        : onBackground)
-                                    .withOpacity(0.12),
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                              child: Text(
-                                tab.count > 99 ? '99+' : tab.count.toString(),
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: List.generate(tabs.length, (index) {
+                      final bool isActive = index == current;
+                      final tab = tabs[index];
+                      return Padding(
+                        padding: EdgeInsetsDirectional.only(
+                            end: index == tabs.length - 1 ? 0 : 8),
+                        child: ChoiceChip(
+                          label: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                tab.label,
+                                style:
+                                    (isActive ? selected : unselected).copyWith(
                                   color: isActive
                                       ? colors.territoryColor
                                       : onBackground,
                                 ),
                               ),
+                              if (tab.count > 0) ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: (isActive
+                                            ? colors.territoryColor
+                                            : onBackground)
+                                        .withOpacity(0.12),
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                  child: Text(
+                                    tab.count > 99
+                                        ? '99+'
+                                        : tab.count.toString(),
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      color: isActive
+                                          ? colors.territoryColor
+                                          : onBackground,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          selected: isActive,
+                          onSelected: (_) => controller.animateTo(index),
+                          backgroundColor: colors.secondaryColor.withOpacity(0.6),
+                          selectedColor: colors.territoryColor.withOpacity(0.12),
+                          shape: StadiumBorder(
+                            side: BorderSide(
+                              color: isActive
+                                  ? colors.territoryColor.withOpacity(0.5)
+                                  : border,
                             ),
-                          ],
-                        ],
-                      ),
-                      selected: isActive,
-                      onSelected: (_) => controller.animateTo(index),
-                      backgroundColor: colors.secondaryColor.withOpacity(0.6),
-                      selectedColor: colors.territoryColor.withOpacity(0.12),
-                      shape: StadiumBorder(
-                        side: BorderSide(
-                          color: isActive
-                              ? colors.territoryColor.withOpacity(0.5)
-                              : border,
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
+                          elevation: 0,
+                          pressElevation: 0,
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                          showCheckmark: false,
                         ),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
-                      elevation: 0,
-                      pressElevation: 0,
-                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      showCheckmark: false,
-                    );
-                  }),
+                      );
+                    }),
+                  ),
                 ),
               ],
             );

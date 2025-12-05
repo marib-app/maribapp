@@ -227,8 +227,25 @@ class _AttachmentMessageState extends State<AttachmentMessage> {
 
     return GestureDetector(
       onTap: () {
-        if (provider != null) {
+        if (provider == null) return;
+        if (_isLocalFile) {
           UiUtils.showFullScreenImage(context, provider: provider);
+        } else {
+          final String url = _remoteUrl;
+          if (url.isEmpty) return;
+          final List<String> allImages = _collectConversationImages(url);
+          final int initialIndex =
+              allImages.indexWhere((element) => element == url);
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) =>
+                  GalleryViewWidget(
+                images: allImages.isNotEmpty ? allImages : [url],
+                initalIndex: initialIndex >= 0 ? initialIndex : 0,
+              ),
+            ),
+          );
         }
       },
       child: Stack(
@@ -265,33 +282,45 @@ class _AttachmentMessageState extends State<AttachmentMessage> {
                   ),
                 ),
               ),
-            )
-          else if (_isRemoteAttachment)
-            Positioned(
-              right: 8,
-              bottom: 8,
-              child: Material(
-                color: Colors.black54,
-                shape: const CircleBorder(),
-                child: InkWell(
-                  onTap: () async {
-                    await downloadFile();
-                  },
-                  customBorder: const CircleBorder(),
-                  child: const Padding(
-                    padding: EdgeInsets.all(6),
-                    child: Icon(
-                      Icons.download,
-                      size: 16,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
             ),
         ],
       ),
     );
+  }
+
+  bool _isImageType(String? messageType) {
+    final String mt = (messageType ?? '').toLowerCase();
+    return mt.contains('image') || mt.contains('photo');
+  }
+
+  bool _isImageUrl(String url, String? messageType) {
+    if (_isImageType(messageType)) {
+      return true;
+    }
+    final String trimmed = url.split('?').first.toLowerCase();
+    final int dotIndex = trimmed.lastIndexOf('.');
+    if (dotIndex == -1) return false;
+    final String ext = trimmed.substring(dotIndex + 1);
+    return _imageExtensions.contains(ext);
+  }
+
+  List<String> _collectConversationImages(String currentUrl) {
+    final Set<String> seen = <String>{};
+    final List<String> images = <String>[];
+    for (final ChatMessageModal message in ChatMessageHandler.currentMessages) {
+      final String raw = (message.file ?? '').trim();
+      if (raw.isEmpty) continue;
+      final String absolute = HelperUtils.absoluteImage(raw);
+      if (absolute.isEmpty) continue;
+      if (!_isImageUrl(absolute, message.messageType)) continue;
+      if (seen.add(absolute)) {
+        images.add(absolute);
+      }
+    }
+    if (currentUrl.isNotEmpty && seen.add(currentUrl)) {
+      images.add(currentUrl);
+    }
+    return images;
   }
 
   Widget _buildImagePlaceholder(BuildContext context) {

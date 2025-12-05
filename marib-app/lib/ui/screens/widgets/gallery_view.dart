@@ -32,6 +32,7 @@ class GalleryViewWidget extends StatefulWidget {
 class _GalleryViewWidgetState extends State<GalleryViewWidget> {
   late PageController controller =
       PageController(initialPage: widget.initalIndex);
+  int _currentIndex = 0;
 
   @override
   void dispose() {
@@ -41,39 +42,128 @@ class _GalleryViewWidgetState extends State<GalleryViewWidget> {
 
   @override
   Widget build(BuildContext context) {
+    _currentIndex = controller.hasClients ? controller.page?.round() ?? 0 : 0;
+
     return Scaffold(
-        extendBodyBehindAppBar: true,
-        appBar: UiUtils.buildAppBar(
-          context,
-          showBackButton: true,
-          backgroundColor: context.color.secondaryDetailsColor,
-        ),
+      extendBodyBehindAppBar: true,
+      appBar: UiUtils.buildAppBar(
+        context,
+        showBackButton: true,
         backgroundColor: context.color.secondaryDetailsColor,
-        body: PageView.builder(
-          controller: controller,
-          itemBuilder: (context, index) {
-            return InteractiveViewer(
-              scaleEnabled: true,
-              maxScale: 5,
-              child: CachedNetworkImage(
-                imageUrl: widget.images[index],
-                fit: BoxFit.contain,
-                placeholder: (context, url) => ShimmerBox(
-                  width: double.infinity,
-                  height: double.infinity,
-                  borderRadius: BorderRadius.circular(16),
+      ),
+      backgroundColor: context.color.secondaryDetailsColor,
+      body: Stack(
+        children: [
+          PageView.builder(
+            controller: controller,
+            itemCount: widget.images.length,
+            onPageChanged: (i) => setState(() => _currentIndex = i),
+            itemBuilder: (context, index) {
+              return InteractiveViewer(
+                scaleEnabled: true,
+                maxScale: 5,
+                child: CachedNetworkImage(
+                  imageUrl: widget.images[index],
+                  fit: BoxFit.contain,
+                  placeholder: (context, url) => ShimmerBox(
+                    width: double.infinity,
+                    height: double.infinity,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  errorWidget: (context, url, error) => ShimmerBox(
+                    width: double.infinity,
+                    height: double.infinity,
+                    borderRadius: BorderRadius.circular(16),
+                    animate: false,
+                  ),
                 ),
-                errorWidget: (context, url, error) => ShimmerBox(
-                  width: double.infinity,
-                  height: double.infinity,
-                  borderRadius: BorderRadius.circular(16),
-                  animate: false,
+              );
+            },
+          ),
+          if (widget.images.length > 1)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: SafeArea(
+                top: false,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withOpacity(0.0),
+                        Colors.black.withOpacity(0.35),
+                        Colors.black.withOpacity(0.65),
+                      ],
+                    ),
+                  ),
+                  height: 96,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: widget.images.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    itemBuilder: (context, index) {
+                      final bool isActive = index == _currentIndex;
+                      final double size = isActive ? 78 : 66;
+                      return GestureDetector(
+                        onTap: () => controller.animateToPage(
+                          index,
+                          duration: const Duration(milliseconds: 200),
+                          curve: Curves.easeOut,
+                        ),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          curve: Curves.easeOut,
+                          width: size,
+                          height: size,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isActive
+                                  ? context.color.territoryColor
+                                  : Colors.white30,
+                              width: isActive ? 2 : 1,
+                            ),
+                            boxShadow: [
+                              if (isActive)
+                                BoxShadow(
+                                  color: context.color.territoryColor
+                                      .withOpacity(0.4),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                            ],
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: CachedNetworkImage(
+                            imageUrl: widget.images[index],
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) => ShimmerBox(
+                              width: size,
+                              height: size,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            errorWidget: (context, url, error) => ShimmerBox(
+                              width: size,
+                              height: size,
+                              borderRadius: BorderRadius.circular(12),
+                              animate: false,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ),
-            );
-          },
-          itemCount: widget.images.length,
-        ));
+            ),
+        ],
+      ),
+    );
   }
 
 /*  @override

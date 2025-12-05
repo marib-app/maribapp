@@ -3569,16 +3569,16 @@ class ApiController extends Controller {
                 ->first();
 
             if (! $config) {
-                $config = new FeaturedAdsConfig([
-                    'interface_type'   => $sectionType,
-                    'root_category_id' => $rootId,
-                    'root_identifier'  => $rootIdentifier,
-                    'order_mode'       => 'latest',
-                    'style_key'        => 'style_1',
-                    'enabled'          => true,
-                    'enable_ad_slider' => true,
-                    'title'            => __('Featured Items'),
-                ]);
+                return response()->json([
+                    'error' => false,
+                    'message' => __('No featured ads configuration found for this section.'),
+                    'data' => [
+                        'interface_type' => $sectionType,
+                        'filters' => $filters,
+                        'sections' => [],
+                    ],
+                    'code' => 200,
+                ], 200);
             }
 
             if (is_string($config->interface_type) && $config->interface_type !== '') {

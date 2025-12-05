@@ -3,6 +3,8 @@ import 'dart:math';
 
 import 'package:marib/app/routes.dart';
 import 'package:marib/data/cubits/item/fetch_item_from_category_cubit.dart';
+import 'package:marib/data/cubits/category/fetch_sub_categories_cubit.dart';
+import 'package:marib/data/model/category_model.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/hive_utils.dart';
@@ -25,10 +27,13 @@ import 'package:marib/ui/screens/widgets/errors/no_data_found.dart';
 import 'package:marib/ui/screens/item/cards/horizontal_card.dart';
 import 'package:marib/ui/screens/settings/main_activity.dart';
 import 'package:marib/ui/screens/native_ads_screen.dart';
+import 'package:marib/data/cubits/custom_field/fetch_custom_fields_cubit.dart';
 import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
 import 'package:marib/ui/widgets/slivers/catalog_scroll_view.dart';
 import 'package:marib/ui/widgets/slivers/catalog_section.dart';
+import 'package:marib/ui/screens/item/widgets/side_filter_panel.dart';
+
 class ItemsList extends StatefulWidget {
   final String categoryId, categoryName;
   final List<String> categoryIds;
@@ -37,38 +42,133 @@ class ItemsList extends StatefulWidget {
 
   const ItemsList(
       {super.key,
-        required this.categoryId,
-        required this.categoryName,
-        required this.categoryIds,
-        required this.interfaceType,
-        this.initialSortBy});
+      required this.categoryId,
+      required this.categoryName,
+      required this.categoryIds,
+      required this.interfaceType,
+      this.initialSortBy});
 
   @override
   ItemsListState createState() => ItemsListState();
 
   static Route route(RouteSettings routeSettings) {
     Map? arguments = routeSettings.arguments as Map?;
+    final String catId = arguments?['catID'] as String;
     return BlurredRouter(
-      builder: (_) => ItemsList(
-        categoryId: arguments?['catID'] as String,
-        categoryName: arguments?['catName'],
-        categoryIds: arguments?['categoryIds'],
-        interfaceType: arguments?['interfaceType'],
-        initialSortBy: arguments?['initialSortBy'],
+      builder: (_) => MultiBlocProvider(
+        providers: [
+          BlocProvider<FetchSubCategoriesCubit>(
+            create: (_) => FetchSubCategoriesCubit()
+              ..fetchSubCategories(categoryId: int.parse(catId)),
+          ),
+        ],
+        child: ItemsList(
+          categoryId: catId,
+          categoryName: arguments?['catName'],
+          categoryIds: arguments?['categoryIds'],
+          interfaceType: arguments?['interfaceType'],
+          initialSortBy: arguments?['initialSortBy'],
+        ),
+      ),
+    );
+  }
+}
+
+class _SubcatChip extends StatelessWidget {
+  final String label;
+  final bool isActive;
+  final VoidCallback onTap;
+  final String? imageUrl;
+
+  const _SubcatChip({
+    required this.label,
+    required this.isActive,
+    required this.onTap,
+    this.imageUrl,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final double size = 52;
+    final Color borderColor = isActive
+        ? context.color.territoryColor
+        : context.color.borderColor.darken(20);
+    final Color fillColor = isActive
+        ? context.color.territoryColor.withOpacity(0.1)
+        : context.color.secondaryColor;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: 64,
+        padding: const EdgeInsets.symmetric(horizontal: 2),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: size,
+              height: size,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: fillColor,
+                border: Border.all(color: borderColor, width: 1.2),
+                boxShadow: isActive
+                    ? [
+                        BoxShadow(
+                          color: context.color.territoryColor.withOpacity(0.18),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: ClipOval(
+                child: imageUrl != null && imageUrl!.trim().isNotEmpty
+                    ? UiUtils.getImage(
+                        imageUrl!,
+                        height: size,
+                        width: size,
+                        fit: BoxFit.cover,
+                        cacheWidth: 120,
+                        cacheHeight: 120,
+                      )
+                    : Icon(
+                        Icons.category_outlined,
+                        color: isActive
+                            ? context.color.territoryColor.darken(20)
+                            : context.color.textDefaultColor.withOpacity(0.7),
+                        size: 28,
+                      ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: isActive
+                    ? context.color.territoryColor.darken(10)
+                    : context.color.textDefaultColor,
+                fontWeight: FontWeight.w600,
+                fontSize: context.font.smaller + 1,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
 class ItemsListState extends State<ItemsList> {
-
   static const double _listItemExtent = 152;
   static const double _gridMainAxisSpacing = 12;
   static const double _gridCrossAxisSpacing = 12;
-
-
-
-
+  int? _activeSubcatId;
 
   late ScrollController controller;
   static TextEditingController searchController = TextEditingController();
@@ -112,7 +212,109 @@ class ItemsListState extends State<ItemsList> {
     Future.delayed(Duration.zero, () {
       selectedcategoryId = widget.categoryId;
       selectedcategoryName = widget.categoryName;
+      _activeSubcatId = int.tryParse(widget.categoryId);
       searchbody[Api.categoryId] = widget.categoryId;
+      setState(() {});
+    });
+  }
+
+  void _switchCategory(String categoryId, String? name) {
+    final int parsedId =
+        int.tryParse(categoryId) ?? int.parse(widget.categoryId);
+    _activeSubcatId = parsedId;
+    selectedcategoryId = categoryId;
+    selectedcategoryName =
+        (name?.trim().isNotEmpty ?? false) ? name!.trim() : widget.categoryName;
+    searchController.clear();
+    previousSearchQuery = "";
+    sortBy = null;
+    searchbody[Api.categoryId] = categoryId;
+
+    context
+        .read<FetchSubCategoriesCubit>()
+        .fetchSubCategories(categoryId: parsedId);
+
+    controller.animateTo(0,
+        duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+
+    context.read<FetchItemFromCategoryCubit>().fetchItemFromCategory(
+          categoryId: parsedId,
+          search: "",
+          sortBy: sortBy,
+          filter: ItemFilterModel(categoryId: categoryId),
+        );
+
+    setState(() {});
+  }
+
+  void _openFilterSheet() {
+    showGeneralDialog(
+      context: context,
+      barrierLabel: "filter_sheet",
+      barrierDismissible: true,
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 280),
+      pageBuilder: (ctx, anim1, anim2) {
+        return SafeArea(
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: FractionallySizedBox(
+              widthFactor: 0.92,
+              heightFactor: 1,
+              child: Material(
+                color: Colors.transparent,
+                child: BlocProvider<FetchCustomFieldsCubit>(
+                  create: (_) => FetchCustomFieldsCubit(),
+                  child: SideFilterPanel(
+                    initialFilter: filter,
+                    initialSortBy: sortBy,
+                    categoryIds: widget.categoryIds.isNotEmpty
+                        ? widget.categoryIds
+                        : [selectedcategoryId],
+                    onApply: (updatedFilter, selectedSort) {
+                      filter = updatedFilter;
+                      sortBy = selectedSort;
+                      final ItemFilterModel baseFilter = updatedFilter.copyWith(
+                          categoryId: selectedcategoryId);
+                      context
+                          .read<FetchItemFromCategoryCubit>()
+                          .fetchItemFromCategory(
+                              categoryId: int.tryParse(selectedcategoryId) ??
+                                  int.parse(widget.categoryId),
+                              search: searchController.text.toString(),
+                              sortBy: sortBy,
+                              filter: baseFilter);
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+      transitionBuilder: (ctx, anim, secondary, child) {
+        final curved =
+            CurvedAnimation(parent: anim, curve: Curves.easeOutCubic);
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(-1, 0),
+            end: Offset.zero,
+          ).animate(curved),
+          child: child,
+        );
+      },
+    ).then((value) {
+      if (value == true) {
+        final ItemFilterModel baseFilter =
+            filter ?? ItemFilterModel(categoryId: selectedcategoryId);
+        ItemFilterModel updatedFilter =
+            baseFilter.copyWith(categoryId: selectedcategoryId);
+        context.read<FetchItemFromCategoryCubit>().fetchItemFromCategory(
+            categoryId: int.tryParse(selectedcategoryId) ??
+                int.parse(widget.categoryId),
+            search: searchController.text.toString(),
+            filter: updatedFilter);
+      }
       setState(() {});
     });
   }
@@ -140,11 +342,10 @@ class ItemsListState extends State<ItemsList> {
   void itemSearch() {
     // if (searchController.text.isNotEmpty) {
     if (previousSearchQuery != searchController.text) {
+      final int currentCat =
+          int.tryParse(selectedcategoryId) ?? int.parse(widget.categoryId);
       context.read<FetchItemFromCategoryCubit>().fetchItemFromCategory(
-          categoryId: int.parse(
-            widget.categoryId,
-          ),
-          search: searchController.text);
+          categoryId: currentCat, search: searchController.text);
       previousSearchQuery = searchController.text;
       sortBy = null;
       setState(() {});
@@ -154,10 +355,10 @@ class ItemsListState extends State<ItemsList> {
   void _loadMore() async {
     if (controller.isEndReached()) {
       if (context.read<FetchItemFromCategoryCubit>().hasMoreData()) {
+        final int currentCat =
+            int.tryParse(selectedcategoryId) ?? int.parse(widget.categoryId);
         context.read<FetchItemFromCategoryCubit>().fetchItemFromCategoryMore(
-            catId: int.parse(
-              widget.categoryId,
-            ),
+            catId: currentCat,
             search: searchController.text,
             sortBy: sortBy,
             filter: ItemFilterModel(
@@ -168,7 +369,7 @@ class ItemsListState extends State<ItemsList> {
               //     : null,
               // city: HiveUtils.getCityName() ?? "",
               // state: HiveUtils.getStateName() ?? "",
-              categoryId: widget.categoryId,
+              categoryId: selectedcategoryId,
             ));
       }
     }
@@ -185,7 +386,7 @@ class ItemsListState extends State<ItemsList> {
               fit: BoxFit.none,
               child: Padding(
                 padding:
-                const EdgeInsets.symmetric(vertical: 14, horizontal: 18.0),
+                    const EdgeInsets.symmetric(vertical: 14, horizontal: 18.0),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -198,7 +399,7 @@ class ItemsListState extends State<ItemsList> {
                                 width: 1,
                                 color: context.color.borderColor.darken(30)),
                             borderRadius:
-                            const BorderRadius.all(Radius.circular(10)),
+                                const BorderRadius.all(Radius.circular(10)),
                             color: context.color.primaryColor),
                         child: TextFormField(
                             controller: searchController,
@@ -208,7 +409,7 @@ class ItemsListState extends State<ItemsList> {
                                   vertical: 10, horizontal: 8),
                               //OutlineInputBorder()
                               fillColor:
-                              Theme.of(context).colorScheme.primaryColor,
+                                  Theme.of(context).colorScheme.primaryColor,
                               hintText: "searchHintLbl".translate(context),
                               prefixIcon: setSearchIcon(),
                               prefixIconConstraints: const BoxConstraints(
@@ -217,7 +418,7 @@ class ItemsListState extends State<ItemsList> {
                             enableSuggestions: true,
                             onEditingComplete: () {
                               setState(
-                                    () {
+                                () {
                                   isFocused = false;
                                   FocusScope.of(context).unfocus();
                                 },
@@ -236,7 +437,7 @@ class ItemsListState extends State<ItemsList> {
                     GestureDetector(
                       onTap: () {
                         setState(() {
-                          isList = false;
+                          isList = !isList;
                         });
                       },
                       child: Container(
@@ -250,11 +451,11 @@ class ItemsListState extends State<ItemsList> {
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Center(
-                          child: UiUtils.getSvg(AppIcons.gridViewIcon,
-                              color: !isList
-                                  ? context.color.textDefaultColor
-                                  : context.color.textDefaultColor
-                                  .withOpacity(0.2)),
+                          child: UiUtils.getSvg(
+                              isList
+                                  ? AppIcons.listViewIcon
+                                  : AppIcons.gridViewIcon,
+                              color: context.color.textDefaultColor),
                         ),
                       ),
                     ),
@@ -263,9 +464,7 @@ class ItemsListState extends State<ItemsList> {
                     ),
                     GestureDetector(
                       onTap: () {
-                        setState(() {
-                          isList = true;
-                        });
+                        _openFilterSheet();
                       },
                       child: Container(
                         width: 40.rw(context),
@@ -278,11 +477,10 @@ class ItemsListState extends State<ItemsList> {
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Center(
-                          child: UiUtils.getSvg(AppIcons.listViewIcon,
-                              color: isList
-                                  ? context.color.textDefaultColor
-                                  : context.color.textDefaultColor
-                                  .withOpacity(0.2)),
+                          child: UiUtils.getSvg(
+                            AppIcons.filterByIcon,
+                            color: context.color.textDefaultColor,
+                          ),
                         ),
                       ),
                     ),
@@ -340,7 +538,7 @@ class ItemsListState extends State<ItemsList> {
               title: selectedcategoryName == ""
                   ? widget.categoryName
                   : selectedcategoryName),
-                    body: BlocBuilder<FetchItemFromCategoryCubit,
+          body: BlocBuilder<FetchItemFromCategoryCubit,
               FetchItemFromCategoryState>(
             builder: (context, state) {
               final sections = _buildSectionsForState(context, state);
@@ -349,23 +547,23 @@ class ItemsListState extends State<ItemsList> {
                 onRefresh: () async {
                   searchbody = {};
                   Constant.itemFilter = null;
+                  final int currentCat = int.tryParse(selectedcategoryId) ??
+                      int.parse(widget.categoryId);
 
                   context
                       .read<FetchItemFromCategoryCubit>()
                       .fetchItemFromCategory(
-                    categoryId: int.parse(widget.categoryId),
-                    search: "",
-                  );
+                        categoryId: currentCat,
+                        search: "",
+                      );
                 },
                 color: context.color.territoryColor,
                 child: CatalogScrollView(
                   controller: controller,
-
                   sections: sections,
                 ),
               );
             },
-
           ),
         ),
       ),
@@ -411,10 +609,10 @@ class ItemsListState extends State<ItemsList> {
         }).then((value) {
           if (value == true) {
             ItemFilterModel updatedFilter =
-            filter!.copyWith(categoryId: widget.categoryId);
+                filter!.copyWith(categoryId: selectedcategoryId);
             context.read<FetchItemFromCategoryCubit>().fetchItemFromCategory(
                 categoryId: int.parse(
-                  widget.categoryId,
+                  selectedcategoryId,
                 ),
                 search: searchController.text.toString(),
                 filter: updatedFilter);
@@ -501,11 +699,11 @@ class ItemsListState extends State<ItemsList> {
                   context
                       .read<FetchItemFromCategoryCubit>()
                       .fetchItemFromCategory(
-                      categoryId: int.parse(
-                        widget.categoryId,
-                      ),
-                      search: searchController.text.toString(),
-                      sortBy: null);
+                          categoryId: int.parse(
+                            selectedcategoryId,
+                          ),
+                          search: searchController.text.toString(),
+                          sortBy: null);
 
                   setState(() {
                     sortBy = null;
@@ -526,11 +724,11 @@ class ItemsListState extends State<ItemsList> {
                   context
                       .read<FetchItemFromCategoryCubit>()
                       .fetchItemFromCategory(
-                      categoryId: int.parse(
-                        widget.categoryId,
-                      ),
-                      search: searchController.text.toString(),
-                      sortBy: "new-to-old");
+                          categoryId: int.parse(
+                            selectedcategoryId,
+                          ),
+                          search: searchController.text.toString(),
+                          sortBy: "new-to-old");
                   setState(() {
                     sortBy = "new-to-old";
                     FocusManager.instance.primaryFocus?.unfocus();
@@ -546,11 +744,11 @@ class ItemsListState extends State<ItemsList> {
                   context
                       .read<FetchItemFromCategoryCubit>()
                       .fetchItemFromCategory(
-                      categoryId: int.parse(
-                        widget.categoryId,
-                      ),
-                      search: searchController.text.toString(),
-                      sortBy: "old-to-new");
+                          categoryId: int.parse(
+                            selectedcategoryId,
+                          ),
+                          search: searchController.text.toString(),
+                          sortBy: "old-to-new");
                   setState(() {
                     sortBy = "old-to-new";
                     FocusManager.instance.primaryFocus?.unfocus();
@@ -566,11 +764,11 @@ class ItemsListState extends State<ItemsList> {
                   context
                       .read<FetchItemFromCategoryCubit>()
                       .fetchItemFromCategory(
-                      categoryId: int.parse(
-                        widget.categoryId,
-                      ),
-                      search: searchController.text.toString(),
-                      sortBy: "price-high-to-low");
+                          categoryId: int.parse(
+                            selectedcategoryId,
+                          ),
+                          search: searchController.text.toString(),
+                          sortBy: "price-high-to-low");
                   setState(() {
                     sortBy = "price-high-to-low";
                     FocusManager.instance.primaryFocus?.unfocus();
@@ -586,11 +784,11 @@ class ItemsListState extends State<ItemsList> {
                   context
                       .read<FetchItemFromCategoryCubit>()
                       .fetchItemFromCategory(
-                      categoryId: int.parse(
-                        widget.categoryId,
-                      ),
-                      search: searchController.text.toString(),
-                      sortBy: "price-low-to-high");
+                          categoryId: int.parse(
+                            selectedcategoryId,
+                          ),
+                          search: searchController.text.toString(),
+                          sortBy: "price-low-to-high");
                   setState(() {
                     sortBy = "price-low-to-high";
                     FocusManager.instance.primaryFocus?.unfocus();
@@ -607,7 +805,6 @@ class ItemsListState extends State<ItemsList> {
   List<CatalogSection> _buildSectionsForState(
       BuildContext context, FetchItemFromCategoryState state) {
     final sections = <CatalogSection>[
-
       _buildSearchHeaderSection(context),
     ];
 
@@ -626,7 +823,6 @@ class ItemsListState extends State<ItemsList> {
       final List<ItemModel> skeletons = state.itemSkeletons;
 
       if (skeletons.isEmpty) {
-
         sections.add(_buildEmptySection(context));
       } else {
         sections.addAll(_buildSuccessSections(context, skeletons));
@@ -649,7 +845,7 @@ class ItemsListState extends State<ItemsList> {
   }
 
   CatalogSection _buildSearchHeaderSection(BuildContext context) {
-    final double headerHeight = 56.rh(context) + 24;
+    final double headerHeight = 56.rh(context) + 24 + 88;
 
     return CatalogPersistentHeaderSection(
       key: const ValueKey('items_search_header'),
@@ -660,10 +856,109 @@ class ItemsListState extends State<ItemsList> {
           color: context.color.secondaryColor,
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
-            child: searchBarWidget(),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                searchBarWidget(),
+                const SizedBox(height: 8),
+                _buildSubcategoryStrip(),
+              ],
+            ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildSubcategoryStrip() {
+    return BlocBuilder<FetchSubCategoriesCubit, FetchSubCategoriesState>(
+      builder: (context, state) {
+        if (state is FetchSubCategoriesInProgress ||
+            state is FetchSubCategoriesInitial) {
+          return SizedBox(
+            height: 80,
+            child: ListView.separated(
+              padding: const EdgeInsetsDirectional.only(start: 10, end: 18),
+              scrollDirection: Axis.horizontal,
+              itemCount: 6,
+              separatorBuilder: (_, __) => const SizedBox(width: 6),
+              itemBuilder: (_, __) => SizedBox(
+                width: 64,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    CustomShimmer(
+                      height: 52,
+                      width: 52,
+                      borderRadius: 26,
+                    ),
+                    SizedBox(height: 8),
+                    CustomShimmer(
+                      height: 10,
+                      width: 46,
+                      borderRadius: 10,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
+        List<Widget> chips = [];
+
+        if (state is FetchSubCategoriesSuccess) {
+          final List<CategoryModel> categories = state.categories;
+          chips.add(_SubcatChip(
+            label: widget.categoryName,
+            isActive: _activeSubcatId == null ||
+                _activeSubcatId == int.tryParse(widget.categoryId),
+            onTap: () =>
+                _switchCategory(widget.categoryId, widget.categoryName),
+            imageUrl: null,
+          ));
+
+          for (final CategoryModel c in categories) {
+            final int? cid = c.id;
+            if (cid == null) continue;
+            chips.add(_SubcatChip(
+              label: c.name ?? "ط¨ط¯ظˆظ† ط¹ظ†ظˆط§ظ†",
+              isActive: _activeSubcatId == cid,
+              onTap: () => _switchCategory(cid.toString(), c.name),
+              imageUrl: c.url,
+            ));
+          }
+        } else if (state is FetchSubCategoriesFailure) {
+          chips.add(_SubcatChip(
+            label: widget.categoryName,
+            isActive: true,
+            onTap: () =>
+                _switchCategory(widget.categoryId, widget.categoryName),
+            imageUrl: null,
+          ));
+        }
+
+        if (chips.isEmpty) {
+          chips.add(_SubcatChip(
+            label: widget.categoryName,
+            isActive: true,
+            onTap: () =>
+                _switchCategory(widget.categoryId, widget.categoryName),
+            imageUrl: null,
+          ));
+        }
+
+        return SizedBox(
+          height: 80,
+          child: ListView.separated(
+            padding: const EdgeInsetsDirectional.only(start: 10, end: 18),
+            scrollDirection: Axis.horizontal,
+            itemBuilder: (context, index) => chips[index],
+            separatorBuilder: (_, __) => const SizedBox(width: 6),
+            itemCount: chips.length,
+          ),
+        );
+      },
     );
   }
 
@@ -691,10 +986,8 @@ class ItemsListState extends State<ItemsList> {
 
       if (isList) {
         sections.add(_buildListSection(context, items, start, count));
-
       } else {
         sections.add(_buildGridSection(context, items, start, count));
-
       }
 
       final int nextIndex = start + count;
@@ -704,15 +997,14 @@ class ItemsListState extends State<ItemsList> {
     }
 
     return sections;
-
   }
 
   CatalogSection _buildListSection(
-      BuildContext context,
-      List<ItemModel> items,
-      int start,
-      int count,
-      ) {
+    BuildContext context,
+    List<ItemModel> items,
+    int start,
+    int count,
+  ) {
     return CatalogListSection(
       key: ValueKey('items_list_${isList}_$start'),
       padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 3),
@@ -734,17 +1026,15 @@ class ItemsListState extends State<ItemsList> {
   }
 
   CatalogSection _buildGridSection(
-      BuildContext context,
-      List<ItemModel> items,
-      int start,
-      int count,
-      ) {
+    BuildContext context,
+    List<ItemModel> items,
+    int start,
+    int count,
+  ) {
     return CatalogGridSection(
       key: ValueKey('items_grid_${isList}_$start'),
       padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
       itemCount: count,
-
-
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCountAndFixedHeight(
         crossAxisCount: 2,
         height: _gridItemHeight(context),
@@ -790,9 +1080,8 @@ class ItemsListState extends State<ItemsList> {
   }
 
   CatalogSection _buildFailureSection(BuildContext context, String message) {
-    final String effectiveMessage = message.isEmpty
-        ? 'somethingWentWrong'.translate(context)
-        : message;
+    final String effectiveMessage =
+        message.isEmpty ? 'somethingWentWrong'.translate(context) : message;
 
     return CatalogSliverSection(
       key: const ValueKey('items_failure_state'),
@@ -918,16 +1207,17 @@ class ItemsListState extends State<ItemsList> {
 
   void _retryLoadMore() {
     final cubit = context.read<FetchItemFromCategoryCubit>();
+    final int currentCat =
+        int.tryParse(selectedcategoryId) ?? int.parse(widget.categoryId);
     cubit.fetchItemFromCategoryMore(
-      catId: int.parse(widget.categoryId),
+      catId: currentCat,
       search: searchController.text,
       sortBy: sortBy,
-      filter: ItemFilterModel(categoryId: widget.categoryId),
+      filter: ItemFilterModel(categoryId: selectedcategoryId),
     );
   }
 
   Widget _buildShimmerTile(BuildContext context) {
-
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Container(
@@ -988,9 +1278,10 @@ class ItemsListState extends State<ItemsList> {
 
   void _retryInitialFetch() {
     context.read<FetchItemFromCategoryCubit>().fetchItemFromCategory(
-      categoryId: int.parse(widget.categoryId),
-      search: searchController.text.toString(),
-    );
+          categoryId:
+              int.tryParse(selectedcategoryId) ?? int.parse(widget.categoryId),
+          search: searchController.text.toString(),
+        );
   }
 
   double _gridItemHeight(BuildContext context) => 220.rh(context);
@@ -1018,6 +1309,6 @@ class _PinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
   bool shouldRebuild(_PinnedHeaderDelegate oldDelegate) {
     return oldDelegate.child != child || oldDelegate.height != height;
   }
-
-
 }
+
+// side filter panel moved to separate file

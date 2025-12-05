@@ -1,4 +1,4 @@
-
+﻿
 part of 'chat_list_screen.dart';
 
 extension _ChatListScreenUi on _ChatListScreenState {
@@ -24,53 +24,39 @@ extension _ChatListScreenUi on _ChatListScreenState {
         context: context,
         statusBarColor: colors.secondaryColor,
       ),
-      child: DefaultTabController(
-        length: 2,
-        child: Scaffold(
-          backgroundColor: colors.backgroundColor,
-          appBar: UiUtils.buildAppBar(
-            context,
-            title: "message".translate(context),
-            // ارتفاع أكبر شوي لاستيعاب الحاوية + الـ Divider
-            bottomHeight: 78,
-            actions: [
-              InkWell(
-                child: UiUtils.getSvg(
-                  AppIcons.blockedUserIcon,
-                  color: colors.textDefaultColor,
-                ),
-                onTap: () {
-                  Navigator.pushNamed(context, Routes.blockedUserListScreen);
-                },
+      child: Scaffold(
+        backgroundColor: colors.backgroundColor,
+        appBar: UiUtils.buildAppBar(
+          context,
+          title: "message".translate(context),
+          actions: [
+            InkWell(
+              child: UiUtils.getSvg(
+                AppIcons.blockedUserIcon,
+                color: colors.textDefaultColor,
               ),
-            ],
-            bottom: [
+              onTap: () {
+                Navigator.pushNamed(context, Routes.blockedUserListScreen);
+              },
+            ),
+          ],
+        ),
+        body: DefaultTabController(
+          length: 4,
+          child: Column(
+            children: [
               Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: background,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: border),
-                  ),
-                  child: TabBar(
-                    // نفس شكل وسلوك CurrencyTabBar
-                    tabs: [
-                      Tab(text: 'buying'.translate(context)),
-                      Tab(text: 'selling'.translate(context)),
-                    ],
-                    indicator: UnderlineTabIndicator(
-                      borderSide: BorderSide(color: brand, width: 3),
-                      insets: const EdgeInsets.symmetric(horizontal: 24),
-                    ),
-                    labelStyle: selected,
-                    unselectedLabelStyle: unselected,
-                    labelColor: onBackground,
-                    unselectedLabelColor: onBackground.withOpacity(0.5),
-                    overlayColor:
-                    MaterialStateProperty.all(Colors.transparent),
-                  ),
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+                child: _buildSearchField(context, background, border),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                child: _buildChipTabs(
+                  context: context,
+                  selected: selected,
+                  unselected: unselected,
+                  onBackground: onBackground,
+                  border: border,
                 ),
               ),
               Divider(
@@ -78,12 +64,16 @@ extension _ChatListScreenUi on _ChatListScreenState {
                 thickness: 0.5,
                 color: colors.textDefaultColor.withOpacity(0.2),
               ),
-            ],
-          ),
-          body: TabBarView(
-            children: [
-              buildBuyingChatListData(),
-              buildSellingChatListData(),
+              Expanded(
+                child: TabBarView(
+                  children: [
+                    _buildCombinedChatsTab(_ChatFilter.all),
+                    buildSellingChatListData(),
+                    buildBuyingChatListData(),
+                    _buildCombinedChatsTab(_ChatFilter.unread),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -91,6 +81,101 @@ extension _ChatListScreenUi on _ChatListScreenState {
     );
   }
 
+  Widget _buildSearchField(
+    BuildContext context,
+    Color background,
+    Color border,
+  ) {
+    final palette = context.color;
+    return Container(
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: border),
+      ),
+      child: TextField(
+        controller: _searchController,
+        textInputAction: TextInputAction.search,
+        decoration: InputDecoration(
+          hintText: 'ابحث في الرسائل',
+          prefixIcon: Icon(
+            Icons.search,
+            color: palette.textLightColor,
+          ),
+          suffixIcon: _searchQuery.isNotEmpty
+              ? IconButton(
+                  icon: Icon(
+                    Icons.close,
+                    color: palette.textLightColor,
+                  ),
+                  onPressed: () {
+                    _searchController.clear();
+                    _handleSearchChanged();
+                  },
+                )
+              : null,
+          border: InputBorder.none,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChipTabs({
+    required BuildContext context,
+    required TextStyle selected,
+    required TextStyle unselected,
+    required Color onBackground,
+    required Color border,
+  }) {
+    final colors = context.color;
+    final labels = const ['الكل', 'بيع', 'شراء', 'غير مقروء'];
+
+    return Builder(
+      builder: (ctx) {
+        final controller = DefaultTabController.of(ctx)!;
+        return AnimatedBuilder(
+          animation: controller.animation!,
+          builder: (_, __) {
+            final current = controller.index;
+            return Wrap(
+              spacing: 8,
+              runSpacing: 10,
+              children: List.generate(labels.length, (index) {
+                final bool isActive = index == current;
+                return ChoiceChip(
+                  label: Text(
+                    labels[index],
+                    style: (isActive ? selected : unselected).copyWith(
+                      color: isActive ? colors.territoryColor : onBackground,
+                    ),
+                  ),
+                  selected: isActive,
+                  onSelected: (_) => controller.animateTo(index),
+                  backgroundColor: colors.secondaryColor.withOpacity(0.6),
+                  selectedColor: colors.territoryColor.withOpacity(0.12),
+                  shape: StadiumBorder(
+                    side: BorderSide(
+                      color: isActive
+                          ? colors.territoryColor.withOpacity(0.5)
+                          : border,
+                    ),
+                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  elevation: 0,
+                  pressElevation: 0,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  showCheckmark: false,
+                );
+              }),
+            );
+          },
+        );
+      },
+    );
+  }
 
   Widget buildBuyingChatListData() {
     return RefreshIndicator(
@@ -132,80 +217,46 @@ extension _ChatListScreenUi on _ChatListScreenState {
 
             }
 
+            final filtered = _filterChats(state.chatedUserList);
+            if (filtered.isEmpty) {
+              return NoChatFound(
+                title: _searchQuery.isNotEmpty ? 'لا توجد نتائج' : null,
+                subtitle: _searchQuery.isNotEmpty
+                    ? 'لا توجد محادثات تطابق البحث الحالي.'
+                    : null,
+                onRetry: () {
+                  context.read<GetBuyerChatListCubit>().setContext(context);
+                  context.read<GetBuyerChatListCubit>().fetch();
+                },
+              );
+            }
+
             return Column(
               children: [
                 Expanded(
                   child: ListView.builder(
                     controller: chatBuyerScreenController,
-                    itemCount: state.chatedUserList.length,
+                    itemCount: filtered.length,
                     padding: const EdgeInsetsDirectional.all(16),
                     itemBuilder: (context, index) {
-                      final ChatedUser c = state.chatedUserList[index];
-
-                      final seller = c.seller; // قد تكون null
-                      final item = c.item; // قد يكون null
-
-                      final id = c.sellerId?.toString() ?? '';
-                      final itemId = c.itemId?.toString() ?? '';
-                      final buyerId = c.buyerId?.toString() ?? '';
-
-                      final profilePicture = seller?.profile ?? '';
-                      final userName = seller?.name ?? '';
-
-                      final itemPicture = item?.image ?? '';
-                      final itemName = item?.name ?? '';
-
-                      final itemPrice = (item?.price ?? 0.0);
-                      final itemAmount = c.amount; // قد تكون null
-                      final status = item?.status;
-
-
-                      final itemCurrency = item?.currency;
-                      final itemCurrencySymbol = item?.currencySymbol;
-
-                      final date = c.createdAt ?? '';
-
-
-                      final isPurchased = item?.isPurchased ?? 0;
-                      final alreadyReview = _hasAnyReview(item);
-
-                      final itemOfferId = (c.itemOfferId ?? c.id) ?? 0;
-
-
-                      final unreadCount = c.unreadMessagesCount ?? 0;
-                      final lastMessage = c.lastMessage;
-                      final participants = c.participants;
-
-
-
-                      final conversationId =
-                          c.conversationId ?? c.id?.toString() ?? '';
-
+                      final ChatedUser c = filtered[index];
+                      final status = c.participants
+                          ?.map((p) => p.status)
+                          .firstWhere((s) => s != null, orElse: () => null);
+                      final userKey = (c.sellerId ?? c.buyerId)?.toString() ?? '';
+                      if (status != null && userKey.isNotEmpty) {
+                        _seedPresence(
+                          userId: userKey,
+                          status: status,
+                          conversationId: c.conversationId ?? c.id?.toString(),
+                          itemOfferId: c.itemOfferId,
+                        );
+                      }
                       return Padding(
                         padding: const EdgeInsets.only(top: 9.0),
-                        child: ChatTile(
-                          id: id,
-                          itemId: itemId,
-                          profilePicture: profilePicture,
-                          userName: userName,
-                          itemPicture: itemPicture,
-                          itemName: itemName,
-                          unreadCount: unreadCount,
-                          lastMessage: lastMessage,
-
-                          conversationId: conversationId,
-
-                          date: date,
-                          itemOfferId: itemOfferId,
-                          itemPrice: itemPrice,
-                          itemAmount: itemAmount,
-                          status: status,
-                          buyerId: buyerId,
-                          isPurchased: isPurchased,
-                          alreadyReview: alreadyReview,
-                          participants: participants,
-                          itemCurrency: itemCurrency,
-                          itemCurrencySymbol: itemCurrencySymbol,
+                        child: _buildChatTileFromChat(
+                          c,
+                          isSellerSide: false,
                         ),
                       );
                     },
@@ -262,77 +313,46 @@ extension _ChatListScreenUi on _ChatListScreenState {
               );
             }
 
+            final filtered = _filterChats(state.chatedUserList);
+            if (filtered.isEmpty) {
+              return NoChatFound(
+                title: _searchQuery.isNotEmpty ? 'لا توجد نتائج' : null,
+                subtitle: _searchQuery.isNotEmpty
+                    ? 'لا توجد محادثات تطابق البحث الحالي.'
+                    : null,
+                onRetry: () {
+                  context.read<GetSellerChatListCubit>().setContext(context);
+                  context.read<GetSellerChatListCubit>().fetch();
+                },
+              );
+            }
+
             return Column(
               children: [
                 Expanded(
                   child: ListView.builder(
                     controller: chatSellerScreenController,
-                    itemCount: state.chatedUserList.length,
+                    itemCount: filtered.length,
                     padding: const EdgeInsetsDirectional.all(16),
                     itemBuilder: (context, index) {
-                      final ChatedUser c = state.chatedUserList[index];
-
-                      final buyer = c.buyer; // قد تكون null
-                      final item = c.item; // قد يكون null
-
-                      final id = c.buyerId?.toString() ?? '';
-                      final itemId = c.itemId?.toString() ?? '';
-                      final buyerId = c.buyerId?.toString() ?? '';
-
-                      final profilePicture = buyer?.profile ?? '';
-                      final userName = buyer?.name ?? '';
-
-                      final itemPicture = item?.image ?? '';
-                      final itemName = item?.name ?? '';
-
-                      final itemPrice = (item?.price ?? 0.0);
-                      final itemAmount = c.amount;
-                      final status = item?.status;
-                      final itemCurrency = item?.currency;
-                      final itemCurrencySymbol = item?.currencySymbol;
-                      final date = c.createdAt ?? '';
-
-
-
-                      final isPurchased = item?.isPurchased ?? 0;
-                      final alreadyReview = _hasAnyReview(item);
-
-                      final itemOfferId = (c.itemOfferId ?? c.id) ?? 0;
-
-                      final unreadCount = c.unreadMessagesCount ?? 0;
-                      final lastMessage = c.lastMessage;
-                      final participants = c.participants;
-
-
-
-                      final conversationId =
-                          c.conversationId ?? c.id?.toString() ?? '';
-
+                      final ChatedUser c = filtered[index];
+                      final status = c.participants
+                          ?.map((p) => p.status)
+                          .firstWhere((s) => s != null, orElse: () => null);
+                      final userKey = (c.buyerId ?? c.sellerId)?.toString() ?? '';
+                      if (status != null && userKey.isNotEmpty) {
+                        _seedPresence(
+                          userId: userKey,
+                          status: status,
+                          conversationId: c.conversationId ?? c.id?.toString(),
+                          itemOfferId: c.itemOfferId,
+                        );
+                      }
                       return Padding(
                         padding: const EdgeInsets.only(top: 9.0),
-                        child: ChatTile(
-                          id: id,
-                          itemId: itemId,
-                          conversationId:
-                          c.conversationId ?? c.id?.toString() ?? '',
-                          profilePicture: profilePicture,
-                          userName: userName,
-                          itemPicture: itemPicture,
-                          itemName: itemName,
-                          unreadCount: unreadCount,
-                          lastMessage: lastMessage,
-                          date: date,
-                          itemOfferId: itemOfferId,
-                          itemPrice: itemPrice,
-                          itemAmount: itemAmount,
-                          status: status,
-                          buyerId: buyerId,
-                          isPurchased: isPurchased,
-                          alreadyReview: alreadyReview,
-                          participants: participants,
-                          itemCurrency: itemCurrency,
-                          itemCurrencySymbol: itemCurrencySymbol,
-
+                        child: _buildChatTileFromChat(
+                          c,
+                          isSellerSide: true,
                         ),
                       );
                     },
@@ -344,6 +364,202 @@ extension _ChatListScreenUi on _ChatListScreenState {
           }
 
           return const SizedBox.shrink();
+        },
+      ),
+    );
+  }
+
+  ChatTile _buildChatTileFromChat(
+    ChatedUser c, {
+    required bool isSellerSide,
+  }) {
+    final counterpart = isSellerSide ? c.buyer : c.seller;
+    final item = c.item;
+
+    final id =
+        isSellerSide ? c.buyerId?.toString() ?? '' : c.sellerId?.toString() ?? '';
+    final itemId = c.itemId?.toString() ?? '';
+    final buyerId = c.buyerId?.toString() ?? '';
+
+    String _counterpartProfile(dynamic user) {
+      if (user is Buyer) return user.profile ?? '';
+      if (user is Seller) return user.profile ?? '';
+      return '';
+    }
+
+    String _counterpartName(dynamic user) {
+      if (user is Buyer) return user.name ?? '';
+      if (user is Seller) return user.name ?? '';
+      return '';
+    }
+
+    final profilePicture = _counterpartProfile(counterpart);
+    final userName = _counterpartName(counterpart);
+
+    final itemPicture = item?.image ?? '';
+    final itemName = item?.name ?? '';
+
+    final itemPrice = (item?.price ?? 0.0);
+    final itemAmount = c.amount;
+    final status = item?.status;
+    final itemCurrency = item?.currency;
+    final itemCurrencySymbol = item?.currencySymbol;
+    final date = c.createdAt ?? '';
+
+    final isPurchased = item?.isPurchased ?? 0;
+    final alreadyReview = _hasAnyReview(item);
+
+    final itemOfferId = (c.itemOfferId ?? c.id) ?? 0;
+
+    final unreadCount = c.unreadMessagesCount ?? 0;
+    final lastMessage = c.lastMessage;
+    final participants = c.participants;
+
+    final conversationId = c.conversationId ?? c.id?.toString() ?? '';
+
+    return ChatTile(
+      id: id,
+      itemId: itemId,
+      conversationId: conversationId,
+      profilePicture: profilePicture,
+      userName: userName,
+      itemPicture: itemPicture,
+      itemName: itemName,
+      unreadCount: unreadCount,
+      lastMessage: lastMessage,
+      date: date,
+      itemOfferId: itemOfferId,
+      itemPrice: itemPrice,
+      itemAmount: itemAmount,
+      status: status,
+      buyerId: buyerId,
+      isPurchased: isPurchased,
+      alreadyReview: alreadyReview,
+      participants: participants,
+      itemCurrency: itemCurrency,
+      itemCurrencySymbol: itemCurrencySymbol,
+    );
+  }
+
+  Widget _buildCombinedChatsTab(_ChatFilter filter) {
+    return RefreshIndicator(
+      onRefresh: () async {
+        context.read<GetBuyerChatListCubit>().setContext(context);
+        context.read<GetSellerChatListCubit>().setContext(context);
+        context.read<GetBuyerChatListCubit>().fetch();
+        context.read<GetSellerChatListCubit>().fetch();
+      },
+      color: context.color.territoryColor,
+      child: BlocBuilder<GetBuyerChatListCubit, GetBuyerChatListState>(
+        builder: (context, buyerState) {
+          return BlocBuilder<GetSellerChatListCubit, GetSellerChatListState>(
+            builder: (context, sellerState) {
+              final bool buyerLoading = buyerState is GetBuyerChatListInProgress ||
+                  buyerState is GetBuyerChatListInitial;
+              final bool sellerLoading = sellerState is GetSellerChatListInProgress ||
+                  sellerState is GetSellerChatListInitial;
+
+              if (buyerLoading || sellerLoading) {
+                return buildChatListLoadingShimmer();
+              }
+
+              if (buyerState is GetBuyerChatListFailed &&
+                  sellerState is GetSellerChatListFailed) {
+                final dynamic buyerError = buyerState.error;
+                final dynamic sellerError = sellerState.error;
+                final bool noInternet = (buyerError is ApiException &&
+                        buyerError.errorMessage == "no-internet") ||
+                    (sellerError is ApiException &&
+                        sellerError.errorMessage == "no-internet");
+
+                if (noInternet) {
+                  return NoInternet(onRetry: () {
+                    context.read<GetBuyerChatListCubit>().fetch();
+                    context.read<GetSellerChatListCubit>().fetch();
+                  });
+                }
+
+                return SomethingWentWrong(onReload: () {
+                  context.read<GetBuyerChatListCubit>().fetch();
+                  context.read<GetSellerChatListCubit>().fetch();
+                });
+              }
+
+              final buyerList = buyerState is GetBuyerChatListSuccess
+                  ? buyerState.chatedUserList
+                  : <ChatedUser>[];
+              final sellerList = sellerState is GetSellerChatListSuccess
+                  ? sellerState.chatedUserList
+                  : <ChatedUser>[];
+
+              final List<_ChatEntry> entries = [];
+
+              if (filter != _ChatFilter.selling) {
+                entries.addAll(
+                  buyerList.map((c) => _ChatEntry(c, false)),
+                );
+              }
+              if (filter != _ChatFilter.buying) {
+                entries.addAll(
+                  sellerList.map((c) => _ChatEntry(c, true)),
+                );
+              }
+
+              Iterable<_ChatEntry> filtered = entries.where((entry) {
+                final chat = entry.chat;
+                if (filter == _ChatFilter.unread &&
+                    (chat.unreadMessagesCount ?? 0) == 0) {
+                  return false;
+                }
+                return _matchesSearch(chat);
+              });
+
+              final List<_ChatEntry> results = filtered.toList()
+                ..sort((a, b) =>
+                    _chatTimestamp(b.chat).compareTo(_chatTimestamp(a.chat)));
+
+              if (results.isEmpty) {
+                return NoChatFound(
+                  title: _searchQuery.isNotEmpty ? 'لا توجد نتائج' : null,
+                  subtitle: _searchQuery.isNotEmpty
+                      ? 'لا توجد محادثات تطابق البحث الحالي.'
+                      : null,
+                  onRetry: () {
+                    context.read<GetBuyerChatListCubit>().fetch();
+                    context.read<GetSellerChatListCubit>().fetch();
+                  },
+                );
+              }
+
+              final bool loadingMore =
+                  (buyerState is GetBuyerChatListSuccess &&
+                      buyerState.isLoadingMore) ||
+                      (sellerState is GetSellerChatListSuccess &&
+                          sellerState.isLoadingMore);
+
+              return Column(
+                children: [
+                  Expanded(
+                    child: ListView.builder(
+                      padding: const EdgeInsetsDirectional.all(16),
+                      itemCount: results.length,
+                      itemBuilder: (context, index) {
+                        final entry = results[index];
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 9.0),
+                          child: _buildChatTileFromChat(
+                            entry.chat,
+                            isSellerSide: entry.isSellerSide,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  if (loadingMore) UiUtils.progress(),
+                ],
+              );
+            },
+          );
         },
       ),
     );
@@ -434,3 +650,5 @@ extension _ChatListScreenUi on _ChatListScreenState {
     );
   }
 }
+
+

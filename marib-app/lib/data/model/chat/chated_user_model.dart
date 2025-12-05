@@ -19,6 +19,7 @@ class ChatedUser {
   List<ChatParticipant>? participants;
   int? unreadMessagesCount;
   ChatLastMessage? lastMessage;
+  bool? isFavorite;
 
 
   ChatedUser(
@@ -37,7 +38,8 @@ class ChatedUser {
         this.item,
         this.participants,
         this.unreadMessagesCount,
-        this.lastMessage});
+        this.lastMessage,
+        this.isFavorite});
 
 
   static bool? parseUserBlocked(dynamic value) {
@@ -60,6 +62,12 @@ class ChatedUser {
     userBlocked = _parseBool(json['user_blocked']);
     unreadMessagesCount =
         _parseInt(json['unread_messages_count']) ?? _parseInt(json['unread']);
+    isFavorite = _parseBool(
+          json['is_favorite'] ??
+          json['isFavourite'] ??
+          json['favorite'],
+        ) ??
+        false;
     seller = json['seller'] != null ? Seller.fromJson(json['seller']) : null;
     buyer = json['buyer'] != null ? Buyer.fromJson(json['buyer']) : null;
     item = json['item'] != null ? Item.fromJson(json['item']) : null;
@@ -106,6 +114,9 @@ class ChatedUser {
     }
     if (unreadMessagesCount != null) {
       data['unread_messages_count'] = unreadMessagesCount;
+    }
+    if (isFavorite != null) {
+      data['is_favorite'] = isFavorite;
     }
     if (lastMessage != null) {
       data['last_message'] = lastMessage!.toJson();

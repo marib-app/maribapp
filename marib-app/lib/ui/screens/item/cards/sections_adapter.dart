@@ -306,6 +306,34 @@ class _ItemCardState extends State<ICard> {
     return DateTime.now().difference(d).inHours < 24;
   }
 
+  String? _discountLabel(ItemModel? item) {
+    if (item == null) return null;
+    final ItemDiscount? discount = item.discount;
+
+    double? percent;
+
+    final double? original = item.price;
+    final double? finalPrice = item.finalPrice ?? item.price;
+    if (original != null &&
+        finalPrice != null &&
+        original > 0 &&
+        finalPrice < original) {
+      percent = ((original - finalPrice) / original) * 100;
+    } else if (discount?.isActive == true &&
+        discount?.value != null &&
+        (discount?.type?.toLowerCase() == 'percent' ||
+            discount?.type?.toLowerCase() == 'percentage')) {
+      percent = discount?.value;
+    }
+
+    if (percent != null && percent > 0) {
+      final int rounded = percent.round();
+      final int display = rounded <= 0 ? 1 : rounded;
+      return "خصم $display%";
+    }
+    return null;
+  }
+
   // ───────── helpers: قراءة التاريخ من حقول محتملة ─────────
   DateTime? _extractCreatedAt(ItemModel? item) {
     if (item == null) return null;
@@ -367,6 +395,7 @@ class _ItemCardState extends State<ICard> {
   Widget build(BuildContext context) {
 
     final item = widget.item;
+    final String? discountText = _discountLabel(item);
 
     String? preferredThumb;
     final thumb = item?.thumbnailUrl;
@@ -453,6 +482,32 @@ class _ItemCardState extends State<ICard> {
                         start: 10,
                         top: (widget.item?.isFeature ?? false) ? 31 : 5,
                         child: const _NewBadge(),
+                      ),
+
+                    if (discountText != null)
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        child: Container(
+                          height: 26,
+                          decoration: BoxDecoration(
+                            color: Colors.redAccent.shade700,
+                            borderRadius: const BorderRadius.only(
+                              bottomLeft: Radius.circular(18),
+                              bottomRight: Radius.circular(18),
+                            ),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            discountText,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
                       ),
                   ],
                 ),

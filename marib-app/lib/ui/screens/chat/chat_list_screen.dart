@@ -13,14 +13,17 @@ import 'package:marib/utils/api.dart';
 import 'package:marib/utils/app_icon.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/hive_utils.dart';
+import 'package:marib/utils/notification/notification_service.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:marib/utils/constant.dart';
+import 'package:flutter/scheduler.dart';
 
 part 'chat_list_screen_ui.dart';
 
+enum _ChatFilter { all, selling, buying, unread }
 
 
 
@@ -44,6 +47,9 @@ class _ChatListScreenState extends State<ChatListScreen>
     with AutomaticKeepAliveClientMixin {
   ScrollController chatBuyerScreenController = ScrollController();
   ScrollController chatSellerScreenController = ScrollController();
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  final Map<String, ParticipantStatus?> _presenceSeeded = {};
 
   @override
   void initState() {
@@ -70,7 +76,17 @@ class _ChatListScreenState extends State<ChatListScreen>
         }
       });
     }
+    _searchController.addListener(_handleSearchChanged);
     super.initState();
+  }
+
+  @override
+  void dispose() {
+    chatBuyerScreenController.dispose();
+    chatSellerScreenController.dispose();
+    _searchController.removeListener(_handleSearchChanged);
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
@@ -88,6 +104,94 @@ class _ChatListScreenState extends State<ChatListScreen>
     return list != null && list.isNotEmpty;
   }
 
+  void _handleSearchChanged() {
+    final next = _searchController.text.trim();
+    if (next == _searchQuery) return;
+    setState(() {
+      _searchQuery = next;
+    });
+  }
+
+  bool _matchesSearch(ChatedUser chat) {
+    if (_searchQuery.isEmpty) {
+      return true;
+    }
+    final query = _searchQuery.toLowerCase();
+    bool contains(String? source) =>
+        source != null && source.toLowerCase().contains(query);
+
+    return contains(chat.seller?.name) ||
+        contains(chat.buyer?.name) ||
+        contains(chat.item?.name) ||
+        contains(chat.lastMessage?.message);
+  }
+
+  bool _isFavoriteChat(ChatedUser chat) {
+    return chat.isFavorite == true;
+  }
+
+  List<ChatedUser> _filterChats(
+    List<ChatedUser> source, {
+    bool unreadOnly = false,
+    bool favoriteOnly = false,
+  }) {
+    return source.where((chat) {
+      if (unreadOnly && (chat.unreadMessagesCount ?? 0) == 0) {
+        return false;
+      }
+      if (favoriteOnly && !_isFavoriteChat(chat)) {
+        return false;
+      }
+      return _matchesSearch(chat);
+    }).toList();
+  }
+
+  DateTime _chatTimestamp(ChatedUser chat) {
+    final candidates = [
+      chat.lastMessage?.createdAt,
+      chat.updatedAt,
+      chat.createdAt,
+    ];
+
+    for (final candidate in candidates) {
+      if (candidate == null) continue;
+      final parsed = DateTime.tryParse(candidate);
+      if (parsed != null) {
+        return parsed;
+      }
+    }
+    return DateTime.fromMillisecondsSinceEpoch(0);
+  }
+
+  void _seedPresence({
+    required String userId,
+    required ParticipantStatus status,
+    String? conversationId,
+    int? itemOfferId,
+  }) {
+    if (userId.isEmpty) return;
+    // لا نرسخ حالات أوفلاين، فقط Online/Typing حتى لا نكسر الحالات الصحيحة.
+    final bool nextIsOnline = status.isOnline == true || status.isTyping == true;
+    if (!nextIsOnline) {
+      return;
+    }
+
+    final String key = userId;
+    final ParticipantStatus? previous = _presenceSeeded[key];
+    if (NotificationService.areStatusesEqual(previous, status)) {
+      return;
+    }
+    _presenceSeeded[key] = status;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      NotificationService.cacheUserPresence(
+        userId: userId,
+        status: status,
+        conversationId: conversationId,
+        itemOfferId: itemOfferId,
+      );
+    });
+  }
+
   // ---------------------- Buying ----------------------
   Widget buyingChatListData() => buildBuyingChatListData();
 
@@ -102,4 +206,11 @@ class _ChatListScreenState extends State<ChatListScreen>
 
   @override
   bool get wantKeepAlive => true;
+}
+
+class _ChatEntry {
+  final ChatedUser chat;
+  final bool isSellerSide;
+
+  _ChatEntry(this.chat, this.isSellerSide);
 }

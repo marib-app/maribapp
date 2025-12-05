@@ -2173,6 +2173,13 @@ class NotificationService {
       final ParticipantStatus? status =
           _conversationPresenceState[conversationKey];
       if (status != null) {
+        if (userId != null && userId.isNotEmpty) {
+          final ParticipantStatus? existing = _userPresenceState[userId];
+          if (!_areStatusesEqual(existing, status)) {
+            _userPresenceState[userId] = status;
+            _bumpPresenceVersion();
+          }
+        }
         return status;
       }
     }
@@ -2180,6 +2187,31 @@ class NotificationService {
       return _userPresenceState[userId];
     }
     return null;
+  }
+
+  /// Caches/overrides the presence for a specific user (and optionally a conversation)
+  /// and bumps the presence version so listeners refresh.
+  static void cacheUserPresence({
+    required String userId,
+    required ParticipantStatus status,
+    String? conversationId,
+    int? itemOfferId,
+  }) {
+    if (userId.isEmpty) return;
+    // لا نهبط من Online إلى Offline ما لم تكن هناك معلومة أقوى (typing/online).
+    final ParticipantStatus? current = _userPresenceState[userId];
+    final bool currentlyOnline = current?.isOnline == true || current?.isTyping == true;
+    final bool nextIsOnline = status.isOnline == true || status.isTyping == true;
+    if (currentlyOnline && !nextIsOnline) {
+      return;
+    }
+
+    _updatePresenceCaches(
+      conversationId: conversationId,
+      itemOfferId: itemOfferId,
+      userId: userId,
+      status: status,
+    );
   }
 
   static bool areStatusesEqual(ParticipantStatus? a, ParticipantStatus? b) {

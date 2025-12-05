@@ -9,6 +9,7 @@ import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/notification/notification_service.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:marib/utils/hive_utils.dart';
@@ -45,6 +46,17 @@ class ChatTile extends StatelessWidget {
   final List<ChatParticipant>? participants;
   final String? itemCurrency;
   final String? itemCurrencySymbol;
+
+  static final Map<String, ParticipantStatus?> _lastKnownPresence = {};
+
+  static ParticipantStatus? getLastPresence(String userId) {
+    return _lastKnownPresence[userId];
+  }
+
+  static void setLastPresence(String userId, ParticipantStatus? status) {
+    if (userId.isEmpty) return;
+    _lastKnownPresence[userId] = status;
+  }
 
 
   const ChatTile({

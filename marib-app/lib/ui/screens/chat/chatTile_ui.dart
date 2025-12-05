@@ -343,14 +343,23 @@ extension _ChatTileUi on ChatTile {
     return ValueListenableBuilder<int>(
       valueListenable: NotificationService.presenceVersionNotifier,
       builder: (context, _, __) {
-        final ParticipantStatus? liveStatus =
-            NotificationService.resolvePresenceStatus(
-          conversationId: conversationId,
-          itemOfferId: itemOfferId,
-          userId: id,
-        );
-        final ParticipantStatus? presenceStatus =
-            liveStatus ?? _otherParticipantStatus();
+        // نقرأ الحالة العامة (الموحدة لكل المحادثات) مع fallback لآخر حالة محفوظة، ثم المشاركين.
+        final ParticipantStatus? cachedPresence =
+            NotificationService.resolvePresenceStatus(userId: id) ??
+                ChatTile.getLastPresence(id);
+
+        ParticipantStatus? presenceStatus =
+            cachedPresence ?? _otherParticipantStatus();
+
+        // خزّن الحالة الجديدة إذا تغيّرت.
+        if (presenceStatus != null &&
+            !NotificationService.areStatusesEqual(
+              presenceStatus,
+              cachedPresence,
+            )) {
+          ChatTile.setLastPresence(id, presenceStatus);
+        }
+
         return _buildChatTileContent(context, presenceStatus);
       },
     );

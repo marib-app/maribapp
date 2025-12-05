@@ -634,72 +634,84 @@ class _ItemCardState extends State<ICard> {
   }
 
   Widget favButton({required ItemModel item, required double size}) {
-    bool isLike = context.read<FavoriteCubit>().isItemFavorite(item.id!);
+    final int? itemId = item.id;
+    if (itemId == null) {
+      return const SizedBox.shrink();
+    }
 
     return BlocProvider(
       create: (context) => UpdateFavoriteCubit(FavoriteRepository()),
-      child: BlocConsumer<FavoriteCubit, FavoriteState>(
-        bloc: context.read<FavoriteCubit>(),
-        listener: (context, state) {
-          if (state is FavoriteFetchSuccess) {
-            isLike = context.read<FavoriteCubit>().isItemFavorite(item.id!);
-          }
-        },
-        builder: (context, likeAndDislikeState) {
-          return BlocConsumer<UpdateFavoriteCubit, UpdateFavoriteState>(
-            bloc: context.read<UpdateFavoriteCubit>(),
-            listener: (context, state) {
-              if (state is UpdateFavoriteSuccess) {
-                if (state.wasProcess) {
-                  context.read<FavoriteCubit>().addFavoriteitem(state.item);
-                } else {
-                  context.read<FavoriteCubit>().removeFavoriteItem(state.item);
-                }
-              }
-            },
-            builder: (context, state) {
-              final inProgress = state is UpdateFavoriteInProgress;
+      child: Builder(
+        builder: (outerContext) {
+          final favoriteCubit = outerContext.read<FavoriteCubit>();
 
-              return CircleAvatar(
-                backgroundColor: Colors.black54, // ✅ نفس باقي الأزرار
-                radius: size / 2,
-                child: IconButton(
-                  icon: inProgress
-                      ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+          return BlocBuilder<FavoriteCubit, FavoriteState>(
+            bloc: favoriteCubit,
+            builder: (context, likeAndDislikeState) {
+              final bool isLikeFromCubit =
+                  favoriteCubit.isItemFavorite(itemId);
+
+              return BlocConsumer<UpdateFavoriteCubit, UpdateFavoriteState>(
+                bloc: context.read<UpdateFavoriteCubit>(),
+                listener: (context, state) {
+                  if (state is UpdateFavoriteSuccess &&
+                      state.item.id == itemId) {
+                    // مزامنة قائمة المفضلة بعد نجاح العملية
+                    favoriteCubit.getFavorite();
+                  }
+                },
+                builder: (context, state) {
+                  final inProgress = state is UpdateFavoriteInProgress;
+                  final bool isLike =
+                      state is UpdateFavoriteSuccess && state.item.id == itemId
+                          ? state.wasProcess
+                          : isLikeFromCubit;
+
+                  return CircleAvatar(
+                    backgroundColor: Colors.black54, // ✅ نفس باقي الأزرار
+                    radius: size / 2,
+                    child: IconButton(
+                      icon: inProgress
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                          : UiUtils.getSvg(
+                              isLike ? AppIcons.like_fill : AppIcons.like,
+                              width: 22,
+                              height: 22,
+                              color:
+                                  isLike ? Colors.redAccent : Colors.white,
+                            ),
+                      onPressed: inProgress
+                          ? null
+                          : () {
+                              UiUtils.checkUser(
+                                onNotGuest: () {
+                                  context.read<UpdateFavoriteCubit>()
+                                      .setFavoriteItem(
+                                    item: item,
+                                    type: isLike ? 0 : 1,
+                                  );
+
+                                  UiUtils.showSoftSnackBar(
+                                    context,
+                                    message: isLike
+                                        ? "تمت إزالة الإعلان من المفضلة"
+                                        : "تمت إضافة الإعلان إلى المفضلة",
+                                  );
+                                },
+                                context: context,
+                              );
+                            },
                     ),
-                  )
-                      : UiUtils.getSvg(
-                    isLike ? AppIcons.like_fill : AppIcons.like,
-                    width: 22,
-                    height: 22,
-                    color: isLike ? Colors.redAccent : Colors.white,
-                  ),
-                  onPressed: inProgress
-                      ? null
-                      : () {
-                    UiUtils.checkUser(
-                      onNotGuest: () {
-                        context.read<UpdateFavoriteCubit>().setFavoriteItem(
-                          item: item,
-                          type: isLike ? 0 : 1,
-                        );
-
-                        UiUtils.showSoftSnackBar(
-                          context,
-                          message: isLike
-                              ? "تمت الإزالة من المفضلة"
-                              : "تمت الإضافة إلى المفضلة",
-                        );
-                      },
-                      context: context,
-                    );
-                  },
-                ),
+                  );
+                },
               );
             },
           );

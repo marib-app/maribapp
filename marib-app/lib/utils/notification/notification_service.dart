@@ -2198,9 +2198,10 @@ class NotificationService {
     int? itemOfferId,
   }) {
     if (userId.isEmpty) return;
-    // لا نهبط من Online إلى Offline ما لم تكن هناك معلومة أقوى (typing/online).
+    // لا نهبط من Online/Typing إلى Offline ما لم يكن هناك تأكيد قوي.
     final ParticipantStatus? current = _userPresenceState[userId];
-    final bool currentlyOnline = current?.isOnline == true || current?.isTyping == true;
+    final bool currentlyOnline =
+        current?.isOnline == true || current?.isTyping == true;
     final bool nextIsOnline = status.isOnline == true || status.isTyping == true;
     if (currentlyOnline && !nextIsOnline) {
       return;

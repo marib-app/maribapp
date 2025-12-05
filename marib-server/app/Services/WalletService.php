@@ -318,7 +318,7 @@ class WalletService
                 'balance' => $balance,
                 'balance_before' => $balanceBefore,
                 'currency' => $currency,
-                'deeplink' => config('services.mobile.wallet_deeplink', 'eclassify://wallet'),
+                'deeplink' => config('services.mobile.wallet_deeplink', 'maribsrv://wallet'),
                 'idempotency_key' => $transaction->idempotency_key,
                 'created_at' => optional($transaction->created_at)->toIso8601String(),
             ],
@@ -337,7 +337,7 @@ class WalletService
     protected function sendWalletNotification(User $user, WalletTransaction $transaction): void
     {
         $payload = $this->buildWalletNotificationPayload($transaction);
-        $deeplink = (string) ($payload['data']['deeplink'] ?? config('services.mobile.wallet_deeplink', 'marib://wallet'));
+        $deeplink = (string) ($payload['data']['deeplink'] ?? config('services.mobile.wallet_deeplink', 'maribsrv://wallet'));
 
         try {
             app(NotificationDispatchService::class)->dispatch(

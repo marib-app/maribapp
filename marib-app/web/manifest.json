@@ -1,6 +1,6 @@
 {
-    "name": "eclassify",
-    "short_name": "eclassify",
+    "name": "maribsrv",
+    "short_name": "maribsrv",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

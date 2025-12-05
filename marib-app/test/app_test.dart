@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:marib/main.dart' as app;
 
-///Testing eclassify application for version v1.0.3
+///Testing maribsrv application for version v1.0.3
 void main() {
   group("Login test", () {
     IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -25,7 +25,7 @@ void main() {
 
       await widgetTester.tap(button);
 
-      // expect(find.text("Welcome To eclassify"), findsOneWidget);
+      // expect(find.text("Welcome To maribsrv"), findsOneWidget);
       // await widgetTester.tap(find.byKey(const Key("next_screen")));
       // await widgetTester.pumpAndSettle();
 

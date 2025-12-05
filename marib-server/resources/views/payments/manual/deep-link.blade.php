@@ -27,7 +27,7 @@
 @include('layouts.footer_script')
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const appScheme = 'eclassify://{{ $deeplinkPath }}';
+        const appScheme = 'maribsrv://{{ $deeplinkPath }}';
         const appStoreLink = '{{ $appStoreLink }}';
         const playStoreLink = '{{ $playStoreLink }}';
         const fallback = navigator.userAgent.match(/iPad|iPhone|iPod/) ? appStoreLink : playStoreLink;

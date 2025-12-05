@@ -2,6 +2,8 @@
 part of 'chat_list_screen.dart';
 
 extension _ChatListScreenUi on _ChatListScreenState {
+  static bool _isOnlineStatus(ParticipantStatus? status) =>
+      status?.isOnline == true || status?.isTyping == true;
 
 
   Widget buildChatListScreen(BuildContext context) {
@@ -18,6 +20,36 @@ extension _ChatListScreenUi on _ChatListScreenState {
     final base = theme.textTheme.labelLarge ?? const TextStyle(fontSize: 14);
     final selected = base.copyWith(fontWeight: FontWeight.w700, height: 1.1);
     final unselected = base.copyWith(fontWeight: FontWeight.w500, height: 1.1);
+    final buyerState = context.watch<GetBuyerChatListCubit>().state;
+    final sellerState = context.watch<GetSellerChatListCubit>().state;
+
+    int _countChats(GetBuyerChatListState state) {
+      return state is GetBuyerChatListSuccess ? state.chatedUserList.length : 0;
+    }
+
+    int _countSeller(GetSellerChatListState state) {
+      return state is GetSellerChatListSuccess ? state.chatedUserList.length : 0;
+    }
+
+    int _countUnread(GetBuyerChatListState b, GetSellerChatListState s) {
+      int sum = 0;
+      if (b is GetBuyerChatListSuccess) {
+        sum += b.chatedUserList
+            .fold<int>(0, (acc, c) => acc + (c.unreadMessagesCount ?? 0));
+      }
+      if (s is GetSellerChatListSuccess) {
+        sum += s.chatedUserList
+            .fold<int>(0, (acc, c) => acc + (c.unreadMessagesCount ?? 0));
+      }
+      return sum;
+    }
+
+    final int buyerCount = _countChats(buyerState);
+    final int sellerCount = _countSeller(sellerState);
+    final int allCount = buyerCount + sellerCount;
+    final int unreadCount = _countUnread(buyerState, sellerState);
+    final bool isLoading = buyerState is GetBuyerChatListInProgress ||
+        sellerState is GetSellerChatListInProgress;
 
     return AnnotatedRegion(
       value: UiUtils.getSystemUiOverlayStyle(
@@ -57,6 +89,11 @@ extension _ChatListScreenUi on _ChatListScreenState {
                   unselected: unselected,
                   onBackground: onBackground,
                   border: border,
+                  allCount: allCount,
+                  sellerCount: sellerCount,
+                  buyerCount: buyerCount,
+                  unreadCount: unreadCount,
+                  isLoading: isLoading,
                 ),
               ),
               Divider(
@@ -128,9 +165,19 @@ extension _ChatListScreenUi on _ChatListScreenState {
     required TextStyle unselected,
     required Color onBackground,
     required Color border,
+    required int allCount,
+    required int sellerCount,
+    required int buyerCount,
+    required int unreadCount,
+    required bool isLoading,
   }) {
     final colors = context.color;
-    final labels = const ['الكل', 'بيع', 'شراء', 'غير مقروء'];
+    final List<_TabMeta> tabs = [
+      _TabMeta(label: 'الكل', count: allCount),
+      _TabMeta(label: 'بيع', count: sellerCount),
+      _TabMeta(label: 'شراء', count: buyerCount),
+      _TabMeta(label: 'غير مقروء', count: unreadCount),
+    ];
 
     return Builder(
       builder: (ctx) {
@@ -139,37 +186,81 @@ extension _ChatListScreenUi on _ChatListScreenState {
           animation: controller.animation!,
           builder: (_, __) {
             final current = controller.index;
-            return Wrap(
-              spacing: 8,
-              runSpacing: 10,
-              children: List.generate(labels.length, (index) {
-                final bool isActive = index == current;
-                return ChoiceChip(
-                  label: Text(
-                    labels[index],
-                    style: (isActive ? selected : unselected).copyWith(
-                      color: isActive ? colors.territoryColor : onBackground,
-                    ),
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (isLoading)
+                  LinearProgressIndicator(
+                    minHeight: 2,
+                    backgroundColor: colors.secondaryColor,
+                    color: colors.territoryColor,
                   ),
-                  selected: isActive,
-                  onSelected: (_) => controller.animateTo(index),
-                  backgroundColor: colors.secondaryColor.withOpacity(0.6),
-                  selectedColor: colors.territoryColor.withOpacity(0.12),
-                  shape: StadiumBorder(
-                    side: BorderSide(
-                      color: isActive
-                          ? colors.territoryColor.withOpacity(0.5)
-                          : border,
-                    ),
-                  ),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  elevation: 0,
-                  pressElevation: 0,
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  showCheckmark: false,
-                );
-              }),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 10,
+                  children: List.generate(tabs.length, (index) {
+                    final bool isActive = index == current;
+                    final tab = tabs[index];
+                    return ChoiceChip(
+                      label: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            tab.label,
+                            style: (isActive ? selected : unselected).copyWith(
+                              color: isActive
+                                  ? colors.territoryColor
+                                  : onBackground,
+                            ),
+                          ),
+                          if (tab.count > 0) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: (isActive
+                                        ? colors.territoryColor
+                                        : onBackground)
+                                    .withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                tab.count > 99 ? '99+' : tab.count.toString(),
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: isActive
+                                      ? colors.territoryColor
+                                      : onBackground,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      selected: isActive,
+                      onSelected: (_) => controller.animateTo(index),
+                      backgroundColor: colors.secondaryColor.withOpacity(0.6),
+                      selectedColor: colors.territoryColor.withOpacity(0.12),
+                      shape: StadiumBorder(
+                        side: BorderSide(
+                          color: isActive
+                              ? colors.territoryColor.withOpacity(0.5)
+                              : border,
+                        ),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                      elevation: 0,
+                      pressElevation: 0,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      showCheckmark: false,
+                    );
+                  }),
+                ),
+              ],
             );
           },
         );

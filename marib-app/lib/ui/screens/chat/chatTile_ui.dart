@@ -98,7 +98,8 @@ extension _ChatTileUi on ChatTile {
     final borderColor = context.color.textDefaultColor.withOpacity(0.08);
     final bool hasProfileImage = profilePicture.trim().isNotEmpty;
 
-    final bool isOnline = presenceStatus?.isOnline == true;
+    final bool isOnline =
+        presenceStatus?.isOnline == true || presenceStatus?.isTyping == true;
     final bool isTyping = presenceStatus?.isTyping == true;
 
     const double size = 56;
@@ -391,6 +392,18 @@ extension _ChatTileUi on ChatTile {
                 ],
                 child: Builder(
                   builder: (context) {
+                    // تأكد من تطابق حالة الحضور مع الكاش قبل الدخول للدردشة.
+                    final ParticipantStatus? latestPresence =
+                        NotificationService.resolvePresenceStatus(userId: id) ??
+                            ChatTile.getLastPresence(id);
+                    if (latestPresence != null) {
+                      NotificationService.cacheUserPresence(
+                        userId: id,
+                        status: latestPresence,
+                        conversationId: conversationId,
+                        itemOfferId: itemOfferId,
+                      );
+                    }
                     return ChatScreen(
                       profilePicture: profilePicture,
                       itemTitle: itemName,

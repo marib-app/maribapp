@@ -10,13 +10,13 @@
 	</array>
 	<key>com.apple.developer.associated-domains</key>
 	<array>
-		<string>applinks:eclassify.thewrteam.in</string>
-		<string>applinks:eclassify.wrteam.me</string>
-		<string>applinks:e-classify-app-router.vercel.app</string>
+		<string>applinks:maribsrv.thewrteam.in</string>
+		<string>applinks:maribsrv.wrteam.me</string>
+		<string>applinks:maribsrv-app-router.vercel.app</string>
 	</array>
 	<key>com.apple.developer.icloud-container-identifiers</key>
 	<array>
-		<string>iCloud.com.eclassify.wrteam</string>
+		<string>iCloud.com.maribsrv.wrteam</string>
 	</array>
 	<key>com.apple.developer.icloud-services</key>
 	<array>

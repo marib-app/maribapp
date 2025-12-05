@@ -1662,7 +1662,7 @@ class PaymentFulfillmentService
                         : __('تم تسليم كود شبكة :network.', ['network' => $network->name]),
                     'wifi_purchase',
                     array_filter([
-                        'deeplink' => config('services.mobile.wifi_orders_deeplink', 'eclassify://wifi/orders'),
+                        'deeplink' => config('services.mobile.wifi_orders_deeplink', 'maribsrv://wifi/orders'),
                         'wifi_plan_id' => $plan->getKey(),
                         'wifi_network_id' => $network->getKey(),
                         'code' => $deliveryPayload['code'],
@@ -1694,7 +1694,7 @@ class PaymentFulfillmentService
                         ]),
                         'wifi_sale',
                         [
-                            'deeplink' => config('services.mobile.wifi_owner_sales_deeplink', 'eclassify://wifi/owner/sales'),
+                            'deeplink' => config('services.mobile.wifi_owner_sales_deeplink', 'maribsrv://wifi/owner/sales'),
                             'wifi_plan_id' => $plan->getKey(),
                             'wifi_network_id' => $network->getKey(),
                             'net_amount' => $netAmount,

@@ -53,18 +53,18 @@
 //     apiKey: 'AIzaSyApCJcVfUTKAdfiNB2vZ399YgJEFy_d-vk',
 //     appId: '1:6343732161:android:be9cbc67ef8a19792b5d40',
 //     messagingSenderId: '6343732161',
-//     projectId: 'eclassify-wrteam',
-//     storageBucket: 'eclassify-wrteam.appspot.com',
+//     projectId: 'maribsrv-wrteam',
+//     storageBucket: 'maribsrv-wrteam.appspot.com',
 //   );
 
 //   static const FirebaseOptions ios = FirebaseOptions(
 //     apiKey: 'AIzaSyBgKBEjpogvomINJ6uutsUQrHntz4g4PUQ',
 //     appId: '1:6343732161:ios:5cc58a2dcfbbb66b2b5d40',
 //     messagingSenderId: '6343732161',
-//     projectId: 'eclassify-wrteam',
-//     storageBucket: 'eclassify-wrteam.appspot.com',
+//     projectId: 'maribsrv-wrteam',
+//     storageBucket: 'maribsrv-wrteam.appspot.com',
 //     androidClientId: '6343732161-dhn3si4lpio5bhr32iu9u6j6d8ja0npr.apps.googleusercontent.com',
 //     iosClientId: '6343732161-tutdvlsj06eis0n3eli5c4985fi0lkht.apps.googleusercontent.com',
-//     iosBundleId: 'com.eclassify.wrteam',
+//     iosBundleId: 'com.maribsrv.wrteam',
 //   );
 // }

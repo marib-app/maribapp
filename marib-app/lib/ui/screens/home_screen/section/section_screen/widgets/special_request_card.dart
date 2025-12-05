@@ -1,13 +1,10 @@
 import 'dart:io';
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:marib/data/cubits/request_device/request_device_cubit.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
-import 'package:marib/utils/screen_scaler.dart';
 
 class SpecialRequestCard extends StatelessWidget {
   final String sectionSlug;
@@ -19,10 +16,9 @@ class SpecialRequestCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const double gridGap = 6.0;
-
-    final double cardExtent = 52;
-    final double spacing = math.min(ScreenScaler.s(14), gridGap);
+    const double circleSize = 52;
+    const double spacing = 4.0;
+    const double containerWidth = 64;
 
     final ThemeData theme = Theme.of(context);
     final ColorScheme colors = theme.colorScheme;
@@ -33,7 +29,7 @@ class SpecialRequestCard extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(cardExtent),
+        borderRadius: BorderRadius.circular(circleSize),
         onTap: () => _openRequestSheet(context),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.start,
@@ -42,8 +38,8 @@ class SpecialRequestCard extends StatelessWidget {
             AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               curve: Curves.easeOut,
-              height: cardExtent,
-              width: cardExtent,
+              height: circleSize,
+              width: circleSize,
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.transparent,
@@ -53,28 +49,23 @@ class SpecialRequestCard extends StatelessWidget {
                   color: Colors.transparent,
                   child: Icon(
                     Icons.assignment_add,
-                    size: cardExtent * 0.52,
-                    color: context.color.textDefaultColor.withOpacity(0.8),
+                    size: 28,
+                    color: colors.textDefaultColor.withOpacity(0.7),
                   ),
                 ),
               ),
             ),
             SizedBox(height: spacing),
-            Expanded(
-              child: Align(
-                alignment: Alignment.topCenter,
-                child: SizedBox(
-                  width: cardExtent + 12,
-                  child: Text(
-                    'طلب خاص',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: textStyle?.copyWith(
-                      fontSize: context.font.smaller,
-                      height: 1.05,
-                    ),
-                  ),
+            SizedBox(
+              width: containerWidth,
+              child: Text(
+                'طلب خاص',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: textStyle?.copyWith(
+                  fontSize: context.font.smaller,
+                  height: 1.05,
                 ),
               ),
             ),
@@ -312,13 +303,15 @@ class SpecialRequestCard extends StatelessWidget {
                                                     composeMessage();
 
                                                 outerContext
-                                    .read<RequestDeviceCubit>()
-                                    .requestDevice(
-                                      phone: phoneController.text.trim(),
-                                      subject: subject,
-                                      message: message,
-                                      section: sectionSlug,
-                                    );
+                                                    .read<RequestDeviceCubit>()
+                                                    .requestDevice(
+                                                      phone: phoneController
+                                                          .text
+                                                          .trim(),
+                                                      subject: subject,
+                                                      message: message,
+                                                      section: sectionSlug,
+                                                    );
                                               },
                                         child: isSubmitting
                                             ? const SizedBox(

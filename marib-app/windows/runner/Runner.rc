@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.eclassify" "\0"
-            VALUE "FileDescription", "eclassify" "\0"
+            VALUE "CompanyName", "com.maribsrv" "\0"
+            VALUE "FileDescription", "maribsrv" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "eclassify" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2024 com.eclassify. All rights reserved." "\0"
-            VALUE "OriginalFilename", "eclassify.exe" "\0"
-            VALUE "ProductName", "eclassify" "\0"
+            VALUE "InternalName", "maribsrv" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2024 com.maribsrv. All rights reserved." "\0"
+            VALUE "OriginalFilename", "maribsrv.exe" "\0"
+            VALUE "ProductName", "maribsrv" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

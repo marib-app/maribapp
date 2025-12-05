@@ -114,27 +114,27 @@
                 <data android:pathPattern="/product-details/.*" />
 
                 <!--<data
-                    android:host="eclassify.thewrteam.in"
-                    android:scheme="eclassify" />
+                    android:host="maribsrv.thewrteam.in"
+                    android:scheme="maribsrv" />
                 <data />-->
 
 
 
                 <!--<data
-                   android:host="eclassify.thewrteam.in"
+                   android:host="maribsrv.thewrteam.in"
                    android:pathPattern="/.."
-                   android:scheme="eclassify" />
+                   android:scheme="maribsrv" />
                <data android:pathPattern="/product-details/.*" />-->
 
                 <!-- <data
-                     android:host="eclassify-dev.vercel.app"
+                     android:host="maribsrv-dev.vercel.app"
                      android:pathPattern="/.."
-                     android:scheme="eclassify" />
+                     android:scheme="maribsrv" />
                  <data android:pathPattern="/product-details/.*" />-->
 
 
                 <!-- <data
-                     android:host="e-classify-app-router.vercel.app"
+                     android:host="maribsrv-app-router.vercel.app"
                      android:pathPattern="/.."
                      android:scheme="http" />
                  <data android:pathPattern="/product-details/.*" />
@@ -148,8 +148,8 @@
                  <action android:name="android.intent.action.VIEW" />
                  <category android:name="android.intent.category.DEFAULT" />
                  <category android:name="android.intent.category.BROWSABLE" />
-                 <data android:host="eclassify.thewrteam.in" android:scheme="https"/>
-                 <data android:host="eclassify.thewrteam.in" android:scheme="http"/>
+                 <data android:host="maribsrv.thewrteam.in" android:scheme="https"/>
+                 <data android:host="maribsrv.thewrteam.in" android:scheme="http"/>
              </intent-filter>-->
 
 

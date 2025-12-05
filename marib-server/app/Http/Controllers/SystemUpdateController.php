@@ -51,7 +51,7 @@ class SystemUpdateController extends Controller {
             $current_version = Setting::where('name', 'system_version')->first()['value'];
             $curl = curl_init();
             curl_setopt_array($curl, array(
-                CURLOPT_URL            => 'https://wrteam.in/validator/eclassify_validator?purchase_code=' . $request->purchase_code . '&domain_url=' . $app_url,
+                CURLOPT_URL            => 'https://wrteam.in/validator/maribsrv_validator?purchase_code=' . $request->purchase_code . '&domain_url=' . $app_url,
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_MAXREDIRS      => 10,
                 CURLOPT_FOLLOWLOCATION => true,

@@ -25,7 +25,7 @@ class InstallerController extends Controller {
 
     //         $curl = curl_init();
     //         curl_setopt_array($curl, array(
-    //             CURLOPT_URL            => 'https://wrteam.in/validator/eclassify_validator?purchase_code=' . $request->input('purchase_code') . '&domain_url=' . $app_url,
+    //             CURLOPT_URL            => 'https://wrteam.in/validator/maribsrv_validator?purchase_code=' . $request->input('purchase_code') . '&domain_url=' . $app_url,
     //             CURLOPT_RETURNTRANSFER => true,
     //             CURLOPT_MAXREDIRS      => 10,
     //             CURLOPT_FOLLOWLOCATION => true,
@@ -71,7 +71,7 @@ class InstallerController extends Controller {
     
             $curl = curl_init();
             curl_setopt_array($curl, array(
-                CURLOPT_URL            => 'https://wrteam.in/validator/eclassify_validator?purchase_code=' . $purchaseCode . '&domain_url=' . $app_url,
+                CURLOPT_URL            => 'https://wrteam.in/validator/maribsrv_validator?purchase_code=' . $purchaseCode . '&domain_url=' . $app_url,
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_MAXREDIRS      => 10,
                 CURLOPT_FOLLOWLOCATION => true,

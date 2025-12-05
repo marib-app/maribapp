@@ -47,6 +47,7 @@ class _ChatListScreenState extends State<ChatListScreen>
     with AutomaticKeepAliveClientMixin {
   ScrollController chatBuyerScreenController = ScrollController();
   ScrollController chatSellerScreenController = ScrollController();
+  final ScrollController _combinedController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   final Map<String, ParticipantStatus?> _presenceSeeded = {};
@@ -84,6 +85,7 @@ class _ChatListScreenState extends State<ChatListScreen>
   void dispose() {
     chatBuyerScreenController.dispose();
     chatSellerScreenController.dispose();
+    _combinedController.dispose();
     _searchController.removeListener(_handleSearchChanged);
     _searchController.dispose();
     super.dispose();
@@ -213,4 +215,11 @@ class _ChatEntry {
   final bool isSellerSide;
 
   _ChatEntry(this.chat, this.isSellerSide);
+}
+
+class _TabMeta {
+  final String label;
+  final int count;
+
+  const _TabMeta({required this.label, required this.count});
 }

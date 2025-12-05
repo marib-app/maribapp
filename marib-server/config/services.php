@@ -91,7 +91,7 @@ return [
 
 
     'mobile' => [
-        'wallet_deeplink' => env('MOBILE_WALLET_DEEPLINK', 'eclassify://wallet'),
+        'wallet_deeplink' => env('MOBILE_WALLET_DEEPLINK', 'maribsrv://wallet'),
     ],
 
 ];

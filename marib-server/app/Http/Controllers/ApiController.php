@@ -3545,7 +3545,7 @@ class ApiController extends Controller {
 
             $rootId = $request->integer('root_id') ?? $request->integer('root_category_id');
 
-            $config = FeaturedAdsConfig::query()
+            $configs = FeaturedAdsConfig::query()
                 ->where('enabled', true)
                 ->when($sectionType, function ($query) use ($sectionType) {
                     $query->where(function ($inner) use ($sectionType) {
@@ -3567,9 +3567,9 @@ class ApiController extends Controller {
                 })
                 ->orderBy('position')
                 ->orderBy('id')
-                ->first();
+                ->get();
 
-            if (! $config) {
+            if ($configs->isEmpty()) {
                 return response()->json([
                     'error' => false,
                     'message' => __('No featured ads configuration found for this section.'),
@@ -3582,43 +3582,6 @@ class ApiController extends Controller {
                 ], 200);
             }
 
-            if (is_string($config->interface_type) && $config->interface_type !== '') {
-                $sectionType = InterfaceSectionService::normalizeSectionType($config->interface_type);
-                $interfaceVariants = InterfaceSectionService::sectionTypeVariants($sectionType);
-            }
-
-            if (is_string($config->root_identifier) && $config->root_identifier !== '') {
-                $rootIdentifier = $config->root_identifier;
-            }
-
-            $categoryIdsOverride = null;
-            if (! empty($config->root_category_id)) {
-                $categoryIdsOverride = $this->collectCategoryTreeIds((int) $config->root_category_id);
-            } elseif (! empty($rootId)) {
-                $categoryIdsOverride = $this->collectCategoryTreeIds((int) $rootId);
-            }
-
-            if ($categoryIdsOverride !== null) {
-                $categoryIds = $categoryIdsOverride;
-            }
-
-            if ($categoryIds === []) {
-                $categoryIds = null;
-            }
-
-            $preferredOrder = $config->order_mode;
-            if (is_string($preferredOrder)) {
-                $normalizedOrder = (string) Str::of($preferredOrder)
-                    ->lower()
-                    ->replaceMatches('/[\s]+/u', '_')
-                    ->replace('-', '_')
-                    ->trim('_');
-
-                if ($normalizedOrder !== '' && in_array($normalizedOrder, $filterPool, true)) {
-                    $filters = [$normalizedOrder];
-                }
-            }
-
             $relations = [
                 'user:id,name,email,mobile,profile,country_code,show_personal_details',
                 'category:id,name,image',
@@ -3628,26 +3591,6 @@ class ApiController extends Controller {
                 'item_custom_field_values.custom_field',
                 'area:id,name',
             ];
-
-            $applyInterfaceFilter = $sectionType !== null && $sectionType !== 'all';
-
-            $makeBaseQuery = function (bool $withInterfaceFilter = true) use ($categoryIds, $relations, $sectionType, $interfaceVariants) {
-                $query = Item::query()
-                    ->approved()
-                    ->with($relations)
-                    ->withCount('favourites')
-                    ->withCount('featured_items');
-
-                if ($categoryIds !== null) {
-                    $query->whereIn('category_id', $categoryIds);
-                }
-
-                if ($withInterfaceFilter && $sectionType !== null && $sectionType !== 'all') {
-                    $query->whereIn('interface_type', $interfaceVariants);
-                }
-
-                return $query;
-            };
 
             $titleMap = [
                 'featured'      => __('Featured Items'),
@@ -3659,9 +3602,78 @@ class ApiController extends Controller {
                 'lowest_price'  => __('Lowest Price'),
             ];
 
-            $buildSections = function ($baseQuery) use ($filters, $limit, $config, $request, $sectionType, $titleMap, $rootIdentifier) {
-                $sections = [];
-                foreach ($filters as $index => $filter) {
+            $allSections = [];
+            $sequenceOffset = 0;
+
+            foreach ($configs as $config) {
+                $sectionTypeForConfig = $sectionType;
+                $interfaceVariantsForConfig = $interfaceVariants;
+                $rootIdentifierForConfig = $rootIdentifier;
+                $categoryIdsForConfig = $categoryIds;
+                $filtersForConfig = $filters;
+                $rootIdForConfig = $rootId;
+
+                if (is_string($config->interface_type) && $config->interface_type !== '') {
+                    $sectionTypeForConfig = InterfaceSectionService::normalizeSectionType($config->interface_type);
+                    $interfaceVariantsForConfig = InterfaceSectionService::sectionTypeVariants($sectionTypeForConfig);
+                }
+
+                if (is_string($config->root_identifier) && $config->root_identifier !== '') {
+                    $rootIdentifierForConfig = $config->root_identifier;
+                }
+
+                $categoryIdsOverride = null;
+                if (! empty($config->root_category_id)) {
+                    $categoryIdsOverride = $this->collectCategoryTreeIds((int) $config->root_category_id);
+                } elseif (! empty($rootIdForConfig)) {
+                    $categoryIdsOverride = $this->collectCategoryTreeIds((int) $rootIdForConfig);
+                }
+
+                if ($categoryIdsOverride !== null) {
+                    $categoryIdsForConfig = $categoryIdsOverride;
+                }
+
+                if ($categoryIdsForConfig === []) {
+                    $categoryIdsForConfig = null;
+                }
+
+                $preferredOrder = $config->order_mode;
+                if (is_string($preferredOrder)) {
+                    $normalizedOrder = (string) Str::of($preferredOrder)
+                        ->lower()
+                        ->replaceMatches('/[\s]+/u', '_')
+                        ->replace('-', '_')
+                        ->trim('_');
+
+                    if ($normalizedOrder !== '' && in_array($normalizedOrder, $filterPool, true)) {
+                        $filtersForConfig = [$normalizedOrder];
+                    }
+                }
+
+                $applyInterfaceFilterConfig = $sectionTypeForConfig !== null && $sectionTypeForConfig !== 'all';
+
+                $makeBaseQuery = function (bool $withInterfaceFilter = true) use ($categoryIdsForConfig, $relations, $sectionTypeForConfig, $interfaceVariantsForConfig) {
+                    $query = Item::query()
+                        ->approved()
+                        ->with($relations)
+                        ->withCount('favourites')
+                        ->withCount('featured_items');
+
+                    if ($categoryIdsForConfig !== null) {
+                        $query->whereIn('category_id', $categoryIdsForConfig);
+                    }
+
+                    if ($withInterfaceFilter && $sectionTypeForConfig !== null && $sectionTypeForConfig !== 'all') {
+                        $query->whereIn('interface_type', $interfaceVariantsForConfig);
+                    }
+
+                    return $query;
+                };
+
+                $baseQuery = $makeBaseQuery($applyInterfaceFilterConfig);
+                $sectionsForConfig = [];
+
+                foreach ($filtersForConfig as $index => $filter) {
                     $query = clone $baseQuery;
 
                     switch ($filter) {
@@ -3693,17 +3705,17 @@ class ApiController extends Controller {
 
                     $sectionData = array_values((new ItemCollection($items))->toArray($request));
 
-                    $sections[] = [
+                    $sectionsForConfig[] = [
                         'id' => null,
                         'title' => $config->title ?? $titleMap[$filter] ?? Str::title(str_replace('_', ' ', $filter)),
                         'style' => $config->style_key ?? 'list',
-                        'section_type' => $sectionType,
+                        'section_type' => $sectionTypeForConfig,
                         'filter' => $filter,
                         'slug' => $config->slug
                             ?? $request->input('slug')
-                            ?? Str::slug($sectionType . '-' . $filter),
-                        'sequence' => $index + 1,
-                        'root_identifier' => $config->root_identifier ?? $rootIdentifier,
+                            ?? Str::slug($sectionTypeForConfig . '-' . $filter),
+                        'sequence' => $sequenceOffset + $index + 1,
+                        'root_identifier' => $config->root_identifier ?? $rootIdentifierForConfig,
                         'total_data' => count($sectionData),
                         'min_price' => $items->min('price'),
                         'max_price' => $items->max('price'),
@@ -3711,83 +3723,127 @@ class ApiController extends Controller {
                     ];
                 }
 
-                return $sections;
-            };
+                if ($sectionsForConfig === [] && $categoryIdsForConfig !== null && $applyInterfaceFilterConfig) {
+                    // If interface filtering produced no data, fall back to category-only so the banner still renders inside the same section tree.
+                    $baseQuery = $makeBaseQuery(false);
+                    foreach ($filtersForConfig as $index => $filter) {
+                        $query = clone $baseQuery;
 
-            $baseQuery = $makeBaseQuery($applyInterfaceFilter);
-            $sections = $buildSections($baseQuery);
+                        switch ($filter) {
+                            case 'featured':
+                            case 'premium':
+                                $query->whereHas('featured_items')->orderByDesc('items.updated_at');
+                                break;
+                            case 'most_viewed':
+                                $query->orderByDesc('items.clicks');
+                                break;
+                            case 'highest_price':
+                                $query->orderByDesc('items.price');
+                                break;
+                            case 'price_range':
+                            case 'lowest_price':
+                                $query->orderBy('items.price');
+                                break;
+                            case 'latest':
+                            default:
+                                $query->orderByDesc('items.created_at');
+                                break;
+                        }
 
-            if ($sections === [] && $categoryIds !== null && $applyInterfaceFilter) {
-                // If interface filtering produced no data, fall back to category-only so the banner still renders inside the same section tree.
-                $baseQuery = $makeBaseQuery(false);
-                $sections = $buildSections($baseQuery);
-            }
-            // Fallback داخل نفس القسم إذا لم توجد نتائج
-            if ($sections === []) {
-                $fallbackItems = (clone $baseQuery)
-                    ->orderByDesc('items.created_at')
-                    ->limit($limit)
-                    ->get();
+                        $items = $query->limit($limit)->get();
+                        if ($items->isEmpty()) {
+                            continue;
+                        }
 
-                if ($fallbackItems->isNotEmpty()) {
-                    $sectionData = array_values((new ItemCollection($fallbackItems))->toArray($request));
-                    $sections[] = [
+                        $sectionData = array_values((new ItemCollection($items))->toArray($request));
+
+                        $sectionsForConfig[] = [
+                            'id' => null,
+                            'title' => $config->title ?? $titleMap[$filter] ?? Str::title(str_replace('_', ' ', $filter)),
+                            'style' => $config->style_key ?? 'list',
+                            'section_type' => $sectionTypeForConfig,
+                            'filter' => $filter,
+                            'slug' => $config->slug
+                                ?? $request->input('slug')
+                                ?? Str::slug($sectionTypeForConfig . '-' . $filter),
+                            'sequence' => $sequenceOffset + $index + 1,
+                            'root_identifier' => $config->root_identifier ?? $rootIdentifierForConfig,
+                            'total_data' => count($sectionData),
+                            'min_price' => $items->min('price'),
+                            'max_price' => $items->max('price'),
+                            'section_data' => $sectionData,
+                        ];
+                    }
+                }
+
+                if ($sectionsForConfig === []) {
+                    $fallbackItems = (clone $baseQuery)
+                        ->orderByDesc('items.created_at')
+                        ->limit($limit)
+                        ->get();
+
+                    if ($fallbackItems->isNotEmpty()) {
+                        $sectionData = array_values((new ItemCollection($fallbackItems))->toArray($request));
+                        $sectionsForConfig[] = [
+                            'id' => null,
+                            'title' => $config->title ?? $titleMap['latest'] ?? 'Latest Listings',
+                            'style' => $config->style_key ?? 'list',
+                            'section_type' => $sectionTypeForConfig,
+                            'filter' => 'latest',
+                            'slug' => $config->slug
+                                ?? $request->input('slug')
+                                ?? Str::slug($sectionTypeForConfig . '-latest'),
+                            'sequence' => $sequenceOffset + 1,
+                            'root_identifier' => $config->root_identifier ?? $rootIdentifierForConfig,
+                            'total_data' => count($sectionData),
+                            'min_price' => $fallbackItems->min('price'),
+                            'max_price' => $fallbackItems->max('price'),
+                            'section_data' => $sectionData,
+                        ];
+                    }
+                }
+
+                if ($sectionsForConfig === []) {
+                    $singleItemQuery = Item::query()
+                        ->approved()
+                        ->with($relations)
+                        ->withCount('favourites')
+                        ->withCount('featured_items');
+
+                    if ($categoryIdsForConfig !== null) {
+                        $singleItemQuery->whereIn('category_id', $categoryIdsForConfig);
+                    } elseif ($applyInterfaceFilterConfig) {
+                        $singleItemQuery->whereIn('interface_type', $interfaceVariantsForConfig);
+                    }
+
+                    $singleItem = $singleItemQuery
+                        ->orderByDesc('items.created_at')
+                        ->first();
+
+                    $sectionData = $singleItem
+                        ? array_values((new ItemCollection([$singleItem]))->toArray($request))
+                        : [];
+
+                    $sectionsForConfig[] = [
                         'id' => null,
                         'title' => $config->title ?? $titleMap['latest'] ?? 'Latest Listings',
                         'style' => $config->style_key ?? 'list',
-                        'section_type' => $sectionType,
-                        'filter' => 'latest',
+                        'section_type' => $sectionTypeForConfig,
+                        'filter' => $config->order_mode ?? 'latest',
                         'slug' => $config->slug
                             ?? $request->input('slug')
-                            ?? Str::slug($sectionType . '-latest'),
-                        'sequence' => 1,
-                        'root_identifier' => $config->root_identifier ?? $rootIdentifier,
+                            ?? Str::slug($sectionTypeForConfig . '-latest'),
+                        'sequence' => $sequenceOffset + 1,
+                        'root_identifier' => $config->root_identifier ?? $rootIdentifierForConfig,
                         'total_data' => count($sectionData),
-                        'min_price' => $fallbackItems->min('price'),
-                        'max_price' => $fallbackItems->max('price'),
+                        'min_price' => $singleItem?->price,
+                        'max_price' => $singleItem?->price,
                         'section_data' => $sectionData,
                     ];
                 }
-            }
 
-            // إعلان واحد على الأقل ضمن نفس الواجهة
-            if ($sections === []) {
-                $singleItemQuery = Item::query()
-                    ->approved()
-                    ->with($relations)
-                    ->withCount('favourites')
-                    ->withCount('featured_items');
-
-                if ($categoryIds !== null) {
-                    $singleItemQuery->whereIn('category_id', $categoryIds);
-                } elseif ($applyInterfaceFilter) {
-                    $singleItemQuery->whereIn('interface_type', $interfaceVariants);
-                }
-
-                $singleItem = $singleItemQuery
-                    ->orderByDesc('items.created_at')
-                    ->first();
-
-                $sectionData = $singleItem
-                    ? array_values((new ItemCollection([$singleItem]))->toArray($request))
-                    : [];
-
-                $sections[] = [
-                    'id' => null,
-                    'title' => $config->title ?? $titleMap['latest'] ?? 'Latest Listings',
-                    'style' => $config->style_key ?? 'list',
-                    'section_type' => $sectionType,
-                    'filter' => $config->order_mode ?? 'latest',
-                    'slug' => $config->slug
-                        ?? $request->input('slug')
-                        ?? Str::slug($sectionType . '-latest'),
-                    'sequence' => 1,
-                    'root_identifier' => $config->root_identifier ?? $rootIdentifier,
-                    'total_data' => count($sectionData),
-                    'min_price' => $singleItem?->price,
-                    'max_price' => $singleItem?->price,
-                    'section_data' => $sectionData,
-                ];
+                $sequenceOffset += count($sectionsForConfig);
+                $allSections = array_merge($allSections, $sectionsForConfig);
             }
 
             return response()->json([
@@ -3796,7 +3852,7 @@ class ApiController extends Controller {
                 'data' => [
                     'interface_type' => $sectionType,
                     'filters' => $filters,
-                    'sections' => array_values($sections),
+                    'sections' => array_values($allSections),
                 ],
                 'code' => 200,
             ], 200);

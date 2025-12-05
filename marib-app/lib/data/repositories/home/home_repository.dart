@@ -17,6 +17,7 @@ class HomeRepository {
     String? orderMode,
     String? styleKey,
     int? rootCategoryId,
+    int page = 1,
   }) async {
     try {
       final String? trimmedSlug = slug?.trim();
@@ -41,6 +42,7 @@ class HomeRepository {
           'style': styleKey.trim(),
         if (rootCategoryId != null && rootCategoryId > 0)
           'root_id': rootCategoryId,
+        'page': page,
         // Location filters kept for future use (currently disabled)
         // if (city != null && city.isNotEmpty) 'city': city,
         // if (areaId != null) 'area_id': areaId,

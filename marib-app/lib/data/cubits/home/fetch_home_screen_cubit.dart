@@ -1,4 +1,5 @@
 import 'package:marib/data/model/home/home_screen_section.dart';
+import 'package:marib/data/model/item/item_model.dart';
 import 'package:marib/data/repositories/home/home_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:marib/utils/slider_interface_mapper.dart';
@@ -57,6 +58,8 @@ class FetchHomeScreenCubit extends HydratedCubit<FetchHomeScreenState> {
   String? _currentInterfaceType;
   String? _currentSlug;
   String? _currentRootIdentifier;
+  final Map<String, int> _sectionPage = <String, int>{};
+  final Set<String> _loadingSections = <String>{};
 
   static String? _cleanInterfaceType(String? value) {
     final String? normalized = SliderInterfaceMapper.normalize(value);
@@ -183,7 +186,13 @@ class FetchHomeScreenCubit extends HydratedCubit<FetchHomeScreenState> {
         orderMode: orderMode,
         styleKey: styleKey,
         rootCategoryId: rootCategoryId,
+        page: 1,
       );
+
+      _sectionPage.clear();
+      for (final HomeScreenSection section in homeScreenDataList) {
+        _sectionPage[_sectionKey(section)] = 1;
+      }
 
       emit(
         FetchHomeScreenSuccess(
@@ -196,6 +205,127 @@ class FetchHomeScreenCubit extends HydratedCubit<FetchHomeScreenState> {
     } catch (e) {
       print('Issue while loading home screen $e');
       emit(FetchHomeScreenFail(e));
+    }
+  }
+
+  String _sectionKey(HomeScreenSection section) {
+    final String type = section.sectionType ?? '';
+    final String key =
+        section.filter ?? section.slug ?? section.sectionId?.toString() ?? '';
+    return '$type::$key';
+  }
+
+  HomeScreenSection? _findMatchingSection(
+    List<HomeScreenSection> sections,
+    HomeScreenSection target,
+  ) {
+    return sections.firstWhere(
+      (element) =>
+          (element.filter?.toLowerCase() ?? '') ==
+              (target.filter?.toLowerCase() ?? '') &&
+          (element.sectionType?.toLowerCase() ?? '') ==
+              (target.sectionType?.toLowerCase() ?? ''),
+      orElse: () => target,
+    );
+  }
+
+  Future<void> loadMoreSection(HomeScreenSection section) async {
+    if (!(section.hasMore ?? false)) return;
+    final FetchHomeScreenState currentState = state;
+    if (currentState is! FetchHomeScreenSuccess) return;
+
+    final String key = _sectionKey(section);
+    if (_loadingSections.contains(key)) return;
+
+    _loadingSections.add(key);
+    try {
+      final int currentPage = _sectionPage[key] ?? 1;
+      final int nextPage = currentPage + 1;
+
+      final List<HomeScreenSection> response =
+          await _homeRepository.fetchHome(
+        interfaceType: currentState.interfaceType ?? _currentInterfaceType,
+        slug: currentState.slug ?? _currentSlug,
+        rootIdentifier: currentState.rootIdentifier ?? _currentRootIdentifier,
+        orderMode: section.filter,
+        styleKey: section.style,
+        rootCategoryId: null,
+        page: nextPage,
+      );
+
+      HomeScreenSection fetched =
+          _findMatchingSection(response, section) ?? section;
+      if (fetched.sectionData == null || fetched.sectionData!.isEmpty) {
+        fetched = fetched.copyWith(hasMore: false, sectionData: const []);
+      }
+
+      final List<HomeScreenSection> updatedSections = <HomeScreenSection>[];
+      for (final HomeScreenSection existing in currentState.sections) {
+        if (_sectionKey(existing) != key) {
+          updatedSections.add(existing);
+          continue;
+        }
+
+        final List<ItemModel> combined = <ItemModel>[
+          ...?existing.sectionData,
+          ...?fetched.sectionData,
+        ];
+
+        double? _minPrice(Iterable<double?> values) {
+          double? result;
+          for (final double? v in values) {
+            if (v == null) continue;
+            result = result == null ? v : (v < result ? v : result);
+          }
+          return result;
+        }
+
+        double? _maxPrice(Iterable<double?> values) {
+          double? result;
+          for (final double? v in values) {
+            if (v == null) continue;
+            result = result == null ? v : (v > result ? v : result);
+          }
+          return result;
+        }
+
+        updatedSections.add(
+          existing.copyWith(
+            sectionData: combined,
+            totalData: combined.length,
+            minPrice: _minPrice(
+              <double?>[
+                existing.minPrice,
+                fetched.minPrice,
+                ...combined.map((e) => e.price),
+              ],
+            ),
+            maxPrice: _maxPrice(
+              <double?>[
+                existing.maxPrice,
+                fetched.maxPrice,
+                ...combined.map((e) => e.price),
+              ],
+            ),
+            hasMore: fetched.hasMore ?? false,
+          ),
+        );
+      }
+
+      _sectionPage[key] = nextPage;
+
+      emit(
+        FetchHomeScreenSuccess(
+          updatedSections,
+          interfaceType: currentState.interfaceType,
+          slug: currentState.slug,
+          rootIdentifier: currentState.rootIdentifier,
+        ),
+      );
+    } catch (e) {
+      // ignore load more errors to avoid breaking main state
+    } finally {
+      _loadingSections.remove(key);
     }
   }
 

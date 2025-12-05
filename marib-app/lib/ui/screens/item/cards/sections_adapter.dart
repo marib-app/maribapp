@@ -17,6 +17,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:marquee/marquee.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/constant.dart';
+import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
 
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:marib/utils/currency_utils.dart';
@@ -26,10 +27,14 @@ import 'package:marib/utils/currency_utils.dart';
 
 class SectionsAdapter extends StatelessWidget {
   final HomeScreenSection section;
+  final bool showLoadMore;
+  final VoidCallback? onLoadMore;
 
   const SectionsAdapter({
     super.key,
     required this.section,
+    this.showLoadMore = false,
+    this.onLoadMore,
   });
 
   /// واجهة العنوان + قائمة العناصر
@@ -64,9 +69,23 @@ class SectionsAdapter extends StatelessWidget {
     if (data == null || data.isEmpty) return const SizedBox.shrink();
 
     final height = MediaQuery.of(context).size.height / 3.5.rh(context);
+    final bool hasMore = showLoadMore && (section.hasMore ?? false);
+
+    Widget _loaderTile({double? width}) {
+      final Widget shimmer = CustomShimmer(
+        height: height,
+        width: width,
+        margin: const EdgeInsets.symmetric(vertical: 4),
+      );
+      if (onLoadMore != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => onLoadMore!());
+      }
+      return shimmer;
+    }
 
     switch (section.style) {
       case "style_1":
+        final int total = data.length + (hasMore ? 1 : 0);
         return _buildSection(
           context,
           GridListAdapter(
@@ -75,14 +94,18 @@ class SectionsAdapter extends StatelessWidget {
             listAxis: Axis.horizontal,
             listSaperator: (_, __) => const SizedBox(width: 14),
             builder: (_, index, __) {
+              if (hasMore && index >= data.length) {
+                return _loaderTile(width: 220);
+              }
               final item = data[index];
               return ICard(item: item, bigCard: true);
             },
-            total: data.length,
+            total: total,
           ),
         );
 
       case "style_2":
+        final int total = data.length + (hasMore ? 1 : 0);
         return _buildSection(
           context,
           GridListAdapter(
@@ -91,14 +114,18 @@ class SectionsAdapter extends StatelessWidget {
             listAxis: Axis.horizontal,
             listSaperator: (_, __) => const SizedBox(width: 14),
             builder: (_, index, __) {
+              if (hasMore && index >= data.length) {
+                return _loaderTile(width: 144);
+              }
               final item = data[index];
               return ICard(item: item, width: 144);
             },
-            total: data.length,
+            total: total,
           ),
         );
 
       case "style_3":
+        final int total = data.length + (hasMore ? 1 : 0);
         return _buildSection(
           context,
           GridListAdapter(
@@ -106,14 +133,18 @@ class SectionsAdapter extends StatelessWidget {
             crossAxisCount: 2,
             height: height,
             builder: (_, index, __) {
+              if (hasMore && index >= data.length) {
+                return _loaderTile();
+              }
               final item = data[index];
               return ICard(item: item, width: 192);
             },
-            total: data.length,
+            total: total,
           ),
         );
 
       case "style_4":
+        final int total = data.length + (hasMore ? 1 : 0);
         return _buildSection(
           context,
           GridListAdapter(
@@ -122,10 +153,13 @@ class SectionsAdapter extends StatelessWidget {
             listAxis: Axis.horizontal,
             listSaperator: (_, __) => const SizedBox(width: 14),
             builder: (_, index, __) {
+              if (hasMore && index >= data.length) {
+                return _loaderTile(width: 192);
+              }
               final item = data[index];
               return ICard(item: item, width: 192);
             },
-            total: data.length,
+            total: total,
           ),
         );
 

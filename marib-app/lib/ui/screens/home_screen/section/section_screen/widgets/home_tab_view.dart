@@ -1909,7 +1909,7 @@ class _HomeTabEntry {
   final int? itemIndex;
 }
 
-class _FeaturedAdsPanel extends StatelessWidget {
+class _FeaturedAdsPanel extends StatefulWidget {
   const _FeaturedAdsPanel({
     required this.interfaceType,
     this.overrideStyle,
@@ -1918,8 +1918,14 @@ class _FeaturedAdsPanel extends StatelessWidget {
   final String interfaceType;
   final String? overrideStyle;
 
+  @override
+  State<_FeaturedAdsPanel> createState() => _FeaturedAdsPanelState();
+}
+
+class _FeaturedAdsPanelState extends State<_FeaturedAdsPanel> {
   static const int _maxSectionBlocks = 3;
   static const double _horizontalPadding = 18.0;
+  final Set<String> _loadingKeys = <String>{};
 
   bool _hasRenderableItems(HomeScreenSection section) {
     final List<ItemModel>? items = section.sectionData;
@@ -1935,6 +1941,28 @@ class _FeaturedAdsPanel extends StatelessWidget {
     return false;
   }
 
+  String _sectionKey(HomeScreenSection section) {
+    final String type = section.sectionType ?? '';
+    final String key =
+        section.filter ?? section.slug ?? section.sectionId?.toString() ?? '';
+    return '$type::$key';
+  }
+
+  void _loadMore(HomeScreenSection section) {
+    if (!(section.hasMore ?? false)) return;
+    final String key = _sectionKey(section);
+    if (_loadingKeys.contains(key)) return;
+    _loadingKeys.add(key);
+    context.read<FetchHomeScreenCubit>().loadMoreSection(section).whenComplete(
+      () {
+        _loadingKeys.remove(key);
+        if (mounted) {
+          setState(() {});
+        }
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<FetchHomeScreenCubit, FetchHomeScreenState>(
@@ -1947,7 +1975,7 @@ class _FeaturedAdsPanel extends StatelessWidget {
         if (state is FetchHomeScreenSuccess) {
           if (!SliderInterfaceMapper.isEquivalent(
             state.interfaceType,
-            interfaceType,
+            widget.interfaceType,
           )) {
             return const _FeaturedAdsShimmer();
           }
@@ -1955,10 +1983,12 @@ class _FeaturedAdsPanel extends StatelessWidget {
           List<HomeScreenSection> filteredSections =
               state.sections.where(_hasRenderableItems).toList(growable: false);
 
-          if (overrideStyle != null && overrideStyle!.trim().isNotEmpty) {
+          if (widget.overrideStyle != null &&
+              widget.overrideStyle!.trim().isNotEmpty) {
             filteredSections = filteredSections
                 .map(
-                  (section) => section.copyWith(style: overrideStyle!.trim()),
+                  (section) =>
+                      section.copyWith(style: widget.overrideStyle!.trim()),
                 )
                 .toList(growable: false);
           }
@@ -1989,7 +2019,11 @@ class _FeaturedAdsPanel extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               for (int i = 0; i < limitedSections.length; i++) ...[
-                SectionsAdapter(section: limitedSections[i]),
+                SectionsAdapter(
+                  section: limitedSections[i],
+                  showLoadMore: true,
+                  onLoadMore: () => _loadMore(limitedSections[i]),
+                ),
                 if (i != limitedSections.length - 1) const SizedBox(height: 12),
               ],
             ],

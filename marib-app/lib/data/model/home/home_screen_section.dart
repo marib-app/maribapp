@@ -12,6 +12,7 @@ class HomeScreenSection {
   String? rootIdentifier;
   double? minPrice;
   double? maxPrice;
+  bool? hasMore;
   List<ItemModel>? sectionData;
 
   HomeScreenSection(
@@ -25,6 +26,7 @@ class HomeScreenSection {
       this.maxPrice,
       this.sequence,
       this.rootIdentifier,
+      this.hasMore,
       this.totalData,
       this.sectionData});
 
@@ -40,6 +42,7 @@ class HomeScreenSection {
     int? totalData,
     double? minPrice,
     double? maxPrice,
+    bool? hasMore,
     List<ItemModel>? sectionData,
   }) {
     return HomeScreenSection(
@@ -54,6 +57,7 @@ class HomeScreenSection {
       totalData: totalData ?? this.totalData,
       minPrice: minPrice ?? this.minPrice,
       maxPrice: maxPrice ?? this.maxPrice,
+      hasMore: hasMore ?? this.hasMore,
       sectionData: sectionData ?? this.sectionData,
     );
   }
@@ -71,6 +75,14 @@ class HomeScreenSection {
     totalData = json['total_data'];
     minPrice = _parseDouble(json['min_price'] ?? json['minPrice']);
     maxPrice = _parseDouble(json['max_price'] ?? json['maxPrice']);
+    final dynamic hasMoreRaw = json['has_more'];
+    if (hasMoreRaw is bool) {
+      hasMore = hasMoreRaw;
+    } else if (hasMoreRaw is num) {
+      hasMore = hasMoreRaw != 0;
+    } else if (hasMoreRaw is String) {
+      hasMore = hasMoreRaw.toLowerCase() == 'true' || hasMoreRaw == '1';
+    }
     if (json['section_data'] != null) {
       sectionData = <ItemModel>[];
       json['section_data'].forEach((v) {
@@ -117,6 +129,7 @@ class HomeScreenSection {
     data['root_identifier'] = rootIdentifier;
     data['min_price'] = minPrice;
     data['max_price'] = maxPrice;
+    data['has_more'] = hasMore;
     if (sectionData != null) {
       data['section_data'] = sectionData!.map((v) => v.toJson()).toList();
     }

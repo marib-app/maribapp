@@ -3470,6 +3470,7 @@ class ApiController extends Controller {
             'limit'          => ['nullable', 'integer', 'min:1', 'max:50'],
             'filters'        => ['nullable'],
             'filters.*'      => ['nullable', 'string', 'max:191'],
+            'page'           => ['nullable', 'integer', 'min:1'],
         ]);
 
         if ($validator->fails()) {
@@ -3518,10 +3519,21 @@ class ApiController extends Controller {
 
             $filters = array_values(array_unique($filters));
 
-            $minItems = 6;
-            $limitDefault = max($minItems, (int) config('interface_sections.section_item_limit', 12));
+            $page = $request->integer('page') ?? 1;
+            $page = max(1, $page);
+
+            $minItemsFirstPage = 6;
+            $minItemsNextPage = 4;
+            $configLimit = (int) config('interface_sections.section_item_limit', 12);
+
+            $limitDefault = $page === 1
+                ? max($minItemsFirstPage, $configLimit)
+                : max($minItemsNextPage, min($configLimit, 8));
+
+            $minRequired = $page === 1 ? $minItemsFirstPage : $minItemsNextPage;
             $limit = $request->integer('limit');
-            $limit = $limit !== null ? max($minItems, min($limit, 50)) : $limitDefault;
+            $limit = $limit !== null ? max($minRequired, min($limit, 50)) : $limitDefault;
+            $offset = ($page - 1) * $limit;
 
             $sectionTypeInput = $request->input('section_type') ?? $request->input('interface_type');
             $sectionType = InterfaceSectionService::normalizeSectionType($sectionTypeInput);
@@ -3697,7 +3709,7 @@ class ApiController extends Controller {
                             break;
                     }
 
-                    $items = $query->limit($limit)->get();
+                    $items = $query->skip($offset)->limit($limit)->get();
 
                     if ($items->isEmpty()) {
                         continue;
@@ -3719,6 +3731,7 @@ class ApiController extends Controller {
                         'total_data' => count($sectionData),
                         'min_price' => $items->min('price'),
                         'max_price' => $items->max('price'),
+                        'has_more' => $items->count() === $limit,
                         'section_data' => $sectionData,
                     ];
                 }
@@ -3750,7 +3763,7 @@ class ApiController extends Controller {
                                 break;
                         }
 
-                        $items = $query->limit($limit)->get();
+                        $items = $query->skip($offset)->limit($limit)->get();
                         if ($items->isEmpty()) {
                             continue;
                         }
@@ -3771,14 +3784,16 @@ class ApiController extends Controller {
                             'total_data' => count($sectionData),
                             'min_price' => $items->min('price'),
                             'max_price' => $items->max('price'),
+                            'has_more' => $items->count() === $limit,
                             'section_data' => $sectionData,
                         ];
                     }
                 }
 
-                if ($sectionsForConfig === []) {
+                if ($sectionsForConfig === [] && $page === 1) {
                     $fallbackItems = (clone $baseQuery)
                         ->orderByDesc('items.created_at')
+                        ->skip($offset)
                         ->limit($limit)
                         ->get();
 
@@ -3798,6 +3813,7 @@ class ApiController extends Controller {
                             'total_data' => count($sectionData),
                             'min_price' => $fallbackItems->min('price'),
                             'max_price' => $fallbackItems->max('price'),
+                            'has_more' => $fallbackItems->count() === $limit,
                             'section_data' => $sectionData,
                         ];
                     }
@@ -3838,6 +3854,7 @@ class ApiController extends Controller {
                         'total_data' => count($sectionData),
                         'min_price' => $singleItem?->price,
                         'max_price' => $singleItem?->price,
+                        'has_more' => false,
                         'section_data' => $sectionData,
                     ];
                 }
@@ -3852,6 +3869,8 @@ class ApiController extends Controller {
                 'data' => [
                     'interface_type' => $sectionType,
                     'filters' => $filters,
+                    'page' => $page,
+                    'per_page' => $limit,
                     'sections' => array_values($allSections),
                 ],
                 'code' => 200,

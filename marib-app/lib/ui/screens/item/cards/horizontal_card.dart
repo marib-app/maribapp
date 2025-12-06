@@ -19,7 +19,6 @@ import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/geo_rules.dart';
 import 'package:marib/utils/currency_utils.dart';
-import 'package:marib/utils/delivery_department.dart';
 
 /// ✅ تعريف كلاس حالة الإعلان (محجوز / مباعة...)
 class StatusButton {
@@ -189,25 +188,6 @@ class ItemImageSection extends StatelessWidget {
                   ),
                 ),
               ),
-
-            // Basket icon for commercial departments
-            if (_isCommercialDepartment(item))
-              PositionedDirectional(
-                end: 8,
-                bottom: discountText != null ? 34 : 12,
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.55),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.add_shopping_cart_outlined,
-                    size: 18,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
           ],
         ),
 
@@ -241,36 +221,6 @@ class ItemImageSection extends StatelessWidget {
           ),
       ],
     );
-  }
-
-  bool _isCommercialDepartment(ItemModel item) {
-    final String? normalized = _normalizedDepartment(item);
-    return normalized == 'shein' ||
-        normalized == 'computer' ||
-        normalized == 'store';
-  }
-
-  String? _normalizedDepartment(ItemModel item) {
-    // 1) explicit slug or itemType.
-    final String? fromSlug =
-        normalizeDeliveryDepartment(item.departmentSlug ?? item.itemType);
-    if (fromSlug != null) return fromSlug;
-
-    // 2) category ids list (current + ancestors).
-    final List<int> categoryIds = <int>[];
-    if (item.categoryId != null) categoryIds.add(item.categoryId!);
-    if (item.allCategoryIds != null && item.allCategoryIds!.isNotEmpty) {
-      final parts = item.allCategoryIds!.split(',');
-      for (final p in parts) {
-        final int? id = int.tryParse(p.trim());
-        if (id != null) categoryIds.add(id);
-      }
-    }
-    final String? fromCats =
-        resolveDeliveryDepartmentFromCategoryIds(categoryIds);
-    if (fromCats != null) return fromCats;
-
-    return null;
   }
 }
 

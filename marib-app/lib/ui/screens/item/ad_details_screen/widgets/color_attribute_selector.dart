@@ -190,10 +190,8 @@ class ColorSwatchChip extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     final swatchColor = descriptor.swatchColor;
     final resolvedColor = swatchColor ?? theme.colorScheme.surfaceVariant.withOpacity(0.9);
-    final borderColor = selected ? colorScheme.primary : theme.dividerColor.withOpacity(0.3);
-    final labelColor = selected
-        ? colorScheme.primary
-        : theme.textTheme.bodySmall?.color ?? colorScheme.onSurface.withOpacity(0.8);
+    final borderColor =
+        selected ? colorScheme.primary : theme.dividerColor.withOpacity(0.3);
 
     return Semantics(
       button: true,
@@ -248,26 +246,6 @@ class ColorSwatchChip extends StatelessWidget {
               ),
             ),
           ),
-          if (descriptor.displayLabel.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            SizedBox(
-              width: 70,
-              child: Text(
-                descriptor.displayLabel,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: labelColor,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                ) ??
-                    TextStyle(
-                      color: labelColor,
-                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                    ),
-              ),
-            ),
-          ],
         ],
       ),
     );

@@ -410,12 +410,23 @@ extension _ChatScreenUi on _ChatScreenState {
                             }
 
                             _loadMoreRequestInFlight = false;
+                            // allow new load when user scrolls away again
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (!_pageScrollController.hasClients) return;
+                              final pos = _pageScrollController.position;
+                              final double distanceToEnd =
+                                  pos.maxScrollExtent - pos.pixels;
+                              if (distanceToEnd > 80) {
+                                _loadMoreCooldown = false;
+                              }
+                            });
                           }
                           if (state is LoadChatMessagesFailed) {
                             _shouldRestoreScrollAfterLoadMore = false;
                             scrollPositionWhenLoadMore = 0;
                             _maxScrollExtentBeforeLoadMore = 0;
                             _loadMoreRequestInFlight = false;
+                            _loadMoreCooldown = false;
                           }
                         },
                         builder: (context, state) {

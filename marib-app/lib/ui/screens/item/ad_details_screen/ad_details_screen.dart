@@ -109,7 +109,6 @@ import 'owner_view.dart';
 import 'widgets/attribute_selector_section.dart';
 import 'widgets/color_attribute_selector.dart';
 import 'widgets/delivery_size_display.dart';
-import 'widgets/discount_details_card.dart';
 import 'widgets/quantity_selector.dart';
 import 'widgets/variant_stock_info.dart';
 
@@ -948,7 +947,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     }
 
     final bool hasSelection =
-    reasons.any((ReportReason reason) => reason.id == selectedId);
+        reasons.any((ReportReason reason) => reason.id == selectedId);
     int? newSelection;
 
     if (reasons.isEmpty) {
@@ -1408,10 +1407,12 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     final shouldFetchRelated =
         triggerDependentFetches || previousCategoryId != categoryId;
     if (shouldFetchRelated) {
-      final safeCategoryId = categoryId ?? 1;
-      context
-          .read<FetchRelatedItemsCubit>()
-          .fetchRelatedItems(categoryId: safeCategoryId);
+      final int? relatedCategoryId = _resolveRelatedCategoryId();
+      if (relatedCategoryId != null) {
+        context
+            .read<FetchRelatedItemsCubit>()
+            .fetchRelatedItems(categoryId: relatedCategoryId);
+      }
     }
   }
 
@@ -1511,7 +1512,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final List<ReportReason>? reasons =
-      context.read<FetchItemReportReasonsListCubit>().getList();
+          context.read<FetchItemReportReasonsListCubit>().getList();
       if (reasons != null) {
         _syncSelectedReportReason(reasons);
       }
@@ -1557,13 +1558,18 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   void _pageScroll() {
     if (_pageScrollController.isEndReached()) {
       if (context.read<FetchRelatedItemsCubit>().hasMoreData()) {
-        // التحقق من وجود categoryId قبل استخدامه
-        final safeCategoryId = categoryId ?? 1;
-        context
-            .read<FetchRelatedItemsCubit>()
-            .fetchRelatedItemsMore(categoryId: safeCategoryId);
+        final int? relatedCategoryId = _resolveRelatedCategoryId();
+        if (relatedCategoryId != null) {
+          context
+              .read<FetchRelatedItemsCubit>()
+              .fetchRelatedItemsMore(categoryId: relatedCategoryId);
+        }
       }
     }
+  }
+
+  int? _resolveRelatedCategoryId() {
+    return categoryId ?? _currentItem.category?.id ?? _currentItem.categoryId;
   }
 
   CameraPosition get _kInitialPlace => CameraPosition(
@@ -1578,6 +1584,9 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   void dispose() {
     flickManager?.dispose();
     pageController.dispose();
+    _pageScrollController.dispose();
+    _reportmessageController.dispose();
+    _makeAnOffermessageController.dispose();
 
     super.dispose();
   }
@@ -1687,7 +1696,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
 
     if (_purchaseOptionsLoading && _purchaseOptions == null) {
       return const SizedBox.shrink();
-
     }
 
     if (_purchaseOptionsError != null && _purchaseOptions == null) {
@@ -1759,8 +1767,8 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     final bool hasDeliverySize = deliverySize != null && deliverySize > 0;
     final String? deliverySizeText =
         hasDeliverySize ? _formatDeliverySize(deliverySize!) : null;
-    bool deliverySizeDisplayed = false;
-
+    final int? stockLimit = _selectedVariantStock?.availableStock;
+    final bool isOutOfStock = stockLimit != null && stockLimit <= 0;
     final List<Widget> children = <Widget>[];
 
     if (_purchaseOptionsLoading) {
@@ -1768,7 +1776,9 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       children.add(const SizedBox(height: 12));
     }
 
-    if (!hideQuantitySelector && options.attributes.isNotEmpty) {
+    if (!hideQuantitySelector &&
+        options.attributes.isNotEmpty &&
+        !isOutOfStock) {
       children.add(
         Text(
           'خيارات الشراء',
@@ -1785,12 +1795,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
         children.add(const SizedBox(height: 12));
       }
 
-      if (hasDeliverySize && deliverySizeText != null) {
-        children.add(DeliverySizeDisplay(valueText: deliverySizeText));
-
-        children.add(const SizedBox(height: 12));
-        deliverySizeDisplayed = true;
-      }
       children.add(
         VariantStockInfo(
           availableStock: _selectedVariantStock?.availableStock,
@@ -1799,38 +1803,53 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       );
     }
 
-    if (hasDeliverySize && deliverySizeText != null && !deliverySizeDisplayed) {
-      if (children.isNotEmpty) {
-        children.add(const SizedBox(height: 12));
-      }
-      children.add(DeliverySizeDisplay(valueText: deliverySizeText));
-
-      children.add(const SizedBox(height: 12));
-      deliverySizeDisplayed = true;
-    }
-
-    final ItemDiscount? discount = options.discount;
     if (!hideQuantitySelector) {
       if (children.isNotEmpty) {
         children.add(const SizedBox(height: 20));
       }
-      children.add(_buildQuantitySelector());
-    }
-
-    if (discount != null) {
-      if (children.isNotEmpty) {
-        children.add(const SizedBox(height: 20));
+      if (isOutOfStock) {
+        children.add(
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.symmetric(vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.error.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.error.withOpacity(0.25),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.warning_amber_rounded,
+                  color: Theme.of(context).colorScheme.error,
+                  size: 22,
+                ),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    'نفد مخزون هذا المنتج',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.error,
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      } else {
+        children.add(_buildQuantitySelector());
+        if (hasDeliverySize && deliverySizeText != null) {
+          children.add(const SizedBox(height: 12));
+          children.add(DeliverySizeDisplay(valueText: deliverySizeText));
+        }
       }
-
-      final bool active =
-          discount.isActive || options.finalPrice < options.basePrice;
-      children.add(
-        DiscountDetailsCard(
-          finalPriceText: _formatPrice(options.finalPrice),
-          basePriceText: _formatPrice(options.basePrice),
-          isActive: active,
-        ),
-      );
     }
 
     if (children.isEmpty) {
@@ -2103,7 +2122,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
             }
           },
         ),
-
         BlocListener<FetchItemReportReasonsListCubit,
             FetchItemReportReasonsListState>(
           listener: (context, state) {
@@ -2112,7 +2130,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
             }
           },
         ),
-
         BlocListener<FetchItemPurchaseOptionsCubit,
             FetchItemPurchaseOptionsState>(
           listener: _handlePurchaseOptionsState,
@@ -2153,9 +2170,8 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     FetchItemDetailsState state,
   ) {
     final bool isOwner = isAddedByMe;
-    final bool shouldShowLoadingLayout = _isEcommerceItem &&
-        _purchaseOptions == null &&
-        _purchaseOptionsLoading;
+    final bool shouldShowLoadingLayout =
+        _isEcommerceItem && _purchaseOptions == null && _purchaseOptionsLoading;
 
     if (state is FetchItemDetailsFailure) {
       return Scaffold(
@@ -2717,11 +2733,12 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
           if (state.errorMessage == "no-internet") {
             return NoInternet(
               onRetry: () {
-                // التحقق من وجود categoryId قبل استخدامه
-                final safeCategoryId = categoryId ?? 1;
-                context
-                    .read<FetchRelatedItemsCubit>()
-                    .fetchRelatedItems(categoryId: safeCategoryId);
+                final int? relatedCategoryId = _resolveRelatedCategoryId();
+                if (relatedCategoryId != null) {
+                  context
+                      .read<FetchRelatedItemsCubit>()
+                      .fetchRelatedItems(categoryId: relatedCategoryId);
+                }
               },
             );
           }

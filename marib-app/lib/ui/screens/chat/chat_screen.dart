@@ -101,6 +101,7 @@ class _ChatScreenState extends State<ChatScreen>
   PlatformFile? messageAttachment;
   double scrollPositionWhenLoadMore = 0;
   double _maxScrollExtentBeforeLoadMore = 0;
+  bool _loadMoreCooldown = false;
   bool _loadMoreRequestInFlight = false;
   bool _shouldRestoreScrollAfterLoadMore = false;
   final StreamController<PermissionStatus> _notificationStatusController =
@@ -478,10 +479,19 @@ class _ChatScreenState extends State<ChatScreen>
       return;
     }
     final position = _pageScrollController.position;
+    final double distanceToEnd =
+        position.maxScrollExtent - position.pixels; // smaller => closer to top
+
+    // Reset cooldown once user scrolls away from the edge.
+    if (_loadMoreCooldown && distanceToEnd > 80) {
+      _loadMoreCooldown = false;
+    }
+
     if (_loadMoreRequestInFlight) {
       return;
     }
-    if (position.pixels >= position.maxScrollExtent) {
+    // Trigger when close to the top (reverse list)
+    if (distanceToEnd <= 20 && !_loadMoreCooldown) {
       final loadChatCubit = context.read<LoadChatMessagesCubit>();
       final currentState = loadChatCubit.state;
       if (currentState is LoadChatMessagesSuccess &&
@@ -492,6 +502,7 @@ class _ChatScreenState extends State<ChatScreen>
             currentOffset.isFinite ? currentOffset : position.maxScrollExtent;
         _maxScrollExtentBeforeLoadMore = position.maxScrollExtent;
         _loadMoreRequestInFlight = true;
+        _loadMoreCooldown = true;
         _shouldRestoreScrollAfterLoadMore = true;
         loadChatCubit.loadMore();
       }

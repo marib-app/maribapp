@@ -71,6 +71,17 @@ extension _ChatListScreenUi on _ChatListScreenState {
                 Navigator.pushNamed(context, Routes.blockedUserListScreen);
               },
             ),
+            const SizedBox(width: 12),
+            IconButton(
+              tooltip: 'تجربة الشات الجديد',
+              icon: Icon(
+                Icons.auto_awesome,
+                color: colors.territoryColor,
+              ),
+              onPressed: () {
+                Navigator.pushNamed(context, Routes.chatListV2);
+              },
+            ),
           ],
         ),
         body: DefaultTabController(

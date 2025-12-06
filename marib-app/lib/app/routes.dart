@@ -1,4 +1,4 @@
-import 'package:marib/ui/screens/auth/sign_up/mobile_signup_screen.dart';
+﻿import 'package:marib/ui/screens/auth/sign_up/mobile_signup_screen.dart';
 import 'package:marib/ui/screens/auth/sign_up/mobile_verification_screen.dart';
 import 'package:marib/ui/screens/cart/adress.dart';
 import 'package:marib/ui/screens/cart/delivery_and_payment.dart';
@@ -22,6 +22,8 @@ import 'package:marib/ui/screens/auth/login/forgot_password.dart';
 import 'package:marib/ui/screens/auth/sign_up/signup_main_screen.dart';
 import 'package:marib/ui/screens/auth/sign_up/signup_screen.dart';
 import 'package:marib/ui/screens/chat/blocked_user_list_screen.dart';
+import 'package:marib/ui/screens/chat_v2/chat_screen_v2.dart';
+import 'package:marib/ui/screens/chat_v2/chat_list_screen_v2.dart';
 import 'package:marib/ui/screens/favorite_screen.dart';
 import 'package:marib/ui/screens/item/items_list.dart';
 import 'package:marib/ui/screens/location/cities_screen.dart';
@@ -33,7 +35,8 @@ import 'package:marib/ui/screens/location_permission_screen.dart';
 import 'package:marib/ui/screens/my_review_screen.dart';
 import 'package:marib/ui/screens/sold_out_bought_screen.dart';
 import 'package:marib/ui/screens/support_screen.dart';
-import 'package:marib/ui/screens/user_profile/edit_profile.dart';
+
+import 'package:marib/ui/screens/user_profile/pro_edit_profile_screen.dart';
 import 'package:marib/ui/screens/item/add_item_screen/add_item_details.dart';
 import 'package:marib/ui/screens/merchant/merchant_dashboard_screen.dart';
 
@@ -103,7 +106,7 @@ import 'package:marib/ui/screens/widgets/errors/error_screen.dart';
 import 'package:marib/ui/screens/classified_ads/other_services/wifi_cabin/wifi_cabin_screen.dart';
 import 'package:marib/ui/screens/classified_ads/other_services/other_services_screen.dart';
 import 'package:marib/ui/screens/classified_ads/service_add_more_details_screen.dart';
-import 'package:marib/ui/screens/home_screen/section/section_screen/widgets/map_search/map_search_screen.dart'; // عدّل المسار حسب موقع الملف الفعلي
+import 'package:marib/ui/screens/home_screen/section/section_screen/widgets/map_search/map_search_screen.dart'; // ط¹ط¯ظ‘ظ„ ط§ظ„ظ…ط³ط§ط± ط­ط³ط¨ ظ…ظˆظ‚ط¹ ط§ظ„ظ…ظ„ظپ ط§ظ„ظپط¹ظ„ظٹ
 import 'package:marib/ui/screens/wallet/wallet_screen.dart';
 import 'package:marib/ui/screens/cart/orders_list_screen.dart';
 import 'package:marib/ui/screens/merchant/onboarding/merchant_onboarding_screen.dart';
@@ -112,12 +115,12 @@ class Routes {
   //private constructor
   //Routes._();
 
-  static const section_screen = 'section_screen'; // واجهة الاقسام
+  static const section_screen = 'section_screen'; // ظˆط§ط¬ظ‡ط© ط§ظ„ط§ظ‚ط³ط§ظ…
   static const promoteAdScreen = '/promoteAdScreen';
   static const productManagementScreen = '/productManagementScreen';
   static const productReviewScreen = '/productReviewScreen';
 
-  // الخدمات
+  // ط§ظ„ط®ط¯ظ…ط§طھ
   static const classifiedScreenRoute = 'classifiedScreenRoute';
   static const classifiedScreenRoute2 = 'classifiedScreen2Route';
   static const classifiedScreenRoute3 = 'classifiedScreen3Route';
@@ -125,14 +128,16 @@ class Routes {
   static const myReviewsScreen = '/myReviewsScreenRoute';
   static const serviceAddMoreDetails = '/service-add-more-details';
 
-  // خدمات اخرى
+  // ط®ط¯ظ…ط§طھ ط§ط®ط±ظ‰
   static const otherServices = '/other-services';
   static const otherServicesWifiCabin = '/other-services/wifi-cabin';
 
   static const temporarySection = '/temporarySection';
   static const String challengeInstructions = '/challenge-instructions';
+  static const chatListV2 = '/chat-list-v2';
+  static const chatV2 = '/chat-v2';
 
-  static const mapSearch = '/mapSearch'; // البحث بالخريطة
+  static const mapSearch = '/mapSearch'; // ط§ظ„ط¨ط­ط« ط¨ط§ظ„ط®ط±ظٹط·ط©
 
   static const splash = 'splash';
   static const onboarding = 'onboarding';
@@ -263,7 +268,7 @@ class Routes {
   static Route onGenerateRouted(RouteSettings routeSettings) {
     currentRoute = routeSettings.name ?? "";
 
-    // ⛔️ حارس: امنع الذهاب لتعديل/إكمال البروفايل إلا لو تم التصريح عبر arguments
+    // â›”ï¸ڈ ط­ط§ط±ط³: ط§ظ…ظ†ط¹ ط§ظ„ط°ظ‡ط§ط¨ ظ„طھط¹ط¯ظٹظ„/ط¥ظƒظ…ط§ظ„ ط§ظ„ط¨ط±ظˆظپط§ظٹظ„ ط¥ظ„ط§ ظ„ظˆ طھظ… ط§ظ„طھطµط±ظٹط­ ط¹ط¨ط± arguments
     if (routeSettings.name ==
         Routes
             .completeProfile /* || routeSettings.name == Routes.editProfile */) {
@@ -271,12 +276,12 @@ class Routes {
       final bool allow = args is Map &&
           (args['allowProfileRoute'] == true || args['force'] == true);
       if (!allow) {
-        // تحويل للرئيسية إذا كانت محاولة تلقائية/غير مصرّح بها
+        // طھط­ظˆظٹظ„ ظ„ظ„ط±ط¦ظٹط³ظٹط© ط¥ط°ط§ ظƒط§ظ†طھ ظ…ط­ط§ظˆظ„ط© طھظ„ظ‚ط§ط¦ظٹط©/ط؛ظٹط± ظ…طµط±ظ‘ط­ ط¨ظ‡ط§
         return MainActivity.route(routeSettings);
       }
     }
 
-    // --- أمثلتك الخاصة قبل الـ switch (temporarySection وغيره) تبقى كما هي ---
+    // --- ط£ظ…ط«ظ„طھظƒ ط§ظ„ط®ط§طµط© ظ‚ط¨ظ„ ط§ظ„ظ€ switch (temporarySection ظˆط؛ظٹط±ظ‡) طھط¨ظ‚ظ‰ ظƒظ…ط§ ظ‡ظٹ ---
     if (routeSettings.name == Routes.temporarySection) {
       final arguments = routeSettings.arguments as Map<String, dynamic>?;
       if (arguments == null) {
@@ -322,7 +327,7 @@ class Routes {
     }
 
     switch (routeSettings.name) {
-      // الخدمات
+      // ط§ظ„ط®ط¯ظ…ط§طھ
 
       case classifiedScreenRoute:
         return ClassifiedScreen.route(routeSettings);
@@ -342,7 +347,7 @@ class Routes {
       case productReviewScreen:
         return ProductReviewScreen.route(routeSettings);
 
-// ✅ جديد: خدمات أخرى
+// âœ… ط¬ط¯ظٹط¯: ط®ط¯ظ…ط§طھ ط£ط®ط±ظ‰
       case otherServices:
         return OtherServicesScreen.route(routeSettings);
 
@@ -358,17 +363,17 @@ class Routes {
           builder: (_) => const MapSearchScreen(),
         );
 
-      // الدفع
+      // ط§ظ„ط¯ظپط¹
       case Routes.servicePaymentPage:
         return ServicePaymentPage.route(routeSettings);
 
-      case Routes.section_screen: // 👈 مسارك الجديد
+      case Routes.section_screen: // ًں‘ˆ ظ…ط³ط§ط±ظƒ ط§ظ„ط¬ط¯ظٹط¯
         return Section_screen.route(routeSettings);
 
       case promoteAdScreen:
         return PromoteAdScreen.route(routeSettings);
 
-      //  الأقسام الموقوفة
+      //  ط§ظ„ط£ظ‚ط³ط§ظ… ط§ظ„ظ…ظˆظ‚ظˆظپط©
       case Routes.temporarySection:
         final arguments = routeSettings.arguments as Map<String, String>;
 
@@ -415,10 +420,10 @@ class Routes {
       case merchantOnboarding:
         return MerchantOnboardingScreen.route(routeSettings);
 
-      // ✅ بدّل هذه: كانت تفتح UserProfileScreen، خلّها ترجع الرئيسية
+      // âœ… ط¨ط¯ظ‘ظ„ ظ‡ط°ظ‡: ظƒط§ظ†طھ طھظپطھط­ UserProfileScreenطŒ ط®ظ„ظ‘ظ‡ط§ طھط±ط¬ط¹ ط§ظ„ط±ط¦ظٹط³ظٹط©
       case completeProfile:
-        // الآن سيصل هنا فقط لو allowProfileRoute == true
-        return UserProfileScreen.route(routeSettings);
+        // ط§ظ„ط¢ظ† ط³ظٹطµظ„ ظ‡ظ†ط§ ظپظ‚ط· ظ„ظˆ allowProfileRoute == true
+        return ProEditProfileScreen.route(routeSettings);
 
       case showProfile:
         return ShowUserProfileScreen.route(routeSettings);
@@ -483,6 +488,47 @@ class Routes {
 
       case wallet:
         return WalletScreen.route(routeSettings);
+      case chatListV2:
+        return AppPageRoute.build(
+          settings: routeSettings,
+          transition: AppPageRouteTransition.motion,
+          motionPattern: AppMotionPattern.glide,
+          builder: (_) => const ChatListScreenV2(),
+        );
+      case chatV2:
+        {
+          final args = routeSettings.arguments as Map<dynamic, dynamic>?;
+          final String conversationId =
+              args?['conversationId']?.toString() ?? '';
+          final int? receiverId =
+              int.tryParse(args?['receiverId']?.toString() ?? '');
+          final int? senderId =
+              int.tryParse(args?['senderId']?.toString() ?? '');
+          if (conversationId.isEmpty || receiverId == null || senderId == null) {
+            return AppPageRoute.build(
+              settings: routeSettings,
+              builder: (context) => ErrorScreen(),
+            );
+          }
+          final int? itemOfferId =
+              int.tryParse(args?['itemOfferId']?.toString() ?? '');
+          final int? itemId =
+              int.tryParse(args?['itemId']?.toString() ?? '');
+          final String? title = args?['title']?.toString();
+          return AppPageRoute.build(
+            settings: routeSettings,
+            transition: AppPageRouteTransition.motion,
+            motionPattern: AppMotionPattern.glide,
+            builder: (_) => ChatScreenV2(
+              conversationId: conversationId,
+              receiverId: receiverId,
+              senderId: senderId,
+              itemOfferId: itemOfferId,
+              itemId: itemId,
+              title: title,
+            ),
+          );
+        }
 
       case blockedUserListScreen:
         return BlockedUserListScreen.route(routeSettings);

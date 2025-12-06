@@ -13,11 +13,48 @@ class ChatMessageHandler {
   static final ValueNotifier<ParticipantStatus?> participantStatusNotifier =
       ValueNotifier<ParticipantStatus?>(null);
 
-  static List<ChatMessageModal> get currentMessages =>
-      List<ChatMessageModal>.unmodifiable(<ChatMessageModal>[
-        ..._localMessages,
-        ..._remoteMessages,
-      ]);
+  static List<ChatMessageModal> get currentMessages {
+    // Merge local (pending) and remote (confirmed) then sort newest -> oldest
+    // by createdAt (fallback updatedAt, then id). This prevents visual jumps
+    // when a pending message is replaced by its confirmed copy.
+    final List<ChatMessageModal> merged = <ChatMessageModal>[
+      ..._localMessages,
+      ..._remoteMessages,
+    ];
+
+    DateTime? _parseTs(ChatMessageModal m) {
+      DateTime? tryParse(String? value) {
+        if (value == null || value.isEmpty) return null;
+        return DateTime.tryParse(value);
+      }
+
+      return tryParse(m.createdAt) ?? tryParse(m.updatedAt);
+    }
+
+    merged.sort((a, b) {
+      final DateTime? ta = _parseTs(a);
+      final DateTime? tb = _parseTs(b);
+      if (ta != null && tb != null) {
+        // newer first
+        final int cmp = tb.compareTo(ta);
+        if (cmp != 0) return cmp;
+      } else if (ta != null || tb != null) {
+        return (tb ?? DateTime.fromMillisecondsSinceEpoch(0))
+            .compareTo(ta ?? DateTime.fromMillisecondsSinceEpoch(0));
+      }
+
+      final int idA = a.id ?? -1;
+      final int idB = b.id ?? -1;
+      if (idA != idB) {
+        return idB.compareTo(idA);
+      }
+
+      // Keep existing order as final fallback
+      return 0;
+    });
+
+    return List<ChatMessageModal>.unmodifiable(merged);
+  }
 
   static void add(ChatMessageModal chat) {
     // If this is a remote/confirmed message (has server id), insert/update

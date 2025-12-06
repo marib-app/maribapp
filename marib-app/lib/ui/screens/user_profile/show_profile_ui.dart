@@ -135,13 +135,16 @@ class ProfileScreenUI extends StatelessWidget {
             children: adTabs.map((tab) {
               final status = tab["status"];
               final statusKey = normalizeStatus(status);
-              return MyItemTab(
-                getItemsWithStatus: status,
-                onLoadingChanged: updateLoading,
-                onFullRefreshRequested: () {
-                  updateLoading(statusKey, true);
-                  onRequestFullRefresh();
-                },
+              return PrimaryScrollController(
+                controller: ScrollController(),
+                child: MyItemTab(
+                  getItemsWithStatus: status,
+                  onLoadingChanged: updateLoading,
+                  onFullRefreshRequested: () {
+                    updateLoading(statusKey, true);
+                    onRequestFullRefresh();
+                  },
+                ),
               );
             }).toList(),
         ),

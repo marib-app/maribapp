@@ -221,7 +221,7 @@ class AdInfoSection {
       final TextStyle currencyStyle = TextStyle(
         fontSize: context.font.normal + 2,
         fontWeight: FontWeight.w600,
-        color: accent.withOpacity(0.85),
+        color: context.color.textLightColor.withOpacity(0.85),
         height: 1.1,
       );
 
@@ -237,6 +237,7 @@ class AdInfoSection {
         color: context.color.textLightColor.withOpacity(0.7),
         decoration: TextDecoration.lineThrough,
         decorationColor: context.color.textLightColor.withOpacity(0.55),
+        fontStyle: FontStyle.italic,
         height: 1.2,
       );
 
@@ -262,23 +263,39 @@ class AdInfoSection {
 
       final Widget? discountChip = (hasDiscount && discountPercent != null)
           ? Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
-                color: accent.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: accent.withOpacity(0.35), width: 1),
+                color: Colors.red.shade700,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.red.shade900.withOpacity(0.3),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.discount_rounded, size: 18, color: accent),
+                  const Icon(Icons.local_fire_department_rounded,
+                      size: 18, color: Colors.white),
                   const SizedBox(width: 6),
+                  Text(
+                    'خصم',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: context.font.normal,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   Text(
                     '-${discountPercent.toStringAsFixed(discountPercent >= 10 ? 0 : 1)}%',
                     style: TextStyle(
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w800,
                       fontSize: context.font.normal,
-                      color: accent,
+                      color: Colors.white,
                     ),
                   ),
                 ],

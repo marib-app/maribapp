@@ -76,10 +76,8 @@ class MyItemTabUI extends StatelessWidget {
         ScrollPhysics? physicsOverride,                  // NEW
       }) {
     // مطاط دائمًا على كل المنصات (يمكن تجاوزه)
-    final ScrollPhysics physics = physicsOverride ??
-        BouncingScrollPhysics(
-          parent: const AppScrollBehavior().getScrollPhysics(context),
-        );
+    final ScrollPhysics physics =
+        physicsOverride ?? const AppScrollBehavior().getScrollPhysics(context);
     // غلاف موحّد للتحكم بالعرض/المحاذاة/الحشوات
     Widget wrapContent(Widget child) {
       return Align(

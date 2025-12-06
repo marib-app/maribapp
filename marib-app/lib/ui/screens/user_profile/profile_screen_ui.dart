@@ -468,10 +468,24 @@ class _ProfileGlassCard extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(name)
-                        .bold(weight: FontWeight.w800)
-                        .size(context.font.large + 1)
-                        .color(context.color.textColorDark),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(name)
+                              .bold(weight: FontWeight.w800)
+                              .size(context.font.large + 1)
+                              .color(context.color.textColorDark),
+                        ),
+                        const SizedBox(width: 8),
+                        if ((user.isVerified ?? 0) != 1)
+                          _VerifyAccountPill(
+                            onTap: () => Navigator.of(context)
+                                .pushNamed(Routes.accountVerificationInfo),
+                          )
+                        else
+                          const _VerifiedBadge(),
+                      ],
+                    ),
                     const SizedBox(height: 10),
                     if (showPendingBadge) ...[
                       _StoreReviewBadge(compact: false),
@@ -545,6 +559,75 @@ class _AccountStyle {
       default:
         return 'notSpecified'.translate(context);
     }
+  }
+}
+
+class _VerifyAccountPill extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _VerifyAccountPill({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    return OutlinedButton(
+      onPressed: onTap,
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        side: BorderSide(color: context.color.territoryColor, width: 1.2),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        backgroundColor:
+            context.color.territoryColor.withOpacity(isDark ? 0.12 : 0.08),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.verified_user_outlined,
+              size: 17, color: context.color.territoryColor),
+          const SizedBox(width: 6),
+          Text(
+            "توثيق الحساب",
+            style: TextStyle(
+              color: context.color.territoryColor,
+              fontWeight: FontWeight.w700,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _VerifiedBadge extends StatelessWidget {
+  const _VerifiedBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    final Color accent = context.color.territoryColor;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: accent.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: accent.withOpacity(0.5)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.verified, size: 16, color: accent),
+          const SizedBox(width: 6),
+          Text(
+            "موثق",
+            style: TextStyle(
+              color: accent,
+              fontWeight: FontWeight.w700,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

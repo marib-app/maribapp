@@ -18,6 +18,7 @@ import 'package:marib/ui/screens/item/items_list_seller.dart';
 import 'package:marib/ui/screens/item/viewAll.dart';
 import 'package:marib/ui/screens/soon_screen.dart';
 import 'package:marib/ui/screens/sub_category/sub_category_screen.dart';
+import 'package:marib/ui/screens/user_profile/account_verification_info_screen.dart';
 import 'package:marib/ui/screens/auth/login/forgot_password.dart';
 import 'package:marib/ui/screens/auth/sign_up/signup_main_screen.dart';
 import 'package:marib/ui/screens/auth/sign_up/signup_screen.dart';
@@ -236,6 +237,7 @@ class Routes {
   static const sellerVerificationScreen = '/sellerVerificationScreen';
   static const sellerVerificationComplteScreen =
       '/sellerVerificationComplteScreen';
+  static const accountVerificationInfo = '/accountVerificationInfo';
 
   ///Add Item screens
   static const selectItemTypeScreen = '/selectItemType';
@@ -591,6 +593,8 @@ class Routes {
         return SellerVerificationScreen.route(routeSettings);
       case sellerVerificationComplteScreen:
         return SellerVerificationCompleteScreen.route(routeSettings);
+      case accountVerificationInfo:
+        return AccountVerificationInfoScreen.route(routeSettings);
       case nearbyLocationScreen:
         return NearbyLocationScreen.route(routeSettings);
       case myReviewsScreen:

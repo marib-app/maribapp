@@ -18,6 +18,7 @@ import 'package:marib/utils/responsiveSize.dart';
 import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/merchant_display_helper.dart';
 import 'package:marib/app/app_scroll_behavior.dart';
+import 'package:marib/app/routes.dart';
 
 /// ┘ê╪د╪ش┘ç╪ر ╪┤╪د╪┤╪ر ╪د┘┘à┘┘ ╪د┘╪┤╪«╪╡┘è (╪╣╪▒╪╢ ┘┘é╪╖) ظ¤ ╪ز╪│╪ز┘é╪ذ┘ ┘â┘ ╪┤┘è╪ة ╪╣╪ذ╪▒ Params.
 /// ┘╪د ┘è┘ê╪ش╪» ┘à┘╪╖┘é ╪ذ┘è╪د┘╪د╪ز ┘ç┘╪د╪ؤ ╪ث┘è ┘à┘╪╖┘é ┘è╪ش╪ذ ╪ث┘ ┘è╪ذ┘é┘ë ╪«╪د╪▒╪ش ┘ç╪░╪د ╪د┘┘à┘┘.
@@ -102,7 +103,10 @@ class ProfileScreenUI extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 0),
-          _HeaderSection(buildProfileImage: buildProfileImage),
+          _HeaderSection(
+            buildProfileImage: buildProfileImage,
+            isUserAuthenticated: isUserAuthenticated,
+          ),
           const SizedBox(height: 12),
           const _StatsRow(),
           const SizedBox(height: 12),
@@ -168,8 +172,12 @@ class ProfileScreenUI extends StatelessWidget {
 /// ╪ز┘à ╪د╪│╪ز╪«╪»╪د┘à BlocBuilder ┘┘╪ز╪ص╪»┘è╪س ╪د┘┘┘ê╪▒┘è ╪╣┘╪» ╪ز╪║┘è┘ّ╪▒ ╪ذ┘è╪د┘╪د╪ز ╪د┘┘à╪│╪ز╪«╪»┘à.
 class _HeaderSection extends StatelessWidget {
   final Widget Function() buildProfileImage;
+  final bool isUserAuthenticated;
 
-  const _HeaderSection({required this.buildProfileImage});
+  const _HeaderSection({
+    required this.buildProfileImage,
+    required this.isUserAuthenticated,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -204,32 +212,120 @@ class _HeaderSection extends StatelessWidget {
           Expanded(
             child: BlocBuilder<UserDetailsCubit, UserDetailsState>(
               buildWhen: (prev, curr) => prev.user != curr.user,
-                builder: (context, state) {
-                  final user = state.user;
-                  final bool isMerchantAccount =
-                      user?.userType == Constant.accountTypeSeller;
-                  final String resolvedName = user == null
-                      ? ''
-                      : MerchantDisplayHelper.resolveDisplayName(
-                          isMerchant: isMerchantAccount,
-                          store: user.store,
-                          additionalInfo: user.additionalInfo,
-                          fallbackName: user.name,
-                        ).trim();
-                  final String displayName =
-                      resolvedName.isNotEmpty ? resolvedName : (user?.name ?? '');
-                  return Text(
-                    displayName,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 20,
-                        ),
-                    overflow: TextOverflow.ellipsis,
-                  );
-                },
-              ),
+              builder: (context, state) {
+                final user = state.user;
+                final bool isMerchantAccount =
+                    user?.userType == Constant.accountTypeSeller;
+                final String resolvedName = user == null
+                    ? ''
+                    : MerchantDisplayHelper.resolveDisplayName(
+                        isMerchant: isMerchantAccount,
+                        store: user.store,
+                        additionalInfo: user.additionalInfo,
+                        fallbackName: user.name,
+                      ).trim();
+                final String displayName =
+                    resolvedName.isNotEmpty ? resolvedName : (user?.name ?? '');
+                final bool isVerified = (user?.isVerified ?? 0) == 1;
+                final bool showVerificationButton = !isVerified && isUserAuthenticated;
+
+                return Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        displayName,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 20,
+                            ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (showVerificationButton) ...[
+                      const SizedBox(width: 10),
+                      _VerifyAccountChip(onTap: () {
+                        Navigator.of(context)
+                            .pushNamed(Routes.accountVerificationInfo);
+                      }),
+                    ] else if (isVerified) ...[
+                      const SizedBox(width: 10),
+                      const _VerifiedBadge(),
+                    ],
+                  ],
+                );
+              },
             ),
-          ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _VerifyAccountChip extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _VerifyAccountChip({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    return OutlinedButton(
+      onPressed: onTap,
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        side: BorderSide(color: context.color.territoryColor, width: 1.3),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor:
+            context.color.territoryColor.withOpacity(isDark ? 0.12 : 0.08),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.verified_user_outlined,
+              size: 18, color: context.color.territoryColor),
+          const SizedBox(width: 6),
+          Text(
+            "توثيق الحساب",
+            style: TextStyle(
+              color: context.color.territoryColor,
+              fontWeight: FontWeight.w700,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _VerifiedBadge extends StatelessWidget {
+  const _VerifiedBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    final Color accent = context.color.territoryColor;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: accent.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: accent.withOpacity(0.5)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.verified, size: 16, color: accent),
+          const SizedBox(width: 6),
+          Text(
+            "موثق",
+            style: TextStyle(
+              color: accent,
+              fontWeight: FontWeight.w700,
+              fontSize: 12,
+            ),
+          ),
+        ],
       ),
     );
   }

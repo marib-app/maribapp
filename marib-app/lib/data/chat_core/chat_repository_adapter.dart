@@ -55,9 +55,11 @@ class ChatRepositoryAdapter implements ChatRepositoryV2 {
         .whereType<ChatMessageEntity>()
         .toList();
 
-    final int total = response.total ?? entities.length;
+    final int? total = response.total;
     final int currentPage = response.page ?? page;
-    final bool hasMore = total > (currentPage * limit);
+    final bool hasMore = total != null
+        ? total > (currentPage * limit)
+        : entities.length >= limit; // fallback: assume more if page full
     return ChatPage(messages: entities, hasMore: hasMore);
   }
 
@@ -77,7 +79,10 @@ class ChatRepositoryAdapter implements ChatRepositoryV2 {
     final dynamic data = map['data'];
     if (data is Map<String, dynamic>) {
       final ChatMessageModal modal = ChatMessageModal.fromJson(data);
-      final entity = _mapModalToEntity(modal);
+      final entity = _mapModalToEntity(modal)?.copyWith(
+        localId: draft.localId,
+        conversationId: draft.conversationId,
+      );
       if (entity != null) {
         _messageStreamController.add(entity);
         return entity;

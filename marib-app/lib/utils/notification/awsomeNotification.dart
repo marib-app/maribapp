@@ -92,8 +92,8 @@ class LocalAwsomeNotification {
           (payload["body"]?.toString().trim().isNotEmpty ?? false)
               ? payload["body"].toString()
               : notificationData.notification?.body;
-      final String resolvedTitle = title ?? '';
-      final String resolvedBody = body ?? '';
+      final String resolvedTitle = _localizeNotificationText(title ?? '');
+      final String resolvedBody = _localizeNotificationText(body ?? '');
 
       if (isChat) {
         int chatId = int.parse(notificationData.data['sender_id']) +
@@ -214,6 +214,15 @@ class LocalAwsomeNotification {
       return 1;
     }
   }
+}
+
+String _localizeNotificationText(String text) {
+  final String normalized = text.trim().toLowerCase();
+  if (normalized == "your verfication request is approved" ||
+      normalized == "your verification request is approved") {
+    return "تهانياً تم توثيق حسابك";
+  }
+  return text;
 }
 
 class NotificationController {

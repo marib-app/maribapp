@@ -151,6 +151,13 @@ class SellerInfoSection extends StatelessWidget {
     final sellerData = context.watch<FetchSellerRatingsCubit>().sellerData();
     final rating = sellerData?.averageRating;
     final total = context.watch<FetchSellerRatingsCubit>().totalSellerRatings();
+    final bool isIndividualAccount =
+        user.accountType == 1 || user.accountType == 2;
+    final String normalizedStatus =
+        (user.verificationStatus ?? '').toLowerCase();
+    final bool hasActiveVerification = normalizedStatus == 'active';
+    final bool showVerificationBadge =
+        isIndividualAccount && (hasActiveVerification || user.isVerified == 1);
 
     return Padding(
       padding: const EdgeInsets.all(10.0),
@@ -158,7 +165,7 @@ class SellerInfoSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ✅ شارة التوثيق (إن وُجد)
-          if (user.isVerified == 1)
+          if (showVerificationBadge)
             Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(5),

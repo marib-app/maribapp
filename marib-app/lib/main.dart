@@ -23,6 +23,7 @@ import 'package:marib/utils/performance/performance_route_observer.dart';
 import 'package:marib/app/app_scroll_behavior.dart';
 import 'package:intl/intl.dart' hide TextDirection;
 import 'package:marib/utils/ui_utils.dart';
+import 'package:marib/utils/route_observer.dart';
 
 /////////////
 ///V-1.0.0//
@@ -109,6 +110,7 @@ class _AppState extends State<App> {
           navigatorKey: Constant.navigatorKey,
           //This navigator key is used for Navigate users through notification
           navigatorObservers: [
+            routeObserver,
             if (!kReleaseMode) PerformanceRouteObserver(),
           ],
 

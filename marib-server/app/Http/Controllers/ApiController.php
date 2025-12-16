@@ -1821,7 +1821,7 @@ class ApiController extends Controller {
             if ($uniqueSlug === '') {
                 $uniqueSlug = Str::lower(Str::random(12));
             }
-            $status = $this->shouldAutoApproveSection($section) ? 'approved' : 'review';
+            $status = $this->resolveInitialItemStatus($user, $section);
 
             $data = Arr::only($request->all(), [
                 'category_id',
@@ -2128,7 +2128,8 @@ class ApiController extends Controller {
 
 
             $detailRelations = [
-                'user:id,name,email,mobile,profile,created_at,is_verified,show_personal_details,country_code',
+                'user:id,name,email,mobile,profile,created_at,is_verified,show_personal_details,country_code,account_type',
+                'user.latestApprovedVerificationRequest:id,user_id,expires_at,status,approved_at',
                 'category:id,name,image',
                 'gallery_images:id,image,item_id,thumbnail_url,detail_image_url',
                 'featured_items',
@@ -2936,7 +2937,7 @@ class ApiController extends Controller {
                 $item->delete();
             } else if ($request->status == "active") {
                 $item->restore();
-                $status = $this->shouldAutoApproveSection($section) ? 'approved' : 'review';
+                $status = $this->resolveInitialItemStatus(Auth::user(), $section);
                 $item->update(['status' => $status]);
 
             } else if ($request->status == "sold out") {
@@ -12139,6 +12140,47 @@ public function storeRequestDevice(Request $request)
         return null;
     }
 
+
+    private function resolveInitialItemStatus(User $user, ?string $section): string
+    {
+        if ($this->shouldAutoApproveSection($section) || $this->shouldSkipReviewForVerifiedUser($user)) {
+            return 'approved';
+        }
+
+        return 'review';
+    }
+
+    private function shouldSkipReviewForVerifiedUser(User $user): bool
+    {
+        if (! $this->hasVerifiedIndividualPrivileges($user)) {
+            return false;
+        }
+
+        $limit = (int) config('items.auto_approve_verified_max_per_hour', 10);
+
+        if ($limit > 0) {
+            $recentCount = Item::query()
+                ->where('user_id', $user->id)
+                ->where('created_at', '>=', now()->subHour())
+                ->count();
+
+            if ($recentCount >= $limit) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function hasVerifiedIndividualPrivileges(User $user): bool
+    {
+        $eligibleTypes = [
+            User::ACCOUNT_TYPE_CUSTOMER,
+            User::ACCOUNT_TYPE_REAL_ESTATE,
+        ];
+
+        return in_array($user->account_type, $eligibleTypes, true) && $user->hasActiveVerification();
+    }
 
     private function shouldAutoApproveSection(?string $section): bool
     {

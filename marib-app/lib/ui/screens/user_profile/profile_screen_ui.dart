@@ -10,11 +10,14 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen>
     with
         AutomaticKeepAliveClientMixin<ProfileScreen>,
+        RouteAware,
         ProfileScreenLogic<ProfileScreen> {
   final ValueNotifier<bool> _isDark = ValueNotifier(false);
+  late final ValueNotifier<bool> _verificationBadgeLoading;
   final ScrollController _scroll = ScrollController();
   final ValueNotifier<double> _scrollY = ValueNotifier(0);
   final InAppReview _inAppReview = InAppReview.instance;
+  ModalRoute<dynamic>? _route;
 
   @override
   bool get wantKeepAlive => true;
@@ -22,16 +25,64 @@ class _ProfileScreenState extends State<ProfileScreen>
   @override
   void initState() {
     super.initState();
+    _verificationBadgeLoading =
+        ValueNotifier<bool>(HiveUtils.isUserAuthenticated());
     _isDark.value = context.read<AppThemeCubit>().isDarkMode();
     _scroll.addListener(() => _scrollY.value = _scroll.offset);
+    _fetchVerificationRequests();
   }
 
   @override
   void dispose() {
     _isDark.dispose();
+    _verificationBadgeLoading.dispose();
     _scroll.dispose();
     _scrollY.dispose();
+    if (_route != null) {
+      routeObserver.unsubscribe(this);
+    }
     super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route != null && _route != route) {
+      if (_route != null) {
+        routeObserver.unsubscribe(this);
+      }
+      _route = route;
+      routeObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void didPopNext() {
+    _fetchVerificationRequests();
+  }
+
+  @override
+  void didPush() {
+    _fetchVerificationRequests();
+  }
+
+  void _fetchVerificationRequests() {
+    final bool isAuthenticated = HiveUtils.isUserAuthenticated();
+    if (!isAuthenticated) {
+      if (_verificationBadgeLoading.value) {
+        _verificationBadgeLoading.value = false;
+      }
+      return;
+    }
+
+    final currentState = context.read<FetchVerificationRequestsCubit>().state;
+    if (currentState is FetchVerificationRequestInProgress) {
+      return;
+    }
+
+    _verificationBadgeLoading.value = true;
+    context.read<FetchVerificationRequestsCubit>().fetchVerificationRequests();
   }
 
   void _toggleLanguage() {
@@ -130,15 +181,37 @@ class _ProfileScreenState extends State<ProfileScreen>
             physics: const ClampingScrollPhysics(),
             slivers: [
               SliverToBoxAdapter(
-                child: ValueListenableBuilder<double>(
-                  valueListenable: _scrollY,
-                  builder: (_, y, __) {
-                    final double shift = (y * 0.06).clamp(0, 24);
-                    return Transform.translate(
-                      offset: Offset(0, -shift),
-                      child: _ProfileGlassCard(isDark: _isDark.value),
-                    );
+                child: BlocListener<FetchVerificationRequestsCubit,
+                    FetchVerificationRequestState>(
+                  listener: (context, state) {
+                    if (!HiveUtils.isUserAuthenticated()) {
+                      if (_verificationBadgeLoading.value) {
+                        _verificationBadgeLoading.value = false;
+                      }
+                      return;
+                    }
+
+                    final bool isLoading =
+                        state is FetchVerificationRequestInProgress ||
+                            state is FetchVerificationRequestInitial;
+                    if (_verificationBadgeLoading.value != isLoading) {
+                      _verificationBadgeLoading.value = isLoading;
+                    }
                   },
+                  child: ValueListenableBuilder<double>(
+                    valueListenable: _scrollY,
+                    builder: (_, y, __) {
+                      final double shift = (y * 0.06).clamp(0, 24);
+                      return Transform.translate(
+                        offset: Offset(0, -shift),
+                        child: _ProfileGlassCard(
+                          isDark: _isDark.value,
+                          verificationBadgeLoadingNotifier:
+                              _verificationBadgeLoading,
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ),
 
@@ -362,8 +435,12 @@ class _ProfileScreenState extends State<ProfileScreen>
 
 class _ProfileGlassCard extends StatelessWidget {
   final bool isDark;
+  final ValueNotifier<bool> verificationBadgeLoadingNotifier;
 
-  const _ProfileGlassCard({required this.isDark});
+  const _ProfileGlassCard({
+    required this.isDark,
+    required this.verificationBadgeLoadingNotifier,
+  });
 
   String _formatJoined(String? raw) {
     if (raw == null || raw.trim().isEmpty) return '';
@@ -395,20 +472,26 @@ class _ProfileGlassCard extends StatelessWidget {
     final String joined = _formatJoined(user.createdAt);
     final verificationState =
         context.watch<FetchVerificationRequestsCubit>().state;
+    VerificationRequestModel? verificationRequest;
+    if (verificationState is FetchVerificationRequestSuccess) {
+      verificationRequest = verificationState.data;
+    } else if (verificationState is FetchVerificationRequestFail) {
+      verificationRequest = HiveUtils.getCachedVerificationRequest();
+    }
+
     String? verificationStatus =
-        verificationState is FetchVerificationRequestSuccess
-            ? verificationState.data.status?.trim().toLowerCase()
-            : null;
-    final DateTime? verificationExpiresAt =
-        verificationState is FetchVerificationRequestSuccess
-            ? verificationState.data.expiresAt
-            : null;
+        verificationRequest?.status?.trim().toLowerCase();
+    final DateTime? verificationExpiresAt = verificationRequest?.expiresAt;
+
     bool isVerified = (user.isVerified ?? 0) == 1;
     if (!isVerified && verificationStatus == 'approved') {
       final bool active = verificationExpiresAt == null ||
           verificationExpiresAt.isAfter(DateTime.now());
       isVerified = active;
     }
+
+    final bool showVerificationButton =
+        !isVerified && HiveUtils.isUserAuthenticated();
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(10, 18, 10, 0),
@@ -461,11 +544,28 @@ class _ProfileGlassCard extends StatelessWidget {
                               .color(context.color.textColorDark),
                         ),
                         const SizedBox(width: 8),
-                        _resolveVerificationBadge(
-                          context: context,
-                          isVerified: isVerified,
-                          status: verificationStatus,
-                          expiresAt: verificationExpiresAt,
+                        ValueListenableBuilder<bool>(
+                          valueListenable: verificationBadgeLoadingNotifier,
+                          builder: (context, badgeLoading, _) {
+                            return VerificationBadgeAnimated(
+                              isLoading: badgeLoading,
+                              showVerificationButton: showVerificationButton,
+                              isVerified: isVerified,
+                              status: verificationStatus,
+                              expiresAt: verificationExpiresAt,
+                              onVerifyTap: () {
+                                Navigator.of(context)
+                                    .pushNamed(Routes.accountVerificationInfo);
+                              },
+                              onStatusTap: () =>
+                                  showVerificationSubscriptionSheet(
+                                context,
+                                status: verificationStatus,
+                                expiresAt: verificationExpiresAt,
+                                isVerified: isVerified,
+                              ),
+                            );
+                          },
                         ),
                       ],
                     ),

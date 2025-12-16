@@ -10,6 +10,7 @@ use App\Models\StoreGatewayAccount;
 use App\Models\StoreStaff;
 use App\Models\WalletAccount;
 use App\Models\WalletTransaction;
+use App\Models\VerificationRequest;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -19,6 +20,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
@@ -28,6 +30,8 @@ use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable {
     use HasApiTokens, HasFactory, Notifiable, HasRoles, SoftDeletes, HasPermissions;
+
+    protected $appends = ['verification_status', 'verification_expires_at'];
 
     /**
      * Always eager load relations that are commonly required on the mobile app.
@@ -134,6 +138,65 @@ class User extends Authenticatable {
             'user_id',
             'wallet_account_id'
         );
+    }
+
+    public function verificationRequests(): HasMany
+    {
+        return $this->hasMany(VerificationRequest::class);
+    }
+
+    public function latestApprovedVerificationRequest(): HasOne
+    {
+        return $this->hasOne(VerificationRequest::class)
+            ->where('status', 'approved')
+            ->latest('approved_at');
+    }
+
+    public function hasActiveVerification(): bool
+    {
+        $latest = $this->relationLoaded('latestApprovedVerificationRequest')
+            ? $this->latestApprovedVerificationRequest
+            : $this->latestApprovedVerificationRequest()->first();
+
+        if (! $latest || $this->is_verified !== 1) {
+            return false;
+        }
+
+        if (! $latest->expires_at) {
+            return true;
+        }
+
+        try {
+            return Carbon::parse($latest->expires_at)->isFuture();
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    public function getVerificationStatusAttribute(): string
+    {
+        if ($this->hasActiveVerification()) {
+            return 'active';
+        }
+
+        return $this->is_verified === 1 ? 'expired' : 'unverified';
+    }
+
+    public function getVerificationExpiresAtAttribute(): ?string
+    {
+        $latest = $this->relationLoaded('latestApprovedVerificationRequest')
+            ? $this->latestApprovedVerificationRequest
+            : $this->latestApprovedVerificationRequest()->first();
+
+        if (! $latest || ! $latest->expires_at) {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($latest->expires_at)->toIso8601String();
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
 

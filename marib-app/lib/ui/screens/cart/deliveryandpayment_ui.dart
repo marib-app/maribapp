@@ -187,6 +187,13 @@ class DeliveryAndPaymentUI extends StatelessWidget {
     final bool hasReturnDepositTab = _hasReturnDepositToShow();
     final StoreStatusViewModel storeStatus =
         StoreStatusViewModel.fromMap(store);
+    final Map<String, dynamic>? assurance =
+        store?['assurance'] is Map<String, dynamic>
+            ? Map<String, dynamic>.from(store!['assurance'])
+            : null;
+    final bool showAssuranceBanner = assurance?['active'] == true;
+    final String assuranceMessage = assurance?['message'] ??
+        'هذا الطلب يخضع لضمان تاجر موثَّق، وسيتم حماية المبلغ أو تعويضك عند حدوث مشكلة بالدفع.';
     final MoneyFormatter totalFormatter = MoneyFormatter.fromCartCurrency(
       currency: orderCurrencyLabel,
       currencyCode: orderCurrencyCode,
@@ -225,9 +232,13 @@ class DeliveryAndPaymentUI extends StatelessWidget {
                 ),
                 const SizedBox(height: 11),
               ],
+              if (showAssuranceBanner) ...[
+                _TradeAssuranceBanner(message: assuranceMessage),
+                const SizedBox(height: 11),
+              ],
               if (showAddressBlock)
                 CartDeliveryAddressTab(
-                  loading: loading, 
+                  loading: loading,
                   address: address,
                   onManageAddresses: onManageAddresses,
                   initiallyExpanded: true,
@@ -834,6 +845,43 @@ class DeliveryAndPaymentUI extends StatelessWidget {
       return value.trim().isNotEmpty;
     }
     return false;
+  }
+}
+
+class _TradeAssuranceBanner extends StatelessWidget {
+  const _TradeAssuranceBanner({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color accent = context.color.successColor;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      decoration: BoxDecoration(
+        color: accent.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(14), 
+        border: Border.all(color: accent.withOpacity(0.25)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.verified_user, color: accent),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                color: accent,
+                fontWeight: FontWeight.w600,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

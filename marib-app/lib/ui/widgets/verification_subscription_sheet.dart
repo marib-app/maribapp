@@ -109,28 +109,43 @@ class _VerificationSubscriptionSheetState
               FetchVerificationRequestState>(
             bloc: _cubit,
             builder: (context, state) {
+              Widget content;
               if (state is FetchVerificationRequestInProgress ||
                   state is FetchVerificationRequestInitial) {
-                return _buildLoading(context);
+                content = _buildLoading(context);
+              } else if (state is FetchVerificationRequestFail) {
+                content = _hasSnapshot()
+                    ? _buildSnapshot(context)
+                    : _buildNoRequest(context, message: state.error.toString());
+              } else if (state is FetchVerificationRequestSuccess) {
+                content = _buildDetails(context, state.data);
+              } else if (_hasSnapshot()) {
+                content = _buildSnapshot(context);
+              } else {
+                content = _buildError(context, 'Something went wrong');
               }
-              if (state is FetchVerificationRequestFail) {
-                if (_hasSnapshot()) {
-                  return _buildSnapshot(context);
-                }
-                return _buildNoRequest(context,
-                    message: state.error.toString());
-              }
-              if (state is FetchVerificationRequestSuccess) {
-                return _buildDetails(context, state.data);
-              }
-              if (_hasSnapshot()) {
-                return _buildSnapshot(context);
-              }
-              return _buildError(context, 'Something went wrong');
+
+              return _wrapScrollable(content);
             },
           ),
         ),
       ),
+    );
+  }
+
+  Widget _wrapScrollable(Widget child) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minWidth: constraints.maxWidth,
+              maxWidth: constraints.maxWidth,
+            ),
+            child: child,
+          ),
+        );
+      },
     );
   }
 

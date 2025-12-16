@@ -964,6 +964,8 @@ class User {
   int? showPersonalDetails;
   int? isVerified;
   int? accountType;
+  String? verificationStatus;
+  String? verificationExpiresAt;
   Map<String, dynamic>? additionalInfo;
   Map<String, dynamic>? store;
 
@@ -984,6 +986,8 @@ class User {
     this.isVerified,
     this.showPersonalDetails,
     this.accountType,
+    this.verificationStatus,
+    this.verificationExpiresAt,
     this.additionalInfo,
     this.store,
   });
@@ -1005,6 +1009,8 @@ class User {
     isVerified = ItemModel._toInt(json['is_verified']);
     showPersonalDetails = ItemModel._toInt(json['show_personal_details']);
     accountType = ItemModel._toInt(json['account_type']);
+    verificationStatus = json['verification_status'];
+    verificationExpiresAt = json['verification_expires_at'];
     additionalInfo = _normalizeAdditionalInfo(json['additional_info']);
     store = _normalizeStoreMap(json['store']);
   }
@@ -1027,6 +1033,8 @@ class User {
     data['is_verified'] = isVerified;
     data['show_personal_details'] = showPersonalDetails;
     data['account_type'] = accountType;
+    data['verification_status'] = verificationStatus;
+    data['verification_expires_at'] = verificationExpiresAt;
     data['additional_info'] = additionalInfo;
     if (store != null) {
       data['store'] = Map<String, dynamic>.from(store!);

@@ -820,6 +820,7 @@ class CartController extends Controller
                     'department_notice' => null,
                     'department_policy' => null,
                     'support' => null,
+                    'assurance' => null,
                 ],
                 'currency' => $this->defaultCurrency(),
                 'currency_conflict' => false,
@@ -830,6 +831,7 @@ class CartController extends Controller
         $cartStore = $this->extractCartStore($cartItems);
         $storeSummary = $this->formatCartStoreSummary($cartItems, $cartStore);
         $storeStatus = $storeSummary['status'] ?? null;
+        $assurance = $storeSummary['assurance'] ?? null;
 
 
 
@@ -908,6 +910,7 @@ class CartController extends Controller
                 'department_notice' => $departmentNotice,
                 'department_policy' => $departmentPolicy,
                 'support' => $support,
+                'assurance' => $assurance,
                 'store' => $storeSummary,
             ],
             'currency' => $currency,
@@ -963,6 +966,26 @@ class CartController extends Controller
         ];
     }
 
+    protected function buildStoreAssurancePayload(Store $store): ?array
+    {
+        $owner = $store->owner;
+
+        if (! $owner || $owner->account_type !== User::ACCOUNT_TYPE_SELLER) {
+            return null;
+        }
+
+        if (! $owner->hasActiveVerification()) {
+            return null;
+        }
+
+        return [
+            'active' => true,
+            'type' => 'verified_merchant',
+            'message' => __('تم تفعيل ضمان الطلب لهذا التاجر الموثّق، سيتم حماية المبلغ أو تعويضك عند حدوث مشكلة.'),
+            'verification_expires_at' => $owner->verification_expires_at,
+        ];
+    }
+
     protected function extractCartStore(Collection $cartItems): ?Store
     {
         $storeId = $cartItems->pluck('store_id')->filter()->unique()->values()->first();
@@ -977,12 +1000,12 @@ class CartController extends Controller
             ->firstWhere('id', $storeId);
 
         if ($store instanceof Store) {
-            $store->loadMissing(['settings', 'workingHours']);
+            $store->loadMissing(['settings', 'workingHours', 'owner.latestApprovedVerificationRequest']);
 
             return $store;
         }
 
-        return Store::with(['settings', 'workingHours'])->find($storeId);
+        return Store::with(['settings', 'workingHours', 'owner.latestApprovedVerificationRequest'])->find($storeId);
     }
 
     protected function summarizeCartStoreContext(Collection $cartItems): array
@@ -1123,6 +1146,8 @@ class CartController extends Controller
         }
 
         $status = $this->storeStatusService->resolve($store);
+        $store->loadMissing(['owner.latestApprovedVerificationRequest']);
+        $assurance = $store->owner ? $this->buildStoreAssurancePayload($store) : null;
         $summary = [
             'id' => $store->id,
             'name' => $store->name,
@@ -1131,9 +1156,23 @@ class CartController extends Controller
             'status' => $status,
         ];
 
+        if ($store->owner) {
+            $summary['owner'] = [
+                'id' => $store->owner->id,
+                'account_type' => $store->owner->account_type,
+                'is_verified' => $store->owner->is_verified,
+                'verification_status' => $store->owner->verification_status,
+                'verification_expires_at' => $store->owner->verification_expires_at,
+            ];
+        }
+
         $manualBanks = $this->resolveStoreManualBanks($store);
         if ($manualBanks !== []) {
             $summary['manual_banks'] = $manualBanks;
+        }
+
+        if ($assurance !== null) {
+            $summary['assurance'] = $assurance;
         }
 
         return $summary;

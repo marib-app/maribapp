@@ -366,6 +366,16 @@ class OrderCheckoutService
                 }
             }
 
+            $assuranceSnapshot = $this->resolveTradeAssuranceSnapshot($cartItems);
+            $cartSnapshot = $this->buildCartSnapshot($cartItems, $cartMetrics);
+
+            if ($assuranceSnapshot !== null) {
+                $cartSnapshot['assurance'] = $assuranceSnapshot;
+                if (is_array($quote)) {
+                    $quote['assurance'] = $assuranceSnapshot;
+                }
+            }
+
             $order = Order::create([
                 'user_id' => $user->getKey(),
                 'seller_id' => $this->resolveSellerId($cartItems),
@@ -397,7 +407,7 @@ class OrderCheckoutService
                 'delivery_discount' => $this->resolveDiscount($quote),
                 'delivery_total' => $deliveryTotal,
                 'delivery_collected_amount' => 0,
-                'cart_snapshot' => $this->buildCartSnapshot($cartItems, $cartMetrics),
+                'cart_snapshot' => $cartSnapshot,
                 'pricing_snapshot' => $quote,
 
                 'deposit_minimum_amount' => $depositOrderFields['deposit_minimum_amount'],
@@ -1467,6 +1477,35 @@ class OrderCheckoutService
                 return $this->buildItemSnapshot($item);
             })->values()->all(),
             'metrics' => $metrics,
+        ];
+    }
+
+    private function resolveTradeAssuranceSnapshot(Collection $cartItems): ?array
+    {
+        $storeId = $cartItems->pluck('store_id')->filter()->unique()->first();
+
+        if (! $storeId) {
+            return null;
+        }
+
+        $store = Store::with(['owner.latestApprovedVerificationRequest'])->find($storeId);
+
+        if (! $store || ! $store->owner) {
+            return null;
+        }
+
+        $owner = $store->owner;
+
+        if ($owner->account_type !== User::ACCOUNT_TYPE_SELLER || ! $owner->hasActiveVerification()) {
+            return null;
+        }
+
+        return [
+            'status' => 'active',
+            'store_id' => $store->id,
+            'owner_id' => $owner->id,
+            'policy' => 'payment_protection',
+            'verification_expires_at' => $owner->verification_expires_at,
         ];
     }
 

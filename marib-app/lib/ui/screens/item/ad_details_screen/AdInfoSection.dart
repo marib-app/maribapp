@@ -373,7 +373,7 @@ class AdInfoSection {
             child: Padding(
               padding: const EdgeInsetsDirectional.only(start: 5.0),
               child: Text(
-                model.address ?? "جاري التحميل...",
+                model.address ?? UiUtils.getTranslatedLabel(context, 'loading'),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -394,8 +394,8 @@ class AdInfoSection {
                   model.created != null
                       ? timeago.format(
                           DateTime.tryParse(model.created!) ?? DateTime.now(),
-                          locale: 'ar')
-                      : "تحميل...",
+                          locale: UiUtils.resolveLanguageCode(context))
+                      : UiUtils.getTranslatedLabel(context, 'loading'),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(

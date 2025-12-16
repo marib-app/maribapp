@@ -34,6 +34,47 @@ class _ProfileScreenState extends State<ProfileScreen>
     super.dispose();
   }
 
+  void _toggleLanguage() {
+    final settingsCubit = context.read<FetchSystemSettingsCubit>();
+    final List<dynamic>? languages =
+        settingsCubit.getSetting(SystemSetting.language) as List<dynamic>?;
+
+    if (languages == null || languages.isEmpty) {
+      HelperUtils.showSnackBarMessage(
+        context,
+        'somethingWentWrong'.translate(context),
+      );
+      return;
+    }
+
+    final dynamic storedLanguage = HiveUtils.getLanguage();
+    String? currentCode;
+
+    if (storedLanguage is Map && storedLanguage['code'] is String) {
+      currentCode = storedLanguage['code'] as String;
+    }
+
+    final int currentIndex = languages.indexWhere(
+      (lang) => lang is Map && lang['code'] == currentCode,
+    );
+
+    final int nextIndex =
+        currentIndex >= 0 ? (currentIndex + 1) % languages.length : 0;
+    final dynamic nextLanguage = languages[nextIndex];
+
+    if (nextLanguage is! Map || nextLanguage['code'] is! String) {
+      HelperUtils.showSnackBarMessage(
+        context,
+        'somethingWentWrong'.translate(context),
+      );
+      return;
+    }
+
+    context
+        .read<FetchLanguageCubit>()
+        .getLanguage(nextLanguage['code'] as String);
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);

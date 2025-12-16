@@ -22,13 +22,19 @@ class LanguageCubit extends Cubit<LanguageState> {
   LanguageCubit() : super(LanguageInitial());
 
   void loadCurrentLanguage() {
-    var language =
-        Hive.box(HiveKeys.languageBox).get(HiveKeys.currentLanguageKey);
-    if (language != null) {
-      emit(LanguageLoader(language));
-    } else {
-      emit(LanguageLoadFail(error: "error"));
-    }
+    final box = Hive.box(HiveKeys.languageBox);
+    var language = box.get(HiveKeys.currentLanguageKey);
+    language ??= {
+      'code': 'en',
+      'name': 'English',
+      'name_in_english': 'English',
+      'image': '',
+      'data': <String, dynamic>{},
+      'rtl': false,
+    };
+
+    box.put(HiveKeys.currentLanguageKey, language);
+    emit(LanguageLoader(language));
   }
 
   dynamic currentLanguageCode() {

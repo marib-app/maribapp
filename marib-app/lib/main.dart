@@ -21,6 +21,8 @@ import 'package:marib/data/cubits/notifications/unread_notifications_cubit.dart'
 import 'package:marib/ui/screens/chat/chat_badge_controller.dart';
 import 'package:marib/utils/performance/performance_route_observer.dart';
 import 'package:marib/app/app_scroll_behavior.dart';
+import 'package:intl/intl.dart';
+import 'package:marib/utils/ui_utils.dart';
 
 /////////////
 ///V-1.0.0//
@@ -99,6 +101,8 @@ class _AppState extends State<App> {
     AppTheme currentTheme = context.watch<AppThemeCubit>().state.appTheme;
     return BlocBuilder<LanguageCubit, LanguageState>(
       builder: (context, languageState) {
+        final Locale resolvedLocale = loadLocalLanguageIfFail(languageState);
+        Intl.defaultLocale = resolvedLocale.toLanguageTag();
         return MaterialApp(
           initialRoute: Routes.splash,
           // App will start from here splash screen is first screen,
@@ -170,17 +174,21 @@ class _AppState extends State<App> {
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
-          locale: loadLocalLanguageIfFail(languageState),
+          locale: resolvedLocale,
+          supportedLocales: const [
+            Locale('en'),
+            Locale('ar'),
+          ],
         );
       },
     );
   }
 
-  dynamic loadLocalLanguageIfFail(LanguageState state) {
+  Locale loadLocalLanguageIfFail(LanguageState state) {
     if ((state is LanguageLoader)) {
-      return Locale(state.language['code']);
-    } else if (state is LanguageLoadFail) {
-      return const Locale("ar");
+      final String code = state.language['code'] ?? 'en';
+      return UiUtils.getLocaleFromLanguageCode(code);
     }
+    return const Locale('en');
   }
 }

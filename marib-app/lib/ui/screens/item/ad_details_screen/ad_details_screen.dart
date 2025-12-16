@@ -1746,12 +1746,15 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       }
     }
 
-    return '$formatted كجم';
+    final String unit =
+        UiUtils.getTranslatedLabel(context, 'kilogramUnit').trim();
+    return unit.isEmpty ? formatted : '$formatted $unit';
   }
 
   String _formatPrice(double value) {
+    final String localeTag = UiUtils.resolveLocaleTag(context);
     final NumberFormat formatter = NumberFormat.currency(
-      locale: 'ar',
+      locale: localeTag,
       symbol: '',
       decimalDigits: 2,
     );

@@ -10,11 +10,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'dart:math' as math;
 import 'package:marib/utils/helper_utils.dart';
-import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/app/app_scroll_behavior.dart';
 
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/material.dart';
 import 'package:marib/app/routes.dart';
 import 'package:marib/data/cubits/category/fetch_category_cubit.dart';
 import 'package:marib/data/cubits/home/fetch_home_all_items_cubit.dart';
@@ -49,7 +47,7 @@ class SoonScreenState extends State<SoonScreen> with TickerProviderStateMixin {
   static const double _horizontalPadding = 20;
 
   late final ScrollController _scrollController;
-  final NumberFormat _countFormatter = NumberFormat.compact(locale: 'ar');
+  late final NumberFormat _countFormatter;
 
   double _headerCollapse = 0;
   bool _requestedInitialFetch = false;
@@ -58,6 +56,9 @@ class SoonScreenState extends State<SoonScreen> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     _scrollController = ScrollController()..addListener(_handleScroll);
+    _countFormatter = NumberFormat.compact(
+      locale: UiUtils.resolveLocaleTag(context),
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _triggerInitialFetch();

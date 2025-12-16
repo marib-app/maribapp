@@ -330,9 +330,9 @@ class _DiscountTab extends StatelessWidget {
   final ItemPurchaseOptions options;
   final String? currency;
 
-  String _formatPrice(double value) {
+  String _formatPrice(BuildContext context, double value) {
     final NumberFormat formatter = NumberFormat.currency(
-      locale: 'ar',
+      locale: UiUtils.resolveLocaleTag(context),
       symbol: '',
       decimalDigits: 2,
     );
@@ -344,21 +344,24 @@ class _DiscountTab extends StatelessWidget {
     return '$formatted $suffix';
   }
 
-  String _formatDate(DateTime? date) {
+  String _formatDate(BuildContext context, DateTime? date) {
     if (date == null) {
       return '—';
     }
-    return DateFormat('yyyy-MM-dd HH:mm').format(date);
+    return DateFormat('yyyy-MM-dd HH:mm', UiUtils.resolveLocaleTag(context))
+        .format(date);
   }
 
-  String _readableType(String? type) {
+  String _readableType(BuildContext context, String? type) {
     switch (type) {
       case 'percentage':
-        return 'نسبة مئوية';
+        return UiUtils.getTranslatedLabel(
+            context, 'discountTypePercentage');
       case 'fixed':
-        return 'قيمة ثابتة';
+        return UiUtils.getTranslatedLabel(context, 'discountTypeFixed');
       default:
-        return type ?? 'غير محدد';
+        return type ??
+            UiUtils.getTranslatedLabel(context, 'ordersStatusUnspecified');
     }
   }
 
@@ -372,43 +375,48 @@ class _DiscountTab extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       children: [
         _KeyValueTile(
-          label: 'السعر الأساسي',
-          value: _formatPrice(options.basePrice),
+          label: UiUtils.getTranslatedLabel(context, 'discountBasePrice'),
+          value: _formatPrice(context, options.basePrice),
         ),
         const SizedBox(height: 8),
         _KeyValueTile(
-          label: 'السعر بعد الخصم',
-          value: _formatPrice(options.finalPrice),
+          label: UiUtils.getTranslatedLabel(context, 'discountFinalPrice'),
+          value: _formatPrice(context, options.finalPrice),
         ),
         const SizedBox(height: 16),
         if (discount == null)
-          const _EmptyState(message: 'لا يوجد خصم مفعل لهذا المنتج.')
+          _EmptyState(
+              message: UiUtils.getTranslatedLabel(
+                  context, 'discountNotAvailable'))
         else ...[
           _KeyValueTile(
-            label: 'نوع الخصم',
-            value: _readableType(discount.type),
+            label: UiUtils.getTranslatedLabel(context, 'discountTypeLabel'),
+            value: _readableType(context, discount.type),
           ),
           const SizedBox(height: 8),
           _KeyValueTile(
-            label: 'قيمة الخصم',
+            label: UiUtils.getTranslatedLabel(context, 'discountValueLabel'),
             value: discount.value != null
-                ? NumberFormat('#,##0.##', 'ar').format(discount.value)
+                ? NumberFormat('#,##0.##', UiUtils.resolveLocaleTag(context))
+                    .format(discount.value)
                 : '—',
           ),
           const SizedBox(height: 8),
           _KeyValueTile(
-            label: 'بداية الخصم',
-            value: _formatDate(discount.start),
+            label: UiUtils.getTranslatedLabel(context, 'discountStartDate'),
+            value: _formatDate(context, discount.start),
           ),
           const SizedBox(height: 8),
           _KeyValueTile(
-            label: 'نهاية الخصم',
-            value: _formatDate(discount.end),
+            label: UiUtils.getTranslatedLabel(context, 'discountEndDate'),
+            value: _formatDate(context, discount.end),
           ),
           const SizedBox(height: 12),
           _StatusChip(
             icon: hasDiscount ? Icons.check_circle_outline : Icons.pause_circle_outline,
-            label: hasDiscount ? 'الخصم مفعل' : 'الخصم غير مفعل',
+            label: hasDiscount
+                ? UiUtils.getTranslatedLabel(context, 'discountActive')
+                : UiUtils.getTranslatedLabel(context, 'discountInactive'),
             color: hasDiscount ? Colors.green.shade600 : Colors.grey,
           ),
         ],

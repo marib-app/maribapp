@@ -35,7 +35,7 @@ class StoreStatusViewModel {
 
   bool get hasManualBanks => manualBankAccounts.isNotEmpty;
 
-  String? formatNextOpenLabel({String locale = 'ar'}) {
+  String? formatNextOpenLabel({String locale = 'en'}) {
     if (nextOpenAt == null) {
       return null;
     }

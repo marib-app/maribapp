@@ -449,7 +449,7 @@ class NotificationsState extends State<Notifications>
                       );
                       final bool hasImage = image.trim().isNotEmpty;
                       final String timeLabel =
-                          _formatArabicTime(notification);
+                        _formatArabicTime(context, notification);
 
                       final Color baseColor =
                           Theme.of(context).colorScheme.secondaryColor;
@@ -847,7 +847,8 @@ class NotificationShimmerLoadingContainer extends StatelessWidget {
   }
 }
 
-String _formatArabicTime(NotificationData notification) {
+String _formatArabicTime(
+    BuildContext context, NotificationData notification) {
   final String? raw = notification.createdAt ??
       notification.deliveredAt?.toIso8601String() ??
       notification.openedAt?.toIso8601String();
@@ -856,7 +857,8 @@ String _formatArabicTime(NotificationData notification) {
   }
   try {
     _ensureArabicTimeago();
-    return timeago.format(DateTime.parse(raw).toLocal(), locale: 'ar');
+    final String locale = UiUtils.resolveLanguageCode(context);
+    return timeago.format(DateTime.parse(raw).toLocal(), locale: locale);
   } catch (_) {
     return '';
   }

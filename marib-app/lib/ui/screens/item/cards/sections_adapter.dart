@@ -381,7 +381,10 @@ class _ItemCardState extends State<ICard> {
         const Icon(Icons.access_time, size: 14, color: Colors.grey),
         const SizedBox(width: 5),
         Text(
-          timeago.format(_createdAt!, locale: 'ar'),
+          timeago.format(
+            _createdAt!,
+            locale: UiUtils.resolveLanguageCode(context),
+          ),
           style: TextStyle(
             fontSize: widget.bigCard == true
                 ? context.font.small
@@ -531,8 +534,10 @@ class _ItemCardState extends State<ICard> {
                                   size: 14, color: Colors.grey),
                               const SizedBox(width: 5),
                               Text(
-                                timeago.format(_extractCreatedAt(widget.item)!,
-                                    locale: 'ar'),
+                                timeago.format(
+                                    _extractCreatedAt(widget.item)!,
+                                    locale:
+                                        UiUtils.resolveLanguageCode(context)),
                                 style: TextStyle(
                                   fontSize: widget.bigCard == true
                                       ? context.font.small

@@ -557,7 +557,7 @@ class UiUtils {
 
   // ط¯ط§ظ„ط© ط§ظ„طھط­ظƒظ… ظپظٹ ط¹ط±ط¶ ط§ظ„ظˆظ‚طھ ظˆط§ظ„طھط§ط±ظٹط®
 
-  static String formatSmartTime(String? dateString) {
+  static String formatSmartTime(String? dateString, {BuildContext? context}) {
     if (dateString == null || dateString.isEmpty) return "";
 
     try {
@@ -565,25 +565,28 @@ class UiUtils {
       final now = DateTime.now();
 
       final difference = now.difference(date);
+      final String localeTag = resolveLocaleTag(context);
+      final String languageCode = resolveLanguageCode(context);
 
       if (difference.inDays >= 1) {
-        // ط£ظƒط«ط± ظ…ظ† ظٹظˆظ… = ظ†ط¹ط±ط¶ ط§ظ„طھط§ط±ظٹط® ط§ظ„ظƒط§ظ…ظ„
-        return DateFormat('d  MMM   yyyy  -  h:mm a', 'ar').format(date);
-      } else {
-        // ط£ظ‚ظ„ ظ…ظ† ظٹظˆظ… = ظ†ط¹ط±ط¶ "ظ‚ط¨ظ„ ط¯ظ‚ط§ط¦ظ‚" ط£ظˆ "ط§ظ„ط¢ظ†"
-        return timeago.format(date, locale: 'ar'); // âœ… ظ‡ط°ط§ ط£ظ‡ظ… ط´ظٹط،
+        // أكثر من يوم = نعرض التاريخ الكامل
+        return DateFormat('d  MMM   yyyy  -  h:mm a', localeTag).format(date);
       }
+
+      // أقل من يوم = نعرض "قبل دقائق" أو "الآن"
+      return timeago.format(date, locale: languageCode); // ✅ هذا أهم شيء
     } catch (e) {
       return "";
     }
   }
 
   static String formatDate(String? dateString,
-      {String pattern = 'd MMM yyyy - h:mm a'}) {
+      {String pattern = 'd MMM yyyy - h:mm a', BuildContext? context}) {
     if (dateString == null || dateString.isEmpty) return "";
     try {
       final date = DateTime.parse(dateString).toLocal();
-      return DateFormat(pattern, 'ar').format(date);
+      final String localeTag = resolveLocaleTag(context);
+      return DateFormat(pattern, localeTag).format(date);
     } catch (e) {
       return "";
     }
@@ -1187,6 +1190,49 @@ class UiUtils {
     return (AppLocalization.of(context)!.getTranslatedValues(labelKey) ??
             labelKey)
         .trim();
+  }
+
+  static String resolveLocaleTag(BuildContext? context,
+      {String fallback = 'en'}) {
+    final Locale? locale =
+        context != null ? Localizations.maybeLocaleOf(context) : null;
+
+    if (locale != null) {
+      final String tag = locale.toLanguageTag();
+      if (tag.isNotEmpty) {
+        return tag;
+      }
+
+      if (locale.languageCode.isNotEmpty) {
+        if (locale.countryCode != null && locale.countryCode!.isNotEmpty) {
+          return '${locale.languageCode}_${locale.countryCode}';
+        }
+        return locale.languageCode;
+      }
+    }
+
+    final dynamic storedLanguage = HiveUtils.getLanguage();
+    final String? storedCode =
+        storedLanguage is Map ? storedLanguage['code'] as String? : null;
+    if (storedCode != null && storedCode.isNotEmpty) {
+      return storedCode;
+    }
+
+    final String intlLocale = Intl.getCurrentLocale();
+    if (intlLocale.isNotEmpty) {
+      return intlLocale;
+    }
+
+    return fallback;
+  }
+
+  static String resolveLanguageCode(BuildContext? context,
+      {String fallback = 'en'}) {
+    final String localeTag = resolveLocaleTag(context, fallback: fallback);
+    final String normalized = localeTag.replaceAll('-', '_');
+    if (normalized.isEmpty) return fallback;
+    final String language = normalized.split('_').first;
+    return language.isNotEmpty ? language : fallback;
   }
 
   static Map<String, double> getWidgetInfo(
@@ -2042,68 +2088,58 @@ extension FormatAmount on String {
 
 // ط¯ط§ظ„ط© ظ…ظˆط­ظ‘ط¯ط©: ط¥ظ† ظ…ط±ظ‘ط±طھ format طھط³طھط®ط¯ظ…ظ‡طŒ ظˆط¥ظ„ط§ طھط±ط¬ط¹ طµظٹط؛ط© ط¹ط±ط¨ظٹط© ط°ظƒظٹط© "ظ‚ط¨ظ„ X ..."
 extension FormatDate on String {
-  String formatDate({String? format, String locale = 'ar'}) {
+  String formatDate({String? format, String? locale}) {
     try {
       final date = DateTime.parse(this);
-      // ظ„ظˆ ط­ط¯ظ‘ط¯طھ ظپظˆط±ظ…ط§طھ طµط±ظٹط­طŒ ظ†ط³طھط®ط¯ظ…ظ‡ (طھظˆط§ظپظ‚ ظ…ط¹ ط§ظ„ط§ط³طھط¯ط¹ط§ط،ط§طھ ط§ظ„ظ‚ط¯ظٹظ…ط©)
+      final String localeTag = (locale != null && locale.isNotEmpty)
+          ? locale
+          : UiUtils.resolveLocaleTag(null);
+      // لو حدّدث فورمات صريح، نستخدمه (توافق مع الاستدعاءات القديمة)
       if (format != null && format.isNotEmpty) {
-        return DateFormat(format, locale).format(date);
+        return DateFormat(format, localeTag).format(date);
       }
 
-      // ط³ظ„ظˆظƒ ط¹ط±ط¨ظٹ ط°ظƒظٹ ط¹ظ†ط¯ ط¹ط¯ظ… طھط­ط¯ظٹط¯ format
+      // سلوك عربي ذكي عند عدم تحديد format
       final now = DateTime.now();
       final difference = now.difference(date);
 
       if (difference.inDays < 0) {
-        // ط§ظ„طھط§ط±ظٹط® ظپظٹ ط§ظ„ظ…ط³طھظ‚ط¨ظ„
-        return _formatFullDate(date, locale);
+        // التاريخ في المستقبل
+        return _formatFullDate(date, localeTag);
       }
 
       if (difference.inDays == 0) {
-        if (difference.inMinutes < 1) {
-          return "ط§ظ„ط¢ظ†";
-        } else if (difference.inHours < 1) {
-          return "ظ‚ط¨ظ„ ${_convertToArabicNumbers(difference.inMinutes)} ط¯ظ‚ظٹظ‚ط©";
-        } else {
-          return "ظ‚ط¨ظ„ ${_convertToArabicNumbers(difference.inHours)} ط³ط§ط¹ط©";
+        if (difference.inHours == 0 && difference.inMinutes == 0) {
+          return 'الآن';
         }
+        if (difference.inHours < 1) {
+          return '${difference.inMinutes} دقيقة مضت';
+        }
+        return '${difference.inHours} ساعة مضت';
       }
 
-      if (difference.inDays == 1) return "ظ‚ط¨ظ„ ظٹظˆظ…";
-      if (difference.inDays == 2) return "ظ‚ط¨ظ„ ظٹظˆظ…ظٹظ†";
-      if (difference.inDays <= 30) {
-        return "ظ‚ط¨ظ„ ${_convertToArabicNumbers(difference.inDays)} ظٹظˆظ…";
+      if (difference.inDays == 1) {
+        return 'أمس';
       }
 
-      // ط£ظƒط«ط± ظ…ظ† 30 ظٹظˆظ… â†’ طµظٹط؛ط© ظƒط§ظ…ظ„ط©
-      return _formatFullDate(date, locale);
-    } catch (_) {
-      return "";
+      if (difference.inDays < 7) {
+        return '${difference.inDays} يوم مضى';
+      }
+
+      if (difference.inDays < 30) {
+        final weeks = (difference.inDays / 7).floor();
+        return '$weeks أسبوع مضى';
+      }
+
+      if (difference.inDays < 365) {
+        final months = (difference.inDays / 30).floor();
+        return '$months شهر مضى';
+      }
+
+      return _formatFullDate(date, localeTag);
+    } catch (e) {
+      return this;
     }
-  }
-
-  String _formatFullDate(DateTime date, String locale) {
-    return DateFormat("d  MMMMطŒ  y", locale).format(date);
-  }
-
-  String _convertToArabicNumbers(int number) {
-    final arabicNumbers = [
-      'ظ ',
-      'ظ،',
-      'ظ¢',
-      'ظ£',
-      'ظ¤',
-      'ظ¥',
-      'ظ¦',
-      'ظ§',
-      'ظ¨',
-      'ظ©'
-    ];
-    return number
-        .toString()
-        .split('')
-        .map((c) => arabicNumbers[int.parse(c)])
-        .join();
   }
 }
 

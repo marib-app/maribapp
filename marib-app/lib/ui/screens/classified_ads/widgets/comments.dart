@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
+import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/data/model/seller_ratings_model.dart' show UserRatings;
 import 'service_ratings_api.dart';
 import 'package:flutter/foundation.dart';
@@ -348,7 +349,7 @@ class _CommentTile extends StatelessWidget {
       dt = DateTime.tryParse(raw);
     } catch (_) {}
     if (dt == null) return '';
-    return timeago.format(dt, locale: 'ar');
+    return timeago.format(dt, locale: UiUtils.resolveLanguageCode(null));
   }
 }
 

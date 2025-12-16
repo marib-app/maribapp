@@ -585,12 +585,13 @@ class _ManualPaymentDetailSheetState extends State<_ManualPaymentDetailSheet> {
               Row(
                 children: [
                   _StatusTag(
-                    label: _manualPaymentStatusLabel(payment.status),
+                    label: _manualPaymentStatusLabel(context, payment.status),
                     color: _manualPaymentStatusColor(payment.status, context),
                   ),
                   const SizedBox(width: 8),
                   _StatusTag(
-                    label: _paymentStatusLabel(payment.paymentStatus),
+                    label:
+                        _paymentStatusLabel(context, payment.paymentStatus),
                     color: _paymentStatusColor(payment.paymentStatus, context),
                   ),
                 ],
@@ -746,8 +747,9 @@ class _ManualPaymentDetailSheetState extends State<_ManualPaymentDetailSheet> {
     if (payment.createdAt != null) {
       add('وقت الطلب', _formatDate(payment.createdAt));
     }
-    add('حالة الحوالة', _manualPaymentStatusLabel(payment.status));
-    add('حالة الدفع', _paymentStatusLabel(payment.paymentStatus));
+    add('حالة الحوالة',
+        _manualPaymentStatusLabel(context, payment.status));
+    add('حالة الدفع', _paymentStatusLabel(context, payment.paymentStatus));
     final transfer = payment.transferDetails;
     if (transfer != null) {
       add(
@@ -1114,7 +1116,10 @@ class _StoreIdentitySection extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    store.name.isNotEmpty ? store.name : 'متجر بدون اسم',
+                    store.name.isNotEmpty
+                        ? store.name
+                        : UiUtils.getTranslatedLabel(
+                            context, 'merchantUnnamedStore'),
                     style: TextStyle(
                       fontSize: context.font.large,
                       fontWeight: FontWeight.bold,
@@ -1123,7 +1128,10 @@ class _StoreIdentitySection extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'الحالة الحالية: ${_orderStatusLabel(store.status)}',
+                    UiUtils.getTranslatedLabel(
+                          context, 'merchantCurrentStatusLabel',
+                        ).replaceAll(
+                            '{status}', _orderStatusLabel(context, store.status)),
                     style: TextStyle(
                         color: theme.textColorDark.withValues(alpha: 0.75)),
                   ),
@@ -1134,13 +1142,20 @@ class _StoreIdentitySection extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         _KeyValueRow(
-          label: 'رقم المتجر',
-          value: store.id != 0 ? store.id.toString() : 'غير متاح',
+          label: UiUtils.getTranslatedLabel(context, 'merchantStoreIdLabel'),
+          value: store.id != 0
+              ? store.id.toString()
+              : UiUtils.getTranslatedLabel(context, 'notAvailable'),
         ),
-        _KeyValueRow(label: 'المنطقة الزمنية', value: store.timezone ?? '-'),
+        _KeyValueRow(
+            label: UiUtils.getTranslatedLabel(context, 'merchantTimezoneLabel'),
+            value: store.timezone ?? '-'),
         if (status.closureReason != null &&
             status.closureReason!.trim().isNotEmpty)
-          _KeyValueRow(label: 'سبب الإغلاق', value: status.closureReason!),
+          _KeyValueRow(
+              label:
+                  UiUtils.getTranslatedLabel(context, 'merchantClosureReason'),
+              value: status.closureReason!),
       ],
     );
   }
@@ -1513,19 +1528,20 @@ class _ManualPaymentTile extends StatelessWidget {
                   Wrap(
                     spacing: 6,
                     runSpacing: 6,
-                    children: [
-                      _StatusTag(
-                        label: _manualPaymentStatusLabel(payment.status),
-                        color:
-                            _manualPaymentStatusColor(payment.status, context),
-                      ),
-                      _StatusTag(
-                        label: _paymentStatusLabel(payment.paymentStatus),
-                        color:
-                            _paymentStatusColor(payment.paymentStatus, context),
-                      ),
-                    ],
-                  ),
+                  children: [
+                    _StatusTag(
+                      label: _manualPaymentStatusLabel(context, payment.status),
+                      color:
+                          _manualPaymentStatusColor(payment.status, context),
+                    ),
+                    _StatusTag(
+                      label:
+                          _paymentStatusLabel(context, payment.paymentStatus),
+                      color:
+                          _paymentStatusColor(payment.paymentStatus, context),
+                    ),
+                  ],
+                ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -1583,7 +1599,8 @@ class _OrderListTile extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'المجموع: $totalText',
+              UiUtils.getTranslatedLabel(context, 'merchantOrderTotal')
+                  .replaceAll('{total}', totalText),
               style: Theme.of(context).textTheme.titleSmall,
             ),
             const SizedBox(height: 12),
@@ -1592,11 +1609,11 @@ class _OrderListTile extends StatelessWidget {
               runSpacing: 8,
               children: [
                 _StatusTag(
-                  label: _orderStatusLabel(order.status),
+                  label: _orderStatusLabel(context, order.status),
                   color: _statusColor(order.status, context),
                 ),
                 _StatusTag(
-                  label: _paymentStatusLabel(order.paymentStatus),
+                  label: _paymentStatusLabel(context, order.paymentStatus),
                   color: _paymentStatusColor(order.paymentStatus, context),
                 ),
               ],
@@ -1761,7 +1778,7 @@ class _StatusFilterChips extends StatelessWidget {
           return Padding(
             padding: const EdgeInsetsDirectional.only(end: 8.0),
             child: ChoiceChip(
-              label: Text(filter.label),
+              label: Text(filter.labelKey.translate(context)),
               selected: selected,
               onSelected: (_) => onChanged(filter.value),
             ),
@@ -1773,9 +1790,9 @@ class _StatusFilterChips extends StatelessWidget {
 }
 
 class _StatusFilter {
-  const _StatusFilter({required this.label, required this.value});
+  const _StatusFilter({required this.labelKey, required this.value});
 
-  final String label;
+  final String labelKey;
   final String value;
 }
 
@@ -1909,9 +1926,10 @@ class _MetricSummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final snapshot = data.snapshot;
     final accent = data.color;
-    final NumberFormat compact = NumberFormat.compact(locale: 'ar');
+    final NumberFormat compact =
+        NumberFormat.compact(locale: UiUtils.resolveLocaleTag(context));
     final NumberFormat currency = NumberFormat.compactCurrency(
-      locale: 'ar',
+      locale: UiUtils.resolveLocaleTag(context),
       symbol: 'ر.ي',
       decimalDigits: snapshot.revenue % 1 == 0 ? 0 : 2,
     );
@@ -2539,90 +2557,105 @@ class _MerchantPlaceholderTab extends StatelessWidget {
 }
 
 const List<_StatusFilter> _orderStatusFilters = [
-  _StatusFilter(label: 'الكل', value: ''),
-  _StatusFilter(label: 'بانتظار الدفع', value: 'pending'),
-  _StatusFilter(label: 'دفعة مقدمة', value: 'deposit_paid'),
-  _StatusFilter(label: 'قيد المراجعة', value: 'under_review'),
-  _StatusFilter(label: 'مؤكد', value: 'confirmed'),
-  _StatusFilter(label: 'جار التحضير', value: 'preparing'),
-  _StatusFilter(label: 'جار المعالجة', value: 'processing'),
-  _StatusFilter(label: 'جاهز للتسليم', value: 'ready_for_delivery'),
-  _StatusFilter(label: 'قيد التوصيل', value: 'out_for_delivery'),
-  _StatusFilter(label: 'تم التسليم', value: 'delivered'),
-  _StatusFilter(label: 'تسوية نهائية', value: 'final_settlement'),
-  _StatusFilter(label: 'ملغي', value: 'canceled'),
-  _StatusFilter(label: 'مسترد', value: 'returned'),
+  _StatusFilter(labelKey: 'ordersStatusAll', value: ''),
+  _StatusFilter(labelKey: 'ordersStatusPendingPayment', value: 'pending'),
+  _StatusFilter(labelKey: 'ordersStatusDepositPaid', value: 'deposit_paid'),
+  _StatusFilter(labelKey: 'ordersStatusUnderReview', value: 'under_review'),
+  _StatusFilter(labelKey: 'ordersStatusConfirmed', value: 'confirmed'),
+  _StatusFilter(labelKey: 'ordersStatusPreparing', value: 'preparing'),
+  _StatusFilter(labelKey: 'ordersStatusProcessing', value: 'processing'),
+  _StatusFilter(
+      labelKey: 'ordersStatusReadyForDelivery', value: 'ready_for_delivery'),
+  _StatusFilter(labelKey: 'ordersStatusOutForDelivery', value: 'out_for_delivery'),
+  _StatusFilter(labelKey: 'ordersStatusDelivered', value: 'delivered'),
+  _StatusFilter(
+      labelKey: 'ordersStatusFinalSettlement', value: 'final_settlement'),
+  _StatusFilter(labelKey: 'ordersStatusCanceled', value: 'canceled'),
+  _StatusFilter(labelKey: 'ordersStatusReturned', value: 'returned'),
 ];
 
 const List<_StatusFilter> _manualPaymentStatusFilters = [
-  _StatusFilter(label: 'الكل', value: ''),
-  _StatusFilter(label: 'بانتظار المراجعة', value: 'pending'),
-  _StatusFilter(label: 'قيد المراجعة', value: 'under_review'),
-  _StatusFilter(label: 'تم القبول', value: 'approved'),
-  _StatusFilter(label: 'مرفوض', value: 'rejected'),
+  _StatusFilter(labelKey: 'ordersStatusAll', value: ''),
+  _StatusFilter(labelKey: 'ordersStatusPendingReview', value: 'pending'),
+  _StatusFilter(labelKey: 'ordersStatusUnderReview', value: 'under_review'),
+  _StatusFilter(labelKey: 'ordersStatusApproved', value: 'approved'),
+  _StatusFilter(labelKey: 'ordersStatusRejected', value: 'rejected'),
 ];
 
 const Map<String, String> _orderStatusLabelMap = {
-  'pending': 'بانتظار الدفع',
-  'deposit_paid': 'دفعة مقدمة',
-  'under_review': 'قيد المراجعة',
-  'confirmed': 'مؤكد',
-  'processing': 'جار المعالجة',
-  'preparing': 'جار التحضير',
-  'ready_for_delivery': 'جاهز للتسليم',
-  'out_for_delivery': 'قيد التوصيل',
-  'delivered': 'تم التسليم',
-  'final_settlement': 'تسوية نهائية',
-  'failed': 'فشل',
-  'canceled': 'ملغي',
-  'on_hold': 'معلق',
-  'returned': 'مسترد',
+  'pending': 'ordersStatusPendingPayment',
+  'deposit_paid': 'ordersStatusDepositPaid',
+  'under_review': 'ordersStatusUnderReview',
+  'confirmed': 'ordersStatusConfirmed',
+  'processing': 'ordersStatusProcessing',
+  'preparing': 'ordersStatusPreparing',
+  'ready_for_delivery': 'ordersStatusReadyForDelivery',
+  'out_for_delivery': 'ordersStatusOutForDelivery',
+  'delivered': 'ordersStatusDelivered',
+  'final_settlement': 'ordersStatusFinalSettlement',
+  'failed': 'ordersStatusFailed',
+  'canceled': 'ordersStatusCanceled',
+  'on_hold': 'ordersStatusOnHold',
+  'returned': 'ordersStatusReturned',
 };
 
 const Map<String, String> _paymentStatusLabelMap = {
-  'pending': 'بانتظار الدفع',
-  'awaiting_payment': 'بانتظار الدفع',
-  'under_review': 'قيد المراجعة',
-  'paid': 'مدفوع',
-  'confirmed': 'تم التأكيد',
-  'refunded': 'تم الاسترداد',
-  'failed': 'فشل',
-  'canceled': 'ملغي',
+  'pending': 'ordersStatusPendingPayment',
+  'awaiting_payment': 'ordersStatusAwaitingPayment',
+  'under_review': 'ordersStatusUnderReview',
+  'paid': 'ordersStatusPaid',
+  'confirmed': 'ordersStatusConfirmed',
+  'refunded': 'ordersStatusRefunded',
+  'failed': 'ordersStatusFailed',
+  'canceled': 'ordersStatusCanceled',
+  'rejected': 'ordersStatusRejected',
 };
 
 const Map<String, String> _manualPaymentStatusLabelMap = {
-  'pending': 'بانتظار المراجعة',
-  'under_review': 'قيد المراجعة',
-  'approved': 'مقبول',
-  'rejected': 'مرفوض',
+  'pending': 'ordersStatusPendingReview',
+  'under_review': 'ordersStatusUnderReview',
+  'approved': 'ordersStatusApproved',
+  'rejected': 'ordersStatusRejected',
 };
 
-String _orderStatusLabel(String? status) {
+String _orderStatusLabel(BuildContext context, String? status) {
   if (status == null || status.isEmpty) {
-    return 'غير محدد';
+    return UiUtils.getTranslatedLabel(context, 'ordersStatusUnspecified');
   }
-  return _orderStatusLabelMap[status] ?? status;
+  final String? key = _orderStatusLabelMap[status];
+  if (key == null) {
+    return status;
+  }
+  return UiUtils.getTranslatedLabel(context, key);
 }
 
-String _paymentStatusLabel(String? status) {
+String _paymentStatusLabel(BuildContext context, String? status) {
   if (status == null || status.isEmpty) {
-    return 'غير محدد';
+    return UiUtils.getTranslatedLabel(context, 'ordersStatusUnspecified');
   }
-  return _paymentStatusLabelMap[status] ?? status;
+  final String? key = _paymentStatusLabelMap[status];
+  if (key == null) {
+    return status;
+  }
+  return UiUtils.getTranslatedLabel(context, key);
 }
 
-String _manualPaymentStatusLabel(String? status) {
+String _manualPaymentStatusLabel(BuildContext context, String? status) {
   if (status == null || status.isEmpty) {
-    return 'غير محدد';
+    return UiUtils.getTranslatedLabel(context, 'ordersStatusUnspecified');
   }
-  return _manualPaymentStatusLabelMap[status] ?? status;
+  final String? key = _manualPaymentStatusLabelMap[status];
+  if (key == null) {
+    return status;
+  }
+  return UiUtils.getTranslatedLabel(context, key);
 }
 
 String _formatCurrency(double amount, String currency) {
-  final normalizedCurrency = currency.trim().isEmpty ? 'ر.ي' : currency;
+  final normalizedCurrency = currency.trim().isEmpty ? 'YER' : currency;
   final decimals = amount % 1 == 0 ? 0 : 2;
   final formatter = NumberFormat.currency(
-    locale: 'ar',
+    locale: UiUtils.resolveLocaleTag(Constant.navigatorKey.currentContext),
     symbol: normalizedCurrency,
     decimalDigits: decimals,
   );
@@ -2631,9 +2664,13 @@ String _formatCurrency(double amount, String currency) {
 
 String _formatDate(DateTime? dateTime) {
   if (dateTime == null) {
-    return 'غير متاح';
+    return UiUtils.getTranslatedLabel(
+        Constant.navigatorKey.currentContext!, 'notAvailable');
   }
-  return DateFormat('dd MMM yyyy، hh:mm a', 'ar').format(dateTime.toLocal());
+  final context = Constant.navigatorKey.currentContext;
+  final String localeTag = UiUtils.resolveLocaleTag(context);
+  return DateFormat('dd MMM yyyy، hh:mm a', localeTag)
+      .format(dateTime.toLocal());
 }
 
 Color _statusColor(String? status, BuildContext context) {

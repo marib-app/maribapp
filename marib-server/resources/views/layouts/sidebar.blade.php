@@ -219,15 +219,6 @@
           @endcanany
 
           {{-- ط·آ·ط¢آ·ط·آ¢ط¢آ­ط·آ·ط¢آ¸ط£آ¢أ¢â€ڑآ¬ط¹â€کط·آ·ط¢آ¸ط·آ«أ¢â‚¬آ ط·آ·ط¢آ¸ط£آ¢أ¢â€ڑآ¬أ¢â‚¬ع† ط·آ·ط¢آ·ط·آ¢ط¢آ§ط·آ·ط¢آ¸ط£آ¢أ¢â€ڑآ¬أ¢â‚¬ع†ط·آ·ط¢آ·ط·آ¹ط¢آ¾ط·آ·ط¢آ¸ط·آ«أ¢â‚¬آ ط·آ·ط¢آ·ط·آ¢ط¢آ«ط·آ·ط¢آ¸ط·آ¸ط¢آ¹ط·آ·ط¢آ¸ط£آ¢أ¢â€ڑآ¬ط¹â€ک (ط·آ·ط¢آ·ط·آ¢ط¢آ¥ط·آ·ط¢آ·ط·آ¢ط¢آ¯ط·آ·ط¢آ·ط·آ¢ط¢آ§ط·آ·ط¢آ·ط·آ¢ط¢آ±ط·آ·ط¢آ¸ط·آ¸ط¢آ¹ط·آ·ط¢آ·ط·آ¢ط¢آ©) --}}
-          @canany(['seller-verification-field-list','seller-verification-field-create','seller-verification-field-update','seller-verification-field-delete'])
-            <li class="sidebar-item">
-              <a href="{{ route('seller-verification.verification-field') }}" class="sidebar-link">
-                <i class="bi bi-sliders2"></i>
-                <span class="menu-item">{{ __('Verification Fields') }}</span>
-              </a>
-            </li>
-          @endcanany
-
           @canany(['seller-review-list','seller-review-update','seller-review-delete'])
             <li class="sidebar-item">
               <a href="{{ route('seller-review.index') }}" class="sidebar-link">

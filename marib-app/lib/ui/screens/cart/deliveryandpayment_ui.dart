@@ -861,7 +861,7 @@ class _TradeAssuranceBanner extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
         color: accent.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(14), 
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: accent.withOpacity(0.25)),
       ),
       child: Row(

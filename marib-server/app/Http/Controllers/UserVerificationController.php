@@ -43,8 +43,7 @@ class UserVerificationController extends Controller {
     }
 
     public function verificationField() {
-        // $verificationRequests = VerificationRequest::all();
-        return view('seller-verification.verificationfield');
+        return redirect()->route('seller-verification.dashboard', ['tab' => 'fields']);
     }
 
     public function dashboard() {
@@ -401,6 +400,10 @@ class UserVerificationController extends Controller {
 
             $sql = VerificationField::orderBy($sort, $order)->withTrashed();
 
+            if ($request->filled('account_type')) {
+                $sql->where('account_type', $request->input('account_type'));
+            }
+
             if (!empty($_GET['search'])) {
                 $sql->search($_GET['search']);
 //            $sql->where('id', 'LIKE', "%$search%")->orwhere('question', 'LIKE', "%$search%")->orwhere('answer', 'LIKE', "%$search%");
@@ -412,8 +415,14 @@ class UserVerificationController extends Controller {
             $bulkData = array();
             $bulkData['total'] = $total;
             $rows = array();
+            $accountTypeLabels = [
+                'individual' => __('فردي'),
+                'commercial' => __('تجاري'),
+                'realestate' => __('عقاري'),
+            ];
             foreach ($result as $row) {
                 $tempRow = $row->toArray();
+                $tempRow['account_type_label'] = $accountTypeLabels[$row->account_type] ?? $row->account_type;
                 $operate = '';
                 if (Auth::user()->can('seller-verification.verification-field.update')) {
                     $operate .= BootstrapTableService::editButton(route('seller-verification.verification-field.edit', $row->id));

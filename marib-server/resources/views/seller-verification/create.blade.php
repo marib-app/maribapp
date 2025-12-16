@@ -126,7 +126,7 @@
     <script>
         function afterCustomFieldCreation() {
             setTimeout(function () {
-                window.location.href = "{{route('seller-verification.verification-field')}}";
+                window.location.href = "{{ route('seller-verification.dashboard') }}?tab=fields#fields";
             }, 1000)
         }
     </script>

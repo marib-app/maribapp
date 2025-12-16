@@ -303,6 +303,7 @@
                                 <th scope="col" data-field="id" data-align="center" data-sortable="true">#</th>
                                 <th scope="col" data-field="name" data-align="center" data-sortable="true">{{ __('الاسم') }}</th>
                                 <th scope="col" data-field="type" data-align="center" data-sortable="true">{{ __('النوع') }}</th>
+                                <th scope="col" data-field="account_type_label" data-align="center" data-sortable="true">{{ __('نوع الحساب') }}</th>
                                 <th scope="col" data-field="status" data-align="center" data-sortable="true">{{ __('الحالة') }}</th>
                                 <th scope="col" data-field="operate" data-align="center" data-sortable="false" data-escape="false">{{ __('إجراءات') }}</th>
                             </tr>
@@ -331,6 +332,18 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            const params = new URLSearchParams(window.location.search);
+            const hashTab = window.location.hash.replace('#', '');
+            const requestedTab = params.get('tab') || (hashTab ? hashTab : null);
+
+            if (requestedTab) {
+                const trigger = document.querySelector(`#${requestedTab}-tab`);
+                if (trigger && window.bootstrap?.Tab) {
+                    const tabInstance = new bootstrap.Tab(trigger);
+                    tabInstance.show();
+                }
+            }
+
             const tabButtons = document.querySelectorAll('#verificationTabs button[data-bs-toggle="tab"]');
             tabButtons.forEach(btn => {
                 btn.addEventListener('shown.bs.tab', function () {

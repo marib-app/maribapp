@@ -102,15 +102,6 @@
 
                 @canany(['seller-verification-field-list','seller-verification-field-create','seller-verification-field-update','seller-verification-field-delete','seller-verification-request-list','seller-verification-request-create','seller-verification-request-update','seller-verification-request-delete','seller-review-list','seller-review-update','seller-review-delete'])
                     <div class="sidebar-new-title">{{ __('Seller Management') }}</div>
-                    @canany(['seller-verification-request-list','seller-verification-request-create','seller-verification-request-update','seller-verification-request-delete'])
-                        <li class="sidebar-item">
-                            <a href="{{ route('seller-verification.verification-field') }}" class='sidebar-link'>
-                                <i class="bi bi-grid-1x2"></i>
-                                <span class="menu-item">{{ __('Verification Fields') }}</span>
-                            </a>
-                        </li>
-                    @endcanany
-
                     @canany(['seller-verification-field-list','seller-verification-field-create','seller-verification-field-update','seller-verification-field-delete'])
                         <li class="sidebar-item">
                             <a href="{{route('seller-verification.index') }}" class='sidebar-link'>

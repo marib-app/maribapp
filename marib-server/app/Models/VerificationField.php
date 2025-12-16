@@ -13,12 +13,16 @@ class VerificationField extends Model
     protected $fillable = [
         'name',
         'type',
+        'account_type',
         'status',
         'values',
         'min_length',
         'max_length',
         'is_required',
         'deleted_at'
+    ];
+    protected $casts = [
+        'is_required' => 'boolean',
     ];
     protected $hidden = ['created_at', 'updated_at'];
 

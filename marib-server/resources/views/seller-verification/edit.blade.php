@@ -17,7 +17,7 @@
 @section('content')
     <section class="section">
         <div class="buttons">
-            <a class="btn btn-primary" href="{{ route('seller-verification.verification-field') }}">< {{__("Back to Verification Fields")}} </a>
+            <a class="btn btn-primary" href="{{ route('seller-verification.dashboard') }}?tab=fields#fields">< {{__("Back to Verification Fields")}} </a>
             @if(in_array($verification_field->type,['radio','checkbox','dropdown']))
                 <a class="btn btn-primary" data-bs-toggle="modal" data-bs-target='#addModal'>+ {{__("Add Options")}}</a>
             @endif

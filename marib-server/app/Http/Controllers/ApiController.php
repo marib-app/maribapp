@@ -7085,7 +7085,14 @@ class ApiController extends Controller {
 
     public function getVerificationFields() {
         try {
-            $fields = VerificationField::query()->get();
+            $accountType = auth()->user()?->account_type;
+            $verificationAccountType = $this->mapVerificationAccountType($accountType);
+
+            $fields = VerificationField::query()
+                ->when($verificationAccountType, static function ($query, $type) {
+                    $query->where('account_type', $type);
+                })
+                ->get();
 
             ResponseService::successResponse('Verification Field Fetched Successfully', $fields);
 
@@ -7093,6 +7100,16 @@ class ApiController extends Controller {
             ResponseService::logErrorResponse($th, 'API Controller -> getVerificationFields');
             ResponseService::errorResponse('Failed to fetch verification fields.');
         }
+    }
+
+    private function mapVerificationAccountType(?int $accountType): ?string
+    {
+        return match ($accountType) {
+            User::ACCOUNT_TYPE_SELLER => 'commercial',
+            User::ACCOUNT_TYPE_REAL_ESTATE => 'realestate',
+            User::ACCOUNT_TYPE_CUSTOMER, null => 'individual',
+            default => 'individual',
+        };
     }
 
     public function sendVerificationRequest(Request $request) {

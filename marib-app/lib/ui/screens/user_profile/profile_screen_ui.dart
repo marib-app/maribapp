@@ -1,27 +1,17 @@
-﻿part of 'profile_screen.dart';
+part of "profile_screen.dart";
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
-
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
 class _ProfileScreenState extends State<ProfileScreen>
-    with
-        AutomaticKeepAliveClientMixin<ProfileScreen>,
-        ProfileScreenLogic<ProfileScreen> {
+    with AutomaticKeepAliveClientMixin<ProfileScreen>, ProfileScreenLogic<ProfileScreen> {
   final ValueNotifier<bool> _isDark = ValueNotifier(false);
   final ScrollController _scroll = ScrollController();
   final ValueNotifier<double> _scrollY = ValueNotifier(0);
   final InAppReview _inAppReview = InAppReview.instance;
-  StreamSubscription<ThemeState>? _themeSubscription;
-
-  void _onThemeChanged(bool isDark) {
-    if (_isDark.value != isDark) {
-      _isDark.value = isDark;
-    }
-  }
 
   @override
   bool get wantKeepAlive => true;
@@ -29,19 +19,12 @@ class _ProfileScreenState extends State<ProfileScreen>
   @override
   void initState() {
     super.initState();
-    final appThemeCubit = context.read<AppThemeCubit>();
-    _onThemeChanged(appThemeCubit.isDarkMode());
-    _themeSubscription = appThemeCubit.stream.listen((state) {
-      if (!mounted) return;
-      _onThemeChanged(state.appTheme == AppTheme.dark);
-    });
-
+    _isDark.value = context.read<AppThemeCubit>().isDarkMode();
     _scroll.addListener(() => _scrollY.value = _scroll.offset);
   }
 
   @override
   void dispose() {
-    _themeSubscription?.cancel();
     _isDark.dispose();
     _scroll.dispose();
     _scrollY.dispose();
@@ -52,17 +35,15 @@ class _ProfileScreenState extends State<ProfileScreen>
   Widget build(BuildContext context) {
     super.build(context);
     final int? userType = HiveUtils.getUserDetails().userType;
-    final bool isCommercial = userType == Constant.accountTypeSeller;
+    final bool isCommercial = userType == 3; // احتياطي لو احتجته لاحقًا
 
-    final Widget view = AnnotatedRegion(
+    return AnnotatedRegion(
       value: UiUtils.getSystemUiOverlayStyle(
         context: context,
         statusBarColor: context.color.secondaryColor,
       ),
       child: Scaffold(
         backgroundColor: context.color.primaryColor,
-
-        // AppBar أعلى قليلًا مع زر خروج
         appBar: PreferredSize(
           preferredSize: const Size.fromHeight(75),
           child: UiUtils.buildAppBar(
@@ -83,12 +64,10 @@ class _ProfileScreenState extends State<ProfileScreen>
             ],
           ),
         ),
-
         body: CustomScrollView(
           controller: _scroll,
-          physics: AppScrollBehavior.defaultPhysics,
+          physics: const ClampingScrollPhysics(),
           slivers: [
-            // بطاقة البروفايل الزجاجية
             SliverToBoxAdapter(
               child: ValueListenableBuilder<double>(
                 valueListenable: _scrollY,
@@ -96,14 +75,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   final double shift = (y * 0.06).clamp(0, 24);
                   return Transform.translate(
                     offset: Offset(0, -shift),
-                    child: isCommercial
-                        ? BlocBuilder<MerchantStoreCubit, MerchantStoreState>(
-                            builder: (_, state) => _ProfileGlassCard(
-                              isDark: _isDark.value,
-                              storeSnapshot: state.snapshot,
-                            ),
-                          )
-                        : _ProfileGlassCard(isDark: _isDark.value),
+                    child: _ProfileGlassCard(isDark: _isDark.value),
                   );
                 },
               ),
@@ -118,68 +90,39 @@ class _ProfileScreenState extends State<ProfileScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (isCommercial)
-                      BlocBuilder<MerchantStoreCubit, MerchantStoreState>(
-                        builder: (_, state) {
-                          final bool allowAccess =
-                              state.snapshot?.isApproved ?? false;
-                          return _ServiceItemTile(
-                            title: "لوحة المتجر",
-                            svg: AppIcons.home,
-                            onTap: () {
-                              UiUtils.checkUser(
-                                onNotGuest: () {
-                                  if (!allowAccess) {
-                                    showStoreReviewDialog(
-                                      context,
-                                      variant:
-                                          StoreReviewDialogVariant.management,
-                                    );
-                                    return;
-                                  }
-                                  Navigator.pushNamed(
-                                      context, Routes.merchantDashboard);
-                                },
-                                context: context,
-                              );
-                            },
-                          );
-                        },
-                      )
-                    else
-                      _ServiceItemTile(
-                        title: "الملف الشخصي ",
-                        svg: AppIcons.profileNavActive,
-                        onTap: () {
-                          UiUtils.checkUser(
-                            onNotGuest: () {
-                              HelperUtils.goToNextPage(
-                                Routes.showProfile,
-                                context,
-                                false,
-                                args: {"from": "profile"},
-                              );
-                            },
-                            context: context,
-                          );
-                        },
-                      ),
-                    const SizedBox(height: 10),
-                    // تقييمي
+                    // الملف الشخصي
                     _ServiceItemTile(
-                      title: "تقييماتي",
-                      svg: AppIcons.myReviewIcon,
+                      title: "الملف الشخصي ",
+                      svg: AppIcons.profileNavActive,
                       onTap: () {
                         UiUtils.checkUser(
-                          onNotGuest: () => Navigator.pushNamed(
-                              context, Routes.myReviewsScreen),
+                          onNotGuest: () {
+                            HelperUtils.goToNextPage(
+                              Routes.showProfile,
+                              context,
+                              false,
+                              args: {"from": "profile"},
+                            );
+                          },
                           context: context,
                         );
                       },
                     ),
                     const SizedBox(height: 10),
 
-                    // ─────────── العناصر المطلوبة أسفل "تقييماتي" ───────────
+                    // تقييماتي
+                    _ServiceItemTile(
+                      title: "تقييماتي",
+                      svg: AppIcons.myReviewIcon,
+                      onTap: () {
+                        UiUtils.checkUser(
+                          onNotGuest: () =>
+                              Navigator.pushNamed(context, Routes.myReviewsScreen),
+                          context: context,
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 10),
 
                     // إعلاناتي المروّجة
                     _ServiceItemTile(
@@ -216,8 +159,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       svg: AppIcons.money,
                       onTap: () {
                         UiUtils.checkUser(
-                          onNotGuest: () =>
-                              Navigator.pushNamed(context, Routes.wallet),
+                          onNotGuest: () => Navigator.pushNamed(context, Routes.wallet),
                           context: context,
                         );
                       },
@@ -246,14 +188,12 @@ class _ProfileScreenState extends State<ProfileScreen>
                           if (Platform.isIOS) {
                             await launchUrl(Uri.parse(Constant.appstoreURLios));
                           } else if (Platform.isAndroid) {
-                            await launchUrl(
-                                Uri.parse(Constant.playstoreURLAndroid));
+                            await launchUrl(Uri.parse(Constant.playstoreURLAndroid));
                           }
                         },
                       ),
                       const SizedBox(height: 10),
                     ],
-                    //
 
                     // ─────────── بقية البنود كما هي ───────────
 
@@ -288,8 +228,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       svg: AppIcons.favorites, // يمكنك استبدال الأيقونة لاحقًا
                       onTap: () {
                         UiUtils.checkUser(
-                          onNotGuest: () =>
-                              Navigator.pushNamed(context, Routes.soon),
+                          onNotGuest: () => Navigator.pushNamed(context, Routes.soon),
                           context: context,
                         );
                       },
@@ -301,9 +240,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                       isDark: _isDark,
                       onToggle: () {
                         final v = !_isDark.value;
-                        context
-                            .read<AppThemeCubit>()
-                            .changeTheme(v ? AppTheme.dark : AppTheme.light);
+                        context.read<AppThemeCubit>().changeTheme(
+                            v ? AppTheme.dark : AppTheme.light);
                         _isDark.value = v;
                       },
                     ),
@@ -319,13 +257,13 @@ class _ProfileScreenState extends State<ProfileScreen>
                       ),
                     ),
 
-                    // (ملاحظة): تمت إزالة كرت التحديث من الأسفل لأنه أصبح فوق تحت "تقييماتي"
+                    // (ملاحظة): تم إزالة كرت التحديث من الأسفل لأنه أصبح فوق تحت "تقييماتي"
 
                     // حذف الحساب (للمسجلين فقط)
                     if (HiveUtils.isUserAuthenticated()) ...[
                       const SizedBox(height: 10),
                       _ServiceItemTile(
-                        title: "حذف الحساب",
+                         title: "حذف الحساب",
                         svg: AppIcons.delete,
                         onTap: () {
                           if (Constant.isDemoModeOn) {
@@ -355,30 +293,10 @@ class _ProfileScreenState extends State<ProfileScreen>
         ),
       ),
     );
-
-    if (!isCommercial) {
-      return view;
-    }
-
-    return BlocProvider<MerchantStoreCubit>(
-      create: (_) => MerchantStoreCubit()..load(),
-      child: view,
-    );
   }
-}
-
-/* =========================
- *  بطاقة البروفايل (كما هي)
- * ========================= */
-
-class _ProfileGlassCard extends StatelessWidget {
+}class _ProfileGlassCard extends StatelessWidget {
   final bool isDark;
-  final MerchantStoreSnapshot? storeSnapshot;
-
-  const _ProfileGlassCard({
-    required this.isDark,
-    this.storeSnapshot,
-  });
+  const _ProfileGlassCard({required this.isDark});
 
   String _formatJoined(String? raw) {
     if (raw == null || raw.trim().isEmpty) return '';
@@ -387,7 +305,7 @@ class _ProfileGlassCard extends StatelessWidget {
       final dd = dt.day.toString().padLeft(2, '0');
       final mm = dt.month.toString().padLeft(2, '0');
       final yyyy = dt.year.toString();
-      return 'تم الانضمام في : $dd/$mm/$yyyy';
+      return 'â•ھط²â”کأ  â•ھط¯â”کآ„â•ھط¯â”کآ†â•ھâ•¢â”کأ â•ھط¯â”کأ  â”کآپâ”کأ¨ : $dd/$mm/$yyyy';
     }
     final dateOnly = raw.split(' ').first;
     final parts = dateOnly.split('-');
@@ -395,37 +313,35 @@ class _ProfileGlassCard extends StatelessWidget {
       final yyyy = parts[0],
           mm = parts[1].padLeft(2, '0'),
           dd = parts[2].padLeft(2, '0');
-      return 'تم الانضمام في : $dd/$mm/$yyyy';
+      return 'â•ھط²â”کأ  â•ھط¯â”کآ„â•ھط¯â”کآ†â•ھâ•¢â”کأ â•ھط¯â”کأ  â”کآپâ”کأ¨ : $dd/$mm/$yyyy';
     }
-    return 'تم الانضمام في : $dateOnly';
+    return 'â•ھط²â”کأ  â•ھط¯â”کآ„â•ھط¯â”کآ†â•ھâ•¢â”کأ â•ھط¯â”کأ  â”کآپâ”کأ¨ : $dateOnly';
   }
 
   @override
   Widget build(BuildContext context) {
     final user = HiveUtils.getUserDetails();
+    final String name =
+        (user.name ?? "").trim().isEmpty ? "مستخدم" : user.name!;
     final int? type = user.userType; // 1 فردي، 2 عقاري، 3 تجاري
-    final bool isMerchantAccount = type == Constant.accountTypeSeller;
-    final String resolvedMerchantName =
-        MerchantDisplayHelper.resolveDisplayName(
-      isMerchant: isMerchantAccount,
-      store: user.store,
-      additionalInfo: user.additionalInfo,
-      fallbackName: user.name,
-    );
-    final String fallbackName = (user.name ?? "").trim().isEmpty
-        ? "anonymous".translate(context)
-        : user.name!;
-    final String name = resolvedMerchantName.trim().isNotEmpty
-        ? resolvedMerchantName.trim()
-        : fallbackName;
     final _AccountStyle style = _AccountStyle.fromType(context, type);
     final String joined = _formatJoined(user.createdAt);
-    final bool showPendingBadge = storeSnapshot?.isPendingReview ?? false;
-    final String? profileImage = MerchantDisplayHelper.resolveProfileImage(
-      isMerchant: isMerchantAccount,
-      store: user.store,
-      fallbackImage: user.profile,
-    );
+    final verificationState =
+        context.watch<FetchVerificationRequestsCubit>().state;
+    String? verificationStatus =
+        verificationState is FetchVerificationRequestSuccess
+            ? verificationState.data.status?.trim().toLowerCase()
+            : null;
+    final DateTime? verificationExpiresAt =
+        verificationState is FetchVerificationRequestSuccess
+            ? verificationState.data.expiresAt
+            : null;
+    bool isVerified = (user.isVerified ?? 0) == 1;
+    if (!isVerified && verificationStatus == 'approved') {
+      final bool active = verificationExpiresAt == null ||
+          verificationExpiresAt.isAfter(DateTime.now());
+      isVerified = active;
+    }
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(10, 18, 10, 0),
@@ -448,7 +364,7 @@ class _ProfileGlassCard extends StatelessWidget {
                       color: context.color.textDefaultColor.withOpacity(0.10)),
                 ),
                 child: ClipOval(
-                  child: (profileImage ?? "").isEmpty
+                  child: (user.profile ?? "").isEmpty
                       ? Container(
                           color: context.color.backgroundColor,
                           alignment: Alignment.center,
@@ -458,7 +374,7 @@ class _ProfileGlassCard extends StatelessWidget {
                       : UiUtils.getImage(
                           height: 70,
                           width: 70,
-                          profileImage!,
+                          user.profile!,
                           fit: BoxFit.cover),
                 ),
               ),
@@ -469,6 +385,7 @@ class _ProfileGlassCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Expanded(
                           child: Text(name)
@@ -477,20 +394,22 @@ class _ProfileGlassCard extends StatelessWidget {
                               .color(context.color.textColorDark),
                         ),
                         const SizedBox(width: 8),
-                        if ((user.isVerified ?? 0) != 1)
-                          _VerifyAccountPill(
-                            onTap: () => Navigator.of(context)
-                                .pushNamed(Routes.accountVerificationInfo),
-                          )
-                        else
-                          const _VerifiedBadge(),
+                        _resolveVerificationBadge(
+                          context: context,
+                          isVerified: isVerified,
+                          status: verificationStatus,
+                          expiresAt: verificationExpiresAt,
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 10),
-                    if (showPendingBadge) ...[
-                      _StoreReviewBadge(compact: false),
-                      const SizedBox(height: 8),
+                    if (user.id != null) ...[
+                      const SizedBox(height: 6),
+                      Text('#${user.id}')
+                          .size(context.font.normal)
+                          .color(context.color.textDefaultColor)
+                          .bold(weight: FontWeight.w600),
                     ],
+                    const SizedBox(height: 10),
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 5),
@@ -533,9 +452,7 @@ class _AccountStyle {
   final Color base;
   final IconData icon;
   final int? type;
-
   _AccountStyle(this.base, this.icon, this.type);
-
   factory _AccountStyle.fromType(BuildContext context, int? type) {
     switch (type) {
       case 2:
@@ -547,7 +464,6 @@ class _AccountStyle {
         return _AccountStyle(Colors.blue, Icons.person_rounded, type);
     }
   }
-
   String label(BuildContext context) {
     switch (type) {
       case 1:
@@ -562,112 +478,60 @@ class _AccountStyle {
   }
 }
 
-class _VerifyAccountPill extends StatelessWidget {
-  final VoidCallback onTap;
+Widget _resolveVerificationBadge({
+  required BuildContext context,
+  required bool isVerified,
+  required String? status,
+  required DateTime? expiresAt,
+}) {
+  final normalized = (status ?? '').trim().toLowerCase();
+  final bool expired = expiresAt != null && expiresAt.isBefore(DateTime.now());
 
-  const _VerifyAccountPill({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    return OutlinedButton(
-      onPressed: onTap,
-      style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        side: BorderSide(color: context.color.territoryColor, width: 1.2),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        backgroundColor:
-            context.color.territoryColor.withOpacity(isDark ? 0.12 : 0.08),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.verified_user_outlined,
-              size: 17, color: context.color.territoryColor),
-          const SizedBox(width: 6),
-          Text(
-            "توثيق الحساب",
-            style: TextStyle(
-              color: context.color.territoryColor,
-              fontWeight: FontWeight.w700,
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ),
-    );
+  if (isVerified && !expired) {
+    return _StatusBadge(label: "ظ…ظˆط«ظ‚", color: Colors.green);
   }
+
+  if (normalized == 'approved' && !expired) {
+    return _StatusBadge(label: "ظ…ظˆط«ظ‚", color: Colors.green);
+  }
+
+  if (normalized == 'pending' || normalized == 'resubmitted') {
+    return _StatusBadge(label: "ط¬ط§ط±ظٹ ط§ظ„ظ…ط±ط§ط¬ط¹ط©", color: Colors.amber);
+  }
+
+  if (normalized == 'rejected') {
+    return _StatusBadge(label: "طھظ… ط§ظ„ط±ظپط¶", color: Colors.red);
+  }
+
+  return _StatusBadge(label: "ط؛ظٹط± ظ…ظˆط«ظ‚", color: Colors.blueGrey);
 }
 
-class _VerifiedBadge extends StatelessWidget {
-  const _VerifiedBadge();
+class _StatusBadge extends StatelessWidget {
+  final String label;
+  final Color color;
+
+  const _StatusBadge({required this.label, required this.color});
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = context.color.territoryColor;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: accent.withOpacity(0.12),
+        color: color.withOpacity(0.12),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: accent.withOpacity(0.5)),
+        border: Border.all(color: color.withOpacity(0.5)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.verified, size: 16, color: accent),
+          Icon(Icons.verified, size: 16, color: color),
           const SizedBox(width: 6),
           Text(
-            "موثق",
+            label,
             style: TextStyle(
-              color: accent,
+              color: color,
               fontWeight: FontWeight.w700,
               fontSize: 12,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StoreReviewBadge extends StatelessWidget {
-  const _StoreReviewBadge({this.compact = false});
-
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    final Color accent = context.color.territoryColor;
-    final Color background = accent.withOpacity(0.12);
-    final double fontSize =
-        compact ? context.font.small : context.font.small + 0.5;
-
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: compact ? 10 : 12,
-        vertical: compact ? 4 : 6,
-      ),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: accent.withOpacity(0.35)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.hourglass_bottom,
-            size: compact ? 14 : 16,
-            color: accent,
-          ),
-          const SizedBox(width: 6),
-          Text(
-            'storePendingBadge'.translate(context),
-            style: TextStyle(
-              fontSize: fontSize,
-              fontWeight: FontWeight.w600,
-              color: accent,
             ),
           ),
         ],
@@ -679,14 +543,13 @@ class _StoreReviewBadge extends StatelessWidget {
 class _ThemeSwitchTile extends StatelessWidget {
   final ValueNotifier<bool> isDark;
   final VoidCallback onToggle;
-
   const _ThemeSwitchTile({required this.isDark, required this.onToggle});
 
   @override
   Widget build(BuildContext context) {
     final accent = context.color.territoryColor;
 
-    // شريط أهدأ مثل _ServiceItemTile
+    // â•ھâ”¤â•ھâ–’â”کأ¨â•ھâ•– â•ھط«â”کأ§â•ھآ»â•ھط« â”کأ â•ھط³â”کآ„ _ServiceItemTile
     final _hsl = HSLColor.fromColor(accent);
     final barBase = _hsl
         .withSaturation((_hsl.saturation * 0.45).clamp(0.0, 1.0))
@@ -701,8 +564,9 @@ class _ThemeSwitchTile extends StatelessWidget {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(14),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              // 👈 نفس ارتفاع الخدمات
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10), // â‰،ط§ظ‘أھ â”کآ†â”کآپâ•ھâ”‚ â•ھط¯â•ھâ–’â•ھط²â”کآپâ•ھط¯â•ھâ•£ â•ھط¯â”کآ„â•ھآ«â•ھآ»â”کأ â•ھط¯â•ھط²
               decoration: BoxDecoration(
                 color: context.color.secondaryColor,
                 borderRadius: BorderRadius.circular(14),
@@ -717,7 +581,7 @@ class _ThemeSwitchTile extends StatelessWidget {
                 ],
               ),
 
-              // الشريط الجانبي نفسه
+              // â•ھط¯â”کآ„â•ھâ”¤â•ھâ–’â”کأ¨â•ھâ•– â•ھط¯â”کآ„â•ھط´â•ھط¯â”کآ†â•ھط°â”کأ¨ â”کآ†â”کآپâ•ھâ”‚â”کأ§
               foregroundDecoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(14),
                 gradient: LinearGradient(
@@ -733,9 +597,10 @@ class _ThemeSwitchTile extends StatelessWidget {
               ),
 
               child: Row(
-                textDirection: TextDirection.ltr, // أيقونة يمين، سويتش يسار
+                textDirection: TextDirection
+                    .ltr, // â•ھط«â”کأ¨â”کأ©â”کأھâ”کآ†â•ھط± â”کأ¨â”کأ â”کأ¨â”کآ†â•ھأ® â•ھâ”‚â”کأھâ”کأ¨â•ھط²â•ھâ”¤ â”کأ¨â•ھâ”‚â•ھط¯â•ھâ–’
                 children: [
-                  // السويتش يسار (adaptive شكله أجمل)
+                  // â•ھط¯â”کآ„â•ھâ”‚â”کأھâ”کأ¨â•ھط²â•ھâ”¤ â”کأ¨â•ھâ”‚â•ھط¯â•ھâ–’ (adaptive â•ھâ”¤â”کأ¢â”کآ„â”کأ§ â•ھط«â•ھط´â”کأ â”کآ„)
                   Switch.adaptive(
                     value: v,
                     onChanged: (_) => onToggle(),
@@ -749,9 +614,12 @@ class _ThemeSwitchTile extends StatelessWidget {
 
                   const SizedBox(width: 12),
 
-                  // النص وسط
+                  // â•ھط¯â”کآ„â”کآ†â•ھâ•، â”کأھâ•ھâ”‚â•ھâ•–
                   Expanded(
-                    child: Text(v ? "الوضع الداكن" : "الوضع الفاتح",
+                    child: Text(
+                            v
+                                ? "â•ھط¯â”کآ„â”کأھâ•ھâ•¢â•ھâ•£ â•ھط¯â”کآ„â•ھآ»â•ھط¯â”کأ¢â”کآ†"
+                                : "â•ھط¯â”کآ„â”کأھâ•ھâ•¢â•ھâ•£ â•ھط¯â”کآ„â”کآپâ•ھط¯â•ھط²â•ھطµ",
                             textAlign: TextAlign.center)
                         .bold(weight: FontWeight.w600)
                         .size(context.font.normal)
@@ -760,7 +628,7 @@ class _ThemeSwitchTile extends StatelessWidget {
 
                   const SizedBox(width: 12),
 
-                  // الأيقونة يمين مع أنيميشن
+                  // â•ھط¯â”کآ„â•ھط«â”کأ¨â”کأ©â”کأھâ”کآ†â•ھط± â”کأ¨â”کأ â”کأ¨â”کآ† â”کأ â•ھâ•£ â•ھط«â”کآ†â”کأ¨â”کأ â”کأ¨â•ھâ”¤â”کآ†
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 400),
                     transitionBuilder: (child, anim) {
@@ -800,13 +668,11 @@ class _ActionTab {
   final String label;
   final String svg;
   final VoidCallback? onTap;
-
   const _ActionTab(this.label, this.svg, {this.onTap});
 }
 
 class _TabChip extends StatelessWidget {
   final _ActionTab tab;
-
   const _TabChip({required this.tab});
 
   @override
@@ -837,19 +703,17 @@ class _TabChip extends StatelessWidget {
 }
 
 /* =========================
- *  قائمة "استكشف"
+ *  â”کأ©â•ھط¯â•ھط®â”کأ â•ھط± "â•ھط¯â•ھâ”‚â•ھط²â”کأ¢â•ھâ”¤â”کآپ"
  * ========================= */
 class _ExploreItem {
   final String title;
   final String svg;
   final VoidCallback onTap;
-
   _ExploreItem(this.title, this.svg, this.onTap);
 }
 
 class _ExploreList extends StatelessWidget {
   final List<_ExploreItem> items;
-
   const _ExploreList({required this.items});
 
   @override
@@ -865,7 +729,7 @@ class _ExploreList extends StatelessWidget {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-              child: Text("استكشف")
+              child: Text("â•ھط¯â•ھâ”‚â•ھط²â”کأ¢â•ھâ”¤â”کآپ")
                   .bold(weight: FontWeight.w700)
                   .size(context.font.normal)
                   .color(context.color.textColorDark),
@@ -896,12 +760,11 @@ class _ExploreList extends StatelessWidget {
 }
 
 /* =========================
- *  عناصر مساعدة قصيرة
+ *  â•ھâ•£â”کآ†â•ھط¯â•ھâ•،â•ھâ–’ â”کأ â•ھâ”‚â•ھط¯â•ھâ•£â•ھآ»â•ھط± â”کأ©â•ھâ•،â”کأ¨â•ھâ–’â•ھط±
  * ========================= */
 class _ThemeToggle extends StatelessWidget {
   final ValueNotifier<bool> isDark;
   final VoidCallback onToggle;
-
   const _ThemeToggle({required this.isDark, required this.onToggle});
 
   @override
@@ -940,9 +803,7 @@ class _ThemeToggle extends StatelessWidget {
 class _IconSquareButton extends StatelessWidget {
   final String svg;
   final VoidCallback onTap;
-
   const _IconSquareButton({required this.svg, required this.onTap});
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -967,16 +828,13 @@ class _Pressable extends StatefulWidget {
   final Widget child;
   final VoidCallback? onTap;
   final double scaleDown;
-
   const _Pressable({required this.child, this.onTap, this.scaleDown = 0.96});
-
   @override
   State<_Pressable> createState() => _PressableState();
 }
 
 class _PressableState extends State<_Pressable> {
   bool _down = false;
-
   @override
   Widget build(BuildContext context) {
     return Listener(
@@ -997,7 +855,7 @@ class _PressableState extends State<_Pressable> {
 }
 
 /* ==========
- * صفوف جاهزة بقيت كما هي لديك:
+ * â•ھâ•،â”کآپâ”کأھâ”کآپ â•ھط´â•ھط¯â”کأ§â•ھâ–“â•ھط± â•ھط°â”کأ©â”کأ¨â•ھط² â”کأ¢â”کأ â•ھط¯ â”کأ§â”کأ¨ â”کآ„â•ھآ»â”کأ¨â”کأ¢:
  *  - _UpdateRow
  *  - _DeleteAccountRow
  * ========== */
@@ -1006,7 +864,6 @@ class _PressableState extends State<_Pressable> {
 
 class _UpdateRow extends StatelessWidget {
   final VoidCallback onTap;
-
   const _UpdateRow({required this.onTap});
 
   @override
@@ -1053,7 +910,6 @@ class _UpdateRow extends StatelessWidget {
 
 class _DeleteAccountRow extends StatelessWidget {
   final VoidCallback onTap;
-
   const _DeleteAccountRow({required this.onTap});
 
   @override
@@ -1133,14 +989,13 @@ class _ServiceItemTile extends StatelessWidget {
   final String title;
   final String svg;
   final VoidCallback? onTap;
-
   const _ServiceItemTile({required this.title, required this.svg, this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final accent = context.color.territoryColor;
 
-    // لون الشريط أهدأ من لون الهوية (نفس الهيو لكن تشبّع أقل وإضاءة أعلى قليلًا)
+    // â”کآ„â”کأھâ”کآ† â•ھط¯â”کآ„â•ھâ”¤â•ھâ–’â”کأ¨â•ھâ•– â•ھط«â”کأ§â•ھآ»â•ھط« â”کأ â”کآ† â”کآ„â”کأھâ”کآ† â•ھط¯â”کآ„â”کأ§â”کأھâ”کأ¨â•ھط± (â”کآ†â”کآپâ•ھâ”‚ â•ھط¯â”کآ„â”کأ§â”کأ¨â”کأھ â”کآ„â”کأ¢â”کآ† â•ھط²â•ھâ”¤â•ھط°â”کظ‘â•ھâ•£ â•ھط«â”کأ©â”کآ„ â”کأھâ•ھط­â•ھâ•¢â•ھط¯â•ھط©â•ھط± â•ھط«â•ھâ•£â”کآ„â”کأ« â”کأ©â”کآ„â”کأ¨â”کآ„â”کأ¯â•ھط¯)
     final _hsl = HSLColor.fromColor(accent);
     final barBase = _hsl
         .withSaturation((_hsl.saturation * 0.45).clamp(0.0, 1.0))
@@ -1150,7 +1005,7 @@ class _ServiceItemTile extends StatelessWidget {
     return _Pressable(
       onTap: onTap,
       child: ClipRRect(
-        // يضمن تطابق الحواف مع أي أنيميشن/سكيل
+        // â”کأ¨â•ھâ•¢â”کأ â”کآ† â•ھط²â•ھâ•–â•ھط¯â•ھط°â”کأ© â•ھط¯â”کآ„â•ھطµâ”کأھâ•ھط¯â”کآپ â”کأ â•ھâ•£ â•ھط«â”کأ¨ â•ھط«â”کآ†â”کأ¨â”کأ â”کأ¨â•ھâ”¤â”کآ†/â•ھâ”‚â”کأ¢â”کأ¨â”کآ„
         borderRadius: BorderRadius.circular(14),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
@@ -1168,25 +1023,30 @@ class _ServiceItemTile extends StatelessWidget {
             ],
           ),
 
-          // الشريط جزء أساسي من الزر (لا يتأثر بمقاسات الشاشات)
+          // â•ھط¯â”کآ„â•ھâ”¤â•ھâ–’â”کأ¨â•ھâ•– â•ھط´â•ھâ–“â•ھط© â•ھط«â•ھâ”‚â•ھط¯â•ھâ”‚â”کأ¨ â”کأ â”کآ† â•ھط¯â”کآ„â•ھâ–“â•ھâ–’ (â”کآ„â•ھط¯ â”کأ¨â•ھط²â•ھط«â•ھط³â•ھâ–’ â•ھط°â”کأ â”کأ©â•ھط¯â•ھâ”‚â•ھط¯â•ھط² â•ھط¯â”کآ„â•ھâ”¤â•ھط¯â•ھâ”¤â•ھط¯â•ھط²)
           foregroundDecoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
             gradient: LinearGradient(
               begin: Alignment.centerRight,
               end: Alignment.centerLeft,
               colors: [
-                barBase.withOpacity(0.40), // أقوى عند الحافة
-                barBase.withOpacity(0.18), // يتدرّج للداخل
-                Colors.transparent, // يتلاشى
+                barBase.withOpacity(0.40), // â•ھط«â”کأ©â”کأھâ”کأ« â•ھâ•£â”کآ†â•ھآ» â•ھط¯â”کآ„â•ھطµâ•ھط¯â”کآپâ•ھط±
+                barBase.withOpacity(0.18), // â”کأ¨â•ھط²â•ھآ»â•ھâ–’â”کظ‘â•ھط´ â”کآ„â”کآ„â•ھآ»â•ھط¯â•ھآ«â”کآ„
+                Colors.transparent, // â”کأ¨â•ھط²â”کآ„â•ھط¯â•ھâ”¤â”کأ«
               ],
-              stops: const [0.0, 0.08, 0.20], // اضبطها لو تبغيه أرفع/أعرض
+              stops: const [
+                0.0,
+                0.08,
+                0.20
+              ], // â•ھط¯â•ھâ•¢â•ھط°â•ھâ•–â”کأ§â•ھط¯ â”کآ„â”کأھ â•ھط²â•ھط°â•ھâ•‘â”کأ¨â”کأ§ â•ھط«â•ھâ–’â”کآپâ•ھâ•£/â•ھط«â•ھâ•£â•ھâ–’â•ھâ•¢
             ),
           ),
 
           child: Row(
-            textDirection: TextDirection.ltr, // يثبّت الأيقونة يمين دائمًا
+            textDirection: TextDirection
+                .ltr, // â”کأ¨â•ھط³â•ھط°â”کظ‘â•ھط² â•ھط¯â”کآ„â•ھط«â”کأ¨â”کأ©â”کأھâ”کآ†â•ھط± â”کأ¨â”کأ â”کأ¨â”کآ† â•ھآ»â•ھط¯â•ھط®â”کأ â”کأ¯â•ھط¯
             children: [
-              // النص بالوسط
+              // â•ھط¯â”کآ„â”کآ†â•ھâ•، â•ھط°â•ھط¯â”کآ„â”کأھâ•ھâ”‚â•ھâ•–
               Expanded(
                 child: Text(
                   title,
@@ -1198,7 +1058,7 @@ class _ServiceItemTile extends StatelessWidget {
               ),
               const SizedBox(width: 12),
 
-              // الأيقونة يمين بلون الهوية الكامل
+              // â•ھط¯â”کآ„â•ھط«â”کأ¨â”کأ©â”کأھâ”کآ†â•ھط± â”کأ¨â”کأ â”کأ¨â”کآ† â•ھط°â”کآ„â”کأھâ”کآ† â•ھط¯â”کآ„â”کأ§â”کأھâ”کأ¨â•ھط± â•ھط¯â”کآ„â”کأ¢â•ھط¯â”کأ â”کآ„
               UiUtils.getSvg(
                 svg,
                 height: 22,
@@ -1212,3 +1072,6 @@ class _ServiceItemTile extends StatelessWidget {
     );
   }
 }
+
+
+

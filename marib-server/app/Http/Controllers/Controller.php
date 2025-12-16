@@ -3,6 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\ContactUs;
+use App\Models\Item;
+use App\Models\Service;
+use App\Models\User;
+use App\Models\UserFcmToken;
+use App\Services\NotificationService;
 use App\Services\ResponseService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Bus\DispatchesJobs;
@@ -11,6 +16,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller as BaseController;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Session;
 use Throwable;
 
@@ -52,6 +58,7 @@ class Controller extends BaseController {
                 'column' => 'nullable',
             ]);
             $column = $request->column ?? "status";
+            $isActive = (bool) $request->status;
 
             //Special case for deleted_at column
             if ($column == "deleted_at") {
@@ -59,12 +66,120 @@ class Controller extends BaseController {
                 $request->status = ($request->status) ? null : now();
             }
             DB::table($request->table)->where('id', $request->id)->update([(string)$column => $request->status]);
+            $this->notifyStatusChange((string)$request->table, (string)$column, (int)$request->id, $isActive);
             ResponseService::successResponse("Status Updated Successfully");
         } catch (Throwable $th) {
             ResponseService::logErrorResponse($th);
             ResponseService::errorResponse();
         }
 
+    }
+
+    private function notifyStatusChange(string $table, string $column, int $id, bool $isActive): void
+    {
+        try {
+            if ($table === 'items') {
+                $item = Item::withTrashed()->find($id);
+
+                if (empty($item?->user_id)) {
+                    return;
+                }
+
+                $tokens = $this->resolveUserTokens($item->user_id);
+                if ($tokens === []) {
+                    return;
+                }
+
+                $statusSlug = $isActive ? 'active' : 'blocked';
+                $title = $isActive ? 'تم إعادة تفعيل إعلانك' : 'تم حظر إعلانك';
+                $body = $isActive
+                    ? 'تم إعادة تفعيل إعلانك بعد مراجعة البلاغ.'
+                    : 'تم حظر الإعلان أو الخدمة الخاصة بك نتيجة لتلقينا بلاغ معين.';
+
+                NotificationService::sendFcmNotification($tokens, $title, $body, 'item-status', [
+                    'entity'    => 'item-status',
+                    'entity_id' => $item->id . '-' . $statusSlug,
+                    'status'    => $statusSlug,
+                    'item_id'   => $item->id,
+                    'active'    => $isActive,
+                ]);
+
+                return;
+            }
+
+            if ($table === 'users' && $column === 'deleted_at') {
+                $user = User::withTrashed()->find($id);
+
+                if (empty($user)) {
+                    return;
+                }
+
+                $tokens = $this->resolveUserTokens($user->id);
+                if ($tokens === []) {
+                    return;
+                }
+
+                $statusSlug = $isActive ? 'active' : 'blocked';
+                $title = $isActive ? 'تم إعادة تفعيل حسابك' : 'تم حظر حسابك';
+                $body = $isActive
+                    ? 'تم إعادة تفعيل وصولك إلى التطبيق بعد مراجعة البلاغ.'
+                    : 'تم حظر وصولك إلى التطبيق نتيجة بلاغ معين.';
+
+                NotificationService::sendFcmNotification($tokens, $title, $body, 'account-status', [
+                    'entity'    => 'user-status',
+                    'entity_id' => $user->id . '-' . $statusSlug,
+                    'status'    => $statusSlug,
+                    'user_id'   => $user->id,
+                    'active'    => $isActive,
+                ]);
+
+                return;
+            }
+
+            if ($table === 'services') {
+                $service = Service::find($id);
+
+                if (empty($service?->owner_id)) {
+                    return;
+                }
+
+                $tokens = $this->resolveUserTokens($service->owner_id);
+                if ($tokens === []) {
+                    return;
+                }
+
+                $statusSlug = $isActive ? 'active' : 'blocked';
+                $title = $isActive ? 'تم إعادة تفعيل خدمتك' : 'تم حظر خدمتك';
+                $body = $isActive
+                    ? 'تم إعادة تفعيل خدمتك بعد مراجعة البلاغ.'
+                    : 'تم حظر الخدمة الخاصة بك نتيجة لتلقينا بلاغ معين.';
+
+                NotificationService::sendFcmNotification($tokens, $title, $body, 'service-status', [
+                    'entity'    => 'service-status',
+                    'entity_id' => $service->id . '-' . $statusSlug,
+                    'status'    => $statusSlug,
+                    'service_id'=> $service->id,
+                    'active'    => $isActive,
+                ]);
+            }
+        } catch (Throwable $exception) {
+            Log::warning('changeStatus: failed to send status notification', [
+                'table'  => $table,
+                'column' => $column,
+                'id'     => $id,
+                'active' => $isActive,
+                'error'  => $exception->getMessage(),
+            ]);
+        }
+    }
+
+    private function resolveUserTokens(int $userId): array
+    {
+        return UserFcmToken::where('user_id', $userId)
+            ->pluck('fcm_token')
+            ->filter()
+            ->values()
+            ->all();
     }
 
     public function readLanguageFile() {

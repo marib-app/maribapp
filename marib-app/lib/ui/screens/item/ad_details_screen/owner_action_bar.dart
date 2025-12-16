@@ -2,39 +2,12 @@
 // UI فقط: شريط أزرار المالك بأسلوب سكرول أفقي (بدون منطق/توجيهات/Dialogs).
 // ظهور كل زر يعتمد على تمرير Callback غير null.
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:marib/utils/helper_utils.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Clipboard
 import 'package:marib/data/model/item/item_model.dart';
 import 'package:marib/app/routes.dart';
-import 'package:marib/data/cubits/item/delete_item_cubit.dart';
 import 'dart:ui';
 
-import 'package:flutter_bloc/flutter_bloc.dart';
-
-import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart';
-import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
-import 'package:marib/ui/screens/chat/chat_screen.dart';
-import 'package:marib/ui/screens/item/add_item_screen/custom_filed_structure/custom_field.dart';
-
-import 'package:marib/utils/extensions/extensions.dart';
-import 'package:marib/utils/responsiveSize.dart';
-import 'package:marib/utils/helper_utils.dart';
-import 'package:marib/utils/ui_utils.dart';
-import 'package:marib/utils/hive_utils.dart';
-
-import 'dart:ui';
-
-import 'fullscreen_gallery.dart';
-
-import 'package:flutter/material.dart';
-import 'package:marib/data/model/item/item_model.dart';
-
-// lib/ui/new_code/section/Computers/ads_files/owner_action_bar.dart
-import 'package:flutter/material.dart';
-import 'package:marib/data/model/item/item_model.dart';
-import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/item_category_ids.dart';
 import 'package:marib/utils/currency_utils.dart';
 import 'package:marib/app/app_scroll_behavior.dart';

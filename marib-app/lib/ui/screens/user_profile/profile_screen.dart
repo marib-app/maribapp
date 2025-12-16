@@ -46,6 +46,7 @@ import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart';
 import 'package:marib/utils/app_icon.dart';
 import 'package:marib/ui/widgets/dialogs/store_review_dialogs.dart';
 import 'package:marib/utils/merchant_display_helper.dart';
+import 'package:marib/ui/widgets/verification_subscription_sheet.dart';
 
 import 'package:flutter/cupertino.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -65,11 +66,6 @@ mixin ProfileScreenLogic<T extends StatefulWidget> on State<T> {
   void initState() {
     super.initState();
     final settings = context.read<FetchSystemSettingsCubit>();
-
-    if (HiveUtils.isUserAuthenticated()) {
-      context.read<FetchVerificationRequestsCubit>().fetchVerificationRequests();
-      context.read<ProfileStatsCubit>().fetchProfileStats();
-    }
 
     if (!const bool.fromEnvironment("force-disable-demo-mode", defaultValue: false)) {
       Constant.isDemoModeOn = settings.getSetting(SystemSetting.demoMode) ?? false;
@@ -302,9 +298,6 @@ mixin ProfileScreenLogic<T extends StatefulWidget> on State<T> {
   Color getAccountTypeBadgeColor(BuildContext context) => _getAccountTypeBadgeColor(context);
   String getAccountTypeText() => _getAccountTypeText();
 }
-
-
-
 
 
 

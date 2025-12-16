@@ -19,6 +19,7 @@ import 'package:marib/data/cubits/system/fetch_system_settings_cubit.dart';
 import 'package:marib/data/model/item/item_model.dart';
 import 'package:marib/data/model/system_settings_model.dart';
 import 'package:marib/data/cubits/system/user_details.dart';
+import 'package:marib/data/cubits/seller/fetch_verification_request_cubit.dart';
 import 'package:marib/data/model/merchant/merchant_store_snapshot.dart';
 import 'package:marib/data/repositories/merchant_repository.dart';
 
@@ -288,6 +289,9 @@ class MainActivityState extends State<MainActivity> with TickerProviderStateMixi
     } else {
       currtab = index;
       pageCntrlr.jumpToPage(currtab);
+      if (index == 3 && HiveUtils.isUserAuthenticated()) {
+        context.read<FetchVerificationRequestsCubit>().fetchVerificationRequests();
+      }
       setState(() {});
     }
   }

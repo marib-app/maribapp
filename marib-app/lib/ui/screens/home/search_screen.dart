@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:marib/app/app_scroll_behavior.dart';
 import 'package:marib/app/app_theme.dart';
 import 'package:marib/app/routes.dart';
 import 'package:marib/data/cubits/item/search_item_cubit.dart';
@@ -30,6 +31,7 @@ import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/responsiveSize.dart';
 import 'package:flutter/material.dart';
 import 'package:marib/utils/ui_utils.dart';
+import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/ui/widgets/slivers/catalog_scroll_view.dart';
 import 'package:marib/ui/widgets/slivers/catalog_section.dart';
 
@@ -159,13 +161,19 @@ class SearchScreenState extends State<SearchScreen>
     required FetchPopularItemsState popularState,
   }) {
     final sections = <CatalogSection>[
-      _buildHistorySection(),
+      _buildShortcutSection(),
     ];
 
-    if (_shouldShowSearchSections(searchState)) {
-      sections.addAll(_buildSearchSections(searchState));
-    } else {
+    final bool showSearchResults = _shouldShowSearchSections(searchState);
+
+    if (!showSearchResults) {
       sections.addAll(_buildPopularSections(popularState));
+    }
+
+    sections.add(_buildHistorySection());
+
+    if (showSearchResults) {
+      sections.addAll(_buildSearchSections(searchState));
     }
 
     return sections;
@@ -405,6 +413,51 @@ class SearchScreenState extends State<SearchScreen>
     return const [];
   }
 
+  CatalogSection _buildShortcutSection() {
+    final shortcuts = [
+      _Shortcut(label: "الأقرب لك", icon: Icons.near_me_rounded, type: ShortcutType.nearby),
+      _Shortcut(label: "تخفيضات", icon: Icons.local_offer_outlined, type: ShortcutType.discounts),
+      _Shortcut(label: "جديد اليوم", icon: Icons.fiber_new_rounded, type: ShortcutType.newToday),
+      _Shortcut(label: "الأكثر مشاهدة", icon: Icons.visibility_outlined, type: ShortcutType.mostViewed),
+    ];
+
+    return CatalogBoxSection(
+      key: const ValueKey('search-shortcuts'),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: shortcuts
+              .map(
+                (s) => Padding(
+                  padding: const EdgeInsetsDirectional.only(end: 8.0),
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      side: BorderSide(
+                        color: context.color.territoryColor.withOpacity(0.6),
+                        width: 1,
+                      ),
+                      backgroundColor: context.color.secondaryColor,
+                      foregroundColor: context.color.territoryColor,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    onPressed: () => _applyShortcut(s.type),
+                    icon: Icon(s.icon, size: 18, color: context.color.territoryColor),
+                    label: Text(s.label)
+                        .size(context.font.small)
+                        .bold(weight: FontWeight.w700),
+                  ),
+                ),
+              )
+              .toList(),
+        ),
+      ),
+    );
+  }
+
   CatalogSection _buildSearchHeaderSection() {
     return CatalogBoxSection(
       key: const ValueKey('search-header'),
@@ -626,6 +679,78 @@ class SearchScreenState extends State<SearchScreen>
     // }
   }
 
+  void _applyShortcut(ShortcutType type) {
+    setState(() {
+      filter = null;
+      previousSearchQuery = "";
+    });
+
+    switch (type) {
+      case ShortcutType.nearby:
+        final lat = _resolveLatitude();
+        final lng = _resolveLongitude();
+        if (lat == null || lng == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                "الرجاء تفعيل الموقع للحصول على أقرب الإعلانات",
+                style: const TextStyle(color: Colors.white),
+              ),
+              backgroundColor: context.color.territoryColor,
+            ),
+          );
+          return;
+        }
+        filter = ItemFilterModel(
+          latitude: lat,
+          longitude: lng,
+          radius: 50,
+        );
+        _triggerSearch(query: "");
+        return;
+
+      case ShortcutType.discounts:
+        filter = null;
+        _triggerSearch(query: "تخفيض");
+        return;
+
+      case ShortcutType.newToday:
+        filter = ItemFilterModel(postedSince: "today");
+        _triggerSearch(query: "");
+        return;
+
+      case ShortcutType.mostViewed:
+        filter = ItemFilterModel();
+        _triggerSearch(query: "");
+        return;
+    }
+  }
+
+  void _triggerSearch({required String query}) {
+    searchController.text = query;
+    searchController.selection =
+        TextSelection.collapsed(offset: searchController.text.length);
+    previousSearchQuery = ""; // اجبار البحث حتى لو نفس النص السابق
+    itemSearch();
+  }
+
+  double? _resolveLatitude() {
+    final dynamic v = HiveUtils.getCurrentLatitude() ?? HiveUtils.getLatitude();
+    if (v is double) return v;
+    if (v is num) return v.toDouble();
+    if (v is String) return double.tryParse(v);
+    return null;
+  }
+
+  double? _resolveLongitude() {
+    final dynamic v =
+        HiveUtils.getCurrentLongitude() ?? HiveUtils.getLongitude();
+    if (v is double) return v;
+    if (v is num) return v.toDouble();
+    if (v is String) return double.tryParse(v);
+    return null;
+  }
+
   PreferredSizeWidget appBarWidget() {
     return AppBar(
       systemOverlayStyle:
@@ -817,6 +942,8 @@ class SearchScreenState extends State<SearchScreen>
 
             return CatalogScrollView(
               controller: _scrollController,
+              physics: AppScrollBehavior.defaultPhysics,
+              scrollBehavior: const _NoStretchScrollBehavior(),
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               sections: sections,
             );
@@ -923,3 +1050,34 @@ class _SearchDebounceCoordinator {
 
 @visibleForTesting
 typedef SearchDebounceCoordinator = _SearchDebounceCoordinator;
+
+class _NoStretchScrollBehavior extends ScrollBehavior {
+  const _NoStretchScrollBehavior();
+
+  @override
+  Widget buildOverscrollIndicator(
+    BuildContext context,
+    Widget child,
+    ScrollableDetails details,
+  ) {
+    return child;
+  }
+
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) {
+    return AppScrollBehavior.defaultPhysics;
+  }
+}
+
+enum ShortcutType { nearby, discounts, newToday, mostViewed }
+
+class _Shortcut {
+  final String label;
+  final IconData icon;
+  final ShortcutType type;
+  const _Shortcut({
+    required this.label,
+    required this.icon,
+    required this.type,
+  });
+}

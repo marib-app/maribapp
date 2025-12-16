@@ -12110,6 +12110,35 @@ public function storeRequestDevice(Request $request)
         return null;
     }
 
+    /**
+     * Resolve the reporting department for a given category id.
+     */
+    private function resolveReportDepartment(?int $categoryId): ?string
+    {
+        if (empty($categoryId)) {
+            return null;
+        }
+
+        $map = [
+            DepartmentReportService::DEPARTMENT_SHEIN =>
+                $this->departmentReportService->resolveCategoryIds(DepartmentReportService::DEPARTMENT_SHEIN),
+            DepartmentReportService::DEPARTMENT_COMPUTER =>
+                $this->departmentReportService->resolveCategoryIds(DepartmentReportService::DEPARTMENT_COMPUTER),
+            DepartmentReportService::DEPARTMENT_STORE =>
+                $this->departmentReportService->resolveCategoryIds(DepartmentReportService::DEPARTMENT_STORE),
+            DepartmentReportService::DEPARTMENT_SERVICES =>
+                $this->departmentReportService->resolveCategoryIds(DepartmentReportService::DEPARTMENT_SERVICES),
+        ];
+
+        foreach ($map as $department => $categoryIds) {
+            if (in_array($categoryId, $categoryIds, true)) {
+                return $department;
+            }
+        }
+
+        return null;
+    }
+
 
     private function shouldAutoApproveSection(?string $section): bool
     {

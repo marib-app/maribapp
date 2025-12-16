@@ -1,8 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'dart:async';
 import 'package:marib/app/routes.dart';
 
+/// بسيط ومتناسق مع واجهة الهوم، يحافظ على التلميحات المتبدلة والانتقال لشاشة البحث.
 class AnimatedSearchBar extends StatefulWidget {
   const AnimatedSearchBar({super.key});
 
@@ -11,12 +13,11 @@ class AnimatedSearchBar extends StatefulWidget {
 }
 
 class _AnimatedSearchBarState extends State<AnimatedSearchBar>
-    with TickerProviderStateMixin, WidgetsBindingObserver {
-  final List<String> hints = [
-    "ابحث عن منتج يهمك 🔍",
-    "وش تحتاج اليوم؟ 🛒",
-    "استكشف العروض الجديدة 🎁",
-    "جرب تكتب 'كوب قهوة' ☕",
+    with WidgetsBindingObserver {
+  final List<String> hints = const [
+    "ابحث عن منتج، خدمة أو إعلان",
+    "جرّب كلمات مثل: كمبيوتر، عقار، صيانة",
+    "اكتب اسم المتجر أو البائع للوصول السريع",
   ];
 
   int currentHintIndex = 0;
@@ -24,25 +25,26 @@ class _AnimatedSearchBarState extends State<AnimatedSearchBar>
   bool _isLifecycleResumed = true;
 
   Duration _getDurationForHint(String text) {
-    final base = 4.0; // مدة أساسية بالثواني
-    final extra = (text.length / 10); // زيادة حسب طول النص
+    final base = 4.0;
+    final extra = (text.length / 10);
     return Duration(seconds: (base + extra).ceil());
   }
 
   void _startTimer() {
-    if (!_isLifecycleResumed || hints.isEmpty) {
-      return;
-    }
+    if (!_isLifecycleResumed || hints.isEmpty) return;
     _cancelTimer();
     _timer = Timer(_getDurationForHint(hints[currentHintIndex]), () {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       setState(() {
         currentHintIndex = (currentHintIndex + 1) % hints.length;
       });
-      _startTimer(); // نعيد التايمر
+      _startTimer();
     });
+  }
+
+  void _cancelTimer() {
+    _timer?.cancel();
+    _timer = null;
   }
 
   @override
@@ -51,11 +53,9 @@ class _AnimatedSearchBarState extends State<AnimatedSearchBar>
     WidgetsBinding.instance.addObserver(this);
     final AppLifecycleState? lifecycleState =
         WidgetsBinding.instance.lifecycleState;
-    _isLifecycleResumed = lifecycleState == null ||
-        lifecycleState == AppLifecycleState.resumed;
-    if (_isLifecycleResumed) {
-      _startTimer();
-    }
+    _isLifecycleResumed =
+        lifecycleState == null || lifecycleState == AppLifecycleState.resumed;
+    if (_isLifecycleResumed) _startTimer();
   }
 
   @override
@@ -64,17 +64,11 @@ class _AnimatedSearchBarState extends State<AnimatedSearchBar>
     _cancelTimer();
     super.dispose();
   }
-  void _cancelTimer() {
-    _timer?.cancel();
-    _timer = null;
-  }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     final bool shouldResume = state == AppLifecycleState.resumed;
-    if (shouldResume == _isLifecycleResumed) {
-      return;
-    }
+    if (shouldResume == _isLifecycleResumed) return;
     _isLifecycleResumed = shouldResume;
     if (shouldResume) {
       _startTimer();
@@ -82,7 +76,6 @@ class _AnimatedSearchBarState extends State<AnimatedSearchBar>
       _cancelTimer();
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -100,12 +93,16 @@ class _AnimatedSearchBarState extends State<AnimatedSearchBar>
           );
         },
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 350),
+          duration: const Duration(milliseconds: 250),
           curve: Curves.easeOut,
-          height: 50,
+          height: 54,
           decoration: BoxDecoration(
             color: isDark ? Colors.grey[850] : Colors.white,
-            borderRadius: BorderRadius.circular(30),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: (isDark ? Colors.white12 : Colors.black12),
+              width: 0.6,
+            ),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.05),
@@ -114,40 +111,42 @@ class _AnimatedSearchBarState extends State<AnimatedSearchBar>
               )
             ],
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(
             children: [
-              const Icon(Icons.search, size: 22, color: Colors.grey),
-              const SizedBox(width: 12),
+              Icon(
+                Icons.search_rounded,
+                size: 22,
+                color: isDark ? Colors.white70 : Colors.grey[700],
+              ),
+              const SizedBox(width: 10),
               Expanded(
                 child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 800), // ← أبطأ وأكثر سلاسة
+                  duration: const Duration(milliseconds: 700),
                   switchInCurve: Curves.easeOutQuad,
                   switchOutCurve: Curves.easeInQuad,
                   transitionBuilder: (child, animation) {
                     final slide = Tween<Offset>(
-                      begin: const Offset(0.2, 0),
+                      begin: const Offset(0.14, 0),
                       end: Offset.zero,
                     ).animate(CurvedAnimation(
                       parent: animation,
                       curve: Curves.easeOut,
                     ));
-
                     return FadeTransition(
                       opacity: animation,
-                      child: SlideTransition(
-                        position: slide,
-                        child: child,
-                      ),
+                      child: SlideTransition(position: slide, child: child),
                     );
                   },
                   child: Text(
                     hints[currentHintIndex],
                     key: ValueKey(currentHintIndex),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 16,
-                      fontWeight: FontWeight.w400,
+                      color: isDark ? Colors.white70 : Colors.grey[700],
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),

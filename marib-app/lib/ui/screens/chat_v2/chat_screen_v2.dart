@@ -1,19 +1,20 @@
-import 'dart:math';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:marib/data/chat_core/chat_message_entity.dart';
 import 'package:marib/data/chat_core/chat_repository_adapter.dart';
 import 'package:marib/data/chat_core/cubit/chat_messages_cubit.dart';
 import 'package:marib/data/chat_core/cubit/chat_messages_state.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:marib/ui/screens/chat/chat_audio/widgets/record_button.dart';
-import 'package:just_audio/just_audio.dart';
 import 'package:marib/data/repositories/chat_repository.dart';
+import 'package:marib/app/routes.dart';
+import 'package:marib/data/model/item/item_model.dart';
+import 'package:marib/ui/screens/chat/chat_audio/widgets/record_button.dart';
 
-/// Minimal V2 chat screen wired to the new ChatRepositoryV2 stack.
-/// This is isolated from the legacy screens so it can be iterated safely.
+/// شاشة المحادثة V2 المعتمدة على طبقة chat_core الجديدة (رسائل/صور/صوت).
 class ChatScreenV2 extends StatefulWidget {
   const ChatScreenV2({
     super.key,
@@ -54,6 +55,9 @@ class _ChatScreenV2State extends State<ChatScreenV2>
   String? _itemTitle;
   String? _itemImage;
   double? _itemPrice;
+  String? _itemCurrency;
+  String? _itemStatus;
+  int? _itemId;
 
   @override
   void initState() {
@@ -73,6 +77,8 @@ class _ChatScreenV2State extends State<ChatScreenV2>
     _itemTitle = widget.itemTitle;
     _itemImage = widget.itemImage;
     _itemPrice = widget.itemPrice;
+    _itemCurrency = null;
+    _itemId = widget.itemId;
     _prefetchConversationDetailsIfNeeded();
     _messagesCubit.loadInitial(widget.conversationId);
   }
@@ -80,7 +86,7 @@ class _ChatScreenV2State extends State<ChatScreenV2>
   void _onScroll() {
     if (!_scrollController.hasClients) return;
     final position = _scrollController.position;
-    // With reverse:true, older messages are at the "top" (maxScrollExtent).
+    // مع reverse:true الرسائل الأقدم في الأعلى (maxScrollExtent).
     final double distanceToTop =
         (position.maxScrollExtent - position.pixels).clamp(0.0, double.infinity);
     if (distanceToTop <= 20) {
@@ -114,6 +120,9 @@ class _ChatScreenV2State extends State<ChatScreenV2>
         _itemTitle = item.name ?? _itemTitle;
         _itemImage = item.image ?? _itemImage;
         _itemPrice = item.price ?? _itemPrice;
+        _itemCurrency = item.currencySymbol ?? item.currency ?? _itemCurrency;
+        _itemStatus = item.status ?? _itemStatus;
+        _itemId = item.id ?? _itemId;
       });
     }
   }
@@ -188,7 +197,7 @@ class _ChatScreenV2State extends State<ChatScreenV2>
   }
 
   Future<void> _pickAndSendAudio() async {
-    // Fallback to record button flow; FilePicker not used here.
+    // التسجيل المباشر متوفر عبر RecordButton
     return;
   }
 
@@ -229,13 +238,72 @@ class _ChatScreenV2State extends State<ChatScreenV2>
                   (_itemTitle?.isNotEmpty ?? false) ||
                   (_itemImage?.isNotEmpty ?? false);
               if (!showOffer) return const SizedBox.shrink();
+              final String? currency = _itemCurrency;
+              final bool isUnavailable = () {
+                final status = (_itemStatus ?? '').toLowerCase();
+                return status.contains('sold') ||
+                    status.contains('sold out') ||
+                    status.contains('inactive') ||
+                    status.contains('deleted') ||
+                    status.contains('rejected');
+              }();
+              final ColorScheme colors = Theme.of(context).colorScheme;
+              final int? targetId = _itemId ?? widget.itemId;
+              final VoidCallback? openDetails = (isUnavailable ||
+                      targetId == null ||
+                      targetId <= 0)
+                  ? null
+                  : () {
+                      Navigator.pushNamed(
+                        context,
+                        Routes.adDetailsScreen,
+                        arguments: {
+                          'id': targetId,
+                          'model': ItemModel(
+                            id: targetId,
+                            name: _itemTitle ?? widget.title,
+                            price: _itemPrice,
+                            image: _itemImage,
+                            currency: _itemCurrency,
+                            status: _itemStatus,
+                          ),
+                        },
+                      );
+                    };
               return Padding(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                child: _OfferCard(
-                  title: _itemTitle ?? widget.title ?? 'إعلان',
-                  imageUrl: _itemImage ?? '',
-                  price: _itemPrice,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (isUnavailable)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: colors.errorContainer,
+                          borderRadius: BorderRadius.circular(10),
+                          border:
+                              Border.all(color: colors.error.withOpacity(0.35)),
+                        ),
+                        child: Text(
+                          'الإعلان غير متوفر حالياً',
+                          style: TextStyle(
+                            color: colors.onErrorContainer,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    _OfferCard(
+                      title: _itemTitle ?? widget.title ?? 'إعلان',
+                      imageUrl: _itemImage ?? '',
+                      price: _itemPrice,
+                      currency: currency,
+                      isUnavailable: isUnavailable,
+                      onTap: openDetails,
+                    ),
+                  ],
                 ),
               );
             }),
@@ -389,16 +457,26 @@ class _ImageBubbleContent extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
+        final state = context.read<ChatMessagesCubit>().state;
+        final imageUrls = state.messages
+            .where((m) => _MessageBubble.isImageMessage(m))
+            .map((m) => m.fileUrl ?? '')
+            .where((u) => u.isNotEmpty)
+            .toList();
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (_) => _FullImagePage(imageProvider: provider),
+            builder: (_) => _FullImagePage(
+              imageUrls: imageUrls,
+              initialUrl: url,
+            ),
           ),
         );
       },
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
-        child: AspectRatio(
-          aspectRatio: 3 / 4,
+        child: SizedBox(
+          width: 160,
+          height: 160,
           child: Image(
             image: provider,
             fit: BoxFit.cover,
@@ -409,9 +487,32 @@ class _ImageBubbleContent extends StatelessWidget {
   }
 }
 
-class _FullImagePage extends StatelessWidget {
-  const _FullImagePage({required this.imageProvider});
-  final ImageProvider imageProvider;
+class _FullImagePage extends StatefulWidget {
+  const _FullImagePage({required this.imageUrls, required this.initialUrl});
+  final List<String> imageUrls;
+  final String initialUrl;
+
+  @override
+  State<_FullImagePage> createState() => _FullImagePageState();
+}
+
+class _FullImagePageState extends State<_FullImagePage> {
+  late final PageController _pageController;
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.imageUrls.indexOf(widget.initialUrl);
+    if (_currentIndex < 0) _currentIndex = 0;
+    _pageController = PageController(initialPage: _currentIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -420,13 +521,73 @@ class _FullImagePage extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.black,
       ),
-      body: Center(
-        child: InteractiveViewer(
-          child: Image(
-            image: imageProvider,
-            fit: BoxFit.contain,
+      body: Stack(
+        children: [
+          PageView.builder(
+            controller: _pageController,
+            onPageChanged: (i) => setState(() => _currentIndex = i),
+            itemCount: widget.imageUrls.length,
+            itemBuilder: (_, index) {
+              final url = widget.imageUrls[index];
+              final isLocal = url.isNotEmpty && File(url).existsSync();
+              final ImageProvider provider =
+                  isLocal ? FileImage(File(url)) : NetworkImage(url) as ImageProvider;
+              return Center(
+                child: InteractiveViewer(
+                  child: Image(
+                    image: provider,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              );
+            },
           ),
-        ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 12,
+            child: SizedBox(
+              height: 86,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                itemCount: widget.imageUrls.length,
+                itemBuilder: (_, index) {
+                  final url = widget.imageUrls[index];
+                  final isLocal = url.isNotEmpty && File(url).existsSync();
+                  final ImageProvider provider = isLocal
+                      ? FileImage(File(url))
+                      : NetworkImage(url) as ImageProvider;
+                  final bool selected = index == _currentIndex;
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() => _currentIndex = index);
+                      _pageController.jumpToPage(index);
+                    },
+                    child: Container(
+                      width: 70,
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: selected ? Colors.white : Colors.white54,
+                          width: selected ? 2 : 1,
+                        ),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image(
+                          image: provider,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -495,7 +656,8 @@ class _AudioBubbleState extends State<_AudioBubble> {
     final Color active =
         widget.isMe ? colors.primary : colors.tertiaryContainer;
     final Color inactive = active.withValues(alpha: 0.3);
-    final double max = _duration.inMilliseconds.toDouble().clamp(1, double.maxFinite);
+    final double max =
+        _duration.inMilliseconds.toDouble().clamp(1, double.maxFinite);
     final double value = _position.inMilliseconds
         .clamp(0, _duration.inMilliseconds == 0 ? 0 : _duration.inMilliseconds)
         .toDouble();
@@ -616,81 +778,141 @@ class _OfferCard extends StatelessWidget {
     required this.title,
     required this.imageUrl,
     this.price,
+    this.currency,
+    this.isUnavailable = false,
+    this.onTap,
   });
 
   final String title;
   final String imageUrl;
   final double? price;
+  final String? currency;
+  final bool isUnavailable;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final ColorScheme colors = Theme.of(context).colorScheme;
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.outlineVariant),
-      ),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(12),
-              bottomLeft: Radius.circular(12),
-            ),
-            child: imageUrl.isNotEmpty
-                ? Image.network(
-                    imageUrl,
-                    width: 72,
-                    height: 72,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      width: 72,
-                      height: 72,
-                      color: colors.surfaceVariant,
-                      child: const Icon(Icons.image_not_supported_outlined),
-                    ),
-                  )
-                : Container(
-                    width: 72,
-                    height: 72,
-                    color: colors.surfaceVariant,
-                    child: const Icon(Icons.image_outlined),
-                  ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: colors.onSurface,
-                  ),
+    // إذا كان الإعلان غير متوفر، أظهر تنبيه بدلاً من البطاقة القابلة للنقر.
+    if (isUnavailable) {
+      return Container(
+        decoration: BoxDecoration(
+          color: colors.errorContainer,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: colors.error.withOpacity(0.35)),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Icon(Icons.info_outline, color: colors.onErrorContainer),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'الإعلان غير متوفر (مباع / محذوف / غير نشط)',
+                style: TextStyle(
+                  color: colors.onErrorContainer,
+                  fontWeight: FontWeight.w700,
                 ),
-                if (price != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    '${price!.toStringAsFixed(2)}',
-                    style: TextStyle(
-                      color: colors.tertiary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ],
+              ),
             ),
+          ],
+        ),
+      );
+    }
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Container(
+          decoration: BoxDecoration(
+            color: colors.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: colors.outlineVariant),
           ),
-          const SizedBox(width: 12),
-        ],
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(12),
+                  bottomLeft: Radius.circular(12),
+                ),
+                child: imageUrl.isNotEmpty
+                    ? Image.network(
+                        imageUrl,
+                        width: 72,
+                        height: 72,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          width: 72,
+                          height: 72,
+                          color: colors.surfaceVariant,
+                          child: const Icon(Icons.image_not_supported_outlined),
+                        ),
+                      )
+                    : Container(
+                        width: 72,
+                        height: 72,
+                        color: colors.surfaceVariant,
+                        child: const Icon(Icons.image_outlined),
+                      ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: colors.onSurface,
+                      ),
+                    ),
+                    if (price != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        _formatPrice(price!, currency),
+                        style: TextStyle(
+                          color: colors.tertiary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                    if (isUnavailable) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        'الإعلان غير متوفر',
+                        style: TextStyle(
+                          color: colors.error,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+            ],
+          ),
+        ),
       ),
     );
   }
+
+  String _formatPrice(double value, String? cur) {
+    final String formatted = value.toStringAsFixed(value.truncateToDouble() == value ? 0 : 2);
+    if (cur != null && cur.trim().isNotEmpty) {
+      return '$formatted $cur';
+    }
+    return formatted;
+  }
 }
+
 class _MessageBubble extends StatelessWidget {
   const _MessageBubble({
     required this.message,
@@ -710,7 +932,7 @@ class _MessageBubble extends StatelessWidget {
     final Color textColor =
         isMe ? colors.onPrimaryContainer : colors.onSurfaceVariant;
     final String statusLabel = _statusText(message.deliveryStatus);
-    final bool hasImage = _isImageMessage(message);
+    final bool hasImage = _MessageBubble.isImageMessage(message);
     final bool hasAudio = _isAudioMessage(message);
 
     return Align(
@@ -736,7 +958,7 @@ class _MessageBubble extends StatelessWidget {
               _ImageBubbleContent(message: message),
             ],
             if (hasAudio) ...[
-              const SizedBox(height: 8), 
+              const SizedBox(height: 8),
               _AudioBubble(
                 url: message.audioUrl ?? message.fileUrl ?? '',
                 isMe: isMe,
@@ -779,7 +1001,7 @@ class _MessageBubble extends StatelessWidget {
     );
   }
 
-  bool _isImageMessage(ChatMessageEntity msg) {
+  static bool isImageMessage(ChatMessageEntity msg) {
     final String t = msg.messageType.toLowerCase();
     final String url = (msg.fileUrl ?? '').toLowerCase();
     const exts = ['.png', '.jpg', '.jpeg', '.webp', '.gif', '.bmp', '.heic', '.heif'];

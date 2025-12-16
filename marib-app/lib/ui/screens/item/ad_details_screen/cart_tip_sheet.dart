@@ -5,7 +5,7 @@ class CartTipSheet extends StatelessWidget {
   final String titleText;
   final String descriptionText;
   final bool showSheinButton;
-  final List<String> chips;
+  final List<ChipData> chips;
   final VoidCallback? onExternal;
   final VoidCallback onNavigate;
   final VoidCallback onClose;
@@ -23,7 +23,7 @@ class CartTipSheet extends StatelessWidget {
     required this.titleText,
     required this.descriptionText,
     required this.showSheinButton,
-    this.chips = const <String>[],
+    this.chips = const <ChipData>[],
     required this.onExternal,
     required this.onNavigate,
     required this.onClose,
@@ -80,6 +80,15 @@ class CartTipSheet extends StatelessWidget {
               style: descriptionStyle,
             ),
             if (chips.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                'خيارات المنتج الذي طلبته هي:',
+                style: TextStyle(
+                  color: textColor.withOpacity(0.7),
+                  fontSize: context.font.small,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               const SizedBox(height: 12),
               Wrap(
                 spacing: 8,
@@ -97,12 +106,34 @@ class CartTipSheet extends StatelessWidget {
                             color: outlineBorder.withOpacity(0.6),
                           ),
                         ),
-                        child: Text(
-                          chip,
-                          style: TextStyle(
-                            color: textColor,
-                            fontWeight: FontWeight.w600,
-                          ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (chip.colorPreview != null) ...[
+                              Container(
+                                width: 14,
+                                height: 14,
+                                decoration: BoxDecoration(
+                                  color: chip.colorPreview,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.black26,
+                                    width: 0.5,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                            ],
+                            Text(
+                              chip.value.isEmpty
+                                  ? chip.label
+                                  : '${chip.label}: ${chip.value}',
+                              style: TextStyle(
+                                color: textColor,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     )
@@ -111,7 +142,7 @@ class CartTipSheet extends StatelessWidget {
             ],
             const SizedBox(height: 15),
             Text(
-              'ãä ãåã ÇÎÊíÇÑã, ãíÍÊã ÎÕã ÇáÃÕäÇÝ ãÊÆßÏÇ',
+              'لن يتم إضافة المنتج إلى السلة إلا عند اختيار "إضافة إلى السلة".',
               textAlign: TextAlign.center,
               style: descriptionStyle,
             ),
@@ -132,52 +163,71 @@ class CartTipSheet extends StatelessWidget {
                 onPressed: onExternal,
                 icon: const Icon(Icons.open_in_new),
                 label: const Text(
-                  'ÇÝÊÍ ÇáÑÇÈØ',
+                  'فتح في شي إن',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
               const SizedBox(height: 15),
             ],
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 14,
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: outlineForeground,
+                      side: BorderSide(color: outlineBorder),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 14,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    onPressed: onClose,
+                    child: const Text(
+                      'إغلاق',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
                 ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 14,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    onPressed: onNavigate,
+                    child: const Text(
+                      'إضافة إلى السلة',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
                 ),
-              ),
-              onPressed: onNavigate,
-              child: const Text(
-                'ÅÖÇÝÉ Åáì ÇáÓáÉ',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-            const SizedBox(height: 12),
-            OutlinedButton(
-              style: OutlinedButton.styleFrom(
-                foregroundColor: outlineForeground,
-                side: BorderSide(color: outlineBorder),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 14,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              onPressed: onClose,
-              child: const Text(
-                'ÅÛáÇÞ',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
+              ],
             ),
           ],
         ),
       ),
     );
   }
+}
+
+class ChipData {
+  final String label;
+  final String value;
+  final Color? colorPreview;
+  const ChipData({
+    required this.label,
+    required this.value,
+    this.colorPreview,
+  });
 }

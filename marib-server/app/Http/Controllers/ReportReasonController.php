@@ -156,16 +156,36 @@ class ReportReasonController extends Controller {
             $bulkData = array();
             $bulkData['total'] = $total;
             $rows = [];
-            foreach ($res as $row) {
-                $tempRow = $row->toArray();
-                $tempRow['user_status'] = empty($row->user->deleted_at);
-                $tempRow['item_status'] = empty($row->item->deleted_at);
-                $tempRow['reason'] = empty($row->report_reason_id) ? $row->other_message : $row->report_reason->reason;
-                $tempRow['department_label'] = $departments[$row->department] ?? $row->department;
+        foreach ($res as $row) {
+            $user = $row->user;
+            $item = $row->item;
+            $reportReason = $row->report_reason;
+
+            $tempRow = $row->toArray();
+
+            $tempRow['user'] = [
+                'id' => $user?->id ?? $row->user_id,
+                'name' => $user?->name ?? __('User #:id (deleted)', ['id' => $row->user_id]),
+            ];
+
+            $tempRow['item'] = [
+                'id' => $item?->id ?? $row->item_id,
+                'name' => $item?->name ?? __('Item #:id (deleted)', ['id' => $row->item_id]),
+            ];
+
+            $tempRow['user_status'] = $user?->deleted_at === null && $user !== null;
+            $tempRow['item_status'] = $item?->deleted_at === null && $item !== null;
+
+            $tempRow['reason'] = $reportReason?->reason
+                ?? ($row->other_message ?: $row->reason ?: __('N/A'));
+
+            $tempRow['details'] = $row->other_message;
+            $tempRow['department_label'] = $departments[$row->department] ?? $row->department;
+            $tempRow['reported_at'] = optional($row->created_at)->format('Y-m-d H:i:s');
 
 
-                $rows[] = $tempRow;
-            }
+            $rows[] = $tempRow;
+        }
 
             $bulkData['rows'] = $rows;
             return response()->json($bulkData);

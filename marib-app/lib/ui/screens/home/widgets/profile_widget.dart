@@ -278,9 +278,7 @@ class _ProfileHeaderWidgetState extends State<ProfileHeaderWidget>
                           SizedBox(
                             width: context.screenWidth * 0.63,
                             child: Text(
-                              // /        '#' +
-                              (HiveUtils.getUserDetails()?.mobile?.toString() ??
-                                  ''),
+                              '#${HiveUtils.getUserDetails().id ?? ''}',
                               softWrap: true,
                               overflow: TextOverflow.ellipsis,
                               maxLines: 2,
@@ -743,9 +741,7 @@ class _ProfileHeaderWidgetState extends State<ProfileHeaderWidget>
                       valueListenable: isDarkTheme,
                       builder: (_, isDark, __) {
                         return IconButton(
-                          tooltip: isDark
-                              ? "الوضع الفاتح"
-                              : "الوضع الداكن",
+                          tooltip: isDark ? "الوضع الفاتح" : "الوضع الداكن",
                           icon: UiUtils.getSvg(
                             isDark ? AppIcons.darkTheme : AppIcons.language,
                             height: 24,
@@ -755,7 +751,9 @@ class _ProfileHeaderWidgetState extends State<ProfileHeaderWidget>
                           onPressed: () {
                             final nextTheme =
                                 isDark ? AppTheme.light : AppTheme.dark;
-                            context.read<AppThemeCubit>().changeTheme(nextTheme);
+                            context
+                                .read<AppThemeCubit>()
+                                .changeTheme(nextTheme);
                           },
                         );
                       },

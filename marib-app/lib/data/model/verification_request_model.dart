@@ -5,6 +5,11 @@
   String? createdAt;
   String? updatedAt;
   String? rejectionReason;
+  double? price;
+  String? currency;
+  int? durationDays;
+  DateTime? approvedAt;
+  DateTime? expiresAt;
   List<VerificationFieldValues>? verificationFieldValues;
 
   VerificationRequestModel({
@@ -14,6 +19,11 @@
     this.createdAt,
     this.updatedAt,
     this.rejectionReason,
+    this.price,
+    this.currency,
+    this.durationDays,
+    this.approvedAt,
+    this.expiresAt,
     this.verificationFieldValues,
   });
 
@@ -24,6 +34,11 @@
     createdAt = json['created_at'];
     updatedAt = json['updated_at'];
     rejectionReason = json['rejection_reason'];
+    price = _parseDouble(json['price']);
+    currency = json['currency'];
+    durationDays = _parseInt(json['duration_days']);
+    approvedAt = _parseDate(json['approved_at']);
+    expiresAt = _parseDate(json['expires_at']);
     if (json['verification_field_values'] != null) {
       verificationFieldValues = <VerificationFieldValues>[];
       json['verification_field_values'].forEach((v) {
@@ -40,11 +55,48 @@
     data['created_at'] = this.createdAt;
     data['updated_at'] = this.updatedAt;
     data['rejection_reason'] = this.rejectionReason;
+    data['price'] = this.price;
+    data['currency'] = this.currency;
+    data['duration_days'] = this.durationDays;
+    data['approved_at'] = this.approvedAt?.toIso8601String();
+    data['expires_at'] = this.expiresAt?.toIso8601String();
     if (this.verificationFieldValues != null) {
       data['verification_field_values'] =
           this.verificationFieldValues!.map((v) => v.toJson()).toList();
     }
     return data;
+  }
+
+  double? _parseDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    if (value is String && value.trim().isNotEmpty) {
+      return double.tryParse(value.trim());
+    }
+    return null;
+  }
+
+  int? _parseInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String && value.trim().isNotEmpty) {
+      return int.tryParse(value.trim());
+    }
+    return null;
+  }
+
+  DateTime? _parseDate(dynamic value) {
+    if (value == null) return null;
+    if (value is DateTime) return value;
+    if (value is int) {
+      return DateTime.fromMillisecondsSinceEpoch(
+          value.toString().length == 10 ? value * 1000 : value);
+    }
+    if (value is String && value.trim().isNotEmpty) {
+      return DateTime.tryParse(value.trim());
+    }
+    return null;
   }
 }
 

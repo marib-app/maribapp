@@ -60,15 +60,17 @@
                                        data-fixed-right-number="1" data-trim-on-search="false" data-sort-name="id"
                                        data-sort-order="desc" data-pagination-successively-size="3" data-query-params="queryParams"
                                        data-escape="true"
-                                       data-show-export="true" data-export-options='{"fileName": "advertisement-package-list","ignoreColumn": ["operate"]}' data-export-types="['pdf','json', 'xml', 'csv', 'txt', 'sql', 'doc', 'excel']"
+                                       data-show-export="true" data-export-options='{"fileName": "user-reports","ignoreColumn": ["operate"]}' data-export-types="['pdf','json', 'xml', 'csv', 'txt', 'sql', 'doc', 'excel']"
                                        data-mobile-responsive="true" data-filter-control="true" data-filter-control-container="#filters" data-toolbar="#filters">
                                     <thead class="thead-dark">
                                     <tr>
                                         <th scope="col" data-field="id" data-align="center" data-sortable="true">{{ __('ID') }}</th>
                                         <th scope="col" data-field="reason" data-align="center">{{ __('Reason') }}</th>
+                                        <th scope="col" data-field="details" data-align="center">{{ __('Details') }}</th>
                                         <th scope="col" data-field="user.name" data-sort-name="user_name" data-align="center" data-sortable="true">{{ __('User') }}</th>
                                         <th scope="col" data-field="item.name" data-sort-name="item_name" data-align="center" data-sortable="true">{{ __('Item') }}</th>
                                         <th scope="col" data-field="department_label" data-sort-name="department" data-align="center" data-sortable="true">{{ __('Department') }}</th>
+                                        <th scope="col" data-field="reported_at" data-sort-name="created_at" data-align="center" data-sortable="true">{{ __('Reported At') }}</th>
 
                                         <th scope="col" data-field="item_id" data-align="center" data-sortable="true" data-visible="false" data-filter-control="select" data-filter-data="">{{ __('Item ID') }}</th>
                                         <th scope="col" data-field="user_id" data-align="center" data-sortable="true" data-visible="false" data-filter-control="select" data-filter-data="">{{ __('User ID') }}</th>

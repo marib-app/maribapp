@@ -120,6 +120,12 @@ extension ColorPrefs on ColorScheme {
   Color get chatSenderColor => _getColor(brightness,
       lightColor: senderChatColor, darkColor: darkSenderChatColor);
 
+  Color get errorColor => _getColor(
+        brightness,
+        lightColor: errorMessageColor,
+        darkColor: errorMessageColor,
+      );
+
   ///This will set text color white if background is dark if background is light it will be dark
   Color textAutoAdapt(Color backgroundColor) =>
       UiUtils.getAdaptiveTextColor(backgroundColor);

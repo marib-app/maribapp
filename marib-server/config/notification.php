@@ -25,12 +25,13 @@ return [
             'dedupe_ttl' => 3600,
         ],
         NotificationType::KycRequest->value => [
-            'collapse_key' => 'kyc:{entity_id}',
+            'collapse_key' => 'verification:{entity_id}',
             'ttl' => 86400,
             'priority' => 'high',
             'queue' => 'notifications-high',
-            'throttle_ttl' => 300,
-            'dedupe_ttl' => 7200,
+            // تحديث حالة التوثيق يجب أن يصل في كل مرة، لذلك نلغي منع التكرار والخنق
+            'throttle_ttl' => 0,
+            'dedupe_ttl' => 0,
         ],
         NotificationType::OrderStatus->value => [
             'collapse_key' => 'order:{entity_id}',

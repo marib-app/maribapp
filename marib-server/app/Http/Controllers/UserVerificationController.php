@@ -13,6 +13,11 @@ use App\Models\Notifications;
 use App\Services\BootstrapTableService;
 use App\Services\FileService;
 use App\Services\NotificationService;
+use App\Services\NotificationDispatchService;
+use App\Data\Notifications\NotificationIntent;
+use App\Enums\NotificationType;
+use App\Models\NotificationDelivery;
+use App\Services\NotificationInboxService;
 use App\Services\ResponseService;
 use Illuminate\Support\Facades\Log;
 
@@ -221,15 +226,15 @@ class UserVerificationController extends Controller {
                 'rows'  => [],
             ];
 
-            foreach ($rows as $row) {
-                $bulkData['rows'][] = [
-                    'id' => $row->id,
-                    'user_name' => $row->user->name ?? '',
-                    'status' => $row->status,
-                    'amount' => number_format((float) $row->amount, 2) . ' ' . $row->currency,
-                    'plan' => $row->plan->name ?? '-',
-                    'expires_at' => optional($row->expires_at)->toDateString(),
-                    'created_at' => optional($row->created_at)->toDateTimeString(),
+                foreach ($rows as $row) {
+                    $bulkData['rows'][] = [
+                        'id' => $row->id,
+                        'user_name' => $row->user->name ?? '',
+                        'status' => $row->status,
+                        'amount' => number_format((float) $row->amount, 2) . ' ' . $row->currency,
+                        'plan' => $row->plan->name ?? '-',
+                        'expires_at' => optional($row->expires_at)->toDateString(),
+                        'created_at' => optional($row->created_at)->toDateTimeString(),
                 ];
             }
 
@@ -267,7 +272,7 @@ class UserVerificationController extends Controller {
             $limit = (int) $request->input('limit', 10);
             $search = $request->input('search', '');
 
-            // اجلب آخر طلب موثق لكل مستخدم
+            // ط·آ·ط¢آ·ط·آ¢ط¢آ§ط·آ·ط¢آ·ط·آ¢ط¢آ¬ط·آ·ط¢آ¸ط£آ¢أ¢â€ڑآ¬أ¢â‚¬ع†ط·آ·ط¢آ·ط·آ¢ط¢آ¨ ط·آ·ط¢آ·ط·آ¢ط¢آ¢ط·آ·ط¢آ·ط·آ¢ط¢آ®ط·آ·ط¢آ·ط·آ¢ط¢آ± ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¸ط£آ¢أ¢â€ڑآ¬أ¢â‚¬ع†ط·آ·ط¢آ·ط·آ¢ط¢آ¨ ط·آ·ط¢آ¸ط£آ¢أ¢â€ڑآ¬ط¢آ¦ط·آ·ط¢آ¸ط·آ«أ¢â‚¬آ ط·آ·ط¢آ·ط·آ¢ط¢آ«ط·آ·ط¢آ¸ط£آ¢أ¢â€ڑآ¬ط¹â€ک ط·آ·ط¢آ¸ط£آ¢أ¢â€ڑآ¬أ¢â‚¬ع†ط·آ·ط¢آ¸ط·آ¦أ¢â‚¬â„¢ط·آ·ط¢آ¸ط£آ¢أ¢â€ڑآ¬أ¢â‚¬ع† ط·آ·ط¢آ¸ط£آ¢أ¢â€ڑآ¬ط¢آ¦ط·آ·ط¢آ·ط·آ¢ط¢آ³ط·آ·ط¢آ·ط·آ¹ط¢آ¾ط·آ·ط¢آ·ط·آ¢ط¢آ®ط·آ·ط¢آ·ط·آ¢ط¢آ¯ط·آ·ط¢آ¸ط£آ¢أ¢â€ڑآ¬ط¢آ¦
             $requests = VerificationRequest::with('user')
                 ->where('status', 'approved')
                 ->when(!empty($search), function ($q) use ($search) {
@@ -281,7 +286,7 @@ class UserVerificationController extends Controller {
                 ->get()
                 ->groupBy('user_id')
                 ->map(function ($items) {
-                    return $items->first(); // الأحدث
+                    return $items->first(); // ط·آ·ط¢آ·ط·آ¢ط¢آ§ط·آ·ط¢آ¸ط£آ¢أ¢â€ڑآ¬أ¢â‚¬ع†ط·آ·ط¢آ·ط·آ¢ط¢آ£ط·آ·ط¢آ·ط·آ¢ط¢آ­ط·آ·ط¢آ·ط·آ¢ط¢آ¯ط·آ·ط¢آ·ط·آ¢ط¢آ«
                 })
                 ->values();
 
@@ -293,14 +298,14 @@ class UserVerificationController extends Controller {
                 $expiresAt = $req->expires_at ? Carbon::parse($req->expires_at) : null;
                 $remaining = $expiresAt ? $expiresAt->diffInDays(now(), false) * -1 : null;
                 $statusType = 'success';
-                $labelText = __('موثق');
+                $labelText = __('ط·آ·ط¢آ¸ط£آ¢أ¢â€ڑآ¬ط¢آ¦ط·آ·ط¢آ¸ط·آ«أ¢â‚¬آ ط·آ·ط¢آ·ط·آ¢ط¢آ«ط·آ·ط¢آ¸ط£آ¢أ¢â€ڑآ¬ط¹â€ک');
                 if ($remaining !== null) {
                     if ($remaining < 0) {
                         $statusType = 'danger';
-                        $labelText = __('منتهي');
+                        $labelText = __('ط·آ·ط¢آ¸ط£آ¢أ¢â€ڑآ¬ط¢آ¦ط·آ·ط¢آ¸ط£آ¢أ¢â€ڑآ¬ط¢آ ط·آ·ط¢آ·ط·آ¹ط¢آ¾ط·آ·ط¢آ¸ط£آ¢أ¢â€ڑآ¬ط·إ’ط·آ·ط¢آ¸ط·آ¸ط¢آ¹');
                     } elseif ($remaining <= 7) {
                         $statusType = 'warning';
-                        $labelText = __('قارب على الانتهاء');
+                        $labelText = __('ط·آ·ط¢آ¸ط£آ¢أ¢â€ڑآ¬ط¹â€کط·آ·ط¢آ·ط·آ¢ط¢آ§ط·آ·ط¢آ·ط·آ¢ط¢آ±ط·آ·ط¢آ·ط·آ¢ط¢آ¨ ط·آ·ط¢آ·ط·آ¢ط¢آ¹ط·آ·ط¢آ¸ط£آ¢أ¢â€ڑآ¬أ¢â‚¬ع†ط·آ·ط¢آ¸ط£آ¢أ¢â€ڑآ¬ط¢آ° ط·آ·ط¢آ·ط·آ¢ط¢آ§ط·آ·ط¢آ¸ط£آ¢أ¢â€ڑآ¬أ¢â‚¬ع†ط·آ·ط¢آ·ط·آ¢ط¢آ§ط·آ·ط¢آ¸ط£آ¢أ¢â€ڑآ¬ط¢آ ط·آ·ط¢آ·ط·آ¹ط¢آ¾ط·آ·ط¢آ¸ط£آ¢أ¢â€ڑآ¬ط·إ’ط·آ·ط¢آ·ط·آ¢ط¢آ§ط·آ·ط¢آ·ط·آ·ط¥â€™');
                     }
                 }
 
@@ -313,7 +318,7 @@ class UserVerificationController extends Controller {
                 $actions = sprintf(
                     '<a href="%s" class="btn btn-sm btn-outline-primary">%s</a>',
                     route('seller-verification.request.details', $req->id),
-                    __('عرض التفاصيل')
+                    __('ط·آ·ط¢آ·ط·آ¢ط¢آ¹ط·آ·ط¢آ·ط·آ¢ط¢آ±ط·آ·ط¢آ·ط·آ¢ط¢آ¶ ط·آ·ط¢آ·ط·آ¢ط¢آ§ط·آ·ط¢آ¸ط£آ¢أ¢â€ڑآ¬أ¢â‚¬ع†ط·آ·ط¢آ·ط·آ¹ط¢آ¾ط·آ·ط¢آ¸ط·آ¸ط¢آ¾ط·آ·ط¢آ·ط·آ¢ط¢آ§ط·آ·ط¢آ·ط·آ¢ط¢آµط·آ·ط¢آ¸ط·آ¸ط¢آ¹ط·آ·ط¢آ¸ط£آ¢أ¢â€ڑآ¬أ¢â‚¬ع†')
                 );
 
                 return [
@@ -583,70 +588,197 @@ class UserVerificationController extends Controller {
         }
     }
 
-    public function updateSellerApproval(Request $request, $id) {
+            public function updateSellerApproval(Request $request, $id) {
         try {
             ResponseService::noPermissionThenSendJson('seller-verification-field-update');
-            $verification_field = VerificationRequest::with('user')->findOrFail($id);
+            $verification = VerificationRequest::with('user')->findOrFail($id);
             $newStatus = $request->input('status');
-            $rejectionReason = $request->input('rejection_reason'); // Get the rejection reason from the request
+            $rejectionReason = $request->input('rejection_reason');
+            $durationDays = (int) $request->input('duration_days', 30);
+            $priceValue = $request->input('price', $verification->price);
+            $currencyValue = $request->input('currency', $verification->currency ?? 'SAR');
+
             if ($newStatus === 'rejected' && empty($rejectionReason)) {
                 ResponseService::validationError('Rejection reason is required when status is rejected.');
             }
-            $verification_field->update([
+
+            $expiresAt = $newStatus === 'approved'
+                ? Carbon::now()->addDays($durationDays)
+                : null;
+
+            $verification->update([
                 'status'           => $newStatus,
                 'rejection_reason' => $newStatus === 'rejected' ? $rejectionReason : null,
                 'approved_at'      => $newStatus === 'approved' ? now() : null,
-                'expires_at'       => $newStatus === 'approved'
-                    ? Carbon::now()->addDays((int) $request->input('duration_days', 30))
-                    : null,
-                'duration_days'    => $newStatus === 'approved' ? (int) $request->input('duration_days', 30) : null,
-                'price'            => $newStatus === 'approved' ? $request->input('price', null) : null,
-                'currency'         => $newStatus === 'approved' ? $request->input('currency', 'SAR') : null,
+                'expires_at'       => $expiresAt,
+                'duration_days'    => $newStatus === 'approved' ? $durationDays : null,
+                'price'            => $newStatus === 'approved' ? $priceValue : null,
+                'currency'         => $newStatus === 'approved' ? $currencyValue : null,
             ]);
 
-            $verification_field->user->update([
+            $verification->user->update([
                 'is_verified' => $newStatus === 'approved' ? 1 : 0,
             ]);
 
             if ($newStatus === 'approved') {
                 VerificationPayment::create([
-                    'user_id' => $verification_field->user->id,
-                    'verification_request_id' => $verification_field->id,
-                    'amount' => $request->input('price', 0),
-                    'currency' => $request->input('currency', 'SAR'),
+                    'user_id' => $verification->user->id,
+                    'verification_request_id' => $verification->id,
+                    'amount' => $priceValue ?? 0,
+                    'currency' => $currencyValue,
                     'status' => 'paid',
                     'starts_at' => now(),
-                    'expires_at' => Carbon::now()->addDays((int) $request->input('duration_days', 30)),
+                    'expires_at' => $expiresAt,
                     'meta' => [
                         'approved_by' => Auth::id(),
                     ],
                 ]);
             }
 
-            $user_token = UserFcmToken::where('user_id', $verification_field->user->id)->pluck('fcm_token')->toArray();
-            if (!empty($user_token)) {
-                $notificationResponse = NotificationService::sendFcmNotification(
-                    $user_token,
-                    'تنبيه التوثيق',
-                    $newStatus === 'approved'
-                        ? "تهانياً تم توثيق حسابك"
-                        : "تم تحديث حالة طلب التوثيق إلى " . ucfirst($request->status),
-                    "verifcation-request-update",
-                    ['id' => $id]
-                );
+            $title = 'تنبيه التوثيق';
+            $expiresText = $expiresAt
+                ? $expiresAt->setTimezone(config('app.timezone', 'Asia/Riyadh'))->format('Y-m-d H:i')
+                : '-';
+            $priceText = $priceValue !== null ? "{$priceValue} {$currencyValue}" : '-';
 
-                if (is_array($notificationResponse) && ($notificationResponse['error'] ?? false)) {
-                    Log::error('UserVerificationController: Failed to send verification status notification', $notificationResponse);
-
-                    ResponseService::warningResponse(
-                        $notificationResponse['message'] ?? 'Failed to send verification notification.',
-                        $notificationResponse,
-                        $notificationResponse['code'] ?? null
-                    );
-                }
-
-
+            if ($newStatus === 'approved') {
+                $body = "تهانياً، تم توثيق حسابك!\n"
+                    . "الشارة الآن ظاهرة للمستخدمين.\n"
+                    . "سينتهي اشتراك التوثيق في {$expiresText}.\n"
+                    . "الرسوم: {$priceText}.";
+            } elseif ($newStatus === 'rejected') {
+                $reason = $rejectionReason ?: 'لم يتم ذكر سبب';
+                $body = "تم رفض طلب التوثيق.\n"
+                    . "السبب: {$reason}.\n"
+                    . "يمكنك التعديل وإعادة الإرسال.";
+            } else {
+                $statusLabel = match ($newStatus) {
+                    'pending', 'in_review' => 'قيد المراجعة',
+                    'expired' => 'منتهي',
+                    default => $newStatus,
+                };
+                $body = "تم تحديث حالة طلب التوثيق إلى {$statusLabel}.";
             }
+
+            $collapseKey = sprintf(
+                'verification:%s:%s:%s',
+                $verification->id,
+                $newStatus,
+                now()->timestamp
+            );
+
+            $payload = [
+                'title' => $title,
+                'body' => $body,
+                'type' => NotificationType::KycRequest->value,
+                'deeplink' => 'marib://settings/notifications?category=account',
+                'data' => [
+                    'category' => 'account',
+                    'type' => 'verification',
+                    'request_id' => $verification->id,
+                    'status' => $newStatus,
+                    'expires_at' => $expiresAt?->toIso8601String(),
+                    'price' => $priceValue,
+                    'currency' => $currencyValue,
+                ],
+                'meta' => [
+                    'category' => 'account',
+                    'type' => 'verification',
+                    'request_id' => $verification->id,
+                    'status' => $newStatus,
+                    'expires_at' => $expiresAt?->toIso8601String(),
+                    'price' => $priceValue,
+                    'currency' => $currencyValue,
+                ],
+            ];
+
+            NotificationDelivery::create([
+                'user_id' => $verification->user->id,
+                'type' => NotificationType::KycRequest->value,
+                'deeplink' => $payload['deeplink'],
+                'status' => NotificationDelivery::STATUS_SENT,
+                'delivered_at' => now(),
+                'payload' => $payload,
+                'meta' => $payload['meta'],
+                'collapse_key' => $collapseKey,
+                'priority' => 'high',
+                'ttl' => 86400,
+            ]);
+            app(NotificationInboxService::class)->incrementUnreadCount($verification->user->id);
+
+            try {
+                $intent = new NotificationIntent(
+                    userId: $verification->user->id,
+                    type: NotificationType::KycRequest,
+                    title: $title,
+                    body: $body,
+                    deeplink: $payload['deeplink'],
+                    entity: 'verification_request',
+                    entityId: $verification->id,
+                    data: $payload['data'],
+                    meta: $payload['meta'],
+                );
+                app(NotificationDispatchService::class)->dispatch($intent, true);
+            } catch (Throwable $notificationException) {
+                Log::warning('UserVerificationController: Failed to dispatch inbox notification', [
+                    'error' => $notificationException->getMessage(),
+                    'user_id' => $verification->user->id,
+                    'request_id' => $verification->id,
+                ]);
+            }
+
+            try {
+                $userTokens = UserFcmToken::where('user_id', $verification->user->id)
+                    ->pluck('fcm_token')
+                    ->filter()
+                    ->values()
+                    ->all();
+
+                if (!empty($userTokens)) {
+                    $fcmPayload = $payload['data'];
+
+                    $legacyResponse = NotificationService::sendFcmNotification(
+                        $userTokens,
+                        $title,
+                        $body,
+                        'verification-request-update',
+                        $fcmPayload
+                    );
+
+                    if (is_array($legacyResponse) && ($legacyResponse['error'] ?? false)) {
+                        Log::error('UserVerificationController: Legacy FCM send failed', $legacyResponse);
+                    }
+                }
+            } catch (Throwable $fcmException) {
+                Log::warning('UserVerificationController: Fallback FCM send failed', [
+                    'error' => $fcmException->getMessage(),
+                    'user_id' => $verification->user->id,
+                    'request_id' => $verification->id,
+                ]);
+            }
+
+            try {
+                Notifications::create([
+                    'title' => $title,
+                    'message' => $body,
+                    'image' => '',
+                    'item_id' => null,
+                    'send_to' => 'selected',
+                    'user_id' => (string) $verification->user->id,
+                    'category' => 'account',
+                    'meta' => [
+                        'type' => 'verification',
+                        'request_id' => $id,
+                        'status' => $newStatus,
+                        'expires_at' => $expiresAt?->toIso8601String(),
+                        'price' => $priceValue,
+                        'currency' => $currencyValue,
+                    ],
+                ]);
+            } catch (Throwable $e) {
+                Log::error('UserVerificationController: Failed to persist verification notification', ['error' => $e->getMessage()]);
+            }
+
             if ($request->expectsJson() || $request->ajax()) {
                 ResponseService::successResponse('Seller status updated successfully');
             } else {
@@ -660,12 +792,8 @@ class UserVerificationController extends Controller {
                 $th->getCode() ?: null,
                 $th
             );
-        
         }
     }
-
-
-    /* NOTE : Why this simple code is done using chatgpt ? */
     public function getVerificationDetails($id) {
         $verificationFieldValues = VerificationFieldValue::with('verificationField')->where('verification_request_id', $id)->get();
         if ($verificationFieldValues->isEmpty()) {
@@ -684,3 +812,8 @@ class UserVerificationController extends Controller {
         ]);
     }
 }
+
+
+
+
+

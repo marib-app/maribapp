@@ -43,7 +43,8 @@ class FetchItemReportReasonsListCubit
     extends Cubit<FetchItemReportReasonsListState> {
   FetchItemReportReasonsListCubit() : super(FetchItemReportReasonsInitial());
   final ReportItemRepository _repository = ReportItemRepository();
-  void fetch({bool? forceRefresh}) async {
+
+  Future<List<ReportReason>> fetch({bool? forceRefresh}) async {
     try {
       if (forceRefresh != true) {
         if (state is FetchItemReportReasonsSuccess) {
@@ -58,8 +59,8 @@ class FetchItemReportReasonsListCubit
         emit(FetchItemReportReasonsInProgress());
       }
 
-      if (forceRefresh == true) {
-        DataOutput<ReportReason> result =
+      if (forceRefresh == true || state is! FetchItemReportReasonsSuccess) {
+        final DataOutput<ReportReason> result =
             await _repository.fetchReportReasonsList();
 
         result.modelList.add(ReportReason(id: -10, reason: "Other"));
@@ -68,24 +69,18 @@ class FetchItemReportReasonsListCubit
           reasons: result.modelList,
           total: result.total,
         ));
-      } else {
-        if (state is! FetchItemReportReasonsSuccess) {
-          DataOutput<ReportReason> result =
-              await _repository.fetchReportReasonsList();
-
-          result.modelList.add(ReportReason(id: -10, reason: "Other"));
-
-          emit(FetchItemReportReasonsSuccess(
-            reasons: result.modelList,
-            total: result.total,
-          ));
-        }
+        return result.modelList;
       }
 
       // emit(FetchItemReportReasonsInProgress());
     } catch (e) {
       emit(FetchItemReportReasonsFailure(e));
+      return <ReportReason>[];
     }
+    if (state is FetchItemReportReasonsSuccess) {
+      return (state as FetchItemReportReasonsSuccess).reasons;
+    }
+    return <ReportReason>[];
   }
 
   List<ReportReason>? getList() {

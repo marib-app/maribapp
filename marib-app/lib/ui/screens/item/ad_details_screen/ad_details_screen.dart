@@ -1,4 +1,4 @@
-// ignore_for_file: public_member_api_docs, sort_constructors_first
+﻿// ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:async';
 import 'dart:ui';
 
@@ -46,7 +46,6 @@ import 'package:marib/data/repositories/favourites_repository.dart';
 import 'package:marib/data/repositories/item/item_purchase_options_repository.dart';
 import 'package:marib/data/repositories/item/item_repository.dart';
 import 'package:marib/ui/screens/ad_banner_screen.dart';
-import 'package:marib/ui/screens/chat/chat_screen.dart';
 import 'package:marib/ui/screens/google_map_screen.dart';
 import 'package:marib/ui/screens/home/widgets/grid_list_adapter.dart';
 import 'package:marib/ui/screens/home_screen/home_screen.dart';
@@ -59,6 +58,7 @@ import 'package:marib/ui/screens/widgets/errors/no_data_found.dart';
 import 'package:marib/ui/screens/widgets/errors/no_internet.dart';
 import 'package:marib/ui/screens/widgets/errors/something_went_wrong.dart';
 import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
+import 'package:marib/ui/screens/item/ad_details_screen/cart_tip_sheet_controller.dart';
 
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/api.dart';
@@ -1041,285 +1041,37 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
 
   Future<void> _showCartTipBottomSheet(
       BuildContext context, CartSafetyTipsPayload payload) async {
-    final CartSafetyTip? tip = payload.primaryTip;
-    final String? resolvedDepartmentSlug =
-        (payload.departmentKey ?? _resolveSafetyTipsDepartment(_currentItem))
-            ?.toLowerCase()
-            .trim();
-    final bool isSheinDepartment = resolvedDepartmentSlug == 'shein';
-
-    String? descriptionText = tip?.description?.trim();
-    if (descriptionText == null || descriptionText.isEmpty) {
-      descriptionText = payload.fallbackDescription;
-    }
-    if ((descriptionText == null || descriptionText.isEmpty) &&
-        isSheinDepartment) {
-      descriptionText =
-          'يرجى التأكد من صحة رابط المنتج والتفاصيل المعروضة في موقع شي إن قبل المتابعة. مارب غير مسؤولة عن أي اختلافات أو روابط خارجية مضللة.';
-    }
-    if ((descriptionText == null || descriptionText.isEmpty) &&
-        !isSheinDepartment) {
-      if (mounted) {
-        context.read<CartCubit>().clearSafetyTips();
-      }
-      return;
-    }
-
-    List<CartSafetyTipAction> actions =
-        tip?.actions.where(_isTipActionSupported).toList() ??
-            <CartSafetyTipAction>[];
-    if (actions.isEmpty) {
-      actions = payload.fallbackActions.where(_isTipActionSupported).toList();
-    }
-
-    CartSafetyTipAction? navigateAction;
-    CartSafetyTipAction? externalAction;
-    for (final CartSafetyTipAction action in actions) {
-      if (navigateAction == null &&
-          action.isNavigate &&
-          action.navigatesToCart) {
-        navigateAction = action;
-      } else if (externalAction == null && action.isOpenUrl) {
-        externalAction = action;
+    final Map<String, CartAttributeLabel> attributeLabels =
+        <String, CartAttributeLabel>{};
+    final ItemPurchaseOptions? options = _purchaseOptions;
+    if (options != null) {
+      for (final ItemPurchaseAttributeOption attribute in options.attributes) {
+        final String key = attribute.key.trim();
+        if (key.isEmpty) continue;
+        final String displayName =
+            attribute.name.isNotEmpty ? attribute.name : key;
+        final bool isColor = _isColorAttribute(attribute);
+        attributeLabels[key.toLowerCase()] =
+            CartAttributeLabel(label: displayName, isColor: isColor);
+        attributeLabels[key] =
+            CartAttributeLabel(label: displayName, isColor: isColor);
       }
     }
 
-    final CartCubit cartCubit = context.read<CartCubit>();
-    bool cancellationTriggered = false;
-
-    final bool? confirmed = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(18.0),
-          topRight: Radius.circular(18.0),
-        ),
-      ),
-      builder: (BuildContext sheetContext) {
-        final Color textColor = sheetContext.color.textDefaultColor;
-        final Color sheetBackground = sheetContext.color.secondaryColor;
-        final Color accentColor = sheetContext.color.territoryColor;
-        final Color handleColor =
-            sheetContext.color.textColorDark.withOpacity(0.1);
-        final Color outlineForeground = textColor.withOpacity(0.9);
-        final Color outlineBorder = textColor.withOpacity(0.3);
-
-        final TextStyle titleStyle = TextStyle(
-          fontSize: sheetContext.font.larger,
-          fontWeight: FontWeight.bold,
-          color: textColor,
-        );
-        final TextStyle descriptionStyle = TextStyle(
-          fontSize: sheetContext.font.normal,
-          height: 1.6,
-          color: textColor.withOpacity(0.9),
-        );
-
-        Future<void> handleNavigate() async {
-          AppTelemetry.record('tips_confirmed', <String, dynamic>{
-            'department': resolvedDepartmentSlug ?? payload.departmentKey,
-            'has_external': externalAction != null,
-          });
-
-          final List<String> resolvedCommands =
-              _resolveTipActionCommands(payload, tip: tip);
-          final List<String> commands = resolvedCommands.isEmpty
-              ? <String>['add_to_cart']
-              : resolvedCommands;
-
-          try {
-            await cartCubit.confirmPendingCartAddition();
-          } catch (_) {
-            HelperUtils.showSnackBarMessage(
-              sheetContext,
-              'حدث خطأ غير متوقع'.translate(sheetContext),
-            );
-            return;
-          }
-
-          if (!mounted) return;
-
-          Navigator.of(sheetContext).pop(true);
-
-          bool navigateToCart = false;
-          for (final String command in commands) {
-            switch (command) {
-              case 'go_to_cart':
-                navigateToCart = true;
-                break;
-              case 'add_to_cart':
-                // تمت إضافة المنتج بالفعل عبر confirmPendingCartAddition.
-                break;
-              default:
-                // أي أوامر غير معروفة تُعامل كإضافة للسلة.
-                break;
-            }
-          }
-
-          if (navigateToCart) {
-            final NavigatorState navigator =
-                Navigator.of(context, rootNavigator: true);
-            navigator.popUntil((Route<dynamic> route) => route is! PopupRoute);
-            await navigator.pushNamed(Routes.cart);
-            return;
-          }
-
-          if (navigateAction != null) {
-            await _handleCartTipAction(context, navigateAction!);
-          } else if (externalAction != null && !isSheinDepartment) {
-            await _handleCartTipAction(context, externalAction!);
-          } else {
-            final NavigatorState navigator =
-                Navigator.of(context, rootNavigator: true);
-            navigator.popUntil((Route<dynamic> route) => route is! PopupRoute);
-            await navigator.pushNamed(Routes.cart);
-          }
-        }
-
-        Future<void> handleExternal() async {
-          if (externalAction == null) {
-            return;
-          }
-          cancellationTriggered = true;
-          Navigator.of(sheetContext).pop(false);
-          await cartCubit.cancelPendingCartAddition();
-          if (!mounted) return;
-          await _handleCartTipAction(context, externalAction!);
-        }
-
-        void handleClose() {
-          cancellationTriggered = true;
-          Navigator.of(sheetContext).pop(false);
-          unawaited(cartCubit.cancelPendingCartAddition());
-        }
-
-        final String? fallbackTitle = payload.fallbackTitle;
-        final String titleText = (tip?.title?.trim().isNotEmpty ?? false)
-            ? tip!.title!.trim()
-            : ((fallbackTitle?.trim().isNotEmpty ?? false)
-                ? fallbackTitle!.trim()
-                : 'تنويه هام قبل الشراء');
-        final String effectiveDescription = descriptionText ?? '';
-
-        return Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: sheetBackground,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(18),
-              topRight: Radius.circular(18),
-            ),
-          ),
-          child: SafeArea(
-            top: false,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  height: 5,
-                  width: 50,
-                  margin: const EdgeInsets.only(bottom: 20),
-                  decoration: BoxDecoration(
-                    color: handleColor,
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                ),
-                Icon(
-                  Icons.info_outline,
-                  size: 50,
-                  color: accentColor,
-                ),
-                const SizedBox(height: 15),
-                Text(
-                  titleText,
-                  textAlign: TextAlign.center,
-                  style: titleStyle,
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  effectiveDescription,
-                  textAlign: TextAlign.center,
-                  style: descriptionStyle,
-                ),
-                const SizedBox(height: 15),
-                Text(
-                  'لن يتم إضافة المنتج إلى السلة إلا عند اختيار "متابعة إلى الشراء".'
-                      .translate(sheetContext),
-                  textAlign: TextAlign.center,
-                  style: descriptionStyle,
-                ),
-                const SizedBox(height: 20),
-                if (isSheinDepartment && externalAction != null) ...[
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: accentColor,
-                      foregroundColor: sheetContext.color.secondaryColor,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 14,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    onPressed: handleExternal,
-                    icon: const Icon(Icons.open_in_new),
-                    label: const Text(
-                      'تحقق من المنتج',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  const SizedBox(height: 15),
-                ],
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 14,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  onPressed: handleNavigate,
-                  child: const Text(
-                    'متابعة إلى الشراء',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-                const SizedBox(height: 15),
-                OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: outlineForeground,
-                    side: BorderSide(color: outlineBorder),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 14,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  onPressed: handleClose,
-                  child: const Text(
-                    'إغلاق',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+    final CartTipSheetController controller = CartTipSheetController(
+      cartCubit: context.read<CartCubit>(),
+      payload: payload,
+      resolvedDepartmentSlug:
+          (payload.departmentKey ?? _resolveSafetyTipsDepartment(_currentItem))
+              ?.toLowerCase()
+              .trim(),
+      tip: payload.primaryTip,
+      navigateAction: null,
+      externalAction: null,
+      attributeLabels: attributeLabels,
     );
 
-    if (!mounted) return;
-    if (confirmed != true && !cancellationTriggered) {
-      await cartCubit.cancelPendingCartAddition();
-    }
+    await controller.show(context);
   }
 
   void _clearCartTipBanner(BuildContext context) {
@@ -3829,6 +3581,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   }
 
   Future<void> _bottomSheet(int itemId) async {
+    await _refreshReportReasons();
     await UiUtils.showBlurredDialoge(
       context,
       dialoge: BlurredDialogBox(
@@ -3856,6 +3609,14 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                 }
               })),
     );
+  }
+
+  Future<void> _refreshReportReasons() async {
+    final List<ReportReason> reasons = await context
+        .read<FetchItemReportReasonsListCubit>()
+        .fetch(forceRefresh: true);
+    if (!mounted) return;
+    _syncSelectedReportReason(reasons);
   }
 
   String formatPhoneNumber(String fullNumber, String countryCode) {
@@ -4495,4 +4256,5 @@ class _FetchErrorView extends StatelessWidget {
     );
   }
 }
+
 

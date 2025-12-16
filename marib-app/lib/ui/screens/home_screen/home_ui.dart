@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
@@ -116,8 +116,8 @@ class HomeScreenUI extends StatelessWidget {
             : MerchantStoreSnapshot.fromDynamic(details.store);
         final bool canAccessMerchantDashboard =
             storeSnapshot?.isApproved ?? false;
-        final String resolvedMerchantName = MerchantDisplayHelper
-            .resolveDisplayName(
+        final String resolvedMerchantName =
+            MerchantDisplayHelper.resolveDisplayName(
           isMerchant: merchantAccount,
           store: details.store,
           additionalInfo: details.additionalInfo,
@@ -148,10 +148,23 @@ class HomeScreenUI extends StatelessWidget {
           return '  ط²ط§ط¦ط±';
         })();
 
-        final String phone = (mobile?.isNotEmpty == true)
-            ? mobile!
-            : (details.mobile?.toString() ?? '');
-        final String? merchantAvatar = MerchantDisplayHelper.resolveProfileImage(
+        final String phone = (() {
+          final String rawId = idStr.isNotEmpty
+              ? idStr
+              : (details.id != null ? details.id.toString() : '');
+          if (rawId.isNotEmpty) {
+            return '#$rawId';
+          }
+
+          // Fallback to provided mobile only if no id was found.
+          if (mobile?.isNotEmpty == true) {
+            return mobile!;
+          }
+
+          return details.mobile?.toString() ?? '';
+        })();
+        final String? merchantAvatar =
+            MerchantDisplayHelper.resolveProfileImage(
           isMerchant: merchantAccount,
           store: details.store,
           fallbackImage: details.profile,
@@ -434,8 +447,10 @@ class ProfileHeaderUI extends StatelessWidget {
   final bool isVerified;
 
   // ط£ط¶ظپ ظ‡ط°ظ‡ ط§ظ„ط­ظ‚ظˆظ„ ظ…ط¹ ط§ظ„ط¨ظ‚ظٹط©
-  final double? guestIconSize; // ط­ط¬ظ… ط«ط§ط¨طھ ط¨ط§ظ„ط¨ظƒط³ظ„ (ط¥ظ† ط­ط¯ط¯طھظ‡ ظٹطھط¬ط§ظ‡ظ„ scale)
-  final double guestIconScale; // ظ†ط³ط¨ط© ظ…ظ† ظ‚ط·ط± ط§ظ„ط£ظپط§طھط§ط± (ط§ظپطھط±ط§ط¶ظٹ 0.62)
+  final double?
+      guestIconSize; // ط­ط¬ظ… ط«ط§ط¨طھ ط¨ط§ظ„ط¨ظƒط³ظ„ (ط¥ظ† ط­ط¯ط¯طھظ‡ ظٹطھط¬ط§ظ‡ظ„ scale)
+  final double
+      guestIconScale; // ظ†ط³ط¨ط© ظ…ظ† ظ‚ط·ط± ط§ظ„ط£ظپط§طھط§ط± (ط§ظپطھط±ط§ط¶ظٹ 0.62)
   final double? guestIconMin; // ط­ط¯ ط£ط¯ظ†ظ‰ ط§ط®طھظٹط§ط±ظٹ
   final double? guestIconMax; // ط­ط¯ ط£ظ‚طµظ‰ ط§ط®طھظٹط§ط±ظٹ
 
@@ -480,8 +495,8 @@ class ProfileHeaderUI extends StatelessWidget {
         const double avatarExpandScale =
             1.70; // ظ…ظ‚ط¯ط§ط± طھظƒط¨ظٹط± ط§ظ„ط£ظپط§طھط§ط± ظ‚ط¨ظ„ ط§ظ„طھظ…ط±ظٹط±
         final double maxAvatarTap = maxIconTap * avatarExpandScale;
-        final double minAvatarTap =
-            minIconTap * 0.82; // ط­ط¬ظ… ط§ظ„ط£ظپط§طھط§ط± ط¹ظ†ط¯ ط§ظ„ط§ظ†ظƒظ…ط§ط´ ط§ظ„ظƒط§ظ…ظ„
+        final double minAvatarTap = minIconTap *
+            0.82; // ط­ط¬ظ… ط§ظ„ط£ظپط§طھط§ط± ط¹ظ†ط¯ ط§ظ„ط§ظ†ظƒظ…ط§ط´ ط§ظ„ظƒط§ظ…ظ„
         final double avatarTap =
             (minAvatarTap + (maxAvatarTap - minAvatarTap) * shrinkFactor);
 
@@ -501,7 +516,8 @@ class ProfileHeaderUI extends StatelessWidget {
         final double nameMin = context.font.small;
         final double nameMax = context.font.large;
         final double nameSize = nameMin +
-            (nameMax - nameMin) * shrinkFactor; // ط­ط¬ظ… ط§ط³ظ… ط¯ظٹظ†ط§ظ…ظٹظƒظٹ (ظ…ط³طھظ‚ظ„)
+            (nameMax - nameMin) *
+                shrinkFactor; // ط­ط¬ظ… ط§ط³ظ… ط¯ظٹظ†ط§ظ…ظٹظƒظٹ (ظ…ط³طھظ‚ظ„)
 
         /* ====================================================
        * 4) ط³ظ„ظˆظƒ ط±ظ‚ظ… ط§ظ„ط¬ظˆط§ظ„: ظٹط¸ظ‡ط± ظ…ظˆط³ظ‘ط¹طŒ ظٹط®طھظپظٹ ط¨ط§ظ†ظƒظ…ط§ط´ ط§ظ„ظ‡ظٹط¯ط±
@@ -576,7 +592,8 @@ class ProfileHeaderUI extends StatelessWidget {
              * ============================================================ */
               Expanded(
                 child: SizedBox(
-                  height: avatarTap, // ظ†ظپط³ ط§ط±طھظپط§ط¹ ط§ظ„ط£ظپط§طھط§ط± â†’ ظ„ط§ Overflow
+                  height:
+                      avatarTap, // ظ†ظپط³ ط§ط±طھظپط§ط¹ ط§ظ„ط£ظپط§طھط§ط± â†’ ظ„ط§ Overflow
                   child: Stack(
                     clipBehavior: Clip.none,
                     children: [
@@ -1046,5 +1063,3 @@ class AllItemsWidget extends StatelessWidget {
     );
   }
 }
-
-

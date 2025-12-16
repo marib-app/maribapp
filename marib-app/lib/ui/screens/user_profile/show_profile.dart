@@ -11,6 +11,7 @@ import 'package:marib/data/cubits/item/fetch_my_item_cubit.dart';
 import 'package:marib/data/cubits/profile/profile_stats_cubit.dart';
 import 'package:marib/data/cubits/system/user_details.dart';
 import 'package:marib/data/model/user_model.dart';
+import 'package:marib/data/cubits/seller/fetch_verification_request_cubit.dart';
 
 // أدوات واجهة
 import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
@@ -64,6 +65,7 @@ class ShowUserProfileScreen extends StatefulWidget {
           BlocProvider(create: (_) => ProfileStatsCubit()),
           BlocProvider(create: (_) => FetchMyItemsCubit()),
           BlocProvider(create: (_) => UserDetailsCubit()),
+          BlocProvider(create: (_) => FetchVerificationRequestsCubit()),
         ],
         child: ShowUserProfileScreen(
           from: arguments['from'] as String,
@@ -149,6 +151,7 @@ class UserProfileScreenState extends State<ShowUserProfileScreen>
     // جلب إحصائيات عند توفر جلسة مستخدم
     if (_isUserAuthenticated) {
       context.read<ProfileStatsCubit>().fetchProfileStats();
+      context.read<FetchVerificationRequestsCubit>().fetchVerificationRequests();
     }
 
     // تعبئة الحقول من بيانات المستخدم المخزنة

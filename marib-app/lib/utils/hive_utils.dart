@@ -7,6 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import 'package:marib/data/model/user_model.dart';
+import 'package:marib/data/model/verification_request_model.dart';
 
 import 'helper_utils.dart';
 import 'package:marib/utils/hive_keys.dart';
@@ -890,6 +891,27 @@ class HiveUtils {
     }
     _hydrateUserDetailsCache();
     return _cachedUserDetails ?? UserModel.fromJson(<String, dynamic>{});
+  }
+
+  static VerificationRequestModel? getCachedVerificationRequest() {
+    final dynamic raw = _userDetailsBox.get(HiveKeys.lastVerificationRequest);
+    if (raw is Map<String, dynamic>) {
+      return VerificationRequestModel.fromJson(raw);
+    }
+    if (raw is Map) {
+      return VerificationRequestModel.fromJson(
+          raw.map((key, value) => MapEntry(key.toString(), value)));
+    }
+    return null;
+  }
+
+  static Future<void> cacheVerificationRequest(
+      VerificationRequestModel model) async {
+    await _userDetailsBox.put(HiveKeys.lastVerificationRequest, model.toJson());
+  }
+
+  static Future<void> clearCachedVerificationRequest() async {
+    await _userDetailsBox.delete(HiveKeys.lastVerificationRequest);
   }
 
   /// طھط¹ظٹظٹظ† ط£ظ†ظ‘ ط§ظ„ظ…ط³طھط®ط¯ظ… "طھط¬ط§ظˆط²" ط´ط§ط´ط© ظ…ط§ (ظ…ط«ظ„ Onboarding)

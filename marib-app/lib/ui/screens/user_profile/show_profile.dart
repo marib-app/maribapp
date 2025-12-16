@@ -120,6 +120,7 @@ class UserProfileScreenState extends State<ShowUserProfileScreen>
 
   late final TabController _tabController;
   late final ValueNotifier<bool> _fullPageLoadingNotifier;
+  late final ValueNotifier<bool> _verificationBadgeLoading;
 
   // Getters لتسهيل تمريرها للـ UI
   TabController get tabController => _tabController;
@@ -133,6 +134,7 @@ class UserProfileScreenState extends State<ShowUserProfileScreen>
 
     _isUserAuthenticated = HiveUtils.isUserAuthenticated();
     _fullPageLoadingNotifier = ValueNotifier<bool>(_isUserAuthenticated);
+    _verificationBadgeLoading = ValueNotifier<bool>(_isUserAuthenticated);
 
     // تحكم التبويبات (يجب التخلص منه في dispose)
     _tabController = TabController(length: adTabs.length, vsync: this);
@@ -193,6 +195,7 @@ class UserProfileScreenState extends State<ShowUserProfileScreen>
     _tabController.removeListener(_handleTabChange);
     _tabController.dispose();
     _fullPageLoadingNotifier.dispose();
+    _verificationBadgeLoading.dispose();
     phoneController.dispose();
     nameController.dispose();
     emailController.dispose();
@@ -221,12 +224,26 @@ class UserProfileScreenState extends State<ShowUserProfileScreen>
           /// ملاحظة:
           /// - استخدمنا ScrollConfiguration+Bouncing لمنح سحب لطيف.
           /// - تم إبقاء الواجهة الفعلية في ProfileScreenUI (ملف منفصل) لتبسيط الصيانة.
-          body: ScrollConfiguration(
+         body: ScrollConfiguration(
             behavior: RemoveGlow(),
-            child: ProfileScreenUI(
-              // التبويبات + الحالات
-              tabController: _tabController,
-              adTabs: adTabs,
+            child: BlocListener<FetchVerificationRequestsCubit,
+                FetchVerificationRequestState>(
+              listener: (context, state) {
+                if (!_isUserAuthenticated) {
+                  _verificationBadgeLoading.value = false;
+                  return;
+                }
+
+                final bool isLoading = state is FetchVerificationRequestInProgress ||
+                    state is FetchVerificationRequestInitial;
+                if (_verificationBadgeLoading.value != isLoading) {
+                  _verificationBadgeLoading.value = isLoading;
+                }
+              },
+              child: ProfileScreenUI(
+                // التبويبات + الحالات
+                tabController: _tabController,
+                adTabs: adTabs,
 
               // زر "تعديل الملف الشخصي":
               // نمرّر allowProfileRoute=true حتى لا يعترضه الحارس الموجود في الراوتر.
@@ -250,11 +267,13 @@ class UserProfileScreenState extends State<ShowUserProfileScreen>
                 // زر تغيير صورة الحساب (يفتح BottomSheet)
                 onAvatarEditPressed: showPicker,
 
-              // باني صورة الحساب
-              isUserAuthenticated: _isUserAuthenticated,
-              fullPageLoadingNotifier: _fullPageLoadingNotifier,
-              onRequestFullRefresh: _refreshAllProfileData,
-              buildProfileImage: getProfileImage,
+                // باني صورة الحساب
+                isUserAuthenticated: _isUserAuthenticated,
+                fullPageLoadingNotifier: _fullPageLoadingNotifier,
+                verificationBadgeLoadingNotifier: _verificationBadgeLoading,
+                onRequestFullRefresh: _refreshAllProfileData,
+                buildProfileImage: getProfileImage,
+              ),
             ),
           ),
         ),
@@ -269,11 +288,14 @@ class UserProfileScreenState extends State<ShowUserProfileScreen>
   void _refreshAllProfileData() {
     if (!HiveUtils.isUserAuthenticated()) {
       _fullPageLoadingNotifier.value = false;
+      _verificationBadgeLoading.value = false;
       return;
     }
 
+    _verificationBadgeLoading.value = true;
     context.read<ProfileStatsCubit>().fetchProfileStats();
     context.read<UserDetailsCubit>().fill(HiveUtils.getUserDetails());
+    context.read<FetchVerificationRequestsCubit>().fetchVerificationRequests();
   }
 
   void _handleTabChange() {

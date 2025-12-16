@@ -26,6 +26,8 @@ class HiveKeys {
   static const String cartSection = "cartSection";
   static const String sliderSessionId = "sliderSessionId";
 
+  static const String lastVerificationRequest = "lastVerificationRequest";
+
 //Box
   static const String authBox = "authBox";
   static const String isAuthenticated = "isAuthenticated";

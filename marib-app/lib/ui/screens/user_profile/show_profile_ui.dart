@@ -10,6 +10,7 @@ import 'my_item_tab.dart';
 import 'package:marib/data/cubits/system/user_details.dart';
 import 'package:marib/data/cubits/profile/profile_stats_cubit.dart';
 import 'package:marib/data/cubits/item/fetch_my_item_cubit.dart';
+import 'package:marib/data/model/verification_request_model.dart';
 
 // ╪س┘è┘à + ╪ث╪»┘ê╪د╪ز ┘à╪│╪د╪╣╪»╪ر
 import 'package:marib/ui/theme/theme.dart';
@@ -17,9 +18,11 @@ import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/responsiveSize.dart';
 import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/merchant_display_helper.dart';
+import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/app/app_scroll_behavior.dart';
 import 'package:marib/app/routes.dart';
 import 'package:marib/data/cubits/seller/fetch_verification_request_cubit.dart';
+import 'package:marib/ui/widgets/verification_badge_loader.dart';
 import 'package:marib/ui/widgets/verification_subscription_sheet.dart';
 
 /// ┘ê╪د╪ش┘ç╪ر ╪┤╪د╪┤╪ر ╪د┘┘à┘┘ ╪د┘╪┤╪«╪╡┘è (╪╣╪▒╪╢ ┘┘é╪╖) ظ¤ ╪ز╪│╪ز┘é╪ذ┘ ┘â┘ ╪┤┘è╪ة ╪╣╪ذ╪▒ Params.
@@ -35,6 +38,7 @@ class ProfileScreenUI extends StatelessWidget {
   final VoidCallback onAvatarEditPressed;
   final bool isUserAuthenticated;
   final ValueNotifier<bool> fullPageLoadingNotifier;
+  final ValueNotifier<bool> verificationBadgeLoadingNotifier;
   final VoidCallback onRequestFullRefresh;
 
   /// ┘à╪▓┘ê┘ّ╪» ╪╡┘ê╪▒╪ر ╪د┘╪ذ╪▒┘ê┘╪د┘è┘ (File/Network/SVG) ┘à┘ ╪د┘┘ State ╪د┘╪«╪د╪▒╪ش┘è
@@ -49,6 +53,7 @@ class ProfileScreenUI extends StatelessWidget {
     required this.onAvatarEditPressed,
     required this.isUserAuthenticated,
     required this.fullPageLoadingNotifier,
+    required this.verificationBadgeLoadingNotifier,
     required this.onRequestFullRefresh,
     required this.buildProfileImage,
   });
@@ -108,6 +113,7 @@ class ProfileScreenUI extends StatelessWidget {
           _HeaderSection(
             buildProfileImage: buildProfileImage,
             isUserAuthenticated: isUserAuthenticated,
+            verificationBadgeLoadingNotifier: verificationBadgeLoadingNotifier,
           ),
           const SizedBox(height: 12),
           const _StatsRow(),
@@ -175,10 +181,12 @@ class ProfileScreenUI extends StatelessWidget {
 class _HeaderSection extends StatelessWidget {
   final Widget Function() buildProfileImage;
   final bool isUserAuthenticated;
+  final ValueNotifier<bool> verificationBadgeLoadingNotifier;
 
   const _HeaderSection({
     required this.buildProfileImage,
     required this.isUserAuthenticated,
+    required this.verificationBadgeLoadingNotifier,
   });
 
   @override
@@ -228,24 +236,33 @@ class _HeaderSection extends StatelessWidget {
                       ).trim();
                 final String displayName =
                     resolvedName.isNotEmpty ? resolvedName : (user?.name ?? '');
-                final verificationState =
+                final FetchVerificationRequestState verificationState =
                     context.watch<FetchVerificationRequestsCubit>().state;
+                final VerificationRequestModel? cachedRequest =
+                    HiveUtils.getCachedVerificationRequest();
+
+                VerificationRequestModel? resolvedRequest;
+                if (verificationState is FetchVerificationRequestSuccess) {
+                  resolvedRequest = verificationState.data;
+                } else if (verificationState is FetchVerificationRequestFail &&
+                    cachedRequest != null) {
+                  resolvedRequest = cachedRequest;
+                }
+
                 bool isVerified = (user?.isVerified ?? 0) == 1;
-                final verificationStatus = verificationState is FetchVerificationRequestSuccess
-                    ? verificationState.data.status?.trim().toLowerCase()
-                    : null;
+                final String? verificationStatus =
+                    resolvedRequest?.status?.trim().toLowerCase();
                 final DateTime? verificationExpiresAt =
-                    verificationState is FetchVerificationRequestSuccess
-                        ? verificationState.data.expiresAt
-                        : null;
-                if (!isVerified && verificationState is FetchVerificationRequestSuccess) {
+                    resolvedRequest?.expiresAt;
+                if (!isVerified && resolvedRequest != null) {
                   final bool active = verificationStatus == 'approved' &&
                       (verificationExpiresAt == null ||
                           verificationExpiresAt.isAfter(DateTime.now()));
                   isVerified = active;
                 }
 
-                final bool showVerificationButton = !isVerified && isUserAuthenticated;
+                final bool showVerificationButton =
+                    !isVerified && isUserAuthenticated;
 
                 return Row(
                   children: [
@@ -259,24 +276,29 @@ class _HeaderSection extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    if (showVerificationButton) ...[
-                      const SizedBox(width: 10),
-                      _VerifyAccountChip(onTap: () {
-                        Navigator.of(context)
-                            .pushNamed(Routes.accountVerificationInfo);
-                      }),
-                    ] else if (isVerified ||
-                        verificationStatus == 'pending' ||
-                        verificationStatus == 'resubmitted' ||
-                        verificationStatus == 'rejected') ...[
-                      const SizedBox(width: 10),
-                      _buildVerificationStatusBadge(
-                        context: context,
-                        isVerified: isVerified,
-                        status: verificationStatus,
-                        expiresAt: verificationExpiresAt,
-                      ),
-                    ],
+                    const SizedBox(width: 10),
+                    ValueListenableBuilder<bool>(
+                      valueListenable: verificationBadgeLoadingNotifier,
+                      builder: (context, badgeLoading, _) {
+                        return VerificationBadgeAnimated(
+                          isLoading: badgeLoading,
+                          showVerificationButton: showVerificationButton,
+                          isVerified: isVerified,
+                          status: verificationStatus,
+                          expiresAt: verificationExpiresAt,
+                          onVerifyTap: () {
+                            Navigator.of(context)
+                                .pushNamed(Routes.accountVerificationInfo);
+                          },
+                          onStatusTap: () => showVerificationSubscriptionSheet(
+                            context,
+                            status: verificationStatus,
+                            expiresAt: verificationExpiresAt,
+                            isVerified: isVerified,
+                          ),
+                        );
+                      },
+                    ),
                   ],
                 );
               },
@@ -616,153 +638,4 @@ class _Badge extends StatelessWidget {
   }
 }
 
-class _VerifyAccountChip extends StatelessWidget {
-  final VoidCallback onTap;
-
-  const _VerifyAccountChip({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    return OutlinedButton(
-      onPressed: onTap,
-      style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        side: BorderSide(color: context.color.territoryColor, width: 1.3),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        backgroundColor:
-            context.color.territoryColor.withOpacity(isDark ? 0.12 : 0.08),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.verified_user_outlined,
-              size: 18, color: context.color.territoryColor),
-          const SizedBox(width: 6),
-          Text(
-            "قم بتوثيق حسابك",
-            style: TextStyle(
-              color: context.color.territoryColor,
-              fontWeight: FontWeight.w700,
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-Widget _buildVerificationStatusBadge({
-  required BuildContext context,
-  required bool isVerified,
-  required String? status,
-  required DateTime? expiresAt,
-}) {
-  final normalized = (status ?? "").trim().toLowerCase();
-  final bool expired = expiresAt != null && expiresAt.isBefore(DateTime.now());
-
-  if (isVerified && !expired) {
-    return _VerifiedBadge(
-      label: "موثق",
-      color: Colors.green,
-      onTap: () => showVerificationSubscriptionSheet(
-        context,
-        status: status,
-        expiresAt: expiresAt,
-        isVerified: isVerified,
-      ),
-    );
-  }
-
-  if (normalized == "approved" && !expired) {
-    return _VerifiedBadge(
-      label: "موثق",
-      color: Colors.green,
-      onTap: () => showVerificationSubscriptionSheet(
-        context,
-        status: status,
-        expiresAt: expiresAt,
-        isVerified: isVerified,
-      ),
-    );
-  }
-
-  if (normalized == "pending" || normalized == "resubmitted") {
-    return _VerifiedBadge(
-      label: "جاري المراجعة",
-      color: Colors.amber,
-      onTap: () => showVerificationSubscriptionSheet(
-        context,
-        status: status,
-        expiresAt: expiresAt,
-        isVerified: isVerified,
-      ),
-    );
-  }
-
-  if (normalized == "rejected") {
-    return _VerifiedBadge(
-      label: "تم الرفض",
-      color: Colors.red,
-      onTap: () => showVerificationSubscriptionSheet(
-        context,
-        status: status,
-        expiresAt: expiresAt,
-        isVerified: isVerified,
-      ),
-    );
-  }
-
-  return _VerifyAccountChip(
-    onTap: () =>
-        Navigator.of(context).pushNamed(Routes.accountVerificationInfo),
-  );
-}
-
-class _VerifiedBadge extends StatelessWidget {
-  final VoidCallback? onTap;
-  final String? label;
-  final Color? color;
-
-  const _VerifiedBadge({this.onTap, this.label, this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    final Color accent = color ?? context.color.territoryColor;
-    final badge = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: accent.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: accent.withOpacity(0.5)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.verified, size: 16, color: accent),
-          const SizedBox(width: 6),
-          Text(
-            (label ?? "verifiedLbl".translate(context)),
-            style: TextStyle(
-              color: accent,
-              fontWeight: FontWeight.w700,
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (onTap == null) {
-      return badge;
-    }
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(18),
-      child: badge,
-    );
-  }
-}
 

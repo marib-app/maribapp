@@ -17,6 +17,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:hive_flutter/adapters.dart';
+import 'package:marib/ui/widgets/verification_badge_loader.dart';
+import 'package:marib/ui/widgets/verification_subscription_sheet.dart';
 
 import 'package:marib/data/model/system_settings_model.dart';
 
@@ -37,6 +39,7 @@ class _ProfileHeaderWidgetState extends State<ProfileHeaderWidget>
   bool notificationsSeen = false;
   final ValueNotifier<bool> isDarkTheme = ValueNotifier(false);
   bool isExpanded = false;
+  late final ValueNotifier<bool> _verificationBadgeLoading;
   StreamSubscription<ThemeState>? _themeSubscription;
 
 /*  //bool isGuest = false;
@@ -51,6 +54,8 @@ class _ProfileHeaderWidgetState extends State<ProfileHeaderWidget>
 
   @override
   void initState() {
+    _verificationBadgeLoading =
+        ValueNotifier<bool>(HiveUtils.isUserAuthenticated());
     var settings = context.read<FetchSystemSettingsCubit>();
     //userData();
     if (HiveUtils.isUserAuthenticated()) {
@@ -78,6 +83,7 @@ class _ProfileHeaderWidgetState extends State<ProfileHeaderWidget>
   void dispose() {
     _themeSubscription?.cancel();
     isDarkTheme.dispose();
+    _verificationBadgeLoading.dispose();
     super.dispose();
   }
 
@@ -155,6 +161,23 @@ class _ProfileHeaderWidgetState extends State<ProfileHeaderWidget>
   Widget profileHeader() {
     return BlocBuilder<FetchVerificationRequestsCubit,
         FetchVerificationRequestState>(builder: (context, state) {
+      final bool loadingState = state is FetchVerificationRequestInProgress ||
+          state is FetchVerificationRequestInitial;
+      final bool shouldShowLoader =
+          HiveUtils.isUserAuthenticated() && loadingState;
+      if (_verificationBadgeLoading.value != shouldShowLoader) {
+        _verificationBadgeLoading.value = shouldShowLoader;
+      }
+
+      final verificationRequest = state is FetchVerificationRequestSuccess
+          ? state.data
+          : (state is FetchVerificationRequestFail
+              ? HiveUtils.getCachedVerificationRequest()
+              : null);
+      final String? verificationStatus =
+          verificationRequest?.status?.trim().toLowerCase();
+      final DateTime? verificationExpiresAt = verificationRequest?.expiresAt;
+
       return ValueListenableBuilder(
           valueListenable: Hive.box(HiveKeys.userDetailsBox).listenable(),
           builder: (context, Box box, _) {
@@ -210,39 +233,45 @@ class _ProfileHeaderWidgetState extends State<ProfileHeaderWidget>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: <Widget>[
-                        (state is FetchVerificationRequestInProgress ||
-                                state is FetchVerificationRequestInitial ||
-                                state is FetchVerificationRequestFail)
-                            ? SizedBox()
-                            : (HiveUtils.isUserAuthenticated() &&
-                                    ((HiveUtils.getUserDetails().isVerified ==
-                                            1) ||
-                                        (state as FetchVerificationRequestSuccess)
-                                                .data
-                                                .status ==
-                                            "approved"))
-                                ? Container(
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(5),
-                                      color: context.color.forthColor,
-                                    ),
-                                    padding: EdgeInsets.symmetric(
-                                        horizontal: 5, vertical: 1),
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.start,
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        UiUtils.getSvg(AppIcons.verifiedIcon,
-                                            width: 14, height: 14),
-                                        SizedBox(width: 4),
-                                        Text("verifiedLbl".translate(context))
-                                            .color(context.color.secondaryColor)
-                                            .bold(weight: FontWeight.w500)
-                                      ],
-                                    ),
-                                  )
-                                : SizedBox(),
+                        ValueListenableBuilder<bool>(
+                          valueListenable: _verificationBadgeLoading,
+                          builder: (context, badgeLoading, __) {
+                            final bool isUserVerified =
+                                HiveUtils.isUserAuthenticated() &&
+                                    ((HiveUtils.getUserDetails().isVerified == 1) ||
+                                        (verificationStatus == 'approved' &&
+                                            (verificationExpiresAt == null ||
+                                                verificationExpiresAt.isAfter(
+                                                    DateTime.now()))));
+                            final bool showVerificationButton =
+                                HiveUtils.isUserAuthenticated() &&
+                                    !isUserVerified;
+
+                            return VerificationBadgeAnimated(
+                              isLoading: badgeLoading,
+                              showVerificationButton: showVerificationButton,
+                              isVerified: isUserVerified,
+                              status: verificationStatus,
+                              expiresAt: verificationExpiresAt,
+                              onVerifyTap: () {
+                                UiUtils.checkUser(
+                                    onNotGuest: () {
+                                      HelperUtils.goToNextPage(
+                                          Routes.accountVerificationInfo,
+                                          context,
+                                          false);
+                                    },
+                                    context: context);
+                              },
+                              onStatusTap: () => showVerificationSubscriptionSheet(
+                                context,
+                                status: verificationStatus,
+                                expiresAt: verificationExpiresAt,
+                                isVerified: isUserVerified,
+                              ),
+                            );
+                          },
+                        ),
                         // If none of the conditions are met, return an empty widget
 
                         SizedBox(

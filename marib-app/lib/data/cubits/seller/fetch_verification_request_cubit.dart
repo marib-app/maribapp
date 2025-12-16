@@ -1,6 +1,7 @@
 ﻿import 'package:marib/data/model/verification_request_model.dart';
 import 'package:marib/data/repositories/seller/seller_verification_field_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:marib/utils/hive_utils.dart';
 
 abstract class FetchVerificationRequestState {}
 
@@ -32,6 +33,7 @@ class FetchVerificationRequestsCubit
       emit(FetchVerificationRequestInProgress());
       VerificationRequestModel result =
           await repository.getVerificationRequest();
+      await HiveUtils.cacheVerificationRequest(result);
       emit(FetchVerificationRequestSuccess(result));
     } catch (e) {
       emit(FetchVerificationRequestFail(e.toString()));

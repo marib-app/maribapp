@@ -126,6 +126,12 @@ extension ColorPrefs on ColorScheme {
         darkColor: errorMessageColor,
       );
 
+  Color get successColor => _getColor(
+        brightness,
+        lightColor: successMessageColor,
+        darkColor: successMessageColor,
+      );
+
   ///This will set text color white if background is dark if background is light it will be dark
   Color textAutoAdapt(Color backgroundColor) =>
       UiUtils.getAdaptiveTextColor(backgroundColor);

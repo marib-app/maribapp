@@ -119,6 +119,9 @@ class _ChatListScreenV2State extends State<ChatListScreenV2> {
                       'itemOfferId': resolved.itemOfferId,
                       'itemId': resolved.itemId,
                       'title': resolved.title,
+                      'itemTitle': chat.item?.name ?? '',
+                      'itemImage': chat.item?.image ?? '',
+                      'itemPrice': chat.item?.price,
                     },
                   );
                 },

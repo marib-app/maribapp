@@ -23,7 +23,7 @@ import 'package:marib/data/model/merchant/merchant_store_snapshot.dart';
 import 'package:marib/data/repositories/merchant_repository.dart';
 
 import 'package:marib/ui/screens/Transaction_screen.dart';
-import 'package:marib/ui/screens/chat/chat_list_screen.dart';
+import 'package:marib/ui/screens/chat_v2/chat_list_screen_v2.dart';
 import 'package:marib/ui/screens/home_screen/home_screen.dart';
 import 'package:marib/ui/screens/user_profile/profile_screen.dart';
 import 'package:marib/ui/screens/wallet/wallet_screen.dart';
@@ -313,7 +313,7 @@ class MainActivityState extends State<MainActivity> with TickerProviderStateMixi
         page = HomeScreen(from: widget.from);
         break;
       case 1:
-        page = ChatListScreen();
+        page = const ChatListScreenV2();
         break;
       case 2:
         page = const TransactionScreen();

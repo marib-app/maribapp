@@ -1,4 +1,4 @@
-/// 🧱 عنصر يعرض بيانات الحقل (أيقونة + اسم + قيمة + فاصل)
+﻿/// ًں§± ط¹ظ†طµط± ظٹط¹ط±ط¶ ط¨ظٹط§ظ†ط§طھ ط§ظ„ط­ظ‚ظ„ (ط£ظٹظ‚ظˆظ†ط© + ط§ط³ظ… + ظ‚ظٹظ…ط© + ظپط§طµظ„)
 
 import 'dart:async';
 import 'package:timeago/timeago.dart' as timeago;
@@ -77,14 +77,14 @@ class _CustomFieldsWidgetState extends State<CustomFieldsWidget> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          /// 📝 عنوان "تفاصيل الإعلان"
-          Text("تفاصيل الاعلان".translate(context))
+          /// ًں“‌ ط¹ظ†ظˆط§ظ† "طھظپط§طµظٹظ„ ط§ظ„ط¥ط¹ظ„ط§ظ†"
+          Text("طھظپط§طµظٹظ„ ط§ظ„ط§ط¹ظ„ط§ظ†".translate(context))
               .bold()
               .size(context.font.large),
 
           const SizedBox(height: 8),
 
-          /// 🧱 قائمة الحقول داخل Scroll + مفتاح للموقع
+          /// ًں§± ظ‚ط§ط¦ظ…ط© ط§ظ„ط­ظ‚ظˆظ„ ط¯ط§ط®ظ„ Scroll + ظ…ظپطھط§ط­ ظ„ظ„ظ…ظˆظ‚ط¹
           LayoutBuilder(
             builder: (context, constraints) {
               return SingleChildScrollView(
@@ -99,14 +99,14 @@ class _CustomFieldsWidgetState extends State<CustomFieldsWidget> {
             },
           ),
 
-          /// 🔘 زر عرض المزيد
+          /// ًں”ک ط²ط± ط¹ط±ط¶ ط§ظ„ظ…ط²ظٹط¯
           _buildMoreButton(hasMore, extraCount),
         ],
       ),
     );
   }
 
-  /// 🧱 عنصر يعرض بيانات الحقل (أيقونة + اسم + قيمة + فاصل)
+  /// ًں§± ط¹ظ†طµط± ظٹط¹ط±ط¶ ط¨ظٹط§ظ†ط§طھ ط§ظ„ط­ظ‚ظ„ (ط£ظٹظ‚ظˆظ†ط© + ط§ط³ظ… + ظ‚ظٹظ…ط© + ظپط§طµظ„)
   Widget _buildFieldItem(dynamic field, double width) {
     final customField = field is CustomFieldModel ? field : null;
     final fieldValue = customField?.value ?? field.value;
@@ -144,7 +144,7 @@ class _CustomFieldsWidgetState extends State<CustomFieldsWidget> {
               height: 2,
               thickness: 0.6,
               color: Color(
-                  0xFFE0E0E0), // ✅ يكون تلقائي بتناسق شبيه مع الألوان العامة
+                  0xFFE0E0E0), // âœ… ظٹظƒظˆظ† طھظ„ظ‚ط§ط¦ظٹ ط¨طھظ†ط§ط³ظ‚ ط´ط¨ظٹظ‡ ظ…ط¹ ط§ظ„ط£ظ„ظˆط§ظ† ط§ظ„ط¹ط§ظ…ط©
             ),
           ),
         ],
@@ -152,7 +152,7 @@ class _CustomFieldsWidgetState extends State<CustomFieldsWidget> {
     );
   }
 
-  /// 🔘 بناء زر "عرض المزيد" إذا كان هناك حقول إضافية
+  /// ًں”ک ط¨ظ†ط§ط، ط²ط± "ط¹ط±ط¶ ط§ظ„ظ…ط²ظٹط¯" ط¥ط°ط§ ظƒط§ظ† ظ‡ظ†ط§ظƒ ط­ظ‚ظˆظ„ ط¥ط¶ط§ظپظٹط©
   Widget _buildMoreButton(bool hasMore, int extraCount) {
     if (!hasMore || hasExpandedOnce) return const SizedBox.shrink();
 
@@ -185,29 +185,29 @@ class _CustomFieldsWidgetState extends State<CustomFieldsWidget> {
                 height: 16,
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
-            : Text("عرض المزيد ($extraCount)"),
+            : Text("ط¹ط±ط¶ ط§ظ„ظ…ط²ظٹط¯ ($extraCount)"),
       ),
     );
   }
 
-  /// 🧱 بناء قائمة الحقول
+  /// ًں§± ط¨ظ†ط§ط، ظ‚ط§ط¦ظ…ط© ط§ظ„ط­ظ‚ظˆظ„
   List<Widget> _buildFieldsList(
       BoxConstraints constraints, List<dynamic> customFields) {
     const int defaultCount = 10;
 
-    // 🧱 التقسيم بين الحقول الأساسية والإضافية
+    // ًں§± ط§ظ„طھظ‚ط³ظٹظ… ط¨ظٹظ† ط§ظ„ط­ظ‚ظˆظ„ ط§ظ„ط£ط³ط§ط³ظٹط© ظˆط§ظ„ط¥ط¶ط§ظپظٹط©
     final base = customFields.take(defaultCount).toList();
     final extra = customFields.skip(defaultCount).toList();
 
-    // 📦 القائمة النهائية حسب حالة العرض
+    // ًں“¦ ط§ظ„ظ‚ط§ط¦ظ…ط© ط§ظ„ظ†ظ‡ط§ط¦ظٹط© ط­ط³ط¨ ط­ط§ظ„ط© ط§ظ„ط¹ط±ط¶
     final totalList = [
       ...base,
       if (showAll && !loadingExtra) ...extra,
       if (loadingExtra)
-        ...List.filled(extra.length, null), // ➕ عناصر وهمية للشيمر
+        ...List.filled(extra.length, null), // â‍• ط¹ظ†ط§طµط± ظˆظ‡ظ…ظٹط© ظ„ظ„ط´ظٹظ…ط±
     ];
 
-    // 🌓 تحديد الثيم الحالي لاختيار ألوان الشيمر
+    // ًںŒ“ طھط­ط¯ظٹط¯ ط§ظ„ط«ظٹظ… ط§ظ„ط­ط§ظ„ظٹ ظ„ط§ط®طھظٹط§ط± ط£ظ„ظˆط§ظ† ط§ظ„ط´ظٹظ…ط±
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final bool isDark = theme.brightness == Brightness.dark;
@@ -226,7 +226,7 @@ class _CustomFieldsWidgetState extends State<CustomFieldsWidget> {
         final width =
             wide ? constraints.maxWidth : (constraints.maxWidth - 26) / 2;
 
-        // ✨ عنصر shimmer مطابق للمحتوى الحقيقي (اسم + قيمة فقط)
+        // âœ¨ ط¹ظ†طµط± shimmer ظ…ط·ط§ط¨ظ‚ ظ„ظ„ظ…ط­طھظˆظ‰ ط§ظ„ط­ظ‚ظٹظ‚ظٹ (ط§ط³ظ… + ظ‚ظٹظ…ط© ظپظ‚ط·)
         if (isShimmer) {
           return SizedBox(
             width: width,
@@ -266,26 +266,24 @@ class _CustomFieldsWidgetState extends State<CustomFieldsWidget> {
           );
         }
 
-        // ✅ عرض العنصر الحقيقي
+        // âœ… ط¹ط±ط¶ ط§ظ„ط¹ظ†طµط± ط§ظ„ط­ظ‚ظٹظ‚ظٹ
         return _buildFieldItem(field, width);
       },
     );
   }
 
-//                             الحقول في صفحة الاعلان
+//                             ط§ظ„ط­ظ‚ظˆظ„ ظپظٹ طµظپط­ط© ط§ظ„ط§ط¹ظ„ط§ظ†
 
-  /// ✅ تعرض محتوى الحقول (نص، صورة، PDF...) بتصميم متجاوب ومرن
+  /// âœ… طھط¹ط±ط¶ ظ…ط­طھظˆظ‰ ط§ظ„ط­ظ‚ظˆظ„ (ظ†طµطŒ طµظˆط±ط©طŒ PDF...) ط¨طھطµظ…ظٹظ… ظ…طھط¬ط§ظˆط¨ ظˆظ…ط±ظ†
 
   Widget valueContent(
     List<dynamic>? value,
     BuildContext context, {
-    // ⚙️ إعدادات قابلة للتخصيص
+    // âڑ™ï¸ڈ ط¥ط¹ط¯ط§ط¯ط§طھ ظ‚ط§ط¨ظ„ط© ظ„ظ„طھط®طµظٹطµ
     CustomFieldModel? field,
     Color? buttonColor,
-    Color? iconColor,
     Color? textColor,
     double? fontSize,
-    double? iconSize,
     double? borderRadius,
     EdgeInsetsGeometry? padding,
     void Function()? onTapFallback,
@@ -302,10 +300,9 @@ class _CustomFieldsWidgetState extends State<CustomFieldsWidget> {
     final isSmall = width < 350;
 
     final double responsiveFont = fontSize ?? (isSmall ? 11 : 13);
-    final double responsiveIcon = iconSize ?? (isSmall ? 14 : 18);
-    final double responsiveRadius = borderRadius ?? 6;
-    final EdgeInsetsGeometry responsivePadding =
-        padding ?? EdgeInsets.symmetric(horizontal: 10, vertical: 6);
+    final double chipRadius = borderRadius ?? 6;
+    final EdgeInsetsGeometry contentPadding =
+        padding ?? const EdgeInsets.symmetric(horizontal: 10, vertical: 6);
 
     final List<String> sanitizedValues = value
         .map((e) => (e ?? '').toString().trim())
@@ -328,10 +325,14 @@ class _CustomFieldsWidgetState extends State<CustomFieldsWidget> {
             .size(responsiveFont);
       }
 
-      final labels = hexValues.map((normalized) => ColorCatalog.nameForHex(normalized, context: context).isNotEmpty ? ColorCatalog.nameForHex(normalized, context: context) : "#${normalized}").toList();
+      final labels = hexValues
+          .map((normalized) => ColorCatalog.nameForHex(normalized, context: context).isNotEmpty
+              ? ColorCatalog.nameForHex(normalized, context: context)
+              : "#$normalized")
+          .toList();
  
       return Text(
-        labels.join("� "),
+        labels.join("، "),
         style: TextStyle(
           color: textColor ?? context.color.textDefaultColor,
           fontWeight: FontWeight.w600,
@@ -347,73 +348,54 @@ class _CustomFieldsWidgetState extends State<CustomFieldsWidget> {
         url.endsWith(".svg");
     bool isPdf = url.endsWith(".pdf");
 
-    /// 🔘 زر ملف/صورة متجاوب
-
-    Widget fileButton({
-      required String label,
-      required IconData? icon,
-      required VoidCallback onTap,
-    }) {
-      return InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(responsiveRadius),
-        child: Container(
-          padding: responsivePadding,
-          decoration: BoxDecoration(
-            color: buttonColor ?? context.color.territoryColor.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(responsiveRadius),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (!iconAtEnd && !hideIcon) ...[
-                Icon(icon,
-                    size: responsiveIcon,
-                    color: iconColor ?? context.color.territoryColor),
-                //       const SizedBox(width: 5),
-              ],
-              Text(label)
-                  .size(responsiveFont)
-                  .color(textColor ?? context.color.textColorDark)
-                  .bold(),
-              if (iconAtEnd && !hideIcon) ...[
-                const SizedBox(width: 5),
-                Icon(icon,
-                    size: responsiveIcon,
-                    color: iconColor ?? context.color.territoryColor),
-              ]
-            ],
-          ),
-        ),
-      );
-    }
-
-    // ✅ ملف PDF
     if (url.startsWith("http") || url.startsWith("https")) {
       if (isPdf) {
-        return fileButton(
-          label: "📄 افتح الملف",
-          icon: null,
+        return InkWell(
           onTap: () {
             Navigator.pushNamed(context, Routes.pdfViewerScreen,
                 arguments: {"url": value[0]});
           },
+          child: Container(
+            padding: contentPadding,
+            decoration: BoxDecoration(
+              color: buttonColor ?? context.color.territoryColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(chipRadius),
+            ),
+            child: Text(
+              "افتح الملف",
+              style: TextStyle(
+                color: textColor ?? context.color.textColorDark,
+                fontWeight: FontWeight.w600,
+                fontSize: responsiveFont,
+              ),
+            ),
+          ),
         );
-      }
-      // ✅ صورة
-      else if (isImage) {
-        return fileButton(
-          label: "📷 عرض الصورة",
-          icon: null,
+      } else if (isImage) {
+        return InkWell(
           onTap: () {
             UiUtils.showFullScreenImage(context,
                 provider: NetworkImage(value[0]));
           },
+          child: Container(
+            padding: contentPadding,
+            decoration: BoxDecoration(
+              color: buttonColor ?? context.color.territoryColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(chipRadius),
+            ),
+            child: Text(
+              "عرض الصورة",
+              style: TextStyle(
+                color: textColor ?? context.color.textColorDark,
+                fontWeight: FontWeight.w600,
+                fontSize: responsiveFont,
+              ),
+            ),
+          ),
         );
       }
     }
 
-    // ✅ نص عادي
     return Text(
       sanitizedValues.isEmpty
           ? value.length == 1
@@ -421,7 +403,16 @@ class _CustomFieldsWidgetState extends State<CustomFieldsWidget> {
               : value.join(' , ')
           : sanitizedValues.length == 1
               ? sanitizedValues.first
-              : sanitizedValues.join(' , '),
-    ).color(textColor ?? context.color.textDefaultColor).size(responsiveFont);
-  }
+              : sanitizedValues.join('، '),
+        );
+        }
 }
+
+
+
+
+
+
+
+
+

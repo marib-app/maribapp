@@ -197,51 +197,11 @@ window.cityEvents = {
 
 window.verificationEvents = {
     'click .view-verification-fields': function (e, value, row) {
-        let html = `<table class="table">
-            <tr>
-                <th width="10%">${trans("No.")}</th>
-                <th width="25%">${trans("Name")}</th>
-                <th width="65%">${trans("Value")}</th>
-            </tr>`;
-
-        console.log(row.verification_field_values);
-
-        $.each(row.verification_field_values, function (key, field) {
-
-            let fieldName = field.verification_field.name;
-            let fieldValue = field.value;
-
-            let displayValue = '';
-            if (fieldValue) {
-                try {
-                    if(fieldValue.includes('verification_field_files')){
-                        displayValue = "<a class='text-decoration-underline' href='"+fieldValue+"' target='_blank'>"+trans('Click Here')+"</a>";
-                    }else{
-                        displayValue = Array.isArray(fieldValue) ? fieldValue.join(', ') : fieldValue;
-                    }
-
-                } catch (e) {
-                    displayValue = fieldValue;
-                }
-            } else {
-                displayValue = 'No value provided';
-            }
-
-            html += `<tr class="mb-2">
-                <td>${key + 1}</td>
-                <td>${fieldName}</td>
-                <td class="text-break">${displayValue}</td>
-            </tr>`;
-        });
-
-        html += "</table>";
-        $('#verification_fields').html(html);
-        $('#editModal').modal('show');
+        window.location.href = "/seller-verification/requests/" + row.id;
     },
 
     'click .edit_btn': function (e, value, row) {
-        $('#status').val(row.status).trigger('change');
-        $('#rejection_reason').val(row.rejection_reason);
+        window.location.href = "/seller-verification/requests/" + row.id + "#actions";
     }
 };
 

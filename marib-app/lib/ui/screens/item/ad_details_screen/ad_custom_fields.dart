@@ -1,4 +1,4 @@
-import 'dart:collection';
+﻿import 'dart:collection';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter_svg/flutter_svg.dart' as svg;
@@ -79,46 +79,45 @@ class AdCustomFieldsShimmer extends StatelessWidget {
 
 
 /// ===============================
-/// إعدادات قابلة للتخصيص لكل جزئية
+/// ط¥ط¹ط¯ط§ط¯ط§طھ ظ‚ط§ط¨ظ„ط© ظ„ظ„طھط®طµظٹطµ ظ„ظƒظ„ ط¬ط²ط¦ظٹط©
 /// ===============================
 class AdFieldsStyle {
-  // أحجام الأيقونات
-  final double leadingBoxSize;      // صندوق الأيقونة في الصفوف/الأزرار
-  final double leadingIconSize;     // الأيقونة داخل الصندوق
+  final double leadingBoxSize;      // مساحة صندوق الأيقونة (غير مستخدمة حالياً)
+  final double leadingIconSize;     // حجم الأيقونة داخل الصندوق
   final double actionIconSize;      // حجم أيقونة الأزرار السفلية (إن وجدت)
 
-  // line-heights والتباعدات
-  final double titleLineHeight;     // سطر عنوان الحقل
-  final double valueLineHeight;     // سطر القيمة/الرابط
+  // line-heights للعنوان/القيمة/الفواصل
+  final double titleLineHeight;     // ارتفاع سطر العنوان
+  final double valueLineHeight;     // ارتفاع سطر القيمة
   final double titleToValueGap;     // المسافة بين العنوان والقيمة
-  final double rowToDividerGap;     // المسافة قبل الـDivider
-  final double wrapSpacing;         // تباعد أفقي بين عناصر الشبكة
-  final double wrapRunSpacing;      // تباعد عمودي بين الصفوف بالشبكة
+  final double rowToDividerGap;     // المسافة قبل الفاصل Divider
+  final double wrapSpacing;         // المسافة الأفقية بين عناصر الشبكة
+  final double wrapRunSpacing;      // المسافة العمودية بين صفوف الشبكة
 
-  // عرض أيقونات السيرفر
-  final bool showServerIconOnTextRows;      // في صفوف الشبكة العلوية
+  // إظهار الأيقونات القادمة من الخادم
+  final bool showServerIconOnTextRows; // في صفوف الشبكة العلوية
   final bool showServerIconOnActionButtons; // في منطقة الأزرار السفلية
 
-  // تخصيص خطوط وأزرار
+  // أنماط النصوص والأزرار
   final TextStyle? labelTextStyle;
   final TextStyle? valueTextStyle;
   final TextStyle? actionButtonTextStyle;
   final ButtonStyle? actionButtonStyle;
 
-  // قوالب نصوص (بدون {label} لإلغاء التكرار) – تدعم {count}
+  // النصوص الافتراضية
   final String emptyPlaceholder;
   final String imagesButtonLabel;     // مثال: 'عرض الصور ({count})'
   final String filesButtonLabel;      // مثال: 'عرض الملفات ({count})'
-  final String checkboxButtonLabel;   // مثال: 'عرض القيم ({count})'
+  final String checkboxButtonLabel;   // مثال: 'عرض الاختيارات ({count})'
 
-  // نصوص واجهة Dialog للـCheckbox
+  // نصوص حوارات الاختيارات
   final String dialogCloseText;
   final String dialogSearchHint;
   final String dialogCopyAll;
 
-  // نص زر التحكّم الواحد
-  final String collapsedText; // يُعرض عند الطي (مثلاً: "عرض المزيد (N)")
-  final String expandedText;  // يُعرض عند التوسيع (مثلاً: "إخفاء الكل")
+  // نصوص الطيّ/الفتح
+  final String collapsedText; // النص عند الطيّ
+  final String expandedText;  // النص عند الفتح
 
   const AdFieldsStyle({
     this.leadingBoxSize = 24,
@@ -130,21 +129,21 @@ class AdFieldsStyle {
     this.rowToDividerGap = 6,
     this.wrapSpacing = 20,
     this.wrapRunSpacing = 20,
-    this.showServerIconOnTextRows = true,
-    this.showServerIconOnActionButtons = true,
+    this.showServerIconOnTextRows = false,
+    this.showServerIconOnActionButtons = false,
     this.labelTextStyle,
     this.valueTextStyle,
     this.actionButtonTextStyle,
     this.actionButtonStyle,
-    this.emptyPlaceholder = 'غير محدد',
+    this.emptyPlaceholder = 'لا توجد بيانات',
     this.imagesButtonLabel = 'عرض الصور ({count})',
     this.filesButtonLabel  = 'عرض الملفات ({count})',
-    this.checkboxButtonLabel = 'عرض القيم ({count})',
+    this.checkboxButtonLabel = 'عرض الاختيارات ({count})',
     this.dialogCloseText = 'إغلاق',
-    this.dialogSearchHint = 'ابحث داخل القيم…',
+    this.dialogSearchHint = 'ابحث هنا',
     this.dialogCopyAll = 'نسخ الكل',
     this.collapsedText = 'عرض المزيد',
-    this.expandedText  = 'إخفاء الكل',
+    this.expandedText  = 'عرض أقل',
   });
 
   ButtonStyle effectiveActionButtonStyle(BuildContext context) {
@@ -158,25 +157,19 @@ class AdFieldsStyle {
     );
   }
 
-  /// استبدال {count} فقط (بدون {label} لتفادي التكرار)
   String formatCount(String tpl, int count) =>
       tpl.replaceAll('{count}', '$count');
-}
-
-/// ===============================
-/// القسم الرئيسي: تفاصيل الإعلان
-/// ===============================
-class AdCustomFieldsSection extends StatefulWidget {
+}class AdCustomFieldsSection extends StatefulWidget {
   final List<CustomFieldModel> fields;
   final EdgeInsetsGeometry padding;
-  final int columns; // افتراضي عمودين
+  final int columns; // ط§ظپطھط±ط§ط¶ظٹ ط¹ظ…ظˆط¯ظٹظ†
   final String title;
   final bool showTitle;
 
-  /// تخصيص بناء أيقونة من بيانات السيرفر
+  /// طھط®طµظٹطµ ط¨ظ†ط§ط، ط£ظٹظ‚ظˆظ†ط© ظ…ظ† ط¨ظٹط§ظ†ط§طھ ط§ظ„ط³ظٹط±ظپط±
   final Widget Function(Map<String, dynamic> map, String label)? iconBuilder;
 
-  /// إعدادات العرض
+  /// ط¥ط¹ط¯ط§ط¯ط§طھ ط§ظ„ط¹ط±ط¶
   final AdFieldsStyle style;
 
   const AdCustomFieldsSection({
@@ -184,7 +177,7 @@ class AdCustomFieldsSection extends StatefulWidget {
     required this.fields,
     this.padding = const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
     this.columns = 2,
-    this.title = 'تفاصيل الاعلان',
+    this.title = 'تفاصيل الإعلان',
     this.showTitle = true,
     this.iconBuilder,
     this.style = const AdFieldsStyle(),
@@ -194,31 +187,31 @@ class AdCustomFieldsSection extends StatefulWidget {
   State<AdCustomFieldsSection> createState() => _AdCustomFieldsSectionState();
 }
 
-/// سجل موحّد لكل عنصر
+/// ط³ط¬ظ„ ظ…ظˆط­ظ‘ط¯ ظ„ظƒظ„ ط¹ظ†طµط±
 typedef _FieldRec = ({
 Map<String, dynamic> map,
 String label,
-String value,            // قيمة نصية مختصرة للعرض العادي
-String? iconUrl,         // أيقونة الحقل من السيرفر إن وُجدت
-bool wide,               // طلب عرض صف كامل (للصور/الملفات)
-bool checkbox,           // هل هو حقل Checkbox؟
-List<String> labels,     // ملصقات القيم المختارة (للـ Checkbox)
+String value,            // ظ‚ظٹظ…ط© ظ†طµظٹط© ظ…ط®طھطµط±ط© ظ„ظ„ط¹ط±ط¶ ط§ظ„ط¹ط§ط¯ظٹ
+String? iconUrl,         // ط£ظٹظ‚ظˆظ†ط© ط§ظ„ط­ظ‚ظ„ ظ…ظ† ط§ظ„ط³ظٹط±ظپط± ط¥ظ† ظˆظڈط¬ط¯طھ
+bool wide,               // ط·ظ„ط¨ ط¹ط±ط¶ طµظپ ظƒط§ظ…ظ„ (ظ„ظ„طµظˆط±/ط§ظ„ظ…ظ„ظپط§طھ)
+bool checkbox,           // ظ‡ظ„ ظ‡ظˆ ط­ظ‚ظ„ Checkboxطں
+List<String> labels,     // ظ…ظ„طµظ‚ط§طھ ط§ظ„ظ‚ظٹظ… ط§ظ„ظ…ط®طھط§ط±ط© (ظ„ظ„ظ€ Checkbox)
 String kind,             // 'text' | 'image' | 'file' | 'checkbox'
-List<String> mediaUrls,  // روابط الصور/الملفات إن وجدت
+List<String> mediaUrls,  // ط±ظˆط§ط¨ط· ط§ظ„طµظˆط±/ط§ظ„ظ…ظ„ظپط§طھ ط¥ظ† ظˆط¬ط¯طھ
 });
 
 class _AdCustomFieldsSectionState extends State<AdCustomFieldsSection>
     with SingleTickerProviderStateMixin {
   static const int _defaultCount = 8;
 
-  /// زر واحد يتحكم بإظهار بقية الشبكة + الأزرار السفلية
+  /// ط²ط± ظˆط§ط­ط¯ ظٹطھط­ظƒظ… ط¨ط¥ط¸ظ‡ط§ط± ط¨ظ‚ظٹط© ط§ظ„ط´ط¨ظƒط© + ط§ظ„ط£ط²ط±ط§ط± ط§ظ„ط³ظپظ„ظٹط©
   bool _expanded = false;
 
   AdFieldsStyle get style => widget.style;
 
   @override
   Widget build(BuildContext context) {
-    // 1) بناء العناصر + كشف النوع
+    // 1) ط¨ظ†ط§ط، ط§ظ„ط¹ظ†ط§طµط± + ظƒط´ظپ ط§ظ„ظ†ظˆط¹
     final List<_FieldRec> items = widget.fields.map<_FieldRec?>((f) {
       final map = _safeMap(f);
       final label = _labelOf(map);
@@ -236,7 +229,7 @@ class _AdCustomFieldsSectionState extends State<AdCustomFieldsSection>
       final labels = isChk ? _extractCheckboxLabels(map) : const <String>[];
       final isWide = (kind == 'image' || kind == 'file');
 
-      // تجاهل النص الفارغ
+      // طھط¬ط§ظ‡ظ„ ط§ظ„ظ†طµ ط§ظ„ظپط§ط±ط؛
       if (!isChk && kind == 'text' && textValue.isEmpty) return null;
 
       final iconUrl = _iconUrlOf(map);
@@ -259,7 +252,7 @@ class _AdCustomFieldsSectionState extends State<AdCustomFieldsSection>
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
 
-    // 2) نقسم: Grid للنصوص + Actions سفلية
+    // 2) ظ†ظ‚ط³ظ…: Grid ظ„ظ„ظ†طµظˆطµ + Actions ط³ظپظ„ظٹط©
     final gridItems   = items.where((e) => e.kind == 'text').toList();
     final cbxActions  = items.where((e) => e.kind == 'checkbox').toList();
     final imgActions  = items.where((e) => e.kind == 'image').toList();
@@ -280,7 +273,7 @@ class _AdCustomFieldsSectionState extends State<AdCustomFieldsSection>
           final fullWidth = constraints.maxWidth;
           final spacing = style.wrapSpacing;
 
-          int colCount = widget.columns <= 1 ? 1 : widget.columns; // 2 افتراضيًا
+          int colCount = widget.columns <= 1 ? 1 : widget.columns; // 2 ط§ظپطھط±ط§ط¶ظٹظ‹ط§
           if (fullWidth < 340) colCount = 1;
           final itemW = (fullWidth - spacing * (colCount - 1)) / colCount;
 
@@ -298,22 +291,17 @@ class _AdCustomFieldsSectionState extends State<AdCustomFieldsSection>
                 const SizedBox(height: 14),
               ],
 
-              // --- شبكة الحقول العادية (نص) ---
+              // --- ط´ط¨ظƒط© ط§ظ„ط­ظ‚ظˆظ„ ط§ظ„ط¹ط§ط¯ظٹط© (ظ†طµ) ---
               Wrap(
                 spacing: style.wrapSpacing,
                 runSpacing: style.wrapRunSpacing,
                 children: visibleGrid.map((it) {
                   final width = it.wide ? fullWidth : itemW;
-                  final leading = style.showServerIconOnTextRows
-                      ? _buildServerIcon(context, it.map, it.iconUrl)
-                      : null;
-
                   return SizedBox(
                     width: width,
                     child: _FieldRow(
                       label: it.label,
                       value: it.value,
-                      leadingIcon: leading,
                       style: style,
                     ),
                   );
@@ -323,12 +311,12 @@ class _AdCustomFieldsSectionState extends State<AdCustomFieldsSection>
 
 
 
-              // زر "عرض المزيد" يظهر فقط قبل التوسيع.
+              // ط²ط± "ط¹ط±ط¶ ط§ظ„ظ…ط²ظٹط¯" ظٹط¸ظ‡ط± ظپظ‚ط· ظ‚ط¨ظ„ ط§ظ„طھظˆط³ظٹط¹.
               if (!_expanded && (hasMore || hasActions)) ...[
                 const SizedBox(height: 10),
                 Center(
                   child: TextButton.icon(
-                    onPressed: () => setState(() => _expanded = true), // فقط تفعيل التوسيع
+                    onPressed: () => setState(() => _expanded = true), // ظپظ‚ط· طھظپط¹ظٹظ„ ط§ظ„طھظˆط³ظٹط¹
                     icon: const Icon(Icons.expand_more),
                     label: Text(
                       hasMore
@@ -344,73 +332,58 @@ class _AdCustomFieldsSectionState extends State<AdCustomFieldsSection>
                   ),
                 ),
               ],
-              // --- منطقة الأزرار السفلية (تظهر فقط عند التوسيع) ---
+              // --- ظ…ظ†ط·ظ‚ط© ط§ظ„ط£ط²ط±ط§ط± ط§ظ„ط³ظپظ„ظٹط© (طھط¸ظ‡ط± ظپظ‚ط· ط¹ظ†ط¯ ط§ظ„طھظˆط³ظٹط¹) ---
               if (hasActions && _expanded) ...[
                 SizedBox(height: style.rowToDividerGap.toDouble()),
                 _standardDivider(context),
                 const SizedBox(height: 10),
 
-                // صفوف كاملة: أيقونة السيرفر + عنوان الحقل (ثابتين) + زر "عرض"
+                // طµظپظˆظپ ظƒط§ظ…ظ„ط©: ط£ظٹظ‚ظˆظ†ط© ط§ظ„ط³ظٹط±ظپط± + ط¹ظ†ظˆط§ظ† ط§ظ„ط­ظ‚ظ„ (ط«ط§ط¨طھظٹظ†) + ط²ط± "ط¹ط±ط¶"
                 // Checkbox rows
                 ...cbxActions.map((it) {
                   final buttonText = style.formatCount(
                       style.checkboxButtonLabel, it.labels.length);
-                  final leading = style.showServerIconOnActionButtons
-                      ? _buildServerActionIcon(context, it.map, it.iconUrl)
-                      : null;
-
                   return _ActionLine(
                     width: fullWidth,
-                    leading: leading,
                     label: it.label,
                     style: style,
                     trailing: _CheckboxActionButton(
                       title: it.label,
-                      buttonText: buttonText, // بدون تكرار العنوان
+                      buttonText: buttonText, // ط¨ط¯ظˆظ† طھظƒط±ط§ط± ط§ظ„ط¹ظ†ظˆط§ظ†
                       labels: it.labels,
                       style: style,
                     ),
                   );
                 }),
 
-                // Images rows (يفتح أول صورة مباشرة)
+                // Images rows (ظٹظپطھط­ ط£ظˆظ„ طµظˆط±ط© ظ…ط¨ط§ط´ط±ط©)
                 ...imgActions.map((it) {
                   final buttonText = style.formatCount(
                       style.imagesButtonLabel, it.mediaUrls.length);
-                  final leading = style.showServerIconOnActionButtons
-                      ? _buildServerActionIcon(context, it.map, it.iconUrl)
-                      : null;
-
                   return _ActionLine(
                     width: fullWidth,
-                    leading: leading,
                     label: it.label,
                     style: style,
                     trailing: _ImagesOpenButton(
                       title: it.label,
-                      buttonText: buttonText, // بدون تكرار العنوان
+                      buttonText: buttonText, // ط¨ط¯ظˆظ† طھظƒط±ط§ط± ط§ظ„ط¹ظ†ظˆط§ظ†
                       imageUrls: it.mediaUrls,
                       style: style,
                     ),
                   );
                 }),
 
-                // Files rows (يفتح أول ملف مباشرة)
+                // Files rows (ظٹظپطھط­ ط£ظˆظ„ ظ…ظ„ظپ ظ…ط¨ط§ط´ط±ط©)
                 ...fileActions.map((it) {
                   final buttonText = style.formatCount(
                       style.filesButtonLabel, it.mediaUrls.length);
-                  final leading = style.showServerIconOnActionButtons
-                      ? _buildServerActionIcon(context, it.map, it.iconUrl)
-                      : null;
-
                   return _ActionLine(
                     width: fullWidth,
-                    leading: leading,
                     label: it.label,
                     style: style,
                     trailing: _FilesOpenButton(
                       title: it.label,
-                      buttonText: buttonText, // بدون تكرار العنوان
+                      buttonText: buttonText, // ط¨ط¯ظˆظ† طھظƒط±ط§ط± ط§ظ„ط¹ظ†ظˆط§ظ†
                       fileUrls: it.mediaUrls,
                       style: style,
                     ),
@@ -426,9 +399,6 @@ class _AdCustomFieldsSectionState extends State<AdCustomFieldsSection>
       ),
     );
   }
-
-  // ===== Helpers: تحويلات وقراءات آمنة =====
-
   Map<String, dynamic> _safeMap(CustomFieldModel f) {
     try {
       final m = f.toMap();
@@ -552,7 +522,7 @@ class _AdCustomFieldsSectionState extends State<AdCustomFieldsSection>
     return null;
   }
 
-  /// أيقونة شبكة الحقول (صندوق ثابت + شيمر)
+  /// ط£ظٹظ‚ظˆظ†ط© ط´ط¨ظƒط© ط§ظ„ط­ظ‚ظˆظ„ (طµظ†ط¯ظˆظ‚ ط«ط§ط¨طھ + ط´ظٹظ…ط±)
   Widget? _buildServerIcon(BuildContext context, Map<String, dynamic> map, String? url) {
     if (widget.iconBuilder != null) {
       final w = widget.iconBuilder!(map, _labelOf(map));
@@ -568,7 +538,7 @@ class _AdCustomFieldsSectionState extends State<AdCustomFieldsSection>
     );
   }
 
-  /// أيقونة الأزرار السفلية — من السيرفر فقط (بدون fallback)
+  /// ط£ظٹظ‚ظˆظ†ط© ط§ظ„ط£ط²ط±ط§ط± ط§ظ„ط³ظپظ„ظٹط© â€” ظ…ظ† ط§ظ„ط³ظٹط±ظپط± ظپظ‚ط· (ط¨ط¯ظˆظ† fallback)
   Widget? _buildServerActionIcon(BuildContext context, Map<String, dynamic> map, String? url) {
     url ??= _iconUrlOf(map);
     if (url == null || url.isEmpty) return null;
@@ -578,7 +548,7 @@ class _AdCustomFieldsSectionState extends State<AdCustomFieldsSection>
     );
   }
 
-  // ===== Helpers خاصة بالـ Checkbox =====
+  // ===== Helpers ط®ط§طµط© ط¨ط§ظ„ظ€ Checkbox =====
   bool _isCheckbox(Map<String, dynamic> m) {
     final t = _typeOf(m);
     return t == 'checkbox' || t == 'multi_checkbox' || t == 'multi-check' || t == 'checks';
@@ -642,19 +612,17 @@ class _AdCustomFieldsSectionState extends State<AdCustomFieldsSection>
 }
 
 /// ===============================
-/// صف حقل نصّي عادي + Divider
+/// طµظپ ط­ظ‚ظ„ ظ†طµظ‘ظٹ ط¹ط§ط¯ظٹ + Divider
 /// ===============================
 class _FieldRow extends StatelessWidget {
   const _FieldRow({
     required this.label,
     required this.value,
     required this.style,
-    this.leadingIcon,
   });
 
   final String label;
   final String value;
-  final Widget? leadingIcon;
   final AdFieldsStyle style;
 
   @override
@@ -679,8 +647,6 @@ class _FieldRow extends StatelessWidget {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            (leadingIcon ?? SizedBox(width: style.leadingBoxSize, height: style.leadingBoxSize)),
-            const SizedBox(width: 8),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -714,7 +680,7 @@ class _FieldRow extends StatelessWidget {
 }
 
 /// ===============================
-/// صف أكشن كامل العرض: أيقونة سيرفر + عنوان + زر تشغيل/عرض
+/// طµظپ ط£ظƒط´ظ† ظƒط§ظ…ظ„ ط§ظ„ط¹ط±ط¶: ط£ظٹظ‚ظˆظ†ط© ط³ظٹط±ظپط± + ط¹ظ†ظˆط§ظ† + ط²ط± طھط´ط؛ظٹظ„/ط¹ط±ط¶
 /// ===============================
 class _ActionLine extends StatelessWidget {
   const _ActionLine({
@@ -722,12 +688,10 @@ class _ActionLine extends StatelessWidget {
     required this.label,
     required this.style,
     required this.trailing,
-    this.leading,
   });
 
   final double width;
   final String label;
-  final Widget? leading;
   final Widget trailing;
   final AdFieldsStyle style;
 
@@ -749,11 +713,7 @@ class _ActionLine extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // أيقونة السيرفر (إن وُجدت) أو فراغ محجوز للمحاذاة
-            (leading ?? SizedBox(width: style.leadingBoxSize, height: style.leadingBoxSize)),
-            const SizedBox(width: 8),
-
-            // عنوان الحقل
+            // ط¹ظ†ظˆط§ظ† ط§ظ„ط­ظ‚ظ„
             Expanded(
               child: Text(
                 label,
@@ -765,7 +725,7 @@ class _ActionLine extends StatelessWidget {
 
             const SizedBox(width: 8),
 
-            // زر الأكشن (عرض القيم/الصور/الملفات)
+            // ط²ط± ط§ظ„ط£ظƒط´ظ† (ط¹ط±ط¶ ط§ظ„ظ‚ظٹظ…/ط§ظ„طµظˆط±/ط§ظ„ظ…ظ„ظپط§طھ)
             ConstrainedBox(
               constraints: const BoxConstraints(minWidth: 120),
               child: trailing,
@@ -782,11 +742,7 @@ class _ActionLine extends StatelessWidget {
 
 
 // ===============================
-// أزرار الأكشن
-// ===============================
-
-// Checkbox: يفتح Dialog بحث/نسخ (القيم النصية)
-
+// ط£ط²ط±ط§ط± ط§ظ„ط£ظƒط´ظ†
 
 class _CheckboxActionButton extends StatelessWidget {
   const _CheckboxActionButton({
@@ -842,7 +798,7 @@ class _CheckboxActionButton extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
               child: Column(
                 children: [
-                  // رأس الحوار
+                  // ط±ط£ط³ ط§ظ„ط­ظˆط§ط±
                   Row(
                     children: [
                       Expanded(
@@ -862,7 +818,7 @@ class _CheckboxActionButton extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
 
-                  // قائمة القيم
+                  // ظ‚ط§ط¦ظ…ط© ط§ظ„ظ‚ظٹظ…
                   const SizedBox(height: 6),
                   Divider(height: 1, color: theme.colorScheme.outline.withOpacity(.25)),
                   const SizedBox(height: 6),
@@ -920,12 +876,6 @@ class _CheckboxActionButton extends StatelessWidget {
     );
   }
 }
-
-
-
-
-// Images: يفتح أول صورة مباشرة (view) — بدون أي Dialog
-
 class _ImagesOpenButton extends StatelessWidget {
   const _ImagesOpenButton({
     required this.title,
@@ -946,15 +896,15 @@ class _ImagesOpenButton extends StatelessWidget {
       onPressed: () {
         if (imageUrls.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('لا توجد صور للعرض')),
+            const SnackBar(content: Text('ظ„ط§ طھظˆط¬ط¯ طµظˆط± ظ„ظ„ط¹ط±ط¶')),
           );
           return;
         }
-        // فتح أول صورة مباشرة
+        // ظپطھط­ ط£ظˆظ„ طµظˆط±ط© ظ…ط¨ط§ط´ط±ط©
         launchUrlString(imageUrls.first);
         if (imageUrls.length > 1) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('تم فتح أول صورة من ${imageUrls.length}')),
+            SnackBar(content: Text('طھظ… ظپطھط­ ط£ظˆظ„ طµظˆط±ط© ظ…ظ† ${imageUrls.length}')),
           );
         }
       },
@@ -967,7 +917,7 @@ class _ImagesOpenButton extends StatelessWidget {
 
 
 
-// Files: يفتح أول ملف مباشرة (view) — بدون أي Dialog
+// Files: ظٹظپطھط­ ط£ظˆظ„ ظ…ظ„ظپ ظ…ط¨ط§ط´ط±ط© (view) â€” ط¨ط¯ظˆظ† ط£ظٹ Dialog
 class _FilesOpenButton extends StatelessWidget {
   const _FilesOpenButton({
     required this.title,
@@ -988,15 +938,15 @@ class _FilesOpenButton extends StatelessWidget {
       onPressed: () {
         if (fileUrls.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('لا توجد ملفات للعرض')),
+            const SnackBar(content: Text('ظ„ط§ طھظˆط¬ط¯ ظ…ظ„ظپط§طھ ظ„ظ„ط¹ط±ط¶')),
           );
           return;
         }
-        // فتح أول ملف مباشرة
+        // ظپطھط­ ط£ظˆظ„ ظ…ظ„ظپ ظ…ط¨ط§ط´ط±ط©
         launchUrlString(fileUrls.first);
         if (fileUrls.length > 1) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('تم فتح أول ملف من ${fileUrls.length}')),
+            SnackBar(content: Text('طھظ… ظپطھط­ ط£ظˆظ„ ظ…ظ„ظپ ظ…ظ† ${fileUrls.length}')),
           );
         }
       },
@@ -1010,7 +960,7 @@ class _FilesOpenButton extends StatelessWidget {
 
 
 /// ===============================
-/// أدوات مشتركة: Divider, Icon Box, ServerIcon, Shimmer
+/// ط£ط¯ظˆط§طھ ظ…ط´طھط±ظƒط©: Divider, Icon Box, ServerIcon, Shimmer
 /// ===============================
 Widget _standardDivider(BuildContext context) => Divider(
   height: 1,
@@ -1118,9 +1068,13 @@ class _ShimmerBoxState extends State<_ShimmerBox>
     );
   }
 }
-
-// استبدلها بمنطق مشروعك لفتح الروابط خارجيًا
-
 void launchUrlString(String url) {
   debugPrint('Open: $url');
 }
+
+
+
+
+
+
+

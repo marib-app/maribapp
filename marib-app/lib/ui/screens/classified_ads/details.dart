@@ -20,15 +20,12 @@ import 'package:marib/data/repositories/service_request_repository.dart';
 import 'package:marib/app/routes.dart';
 import 'package:marib/data/cubits/chat/get_buyer_chat_users_cubit.dart';
 import 'package:marib/data/cubits/chat/make_an_offer_item_cubit.dart';
-import 'package:marib/data/cubits/chat/send_message.dart';
-import 'package:marib/data/cubits/chat/load_chat_messages.dart';
-import 'package:marib/data/cubits/chat/delete_message_cubit.dart';
 
 import 'package:marib/data/model/classified_model.dart' show ClassifiedModel, ClassifiedSummary;
 import 'package:marib/data/model/chat/chated_user_model.dart';
 
 import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
-import 'package:marib/ui/screens/chat/chat_screen.dart';
+import 'package:marib/ui/screens/chat_v2/chat_screen_v2.dart';
 
 import 'package:marib/utils/api.dart';
 import 'package:marib/utils/extensions/extensions.dart';
@@ -823,35 +820,21 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
 
 
 
+    final int senderId = int.tryParse(HiveUtils.getUserId() ?? '') ?? 0;
+    final int receiverId = advertiserId;
     Navigator.push(
       context,
       BlurredRouter(
-        builder: (_) => MultiBlocProvider(
-          providers: [
-            BlocProvider(create: (_) => SendMessageCubit()),
-            BlocProvider(create: (_) => LoadChatMessagesCubit()),
-            BlocProvider(create: (_) => DeleteMessageCubit()),
-          ],
-          child: ChatScreen(
-            userId: advertiserId.toString(),
-            profilePicture: '',
-            userName: _data?.title ?? '',
-            from: "item",
-            itemImage: _data?.image ?? '',
-            itemId: (_data?.id ?? '').toString(),
-            date: _data?.createdAt ?? '',
-            itemTitle: _data?.title ?? '',
-            itemOfferId: itemOfferId,
-            conversationId: conversationId,
-            itemPrice: _data?.price ?? 0,
-            status: (_data?.status ?? '').toString(),
-            buyerId: HiveUtils.getUserId(),
-            isPurchased: 0,
-            alreadyReview: false,
-            participants: participants,
-            currency: _data?.currency,
-            currencySymbol: _data?.currency,
-          ),
+        builder: (_) => ChatScreenV2(
+          conversationId: conversationId,
+          receiverId: receiverId,
+          senderId: senderId,
+          itemOfferId: itemOfferId,
+          itemId: _data?.id,
+          title: _data?.title ?? '',
+          itemTitle: _data?.title ?? '',
+          itemImage: _data?.image ?? '',
+          itemPrice: _data?.price,
         ),
       ),
     );

@@ -14,6 +14,7 @@ abstract class ChatRepositoryV2 {
     int limit = 20,
     int? beforeMessageId,
     DateTime? beforeTimestamp,
+    int? itemOfferId,
   });
 
   /// Send a new message. Returns the confirmed message (with server id) or

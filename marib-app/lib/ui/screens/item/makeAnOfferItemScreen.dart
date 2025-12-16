@@ -7,15 +7,13 @@ import 'package:marib/data/cubits/chat/make_an_offer_item_cubit.dart';
 import 'package:marib/data/model/item/item_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:marib/ui/theme/theme.dart';
+import 'package:marib/utils/hive_utils.dart';
 
 import '../../../Utils/constant.dart';
 import '../../../Utils/validator.dart';
-import 'package:marib/data/cubits/chat/delete_message_cubit.dart';
-import 'package:marib/data/cubits/chat/load_chat_messages.dart';
-import 'package:marib/data/cubits/chat/send_message.dart';
 import '../../../data/model/chat/chated_user_model.dart';
-import '../Chat/chat_screen.dart';
-import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
+import 'package:marib/ui/screens/chat_v2/chat_screen_v2.dart';
 
 import 'package:marib/utils/notification/notification_service.dart';
 
@@ -144,13 +142,14 @@ class _MakeAnOfferItemScreenState extends State<MakeAnOfferItemScreen> {
                   final double? offerAmount =
                   NotificationService.getPrice(data['amount']);
 
+                  final String conversationId =
+                      (data['conversation_id'] ?? data['id']).toString();
                   context.read<GetBuyerChatListCubit>().addNewChat(ChatedUser(
                       itemId: int.parse(data['item_id']),
                       amount: offerAmount,
                       buyerId: data['buyer_id'],
                       createdAt: data['created_at'],
                       id: data['id'],
-
                       itemOfferId: (() {
                         final dynamic offerIdData =
                             data['item_offer_id'] ?? data['id'];
@@ -159,25 +158,22 @@ class _MakeAnOfferItemScreenState extends State<MakeAnOfferItemScreen> {
                         }
                         return int.tryParse(offerIdData.toString());
                       })(),
-                      conversationId:
-
+                      conversationId: conversationId,
                       sellerId: data['seller_id'],
                       updatedAt: data['updated_at'],
                       userBlocked:
-                      ChatedUser.parseUserBlocked(data['user_blocked']) ??
-                          false,
-
+                          ChatedUser.parseUserBlocked(data['user_blocked']) ??
+                              false,
                       buyer: Buyer.fromJson(data['buyer']),
                       item: Item.fromJson(data['item']),
                       seller: Seller.fromJson(data['seller'])));
                   Future.delayed(Duration(seconds: 1), () {
                     Navigator.pop(context);
                   }).then((value) {
-                    Navigator.push(context, BlurredRouter(
-                      builder: (context) {
-                        final Map<String, dynamic> responseData = {};
-                        if (state.data is Map<String, dynamic>) {
-                          responseData.addAll(
+                    Navigator.push(context, MaterialPageRoute(builder: (context) {
+                      final Map<String, dynamic> responseData = {};
+                      if (state.data is Map<String, dynamic>) {
+                        responseData.addAll(
                               state.data as Map<String, dynamic>);
                         } else if (state.data is Map) {
                           (state.data as Map).forEach((key, value) {
@@ -200,59 +196,19 @@ class _MakeAnOfferItemScreenState extends State<MakeAnOfferItemScreen> {
                             responseData['id'])
                             .toString();
 
-                        final List<ChatParticipant>? participants =
-                            NotificationService.getCachedParticipants(
-                              conversationId,
-                              itemOfferId: resolvedOfferId > 0
-                                  ? resolvedOfferId
-                                  : null,
-                              senderId: widget.model.user?.id?.toString(),
-                              itemId: widget.model.id?.toString(),
-                            ) ??
-                                NotificationService.buildParticipantsFromNotification(
-                                  data: {
-                                    ...responseData,
-                                    'user_id': widget.model.user?.id,
-                                    'user_name': widget.model.user?.name,
-                                    'user_profile': widget.model.user?.profile,
-                                    'conversation_id': conversationId,
-                                    'item_offer_id': resolvedOfferId,
-                                  },
-                                );
-                        return MultiBlocProvider(
-                          providers: [
-                            BlocProvider(
-                              create: (context) => SendMessageCubit(),
-                            ),
-                            BlocProvider(
-                              create: (context) => LoadChatMessagesCubit(),
-                            ),
-                            BlocProvider(
-                              create: (context) => DeleteMessageCubit(),
-                            ),
-                          ],
-                          child: ChatScreen(
-                            profilePicture: widget.model.user!.profile ?? "",
-                            userName: widget.model.user!.name!,
-                            userId: widget.model.user!.id!.toString(),
-                            from: "item",
-                            itemImage: widget.model.image!,
-                            itemId: widget.model.id.toString(),
-                            date: widget.model.created!,
-                            itemTitle: widget.model.name!,
-                            itemOfferId: resolvedOfferId,
-                            conversationId: conversationId,
-
-                            itemPrice: widget.model.price!,
-                            status: widget.model.status!,
-                            itemOfferPrice:
-                            NotificationService.getPrice(
-                                responseData['amount']),
-                            participants: participants,
-                            currency: widget.model.currency,
-                            currencySymbol: widget.model.currency,
-                          ),
-                          ),
+                        final int senderId =
+                            int.tryParse(HiveUtils.getUserId() ?? '') ?? 0;
+                        final int receiverId = widget.model.user?.id ?? 0;
+                        return ChatScreenV2(
+                          conversationId: conversationId,
+                          receiverId: receiverId,
+                          senderId: senderId,
+                          itemOfferId: resolvedOfferId,
+                          itemId: widget.model.id,
+                          title: widget.model.user?.name ?? '',
+                          itemTitle: widget.model.name,
+                          itemImage: widget.model.image,
+                          itemPrice: widget.model.price,
                         );
                       },
                     ));
@@ -296,9 +252,12 @@ class _MakeAnOfferItemScreenState extends State<MakeAnOfferItemScreen> {
                       onPressed: () async {
                         if (_formKey.currentState!.validate()) {
                           context.read<MakeAnOfferItemCubit>().makeAnOfferItem(
-                              widget.model.id!,
-                              int.parse(
-                                  _makeAnOffermessageController.text.trim()));
+                                id: widget.model.id!,
+                                from: 'item',
+                                amount: double.tryParse(
+                                  _makeAnOffermessageController.text.trim(),
+                                ),
+                              );
                         }
                       },
                       child: (state is MakeAnOfferItemInProgress)
@@ -316,4 +275,3 @@ class _MakeAnOfferItemScreenState extends State<MakeAnOfferItemScreen> {
     );
   }
 }
-

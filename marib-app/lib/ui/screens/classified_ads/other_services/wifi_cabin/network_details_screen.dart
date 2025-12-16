@@ -6,12 +6,8 @@ import 'package:marib/data/model/wifi/wifi_network.dart';
 import 'package:marib/data/model/wifi/wifi_plan.dart';
 import 'package:marib/data/model/wifi/wifi_purchase.dart';
 import 'package:marib/data/wifi/wifi_repository.dart';
-import 'package:marib/data/cubits/chat/send_message.dart';
-import 'package:marib/data/cubits/chat/load_chat_messages.dart';
-import 'package:marib/data/cubits/chat/delete_message_cubit.dart';
-import 'package:marib/data/model/chat/chated_user_model.dart';
 import 'package:marib/ui/theme/theme.dart';
-import 'package:marib/ui/screens/chat/chat_screen.dart';
+import 'package:marib/ui/screens/chat_v2/chat_screen_v2.dart';
 import 'package:marib/ui/screens/widgets/animated_routes/transparant_route.dart';
 import 'package:marib/utils/errorFilter.dart';
 import 'package:marib/utils/extensions/extensions.dart';
@@ -99,42 +95,20 @@ class _WifiNetworkDetailsScreenState extends State<WifiNetworkDetailsScreen> {
         ? widget.network.currencies.first
         : null;
 
+    final int senderId = int.tryParse(HiveUtils.getUserId() ?? '') ?? 0;
+    final int receiverId = ownerId;
     Navigator.of(context).push(
       TransparantRoute(
-        builder: (_) => MultiBlocProvider(
-          providers: [
-            BlocProvider(create: (_) => SendMessageCubit()),
-            BlocProvider(create: (_) => LoadChatMessagesCubit()),
-            BlocProvider(create: (_) => DeleteMessageCubit()),
-          ],
-          child: ChatScreen(
-            profilePicture: networkLogo.isNotEmpty ? networkLogo : ownerAvatar,
-            userName: widget.network.name,
-            itemImage: networkLogo.isNotEmpty ? networkLogo : ownerAvatar,
-            itemTitle: widget.network.name,
-            userId: ownerId.toString(),
-            itemId: widget.network.id.toString(),
-            date: DateTime.now().toIso8601String(),
-            conversationId: convoId,
-            from: 'wifi',
-            itemOfferId: 0,
-            itemPrice: 0,
-            itemOfferPrice: null,
-            buyerId: '0',
-            status: null,
-            isPurchased: 0,
-            alreadyReview: false,
-            participants: [
-              ChatParticipant(
-                userId: ownerId,
-                name: ownerName,
-                profile: ownerAvatar,
-              ),
-            ],
-            lastMessage: null,
-            currency: currency ?? '',
-            currencySymbol: currency ?? '',
-          ),
+        builder: (_) => ChatScreenV2(
+          conversationId: convoId,
+          receiverId: receiverId,
+          senderId: senderId,
+          itemOfferId: 0,
+          itemId: widget.network.id,
+          title: widget.network.name,
+          itemTitle: widget.network.name,
+          itemImage: networkLogo.isNotEmpty ? networkLogo : ownerAvatar,
+          itemPrice: 0,
         ),
       ),
     );

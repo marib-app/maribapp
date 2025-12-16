@@ -14,6 +14,7 @@ class ChatMessagesCubit extends Cubit<ChatMessagesState> {
     required ChatRepositoryV2 repository,
     ChatCacheStore? cacheStore,
     this.pageLimit = 20,
+    this.itemOfferId,
   })  : _repository = repository,
         _cache = cacheStore ?? ChatCacheStore(),
         super(const ChatMessagesState());
@@ -21,11 +22,13 @@ class ChatMessagesCubit extends Cubit<ChatMessagesState> {
   final ChatRepositoryV2 _repository;
   final ChatCacheStore _cache;
   final int pageLimit;
+  final int? itemOfferId;
 
   StreamSubscription<ChatMessageEntity>? _messageSub;
   bool _loading = false;
   bool _loadingMore = false;
   bool _hasMore = true;
+  int _currentPage = 1;
 
   String? get _conversationId => state.conversationId;
 
@@ -35,6 +38,7 @@ class ChatMessagesCubit extends Cubit<ChatMessagesState> {
     _loading = true;
     _hasMore = true;
     _loadingMore = false;
+    _currentPage = 1;
     await _messageSub?.cancel();
     emit(const ChatMessagesState(status: ChatMessagesStatus.loading));
 
@@ -42,6 +46,7 @@ class ChatMessagesCubit extends Cubit<ChatMessagesState> {
       final page = await _repository.loadPage(
         conversationId: conversationId,
         limit: pageLimit,
+        itemOfferId: itemOfferId,
       );
       _cache.mergePage(conversationId, page.messages);
       _hasMore = page.hasMore;
@@ -84,6 +89,7 @@ class ChatMessagesCubit extends Cubit<ChatMessagesState> {
       final page = await _repository.loadPage(
         conversationId: cid,
         limit: pageLimit,
+        itemOfferId: itemOfferId,
         beforeMessageId: oldest?.id,
         beforeTimestamp: oldest?.createdAt,
       );

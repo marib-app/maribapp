@@ -517,6 +517,10 @@ class Routes {
           final int? itemId =
               int.tryParse(args?['itemId']?.toString() ?? '');
           final String? title = args?['title']?.toString();
+          final String? itemTitle = args?['itemTitle']?.toString();
+          final String? itemImage = args?['itemImage']?.toString();
+          final double? itemPrice =
+              double.tryParse(args?['itemPrice']?.toString() ?? '');
           return AppPageRoute.build(
             settings: routeSettings,
             transition: AppPageRouteTransition.motion,
@@ -528,6 +532,9 @@ class Routes {
               itemOfferId: itemOfferId,
               itemId: itemId,
               title: title,
+              itemTitle: itemTitle,
+              itemImage: itemImage,
+              itemPrice: itemPrice,
             ),
           );
         }

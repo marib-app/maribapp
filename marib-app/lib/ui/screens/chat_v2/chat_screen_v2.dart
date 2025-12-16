@@ -10,6 +10,7 @@ import 'package:marib/data/chat_core/cubit/chat_messages_state.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:marib/ui/screens/chat/chat_audio/widgets/record_button.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:marib/data/repositories/chat_repository.dart';
 
 /// Minimal V2 chat screen wired to the new ChatRepositoryV2 stack.
 /// This is isolated from the legacy screens so it can be iterated safely.
@@ -22,6 +23,9 @@ class ChatScreenV2 extends StatefulWidget {
     this.itemOfferId,
     this.itemId,
     this.title,
+    this.itemTitle,
+    this.itemImage,
+    this.itemPrice,
   });
 
   final String conversationId;
@@ -30,6 +34,9 @@ class ChatScreenV2 extends StatefulWidget {
   final int? itemOfferId;
   final int? itemId;
   final String? title;
+  final String? itemTitle;
+  final String? itemImage;
+  final double? itemPrice;
 
   @override
   State<ChatScreenV2> createState() => _ChatScreenV2State();
@@ -43,25 +50,40 @@ class _ChatScreenV2State extends State<ChatScreenV2>
   final TextEditingController _textController = TextEditingController();
   final ValueNotifier<String?> _sendingLocalId = ValueNotifier<String?>(null);
   late final AnimationController _recordController;
+  final ChatRepostiory _legacyRepo = ChatRepostiory();
+  String? _itemTitle;
+  String? _itemImage;
+  double? _itemPrice;
 
   @override
   void initState() {
     super.initState();
     _repository = ChatRepositoryAdapter();
-    _messagesCubit = ChatMessagesCubit(repository: _repository, pageLimit: 20);
+    _messagesCubit = ChatMessagesCubit(
+      repository: _repository,
+      pageLimit: 20,
+      itemOfferId: widget.itemOfferId,
+    );
     _scrollController = ScrollController()..addListener(_onScroll);
     _recordController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
     _textController.addListener(() => setState(() {}));
+    _itemTitle = widget.itemTitle;
+    _itemImage = widget.itemImage;
+    _itemPrice = widget.itemPrice;
+    _prefetchConversationDetailsIfNeeded();
     _messagesCubit.loadInitial(widget.conversationId);
   }
 
   void _onScroll() {
     if (!_scrollController.hasClients) return;
-    if (_scrollController.position.pixels <=
-        _scrollController.position.minScrollExtent + 12) {
+    final position = _scrollController.position;
+    // With reverse:true, older messages are at the "top" (maxScrollExtent).
+    final double distanceToTop =
+        (position.maxScrollExtent - position.pixels).clamp(0.0, double.infinity);
+    if (distanceToTop <= 20) {
       _messagesCubit.loadMore();
     }
   }
@@ -76,6 +98,24 @@ class _ChatScreenV2State extends State<ChatScreenV2>
     _messagesCubit.close();
     _repository.dispose();
     super.dispose();
+  }
+
+  Future<void> _prefetchConversationDetailsIfNeeded() async {
+    if ((_itemTitle?.isNotEmpty ?? false) || (_itemImage?.isNotEmpty ?? false)) {
+      return;
+    }
+    final convo = await _legacyRepo.fetchConversationDetails(
+      conversationId: widget.conversationId,
+      itemOfferId: widget.itemOfferId,
+    );
+    if (convo?.item != null && mounted) {
+      final item = convo!.item!;
+      setState(() {
+        _itemTitle = item.name ?? _itemTitle;
+        _itemImage = item.image ?? _itemImage;
+        _itemPrice = item.price ?? _itemPrice;
+      });
+    }
   }
 
   Future<void> _sendText() async {
@@ -182,6 +222,23 @@ class _ChatScreenV2State extends State<ChatScreenV2>
         ),
         body: Column(
           children: [
+            Builder(builder: (context) {
+              final bool showOffer = (widget.itemOfferId != null &&
+                      widget.itemOfferId! > 0) ||
+                  (widget.itemId != null && widget.itemId! > 0) ||
+                  (_itemTitle?.isNotEmpty ?? false) ||
+                  (_itemImage?.isNotEmpty ?? false);
+              if (!showOffer) return const SizedBox.shrink();
+              return Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: _OfferCard(
+                  title: _itemTitle ?? widget.title ?? 'إعلان',
+                  imageUrl: _itemImage ?? '',
+                  price: _itemPrice,
+                ),
+              );
+            }),
             Expanded(
               child: BlocBuilder<ChatMessagesCubit, ChatMessagesState>(
                 builder: (context, state) {
@@ -221,15 +278,31 @@ class _ChatScreenV2State extends State<ChatScreenV2>
                           }
                           final msg = messages[index];
                           final bool isMe = msg.senderId == widget.senderId;
+                          final ChatMessageEntity? prevChrono =
+                              index + 1 < messages.length
+                                  ? messages[index + 1]
+                                  : null;
+                          final bool showDateChip = _shouldShowDateChip(
+                            current: msg,
+                            previous: prevChrono,
+                          );
                           return ValueListenableBuilder<String?>(
                             valueListenable: _sendingLocalId,
                             builder: (_, sendingId, __) {
                               final bool showSpinner =
                                   sendingId != null && msg.localId == sendingId;
-                              return _MessageBubble(
-                                message: msg,
-                                isMe: isMe,
-                                showSendingSpinner: showSpinner,
+                              return Column(
+                                children: [
+                                  if (showDateChip)
+                                    _DateChip(
+                                      label: _formatDateLabel(msg.createdAt),
+                                    ),
+                                  _MessageBubble(
+                                    message: msg,
+                                    isMe: isMe,
+                                    showSendingSpinner: showSpinner,
+                                  ),
+                                ],
                               );
                             },
                           );
@@ -483,6 +556,139 @@ class _AudioBubbleState extends State<_AudioBubble> {
     final int m = d.inMinutes;
     final int s = d.inSeconds % 60;
     return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+  }
+}
+
+bool _isSameDay(DateTime a, DateTime b) {
+  return a.year == b.year && a.month == b.month && a.day == b.day;
+}
+
+bool _shouldShowDateChip({
+  required ChatMessageEntity current,
+  ChatMessageEntity? previous,
+}) {
+  if (previous == null) return true;
+  return !_isSameDay(current.createdAt, previous.createdAt);
+}
+
+String _formatDateLabel(DateTime date) {
+  final DateTime now = DateTime.now();
+  final DateTime today = DateTime(now.year, now.month, now.day);
+  final DateTime yesterday = today.subtract(const Duration(days: 1));
+
+  final DateTime d = DateTime(date.year, date.month, date.day);
+  if (d == today) return 'اليوم';
+  if (d == yesterday) return 'أمس';
+  return '${d.year}/${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}';
+}
+
+class _DateChip extends StatelessWidget {
+  const _DateChip({required this.label});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: colors.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: colors.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _OfferCard extends StatelessWidget {
+  const _OfferCard({
+    required this.title,
+    required this.imageUrl,
+    this.price,
+  });
+
+  final String title;
+  final String imageUrl;
+  final double? price;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme colors = Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colors.outlineVariant),
+      ),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(12),
+              bottomLeft: Radius.circular(12),
+            ),
+            child: imageUrl.isNotEmpty
+                ? Image.network(
+                    imageUrl,
+                    width: 72,
+                    height: 72,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      width: 72,
+                      height: 72,
+                      color: colors.surfaceVariant,
+                      child: const Icon(Icons.image_not_supported_outlined),
+                    ),
+                  )
+                : Container(
+                    width: 72,
+                    height: 72,
+                    color: colors.surfaceVariant,
+                    child: const Icon(Icons.image_outlined),
+                  ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: colors.onSurface,
+                  ),
+                ),
+                if (price != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    '${price!.toStringAsFixed(2)}',
+                    style: TextStyle(
+                      color: colors.tertiary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+        ],
+      ),
+    );
   }
 }
 class _MessageBubble extends StatelessWidget {

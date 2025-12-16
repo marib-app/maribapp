@@ -2,10 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use App\Models\UserFcmToken;
 use App\Models\VerificationField;
 use App\Models\VerificationFieldValue;
+use App\Models\VerificationPayment;
+use App\Models\VerificationPlan;
 use App\Models\VerificationRequest;
+use App\Models\Notifications;
 use App\Services\BootstrapTableService;
 use App\Services\FileService;
 use App\Services\NotificationService;
@@ -15,6 +19,7 @@ use Illuminate\Support\Facades\Log;
 use Auth;
 use DB;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Storage;
 use Throwable;
 use Validator;
@@ -37,6 +42,12 @@ class UserVerificationController extends Controller {
         return view('seller-verification.verificationfield');
     }
 
+    public function dashboard() {
+        ResponseService::noAnyPermissionThenRedirect(['seller-verification-field-list', 'seller-verification-field-create', 'seller-verification-field-update', 'seller-verification-field-delete']);
+        $plans = VerificationPlan::orderByDesc('created_at')->get();
+        return view('seller-verification.dashboard', compact('plans'));
+    }
+
     public function create() {
         ResponseService::noPermissionThenRedirect('seller-verification-field-create');
         return view('seller-verification.create');
@@ -53,6 +64,7 @@ class UserVerificationController extends Controller {
             'values'      => 'required_if:type,radio,dropdown,checkbox|array',
             'min_length'  => 'required_if:number,textbox',
             'max_length'  => 'required_if:number,textbox',
+            'account_type'=> 'required|in:individual,commercial,realestate',
         ]);
 
         if ($validator->fails()) {
@@ -120,7 +132,9 @@ class UserVerificationController extends Controller {
                 'rows'  => []
             ];
 
-            $verificationFieldValues = VerificationFieldValue::whereIn('verification_request_id', $result->pluck('id'))->get();
+            $verificationFieldValues = VerificationFieldValue::whereIn('verification_request_id', $result->pluck('id'))
+                ->with('verificationField')
+                ->get();
             foreach ($result as $row) {
                 $row->verification_fields = collect($row->verification_fields)->map(function ($verification_field) use ($verificationFieldValues, $row) {
                     $fieldValue = $verificationFieldValues->first(function ($data) use ($row, $verification_field) {
@@ -150,6 +164,24 @@ class UserVerificationController extends Controller {
                 $tempRow['no'] = $no++;
                 $tempRow['operate'] = $operate;
                 $tempRow['user_name'] = $row->user->name ?? '';
+                $tempRow['verification_field_values'] = $verificationFieldValues
+                    ->where('verification_request_id', $row->id)
+                    ->values()
+                    ->map(static function (VerificationFieldValue $value) {
+                        $displayValue = $value->value;
+                        $type = $value->verificationField->type ?? null;
+                        if ($type === 'fileinput' && !empty($displayValue)) {
+                            if (!is_array($displayValue)) {
+                                $displayValue = [url(Storage::url($displayValue))];
+                            }
+                        }
+                        return [
+                            'verification_field' => [
+                                'name' => $value->verificationField->name ?? '',
+                            ],
+                            'value' => $displayValue,
+                        ];
+                    });
                 $bulkData['rows'][] = $tempRow;
             }
             return response()->json($bulkData);
@@ -157,6 +189,200 @@ class UserVerificationController extends Controller {
             ResponseService::logErrorResponse($e, "Controller -> show");
             ResponseService::errorResponse('Something Went Wrong');
         }
+    }
+
+    public function payments(Request $request) {
+        try {
+            ResponseService::noPermissionThenSendJson('seller-verification-request-list');
+
+            $offset = (int) $request->input('offset', 0);
+            $limit = (int) $request->input('limit', 10);
+            $sort = $request->input('sort', 'id');
+            $order = $request->input('order', 'DESC');
+
+            $query = VerificationPayment::with(['user', 'plan', 'request'])->orderBy($sort, $order);
+
+            if (!empty($request->search)) {
+                $search = $request->search;
+                $query->where(function ($q) use ($search) {
+                    $q->where('status', 'like', "%{$search}%")
+                        ->orWhereHas('user', static function ($userQuery) use ($search) {
+                            $userQuery->where('name', 'like', "%{$search}%")
+                                ->orWhere('email', 'like', "%{$search}%");
+                        });
+                });
+            }
+
+            $total = $query->count();
+            $rows = $query->skip($offset)->take($limit)->get();
+
+            $bulkData = [
+                'total' => $total,
+                'rows'  => [],
+            ];
+
+            foreach ($rows as $row) {
+                $bulkData['rows'][] = [
+                    'id' => $row->id,
+                    'user_name' => $row->user->name ?? '',
+                    'status' => $row->status,
+                    'amount' => number_format((float) $row->amount, 2) . ' ' . $row->currency,
+                    'plan' => $row->plan->name ?? '-',
+                    'expires_at' => optional($row->expires_at)->toDateString(),
+                    'created_at' => optional($row->created_at)->toDateTimeString(),
+                ];
+            }
+
+            return response()->json($bulkData);
+        } catch (Throwable $e) {
+            ResponseService::logErrorResponse($e, 'UserVerificationController -> payments');
+            ResponseService::errorResponse('Something Went Wrong');
+        }
+    }
+
+    public function requestDetails($id) {
+        ResponseService::noAnyPermissionThenRedirect(['seller-verification-request-list','seller-verification-request-update']);
+
+        $request = VerificationRequest::with([
+            'user',
+            'verification_field_values.verificationField',
+        ])->findOrFail($id);
+
+        $payments = VerificationPayment::with('plan')
+            ->where('verification_request_id', $id)
+            ->orderByDesc('created_at')
+            ->get();
+
+        return view('seller-verification.show', [
+            'verification' => $request,
+            'payments' => $payments,
+        ]);
+    }
+
+    public function verifiedAccounts(Request $request) {
+        try {
+            ResponseService::noPermissionThenSendJson('seller-verification-request-list');
+
+            $offset = (int) $request->input('offset', 0);
+            $limit = (int) $request->input('limit', 10);
+            $search = $request->input('search', '');
+
+            // اجلب آخر طلب موثق لكل مستخدم
+            $requests = VerificationRequest::with('user')
+                ->where('status', 'approved')
+                ->when(!empty($search), function ($q) use ($search) {
+                    $q->whereHas('user', function ($uq) use ($search) {
+                        $uq->where('name', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%")
+                            ->orWhere('mobile', 'like', "%{$search}%");
+                    });
+                })
+                ->orderByDesc('approved_at')
+                ->get()
+                ->groupBy('user_id')
+                ->map(function ($items) {
+                    return $items->first(); // الأحدث
+                })
+                ->values();
+
+            $total = $requests->count();
+            $slice = $requests->slice($offset, $limit);
+
+            $rows = $slice->map(static function (VerificationRequest $req) {
+                $user = $req->user;
+                $expiresAt = $req->expires_at ? Carbon::parse($req->expires_at) : null;
+                $remaining = $expiresAt ? $expiresAt->diffInDays(now(), false) * -1 : null;
+                $statusType = 'success';
+                $labelText = __('موثق');
+                if ($remaining !== null) {
+                    if ($remaining < 0) {
+                        $statusType = 'danger';
+                        $labelText = __('منتهي');
+                    } elseif ($remaining <= 7) {
+                        $statusType = 'warning';
+                        $labelText = __('قارب على الانتهاء');
+                    }
+                }
+
+                $statusBadge = sprintf(
+                    '<span class="badge bg-%s">%s</span>',
+                    $statusType,
+                    e($labelText)
+                );
+
+                $actions = sprintf(
+                    '<a href="%s" class="btn btn-sm btn-outline-primary">%s</a>',
+                    route('seller-verification.request.details', $req->id),
+                    __('عرض التفاصيل')
+                );
+
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'mobile' => $user->mobile,
+                    'expires_at' => $expiresAt ? $expiresAt->toDateString() : '-',
+                    'status_badge' => $statusBadge,
+                    'actions' => $actions,
+                ];
+            });
+
+            return response()->json([
+                'total' => $total,
+                'rows' => $rows,
+            ]);
+        } catch (Throwable $e) {
+            ResponseService::logErrorResponse($e, 'UserVerificationController -> verifiedAccounts');
+            ResponseService::errorResponse('Something Went Wrong');
+        }
+    }
+
+    public function storePlan(Request $request) {
+        ResponseService::noPermissionThenRedirect('seller-verification-field-create');
+
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:190',
+            'account_type' => 'required|in:individual,commercial,realestate',
+            'duration_days' => 'nullable|integer|min:0',
+            'price' => 'required|numeric|min:0',
+            'currency' => 'required|string|max:10',
+            'is_active' => 'nullable|boolean',
+        ]);
+
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput();
+        }
+
+        VerificationPlan::create($validator->validated());
+
+        return redirect()->back()->with('success', __('Plan saved successfully'));
+    }
+
+    public function updatePlan(Request $request, VerificationPlan $plan) {
+        ResponseService::noPermissionThenRedirect('seller-verification-field-update');
+
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:190',
+            'account_type' => 'required|in:individual,commercial,realestate',
+            'duration_days' => 'nullable|integer|min:0',
+            'price' => 'required|numeric|min:0',
+            'currency' => 'required|string|max:10',
+            'is_active' => 'nullable|boolean',
+        ]);
+
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput();
+        }
+
+        $plan->update($validator->validated());
+
+        return redirect()->back()->with('success', __('Plan updated successfully'));
+    }
+
+    public function destroyPlan(VerificationPlan $plan) {
+        ResponseService::noPermissionThenRedirect('seller-verification-field-delete');
+        $plan->delete();
+        return redirect()->back()->with('success', __('Plan deleted successfully'));
     }
 
     public function showVerificationFields(Request $request) {
@@ -218,6 +444,7 @@ class UserVerificationController extends Controller {
             'values'     => 'required_if:type,radio,dropdown,checkbox|array',
             'min_length' => 'required_if:type,number,textbox',
             'max_length' => 'required_if:type,number,textbox',
+            'account_type'=> 'required|in:individual,commercial,realestate',
             'status'     => 'nullable|boolean'
         ]);
         if ($validator->fails()) {
@@ -367,19 +594,43 @@ class UserVerificationController extends Controller {
             }
             $verification_field->update([
                 'status'           => $newStatus,
-                'rejection_reason' => $newStatus === 'rejected' ? $rejectionReason : null, // Set the reason if rejected
+                'rejection_reason' => $newStatus === 'rejected' ? $rejectionReason : null,
+                'approved_at'      => $newStatus === 'approved' ? now() : null,
+                'expires_at'       => $newStatus === 'approved'
+                    ? Carbon::now()->addDays((int) $request->input('duration_days', 30))
+                    : null,
+                'duration_days'    => $newStatus === 'approved' ? (int) $request->input('duration_days', 30) : null,
+                'price'            => $newStatus === 'approved' ? $request->input('price', null) : null,
+                'currency'         => $newStatus === 'approved' ? $request->input('currency', 'SAR') : null,
             ]);
 
             $verification_field->user->update([
                 'is_verified' => $newStatus === 'approved' ? 1 : 0,
             ]);
 
+            if ($newStatus === 'approved') {
+                VerificationPayment::create([
+                    'user_id' => $verification_field->user->id,
+                    'verification_request_id' => $verification_field->id,
+                    'amount' => $request->input('price', 0),
+                    'currency' => $request->input('currency', 'SAR'),
+                    'status' => 'paid',
+                    'starts_at' => now(),
+                    'expires_at' => Carbon::now()->addDays((int) $request->input('duration_days', 30)),
+                    'meta' => [
+                        'approved_by' => Auth::id(),
+                    ],
+                ]);
+            }
+
             $user_token = UserFcmToken::where('user_id', $verification_field->user->id)->pluck('fcm_token')->toArray();
             if (!empty($user_token)) {
                 $notificationResponse = NotificationService::sendFcmNotification(
                     $user_token,
-                    'About ',
-                    "Your Verfication Request is " . ucfirst($request->status),
+                    'تنبيه التوثيق',
+                    $newStatus === 'approved'
+                        ? "تهانياً تم توثيق حسابك"
+                        : "تم تحديث حالة طلب التوثيق إلى " . ucfirst($request->status),
                     "verifcation-request-update",
                     ['id' => $id]
                 );
@@ -396,7 +647,11 @@ class UserVerificationController extends Controller {
 
 
             }
-            ResponseService::successResponse('Seller status updated successfully');
+            if ($request->expectsJson() || $request->ajax()) {
+                ResponseService::successResponse('Seller status updated successfully');
+            } else {
+                return redirect()->back()->with('success', __('Seller status updated successfully'));
+            }
         } catch (Throwable $th) {
             ResponseService::logErrorResponse($th, 'UserVerificationController -> updateSellerApproval');
             ResponseService::errorResponse(

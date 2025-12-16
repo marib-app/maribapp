@@ -20,11 +20,12 @@ class ChatRepositoryAdapter implements ChatRepositoryV2 {
     ChatCacheStore? cacheStore,
     this.perPage = 20,
   })  : _legacy = legacyRepo ?? ChatRepostiory(),
-        _cache = cacheStore ?? ChatCacheStore();
+        _cache = cacheStore ?? ChatCacheStore(maxPerConversation: 500);
 
   final ChatRepostiory _legacy;
   final ChatCacheStore _cache;
   final int perPage;
+  final Map<String, int> _pageByConversation = <String, int>{};
 
   final StreamController<ChatMessageEntity> _messageStreamController =
       StreamController<ChatMessageEntity>.broadcast();
@@ -37,29 +38,34 @@ class ChatRepositoryAdapter implements ChatRepositoryV2 {
     int limit = 20,
     int? beforeMessageId,
     DateTime? beforeTimestamp,
+    int? itemOfferId,
   }) async {
-    // Legacy API paginates by page number; we translate to page based on
-    // already-fetched count. If beforeMessageId provided, we compute a page
-    // estimate from cached length to avoid duplicates.
-    final int already = _cache.getMessages(conversationId).length;
-    final int page = (already ~/ limit) + 1;
+    // Legacy API paginates by page number; keep an internal cursor per conversation.
+    final bool isInitial = beforeMessageId == null && beforeTimestamp == null;
+    if (isInitial) {
+      _pageByConversation[conversationId] = 1;
+    }
+    final int page = _pageByConversation[conversationId] ?? 1;
     final response = await _legacy.getMessagesApi(
       page: page,
       perPage: limit,
-      itemOfferId: 0,
+      itemOfferId: itemOfferId ?? 0,
       conversationId: conversationId,
     );
 
     final List<ChatMessageEntity> entities = response.modelList
-        .map(_mapModalToEntity)
+        .map((m) => _mapModalToEntity(m, forcedConversationId: conversationId))
         .whereType<ChatMessageEntity>()
         .toList();
 
-    final int? total = response.total;
+    final int total = response.total;
     final int currentPage = response.page ?? page;
-    final bool hasMore = total != null
-        ? total > (currentPage * limit)
-        : entities.length >= limit; // fallback: assume more if page full
+    final bool hasMore =
+        total > (currentPage * limit) || entities.length >= limit;
+
+    // advance page cursor for next call
+    _pageByConversation[conversationId] = currentPage + 1;
+
     return ChatPage(messages: entities, hasMore: hasMore);
   }
 
@@ -79,9 +85,11 @@ class ChatRepositoryAdapter implements ChatRepositoryV2 {
     final dynamic data = map['data'];
     if (data is Map<String, dynamic>) {
       final ChatMessageModal modal = ChatMessageModal.fromJson(data);
-      final entity = _mapModalToEntity(modal)?.copyWith(
+      final entity = _mapModalToEntity(
+        modal,
+        forcedConversationId: draft.conversationId,
+      )?.copyWith(
         localId: draft.localId,
-        conversationId: draft.conversationId,
       );
       if (entity != null) {
         _messageStreamController.add(entity);
@@ -122,7 +130,10 @@ class ChatRepositoryAdapter implements ChatRepositoryV2 {
     return <ChatConversationEntity>[];
   }
 
-  ChatMessageEntity? _mapModalToEntity(ChatMessageModal modal) {
+  ChatMessageEntity? _mapModalToEntity(
+    ChatMessageModal modal, {
+    String? forcedConversationId,
+  }) {
     DateTime? _parse(String? raw) {
       if (raw == null || raw.isEmpty) return null;
       return DateTime.tryParse(raw);
@@ -131,12 +142,18 @@ class ChatRepositoryAdapter implements ChatRepositoryV2 {
     final DateTime created = _parse(modal.createdAt) ?? DateTime.now();
     final DateTime? updated = _parse(modal.updatedAt);
 
+    final String conversationId =
+        forcedConversationId?.trim().isNotEmpty == true
+            ? forcedConversationId!
+            : (modal.itemOfferId?.toString() ??
+                modal.receiverId?.toString() ??
+                modal.id?.toString() ??
+                '');
+
     return ChatMessageEntity(
       id: modal.id,
       localId: modal.localId,
-      conversationId: modal.itemOfferId?.toString() ??
-          modal.receiverId?.toString() ??
-          '',
+      conversationId: conversationId,
       senderId: modal.senderId ?? 0,
       receiverId: modal.receiverId ?? 0,
       itemOfferId: modal.itemOfferId,

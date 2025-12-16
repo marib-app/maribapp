@@ -68,6 +68,7 @@ import 'package:marib/utils/cloudState/cloud_state.dart';
 import 'package:marib/utils/color_palette_utils.dart';
 import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/currency_utils.dart';
+import 'package:marib/ui/screens/item/ad_details_screen/cart_tip_sheet.dart';
 import 'package:marib/utils/delivery_department.dart';
 import 'package:marib/utils/ecommerce_department.dart';
 import 'package:marib/utils/extensions/extensions.dart';
@@ -1763,10 +1764,15 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       );
     }
 
-    final double? deliverySize = options.deliverySize;
-    final bool hasDeliverySize = deliverySize != null && deliverySize > 0;
-    final String? deliverySizeText =
-        hasDeliverySize ? _formatDeliverySize(deliverySize!) : null;
+    final double? deliverySizePerUnit = options.deliverySize;
+    final bool hasDeliverySize =
+        deliverySizePerUnit != null && deliverySizePerUnit > 0;
+    final double? deliverySizeTotal = hasDeliverySize
+        ? (deliverySizePerUnit! * _selectedQuantity)
+        : null;
+    final String? deliverySizeText = deliverySizeTotal != null
+        ? _formatDeliverySize(deliverySizeTotal)
+        : null;
     final int? stockLimit = _selectedVariantStock?.availableStock;
     final bool isOutOfStock = stockLimit != null && stockLimit <= 0;
     final List<Widget> children = <Widget>[];
@@ -4489,3 +4495,4 @@ class _FetchErrorView extends StatelessWidget {
     );
   }
 }
+

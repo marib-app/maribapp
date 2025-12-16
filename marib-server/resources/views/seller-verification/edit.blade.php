@@ -32,7 +32,16 @@
                             <div class="card-header">{{__("Verification Field")}}</div>
                             <div class="card-body mt-3">
                                 <div class="row">
-                                    <div class="col-md-12 form-group mandatory">
+                <div class="col-md-6 form-group mandatory">
+                    <label for="account_type" class="mandatory form-label">{{ __('نوع الحساب') }}</label>
+                    <select name="account_type" id="account_type" class="form-select" data-parsley-required="true">
+                        <option value="individual" @selected($verification_field->account_type=='individual')>{{ __('فردي') }}</option>
+                        <option value="commercial" @selected($verification_field->account_type=='commercial')>{{ __('تجاري') }}</option>
+                        <option value="realestate" @selected($verification_field->account_type=='realestate')>{{ __('عقاري') }}</option>
+                    </select>
+                </div>
+
+                <div class="col-md-12 form-group mandatory">
                                         <label for="name" class="mandatory form-label">{{ __('Field Name') }}</label>
                                         <input type="text" name="name" id="name" class="form-control" data-parsley-required="true" value="{{ $verification_field->name }}">
                                     </div>

@@ -18,9 +18,6 @@ import 'package:marib/data/cubits/item/fetch_my_item_cubit.dart';
 import 'package:marib/data/cubits/item/delete_item_cubit.dart';
 import 'package:marib/data/cubits/chat/get_buyer_chat_users_cubit.dart';
 import 'package:marib/data/cubits/chat/make_an_offer_item_cubit.dart';
-import 'package:marib/data/cubits/chat/send_message.dart';
-import 'package:marib/data/cubits/chat/load_chat_messages.dart';
-import 'package:marib/data/cubits/chat/delete_message_cubit.dart';
 import 'package:marib/ui/screens/cart/delivery_pricing_guard.dart';
 
 import 'package:marib/data/model/item/cart_model.dart';
@@ -31,13 +28,15 @@ import 'package:marib/data/model/cart/cart_safety_tip.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart';
 import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
-import 'package:marib/ui/screens/chat/chat_screen.dart';
+import 'package:marib/ui/screens/chat_v2/chat_screen_v2.dart';
+import 'add_cart_sheet.dart';
 import '../add_item_screen/custom_filed_structure/custom_field.dart';
 import 'package:marib/data/helper/widgets.dart';
 import 'package:marib/utils/item_category_ids.dart';
 
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/responsiveSize.dart';
+import 'dart:convert';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/hive_utils.dart';
@@ -452,6 +451,31 @@ Widget bottomButtonWidget({
 // --------------------------------------------------
 enum AdActionMode { ecommerce, classifieds }
 
+String _cartVariantSignature(Cart cart) {
+  String normalize(dynamic value) {
+    if (value is Map) {
+      final entries = value.entries
+          .map((e) => MapEntry(e.key.toString(), normalize(e.value)))
+          .toList()
+        ..sort((a, b) => a.key.compareTo(b.key));
+      return jsonEncode({for (final e in entries) e.key: e.value});
+    }
+    if (value is List) return jsonEncode(value.map(normalize).toList());
+    return value.toString();
+  }
+
+  final variantId = (cart.variantId ?? '').trim();
+  final attrs = cart.variantAttributes ?? <String, dynamic>{};
+  return '$variantId|${normalize(attrs)}';
+}
+
+bool _isDuplicateCartLine(Iterable<Cart> existingItems, Cart incoming) {
+  final signature = _cartVariantSignature(incoming);
+  return existingItems.any(
+    (item) => item.id == incoming.id && _cartVariantSignature(item) == signature,
+  );
+}
+
 // ✅ عدّل هذه القوائم حسب IDs الأقسام عندك
 // - kEcommerceIds: الأقسام التي تتصرف كمتجر (كمبيوترات، متاجر إلكترونية، شي إن...)
 // - kClassifiedIds: أقسام الإعلانات (عقارات، إعلانات عامة...)
@@ -704,37 +728,22 @@ class _AdDetailsBottomBarState extends State<AdDetailsBottomBar> {
           },
         );
 
+    final int senderId = int.tryParse(HiveUtils.getUserId() ?? '') ?? 0;
+    final int receiverId = model.user?.id ?? 0;
     Navigator.push(
       context,
       BlurredRouter(
-        builder: (context) => MultiBlocProvider(
-          providers: [
-            BlocProvider(create: (_) => SendMessageCubit()),
-            BlocProvider(create: (_) => LoadChatMessagesCubit()),
-            BlocProvider(create: (_) => DeleteMessageCubit()),
-          ],
-          child: ChatScreen(
-            profilePicture: model.user?.profile ?? "",
-            userName: model.user?.name ?? '',
-            userId: (model.user?.id ?? '').toString(),
-            from: "item",
-            itemImage: model.image ?? '',
-            itemId: model.id.toString(),
-            date: model.created ?? '',
-            itemTitle: model.name ?? '',
-            itemOfferId: chatedUser.itemOfferId ?? chatedUser.id ?? 0,
-            conversationId:
-                chatedUser.conversationId ?? chatedUser.id?.toString() ?? '',
-            itemPrice: resolvedItemPrice,
-            status: model.status ?? '',
-            buyerId: HiveUtils.getUserId(),
-            isPurchased: model.isPurchased ?? 0,
-            alreadyReview: (model.review != null && model.review!.isNotEmpty),
-            itemOfferPrice: resolvedOfferPrice,
-            participants: participants,
-            currency: currency,
-            currencySymbol: currencySymbol,
-          ),
+        builder: (context) => ChatScreenV2(
+          conversationId:
+              chatedUser.conversationId ?? chatedUser.id?.toString() ?? '',
+          receiverId: receiverId,
+          senderId: senderId,
+          itemOfferId: chatedUser.itemOfferId ?? chatedUser.id ?? 0,
+          itemId: model.id,
+          title: model.user?.name ?? '',
+          itemTitle: model.name ?? '',
+          itemImage: model.image ?? '',
+          itemPrice: resolvedItemPrice,
         ),
       ),
     );
@@ -931,7 +940,7 @@ class _AdDetailsBottomBarState extends State<AdDetailsBottomBar> {
           return;
         }
 
-        if (isDuplicateCartLine(existingItems, cartItem)) {
+        if (_isDuplicateCartLine(existingItems, cartItem)) {
           HelperUtils.showSnackBarMessage(
             context,
             "productAlreadyInCart".translate(context),

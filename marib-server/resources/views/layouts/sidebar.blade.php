@@ -211,9 +211,9 @@
           @canany(['seller-verification-field-list','seller-verification-field-create','seller-verification-field-update','seller-verification-field-delete',
                    'seller-verification-request-list','seller-verification-request-create','seller-verification-request-update','seller-verification-request-delete'])
             <li class="sidebar-item">
-              <a href="{{ route('seller-verification.index') }}" class="sidebar-link">
+              <a href="{{ route('seller-verification.dashboard') }}" class="sidebar-link">
                 <i class="bi bi-shield-lock"></i>
-                <span class="menu-item">{{ __('Seller Verification') }}</span>
+                <span class="menu-item">{{ __('الحسابات الموثقة') }}</span>
               </a>
             </li>
           @endcanany

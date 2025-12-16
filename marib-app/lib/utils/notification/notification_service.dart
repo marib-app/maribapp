@@ -13,7 +13,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:marib/ui/screens/chat/chat_screen.dart';
+import 'package:marib/ui/screens/chat_v2/chat_screen_v2.dart';
 import 'package:marib/ui/screens/chat/chat_badge_controller.dart';
 import 'package:marib/ui/screens/notifications/action_request_details_screen.dart';
 
@@ -1525,24 +1525,20 @@ class NotificationService {
                           NotificationService.extractCurrencySymbol(
                               normalizedData);
 
-                      return ChatScreen(
-                        profilePicture: userProfile ?? "",
-                        userName: username ?? "",
-                        itemImage: itemTitleImage ?? "",
-                        itemTitle: itemTitle ?? "",
-                        userId: senderId ?? "",
-                        itemId: itemId ?? "",
-                        date: date ?? "",
-                        itemOfferId: itemOfferIdParsed,
+                      final int senderInt =
+                          int.tryParse(HiveUtils.getUserId() ?? '') ?? 0;
+                      final int receiverInt =
+                          int.tryParse((senderId ?? '').toString()) ?? 0;
+                      return ChatScreenV2(
                         conversationId: (conversationId ?? '').toString(),
-                        itemPrice: getPrice(itemPrice)!,
-                        itemOfferPrice: getPrice(itemOfferPrice),
-                        buyerId: HiveUtils.getUserId(),
-                        alreadyReview: false,
-                        isPurchased: 0,
-                        participants: participants,
-                        currency: currency,
-                        currencySymbol: currencySymbol,
+                        receiverId: receiverInt,
+                        senderId: senderInt,
+                        itemOfferId: itemOfferIdParsed,
+                        itemId: int.tryParse(itemId ?? ''),
+                        title: username ?? '',
+                        itemTitle: itemTitle,
+                        itemImage: itemTitleImage,
+                        itemPrice: getPrice(itemPrice),
                       );
                     },
                   ),

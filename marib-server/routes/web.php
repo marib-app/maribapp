@@ -577,10 +577,18 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
 
     /* --------------------------- ط·ع¾ط¸ث†ط·آ«ط¸ظ¹ط¸â€ڑ ط·آ§ط¸â€‍ط·آ¨ط·آ§ط·آ¦ط·آ¹ Seller Verification --------------------------- */
     Route::group(['prefix' => 'seller-verification'], static function () {
+        Route::get('/dashboard', [UserVerificationController::class, 'dashboard'])->name('seller-verification.dashboard');
+        Route::get('/verification-payments', [UserVerificationController::class, 'payments'])->name('verification_payments.show');
+        Route::get('/verified-accounts', [UserVerificationController::class, 'verifiedAccounts'])->name('verification_verified_accounts.show');
+        Route::post('/plans', [UserVerificationController::class, 'storePlan'])->name('seller-verification.plan.store');
+        Route::put('/plans/{plan}', [UserVerificationController::class, 'updatePlan'])->name('seller-verification.plan.update');
+        Route::delete('/plans/{plan}', [UserVerificationController::class, 'destroyPlan'])->name('seller-verification.plan.delete');
+
         Route::put('/{id}/approval', [UserVerificationController::class, 'updateSellerApproval'])->name('seller_verification.approval');
 
         Route::get('/verification-requests', [UserVerificationController::class, 'show'])->name('verification_requests.show');
         Route::get('/verification-details/{id}', [UserVerificationController::class, 'getVerificationDetails']);
+        Route::get('/requests/{id}', [UserVerificationController::class, 'requestDetails'])->name('seller-verification.request.details');
 
         Route::put('/seller-verification/status-change', [UserVerificationController::class, 'updateStatus'])->name('seller-verification.update_status');
 

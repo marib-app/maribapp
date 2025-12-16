@@ -404,26 +404,20 @@ extension _ChatTileUi on ChatTile {
                         itemOfferId: itemOfferId,
                       );
                     }
-                    return ChatScreen(
-                      profilePicture: profilePicture,
-                      itemTitle: itemName,
-                      userId: id,
-                      itemImage: itemPicture,
-                      userName: userName,
-                      itemId: itemId,
-                      date: date,
-                      itemOfferId: itemOfferId,
+                    final int senderId =
+                        int.tryParse(HiveUtils.getUserId() ?? '') ?? 0;
+                    final int receiverId = int.tryParse(id) ?? 0;
+                    final int? parsedItemId = int.tryParse(itemId);
+                    return ChatScreenV2(
                       conversationId: conversationId,
+                      receiverId: receiverId,
+                      senderId: senderId,
+                      itemOfferId: itemOfferId,
+                      itemId: parsedItemId ?? itemOfferId,
+                      title: userName,
+                      itemTitle: itemName,
+                      itemImage: itemPicture,
                       itemPrice: itemPrice,
-                      itemOfferPrice: itemAmount ?? null,
-                      status: status,
-                      buyerId: buyerId,
-                      alreadyReview: alreadyReview,
-                      isPurchased: isPurchased,
-                      participants: participants,
-                      lastMessage: lastMessage,
-                      currency: itemCurrency,
-                      currencySymbol: itemCurrencySymbol,
                     );
                   },
                 ),

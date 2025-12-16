@@ -20,6 +20,7 @@ import 'package:marib/data/cubits/add_item_review_cubit.dart';
 import 'package:marib/data/cubits/chat/block_user_cubit.dart';
 import 'package:marib/data/cubits/chat/delete_message_cubit.dart';
 import 'package:marib/ui/theme/theme.dart';
+import 'package:marib/ui/screens/chat_v2/chat_screen_v2.dart';
 import 'package:marib/utils/app_icon.dart';
 import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/customHeroAnimation.dart';
@@ -1080,7 +1081,28 @@ class _ChatScreenState extends State<ChatScreen>
   }
 
   @override
-  Widget build(BuildContext context) => buildChatScreen(context);
+  Widget build(BuildContext context) {
+    final int receiverId = int.tryParse(widget.userId) ?? 0;
+    final int senderId = int.tryParse(HiveUtils.getUserId() ?? '') ?? 0;
+    if (receiverId == 0 || senderId == 0 || widget.conversationId.trim().isEmpty) {
+      return const Scaffold(
+        body: Center(
+          child: Text('تعذر فتح المحادثة'),
+        ),
+      );
+    }
+    return ChatScreenV2(
+      conversationId: widget.conversationId,
+      receiverId: receiverId,
+      senderId: senderId,
+      itemOfferId: widget.itemOfferId,
+      itemId: int.tryParse(widget.itemId) ?? widget.itemOfferId,
+      title: widget.userName,
+      itemTitle: widget.itemTitle,
+      itemImage: widget.itemImage,
+      itemPrice: widget.itemOfferPrice ?? widget.itemPrice,
+    );
+  }
 
   Widget offerWidget() => buildOfferWidget();
 }

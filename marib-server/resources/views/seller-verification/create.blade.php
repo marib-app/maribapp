@@ -19,7 +19,23 @@
         <form action="{{ route('seller-verification.store') }}" method="POST" class="create-form" data-success-function="afterCustomFieldCreation" data-parsley-validate enctype="multipart/form-data">
             @csrf
             <div class="row">
-                <div class="col-md-6 col-sm-12">
+                <div class="col-md-4 col-sm-12">
+                    <div class="card h-100">
+                        <div class="card-header">{{ __('نوع الحساب') }}</div>
+                        <div class="card-body">
+                            <div class="form-group mandatory">
+                                <label for="account_type" class="mandatory form-label">{{ __('اختر نوع الحساب') }}</label>
+                                <select name="account_type" id="account_type" class="form-select" data-parsley-required="true">
+                                    <option value="individual">{{ __('فردي') }}</option>
+                                    <option value="commercial">{{ __('تجاري') }}</option>
+                                    <option value="realestate">{{ __('عقاري') }}</option>
+                                </select>
+                                <small class="text-muted">{{ __('سيتم ربط الحقل بهذا النوع فقط') }}</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-8 col-sm-12">
                     <div class="card">
                         <div class="card-header">{{__("Create Seller Verification")}}</div>
                         <div class="card-body mt-2">

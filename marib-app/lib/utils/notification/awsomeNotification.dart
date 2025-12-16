@@ -8,7 +8,7 @@ import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:marib/app/routes.dart';
 import 'package:marib/app/navigation/app_page_route.dart';
 import 'package:marib/app/navigation/motion/route_motion.dart';
-import 'package:marib/ui/screens/chat/chat_screen.dart';
+import 'package:marib/ui/screens/chat_v2/chat_screen_v2.dart';
 
 import 'package:marib/data/cubits/chat/delete_message_cubit.dart';
 import 'package:marib/data/model/data_output.dart';
@@ -303,25 +303,21 @@ class NotificationController {
                               NotificationService.buildParticipantsFromNotification(
                                 data: notificationData,
                               );
-                      return ChatScreen(
-                        profilePicture: userProfile ?? "",
-                        userName: username ?? "",
-                        itemImage: itemImage ?? "",
-                        itemTitle: itemName ?? "",
-                        userId: senderId ?? "",
-                        itemId: itemId ?? "",
-                        date: date ?? "",
-                        itemOfferId: itemOfferIdParsed,
+                      final int senderInt =
+                          int.tryParse(HiveUtils.getUserId() ?? '') ?? 0;
+                      final int receiverInt =
+                          int.tryParse((senderId ?? '').toString()) ?? 0;
+                      return ChatScreenV2(
                         conversationId: (conversationId ?? '').toString(),
-                        itemPrice: NotificationService.getPrice(itemPrice!)!,
-                        itemOfferPrice:
-                            NotificationService.getPrice(itemOfferPrice),
-                        buyerId: HiveUtils.getUserId(),
-                        alreadyReview: false,
-                        isPurchased: 0,
-                        participants: participants,
-                        currency: currency,
-                        currencySymbol: currencySymbol,
+                        receiverId: receiverInt,
+                        senderId: senderInt,
+                        itemOfferId: itemOfferIdParsed,
+                        itemId: int.tryParse(itemId ?? ''),
+                        title: username ?? '',
+                        itemTitle: itemName,
+                        itemImage: itemImage,
+                        itemPrice:
+                            NotificationService.getPrice(itemPrice ?? 0.0),
                       );
                     },
                   ),
@@ -392,25 +388,21 @@ class NotificationController {
                                 .buildParticipantsFromNotification(
                               data: notificationData,
                             );
-                        return ChatScreen(
-                          profilePicture: userProfile ?? "",
-                          userName: username ?? "",
-                          itemImage: itemImage ?? "",
-                          itemTitle: itemName ?? "",
-                          userId: senderId ?? "",
-                          itemId: itemId ?? "",
-                          date: date ?? "",
-                          itemOfferId: itemOfferIdParsed,
+                        final int senderInt =
+                            int.tryParse(HiveUtils.getUserId() ?? '') ?? 0;
+                        final int receiverInt =
+                            int.tryParse((senderId ?? '').toString()) ?? 0;
+                        return ChatScreenV2(
                           conversationId: (conversationId ?? '').toString(),
-                          itemPrice: NotificationService.getPrice(itemPrice!)!,
-                          itemOfferPrice:
-                              NotificationService.getPrice(itemOfferPrice),
-                          buyerId: HiveUtils.getUserId(),
-                          alreadyReview: false,
-                          isPurchased: 0,
-                          participants: participants,
-                          currency: currency,
-                          currencySymbol: currencySymbol,
+                          receiverId: receiverInt,
+                          senderId: senderInt,
+                          itemOfferId: itemOfferIdParsed,
+                          itemId: int.tryParse(itemId ?? ''),
+                          title: username ?? '',
+                          itemTitle: itemName,
+                          itemImage: itemImage,
+                          itemPrice:
+                              NotificationService.getPrice(itemPrice ?? 0.0),
                         );
                       },
                     ),

@@ -70,6 +70,7 @@ class SearchScreen extends StatefulWidget {
 
 class SearchScreenState extends State<SearchScreen>
     with TickerProviderStateMixin, AutomaticKeepAliveClientMixin<SearchScreen> {
+  static SearchScreenState? _lastInstance;
   static const double _listItemExtent = 160;
   static const double sidePadding = Constant.defaultPadding;
 
@@ -77,7 +78,7 @@ class SearchScreenState extends State<SearchScreen>
   bool get wantKeepAlive => true;
   bool isFocused = false;
   String previousSearchQuery = "";
-  static TextEditingController searchController = TextEditingController();
+  late final TextEditingController searchController;
   late final ScrollController _scrollController;
   late final _SearchDebounceCoordinator _debounce;
   ItemFilterModel? filter;
@@ -101,6 +102,8 @@ class SearchScreenState extends State<SearchScreen>
 
     searchController.addListener(searchItemListener);
     _scrollController = ScrollController()..addListener(_handleScroll);
+    _lastInstance = this;
+
   }
 
   void _handleScroll() {
@@ -151,9 +154,8 @@ class SearchScreenState extends State<SearchScreen>
       return true;
     }
 
-    return state is SearchItemFetchProgress ||
-        state is SearchItemSuccess ||
-        state is SearchItemFailure;
+    return state is SearchItemFetchProgress || state is SearchItemFailure;
+
   }
 
   List<CatalogSection> _buildSections({
@@ -942,6 +944,7 @@ class SearchScreenState extends State<SearchScreen>
 
             return CatalogScrollView(
               controller: _scrollController,
+              primary: false,
               physics: AppScrollBehavior.defaultPhysics,
               scrollBehavior: const _NoStretchScrollBehavior(),
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
@@ -1015,11 +1018,16 @@ class SearchScreenState extends State<SearchScreen>
     _scrollController.removeListener(_handleScroll);
     _scrollController.dispose();
     _debounce.dispose();
+    if (_lastInstance == this) {
+      _lastInstance = null;
+    }
     super.dispose();
   }
 
   @visibleForTesting
   ScrollController get scrollController => _scrollController;
+  static TextEditingController? get activeSearchController =>
+      _lastInstance?.searchController;
 }
 
 enum _DebounceScope { search, scroll }

@@ -271,8 +271,9 @@ class MainActivityState extends State<MainActivity> with TickerProviderStateMixi
 
     if (index != 1) {
       context.read<SearchItemCubit>().clearSearch();
-      if (SearchScreenState.searchController.hasListeners) {
-        SearchScreenState.searchController.text = "";
+      final searchController = SearchScreenState.activeSearchController;
+      if (searchController?.hasListeners ?? false) {
+        searchController!.text = "";
       }
     }
     searchbody = {};

@@ -280,22 +280,40 @@ class _HeaderSection extends StatelessWidget {
                     ValueListenableBuilder<bool>(
                       valueListenable: verificationBadgeLoadingNotifier,
                       builder: (context, badgeLoading, _) {
+                        final Set<String> trackedStatuses = {
+                          'approved',
+                          'pending',
+                          'resubmitted',
+                          'rejected',
+                        };
+                        final bool hasExistingRequest =
+                            resolvedRequest != null &&
+                                verificationStatus != null &&
+                                trackedStatuses.contains(verificationStatus);
+
+                        void handleVerificationTap() {
+                          if (hasExistingRequest) {
+                            showVerificationSubscriptionSheet(
+                              context,
+                              status: verificationStatus,
+                              expiresAt: verificationExpiresAt,
+                              isVerified: isVerified,
+                            );
+                            return;
+                          }
+
+                          Navigator.of(context)
+                              .pushNamed(Routes.accountVerificationInfo);
+                        }
+
                         return VerificationBadgeAnimated(
                           isLoading: badgeLoading,
                           showVerificationButton: showVerificationButton,
                           isVerified: isVerified,
                           status: verificationStatus,
                           expiresAt: verificationExpiresAt,
-                          onVerifyTap: () {
-                            Navigator.of(context)
-                                .pushNamed(Routes.accountVerificationInfo);
-                          },
-                          onStatusTap: () => showVerificationSubscriptionSheet(
-                            context,
-                            status: verificationStatus,
-                            expiresAt: verificationExpiresAt,
-                            isVerified: isVerified,
-                          ),
+                          onVerifyTap: handleVerificationTap,
+                          onStatusTap: handleVerificationTap,
                         );
                       },
                     ),

@@ -1,3 +1,4 @@
+
 // lib/ui/screens/user_profile/profile_screen.dart
 // هذا هو "ملف المنطق" وهو الملف الذي يُستورد كما كان من أي مكان آخر.
 // يُبقي الرمز ProfileScreen معرفاً (لأن الـ part أدناه يحتوي الواجهة).
@@ -21,6 +22,7 @@ import 'package:marib/app/app_theme.dart';
 import 'package:marib/app/routes.dart';
 import 'package:marib/data/cubits/auth/authentication_cubit.dart';
 import 'package:marib/data/cubits/auth/delete_user_cubit.dart';
+import 'package:marib/data/cubits/category/fetch_category_cubit.dart';
 import 'package:marib/data/cubits/chat/blocked_users_list_cubit.dart';
 import 'package:marib/data/cubits/chat/get_buyer_chat_users_cubit.dart';
 import 'package:marib/data/cubits/favorite/favorite_cubit.dart';
@@ -29,8 +31,11 @@ import 'package:marib/data/cubits/merchant/merchant_store_cubit.dart';
 import 'package:marib/data/cubits/report/update_report_items_list_cubit.dart';
 import 'package:marib/data/cubits/seller/fetch_verification_request_cubit.dart';
 import 'package:marib/data/cubits/system/app_theme_cubit.dart';
+import 'package:marib/data/cubits/system/fetch_language_cubit.dart';
 import 'package:marib/data/cubits/system/fetch_system_settings_cubit.dart';
+import 'package:marib/data/cubits/system/language_cubit.dart';
 import 'package:marib/data/cubits/system/user_details.dart';
+import 'package:marib/data/helper/widgets.dart';
 import 'package:marib/data/model/system_settings_model.dart';
 import 'package:marib/data/model/merchant/merchant_store_snapshot.dart';
 

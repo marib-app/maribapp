@@ -2,12 +2,15 @@ part of "profile_screen.dart";
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
 class _ProfileScreenState extends State<ProfileScreen>
-    with AutomaticKeepAliveClientMixin<ProfileScreen>, ProfileScreenLogic<ProfileScreen> {
+    with
+        AutomaticKeepAliveClientMixin<ProfileScreen>,
+        ProfileScreenLogic<ProfileScreen> {
   final ValueNotifier<bool> _isDark = ValueNotifier(false);
   final ScrollController _scroll = ScrollController();
   final ValueNotifier<double> _scrollY = ValueNotifier(0);
@@ -37,265 +40,288 @@ class _ProfileScreenState extends State<ProfileScreen>
     final int? userType = HiveUtils.getUserDetails().userType;
     final bool isCommercial = userType == 3; // احتياطي لو احتجته لاحقًا
 
-    return AnnotatedRegion(
-      value: UiUtils.getSystemUiOverlayStyle(
-        context: context,
-        statusBarColor: context.color.secondaryColor,
-      ),
-      child: Scaffold(
-        backgroundColor: context.color.primaryColor,
-        appBar: PreferredSize(
-          preferredSize: const Size.fromHeight(75),
-          child: UiUtils.buildAppBar(
-            context,
-            showBackButton: false,
-            bottomHeight: 0,
-            title: "myProfile".translate(context),
-            actions: [
-              if (HiveUtils.isUserAuthenticated())
-                Padding(
-                  padding: const EdgeInsets.only(right: 6, top: 8),
-                  child: _IconSquareButton(
-                    svg: AppIcons.logout,
-                    onTap: () => logOutConfirmWidget(),
+    return BlocListener<FetchLanguageCubit, FetchLanguageState>(
+      listener: (context, state) {
+        if (state is FetchLanguageInProgress) {
+          Widgets.showLoader(context);
+        } else if (state is FetchLanguageSuccess) {
+          Widgets.hideLoder(context);
+          final Map<String, dynamic> map = state.toMap();
+          map['data'] = state.data;
+          map.remove('file_name');
+          HiveUtils.storeLanguage(map);
+          context.read<LanguageCubit>().emit(LanguageLoader(map));
+          context.read<FetchCategoryCubit>().fetchCategories();
+        } else if (state is FetchLanguageFailure) {
+          Widgets.hideLoder(context);
+          HelperUtils.showSnackBarMessage(context, state.errorMessage);
+        }
+      },
+      child: AnnotatedRegion(
+        value: UiUtils.getSystemUiOverlayStyle(
+          context: context,
+          statusBarColor: context.color.secondaryColor,
+        ),
+        child: Scaffold(
+          backgroundColor: context.color.primaryColor,
+          appBar: PreferredSize(
+            preferredSize: const Size.fromHeight(75),
+            child: UiUtils.buildAppBar(
+              context,
+              showBackButton: false,
+              bottomHeight: 0,
+              title: "myProfile".translate(context),
+              actions: [
+                if (HiveUtils.isUserAuthenticated())
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6, top: 8),
+                    child: _IconSquareButton(
+                      svg: AppIcons.logout,
+                      onTap: () => logOutConfirmWidget(),
+                    ),
+                  ),
+                const SizedBox(width: 10),
+              ],
+            ),
+          ),
+          body: CustomScrollView(
+            controller: _scroll,
+            physics: const ClampingScrollPhysics(),
+            slivers: [
+              SliverToBoxAdapter(
+                child: ValueListenableBuilder<double>(
+                  valueListenable: _scrollY,
+                  builder: (_, y, __) {
+                    final double shift = (y * 0.06).clamp(0, 24);
+                    return Transform.translate(
+                      offset: Offset(0, -shift),
+                      child: _ProfileGlassCard(isDark: _isDark.value),
+                    );
+                  },
+                ),
+              ),
+
+              const SliverToBoxAdapter(child: SizedBox(height: 10)),
+
+              // القائمة الرئيسية (عمودية بكروت بنفس الثيم)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // الملف الشخصي
+                      _ServiceItemTile(
+                        title: "الملف الشخصي ",
+                        svg: AppIcons.profileNavActive,
+                        onTap: () {
+                          UiUtils.checkUser(
+                            onNotGuest: () {
+                              HelperUtils.goToNextPage(
+                                Routes.showProfile,
+                                context,
+                                false,
+                                args: {"from": "profile"},
+                              );
+                            },
+                            context: context,
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 10),
+
+                      // تقييماتي
+                      _ServiceItemTile(
+                        title: "تقييماتي",
+                        svg: AppIcons.myReviewIcon,
+                        onTap: () {
+                          UiUtils.checkUser(
+                            onNotGuest: () => Navigator.pushNamed(
+                                context, Routes.myReviewsScreen),
+                            context: context,
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 10),
+
+                      // إعلاناتي المروّجة
+                      _ServiceItemTile(
+                        title: "إعلاناتي المروّجة",
+                        svg: AppIcons.promoted,
+                        onTap: () {
+                          UiUtils.checkUser(
+                            onNotGuest: () {
+                              //    APICallTrigger.trigger(); // تفعيل إعادة الجلب في شاشة الإعلانات المروّجة
+                              Navigator.pushNamed(
+                                  context, Routes.myAdvertisment);
+                            },
+                            context: context,
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 10),
+
+                      // الاشتراكات
+                      _ServiceItemTile(
+                        title: "الاشتراكات",
+                        svg: AppIcons.subscription,
+                        onTap: () {
+                          UiUtils.checkUser(
+                            onNotGuest: () => Navigator.pushNamed(
+                                context, Routes.subscriptionPackageListRoute),
+                            context: context,
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 10),
+
+                      _ServiceItemTile(
+                        title: "المحفظة".translate(context),
+                        svg: AppIcons.money,
+                        onTap: () {
+                          UiUtils.checkUser(
+                            onNotGuest: () =>
+                                Navigator.pushNamed(context, Routes.wallet),
+                            context: context,
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 10),
+
+                      _ServiceItemTile(
+                        title: "طلباتي",
+                        svg: AppIcons.competition,
+                        onTap: () {
+                          UiUtils.checkUser(
+                            onNotGuest: () =>
+                                Navigator.pushNamed(context, Routes.ordersList),
+                            context: context,
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 10),
+
+                      // كرت "التحديث متاح" (شرطي) — نُقِل هنا أسفل تقييماتي
+                      if (Constant.isUpdateAvailable == true) ...[
+                        _ServiceItemTile(
+                          title:
+                              "التحديث متاح  •  v${Constant.newVersionNumber}",
+                          svg: AppIcons.update,
+                          onTap: () async {
+                            if (Platform.isIOS) {
+                              await launchUrl(
+                                  Uri.parse(Constant.appstoreURLios));
+                            } else if (Platform.isAndroid) {
+                              await launchUrl(
+                                  Uri.parse(Constant.playstoreURLAndroid));
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 10),
+                      ],
+
+                      // ─────────── بقية البنود كما هي ───────────
+
+                      _ServiceItemTile(
+                        title: "المسابقات",
+                        svg: AppIcons.competition,
+                        onTap: () {
+                          UiUtils.checkUser(
+                            onNotGuest: () => Navigator.pushNamed(
+                                context, Routes.competition),
+                            context: context,
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 10),
+
+                      _ServiceItemTile(
+                        title: "المفضلة",
+                        svg: AppIcons.favorites,
+                        onTap: () {
+                          UiUtils.checkUser(
+                            onNotGuest: () => Navigator.pushNamed(
+                                context, Routes.favoritesScreen),
+                            context: context,
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 10),
+
+                      _ServiceItemTile(
+                        title: "تبديل اللغة",
+                        svg: AppIcons.language,
+                        onTap: _toggleLanguage,
+                      ),
+                      const SizedBox(height: 10),
+
+                      // تبديل الثيم
+                      _ThemeSwitchTile(
+                        isDark: _isDark,
+                        onToggle: () {
+                          final v = !_isDark.value;
+                          context
+                              .read<AppThemeCubit>()
+                              .changeTheme(v ? AppTheme.dark : AppTheme.light);
+                          _isDark.value = v;
+                        },
+                      ),
+                      const SizedBox(height: 10),
+
+                      // قيّمنا
+                      _ServiceItemTile(
+                        title: "قيّمنا",
+                        svg: AppIcons.rateUs,
+                        onTap: () => _inAppReview.openStoreListing(
+                          appStoreId: Constant.iOSAppId,
+                          microsoftStoreId: 'microsoftStoreId',
+                        ),
+                      ),
+
+                      // (ملاحظة): تم إزالة كرت التحديث من الأسفل لأنه أصبح فوق تحت "تقييماتي"
+
+                      // حذف الحساب (للمسجلين فقط)
+                      if (HiveUtils.isUserAuthenticated()) ...[
+                        const SizedBox(height: 10),
+                        _ServiceItemTile(
+                          title: "حذف الحساب",
+                          svg: AppIcons.delete,
+                          onTap: () {
+                            if (Constant.isDemoModeOn) {
+                              final mobile = HiveUtils.getUserDetails().mobile;
+                              if (mobile != null &&
+                                  Constant.demoMobileNumber ==
+                                      mobile.replaceFirst(
+                                          "+${HiveUtils.getCountryCode()}",
+                                          "")) {
+                                HelperUtils.showSnackBarMessage(
+                                  context,
+                                  "thisActionNotValidDemo".translate(context),
+                                );
+                                return;
+                              }
+                            }
+                            deleteConfirmWidget();
+                          },
+                        ),
+                      ],
+                    ],
                   ),
                 ),
-              const SizedBox(width: 10),
+              ),
+
+              const SliverToBoxAdapter(child: SizedBox(height: 24)),
             ],
           ),
-        ),
-        body: CustomScrollView(
-          controller: _scroll,
-          physics: const ClampingScrollPhysics(),
-          slivers: [
-            SliverToBoxAdapter(
-              child: ValueListenableBuilder<double>(
-                valueListenable: _scrollY,
-                builder: (_, y, __) {
-                  final double shift = (y * 0.06).clamp(0, 24);
-                  return Transform.translate(
-                    offset: Offset(0, -shift),
-                    child: _ProfileGlassCard(isDark: _isDark.value),
-                  );
-                },
-              ),
-            ),
-
-            const SliverToBoxAdapter(child: SizedBox(height: 10)),
-
-            // القائمة الرئيسية (عمودية بكروت بنفس الثيم)
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // الملف الشخصي
-                    _ServiceItemTile(
-                      title: "الملف الشخصي ",
-                      svg: AppIcons.profileNavActive,
-                      onTap: () {
-                        UiUtils.checkUser(
-                          onNotGuest: () {
-                            HelperUtils.goToNextPage(
-                              Routes.showProfile,
-                              context,
-                              false,
-                              args: {"from": "profile"},
-                            );
-                          },
-                          context: context,
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 10),
-
-                    // تقييماتي
-                    _ServiceItemTile(
-                      title: "تقييماتي",
-                      svg: AppIcons.myReviewIcon,
-                      onTap: () {
-                        UiUtils.checkUser(
-                          onNotGuest: () =>
-                              Navigator.pushNamed(context, Routes.myReviewsScreen),
-                          context: context,
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 10),
-
-                    // إعلاناتي المروّجة
-                    _ServiceItemTile(
-                      title: "إعلاناتي المروّجة",
-                      svg: AppIcons.promoted,
-                      onTap: () {
-                        UiUtils.checkUser(
-                          onNotGuest: () {
-                            //    APICallTrigger.trigger(); // تفعيل إعادة الجلب في شاشة الإعلانات المروّجة
-                            Navigator.pushNamed(context, Routes.myAdvertisment);
-                          },
-                          context: context,
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 10),
-
-                    // الاشتراكات
-                    _ServiceItemTile(
-                      title: "الاشتراكات",
-                      svg: AppIcons.subscription,
-                      onTap: () {
-                        UiUtils.checkUser(
-                          onNotGuest: () => Navigator.pushNamed(
-                              context, Routes.subscriptionPackageListRoute),
-                          context: context,
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 10),
-
-                    _ServiceItemTile(
-                      title: "المحفظة".translate(context),
-                      svg: AppIcons.money,
-                      onTap: () {
-                        UiUtils.checkUser(
-                          onNotGuest: () => Navigator.pushNamed(context, Routes.wallet),
-                          context: context,
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 10),
-
-                    _ServiceItemTile(
-                      title: "طلباتي",
-                      svg: AppIcons.competition,
-                      onTap: () {
-                        UiUtils.checkUser(
-                          onNotGuest: () =>
-                              Navigator.pushNamed(context, Routes.ordersList),
-                          context: context,
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 10),
-
-                    // كرت "التحديث متاح" (شرطي) — نُقِل هنا أسفل تقييماتي
-                    if (Constant.isUpdateAvailable == true) ...[
-                      _ServiceItemTile(
-                        title: "التحديث متاح  •  v${Constant.newVersionNumber}",
-                        svg: AppIcons.update,
-                        onTap: () async {
-                          if (Platform.isIOS) {
-                            await launchUrl(Uri.parse(Constant.appstoreURLios));
-                          } else if (Platform.isAndroid) {
-                            await launchUrl(Uri.parse(Constant.playstoreURLAndroid));
-                          }
-                        },
-                      ),
-                      const SizedBox(height: 10),
-                    ],
-
-                    // ─────────── بقية البنود كما هي ───────────
-
-                    _ServiceItemTile(
-                      title: "المسابقات",
-                      svg: AppIcons.competition,
-                      onTap: () {
-                        UiUtils.checkUser(
-                          onNotGuest: () =>
-                              Navigator.pushNamed(context, Routes.competition),
-                          context: context,
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 10),
-
-                    _ServiceItemTile(
-                      title: "المفضلة",
-                      svg: AppIcons.favorites,
-                      onTap: () {
-                        UiUtils.checkUser(
-                          onNotGuest: () => Navigator.pushNamed(
-                              context, Routes.favoritesScreen),
-                          context: context,
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 10),
-
-                    _ServiceItemTile(
-                      title: "تجربة الدفع",
-                      svg: AppIcons.favorites, // يمكنك استبدال الأيقونة لاحقًا
-                      onTap: () {
-                        UiUtils.checkUser(
-                          onNotGuest: () => Navigator.pushNamed(context, Routes.soon),
-                          context: context,
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 10),
-
-                    // تبديل الثيم
-                    _ThemeSwitchTile(
-                      isDark: _isDark,
-                      onToggle: () {
-                        final v = !_isDark.value;
-                        context.read<AppThemeCubit>().changeTheme(
-                            v ? AppTheme.dark : AppTheme.light);
-                        _isDark.value = v;
-                      },
-                    ),
-                    const SizedBox(height: 10),
-
-                    // قيّمنا
-                    _ServiceItemTile(
-                      title: "قيّمنا",
-                      svg: AppIcons.rateUs,
-                      onTap: () => _inAppReview.openStoreListing(
-                        appStoreId: Constant.iOSAppId,
-                        microsoftStoreId: 'microsoftStoreId',
-                      ),
-                    ),
-
-                    // (ملاحظة): تم إزالة كرت التحديث من الأسفل لأنه أصبح فوق تحت "تقييماتي"
-
-                    // حذف الحساب (للمسجلين فقط)
-                    if (HiveUtils.isUserAuthenticated()) ...[
-                      const SizedBox(height: 10),
-                      _ServiceItemTile(
-                         title: "حذف الحساب",
-                        svg: AppIcons.delete,
-                        onTap: () {
-                          if (Constant.isDemoModeOn) {
-                            final mobile = HiveUtils.getUserDetails().mobile;
-                            if (mobile != null &&
-                                Constant.demoMobileNumber ==
-                                    mobile.replaceFirst(
-                                        "+${HiveUtils.getCountryCode()}", "")) {
-                              HelperUtils.showSnackBarMessage(
-                                context,
-                                "thisActionNotValidDemo".translate(context),
-                              );
-                              return;
-                            }
-                          }
-                          deleteConfirmWidget();
-                        },
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-
-            const SliverToBoxAdapter(child: SizedBox(height: 24)),
-          ],
         ),
       ),
     );
   }
-}class _ProfileGlassCard extends StatelessWidget {
+}
+
+class _ProfileGlassCard extends StatelessWidget {
   final bool isDark;
+
   const _ProfileGlassCard({required this.isDark});
 
   String _formatJoined(String? raw) {
@@ -305,7 +331,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       final dd = dt.day.toString().padLeft(2, '0');
       final mm = dt.month.toString().padLeft(2, '0');
       final yyyy = dt.year.toString();
-      return 'â•ھط²â”کأ  â•ھط¯â”کآ„â•ھط¯â”کآ†â•ھâ•¢â”کأ â•ھط¯â”کأ  â”کآپâ”کأ¨ : $dd/$mm/$yyyy';
+      return 'تاريخ الانضمام: $dd/$mm/$yyyy';
     }
     final dateOnly = raw.split(' ').first;
     final parts = dateOnly.split('-');
@@ -313,9 +339,9 @@ class _ProfileScreenState extends State<ProfileScreen>
       final yyyy = parts[0],
           mm = parts[1].padLeft(2, '0'),
           dd = parts[2].padLeft(2, '0');
-      return 'â•ھط²â”کأ  â•ھط¯â”کآ„â•ھط¯â”کآ†â•ھâ•¢â”کأ â•ھط¯â”کأ  â”کآپâ”کأ¨ : $dd/$mm/$yyyy';
+      return 'تاريخ الانضمام: $dd/$mm/$yyyy';
     }
-    return 'â•ھط²â”کأ  â•ھط¯â”کآ„â•ھط¯â”کآ†â•ھâ•¢â”کأ â•ھط¯â”کأ  â”کآپâ”کأ¨ : $dateOnly';
+    return 'تاريخ الانضمام: $dateOnly';
   }
 
   @override
@@ -452,7 +478,9 @@ class _AccountStyle {
   final Color base;
   final IconData icon;
   final int? type;
+
   _AccountStyle(this.base, this.icon, this.type);
+
   factory _AccountStyle.fromType(BuildContext context, int? type) {
     switch (type) {
       case 2:
@@ -464,6 +492,7 @@ class _AccountStyle {
         return _AccountStyle(Colors.blue, Icons.person_rounded, type);
     }
   }
+
   String label(BuildContext context) {
     switch (type) {
       case 1:
@@ -488,19 +517,19 @@ Widget _resolveVerificationBadge({
   final bool expired = expiresAt != null && expiresAt.isBefore(DateTime.now());
 
   if (isVerified && !expired) {
-    return _StatusBadge(label: "ظ…ظˆط«ظ‚", color: Colors.green);
+    return _StatusBadge(label: "موثَّق", color: Colors.green);
   }
 
   if (normalized == 'approved' && !expired) {
-    return _StatusBadge(label: "ظ…ظˆط«ظ‚", color: Colors.green);
+    return _StatusBadge(label: "موثَّق", color: Colors.green);
   }
 
   if (normalized == 'pending' || normalized == 'resubmitted') {
-    return _StatusBadge(label: "ط¬ط§ط±ظٹ ط§ظ„ظ…ط±ط§ط¬ط¹ط©", color: Colors.amber);
+    return _StatusBadge(label: "جاري المراجعة", color: Colors.amber);
   }
 
   if (normalized == 'rejected') {
-    return _StatusBadge(label: "طھظ… ط§ظ„ط±ظپط¶", color: Colors.red);
+    return _StatusBadge(label: "تم الرفض", color: Colors.red);
   }
 
   return _StatusBadge(label: "ط؛ظٹط± ظ…ظˆط«ظ‚", color: Colors.blueGrey);
@@ -543,6 +572,7 @@ class _StatusBadge extends StatelessWidget {
 class _ThemeSwitchTile extends StatelessWidget {
   final ValueNotifier<bool> isDark;
   final VoidCallback onToggle;
+
   const _ThemeSwitchTile({required this.isDark, required this.onToggle});
 
   @override
@@ -564,9 +594,8 @@ class _ThemeSwitchTile extends StatelessWidget {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(14),
             child: Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10), // â‰،ط§ظ‘أھ â”کآ†â”کآپâ•ھâ”‚ â•ھط¯â•ھâ–’â•ھط²â”کآپâ•ھط¯â•ھâ•£ â•ھط¯â”کآ„â•ھآ«â•ھآ»â”کأ â•ھط¯â•ھط²
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              // â‰،ط§ظ‘أھ â”کآ†â”کآپâ•ھâ”‚ â•ھط¯â•ھâ–’â•ھط²â”کآپâ•ھط¯â•ھâ•£ â•ھط¯â”کآ„â•ھآ«â•ھآ»â”کأ â•ھط¯â•ھط²
               decoration: BoxDecoration(
                 color: context.color.secondaryColor,
                 borderRadius: BorderRadius.circular(14),
@@ -597,8 +626,8 @@ class _ThemeSwitchTile extends StatelessWidget {
               ),
 
               child: Row(
-                textDirection: TextDirection
-                    .ltr, // â•ھط«â”کأ¨â”کأ©â”کأھâ”کآ†â•ھط± â”کأ¨â”کأ â”کأ¨â”کآ†â•ھأ® â•ھâ”‚â”کأھâ”کأ¨â•ھط²â•ھâ”¤ â”کأ¨â•ھâ”‚â•ھط¯â•ھâ–’
+                textDirection: TextDirection.ltr,
+                // â•ھط«â”کأ¨â”کأ©â”کأھâ”کآ†â•ھط± â”کأ¨â”کأ â”کأ¨â”کآ†â•ھأ® â•ھâ”‚â”کأھâ”کأ¨â•ھط²â•ھâ”¤ â”کأ¨â•ھâ”‚â•ھط¯â•ھâ–’
                 children: [
                   // â•ھط¯â”کآ„â•ھâ”‚â”کأھâ”کأ¨â•ھط²â•ھâ”¤ â”کأ¨â•ھâ”‚â•ھط¯â•ھâ–’ (adaptive â•ھâ”¤â”کأ¢â”کآ„â”کأ§ â•ھط«â•ھط´â”کأ â”کآ„)
                   Switch.adaptive(
@@ -616,10 +645,7 @@ class _ThemeSwitchTile extends StatelessWidget {
 
                   // â•ھط¯â”کآ„â”کآ†â•ھâ•، â”کأھâ•ھâ”‚â•ھâ•–
                   Expanded(
-                    child: Text(
-                            v
-                                ? "â•ھط¯â”کآ„â”کأھâ•ھâ•¢â•ھâ•£ â•ھط¯â”کآ„â•ھآ»â•ھط¯â”کأ¢â”کآ†"
-                                : "â•ھط¯â”کآ„â”کأھâ•ھâ•¢â•ھâ•£ â•ھط¯â”کآ„â”کآپâ•ھط¯â•ھط²â•ھطµ",
+                    child: Text(v ? "المظهر الداكن" : "المظهر الفاتح",
                             textAlign: TextAlign.center)
                         .bold(weight: FontWeight.w600)
                         .size(context.font.normal)
@@ -668,11 +694,13 @@ class _ActionTab {
   final String label;
   final String svg;
   final VoidCallback? onTap;
+
   const _ActionTab(this.label, this.svg, {this.onTap});
 }
 
 class _TabChip extends StatelessWidget {
   final _ActionTab tab;
+
   const _TabChip({required this.tab});
 
   @override
@@ -709,11 +737,13 @@ class _ExploreItem {
   final String title;
   final String svg;
   final VoidCallback onTap;
+
   _ExploreItem(this.title, this.svg, this.onTap);
 }
 
 class _ExploreList extends StatelessWidget {
   final List<_ExploreItem> items;
+
   const _ExploreList({required this.items});
 
   @override
@@ -729,7 +759,7 @@ class _ExploreList extends StatelessWidget {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-              child: Text("â•ھط¯â•ھâ”‚â•ھط²â”کأ¢â•ھâ”¤â”کآپ")
+              child: Text("اكتشف المزيد")
                   .bold(weight: FontWeight.w700)
                   .size(context.font.normal)
                   .color(context.color.textColorDark),
@@ -765,6 +795,7 @@ class _ExploreList extends StatelessWidget {
 class _ThemeToggle extends StatelessWidget {
   final ValueNotifier<bool> isDark;
   final VoidCallback onToggle;
+
   const _ThemeToggle({required this.isDark, required this.onToggle});
 
   @override
@@ -803,7 +834,9 @@ class _ThemeToggle extends StatelessWidget {
 class _IconSquareButton extends StatelessWidget {
   final String svg;
   final VoidCallback onTap;
+
   const _IconSquareButton({required this.svg, required this.onTap});
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -828,13 +861,16 @@ class _Pressable extends StatefulWidget {
   final Widget child;
   final VoidCallback? onTap;
   final double scaleDown;
+
   const _Pressable({required this.child, this.onTap, this.scaleDown = 0.96});
+
   @override
   State<_Pressable> createState() => _PressableState();
 }
 
 class _PressableState extends State<_Pressable> {
   bool _down = false;
+
   @override
   Widget build(BuildContext context) {
     return Listener(
@@ -864,6 +900,7 @@ class _PressableState extends State<_Pressable> {
 
 class _UpdateRow extends StatelessWidget {
   final VoidCallback onTap;
+
   const _UpdateRow({required this.onTap});
 
   @override
@@ -910,6 +947,7 @@ class _UpdateRow extends StatelessWidget {
 
 class _DeleteAccountRow extends StatelessWidget {
   final VoidCallback onTap;
+
   const _DeleteAccountRow({required this.onTap});
 
   @override
@@ -989,6 +1027,7 @@ class _ServiceItemTile extends StatelessWidget {
   final String title;
   final String svg;
   final VoidCallback? onTap;
+
   const _ServiceItemTile({required this.title, required this.svg, this.onTap});
 
   @override
@@ -1030,9 +1069,12 @@ class _ServiceItemTile extends StatelessWidget {
               begin: Alignment.centerRight,
               end: Alignment.centerLeft,
               colors: [
-                barBase.withOpacity(0.40), // â•ھط«â”کأ©â”کأھâ”کأ« â•ھâ•£â”کآ†â•ھآ» â•ھط¯â”کآ„â•ھطµâ•ھط¯â”کآپâ•ھط±
-                barBase.withOpacity(0.18), // â”کأ¨â•ھط²â•ھآ»â•ھâ–’â”کظ‘â•ھط´ â”کآ„â”کآ„â•ھآ»â•ھط¯â•ھآ«â”کآ„
-                Colors.transparent, // â”کأ¨â•ھط²â”کآ„â•ھط¯â•ھâ”¤â”کأ«
+                barBase.withOpacity(0.40),
+                // â•ھط«â”کأ©â”کأھâ”کأ« â•ھâ•£â”کآ†â•ھآ» â•ھط¯â”کآ„â•ھطµâ•ھط¯â”کآپâ•ھط±
+                barBase.withOpacity(0.18),
+                // â”کأ¨â•ھط²â•ھآ»â•ھâ–’â”کظ‘â•ھط´ â”کآ„â”کآ„â•ھآ»â•ھط¯â•ھآ«â”کآ„
+                Colors.transparent,
+                // â”کأ¨â•ھط²â”کآ„â•ھط¯â•ھâ”¤â”کأ«
               ],
               stops: const [
                 0.0,
@@ -1043,8 +1085,8 @@ class _ServiceItemTile extends StatelessWidget {
           ),
 
           child: Row(
-            textDirection: TextDirection
-                .ltr, // â”کأ¨â•ھط³â•ھط°â”کظ‘â•ھط² â•ھط¯â”کآ„â•ھط«â”کأ¨â”کأ©â”کأھâ”کآ†â•ھط± â”کأ¨â”کأ â”کأ¨â”کآ† â•ھآ»â•ھط¯â•ھط®â”کأ â”کأ¯â•ھط¯
+            textDirection: TextDirection.ltr,
+            // â”کأ¨â•ھط³â•ھط°â”کظ‘â•ھط² â•ھط¯â”کآ„â•ھط«â”کأ¨â”کأ©â”کأھâ”کآ†â•ھط± â”کأ¨â”کأ â”کأ¨â”کآ† â•ھآ»â•ھط¯â•ھط®â”کأ â”کأ¯â•ھط¯
             children: [
               // â•ھط¯â”کآ„â”کآ†â•ھâ•، â•ھط°â•ھط¯â”کآ„â”کأھâ•ھâ”‚â•ھâ•–
               Expanded(
@@ -1072,6 +1114,3 @@ class _ServiceItemTile extends StatelessWidget {
     );
   }
 }
-
-
-

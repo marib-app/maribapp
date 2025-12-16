@@ -7087,17 +7087,15 @@ class ApiController extends Controller {
     public function getVerificationFields(Request $request)
     {
         try {
-<<<<<<< ours
-            $accountType = auth()->user()?->account_type;
-            $verificationAccountType = $this->mapVerificationAccountType($accountType);
-
-            $fields = VerificationField::query()
-                ->when($verificationAccountType, static function ($query, $type) {
-                    $query->where('account_type', $type);
-                })
-                ->get();
-=======
             $accountType = $this->normalizeAccountTypeSlug($request->get('account_type'));
+
+            if (!$accountType) {
+                $user = auth()->user();
+                if ($user && $user->account_type) {
+                    $accountType = $this->mapAccountTypeIntToSlug((int) $user->account_type);
+                }
+            }
+
             $fields = VerificationField::query()
                 ->when($accountType, static fn($query) => $query->where('account_type', $accountType))
                 ->whereNull('deleted_at')
@@ -7105,7 +7103,6 @@ class ApiController extends Controller {
                 ->get()
                 ->map(fn(VerificationField $field) => $this->serializeVerificationField($field))
                 ->values();
->>>>>>> theirs
 
             ResponseService::successResponse('Verification Field Fetched Successfully', $fields);
 
@@ -7115,16 +7112,6 @@ class ApiController extends Controller {
         }
     }
 
-<<<<<<< ours
-    private function mapVerificationAccountType(?int $accountType): ?string
-    {
-        return match ($accountType) {
-            User::ACCOUNT_TYPE_SELLER => 'commercial',
-            User::ACCOUNT_TYPE_REAL_ESTATE => 'realestate',
-            User::ACCOUNT_TYPE_CUSTOMER, null => 'individual',
-            default => 'individual',
-        };
-=======
     public function getVerificationMetadata(Request $request)
     {
         try {
@@ -7170,7 +7157,6 @@ class ApiController extends Controller {
             ResponseService::logErrorResponse($th, 'API Controller -> getVerificationMetadata');
             ResponseService::errorResponse('Failed to fetch verification metadata.');
         }
->>>>>>> theirs
     }
 
     public function sendVerificationRequest(Request $request) {

@@ -766,6 +766,7 @@ class Api {
   static String addServiceReviewApi = "add-service-review";
 
   static String getVerificationFieldApi = "verification-fields";
+  static String getVerificationMetadataApi = "verification/metadata";
   static String sendVerificationRequestApi = "send-verification-request";
   static String getVerificationRequestApi = "verification-request";
   static String getMyReviewApi = "my-review";

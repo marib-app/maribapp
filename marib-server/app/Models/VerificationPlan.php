@@ -18,8 +18,9 @@ class VerificationPlan extends Model
         'is_active',
     ];
 
-    public function payments()
-    {
-        return $this->hasMany(VerificationPayment::class);
-    }
+    protected $casts = [
+        'duration_days' => 'integer',
+        'price' => 'float',
+        'is_active' => 'boolean',
+    ];
 }

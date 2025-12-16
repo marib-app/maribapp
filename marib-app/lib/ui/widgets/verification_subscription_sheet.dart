@@ -6,6 +6,7 @@ import 'package:marib/app/routes.dart';
 import 'package:marib/data/cubits/seller/fetch_seller_verification_field.dart';
 import 'package:marib/data/cubits/seller/fetch_verification_request_cubit.dart';
 import 'package:marib/data/model/custom_field/custom_field_model.dart';
+import 'package:marib/data/model/verification_metadata.dart';
 import 'package:marib/data/model/verification_request_model.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
@@ -28,7 +29,10 @@ Future<void> showVerificationSubscriptionSheet(
   // Always refresh before showing to ensure latest status/expiry.
   cubit.fetchVerificationRequests();
   fieldsCubit ??= FetchSellerVerificationFieldsCubit();
-  fieldsCubit.fetchSellerVerificationFields();
+  fieldsCubit.fetchSellerVerificationFields(
+    accountType: HiveUtils.getAccountTypeLower(),
+    forceRefresh: true,
+  );
 
   return showModalBottomSheet<void>(
     context: context,
@@ -77,7 +81,10 @@ class _VerificationSubscriptionSheetState
   void initState() {
     super.initState();
     _cubit.fetchVerificationRequests();
-    _fieldsCubit.fetchSellerVerificationFields();
+    _fieldsCubit.fetchSellerVerificationFields(
+      accountType: HiveUtils.getAccountTypeLower(),
+      forceRefresh: true,
+    );
   }
 
   @override
@@ -344,8 +351,9 @@ class _VerificationSubscriptionSheetState
         FetchSellerVerificationFieldState>(
       bloc: _fieldsCubit,
       builder: (context, fieldState) {
-        final List<VerificationFieldModel> allFields = fieldState
-                is FetchSellerVerificationFieldSuccess
+        final bool hasSuccessState =
+            fieldState is FetchSellerVerificationFieldSuccess;
+        final List<VerificationFieldModel> allFields = hasSuccessState
             ? fieldState.fields
             : const <VerificationFieldModel>[];
         final Map<int, VerificationFieldValues> filledValues = {
@@ -354,9 +362,17 @@ class _VerificationSubscriptionSheetState
             if (value.verificationFieldId != null)
               value.verificationFieldId!: value,
         };
-        final String accountType = HiveUtils.getAccountTypeLower();
-        final List<VerificationFieldModel> typeFields =
-            _filterFieldsForAccountType(allFields, accountType);
+        final String accountType = hasSuccessState
+            ? fieldState.accountType
+            : HiveUtils.getAccountTypeLower();
+        final List<VerificationFieldModel> typeFields = hasSuccessState
+            ? fieldState.fields
+            : _filterFieldsForAccountType(allFields, accountType);
+        final VerificationOffering? offering = hasSuccessState
+            ? fieldState.metadata.findForAccountType(accountType)
+            : null;
+
+        final VerificationPricing? pricing = offering?.pricing;
 
         return Column(
           mainAxisSize: MainAxisSize.min,
@@ -424,16 +440,19 @@ class _VerificationSubscriptionSheetState
               label: _local(context, ar: 'الوقت المتبقي', en: 'Time remaining'),
               value: _remainingLabel(context, expiresAt),
             ),
-            if (model.durationDays != null || model.price != null) ...[
+            if (pricing?.durationDays != null ||
+                pricing?.amount != null ||
+                model.durationDays != null ||
+                model.price != null) ...[
               const SizedBox(height: 12),
               _PlanTile(
-                amount: model.price,
-                currency: model.currency,
-                durationDays: model.durationDays,
+                amount: pricing?.amount ?? model.price,
+                currency: pricing?.currency ?? model.currency,
+                durationDays: pricing?.durationDays ?? model.durationDays,
               ),
             ],
             const SizedBox(height: 12),
-            _BenefitsList(features: _buildBenefits(model)),
+            _BenefitsList(features: _buildBenefits(model, offering: offering)),
             const SizedBox(height: 12),
             _FieldChecklist(
               fields: typeFields,
@@ -469,12 +488,12 @@ class _VerificationSubscriptionSheetState
     final state = _fieldsCubit.state;
     if (state is FetchSellerVerificationFieldFail) {
       HelperUtils.showSnackBarMessage(context, state.error.toString());
-      _fieldsCubit.fetchSellerVerificationFields();
+      _fieldsCubit.fetchSellerVerificationFields(accountType: accountType);
       return;
     }
 
     if (state is! FetchSellerVerificationFieldSuccess) {
-      _fieldsCubit.fetchSellerVerificationFields();
+      _fieldsCubit.fetchSellerVerificationFields(accountType: accountType);
       return;
     }
 
@@ -498,31 +517,44 @@ class _VerificationSubscriptionSheetState
     );
   }
 
-  List<String> _buildBenefits(VerificationRequestModel model) {
-    final List<String> defaultBenefits = [
-      _local(context,
-          ar: 'شارة موثقة أمام اسمك', en: 'Verified badge across your profile'),
-      _local(context,
-          ar: 'ثقة أعلى لدى المشترين', en: 'Higher trust with buyers'),
-      _local(context,
-          ar: 'أولوية في البحث والإعلانات',
-          en: 'Priority placement in search and ads'),
-    ];
+  List<String> _buildBenefits(VerificationRequestModel model,
+      {VerificationOffering? offering}) {
+    final List<String> collected = [];
+    if (offering?.benefits.isNotEmpty == true) {
+      collected.addAll(offering!.benefits);
+    }
 
-    if (model.durationDays != null) {
-      defaultBenefits.add(
+    if (collected.isEmpty) {
+      collected.addAll([
+        _local(context,
+            ar: 'شارة موثقة أمام اسمك',
+            en: 'Verified badge across your profile'),
+        _local(context,
+            ar: 'ثقة أعلى لدى المشترين', en: 'Higher trust with buyers'),
+        _local(context,
+            ar: 'أولوية في البحث والإعلانات',
+            en: 'Priority placement in search and ads'),
+      ]);
+    }
+
+    final VerificationPricing? pricing = offering?.pricing;
+    final int? duration = pricing?.durationDays ?? model.durationDays;
+    final double? price = pricing?.amount ?? model.price;
+    final String? currency = pricing?.currency ?? model.currency;
+
+    if (duration != null) {
+      collected.add(
         _local(
           context,
-          ar: 'صلاحية التوثيق ${model.durationDays} يوم',
-          en: 'Verification valid for ${model.durationDays} days',
+          ar: 'صلاحية التوثيق $duration يوم',
+          en: 'Verification valid for $duration days',
         ),
       );
     }
 
-    if (model.price != null && model.price != 0) {
-      final priceLabel =
-          '${model.price!.toStringAsFixed(2)} ${model.currency ?? ''}'.trim();
-      defaultBenefits.add(
+    if (price != null && price != 0) {
+      final priceLabel = '${price.toStringAsFixed(2)} ${currency ?? ''}'.trim();
+      collected.add(
         _local(
           context,
           ar: 'رسوم الاشتراك: $priceLabel',
@@ -531,7 +563,7 @@ class _VerificationSubscriptionSheetState
       );
     }
 
-    return defaultBenefits;
+    return collected;
   }
 
   List<VerificationFieldModel> _filterFieldsForAccountType(

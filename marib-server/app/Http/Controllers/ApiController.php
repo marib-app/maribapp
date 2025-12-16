@@ -65,6 +65,7 @@ use App\Models\UserReports;
 use App\Models\VerificationField;
 use App\Models\VerificationFieldRequest;
 use App\Models\VerificationFieldValue;
+use App\Models\VerificationPlan;
 use App\Models\VerificationRequest;
 use App\Models\WalletAccount;
 use App\Models\WalletTransaction;
@@ -7083,8 +7084,10 @@ class ApiController extends Controller {
         }
     }
 
-    public function getVerificationFields() {
+    public function getVerificationFields(Request $request)
+    {
         try {
+<<<<<<< ours
             $accountType = auth()->user()?->account_type;
             $verificationAccountType = $this->mapVerificationAccountType($accountType);
 
@@ -7093,6 +7096,16 @@ class ApiController extends Controller {
                     $query->where('account_type', $type);
                 })
                 ->get();
+=======
+            $accountType = $this->normalizeAccountTypeSlug($request->get('account_type'));
+            $fields = VerificationField::query()
+                ->when($accountType, static fn($query) => $query->where('account_type', $accountType))
+                ->whereNull('deleted_at')
+                ->orderBy('id')
+                ->get()
+                ->map(fn(VerificationField $field) => $this->serializeVerificationField($field))
+                ->values();
+>>>>>>> theirs
 
             ResponseService::successResponse('Verification Field Fetched Successfully', $fields);
 
@@ -7102,6 +7115,7 @@ class ApiController extends Controller {
         }
     }
 
+<<<<<<< ours
     private function mapVerificationAccountType(?int $accountType): ?string
     {
         return match ($accountType) {
@@ -7110,6 +7124,53 @@ class ApiController extends Controller {
             User::ACCOUNT_TYPE_CUSTOMER, null => 'individual',
             default => 'individual',
         };
+=======
+    public function getVerificationMetadata(Request $request)
+    {
+        try {
+            $accountType = $this->normalizeAccountTypeSlug($request->get('account_type'));
+
+            $fields = VerificationField::query()
+                ->whereNull('deleted_at')
+                ->when($accountType, static fn($query) => $query->where('account_type', $accountType))
+                ->orderBy('id')
+                ->get();
+
+            $plans = VerificationPlan::query()
+                ->where('is_active', true)
+                ->when($accountType, static fn($query) => $query->where('account_type', $accountType))
+                ->orderByDesc('id')
+                ->get()
+                ->keyBy('account_type');
+
+            $accountTypes = $accountType ? [$accountType] : ['individual', 'commercial', 'realestate'];
+
+            $payload = collect($accountTypes)->map(function (string $type) use ($fields, $plans) {
+                $typeFields = $fields->where('account_type', $type)->values();
+                $plan = $plans->get($type);
+
+                return [
+                    'account_type' => $type,
+                    'pricing' => [
+                        'amount' => $plan?->price ?? 0.0,
+                        'currency' => $plan?->currency ?? 'SAR',
+                        'duration_days' => $plan?->duration_days,
+                    ],
+                    'benefits' => $this->buildVerificationBenefits($type, $plan),
+                    'required_fields' => $typeFields->map(fn(VerificationField $field) => $this->serializeVerificationField($field))->values(),
+                    'updated_at' => optional($typeFields->max('updated_at'))?->toDateTimeString() ?? now()->toDateTimeString(),
+                ];
+            })->values();
+
+            ResponseService::successResponse('Verification metadata fetched successfully.', [
+                'updated_at' => now()->toIso8601String(),
+                'account_types' => $payload,
+            ]);
+        } catch (Throwable $th) {
+            ResponseService::logErrorResponse($th, 'API Controller -> getVerificationMetadata');
+            ResponseService::errorResponse('Failed to fetch verification metadata.');
+        }
+>>>>>>> theirs
     }
 
     public function sendVerificationRequest(Request $request) {
@@ -7120,16 +7181,25 @@ class ApiController extends Controller {
                 'verification_field.*'       => 'sometimes',
                 'verification_field_files'   => 'nullable|array',
                 'verification_field_files.*' => 'nullable|mimes:jpeg,png,jpg,pdf,doc|max:4096',
+                'account_type'               => 'nullable|string'
             ]);
 
             if ($validator->fails()) {
                 ResponseService::validationError($validator->errors()->first());
             }
 
+            $user = Auth::user();
+            $accountTypeSlug = $this->resolveAccountTypeSlug($user, $request->get('account_type'));
+            $missingRequired = $this->validateRequiredVerificationFields($accountTypeSlug, $request);
+
+            if (!empty($missingRequired)) {
+                ResponseService::validationError(
+                    __('الحقول التالية إلزامية: :fields', ['fields' => implode(', ', $missingRequired)])
+                );
+            }
 
             DB::beginTransaction();
 
-            $user = Auth::user();
             $verificationRequest = VerificationRequest::updateOrCreate([
                 'user_id' => $user->id,
             ], ['status' => 'pending']);
@@ -7206,6 +7276,139 @@ class ApiController extends Controller {
 
 
 
+
+    protected function serializeVerificationField(VerificationField $field): array
+    {
+        return [
+            'id' => $field->id,
+            'name' => $field->name,
+            'type' => $field->type,
+            'account_type' => $field->account_type ?? 'individual',
+            'required' => $field->is_required ? 1 : 0,
+            'min_length' => $field->min_length,
+            'max_length' => $field->max_length,
+            'status' => $field->deleted_at ? 0 : 1,
+            'values' => is_array($field->values)
+                ? $field->values
+                : (empty($field->values) ? [] : [(string) $field->values]),
+        ];
+    }
+
+    protected function buildVerificationBenefits(string $accountType, ?VerificationPlan $plan): array
+    {
+        $baseBenefits = [
+            'individual' => [
+                'شارة موثقة أمام اسمك',
+                'ثقة أعلى لدى المشترين',
+                'أولوية في البحث والإعلانات',
+            ],
+            'commercial' => [
+                'شارات توثيق للمتاجر والشركات',
+                'تعزيز ظهور المنتجات والخدمات',
+                'إمكانية متابعة التغطية الإعلانية',
+            ],
+            'realestate' => [
+                'تمييز عروض العقارات الموثوقة',
+                'جذب العملاء الجادين أولاً',
+                'أولوية مراجعة الطلبات العقارية',
+            ],
+        ];
+
+        $benefits = $baseBenefits[$accountType] ?? $baseBenefits['individual'];
+
+        if (!empty($plan?->duration_days)) {
+            $benefits[] = __('صلاحية التوثيق :days يوم', ['days' => $plan->duration_days]);
+        }
+
+        if (!empty($plan?->price) && $plan->price > 0) {
+            $benefits[] = __('رسوم الاشتراك :price :currency', [
+                'price' => number_format((float) $plan->price, 2),
+                'currency' => $plan->currency ?? 'SAR',
+            ]);
+        } else {
+            $benefits[] = __('توثيق مجاني للحسابات المؤهلة');
+        }
+
+        return array_values(array_unique(array_filter($benefits)));
+    }
+
+    protected function resolveAccountTypeSlug(?User $user, ?string $requested = null): string
+    {
+        $normalizedRequest = $this->normalizeAccountTypeSlug($requested);
+
+        if ($normalizedRequest !== null) {
+            return $normalizedRequest;
+        }
+
+        if ($user && $user->account_type) {
+            return $this->mapAccountTypeIntToSlug((int) $user->account_type);
+        }
+
+        return 'individual';
+    }
+
+    protected function normalizeAccountTypeSlug($value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $normalized = strtolower(trim((string) $value));
+
+        return match ($normalized) {
+            '1', 'individual', 'personal', 'customer', 'private' => 'individual',
+            '2', 'realestate', 'real_estate', 'property' => 'realestate',
+            '3', 'commercial', 'business', 'merchant', 'seller' => 'commercial',
+            default => null,
+        };
+    }
+
+    protected function mapAccountTypeIntToSlug(int $accountType): string
+    {
+        return match ($accountType) {
+            User::ACCOUNT_TYPE_REAL_ESTATE => 'realestate',
+            User::ACCOUNT_TYPE_SELLER => 'commercial',
+            default => 'individual',
+        };
+    }
+
+    protected function validateRequiredVerificationFields(string $accountType, Request $request): array
+    {
+        $requiredFields = VerificationField::query()
+            ->where('account_type', $accountType)
+            ->where('is_required', true)
+            ->whereNull('deleted_at')
+            ->pluck('name', 'id');
+
+        $providedFields = $request->get('verification_field', []);
+        $providedFiles = $request->file('verification_field_files', []);
+
+        $missing = [];
+
+        foreach ($requiredFields as $id => $name) {
+            $hasValue = $this->hasVerificationInput($providedFields[$id] ?? null)
+                || $this->hasVerificationInput($providedFiles[$id] ?? null);
+
+            if (!$hasValue) {
+                $missing[] = $name ?? ('field_' . $id);
+            }
+        }
+
+        return $missing;
+    }
+
+    protected function hasVerificationInput($value): bool
+    {
+        if ($value instanceof UploadedFile) {
+            return true;
+        }
+
+        if (is_array($value)) {
+            return collect($value)->filter(fn($entry) => !empty($this->normalizeVerificationFieldValue($entry)))->isNotEmpty();
+        }
+
+        return !empty($this->normalizeVerificationFieldValue($value));
+    }
 
     protected function normalizeVerificationFieldValue(mixed $value): ?string
     {

@@ -21,6 +21,10 @@ class VerificationField extends Model
         'is_required',
         'deleted_at'
     ];
+<<<<<<< ours
+=======
+
+>>>>>>> theirs
     protected $casts = [
         'is_required' => 'boolean',
     ];

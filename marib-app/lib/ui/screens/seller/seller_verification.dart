@@ -179,9 +179,11 @@ class _SellerVerificationScreenState
                 page = 2;
                 fillValue = 1.0;
                 Future.delayed(Duration.zero, () {
+                  final String accountType = HiveUtils.getAccountTypeLower();
                   context
                       .read<FetchSellerVerificationFieldsCubit>()
-                      .fetchSellerVerificationFields();
+                      .fetchSellerVerificationFields(
+                          accountType: accountType, forceRefresh: true);
                 });
               });
             } else {

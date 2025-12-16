@@ -557,23 +557,36 @@ Widget _resolveVerificationBadge({
   final normalized = (status ?? '').trim().toLowerCase();
   final bool expired = expiresAt != null && expiresAt.isBefore(DateTime.now());
 
+  Widget badge({required String label, required Color color}) {
+    return InkWell(
+      onTap: () => showVerificationSubscriptionSheet(
+        context,
+        status: status,
+        expiresAt: expiresAt,
+        isVerified: isVerified,
+      ),
+      borderRadius: BorderRadius.circular(18),
+      child: _StatusBadge(label: label, color: color),
+    );
+  }
+
   if (isVerified && !expired) {
-    return _StatusBadge(label: "موثَّق", color: Colors.green);
+    return badge(label: "موثَّق", color: Colors.green);
   }
 
   if (normalized == 'approved' && !expired) {
-    return _StatusBadge(label: "موثَّق", color: Colors.green);
+    return badge(label: "موثَّق", color: Colors.green);
   }
 
   if (normalized == 'pending' || normalized == 'resubmitted') {
-    return _StatusBadge(label: "جاري المراجعة", color: Colors.amber);
+    return badge(label: "جاري المراجعة", color: Colors.amber);
   }
 
   if (normalized == 'rejected') {
-    return _StatusBadge(label: "تم الرفض", color: Colors.red);
+    return badge(label: "تم الرفض", color: Colors.red);
   }
 
-  return _StatusBadge(label: "ط؛ظٹط± ظ…ظˆط«ظ‚", color: Colors.blueGrey);
+  return badge(label: "غير موثّق", color: Colors.blueGrey);
 }
 
 class _StatusBadge extends StatelessWidget {

@@ -2087,6 +2087,10 @@ extension FormatAmount on String {
 // ط¯ط§ظ„ط© ط§ط®ط±ظ‰ ظ„ظ„طھط­ظƒظ… ظپظٹ ط§ظ„ظˆظ‚طھ ظˆط§ظ„طھط§ط±ظٹط®
 
 // ط¯ط§ظ„ط© ظ…ظˆط­ظ‘ط¯ط©: ط¥ظ† ظ…ط±ظ‘ط±طھ format طھط³طھط®ط¯ظ…ظ‡طŒ ظˆط¥ظ„ط§ طھط±ط¬ط¹ طµظٹط؛ط© ط¹ط±ط¨ظٹط© ط°ظƒظٹط© "ظ‚ط¨ظ„ X ..."
+String _formatFullDate(DateTime date, String localeTag) {
+  return DateFormat('dd MMM yyyy, hh:mm a', localeTag).format(date.toLocal());
+}
+
 extension FormatDate on String {
   String formatDate({String? format, String? locale}) {
     try {
@@ -2112,7 +2116,7 @@ extension FormatDate on String {
         if (difference.inHours == 0 && difference.inMinutes == 0) {
           return 'الآن';
         }
-        if (difference.inHours < 1) {
+        if (difference.inHours < 1) { 
           return '${difference.inMinutes} دقيقة مضت';
         }
         return '${difference.inHours} ساعة مضت';

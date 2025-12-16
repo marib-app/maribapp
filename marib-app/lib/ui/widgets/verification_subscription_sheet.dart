@@ -2,12 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 
+import 'package:marib/app/routes.dart';
 import 'package:marib/data/cubits/seller/fetch_verification_request_cubit.dart';
 import 'package:marib/data/model/verification_request_model.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 
-Future<void> showVerificationSubscriptionSheet(BuildContext context) async {
+Future<void> showVerificationSubscriptionSheet(
+  BuildContext context, {
+  String? status,
+  DateTime? expiresAt,
+  bool? isVerified,
+}) async {
   final cubit = BlocProvider.of<FetchVerificationRequestsCubit>(context);
   // Always refresh before showing to ensure latest status/expiry.
   cubit.fetchVerificationRequests();
@@ -19,14 +25,26 @@ Future<void> showVerificationSubscriptionSheet(BuildContext context) async {
     builder: (sheetContext) {
       return BlocProvider.value(
         value: cubit,
-        child: const _VerificationSubscriptionSheet(),
+        child: _VerificationSubscriptionSheet(
+          status: status,
+          expiresAt: expiresAt,
+          isVerified: isVerified,
+        ),
       );
     },
   );
 }
 
 class _VerificationSubscriptionSheet extends StatefulWidget {
-  const _VerificationSubscriptionSheet();
+  final String? status;
+  final DateTime? expiresAt;
+  final bool? isVerified;
+
+  const _VerificationSubscriptionSheet({
+    this.status,
+    this.expiresAt,
+    this.isVerified,
+  });
 
   @override
   State<_VerificationSubscriptionSheet> createState() =>
@@ -78,10 +96,17 @@ class _VerificationSubscriptionSheetState
                 return _buildLoading(context);
               }
               if (state is FetchVerificationRequestFail) {
-                return _buildError(context, state.error.toString());
+                if (_hasSnapshot()) {
+                  return _buildSnapshot(context);
+                }
+                return _buildNoRequest(context,
+                    message: state.error.toString());
               }
               if (state is FetchVerificationRequestSuccess) {
                 return _buildDetails(context, state.data);
+              }
+              if (_hasSnapshot()) {
+                return _buildSnapshot(context);
               }
               return _buildError(context, 'Something went wrong');
             },
@@ -172,6 +197,88 @@ class _VerificationSubscriptionSheetState
         ),
       ],
     );
+  }
+
+  bool _hasSnapshot() {
+    return widget.status != null ||
+        widget.expiresAt != null ||
+        (widget.isVerified ?? false);
+  }
+
+  Widget _buildNoRequest(BuildContext context, {String? message}) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        _buildHandle(context),
+        const SizedBox(height: 14),
+        Icon(Icons.verified_user_outlined,
+            color: context.color.territoryColor, size: 32),
+        const SizedBox(height: 10),
+        Text(
+          message?.isNotEmpty == true
+              ? message!
+              : _local(
+                  context,
+                  ar: 'لم تقم بتقديم طلب توثيق بعد',
+                  en: 'No verification request submitted yet',
+                ),
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: context.color.textColorDark,
+            fontWeight: FontWeight.w700,
+            fontSize: 14,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          _local(
+            context,
+            ar: 'ابدأ الطلب الآن لاستكمال توثيق حسابك',
+            en: 'Start your request to verify your account.',
+          ),
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: context.color.textDefaultColor,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 16),
+        FilledButton.icon(
+          onPressed: () {
+            Navigator.of(context).pop();
+            Navigator.of(context).pushNamed(Routes.accountVerificationInfo);
+          },
+          icon: const Icon(Icons.verified_user_outlined),
+          label: Text(
+            _local(
+              context,
+              ar: 'تقديم طلب توثيق',
+              en: 'Submit verification request',
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSnapshot(BuildContext context) {
+    final normalized = (widget.status ?? '').trim().toLowerCase();
+    final bool expired =
+        widget.expiresAt != null && widget.expiresAt!.isBefore(DateTime.now());
+    final bool effectiveVerified =
+        ((widget.isVerified ?? false) && !expired) || normalized == 'approved';
+
+    if (!effectiveVerified && normalized.isEmpty) {
+      return _buildNoRequest(context);
+    }
+
+    final VerificationRequestModel model = VerificationRequestModel(
+      status: effectiveVerified ? 'approved' : normalized,
+      expiresAt: widget.expiresAt,
+    );
+
+    return _buildDetails(context, model);
   }
 
   Widget _buildDetails(BuildContext context, VerificationRequestModel model) {

@@ -9,6 +9,7 @@ import 'package:marib/utils/variant_key.dart';
 import 'package:marib/utils/ecommerce_department.dart';
 import 'package:marib/app/navigation/app_page_route.dart';
 import 'package:marib/app/navigation/motion/route_motion.dart';
+import 'package:marib/utils/ui_utils.dart';
 
 class ProductPurchaseOptionsScreen extends StatefulWidget {
   const ProductPurchaseOptionsScreen({super.key, required this.item});

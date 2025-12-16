@@ -21,7 +21,7 @@ import 'package:marib/data/cubits/notifications/unread_notifications_cubit.dart'
 import 'package:marib/ui/screens/chat/chat_badge_controller.dart';
 import 'package:marib/utils/performance/performance_route_observer.dart';
 import 'package:marib/app/app_scroll_behavior.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart' hide TextDirection;
 import 'package:marib/utils/ui_utils.dart';
 
 /////////////
@@ -130,7 +130,7 @@ class _AppState extends State<App> {
               direction = TextDirection.ltr;
             }
             return MediaQuery(
-              data: MediaQuery.of(context).copyWith(
+              data: MediaQuery.of(context).copyWith( 
                 textScaler: const TextScaler.linear(
                     1.0), //set text scale factor to 1 so that this will not resize app's text while user change their system settings text scale
               ),

@@ -12,6 +12,7 @@ import 'package:flutter/widgets.dart';
 import 'dart:ui' as ui;
 import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
 import 'package:marib/utils/currency_utils.dart';
+import 'package:marib/utils/ui_utils.dart';
 
 class AdInfoSectionShimmer extends StatelessWidget {
   final bool isOwner;

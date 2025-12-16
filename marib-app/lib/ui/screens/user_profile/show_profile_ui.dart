@@ -666,7 +666,12 @@ Widget _buildVerificationStatusBadge({
     return _VerifiedBadge(
       label: "موثق",
       color: Colors.green,
-      onTap: () => showVerificationSubscriptionSheet(context),
+      onTap: () => showVerificationSubscriptionSheet(
+        context,
+        status: status,
+        expiresAt: expiresAt,
+        isVerified: isVerified,
+      ),
     );
   }
 
@@ -674,7 +679,12 @@ Widget _buildVerificationStatusBadge({
     return _VerifiedBadge(
       label: "موثق",
       color: Colors.green,
-      onTap: () => showVerificationSubscriptionSheet(context),
+      onTap: () => showVerificationSubscriptionSheet(
+        context,
+        status: status,
+        expiresAt: expiresAt,
+        isVerified: isVerified,
+      ),
     );
   }
 
@@ -682,7 +692,12 @@ Widget _buildVerificationStatusBadge({
     return _VerifiedBadge(
       label: "جاري المراجعة",
       color: Colors.amber,
-      onTap: () => showVerificationSubscriptionSheet(context),
+      onTap: () => showVerificationSubscriptionSheet(
+        context,
+        status: status,
+        expiresAt: expiresAt,
+        isVerified: isVerified,
+      ),
     );
   }
 
@@ -690,7 +705,12 @@ Widget _buildVerificationStatusBadge({
     return _VerifiedBadge(
       label: "تم الرفض",
       color: Colors.red,
-      onTap: () => showVerificationSubscriptionSheet(context),
+      onTap: () => showVerificationSubscriptionSheet(
+        context,
+        status: status,
+        expiresAt: expiresAt,
+        isVerified: isVerified,
+      ),
     );
   }
 

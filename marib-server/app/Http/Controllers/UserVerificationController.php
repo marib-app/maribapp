@@ -593,13 +593,13 @@ class UserVerificationController extends Controller {
             ResponseService::noPermissionThenSendJson('seller-verification-field-update');
             $verification = VerificationRequest::with('user')->findOrFail($id);
             $newStatus = $request->input('status');
-            $rejectionReason = $request->input('rejection_reason');
+            $rejectionReason = trim((string) $request->input('rejection_reason', ''));
             $durationDays = (int) $request->input('duration_days', 30);
             $priceValue = $request->input('price', $verification->price);
             $currencyValue = $request->input('currency', $verification->currency ?? 'SAR');
 
-            if ($newStatus === 'rejected' && empty($rejectionReason)) {
-                ResponseService::validationError('Rejection reason is required when status is rejected.');
+            if ($newStatus === 'rejected' && $rejectionReason === '') {
+                $rejectionReason = __('لم يتم ذكر سبب الرفض');
             }
 
             $expiresAt = $newStatus === 'approved'

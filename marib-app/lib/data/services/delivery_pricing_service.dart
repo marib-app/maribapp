@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/widgets.dart';
 import 'package:meta/meta.dart';
 
 import 'package:marib/settings.dart';
@@ -8,6 +9,7 @@ import 'package:marib/utils/api.dart';
 import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/delivery_department.dart';
 import 'package:marib/utils/network_request_interseptor.dart';
+import 'package:marib/utils/extensions/lib/translate.dart';
 
 /// Exception thrown when delivery pricing requests fail.
 @immutable
@@ -188,7 +190,8 @@ class DeliveryPricingService {
 
       if (_isFailure(map)) {
         throw DeliveryPricingException(
-          _extractMessage(map) ?? 'فشل جلب سياسة التسعير.',
+          _extractMessage(map) ??
+              _translateDeliveryPricing('deliveryPolicyFetchFailed'),
           statusCode: response.statusCode,
           payload: map,
         );
@@ -200,7 +203,8 @@ class DeliveryPricingService {
         return null;
       }
       throw DeliveryPricingException(
-        error.message ?? 'تعذر الاتصال بخدمة التسعير.',
+        error.message ??
+            _translateDeliveryPricing('deliveryPricingConnectionFailed'),
         statusCode: error.response?.statusCode,
         payload: _mapify(error.response?.data),
         cause: error,
@@ -222,8 +226,8 @@ class DeliveryPricingService {
   }) async {
     final double? resolvedDistance = distanceKm ?? distance;
     if (resolvedDistance == null) {
-      throw const DeliveryPricingException(
-        'المسافة مطلوبة لحساب رسوم التوصيل.',
+      throw DeliveryPricingException(
+        _translateDeliveryPricing(_deliveryDistanceRequiredKey),
       );
     }
 
@@ -261,14 +265,15 @@ class DeliveryPricingService {
 
       final Map<String, dynamic>? map = _mapify(response.data);
       if (map == null) {
-        throw const DeliveryPricingException(
-          'استجابة غير متوقعة من خدمة التسعير.',
+        throw DeliveryPricingException(
+          _translateDeliveryPricing(_deliveryUnexpectedResponseKey),
         );
       }
 
       if (_isFailure(map)) {
         throw DeliveryPricingException(
-          _extractMessage(map) ?? 'فشل حساب رسوم التوصيل.',
+          _extractMessage(map) ??
+              _translateDeliveryPricing('deliveryCalculationFailed'),
           statusCode: response.statusCode,
           payload: map,
         );
@@ -282,7 +287,9 @@ class DeliveryPricingService {
     } on DioException catch (error) {
       final Map<String, dynamic>? errorMap = _mapify(error.response?.data);
       throw DeliveryPricingException(
-        _extractMessage(errorMap) ?? error.message ?? 'تعذر حساب رسوم التوصيل.',
+        _extractMessage(errorMap) ??
+            error.message ??
+            _translateDeliveryPricing('deliveryCalculationRequestFailed'),
         statusCode: error.response?.statusCode,
         payload: errorMap,
         cause: error,
@@ -319,8 +326,8 @@ class DeliveryPricingService {
   Uri get _baseUri {
     final String base = _config.baseUrl.trim();
     if (base.isEmpty) {
-      throw const DeliveryPricingException(
-        'لم يتم تكوين رابط خدمة التسعير. يرجى ضبط DELIVERY_PRICING_BASE_URL.',
+      throw DeliveryPricingException(
+        _translateDeliveryPricing(_deliveryPricingBaseUrlMissingKey),
       );
     }
     final String normalized = base.endsWith('/') ? base : '$base/';
@@ -351,6 +358,21 @@ class DeliveryPricingService {
         payload['message'] ?? payload['error'] ?? payload['msg'];
     return message?.toString();
   }
+}
+
+const String _deliveryDistanceRequiredKey = 'deliveryDistanceRequired';
+const String _deliveryUnexpectedResponseKey = 'deliveryUnexpectedResponse';
+const String _deliveryPricingBaseUrlMissingKey =
+    'deliveryPricingBaseUrlMissing';
+
+String _translateDeliveryPricing(String key) {
+  final BuildContext? context = Constant.navigatorKey.currentContext ??
+      Constant.navigatorKey.currentState?.context;
+  if (context != null) {
+    return key.translate(context);
+  }
+
+  return key;
 }
 
 /// Normalised delivery pricing calculation payload returned by the API.

@@ -1,8 +1,11 @@
+import 'package:flutter/widgets.dart';
 import 'package:meta/meta.dart';
 
 import 'package:marib/data/model/cart/checkout_models.dart';
 import 'package:marib/utils/api.dart';
+import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/delivery_department.dart';
+import 'package:marib/utils/ui_utils.dart';
 
 @immutable
 class CartShippingQuoteException implements Exception {
@@ -81,12 +84,12 @@ class CartShippingQuoteService {
       );
 
       final Map<String, dynamic> normalized =
-      Map<String, dynamic>.from(response);
+          Map<String, dynamic>.from(response);
 
       if (_isFailure(normalized)) {
         throw CartShippingQuoteException(
           message: _extractMessage(normalized) ??
-              'فشل الحصول على تسعيرة التوصيل.',
+              _translate('shippingQuoteFetchFailed'),
           payload: normalized,
         );
       }
@@ -198,7 +201,7 @@ class CartShippingQuoteService {
     } on ApiHttpException catch (error) {
       throw CartShippingQuoteException(
         message: error.errorMessage?.toString() ??
-            'تعذر الوصول إلى خادم التسعير.',
+            _translate('shippingQuoteServerUnavailable'),
         statusCode: error.statusCode,
         payload: _mapify(error.payload),
         cause: error,
@@ -206,7 +209,7 @@ class CartShippingQuoteService {
     } on ApiException catch (error) {
       throw CartShippingQuoteException(
         message: error.errorMessage?.toString() ??
-            'تعذر الوصول إلى خادم التسعير.',
+            _translate('shippingQuoteServerUnavailable'),
         cause: error,
       );
     }
@@ -218,6 +221,15 @@ class CartShippingQuoteService {
 
   bool get _shouldUseBaseUrl =>
       !(_endpoint.startsWith('http://') || _endpoint.startsWith('https://'));
+
+  String _translate(String key) {
+    final BuildContext? context = Constant.navigatorKey.currentContext ??
+        Constant.navigatorKey.currentState?.context;
+    if (context == null) {
+      return key;
+    }
+    return UiUtils.getTranslatedLabel(context, key);
+  }
 
   static Map<String, dynamic>? _mapify(dynamic value) {
     if (value is Map<String, dynamic>) {

@@ -126,7 +126,7 @@ class _AnimatedSearchBarState extends State<AnimatedSearchBar>
           Navigator.pushNamed(
             context,
             Routes.searchScreenRoute,
-            arguments: {"autoFocus": true},
+            arguments: {"autoFocus": false},
           );
         },
         child: AnimatedContainer(

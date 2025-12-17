@@ -48,6 +48,10 @@ class SearchScreen extends StatefulWidget {
 
   static Route route(RouteSettings settings) {
     Map? arguments = settings.arguments as Map?;
+    final bool autoFocus =
+        (arguments != null && arguments['autoFocus'] is bool)
+            ? arguments['autoFocus'] as bool
+            : false;
 
     return BlurredRouter(
       builder: (context) => MultiBlocProvider(
@@ -63,7 +67,7 @@ class SearchScreen extends StatefulWidget {
             ),
           ],
           child: SearchScreen(
-            autoFocus: arguments?['autoFocus'],
+            autoFocus: autoFocus,
           )),
     );
   }
@@ -200,13 +204,41 @@ class SearchScreenState extends State<SearchScreen>
       sections.addAll(_buildPopularSections(popularState));
     }
 
-    sections.add(_buildHistorySection());
-
     if (showSearchResults) {
       sections.addAll(_buildSearchSections(searchState));
     }
 
     return sections;
+  }
+
+  CatalogSection _buildShortcutSection() {
+    final shortcuts = [
+      _Shortcut(label: "أقرب لك", icon: Icons.near_me_rounded, type: ShortcutType.nearby),
+      _Shortcut(label: "تخفيضات", icon: Icons.local_offer_outlined, type: ShortcutType.discounts),
+      _Shortcut(label: "جديد اليوم", icon: Icons.fiber_new_rounded, type: ShortcutType.newToday),
+    ];
+
+    return CatalogBoxSection(
+      key: const ValueKey('search-shortcuts'),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: shortcuts
+              .map(
+                (s) => Padding(
+                  padding: const EdgeInsetsDirectional.only(end: 8.0),
+                  child: _ShortcutChip(
+                    shortcut: s,
+                    isSelected: _activeShortcut == s.type,
+                    onTap: () => _applyShortcut(s.type),
+                  ),
+                ),
+              )
+              .toList(),
+        ),
+      ),
+    );
   }
 
   CatalogSection _buildHistorySection() {
@@ -219,30 +251,9 @@ class SearchScreenState extends State<SearchScreen>
             return ItemModel.fromJson(jsonDecode(jsonString));
           }).toList();
 
-          if (items.isEmpty) {
-            return const SliverToBoxAdapter(child: SizedBox.shrink());
-          }
+          // Do not render recent searches list in UI.
+          return const SliverToBoxAdapter(child: SizedBox.shrink());
 
-          final children = <Widget>[
-            _buildHistoryHeader(items.length),
-            const SizedBox(height: 10),
-          ];
-
-          for (var i = 0; i < items.length; i++) {
-            children.add(_buildHistoryRow(items[i]));
-            if (i != items.length - 1) {
-              children.add(_buildHistoryDivider());
-            }
-          }
-
-          children.add(_buildHistoryDivider());
-
-          return SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-            sliver: SliverList(
-              delegate: SliverChildListDelegate(children),
-            ),
-          );
         },
       ),
     );
@@ -559,40 +570,7 @@ class SearchScreenState extends State<SearchScreen>
     }
 
     return const [];
-  }
-
-  CatalogSection _buildShortcutSection() {
-    final shortcuts = [
-      _Shortcut(label: "الأقرب لك", icon: Icons.near_me_rounded, type: ShortcutType.nearby),
-      _Shortcut(label: "تخفيضات", icon: Icons.local_offer_outlined, type: ShortcutType.discounts),
-      _Shortcut(label: "جديد اليوم", icon: Icons.fiber_new_rounded, type: ShortcutType.newToday),
-      _Shortcut(label: "الأكثر مشاهدة", icon: Icons.visibility_outlined, type: ShortcutType.mostViewed),
-    ];
-
-    return CatalogBoxSection(
-      key: const ValueKey('search-shortcuts'),
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: shortcuts
-              .map(
-                (s) => Padding(
-                  padding: const EdgeInsetsDirectional.only(end: 8.0),
-                  child: _ShortcutChip(
-                    shortcut: s,
-                    isSelected: _activeShortcut == s.type,
-                    onTap: () => _applyShortcut(s.type),
-                  ),
-                ),
-              )
-              .toList(),
-        ),
-      ),
-    );
-  }
-
-  CatalogSection _buildSearchHeaderSection() {
+  }CatalogSection _buildSearchHeaderSection() {
     return CatalogBoxSection(
       key: const ValueKey('search-header'),
       padding: EdgeInsets.symmetric(
@@ -875,7 +853,6 @@ class SearchScreenState extends State<SearchScreen>
           // API expects a truthy flag; use 1 to match other filters.
           filter = ItemFilterModel(
             customFields: const {'has_discount': 1},
-            sortBy: 'new-to-old',
           );
           searchController.text = "";
         });
@@ -896,20 +873,10 @@ class SearchScreenState extends State<SearchScreen>
         });
         filter = ItemFilterModel(
           postedSince: "today",
-          sortBy: 'new-to-old',
         );
         _triggerSearch(query: "");
         return;
 
-      case ShortcutType.mostViewed:
-        setState(() {
-          _showNearbySection = false;
-          _activeShortcut = ShortcutType.mostViewed;
-          previousSearchQuery = "";
-        });
-        filter = ItemFilterModel(sortBy: 'most-viewed');
-        _triggerSearch(query: "");
-        return;
     }
   }
 
@@ -919,10 +886,6 @@ class SearchScreenState extends State<SearchScreen>
         return items.where(_hasDiscount).toList(growable: false);
       case ShortcutType.newToday:
         return items.where(_isWithin24Hours).toList(growable: false);
-      case ShortcutType.mostViewed:
-        final sorted = [...items];
-        sorted.sort((a, b) => (b.views ?? 0).compareTo(a.views ?? 0));
-        return sorted;
       default:
         return items;
     }
@@ -993,24 +956,24 @@ class SearchScreenState extends State<SearchScreen>
                       children: [
                         Container(
                             width: 270.rw(context),
-                            height: 50.rh(context),
-                            alignment: AlignmentDirectional.center,
-                            decoration: BoxDecoration(
-                                border: Border.all(
-                                    width: context
-                                                .watch<AppThemeCubit>()
-                                                .state
-                                                .appTheme ==
-                                            AppTheme.dark
-                                        ? 0
-                                        : 1,
-                                    color:
-                                        context.color.borderColor.darken(30)),
-                                borderRadius:
-                                    const BorderRadius.all(Radius.circular(10)),
-                                color: context.color.secondaryColor),
-                            child: TextFormField(
-                                autofocus: widget.autoFocus,
+                             height: 50.rh(context),
+                              alignment: AlignmentDirectional.center,
+                              decoration: BoxDecoration(
+                                  border: Border.all(
+                                      width: context
+                                                  .watch<AppThemeCubit>()
+                                                  .state
+                                                  .appTheme ==
+                                              AppTheme.dark
+                                          ? 0
+                                          : 1,
+                                      color:
+                                          context.color.borderColor.darken(30)),
+                                  borderRadius:
+                                      const BorderRadius.all(Radius.circular(10)),
+                                  color: context.color.secondaryColor),
+                              child: TextFormField(
+                                autofocus: false,
                                 controller: searchController,
                                 decoration: InputDecoration(
                                   border: InputBorder.none,
@@ -1320,6 +1283,21 @@ class _ShortcutChip extends StatelessWidget {
   }
 }
 
+// Shortcut types for quick actions.
+enum ShortcutType { nearby, discounts, newToday }
+
+class _Shortcut {
+  final String label;
+  final IconData icon;
+  final ShortcutType type;
+
+  const _Shortcut({
+    required this.label,
+    required this.icon,
+    required this.type,
+  });
+}
+
 enum _DebounceScope { search, scroll }
 
 @visibleForTesting
@@ -1327,15 +1305,15 @@ typedef DebounceScope = _DebounceScope;
 
 class _SearchDebounceCoordinator {
   _SearchDebounceCoordinator(Duration duration)
-      : duration = duration,
-        _timers = <_DebounceScope, Timer>{};
+      : _duration = duration,
+        _timers = {};
 
-  final Duration duration;
+  final Duration _duration;
   final Map<_DebounceScope, Timer> _timers;
 
   void run(_DebounceScope scope, VoidCallback action) {
     _timers[scope]?.cancel();
-    _timers[scope] = Timer(duration, action);
+    _timers[scope] = Timer(_duration, action);
   }
 
   void dispose() {
@@ -1346,36 +1324,11 @@ class _SearchDebounceCoordinator {
   }
 }
 
-@visibleForTesting
-typedef SearchDebounceCoordinator = _SearchDebounceCoordinator;
-
 class _NoStretchScrollBehavior extends ScrollBehavior {
   const _NoStretchScrollBehavior();
-
   @override
-  Widget buildOverscrollIndicator(
-    BuildContext context,
-    Widget child,
-    ScrollableDetails details,
-  ) {
+  Widget buildViewportChrome(
+      BuildContext context, Widget child, AxisDirection axisDirection) {
     return child;
   }
-
-  @override
-  ScrollPhysics getScrollPhysics(BuildContext context) {
-    return AppScrollBehavior.defaultPhysics;
-  }
-}
-
-enum ShortcutType { nearby, discounts, newToday, mostViewed }
-
-class _Shortcut {
-  final String label;
-  final IconData icon;
-  final ShortcutType type;
-  const _Shortcut({
-    required this.label,
-    required this.icon,
-    required this.type,
-  });
 }

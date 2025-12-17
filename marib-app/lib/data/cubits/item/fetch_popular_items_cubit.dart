@@ -58,17 +58,16 @@ class FetchPopularItemsCubit extends Cubit<FetchPopularItemsState> {
   void fetchPopularItems() async {
     try {
       emit(FetchPopularItemsInProgress());
-      DataOutput<ItemModel> result = await _itemRepository.fetchPopularItems(
-        sortBy: "popular_items",
-        page: 1,
-      );
+      DataOutput<ItemModel> result =
+          await _itemRepository.fetchPopularItems(page: 1);
+      final sorted = _sortByViews(result.modelList);
       emit(FetchPopularItemsSuccess(
           hasError: false,
           isLoadingMore: false,
           page: 1,
-          items: result.modelList,
+          items: sorted,
           total: result.total,
-          sortBy: "popular_items"));
+          sortBy: "views"));
     } catch (e) {
       emit(FetchPopularItemsFailed(e.toString()));
     }
@@ -82,21 +81,22 @@ class FetchPopularItemsCubit extends Cubit<FetchPopularItemsState> {
         }
         emit((state as FetchPopularItemsSuccess).copyWith(isLoadingMore: true));
 
-        DataOutput<ItemModel> result = await _itemRepository.fetchPopularItems(
-          sortBy: "popular_items",
+        DataOutput<ItemModel> result =
+            await _itemRepository.fetchPopularItems(
           page: (state as FetchPopularItemsSuccess).page + 1,
         );
 
         FetchPopularItemsSuccess myItemsState =
             (state as FetchPopularItemsSuccess);
         myItemsState.items.addAll(result.modelList);
+        final sorted = _sortByViews(myItemsState.items);
         emit(
           FetchPopularItemsSuccess(
             isLoadingMore: false,
             hasError: false,
-            items: myItemsState.items,
+            items: sorted,
             page: (state as FetchPopularItemsSuccess).page + 1,
-            sortBy: "popular_items",
+            sortBy: "views",
             total: result.total,
           ),
         );
@@ -117,5 +117,11 @@ class FetchPopularItemsCubit extends Cubit<FetchPopularItemsState> {
           (state as FetchPopularItemsSuccess).total;
     }
     return false;
+  }
+
+  List<ItemModel> _sortByViews(List<ItemModel> items) {
+    final sorted = [...items];
+    sorted.sort((a, b) => (b.views ?? 0).compareTo(a.views ?? 0));
+    return sorted;
   }
 }

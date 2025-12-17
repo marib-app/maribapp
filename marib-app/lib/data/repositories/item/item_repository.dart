@@ -717,12 +717,12 @@ class ItemRepository {
   /// يعيد: DataOutput<ItemModel>
   /// -------------------------------------------------------------------------
   Future<DataOutput<ItemModel>> fetchPopularItems({
-    required String sortBy,
+    String? sortBy,
     required int page,
   }) async {
     final Map<String, dynamic> parameters = {
-      Api.sortBy: sortBy,
-      Api.page: page
+      Api.page: page,
+      if (sortBy != null && sortBy.isNotEmpty) Api.sortBy: sortBy,
     };
 
     final Map<String, dynamic> response =

@@ -73,7 +73,6 @@ class FetchNearbyItemsCubit extends Cubit<FetchNearbyItemsState> {
       final filter = ItemFilterModel(
         latitude: latitude,
         longitude: longitude,
-        sortBy: 'nearest',
         radius: radiusKm.round(),
       );
       final DataOutput<ItemModel> result =
@@ -112,7 +111,6 @@ class FetchNearbyItemsCubit extends Cubit<FetchNearbyItemsState> {
       final filter = ItemFilterModel(
         latitude: current.latitude,
         longitude: current.longitude,
-        sortBy: 'nearest',
         radius: current.radiusKm.round(),
       );
       final DataOutput<ItemModel> result = await _itemRepository.searchItem(

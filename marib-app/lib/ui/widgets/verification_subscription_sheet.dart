@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:marib/app/routes.dart';
@@ -165,7 +165,7 @@ class _VerificationSubscriptionSheetState
             const SizedBox(width: 12),
             Flexible(
               child: Text(
-                '����� ������ ��������...',
+                'جاري تحديث حالة التوثيق...',
                 style: TextStyle(
                   color: context.color.textColorDark,
                   fontWeight: FontWeight.w600,
@@ -192,7 +192,7 @@ class _VerificationSubscriptionSheetState
                 Icon(Icons.warning_amber_rounded, color: context.color.error, size: 30),
         const SizedBox(height: 8),
         Text(
-          message.isNotEmpty ? message : '��� ��� ����� ��� ��������',
+          message.isNotEmpty ? message : 'حدث خطأ أثناء جلب البيانات',
           textAlign: TextAlign.center,
           style: TextStyle(
             color: context.color.textColorDark,
@@ -202,9 +202,8 @@ class _VerificationSubscriptionSheetState
         const SizedBox(height: 12),
         TextButton(
           onPressed: _cubit.fetchVerificationRequests,
-          child: Text(
-            '����� ��������',
-            style: TextStyle(
+          child: Text('إعادة المحاولة',
+                style: TextStyle(
               color: context.color.territoryColor,
               fontWeight: FontWeight.w700,
             ),
@@ -235,8 +234,7 @@ class _VerificationSubscriptionSheetState
               ? message!
               : _local(
                   context,
-                  ar: '�� ��� ������ ��� ����� ���',
-                  en: 'No verification request submitted yet',
+                  ar: 'لا يوجد طلب توثيق حتى الآن', en: 'No verification request submitted yet',
                 ),
           textAlign: TextAlign.center,
           style: TextStyle(
@@ -249,8 +247,7 @@ class _VerificationSubscriptionSheetState
         Text(
           _local(
             context,
-            ar: '���� ����� ���� �������� ����� �����',
-            en: 'Start your request to verify your account.',
+            ar: 'ابدأ طلبك للتحقق من حسابك.', en: 'Start your request to verify your account.',
           ),
           textAlign: TextAlign.center,
           style: TextStyle(
@@ -297,7 +294,7 @@ class _VerificationSubscriptionSheetState
     final Color statusColor =
         expired ? context.color.error : _statusColor(model.status, context);
     final String statusText = expired
-        ? _local(context, ar: '����� ��������', en: 'Expired')
+        ? _local(context, ar: 'منتهي', en: 'Expired')
         : _statusLabel(model.status, context);
 
     return Column(
@@ -324,16 +321,14 @@ class _VerificationSubscriptionSheetState
                   Text(
                     _local(
                       context,
-                      ar: '���� ������� ���������',
-                      en: 'Verification status & expiry',
+                      ar: 'حالة التوثيق والصلاحية', en: 'Verification status & expiry',
                     ),
                   ).bold(weight: FontWeight.w700).size(context.font.large),
                   const SizedBox(height: 4),
                   Text(
                     _local(
                       context,
-                      ar: '���� ������ ������� ������� ������ �������',
-                      en: 'Current verification validity and remaining time',
+                      ar: 'صلاحية التوثيق الحالية والوقت المتبقي', en: 'Current verification validity and remaining time',
                     ),
                   )
                       .size(context.font.small)
@@ -347,25 +342,25 @@ class _VerificationSubscriptionSheetState
         const SizedBox(height: 16),
         _InfoRow(
           icon: Icons.event_available_rounded,
-          label: _local(context, ar: '����� �������', en: 'Activated on'),
+          label: _local(context, ar: 'تاريخ التفعيل', en: 'Activated on'),
           value:
               approvedAt != null ? dateFmt.format(approvedAt.toLocal()) : '-',
         ),
         _InfoRow(
           icon: Icons.event_busy_rounded,
-          label: _local(context, ar: '����� ��������', en: 'Expires on'),
+          label: _local(context, ar: 'تاريخ الانتهاء', en: 'Expires on'),
           value: expiresAt != null ? dateFmt.format(expiresAt.toLocal()) : '-',
           valueColor: expired ? context.color.error : null,
         ),
         _InfoRow(
           icon: Icons.schedule_rounded,
-          label: _local(context, ar: '����� �������', en: 'Time remaining'),
+          label: _local(context, ar: 'الوقت المتبقي', en: 'Time remaining'),
           value: _remainingLabel(context, expiresAt),
         ),
         if (isRejected) ...[
           const SizedBox(height: 12),
           _RejectionReason(
-            label: _local(context, ar: '\u0633\u0628\u0628 \u0627\u0644\u0631\u0641\u0636', en: 'Rejection reason'),
+            label: _local(context, ar: 'سبب الرفض', en: 'Rejection reason'),
             reason: model.rejectionReason,
           ),
           const SizedBox(height: 12),
@@ -388,7 +383,7 @@ class _VerificationSubscriptionSheetState
                     borderRadius: BorderRadius.circular(12)),
               ),
               child: Text(
-                _local(context, ar: '\u0625\u0639\u0627\u062f\u0629 \u0627\u0644\u062a\u0642\u062f\u064a\u0645', en: 'Resubmit request'),
+                _local(context, ar: '????? ???????', en: 'Resubmit request'),
                 style: const TextStyle(fontWeight: FontWeight.w700),
               ),
             ),
@@ -401,11 +396,11 @@ class _VerificationSubscriptionSheetState
 
   String _remainingLabel(BuildContext context, DateTime? expiresAt) {
     if (expiresAt == null) {
-      return _local(context, ar: '��� ����', en: 'Not available');
+      return _local(context, ar: 'غير متوفر', en: 'Not available');
     }
     final Duration diff = expiresAt.difference(DateTime.now());
     if (diff.isNegative) {
-      return _local(context, ar: '����� ��������', en: 'Expired');
+      return _local(context, ar: 'منتهي', en: 'Expired');
     }
 
     final int days = diff.inDays;
@@ -415,15 +410,15 @@ class _VerificationSubscriptionSheetState
 
     if (days > 0) {
       parts.add(
-          '$days ${_local(context, ar: days == 1 ? '���' : '����', en: days == 1 ? 'day' : 'days')}');
+          '$days ${_local(context, ar: days == 1 ? 'يوم' : 'أيام', en: days == 1 ? 'day' : 'days')}');
     }
     if (hours > 0) {
       parts.add(
-          '$hours ${_local(context, ar: hours == 1 ? '����' : '�����', en: hours == 1 ? 'hour' : 'hours')}');
+          '$hours ${_local(context, ar: hours == 1 ? 'ساعة' : 'ساعات', en: hours == 1 ? 'hour' : 'hours')}');
     }
     if (parts.isEmpty) {
       parts.add(
-          '$minutes ${_local(context, ar: '�����', en: minutes == 1 ? 'minute' : 'minutes')}');
+          '$minutes ${_local(context, ar: 'دقيقة', en: minutes == 1 ? 'minute' : 'minutes')}');
     }
     return parts.join(' ');
   }
@@ -608,6 +603,14 @@ class _RejectionReason extends StatelessWidget {
     );
   }
 }
+
+
+
+
+
+
+
+
 
 
 

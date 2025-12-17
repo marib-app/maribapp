@@ -13,6 +13,8 @@ import 'package:marib/data/cubits/seller/fetch_verification_request_cubit.dart';
 import 'package:marib/data/cubits/seller/send_verification_field_cubit.dart';
 import 'package:marib/data/helper/widgets.dart';
 import 'package:marib/data/model/verification_request_model.dart';
+import 'package:marib/data/model/custom_field/custom_field_model.dart';
+import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
 import 'package:marib/ui/screens/home_screen/home_screen.dart';
 
 import 'package:marib/ui/screens/item/add_item_screen/custom_filed_structure/custom_field.dart';
@@ -55,13 +57,14 @@ class _SellerVerificationScreenState
   bool isBack = false;
   List<CustomFieldBuilder> moreDetailDynamicFields = [];
   final _scrollController = ScrollController();
+  bool _hasRequestedFields = false;
 
   @override
   void initState() {
     super.initState();
     AbstractField.fieldsData.clear();
 
-    Future.delayed(Duration.zero, () {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (widget.isResubmitted == true) {
         context
             .read<FetchVerificationRequestsCubit>()
@@ -178,13 +181,7 @@ class _SellerVerificationScreenState
               setState(() {
                 page = 2;
                 fillValue = 1.0;
-                Future.delayed(Duration.zero, () {
-                  final String accountType = HiveUtils.getAccountTypeLower();
-                  context
-                      .read<FetchSellerVerificationFieldsCubit>()
-                      .fetchSellerVerificationFields(
-                          accountType: accountType, forceRefresh: true);
-                });
+                _requestVerificationFieldsIfNeeded();
               });
             } else {
               if (_formKey.currentState?.validate() ?? false) {
@@ -209,23 +206,6 @@ class _SellerVerificationScreenState
               }
             }
           }, buttonTitle: "continue".translate(context)),
-          SizedBox(
-            height: 30,
-          ),
-          Center(
-            child: InkWell(
-              child: Text(
-                "skipForLater".translate(context),
-                style: Theme.of(context).textTheme.titleMedium!.copyWith(
-                    decoration: TextDecoration.underline,
-                    color: context.color.textDefaultColor),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pop(context);
-              },
-            ),
-          )
         ],
       ),
     );
@@ -438,45 +418,36 @@ class _SellerVerificationScreenState
                 FetchSellerVerificationFieldState>(
               listener: (context, state) {
                 if (state is FetchSellerVerificationFieldSuccess) {
-                  moreDetailDynamicFields = state.fields.map((field) {
-                    Map<String, dynamic> fieldData = field.toMap();
-                    if (widget.isResubmitted == true) {
-                      if (verificationState
-                          is FetchVerificationRequestSuccess) {
-                        List<VerificationFieldValues> verificationList =
-                            verificationState.data.verificationFieldValues!;
-
-                        VerificationFieldValues? matchingField =
-                            verificationList.any(
-                                    (e) => e.verificationFieldId == field.id)
-                                ? verificationList.firstWhere(
-                                    (e) => e.verificationFieldId == field.id)
-                                : null;
-                        if (matchingField != null) {
-                          final String rawValue = matchingField.value ?? '';
-                          final List<String> parsedValues = rawValue
-                              .split(',')
-                              .map((entry) => entry.trim())
-                              .where((entry) => entry.isNotEmpty)
-                              .toList();
-
-                          fieldData['value'] = parsedValues;
-
-                          fieldData['isEdit'] = true;
-                        } // Use null-aware operator '?.' for safety
-                      }
-                    }
-
-                    CustomFieldBuilder customFieldBuilder =
-                        CustomFieldBuilder(fieldData);
-                    customFieldBuilder.stateUpdater(setState);
-                    customFieldBuilder.init();
-                    return customFieldBuilder;
-                  }).toList();
+                  moreDetailDynamicFields =
+                      _prepareDynamicFields(state.fields, verificationState);
                   setState(() {});
                 }
               },
               builder: (context, state) {
+                if (state is FetchSellerVerificationFieldInProgress ||
+                    state is FetchSellerVerificationFieldInitial) {
+                  return const _VerificationFieldShimmer();
+                }
+
+                if (state is FetchSellerVerificationFieldFail) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        state.error.toString(),
+                        style: TextStyle(color: context.color.error),
+                      ),
+                      const SizedBox(height: 8),
+                      TextButton.icon(
+                        onPressed: () =>
+                            _requestVerificationFieldsIfNeeded(force: true),
+                        icon: const Icon(Icons.refresh),
+                        label: Text('retryLbl'.translate(context)),
+                      ),
+                    ],
+                  );
+                }
+
                 if (moreDetailDynamicFields.isNotEmpty) {
                   return ListView.builder(
                     shrinkWrap: true,
@@ -502,13 +473,85 @@ class _SellerVerificationScreenState
                 }).toList(),
               );*/
                 } else {
-                  return SizedBox();
+                  return const _VerificationFieldShimmer();
                 }
               },
             );
           },
         ),
       ],
+    );
+  }
+
+  void _requestVerificationFieldsIfNeeded({bool force = false}) {
+    if (_hasRequestedFields && !force) return;
+    _hasRequestedFields = true;
+    moreDetailDynamicFields.clear();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final String accountType = HiveUtils.getAccountTypeLower();
+      context.read<FetchSellerVerificationFieldsCubit>().fetchSellerVerificationFields(
+          accountType: accountType, forceRefresh: true);
+    });
+  }
+
+  List<CustomFieldBuilder> _prepareDynamicFields(
+      List<VerificationFieldModel> fields,
+      FetchVerificationRequestState verificationState) {
+    return fields.map((field) {
+      final Map<String, dynamic> fieldData = field.toMap();
+      if (widget.isResubmitted == true &&
+          verificationState is FetchVerificationRequestSuccess) {
+        final List<VerificationFieldValues> verificationList =
+            verificationState.data.verificationFieldValues ?? [];
+        VerificationFieldValues? matchingField;
+        for (final VerificationFieldValues value in verificationList) {
+          if (value.verificationFieldId == field.id) {
+            matchingField = value;
+            break;
+          }
+        }
+        if (matchingField != null) {
+          final String rawValue = matchingField.value ?? '';
+          final List<String> parsedValues = rawValue
+              .split(',')
+              .map((entry) => entry.trim())
+              .where((entry) => entry.isNotEmpty)
+              .toList();
+
+          fieldData['value'] = parsedValues;
+          fieldData['isEdit'] = true;
+        }
+      }
+
+      final CustomFieldBuilder customFieldBuilder =
+          CustomFieldBuilder(fieldData);
+      customFieldBuilder.stateUpdater(setState);
+      customFieldBuilder.init();
+      return customFieldBuilder;
+    }).toList();
+  }
+}
+
+class _VerificationFieldShimmer extends StatelessWidget {
+  const _VerificationFieldShimmer();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: List.generate(3, (index) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              CustomShimmer(height: 14, width: 160),
+              SizedBox(height: 10),
+              CustomShimmer(height: 48, width: double.infinity, borderRadius: 12),
+            ],
+          ),
+        );
+      }),
     );
   }
 }

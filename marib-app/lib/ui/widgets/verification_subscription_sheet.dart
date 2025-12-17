@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:marib/app/routes.dart';
@@ -55,6 +55,7 @@ class _VerificationSubscriptionSheetState
     extends State<_VerificationSubscriptionSheet> {
   FetchVerificationRequestsCubit get _cubit =>
       BlocProvider.of<FetchVerificationRequestsCubit>(context);
+  bool _isResubmitInProgress = false;
 
   @override
   void initState() {
@@ -98,7 +99,7 @@ class _VerificationSubscriptionSheetState
               } else if (state is FetchVerificationRequestFail) {
                 content = _hasSnapshot()
                     ? _buildSnapshot(context)
-                    : _buildNoRequest(context, message: state.error.toString());
+                    : _buildError(context, state.error.toString());
               } else if (state is FetchVerificationRequestSuccess) {
                 content = _buildDetails(context, state.data);
               } else if (_hasSnapshot()) {
@@ -189,7 +190,7 @@ class _VerificationSubscriptionSheetState
       children: [
         _buildHandle(context),
         const SizedBox(height: 14),
-                Icon(Icons.warning_amber_rounded, color: context.color.error, size: 30),
+        Icon(Icons.warning_amber_rounded, color: context.color.error, size: 30),
         const SizedBox(height: 8),
         Text(
           message.isNotEmpty ? message : 'حدث خطأ أثناء جلب البيانات',
@@ -202,8 +203,9 @@ class _VerificationSubscriptionSheetState
         const SizedBox(height: 12),
         TextButton(
           onPressed: _cubit.fetchVerificationRequests,
-          child: Text('إعادة المحاولة',
-                style: TextStyle(
+          child: Text(
+            'إعادة المحاولة',
+            style: TextStyle(
               color: context.color.territoryColor,
               fontWeight: FontWeight.w700,
             ),
@@ -234,7 +236,8 @@ class _VerificationSubscriptionSheetState
               ? message!
               : _local(
                   context,
-                  ar: 'لا يوجد طلب توثيق حتى الآن', en: 'No verification request submitted yet',
+                  ar: 'لا يوجد طلب توثيق حتى الآن',
+                  en: 'No verification request submitted yet',
                 ),
           textAlign: TextAlign.center,
           style: TextStyle(
@@ -247,7 +250,8 @@ class _VerificationSubscriptionSheetState
         Text(
           _local(
             context,
-            ar: 'ابدأ طلبك للتحقق من حسابك.', en: 'Start your request to verify your account.',
+            ar: 'ابدأ طلبك للتحقق من حسابك.',
+            en: 'Start your request to verify your account.',
           ),
           textAlign: TextAlign.center,
           style: TextStyle(
@@ -287,8 +291,7 @@ class _VerificationSubscriptionSheetState
     final DateTime? expiresAt = model.expiresAt;
     final DateTime? approvedAt = model.approvedAt;
     final bool expired = expiresAt != null && expiresAt.isBefore(now);
-    final String normalizedStatus =
-        (model.status ?? '').trim().toLowerCase();
+    final String normalizedStatus = (model.status ?? '').trim().toLowerCase();
     final bool isRejected = normalizedStatus == 'rejected';
 
     final Color statusColor =
@@ -321,14 +324,16 @@ class _VerificationSubscriptionSheetState
                   Text(
                     _local(
                       context,
-                      ar: 'حالة التوثيق والصلاحية', en: 'Verification status & expiry',
+                      ar: 'حالة التوثيق والصلاحية',
+                      en: 'Verification status & expiry',
                     ),
                   ).bold(weight: FontWeight.w700).size(context.font.large),
                   const SizedBox(height: 4),
                   Text(
                     _local(
                       context,
-                      ar: 'صلاحية التوثيق الحالية والوقت المتبقي', en: 'Current verification validity and remaining time',
+                      ar: 'صلاحية التوثيق الحالية والوقت المتبقي',
+                      en: 'Current verification validity and remaining time',
                     ),
                   )
                       .size(context.font.small)
@@ -340,23 +345,6 @@ class _VerificationSubscriptionSheetState
           ],
         ),
         const SizedBox(height: 16),
-        _InfoRow(
-          icon: Icons.event_available_rounded,
-          label: _local(context, ar: 'تاريخ التفعيل', en: 'Activated on'),
-          value:
-              approvedAt != null ? dateFmt.format(approvedAt.toLocal()) : '-',
-        ),
-        _InfoRow(
-          icon: Icons.event_busy_rounded,
-          label: _local(context, ar: 'تاريخ الانتهاء', en: 'Expires on'),
-          value: expiresAt != null ? dateFmt.format(expiresAt.toLocal()) : '-',
-          valueColor: expired ? context.color.error : null,
-        ),
-        _InfoRow(
-          icon: Icons.schedule_rounded,
-          label: _local(context, ar: 'الوقت المتبقي', en: 'Time remaining'),
-          value: _remainingLabel(context, expiresAt),
-        ),
         if (isRejected) ...[
           const SizedBox(height: 12),
           _RejectionReason(
@@ -368,6 +356,8 @@ class _VerificationSubscriptionSheetState
             width: double.infinity,
             child: ElevatedButton(
               onPressed: () {
+                if (_isResubmitInProgress) return;
+                setState(() => _isResubmitInProgress = true);
                 final navigator = Navigator.of(context);
                 navigator.pop();
                 Future.microtask(
@@ -382,14 +372,51 @@ class _VerificationSubscriptionSheetState
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
               ),
-              child: Text(
-                _local(context, ar: '????? ???????', en: 'Resubmit request'),
-                style: const TextStyle(fontWeight: FontWeight.w700),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 180),
+                transitionBuilder: (child, anim) =>
+                    FadeTransition(opacity: anim, child: child),
+                child: _isResubmitInProgress
+                    ? SizedBox(
+                        key: const ValueKey('loading'),
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white.withOpacity(0.9)),
+                        ),
+                      )
+                    : Text(
+                        _local(context,
+                            ar: 'إعادة التقديم', en: 'Resubmit request'),
+                        key: const ValueKey('text'),
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
               ),
             ),
           ),
+        ] else ...[
+          _InfoRow(
+            icon: Icons.event_available_rounded,
+            label: _local(context, ar: 'تاريخ التفعيل', en: 'Activated on'),
+            value:
+                approvedAt != null ? dateFmt.format(approvedAt.toLocal()) : '-',
+          ),
+          _InfoRow(
+            icon: Icons.event_busy_rounded,
+            label: _local(context, ar: 'تاريخ الانتهاء', en: 'Expires on'),
+            value:
+                expiresAt != null ? dateFmt.format(expiresAt.toLocal()) : '-',
+            valueColor: expired ? context.color.error : null,
+          ),
+          _InfoRow(
+            icon: Icons.schedule_rounded,
+            label: _local(context, ar: 'الوقت المتبقي', en: 'Time remaining'),
+            value: _remainingLabel(context, expiresAt),
+          ),
+          const SizedBox(height: 8),
         ],
-        const SizedBox(height: 8),
       ],
     );
   }
@@ -453,8 +480,7 @@ class _VerificationSubscriptionSheetState
     }
   }
 
-  String _local(BuildContext context,
-      {required String ar, required String en}) {
+  String _local(BuildContext context, {required String ar, required String en}) {
     final locale = Localizations.maybeLocaleOf(context);
     if ((locale?.languageCode ?? 'ar').toLowerCase().startsWith('ar')) {
       return ar;
@@ -603,16 +629,3 @@ class _RejectionReason extends StatelessWidget {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-

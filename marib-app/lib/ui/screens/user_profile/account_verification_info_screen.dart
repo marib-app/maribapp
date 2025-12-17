@@ -13,6 +13,7 @@ import 'package:marib/utils/app_icon.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/hive_utils.dart';
+import 'package:marib/utils/merchant_display_helper.dart';
 import 'package:marib/utils/ui_utils.dart';
 
 class AccountVerificationInfoScreen extends StatefulWidget {
@@ -118,22 +119,16 @@ class _AccountVerificationInfoScreenState
               const SizedBox(height: 12),
               _StatusSection(buildStatusCard: _buildStatusCard),
               const SizedBox(height: 12),
-              _DynamicPlanSection(
-                onStart: () => _startVerificationFlow(context),
-                buildBenefits: _buildBenefits,
-              ),
+              const _DynamicPlanSection(),
               const SizedBox(height: 16),
               _SectionCard(
                 title: "لماذا التوثيق؟",
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: const [
-                    _BenefitChip("موثوقية أعلى لدى المشترين"),
-                    _BenefitChip("شارة موثقة أمام اسمك"),
-                    _BenefitChip("أولوية في نتائج البحث والإعلانات"),
-                    _BenefitChip("معدل إبلاغ أقل وحماية لحسابك"),
-                  ],
+                child: Text(
+                  "التوثيق يمنح حسابك مصداقية إضافية ويُظهر للآخرين أنك المالك الحقيقي، مما يعزز ثقة المشترين ويقلل من البلاغات والخلافات.",
+                  style: TextStyle(
+                    color: context.color.textDefaultColor.withOpacity(0.9),
+                    height: 1.5,
+                  ),
                 ),
               ),
               _SectionCard(
@@ -186,18 +181,6 @@ class _AccountVerificationInfoScreenState
                   ],
                 ),
               ),
-              _SectionCard(
-                title: "المتطلبات الأساسية",
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    _RequirementRow("هوية وطنية أو سجل تجاري ساري"),
-                    _RequirementRow("رقم جوال موثق قابل للتواصل"),
-                    _RequirementRow("عنوان واضح يظهر في إدارة العناوين"),
-                    _RequirementRow("حساب نشط خالٍ من المخالفات الكبيرة"),
-                  ],
-                ),
-              ),
               const SizedBox(height: 6),
               UiUtils.buildButton(
                 context,
@@ -233,6 +216,19 @@ class _AccountVerificationInfoScreenState
     final DateTime? expiresAt = model.expiresAt;
     final DateTime? approvedAt = model.approvedAt;
     final bool expired = expiresAt != null && expiresAt.isBefore(now);
+    final bool isRejected = (model.status ?? '').toLowerCase().trim() == 'rejected';
+    final String? rejectionReason = model.rejectionReason?.trim();
+    final String statusHint = isRejected
+        ? _local(
+            context,
+            ar: 'تم رفض طلب التوثيق. يمكنك مراجعة السبب أدناه.',
+            en: 'Verification request was rejected. See the reason below.',
+          )
+        : _local(
+            context,
+            ar: 'يمكنك الإطلاع على صلاحية التوثيق وزمن انتهاءه.',
+            en: 'See your verification validity and expiry timeline.',
+          );
 
     final Color statusColor = expired
         ? context.color.error
@@ -266,11 +262,7 @@ class _AccountVerificationInfoScreenState
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      _local(
-                        context,
-                        ar: 'يمكنك الإطلاع على صلاحية التوثيق وزمن انتهاءه.',
-                        en: 'See your verification validity and expiry timeline.',
-                      ),
+                      statusHint,
                       style: TextStyle(
                         color: context.color.textDefaultColor,
                         fontSize: context.font.small,
@@ -283,73 +275,46 @@ class _AccountVerificationInfoScreenState
             ],
           ),
           const SizedBox(height: 12),
-          _InfoRow(
-            icon: Icons.event_available_rounded,
-            label: _local(context, ar: 'تاريخ التفعيل', en: 'Activated on'),
-            value: approvedAt != null ? dateFmt.format(approvedAt.toLocal()) : '-',
-          ),
-          _InfoRow(
-            icon: Icons.event_busy_rounded,
-            label: _local(context, ar: 'تاريخ الانتهاء', en: 'Expires on'),
-            value: expiresAt != null ? dateFmt.format(expiresAt.toLocal()) : '-',
-            valueColor: expired ? context.color.error : null,
-          ),
-          _InfoRow(
-            icon: Icons.schedule_rounded,
-            label: _local(context, ar: 'الوقت المتبقي', en: 'Time remaining'),
-            value: _remainingLabel(context, expiresAt),
-          ),
+          if (isRejected) ...[
+            Text(
+              _local(context, ar: 'سبب الرفض', en: 'Rejection reason'),
+              style: TextStyle(
+                color: context.color.textColorDark,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              (rejectionReason != null && rejectionReason.isNotEmpty)
+                  ? rejectionReason
+                  : _local(context,
+                      ar: 'لم يذكر سبب للرفض', en: 'No rejection reason provided'),
+              style: TextStyle(
+                color: context.color.textDefaultColor,
+                height: 1.4,
+              ),
+            ),
+          ] else ...[
+            _InfoRow(
+              icon: Icons.event_available_rounded,
+              label: _local(context, ar: 'تاريخ التفعيل', en: 'Activated on'),
+              value: approvedAt != null ? dateFmt.format(approvedAt.toLocal()) : '-',
+            ),
+            _InfoRow(
+              icon: Icons.event_busy_rounded,
+              label: _local(context, ar: 'تاريخ الانتهاء', en: 'Expires on'),
+              value: expiresAt != null ? dateFmt.format(expiresAt.toLocal()) : '-',
+              valueColor: expired ? context.color.error : null,
+            ),
+            _InfoRow(
+              icon: Icons.schedule_rounded,
+              label: _local(context, ar: 'الوقت المتبقي', en: 'Time remaining'),
+              value: _remainingLabel(context, expiresAt),
+            ),
+          ],
         ],
       ),
     );
-  }
-
-  List<String> _buildBenefits({VerificationOffering? offering}) {
-    final List<String> collected = [];
-    if (offering?.benefits.isNotEmpty == true) {
-      collected.addAll(offering!.benefits);
-    }
-
-    if (collected.isEmpty) {
-      collected.addAll([
-        _local(context,
-            ar: 'شارة موثقة أمام اسمك',
-            en: 'Verified badge across your profile'),
-        _local(context,
-            ar: 'ثقة أعلى لدى المشترين', en: 'Higher trust with buyers'),
-        _local(context,
-            ar: 'أولوية في البحث والإعلانات',
-            en: 'Priority placement in search and ads'),
-      ]);
-    }
-
-    final VerificationPricing? pricing = offering?.pricing;
-    final int? duration = pricing?.durationDays;
-    final double? price = pricing?.amount;
-    final String? currency = pricing?.currency;
-
-    if (duration != null) {
-      collected.add(
-        _local(
-          context,
-          ar: 'صلاحية التوثيق $duration يوم',
-          en: 'Verification valid for $duration days',
-        ),
-      );
-    }
-
-    if (price != null && price != 0) {
-      final priceLabel = '${price.toStringAsFixed(2)} ${currency ?? ''}'.trim();
-      collected.add(
-        _local(
-          context,
-          ar: 'رسوم الاشتراك: $priceLabel',
-          en: 'Subscription fee: $priceLabel',
-        ),
-      );
-    }
-
-    return collected;
   }
 
   String _remainingLabel(BuildContext context, DateTime? expiresAt) {
@@ -477,13 +442,7 @@ class _StatusSection extends StatelessWidget {
 }
 
 class _DynamicPlanSection extends StatelessWidget {
-  final VoidCallback onStart;
-  final List<String> Function({VerificationOffering? offering}) buildBenefits;
-
-  const _DynamicPlanSection({
-    required this.onStart,
-    required this.buildBenefits,
-  });
+  const _DynamicPlanSection();
 
   @override
   Widget build(BuildContext context) {
@@ -528,35 +487,27 @@ class _DynamicPlanSection extends StatelessWidget {
 
         final VerificationOffering? offering =
             state.metadata.findForAccountType(state.accountType);
-        final List<VerificationFieldModel> fields = state.fields;
-        final Map<int, VerificationFieldValues> filledValues = const {};
+        final double? amount = offering?.pricing?.amount;
+        final int durationDays = offering?.pricing?.durationDays ?? 30;
+        final String currency = (offering?.pricing?.currency?.isNotEmpty == true)
+            ? offering!.pricing!.currency!
+            : 'ريال يمني';
+
+        final String priceLabel = (amount != null && amount > 0)
+            ? '${amount % 1 == 0 ? amount.toStringAsFixed(0) : amount.toStringAsFixed(2)} $currency'
+            : 'X ريال يمني';
 
         return _SectionCard(
           title: 'تفاصيل الاشتراك',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (offering?.pricing != null)
-                _PlanTile(
-                  amount: offering?.pricing.amount,
-                  currency: offering?.pricing.currency,
-                  durationDays: offering?.pricing.durationDays,
+              Text(
+                'رسوم الاشتراك هي $priceLabel تكلفة الحصول على شارة التوثيق لمدة $durationDays يوم.',
+                style: TextStyle(
+                  color: context.color.textDefaultColor,
+                  height: 1.5,
                 ),
-              const SizedBox(height: 10),
-              _BenefitsList(features: buildBenefits(offering: offering)),
-              const SizedBox(height: 12),
-              _FieldChecklist(
-                fields: fields,
-                filledValues: filledValues,
-                accountType: state.accountType,
-              ),
-              const SizedBox(height: 10),
-              UiUtils.buildButton(
-                context,
-                onPressed: onStart,
-                buttonTitle: 'بدء تقديم الطلب',
-                height: 44,
-                radius: 12,
               ),
             ],
           ),
@@ -573,6 +524,14 @@ class _HeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final user = HiveUtils.getUserDetails();
+    final bool isMerchant = (user.userType ?? 0) == 3;
+    final String? profileImage = MerchantDisplayHelper.resolveProfileImage(
+      isMerchant: isMerchant,
+      store: user.store,
+      fallbackImage: user.profile,
+    );
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
@@ -583,20 +542,7 @@ class _HeroCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Container(
-            height: 58,
-            width: 58,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: accent.withOpacity(0.12),
-            ),
-            alignment: Alignment.center,
-            child: UiUtils.getSvg(
-              AppIcons.userVerificationIcon,
-              fit: BoxFit.none,
-              color: accent,
-            ),
-          ),
+          _ProfilePreview(accent: accent, profileImage: profileImage),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
@@ -620,6 +566,86 @@ class _HeroCard extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfilePreview extends StatelessWidget {
+  final Color accent;
+  final String? profileImage;
+
+  const _ProfilePreview({required this.accent, required this.profileImage});
+
+  @override
+  Widget build(BuildContext context) {
+    final bool hasImage = profileImage != null && profileImage!.trim().isNotEmpty;
+
+    final Widget avatar = Container(
+      height: 62,
+      width: 62,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: accent.withOpacity(0.18)),
+        color: context.color.backgroundColor,
+      ),
+      child: ClipOval(
+        child: hasImage
+            ? UiUtils.getImage(
+                profileImage!,
+                height: 62,
+                width: 62,
+                fit: BoxFit.cover,
+              )
+            : Container(
+                color: accent.withOpacity(0.08),
+                alignment: Alignment.center,
+                child: UiUtils.getSvg(
+                  AppIcons.defaultPersonLogo,
+                  fit: BoxFit.none,
+                  color: accent,
+                ),
+              ),
+      ),
+    );
+
+    return SizedBox(
+      width: 78,
+      height: 70,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            left: 0,
+            top: 4,
+            child: avatar,
+          ),
+          Positioned(
+            right: 2,
+            bottom: 0,
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: context.color.secondaryColor,
+                shape: BoxShape.circle,
+                border: Border.all(color: accent.withOpacity(0.7)),
+                boxShadow: [
+                  BoxShadow(
+                    color: accent.withOpacity(0.28),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: UiUtils.getSvg(
+                AppIcons.verifiedIcon,
+                width: 16,
+                height: 16,
+                color: accent,
+              ),
             ),
           ),
         ],
@@ -740,238 +766,6 @@ class _StepRow extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-class _RequirementRow extends StatelessWidget {
-  final String label;
-  const _RequirementRow(this.label);
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Icon(Icons.check_circle, color: Colors.green, size: 18),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(color: context.color.textDefaultColor),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PlanTile extends StatelessWidget {
-  final double? amount;
-  final String? currency;
-  final int? durationDays;
-
-  const _PlanTile({this.amount, this.currency, this.durationDays});
-
-  @override
-  Widget build(BuildContext context) {
-    final String priceLabel =
-        amount != null ? '${amount!.toStringAsFixed(2)} ${currency ?? ''}' : '-';
-    final String durationLabel = durationDays != null
-        ? '$durationDays ${'days'.translate(context)}'
-        : '-';
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        color: context.color.secondaryColor,
-        border: Border.all(
-          color: context.color.textDefaultColor.withOpacity(0.08),
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.workspace_premium,
-              color: context.color.territoryColor, size: 26),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'subscription'.translate(context),
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: context.color.textColorDark,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${'fee'.translate(context)}: $priceLabel • ${'duration'.translate(context)}: $durationLabel',
-                  style: TextStyle(
-                    fontSize: context.font.small,
-                    color: context.color.textDefaultColor,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BenefitsList extends StatelessWidget {
-  final List<String> features;
-
-  const _BenefitsList({required this.features});
-
-  @override
-  Widget build(BuildContext context) {
-    if (features.isEmpty) return const SizedBox.shrink();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'المزايا',
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            color: context.color.textColorDark,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 6,
-          runSpacing: 6,
-          children: features
-              .map(
-                (feature) => Chip(
-                  label: Text(
-                    feature,
-                    style: TextStyle(
-                      color: context.color.textColorDark,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  backgroundColor:
-                      context.color.territoryColor.withOpacity(0.1),
-                  side: BorderSide(
-                    color: context.color.territoryColor.withOpacity(0.3),
-                  ),
-                ),
-              )
-              .toList(),
-        ),
-      ],
-    );
-  }
-}
-
-class _FieldChecklist extends StatelessWidget {
-  final List<VerificationFieldModel> fields;
-  final Map<int, VerificationFieldValues> filledValues;
-  final String accountType;
-
-  const _FieldChecklist({
-    required this.fields,
-    required this.filledValues,
-    required this.accountType,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(Icons.assignment_turned_in_outlined,
-                size: 20, color: context.color.territoryColor),
-            const SizedBox(width: 6),
-            Text(
-              'الحقول المطلوبة (${_accountLabel(context, accountType)})',
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                color: context.color.textColorDark,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        if (fields.isEmpty)
-          Text(
-            'لا توجد حقول مطلوبة حاليًا',
-            style: TextStyle(color: context.color.textDefaultColor),
-          )
-        else
-          Column(
-            children: fields.map((field) {
-              final VerificationFieldValues? value = field.id != null
-                  ? filledValues[field.id!]
-                  : null;
-              final bool isRequired = (field.required ?? 0) == 1;
-              final bool hasValue =
-                  value != null && (value.value?.toString().isNotEmpty ?? false);
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  children: [
-                    Icon(
-                      hasValue ? Icons.check_circle : Icons.radio_button_unchecked,
-                      color:
-                          hasValue ? Colors.green : context.color.textDefaultColor,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        field.name ?? '-',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: context.color.textColorDark,
-                        ),
-                      ),
-                    ),
-                    if (isRequired)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: context.color.error.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          'إلزامي',
-                          style: TextStyle(
-                            color: context.color.error,
-                            fontSize: context.font.small,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              );
-            }).toList(),
-          ),
-      ],
-    );
-  }
-
-  String _accountLabel(BuildContext context, String accountType) {
-    final normalized = accountType.toLowerCase();
-    if (normalized.contains('real')) {
-      return 'حساب عقاري';
-    }
-    if (normalized.contains('business') || normalized.contains('merchant')) {
-      return 'حساب تجاري';
-    }
-    return 'حساب فردي';
   }
 }
 

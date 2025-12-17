@@ -80,6 +80,8 @@ class _AnimatedSearchBarState extends State<AnimatedSearchBar>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final double hintFontSize = screenWidth < 360 ? 14 : 15;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -121,32 +123,52 @@ class _AnimatedSearchBarState extends State<AnimatedSearchBar>
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 700),
-                  switchInCurve: Curves.easeOutQuad,
-                  switchOutCurve: Curves.easeInQuad,
-                  transitionBuilder: (child, animation) {
-                    final slide = Tween<Offset>(
-                      begin: const Offset(0.14, 0),
-                      end: Offset.zero,
-                    ).animate(CurvedAnimation(
-                      parent: animation,
-                      curve: Curves.easeOut,
-                    ));
-                    return FadeTransition(
-                      opacity: animation,
-                      child: SlideTransition(position: slide, child: child),
-                    );
-                  },
-                  child: Text(
-                    hints[currentHintIndex],
-                    key: ValueKey(currentHintIndex),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: isDark ? Colors.white70 : Colors.grey[700],
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
+                child: ClipRect(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 650),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
+                    layoutBuilder: (currentChild, previousChildren) {
+                      return Stack(
+                        alignment: Alignment.centerLeft,
+                        children: <Widget>[
+                          ...previousChildren,
+                          if (currentChild != null) currentChild,
+                        ],
+                      );
+                    },
+                    transitionBuilder: (child, animation) {
+                      final curved = CurvedAnimation(
+                        parent: animation,
+                        curve: Curves.easeOutCubic,
+                        reverseCurve: Curves.easeInCubic,
+                      );
+                      final slide = Tween<Offset>(
+                        begin: const Offset(0, 0.28),
+                        end: Offset.zero,
+                      ).animate(curved);
+                      return FadeTransition(
+                        opacity: curved,
+                        child: SlideTransition(
+                          position: slide,
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      key: ValueKey(currentHintIndex),
+                      child: Text(
+                        hints[currentHintIndex],
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        softWrap: false,
+                        style: TextStyle(
+                          color: isDark ? Colors.white70 : Colors.grey[700],
+                          fontSize: hintFontSize,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     ),
                   ),
                 ),

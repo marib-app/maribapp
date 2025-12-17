@@ -479,19 +479,25 @@ class _ProfileGlassCard extends StatelessWidget {
       verificationRequest = HiveUtils.getCachedVerificationRequest();
     }
 
-    String? verificationStatus =
+    final String? verificationStatus =
         verificationRequest?.status?.trim().toLowerCase();
     final DateTime? verificationExpiresAt = verificationRequest?.expiresAt;
-
-    bool isVerified = (user.isVerified ?? 0) == 1;
-    if (!isVerified && verificationStatus == 'approved') {
-      final bool active = verificationExpiresAt == null ||
-          verificationExpiresAt.isAfter(DateTime.now());
-      isVerified = active;
-    }
-
+    final bool expired = verificationExpiresAt != null &&
+        verificationExpiresAt.isBefore(DateTime.now());
+    final bool approvedActive =
+        verificationStatus == 'approved' && !expired;
+    final bool fallbackVerified =
+        (verificationStatus == null || verificationStatus.isEmpty) &&
+            (user.isVerified ?? 0) == 1 &&
+            !expired;
+    final bool isVerified = approvedActive || fallbackVerified;
+    final bool hasExistingRequest =
+        verificationStatus != null && verificationStatus.isNotEmpty;
+    final String? statusForBadge = hasExistingRequest
+        ? verificationStatus
+        : (isVerified ? 'approved' : verificationStatus);
     final bool showVerificationButton =
-        !isVerified && HiveUtils.isUserAuthenticated();
+        !isVerified && HiveUtils.isUserAuthenticated() && !hasExistingRequest;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(10, 18, 10, 0),
@@ -547,43 +553,32 @@ class _ProfileGlassCard extends StatelessWidget {
                         ValueListenableBuilder<bool>(
                           valueListenable: verificationBadgeLoadingNotifier,
                           builder: (context, badgeLoading, _) {
-                        final Set<String> trackedStatuses = {
-                          'approved',
-                          'pending',
-                          'resubmitted',
-                          'rejected',
-                        };
-                        final bool hasExistingRequest =
-                            verificationRequest != null &&
-                                verificationStatus != null &&
-                                trackedStatuses.contains(verificationStatus);
+                            void handleVerificationTap() {
+                              if (isVerified || hasExistingRequest) {
+                                showVerificationSubscriptionSheet(
+                                  context,
+                                  status: statusForBadge,
+                                  expiresAt: verificationExpiresAt,
+                                  isVerified: isVerified,
+                                );
+                                return;
+                              }
 
-                        void handleVerificationTap() {
-                          if (hasExistingRequest) {
-                            showVerificationSubscriptionSheet(
-                              context,
-                              status: verificationStatus,
-                              expiresAt: verificationExpiresAt,
+                              Navigator.of(context)
+                                  .pushNamed(Routes.accountVerificationInfo);
+                            }
+
+                            return VerificationBadgeAnimated(
+                              isLoading: badgeLoading,
+                              showVerificationButton: showVerificationButton,
                               isVerified: isVerified,
+                              status: statusForBadge,
+                              expiresAt: verificationExpiresAt,
+                              onVerifyTap: handleVerificationTap,
+                              onStatusTap: handleVerificationTap,
                             );
-                            return;
-                          }
-
-                          Navigator.of(context)
-                              .pushNamed(Routes.accountVerificationInfo);
-                        }
-
-                        return VerificationBadgeAnimated(
-                          isLoading: badgeLoading,
-                          showVerificationButton: showVerificationButton,
-                          isVerified: isVerified,
-                          status: verificationStatus,
-                          expiresAt: verificationExpiresAt,
-                          onVerifyTap: handleVerificationTap,
-                          onStatusTap: handleVerificationTap,
-                        );
-                      },
-                    ),
+                          },
+                        ),
                       ],
                     ),
                     if (user.id != null) ...[

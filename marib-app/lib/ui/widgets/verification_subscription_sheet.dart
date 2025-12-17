@@ -1,6 +1,7 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:marib/app/routes.dart';
 
 import 'package:marib/data/cubits/seller/fetch_verification_request_cubit.dart';
 import 'package:marib/data/model/verification_request_model.dart';
@@ -164,7 +165,7 @@ class _VerificationSubscriptionSheetState
             const SizedBox(width: 12),
             Flexible(
               child: Text(
-                'تحميل تفاصيل الاشتراك...',
+                '����� ������ ��������...',
                 style: TextStyle(
                   color: context.color.textColorDark,
                   fontWeight: FontWeight.w600,
@@ -188,10 +189,10 @@ class _VerificationSubscriptionSheetState
       children: [
         _buildHandle(context),
         const SizedBox(height: 14),
-        Icon(Icons.warning_amber_rounded, color: context.color.error, size: 30),
+                Icon(Icons.warning_amber_rounded, color: context.color.error, size: 30),
         const SizedBox(height: 8),
         Text(
-          message.isNotEmpty ? message : 'تعذر جلب بيانات التوثيق',
+          message.isNotEmpty ? message : '��� ��� ����� ��� ��������',
           textAlign: TextAlign.center,
           style: TextStyle(
             color: context.color.textColorDark,
@@ -202,7 +203,7 @@ class _VerificationSubscriptionSheetState
         TextButton(
           onPressed: _cubit.fetchVerificationRequests,
           child: Text(
-            'إعادة المحاولة',
+            '����� ��������',
             style: TextStyle(
               color: context.color.territoryColor,
               fontWeight: FontWeight.w700,
@@ -234,7 +235,7 @@ class _VerificationSubscriptionSheetState
               ? message!
               : _local(
                   context,
-                  ar: 'لم تقم بتقديم طلب توثيق بعد',
+                  ar: '�� ��� ������ ��� ����� ���',
                   en: 'No verification request submitted yet',
                 ),
           textAlign: TextAlign.center,
@@ -248,7 +249,7 @@ class _VerificationSubscriptionSheetState
         Text(
           _local(
             context,
-            ar: 'ابدأ الطلب الآن لاستكمال توثيق حسابك',
+            ar: '���� ����� ���� �������� ����� �����',
             en: 'Start your request to verify your account.',
           ),
           textAlign: TextAlign.center,
@@ -289,11 +290,14 @@ class _VerificationSubscriptionSheetState
     final DateTime? expiresAt = model.expiresAt;
     final DateTime? approvedAt = model.approvedAt;
     final bool expired = expiresAt != null && expiresAt.isBefore(now);
+    final String normalizedStatus =
+        (model.status ?? '').trim().toLowerCase();
+    final bool isRejected = normalizedStatus == 'rejected';
 
     final Color statusColor =
         expired ? context.color.error : _statusColor(model.status, context);
     final String statusText = expired
-        ? _local(context, ar: 'انتهى الاشتراك', en: 'Expired')
+        ? _local(context, ar: '����� ��������', en: 'Expired')
         : _statusLabel(model.status, context);
 
     return Column(
@@ -320,7 +324,7 @@ class _VerificationSubscriptionSheetState
                   Text(
                     _local(
                       context,
-                      ar: 'حالة التوثيق والاشتراك',
+                      ar: '���� ������� ���������',
                       en: 'Verification status & expiry',
                     ),
                   ).bold(weight: FontWeight.w700).size(context.font.large),
@@ -328,7 +332,7 @@ class _VerificationSubscriptionSheetState
                   Text(
                     _local(
                       context,
-                      ar: 'تابع صلاحية التوثيق الحالية والوقت المتبقي',
+                      ar: '���� ������ ������� ������� ������ �������',
                       en: 'Current verification validity and remaining time',
                     ),
                   )
@@ -343,21 +347,53 @@ class _VerificationSubscriptionSheetState
         const SizedBox(height: 16),
         _InfoRow(
           icon: Icons.event_available_rounded,
-          label: _local(context, ar: 'تاريخ التفعيل', en: 'Activated on'),
+          label: _local(context, ar: '����� �������', en: 'Activated on'),
           value:
               approvedAt != null ? dateFmt.format(approvedAt.toLocal()) : '-',
         ),
         _InfoRow(
           icon: Icons.event_busy_rounded,
-          label: _local(context, ar: 'تاريخ الانتهاء', en: 'Expires on'),
+          label: _local(context, ar: '����� ��������', en: 'Expires on'),
           value: expiresAt != null ? dateFmt.format(expiresAt.toLocal()) : '-',
           valueColor: expired ? context.color.error : null,
         ),
         _InfoRow(
           icon: Icons.schedule_rounded,
-          label: _local(context, ar: 'الوقت المتبقي', en: 'Time remaining'),
+          label: _local(context, ar: '����� �������', en: 'Time remaining'),
           value: _remainingLabel(context, expiresAt),
         ),
+        if (isRejected) ...[
+          const SizedBox(height: 12),
+          _RejectionReason(
+            label: _local(context, ar: '\u0633\u0628\u0628 \u0627\u0644\u0631\u0641\u0636', en: 'Rejection reason'),
+            reason: model.rejectionReason,
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                final navigator = Navigator.of(context);
+                navigator.pop();
+                Future.microtask(
+                  () => navigator.pushNamed(Routes.accountVerificationInfo),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: context.color.territoryColor,
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+              child: Text(
+                _local(context, ar: '\u0625\u0639\u0627\u062f\u0629 \u0627\u0644\u062a\u0642\u062f\u064a\u0645', en: 'Resubmit request'),
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+          ),
+        ],
         const SizedBox(height: 8),
       ],
     );
@@ -365,11 +401,11 @@ class _VerificationSubscriptionSheetState
 
   String _remainingLabel(BuildContext context, DateTime? expiresAt) {
     if (expiresAt == null) {
-      return _local(context, ar: 'غير محدد', en: 'Not available');
+      return _local(context, ar: '��� ����', en: 'Not available');
     }
     final Duration diff = expiresAt.difference(DateTime.now());
     if (diff.isNegative) {
-      return _local(context, ar: 'انتهى الاشتراك', en: 'Expired');
+      return _local(context, ar: '����� ��������', en: 'Expired');
     }
 
     final int days = diff.inDays;
@@ -379,15 +415,15 @@ class _VerificationSubscriptionSheetState
 
     if (days > 0) {
       parts.add(
-          '$days ${_local(context, ar: days == 1 ? 'يوم' : 'أيام', en: days == 1 ? 'day' : 'days')}');
+          '$days ${_local(context, ar: days == 1 ? '���' : '����', en: days == 1 ? 'day' : 'days')}');
     }
     if (hours > 0) {
       parts.add(
-          '$hours ${_local(context, ar: hours == 1 ? 'ساعة' : 'ساعات', en: hours == 1 ? 'hour' : 'hours')}');
+          '$hours ${_local(context, ar: hours == 1 ? '����' : '�����', en: hours == 1 ? 'hour' : 'hours')}');
     }
     if (parts.isEmpty) {
       parts.add(
-          '$minutes ${_local(context, ar: 'دقيقة', en: minutes == 1 ? 'minute' : 'minutes')}');
+          '$minutes ${_local(context, ar: '�����', en: minutes == 1 ? 'minute' : 'minutes')}');
     }
     return parts.join(' ');
   }
@@ -521,3 +557,59 @@ class _StatusChip extends StatelessWidget {
     );
   }
 }
+
+class _RejectionReason extends StatelessWidget {
+  final String label;
+  final String? reason;
+
+  const _RejectionReason({required this.label, required this.reason});
+
+  @override
+  Widget build(BuildContext context) {
+    final String display =
+        (reason == null || reason!.trim().isEmpty) ? '-' : reason!.trim();
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: context.color.error.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: context.color.error.withOpacity(0.2)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.error_outline, color: context.color.error, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: context.color.error,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  display,
+                  style: TextStyle(
+                    color: context.color.textColorDark,
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
+
+
+

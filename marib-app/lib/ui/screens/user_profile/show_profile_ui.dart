@@ -249,20 +249,27 @@ class _HeaderSection extends StatelessWidget {
                   resolvedRequest = cachedRequest;
                 }
 
-                bool isVerified = (user?.isVerified ?? 0) == 1;
                 final String? verificationStatus =
                     resolvedRequest?.status?.trim().toLowerCase();
                 final DateTime? verificationExpiresAt =
                     resolvedRequest?.expiresAt;
-                if (!isVerified && resolvedRequest != null) {
-                  final bool active = verificationStatus == 'approved' &&
-                      (verificationExpiresAt == null ||
-                          verificationExpiresAt.isAfter(DateTime.now()));
-                  isVerified = active;
-                }
-
-                final bool showVerificationButton =
-                    !isVerified && isUserAuthenticated;
+                final bool expired = verificationExpiresAt != null &&
+                    verificationExpiresAt.isBefore(DateTime.now());
+                final bool approvedActive =
+                    verificationStatus == 'approved' && !expired;
+                final bool fallbackVerified =
+                    (verificationStatus == null || verificationStatus.isEmpty) &&
+                        (user?.isVerified ?? 0) == 1 &&
+                        !expired;
+                final bool isVerified = approvedActive || fallbackVerified;
+                final bool hasExistingRequest =
+                    verificationStatus != null && verificationStatus.isNotEmpty;
+                final String? statusForBadge = hasExistingRequest
+                    ? verificationStatus
+                    : (isVerified ? 'approved' : verificationStatus);
+                final bool showVerificationButton = !isVerified &&
+                    isUserAuthenticated &&
+                    !hasExistingRequest;
 
                 return Row(
                   children: [
@@ -280,22 +287,11 @@ class _HeaderSection extends StatelessWidget {
                     ValueListenableBuilder<bool>(
                       valueListenable: verificationBadgeLoadingNotifier,
                       builder: (context, badgeLoading, _) {
-                        final Set<String> trackedStatuses = {
-                          'approved',
-                          'pending',
-                          'resubmitted',
-                          'rejected',
-                        };
-                        final bool hasExistingRequest =
-                            resolvedRequest != null &&
-                                verificationStatus != null &&
-                                trackedStatuses.contains(verificationStatus);
-
                         void handleVerificationTap() {
-                          if (hasExistingRequest) {
+                          if (isVerified || hasExistingRequest) {
                             showVerificationSubscriptionSheet(
                               context,
-                              status: verificationStatus,
+                              status: statusForBadge,
                               expiresAt: verificationExpiresAt,
                               isVerified: isVerified,
                             );
@@ -310,7 +306,7 @@ class _HeaderSection extends StatelessWidget {
                           isLoading: badgeLoading,
                           showVerificationButton: showVerificationButton,
                           isVerified: isVerified,
-                          status: verificationStatus,
+                          status: statusForBadge,
                           expiresAt: verificationExpiresAt,
                           onVerifyTap: handleVerificationTap,
                           onStatusTap: handleVerificationTap,

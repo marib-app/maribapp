@@ -127,6 +127,10 @@ class AddItemDetailsSubmissionService {
     }
 
     File? mainImageFile = model.coverImageFile ?? flaggedMainFile ?? (galleryFiles.isNotEmpty ? galleryFiles.first : null);
+    if (mainImageFile != null) {
+      final String mainPath = mainImageFile.path;
+      galleryFiles.removeWhere((File file) => file.path == mainPath);
+    }
 
     if (mainImageFile == null && galleryFiles.isEmpty) {
       HelperUtils.showSnackBarMessage(context, 'Cannot continue without images');
@@ -309,6 +313,11 @@ class AddItemDetailsSubmissionService {
     if (mainImageFile == null) {
       mainImageFile =
           flaggedMainFile ?? (galleryFiles.isNotEmpty ? galleryFiles.first : null);
+    }
+
+    if (mainImageFile != null) {
+      final String mainPath = mainImageFile.path;
+      galleryFiles.removeWhere((File file) => file.path == mainPath);
     }
 
     if (mainImageFile == null && model.coverImageUrl.isEmpty) {

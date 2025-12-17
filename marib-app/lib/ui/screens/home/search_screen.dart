@@ -331,6 +331,72 @@ class SearchScreenState extends State<SearchScreen>
     );
   }
 
+  List<CatalogSection> _buildPagedSections({
+    required CatalogSection header,
+    required List<ItemModel> items,
+    required bool isLoadingMore,
+    required bool hasMore,
+    required ValueChanged<ItemModel> onTap,
+    EdgeInsetsGeometry? padding,
+    String Function(ItemModel item)? keyBuilder,
+  }) {
+    final sections = <CatalogSection>[
+      header,
+      CatalogListSection(
+        key: ValueKey('${header.key ?? header.runtimeType}-results'),
+        padding: padding ??
+            EdgeInsets.symmetric(
+              horizontal: sidePadding,
+              vertical: 8,
+            ),
+        itemCount: items.length + (isLoadingMore ? 1 : 0),
+        itemExtent: _listItemExtent,
+        addRepaintBoundaries: true,
+        addAutomaticKeepAlives: true,
+        addSemanticIndexes: false,
+        itemBuilder: (context, index) {
+          final bool isLoaderRow = isLoadingMore && index >= items.length;
+          if (isLoaderRow) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: UiUtils.progress(
+                normalProgressColor: context.color.territoryColor,
+              ),
+            );
+          }
+
+          final item = items[index];
+          final bool isLast = index == items.length - 1;
+          final itemKey = keyBuilder?.call(item) ?? 'item-${item.id ?? index}';
+
+          return Padding(
+            padding: EdgeInsetsDirectional.only(
+              top: index == 0 ? 4 : 0,
+              bottom: isLast ? 2 : 6,
+            ),
+            child: RepaintBoundary(
+              child: InkWell(
+                onTap: () => onTap(item),
+                child: ItemHorizontalCard(
+                  key: ValueKey(itemKey),
+                  item: item,
+                  showLikeButton: true,
+                  additionalImageWidth: 8,
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    ];
+
+    if (!isLoadingMore && !hasMore) {
+      sections.add(_buildEndOfListSection());
+    }
+
+    return sections;
+  }
+
   List<CatalogSection> _buildSearchSections(SearchItemState state) {
     if (state is SearchItemFetchProgress || state is SearchItemInitial) {
       return [_buildShimmerSection(const ValueKey('search-loading'))];
@@ -362,6 +428,7 @@ class SearchScreenState extends State<SearchScreen>
         items: displayItems,
         isLoadingMore: state.isLoadingMore,
         hasMore: state.hasMore,
+        keyBuilder: (item) => 'search-${item.id}',
         onTap: (item) {
           insertNewItem(item);
           Navigator.pushNamed(
@@ -399,7 +466,8 @@ class SearchScreenState extends State<SearchScreen>
           header: const CatalogBoxSection(child: SizedBox.shrink()),
           items: popularState.items,
           isLoadingMore: popularState.isLoadingMore,
-          hasMore: popularCubit.hasMoreData(),
+          hasMore: context.read<FetchPopularItemsCubit>().hasMoreData(),
+          keyBuilder: (item) => 'popular-${item.id}',
           onTap: (item) {
             Navigator.pushNamed(
               context,
@@ -481,61 +549,34 @@ class SearchScreenState extends State<SearchScreen>
         return const [CatalogBoxSection(child: SizedBox.shrink())];
       }
 
-      final sections = <CatalogSection>[
-        _buildNearbyHeaderSection(),
-        CatalogListSection(
-          key: const ValueKey('nearby-results'),
-          padding: EdgeInsets.symmetric(
-            horizontal: sidePadding,
-            vertical: 8,
-          ),
-          itemCount: nearbyState.items.length,
-          itemExtent: _listItemExtent,
-          addRepaintBoundaries: true,
-          addAutomaticKeepAlives: true,
-          addSemanticIndexes: false,
-          itemBuilder: (context, index) {
-            final item = nearbyState.items[index];
-            return Padding(
-              padding: EdgeInsetsDirectional.only(
-                top: index == 0 ? 4 : 0,
-                bottom: index == nearbyState.items.length - 1 ? 2 : 6,
-              ),
-              child: RepaintBoundary(
-                child: InkWell(
-                  onTap: () {
-                    Navigator.pushNamed(
-                      context,
-                      Routes.adDetailsScreen,
-                      arguments: {
-                        'model': item,
-                      },
-                    );
-                  },
-                  child: ItemHorizontalCard(
-                    key: ValueKey('nearby-${item.id}'),
-                    item: item,
-                    showLikeButton: true,
-                    additionalImageWidth: 8,
-                  ),
-                ),
-              ),
-            );
-          },
+      final bool hasMore = nearbyState.items.length < nearbyState.total;
+
+      return _buildPagedSections(
+        header: _buildNearbyHeaderSection(),
+        items: nearbyState.items,
+        isLoadingMore: nearbyState.isLoadingMore,
+        hasMore: hasMore,
+        padding: EdgeInsets.symmetric(
+          horizontal: sidePadding,
+          vertical: 8,
         ),
-      ];
-
-      if (nearbyState.isLoadingMore) {
-        sections.add(_buildLoadingMoreSection());
-      } else if (nearbyState.items.length >= nearbyState.total) {
-        sections.add(_buildEndOfListSection());
-      }
-
-      return sections;
+        keyBuilder: (item) => 'nearby-${item.id}',
+        onTap: (item) {
+          Navigator.pushNamed(
+            context,
+            Routes.adDetailsScreen,
+            arguments: {
+              'model': item,
+            },
+          );
+        },
+      );
     }
 
     return const [];
-  }CatalogSection _buildSearchHeaderSection() {
+  }
+
+  CatalogSection _buildSearchHeaderSection() {
     return CatalogBoxSection(
       key: const ValueKey('search-header'),
       padding: EdgeInsets.symmetric(
@@ -1369,7 +1410,7 @@ class _SearchDebounceCoordinator {
   }
 }
 
-  class _NoStretchScrollBehavior extends ScrollBehavior {
+class _NoStretchScrollBehavior extends ScrollBehavior {
   const _NoStretchScrollBehavior();
   @override
   Widget buildViewportChrome(

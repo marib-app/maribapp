@@ -101,6 +101,9 @@ class AdImageHeader extends StatefulWidget {
   final VoidCallback? onShare;
   final VoidCallback? onReport;
   final Widget? likeButton;
+  final String? videoUrl;
+  final String? videoThumbnail;
+  final VoidCallback? onVideoTap;
   final Future<void> Function(BuildContext context)? openShareSheet;
   final Future<void> Function(BuildContext context)? openReportDialog;
   final Widget Function(BuildContext, int, int)? pageIndicatorBuilder;
@@ -134,6 +137,9 @@ class AdImageHeader extends StatefulWidget {
     required this.model,
     required this.isAddedByMe,
     required this.safeModelId,
+    this.videoUrl,
+    this.videoThumbnail,
+    this.onVideoTap,
   });
 
   static Widget sliver({
@@ -146,6 +152,9 @@ class AdImageHeader extends StatefulWidget {
     dynamic model,
     bool isAddedByMe = false,
     String safeModelId = '',
+    String? videoUrl,
+    String? videoThumbnail,
+    VoidCallback? onVideoTap,
     String? modelId,
     PageController? pageController,
     ValueChanged<int>? onImagePageChanged,
@@ -166,6 +175,9 @@ class AdImageHeader extends StatefulWidget {
         model: model,
         isAddedByMe: isAddedByMe,
         safeModelId: safeModelId,
+        videoUrl: videoUrl,
+        videoThumbnail: videoThumbnail,
+        onVideoTap: onVideoTap,
         images: images,
         modelId: modelId,
         pageController: pageController,
@@ -189,20 +201,21 @@ class _AdImageHeaderState extends State<AdImageHeader> {
   late int currentImageIndex;
 
   bool get _hasImages => widget.images.isNotEmpty;
-
-
+  bool get _hasVideo => (widget.videoUrl?.trim().isNotEmpty ?? false);
+  bool get _hasMedia => _hasImages || _hasVideo;
+  int get _totalCount => widget.images.length + (_hasVideo ? 1 : 0);
 
   @override
   void initState() {
     super.initState();
-    currentImageIndex = widget.currentImageIndex;
+    currentImageIndex = _normalizeIndex(widget.currentImageIndex, _totalCount);
   }
   @override
   void didUpdateWidget(covariant AdImageHeader oldWidget) {
     super.didUpdateWidget(oldWidget);
     final int normalizedIndex = _normalizeIndex(
       widget.currentImageIndex,
-      widget.images.length,
+      _totalCount,
     );
     if (normalizedIndex != currentImageIndex) {
       setState(() {
@@ -232,23 +245,35 @@ class _AdImageHeaderState extends State<AdImageHeader> {
         fit: StackFit.expand,
         children: [
           GestureDetector(
-            onTap: !_hasImages
+            onTap: !_hasMedia
                 ? null
                 : () {
-              Navigator.push(
-                context,
-                AppPageRoute.build(
-                  builder: (context) => FullscreenGalleryPage(
-                    images: widget.images,
-                    initialIndex: currentImageIndex,
-                    heroTagBuilder: (index) => widget.modelId != null
-                        ? 'ad-image-${widget.modelId}-$index'
-                        : 'ad-image-$index',
-                  ),
-                  motionPattern: AppMotionPattern.glide,
-                ),
-              );
-            },
+                    final bool isVideoSlide =
+                        _hasVideo && currentImageIndex == 0;
+                    if (isVideoSlide) {
+                      widget.onVideoTap?.call();
+                      return;
+                    }
+                    if (widget.images.isEmpty) return;
+                    final int initialIndex =
+                        _hasVideo ? currentImageIndex - 1 : currentImageIndex;
+                    Navigator.push(
+                      context,
+                      AppPageRoute.build(
+                        builder: (context) => FullscreenGalleryPage(
+                          images: widget.images,
+                          initialIndex: initialIndex.clamp(
+                            0,
+                            widget.images.length - 1,
+                          ),
+                          heroTagBuilder: (index) => widget.modelId != null
+                              ? 'ad-image-${widget.modelId}-$index'
+                              : 'ad-image-$index',
+                        ),
+                        motionPattern: AppMotionPattern.glide,
+                      ),
+                    );
+                  },
             child: _buildImageSlider(),
           ),
           Positioned.fill(
@@ -284,7 +309,7 @@ class _AdImageHeaderState extends State<AdImageHeader> {
 
 
 
-          if (widget.images.length > 1)
+          if (_totalCount > 1)
             Positioned(
               bottom: 20,
               left: 0,
@@ -299,7 +324,7 @@ class _AdImageHeaderState extends State<AdImageHeader> {
   Widget _buildImageIndicator() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(widget.images.length, (index) {
+      children: List.generate(_totalCount, (index) {
         return AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -320,12 +345,12 @@ class _AdImageHeaderState extends State<AdImageHeader> {
   }
 
   Widget _buildImageSlider() {
-    if (!_hasImages) {
+    if (!_hasMedia) {
       return _buildPlaceholder();
     }
     return PageView.builder(
       controller: widget.pageController,
-      itemCount: widget.images.length,
+      itemCount: _totalCount,
       onPageChanged: (index) {
         if (widget.onImagePageChanged != null) {
           widget.onImagePageChanged!(index);
@@ -336,12 +361,17 @@ class _AdImageHeaderState extends State<AdImageHeader> {
       },
 
       itemBuilder: (context, index) {
-        final AdImageSource imageSource = widget.images[index];
+        if (_hasVideo && index == 0) {
+          return _buildVideoSlide();
+        }
+
+        final int imageIndex = _hasVideo ? index - 1 : index;
+        final AdImageSource imageSource = widget.images[imageIndex];
         final String imageUrl = imageSource.detailUrl;
         return Hero(
           tag: widget.modelId != null
-              ? 'ad-image-${widget.modelId}-$index'
-              : 'ad-image-$index',
+              ? 'ad-image-${widget.modelId}-$imageIndex'
+              : 'ad-image-$imageIndex',
           child: CachedNetworkImage(
             imageUrl: imageUrl,
             fit: BoxFit.cover,
@@ -394,6 +424,70 @@ class _AdImageHeaderState extends State<AdImageHeader> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildVideoSlide() {
+    final String? thumb = widget.videoThumbnail;
+    final bool hasThumb = thumb != null && thumb.isNotEmpty;
+
+    Widget base;
+    if (hasThumb) {
+      base = CachedNetworkImage(
+        imageUrl: thumb!,
+        fit: BoxFit.cover,
+        placeholder: (context, url) => const ShimmerBox(
+          width: double.infinity,
+          height: double.infinity,
+          borderRadius: BorderRadius.zero,
+        ),
+        errorWidget: (context, url, error) => _buildShimmerFallback(
+          icon: Icons.videocam_rounded,
+          animate: false,
+        ),
+      );
+    } else {
+      base = _buildShimmerFallback(
+        icon: Icons.videocam_rounded,
+        animate: true,
+      );
+    }
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        base,
+        Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Colors.black.withOpacity(0.1),
+                Colors.black.withOpacity(0.4),
+              ],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+          ),
+        ),
+        Center(
+          child: Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.black54,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white.withOpacity(0.85),
+                width: 1.5,
+              ),
+            ),
+            child: const Icon(
+              Icons.play_arrow_rounded,
+              size: 42,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -526,5 +620,3 @@ class _AdImageHeaderState extends State<AdImageHeader> {
     );
   }
 }
-
-

@@ -1,4 +1,4 @@
-// lib/ui/screens/item/owner_view.dart
+﻿// lib/ui/screens/item/owner_view.dart
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -7,7 +7,7 @@ import 'package:marib/data/model/item/item_model.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/ui/theme/theme.dart';
 
-// أجزاء من شاشة التفاصيل العامة التي سنعيد استخدامها
+// ط£ط¬ط²ط§ط، ظ…ظ† ط´ط§ط´ط© ط§ظ„طھظپط§طµظٹظ„ ط§ظ„ط¹ط§ظ…ط© ط§ظ„طھظٹ ط³ظ†ط¹ظٹط¯ ط§ط³طھط®ط¯ط§ظ…ظ‡ط§
 import 'AdImagesHeader.dart';
 import 'AdInfoSection.dart';
 import 'Description.dart';
@@ -43,7 +43,7 @@ import 'package:marib/utils/geo_rules.dart';
 import 'ad_image_source.dart';
 
 // ==============================
-// شريحة إضافات المالك (مثلاً: تمييز الإعلان)
+// ط´ط±ظٹط­ط© ط¥ط¶ط§ظپط§طھ ط§ظ„ظ…ط§ظ„ظƒ (ظ…ط«ظ„ط§ظ‹: طھظ…ظٹظٹط² ط§ظ„ط¥ط¹ظ„ط§ظ†)
 // ==============================
 class OwnerExtrasSection extends StatelessWidget {
   final Widget? featuredSection;
@@ -63,7 +63,7 @@ class OwnerExtrasSection extends StatelessWidget {
 }
 
 // ==============================
-// شريحة إحصاء صغيرة
+// ط´ط±ظٹط­ط© ط¥ط­طµط§ط، طµط؛ظٹط±ط©
 // ==============================
 class _StatChip extends StatelessWidget {
   final IconData icon;
@@ -91,14 +91,14 @@ class _StatChip extends StatelessWidget {
 }
 
 // ==============================
-// الصف العلوي: إحصائيات + قائمة خيارات المالك
+// ط§ظ„طµظپ ط§ظ„ط¹ظ„ظˆظٹ: ط¥ط­طµط§ط¦ظٹط§طھ + ظ‚ط§ط¦ظ…ط© ط®ظٹط§ط±ط§طھ ط§ظ„ظ…ط§ظ„ظƒ
 // ==============================
 
 class OwnerStatsActions extends StatelessWidget {
   final ItemModel model;
-  final int? views; // إجمالي المشاهدات
-  final int? likes; // إجمالي الإعجابات
-  final bool isActive; // حالة الإعلان
+  final int? views; // ط¥ط¬ظ…ط§ظ„ظٹ ط§ظ„ظ…ط´ط§ظ‡ط¯ط§طھ
+  final int? likes; // ط¥ط¬ظ…ط§ظ„ظٹ ط§ظ„ط¥ط¹ط¬ط§ط¨ط§طھ
+  final bool isActive; // ط­ط§ظ„ط© ط§ظ„ط¥ط¹ظ„ط§ظ†
 
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
@@ -132,7 +132,7 @@ class OwnerStatsActions extends StatelessWidget {
               icon: Icons.favorite_rounded, text: (likes ?? 0).toString()),
           const Spacer(),
           PopupMenuButton<String>(
-            tooltip: 'خيارات',
+            tooltip: 'ط®ظٹط§ط±ط§طھ',
             onSelected: (v) {
               switch (v) {
                 case 'edit':
@@ -153,25 +153,25 @@ class OwnerStatsActions extends StatelessWidget {
               const PopupMenuItem(
                   value: 'edit',
                   child: ListTile(
-                      leading: Icon(Icons.edit), title: Text('تعديل الإعلان'))),
+                      leading: Icon(Icons.edit), title: Text('طھط¹ط¯ظٹظ„ ط§ظ„ط¥ط¹ظ„ط§ظ†'))),
               const PopupMenuItem(
                   value: 'delete',
                   child: ListTile(
                       leading: Icon(Icons.delete_outline),
-                      title: Text('حذف الإعلان'))),
+                      title: Text('ط­ط°ظپ ط§ظ„ط¥ط¹ظ„ط§ظ†'))),
               PopupMenuItem(
                 value: 'toggle',
                 child: ListTile(
                   leading: Icon(isActive
                       ? Icons.pause_circle_outline
                       : Icons.play_circle_outline),
-                  title: Text(isActive ? 'إيقاف مؤقت' : 'تفعيل'),
+                  title: Text(isActive ? 'ط¥ظٹظ‚ط§ظپ ظ…ط¤ظ‚طھ' : 'طھظپط¹ظٹظ„'),
                 ),
               ),
               const PopupMenuItem(
                   value: 'share',
                   child: ListTile(
-                      leading: Icon(Icons.share), title: Text('مشاركة'))),
+                      leading: Icon(Icons.share), title: Text('ظ…ط´ط§ط±ظƒط©'))),
             ],
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -182,7 +182,7 @@ class OwnerStatsActions extends StatelessWidget {
                         Theme.of(context).colorScheme.outline.withOpacity(.2)),
               ),
               child: Row(children: [
-                Text('خيارات', style: text.bodyMedium),
+                Text('ط®ظٹط§ط±ط§طھ', style: text.bodyMedium),
                 const SizedBox(width: 6),
                 const Icon(Icons.expand_more, size: 18),
               ]),
@@ -195,7 +195,7 @@ class OwnerStatsActions extends StatelessWidget {
 }
 
 // ==============================
-// الـ Bottom bar الخاص بالمالك
+// ط§ظ„ظ€ Bottom bar ط§ظ„ط®ط§طµ ط¨ط§ظ„ظ…ط§ظ„ظƒ
 // ==============================
 
 class OwnerViewBar extends StatelessWidget {
@@ -204,10 +204,10 @@ class OwnerViewBar extends StatelessWidget {
   final VoidCallback onRenewPressed;
   final bool isBusy;
 
-  /// هل الإعلان مضاف بواسطتي؟ يأتي من الشاشة الأب
+  /// ظ‡ظ„ ط§ظ„ط¥ط¹ظ„ط§ظ† ظ…ط¶ط§ظپ ط¨ظˆط§ط³ط·طھظٹطں ظٹط£طھظٹ ظ…ظ† ط§ظ„ط´ط§ط´ط© ط§ظ„ط£ط¨
   final bool isAddedByMe;
 
-  /// كولباك لتحديث moreDetailDynamicFields في الشاشة الأب (Stateful)
+  /// ظƒظˆظ„ط¨ط§ظƒ ظ„طھط­ط¯ظٹط« moreDetailDynamicFields ظپظٹ ط§ظ„ط´ط§ط´ط© ط§ظ„ط£ط¨ (Stateful)
   final void Function(List<CustomFieldBuilder>) onUpdateFields;
 
   final Future<bool> Function()? onPausePressed;
@@ -219,8 +219,8 @@ class OwnerViewBar extends StatelessWidget {
     required this.moreDetailDynamicFields,
     required this.onRenewPressed,
     this.isBusy = false,
-    required this.isAddedByMe, // ✅ أضفناه كـ required
-    required this.onUpdateFields, // ✅ موجود ومطلوب
+    required this.isAddedByMe, // âœ… ط£ط¶ظپظ†ط§ظ‡ ظƒظ€ required
+    required this.onUpdateFields, // âœ… ظ…ظˆط¬ظˆط¯ ظˆظ…ط·ظ„ظˆط¨
 
     this.onPausePressed,
     this.onResumePressed,
@@ -228,7 +228,7 @@ class OwnerViewBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ⚠️ لا نستخدم Padding خارجي هنا حتى ما يسبب فراغ على الأطراف
+    // âڑ ï¸ڈ ظ„ط§ ظ†ط³طھط®ط¯ظ… Padding ط®ط§ط±ط¬ظٹ ظ‡ظ†ط§ ط­طھظ‰ ظ…ط§ ظٹط³ط¨ط¨ ظپط±ط§ط؛ ط¹ظ„ظ‰ ط§ظ„ط£ط·ط±ط§ظپ
 
     final bar = bottomButtonWidget(
       context: context,
@@ -237,13 +237,13 @@ class OwnerViewBar extends StatelessWidget {
       moreDetailDynamicFields: moreDetailDynamicFields,
       onRenewPressed: onRenewPressed,
       onUpdateFields: onUpdateFields,
-      // 👇 مهم لتمرير منطق الإيقاف/الاستئناف للأسفل
+      // ًں‘‡ ظ…ظ‡ظ… ظ„طھظ…ط±ظٹط± ظ…ظ†ط·ظ‚ ط§ظ„ط¥ظٹظ‚ط§ظپ/ط§ظ„ط§ط³طھط¦ظ†ط§ظپ ظ„ظ„ط£ط³ظپظ„
       onPausePressed: onPausePressed,
       onResumePressed: onResumePressed,
     );
 
     return SafeArea(
-      // خليه يغطي العرض كامل، بدون حواف جانبية
+      // ط®ظ„ظٹظ‡ ظٹط؛ط·ظٹ ط§ظ„ط¹ط±ط¶ ظƒط§ظ…ظ„طŒ ط¨ط¯ظˆظ† ط­ظˆط§ظپ ط¬ط§ظ†ط¨ظٹط©
       left: false,
       right: false,
       bottom: true,
@@ -262,10 +262,10 @@ class OwnerViewBar extends StatelessWidget {
 }
 
 // ==============================
-// الجسم الكامل لواجهة المالك
+// ط§ظ„ط¬ط³ظ… ط§ظ„ظƒط§ظ…ظ„ ظ„ظˆط§ط¬ظ‡ط© ط§ظ„ظ…ط§ظ„ظƒ
 // ==============================
 class OwnerAdDetailsBody extends StatelessWidget {
-  final void Function(String key, dynamic value) addCloudDataFn; // 👈 جديد
+  final void Function(String key, dynamic value) addCloudDataFn; // ًں‘ˆ ط¬ط¯ظٹط¯
 
   final ItemModel model;
   final List<String?> images;
@@ -280,8 +280,11 @@ class OwnerAdDetailsBody extends StatelessWidget {
   final VoidCallback onRenewPressed;
   final VoidCallback onOpenMap;
 
-  /// ويدجت اختيارية (مثل createFeaturesAds())
+  /// ظˆظٹط¯ط¬طھ ط§ط®طھظٹط§ط±ظٹط© (ظ…ط«ظ„ createFeaturesAds())
   final Widget? featuredSection;
+  final String? videoUrl;
+  final String? videoThumbnail;
+  final VoidCallback? onVideoTap;
   final bool hideLocation;
   final bool supportsMapSection;
 
@@ -298,10 +301,13 @@ class OwnerAdDetailsBody extends StatelessWidget {
     required this.moreDetailDynamicFields,
     required this.onRenewPressed,
     required this.onOpenMap,
-    required this.addCloudDataFn, // 👈 جديد
+    required this.addCloudDataFn, // ًں‘ˆ ط¬ط¯ظٹط¯
     required this.hideLocation,
     required this.supportsMapSection,
     this.featuredSection,
+    this.videoUrl,
+    this.videoThumbnail,
+    this.onVideoTap,
   });
 
   @override
@@ -311,7 +317,7 @@ class OwnerAdDetailsBody extends StatelessWidget {
     final views = model.views ?? 0;
     final likes = model.totalLikes ?? 0;
 
-    // شريط الإحصائيات بعرض كامل
+    // ط´ط±ظٹط· ط§ظ„ط¥ط­طµط§ط¦ظٹط§طھ ط¨ط¹ط±ط¶ ظƒط§ظ…ظ„
     Widget _statsBar(BuildContext context) {
       final cs = Theme.of(context).colorScheme;
       final text = Theme.of(context).textTheme;
@@ -368,7 +374,7 @@ class OwnerAdDetailsBody extends StatelessWidget {
 
     return CustomScrollView(
       slivers: [
-        // السلايدر مع تكبير عند السحب للأسفل (بدون blur)
+        // ط§ظ„ط³ظ„ط§ظٹط¯ط± ظ…ط¹ طھظƒط¨ظٹط± ط¹ظ†ط¯ ط§ظ„ط³ط­ط¨ ظ„ظ„ط£ط³ظپظ„ (ط¨ط¯ظˆظ† blur)
         SliverAppBar(
           pinned: true,
           stretch: true,
@@ -378,7 +384,7 @@ class OwnerAdDetailsBody extends StatelessWidget {
             collapseMode: CollapseMode.parallax,
             stretchModes: const [
               StretchMode.zoomBackground,
-              StretchMode.fadeTitle, // اختياري
+              StretchMode.fadeTitle, // ط§ط®طھظٹط§ط±ظٹ
             ],
             background: AdImageHeader(
               currentImageIndex: currentIndex,
@@ -391,18 +397,26 @@ class OwnerAdDetailsBody extends StatelessWidget {
               model: model,
               isAddedByMe: true,
               safeModelId: (model.id ?? 0).toString(),
+              videoUrl: (model.videoLink ?? '').trim().isNotEmpty
+                  ? model.videoLink!.trim()
+                  : null,
+              videoThumbnail:
+                  videoThumbnail != null && videoThumbnail!.isNotEmpty
+                      ? videoThumbnail
+                      : null,
+              onVideoTap: onVideoTap,
             ),
           ),
         ),
 
-        // باقي المحتوى
+        // ط¨ط§ظ‚ظٹ ط§ظ„ظ…ط­طھظˆظ‰
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.all(13),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // العنوان
+                // ط§ظ„ط¹ظ†ظˆط§ظ†
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   child: Text(model.name ?? "Unknown Item")
@@ -411,22 +425,22 @@ class OwnerAdDetailsBody extends StatelessWidget {
                       .color(context.color.textDefaultColor),
                 ),
 
-                // الإحصائيات بعرض كامل (بدون قائمة خيارات)
+                // ط§ظ„ط¥ط­طµط§ط¦ظٹط§طھ ط¨ط¹ط±ط¶ ظƒط§ظ…ظ„ (ط¨ط¯ظˆظ† ظ‚ط§ط¦ظ…ط© ط®ظٹط§ط±ط§طھ)
                 _statsBar(context),
 
-                // السعر + الحالة
+                // ط§ظ„ط³ط¹ط± + ط§ظ„ط­ط§ظ„ط©
                 adInfo.priceAndStatus(),
 
-                // سبب الرفض (إن وجد)
+                // ط³ط¨ط¨ ط§ظ„ط±ظپط¶ (ط¥ظ† ظˆط¬ط¯)
                 if (model.rejectedReason?.isNotEmpty == true)
                   RejectedReasonCard(reason: model.rejectedReason!),
 
                 if (!hideLocation && model.address != null)
                   adInfo.titleAndDate(isDate: true),
-                // قسم إضافات المالك (إن وجد)
+                // ظ‚ط³ظ… ط¥ط¶ط§ظپط§طھ ط§ظ„ظ…ط§ظ„ظƒ (ط¥ظ† ظˆط¬ط¯)
                 OwnerExtrasSection(featuredSection: featuredSection),
 
-                // الحقول المخصصة
+                // ط§ظ„ط­ظ‚ظˆظ„ ط§ظ„ظ…ط®طµطµط©
                 if (model.customFields?.isNotEmpty == true)
                   CustomFieldsWidget(
                     field: model,
@@ -442,7 +456,7 @@ class OwnerAdDetailsBody extends StatelessWidget {
                     thickness: 1,
                     color: context.color.textDefaultColor.withOpacity(0.1)),
 
-                // الخريطة
+                // ط§ظ„ط®ط±ظٹط·ط©
                 if (!hideLocation &&
                     supportsMapSection &&
                     model.latitude != null &&
@@ -464,7 +478,7 @@ class OwnerAdDetailsBody extends StatelessWidget {
 }
 
 // ==============================
-// ويدجت سبب الرفض (تصميم أجمل)
+// ظˆظٹط¯ط¬طھ ط³ط¨ط¨ ط§ظ„ط±ظپط¶ (طھطµظ…ظٹظ… ط£ط¬ظ…ظ„)
 // ==============================
 
 class RejectedReasonCard extends StatelessWidget {
@@ -509,7 +523,7 @@ class RejectedReasonCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('تم رفض الإعلان',
+                Text('طھظ… ط±ظپط¶ ط§ظ„ط¥ط¹ظ„ط§ظ†',
                     style: t.titleSmall?.copyWith(
                         color: cs.error, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 6),

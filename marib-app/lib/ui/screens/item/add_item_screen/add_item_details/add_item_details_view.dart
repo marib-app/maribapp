@@ -158,76 +158,6 @@ class AddItemDetailsView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Debugging overlay to show cover/gallery state when running in debug.
-        // Visible only in debug mode to help QA.
-        if (kDebugMode)
-          Builder(builder: (ctx) {
-            final String coverFilePresent = (model.coverImageFile != null) ? 'yes' : 'no';
-            final int galleryFiles = model.galleryItems.where((e) => e is File).length;
-            final int galleryMaps = model.galleryItems.where((e) => e is Map).length;
-
-            String summarizePayload(dynamic p) {
-              try {
-                if (p == null) return 'null';
-                if (p is Map && p['file'] != null) {
-                  final dynamic f = p['file'];
-                  if (f is Iterable) {
-                    final List<String> names = [];
-                    for (final dynamic it in f) {
-                      if (it is File) names.add(it.path.split(RegExp(r'[\\/]')).last);
-                      else names.add(it.toString());
-                    }
-                    return names.join(',');
-                  }
-                  if (f is File) return f.path.split(RegExp(r'[\\/]')).last;
-                }
-                return p.toString();
-              } catch (_) {
-                return p.toString();
-              }
-            }
-
-            final String coverLast = summarizePayload(model.coverImagePicker.lastPayload);
-            final String galleryLast = summarizePayload(model.galleryPicker.lastPayload);
-
-            return Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.06),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.orange.withOpacity(0.18)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(children: [
-                    const Text('[DBG] cover:' , style: TextStyle(fontWeight: FontWeight.w700)),
-                    const SizedBox(width: 6),
-                    Text('file=$coverFilePresent'),
-                    const SizedBox(width: 12),
-                    Text('files=$galleryFiles'),
-                    const SizedBox(width: 8),
-                    Text('maps=$galleryMaps'),
-                    const Spacer(),
-                    // Debug action: dump image state
-                    TextButton(
-                      onPressed: () {
-                        try {
-                          submissionService.debugDumpImageState(ctx);
-                        } catch (_) {}
-                      },
-                      child: const Text('DBG: dump'),
-                    ),
-                  ]),
-                  const SizedBox(height: 6),
-                  Text('cover.last: $coverLast', style: const TextStyle(fontSize: 11)),
-                  const SizedBox(height: 4),
-                  Text('gallery.last: $galleryLast', style: const TextStyle(fontSize: 11)),
-                ],
-              ),
-            );
-          }),
         Row(
           children: [
             Text('إضافة صور وفيديو', style: theme.textTheme.titleMedium),
@@ -418,6 +348,18 @@ class AddItemDetailsView extends StatelessWidget {
             action: TextInputAction.next,
             capitalization: TextCapitalization.sentences,
             maxLength: 120,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Text('رابط فيديو المنتج (إن وجد)', style: theme.textTheme.titleMedium),
+        const SizedBox(height: 12),
+        keyboardManager.wrapWithKeyboardAwareFocus(
+          child: CustomTextFormField(
+            controller: model.adAdditionalDetailsController,
+            hintText: 'ضع رابط الفيديو هنا (اختياري)',
+            keyboard: TextInputType.url,
+            capitalization: TextCapitalization.none,
+            action: TextInputAction.next,
           ),
         ),
         const SizedBox(height: 16),

@@ -81,6 +81,7 @@ import 'package:marib/utils/slider_interface_mapper.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/validator.dart';
 import 'package:marquee/marquee.dart';
+import 'package:marib/ui/screens/widgets/video_view_screen.dart';
 import 'package:meta/meta.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:url_launcher/url_launcher.dart';
@@ -1433,6 +1434,23 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     }
   }
 
+  void _openVideoLink(String rawLink) {
+    final String link = rawLink.trim();
+    if (link.isEmpty) return;
+
+    final FlickManager? manager =
+        HelperUtils.isYoutubeVideo(link) ? null : flickManager;
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => VideoViewScreen(
+          videoUrl: link,
+          flickManager: manager,
+        ),
+      ),
+    );
+  }
+
   void setItemClick() {
     if (!isAddedByMe) {
       context.read<ItemTotalClickCubit>().itemTotalClick(safeModelId);
@@ -2035,6 +2053,17 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       featuredSection: (_currentItem.isFeature != true)
           ? createFeaturesAds()
           : const SizedBox.shrink(),
+      videoUrl: (_currentItem.videoLink ?? '').trim().isNotEmpty
+          ? _currentItem.videoLink!.trim()
+          : null,
+      videoThumbnail:
+          youtubeVideoThumbnail.isNotEmpty ? youtubeVideoThumbnail : null,
+      onVideoTap: () {
+        final String? link = _currentItem.videoLink?.trim();
+        if (link != null && link.isNotEmpty) {
+          _openVideoLink(link);
+        }
+      },
       hideLocation: hideLocation,
       supportsMapSection: supportsMapSection,
       addCloudDataFn: (k, v) => addCloudData(k, v),
@@ -2151,6 +2180,17 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
               images: imageSources,
               pageController: pageController,
               onImagePageChanged: (i) => setState(() => currentIndex = i),
+              videoUrl: (_currentItem.videoLink ?? '').trim().isNotEmpty
+                  ? _currentItem.videoLink!.trim()
+                  : null,
+              videoThumbnail:
+                  youtubeVideoThumbnail.isNotEmpty ? youtubeVideoThumbnail : null,
+              onVideoTap: () {
+                final String? link = _currentItem.videoLink?.trim();
+                if (link != null && link.isNotEmpty) {
+                  _openVideoLink(link);
+                }
+              },
 
               // حالة المفضلة (الإعجاب)
               isFavorite: isFavorite,
@@ -4259,5 +4299,3 @@ class _FetchErrorView extends StatelessWidget {
     );
   }
 }
-
-

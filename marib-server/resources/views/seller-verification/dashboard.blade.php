@@ -335,28 +335,38 @@
             const params = new URLSearchParams(window.location.search);
             const hashTab = window.location.hash.replace('#', '');
             const requestedTab = params.get('tab') || (hashTab ? hashTab : null);
+            const tabButtons = document.querySelectorAll('#verificationTabs button[data-bs-toggle="tab"]');
+
+            const ensureTable = (targetId) => {
+                const tableId = targetId === '#requests' ? '#table_requests'
+                    : targetId === '#payments' ? '#table_payments'
+                        : targetId === '#verified' ? '#table_verified'
+                            : '#table_fields';
+                if ($(tableId).data('bootstrap.table')) {
+                    $(tableId).bootstrapTable('refresh');
+                } else {
+                    $(tableId).bootstrapTable();
+                }
+            };
 
             if (requestedTab) {
                 const trigger = document.querySelector(`#${requestedTab}-tab`);
                 if (trigger && window.bootstrap?.Tab) {
                     const tabInstance = new bootstrap.Tab(trigger);
                     tabInstance.show();
+                    ensureTable(`#${requestedTab}`);
+                }
+            } else {
+                // Initialize the default active tab on first load
+                const activeTab = document.querySelector('#verificationTabs button.active');
+                if (activeTab) {
+                    ensureTable(activeTab.dataset.bsTarget);
                 }
             }
 
-            const tabButtons = document.querySelectorAll('#verificationTabs button[data-bs-toggle="tab"]');
             tabButtons.forEach(btn => {
                 btn.addEventListener('shown.bs.tab', function () {
-                    const targetId = this.dataset.bsTarget;
-                    const tableId = targetId === '#requests' ? '#table_requests'
-                        : targetId === '#payments' ? '#table_payments'
-                            : targetId === '#verified' ? '#table_verified'
-                            : '#table_fields';
-                    if ($(tableId).data('bootstrap.table')) {
-                        $(tableId).bootstrapTable('refresh');
-                    } else {
-                        $(tableId).bootstrapTable();
-                    }
+                    ensureTable(this.dataset.bsTarget);
                 });
             });
 

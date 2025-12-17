@@ -38,7 +38,7 @@ class UserVerificationController extends Controller {
 
     public function index() {
         ResponseService::noAnyPermissionThenRedirect(['seller-verification-field-list', 'seller-verification-field-create', 'seller-verification-field-update', 'seller-verification-field-delete']);
-        $verificationRequests = VerificationRequest::with('verificationFieldValue', 'user');
+        $verificationRequests = VerificationRequest::with('verification_field_values', 'user');
         return view('seller-verification.index', compact('verificationRequests'));
     }
 
@@ -137,12 +137,13 @@ class UserVerificationController extends Controller {
             ];
 
             $verificationFieldValues = VerificationFieldValue::whereIn('verification_request_id', $result->pluck('id'))
-                ->with('verificationField')
+                ->with('verification_field')
                 ->get();
             foreach ($result as $row) {
                 $row->verification_fields = collect($row->verification_fields)->map(function ($verification_field) use ($verificationFieldValues, $row) {
                     $fieldValue = $verificationFieldValues->first(function ($data) use ($row, $verification_field) {
-                        return $data->verification_fields_id == $verification_field->id && $data->verification_request_id == $row->id;
+                        return $data->verification_field_id == $verification_field->id
+                            && $data->verification_request_id == $row->id;
                     });
 
                     $verification_field['value'] = $fieldValue ? $fieldValue->value : null;
@@ -173,7 +174,7 @@ class UserVerificationController extends Controller {
                     ->values()
                     ->map(static function (VerificationFieldValue $value) {
                         $displayValue = $value->value;
-                        $type = $value->verificationField->type ?? null;
+                        $type = $value->verification_field->type ?? null;
                         if ($type === 'fileinput' && !empty($displayValue)) {
                             if (!is_array($displayValue)) {
                                 $displayValue = [url(Storage::url($displayValue))];
@@ -181,7 +182,7 @@ class UserVerificationController extends Controller {
                         }
                         return [
                             'verification_field' => [
-                                'name' => $value->verificationField->name ?? '',
+                                'name' => $value->verification_field->name ?? '',
                             ],
                             'value' => $displayValue,
                         ];
@@ -249,7 +250,7 @@ class UserVerificationController extends Controller {
 
         $request = VerificationRequest::with([
             'user',
-            'verification_field_values.verificationField',
+            'verification_field_values.verification_field',
         ])->findOrFail($id);
 
         $payments = VerificationPayment::with('plan')
@@ -804,14 +805,14 @@ class UserVerificationController extends Controller {
         }
     }
     public function getVerificationDetails($id) {
-        $verificationFieldValues = VerificationFieldValue::with('verificationField')->where('verification_request_id', $id)->get();
+        $verificationFieldValues = VerificationFieldValue::with('verification_field')->where('verification_request_id', $id)->get();
         if ($verificationFieldValues->isEmpty()) {
             return response()->json(['error' => 'No details found.'], 404);
         }
 
         $fieldValues = $verificationFieldValues->map(function ($fieldValue) {
             return [
-                'name'  => $fieldValue->verificationField->name ?? 'N/A',
+                'name'  => $fieldValue->verification_field->name ?? 'N/A',
                 'value' => $fieldValue->value ?? 'No value provided',
             ];
         });

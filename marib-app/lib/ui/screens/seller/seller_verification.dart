@@ -14,8 +14,13 @@ import 'package:marib/data/cubits/seller/send_verification_field_cubit.dart';
 import 'package:marib/data/helper/widgets.dart';
 import 'package:marib/data/model/verification_request_model.dart';
 import 'package:marib/data/model/custom_field/custom_field_model.dart';
+import 'package:marib/data/model/verification_metadata.dart';
 import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
 import 'package:marib/ui/screens/home_screen/home_screen.dart';
+import 'package:marib/utils/payment/bank_transfer_args.dart';
+import 'package:marib/utils/payment/bank_transfer_screen.dart';
+import 'package:marib/utils/payment/manual_payment_service.dart';
+import 'package:marib/utils/payment/payment_route_result.dart';
 
 import 'package:marib/ui/screens/item/add_item_screen/custom_filed_structure/custom_field.dart';
 import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
@@ -58,6 +63,7 @@ class _SellerVerificationScreenState
   List<CustomFieldBuilder> moreDetailDynamicFields = [];
   final _scrollController = ScrollController();
   bool _hasRequestedFields = false;
+  bool _paymentInProgress = false;
 
   @override
   void initState() {
@@ -176,7 +182,7 @@ class _SellerVerificationScreenState
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          UiUtils.buildButton(context, height: 46, radius: 8, onPressed: () {
+          UiUtils.buildButton(context, height: 46, radius: 8, onPressed: () async {
             if (page == 1) {
               setState(() {
                 page = 2;
@@ -185,24 +191,7 @@ class _SellerVerificationScreenState
               });
             } else {
               if (_formKey.currentState?.validate() ?? false) {
-                Map<String, dynamic> data =
-                    convertToCustomFields(AbstractField.fieldsData);
-
-                Map<String, dynamic> files = AbstractField.files;
-
-                files.forEach((key, value) {
-                  if (key.startsWith('custom_field_files[') &&
-                      key.endsWith(']')) {
-                    String index = key.substring(
-                        'custom_field_files['.length, key.length - 1);
-                    String newKey = 'verification_field_files[$index]';
-                    data[newKey] = value;
-                  } else {
-                    // For other keys, add them unchanged
-                    data[key] = value;
-                  }
-                });
-                context.read<SendVerificationFieldCubit>().send(data: data);
+                await _handleVerificationPaymentAndSubmit();
               }
             }
           }, buttonTitle: "continue".translate(context)),
@@ -529,6 +518,157 @@ class _SellerVerificationScreenState
       customFieldBuilder.init();
       return customFieldBuilder;
     }).toList();
+  }
+
+  Future<void> _handleVerificationPaymentAndSubmit() async {
+    if (_paymentInProgress) return;
+
+    final fieldsState = context.read<FetchSellerVerificationFieldsCubit>().state;
+    if (fieldsState is! FetchSellerVerificationFieldSuccess) {
+      HelperUtils.showSnackBarMessage(
+          context, 'somethingWentWrong'.translate(context));
+      _requestVerificationFieldsIfNeeded(force: true);
+      return;
+    }
+
+    final VerificationOffering? offering =
+        fieldsState.metadata.findForAccountType(fieldsState.accountType);
+    final double amount = offering?.pricing.amount ?? 0;
+    final String? currency = offering?.pricing.currency;
+
+    if (amount <= 0) {
+      HelperUtils.showSnackBarMessage(
+          context, 'somethingWentWrong'.translate(context));
+      return;
+    }
+
+    final String token = HiveUtils.getJWT();
+    if (token.isEmpty) {
+      HelperUtils.showSnackBarMessage(context, 'loginFirst'.translate(context));
+      return;
+    }
+
+    setState(() => _paymentInProgress = true);
+
+    final BankTransferArgs args = BankTransferArgs(
+      token: token,
+      packageId: 0,
+      amount: amount,
+      currency: currency,
+      packageType: 'verification',
+      purpose: 'verification',
+      allowedGateways: const [
+        BankTransferGateway.manualBank,
+        BankTransferGateway.eastYemenBank,
+        BankTransferGateway.wallet,
+      ],
+      allowWalletGateway: true,
+    );
+
+    final dynamic paymentResult = await BankTransferScreen.show(context, args);
+
+    if (!mounted) return;
+    setState(() => _paymentInProgress = false);
+
+    if (paymentResult == null || paymentResult == false) {
+      return;
+    }
+
+    final String? paymentReference =
+        _extractPaymentReference(paymentResult)?.trim();
+
+    final bool paymentSucceeded = paymentReference != null ||
+        (paymentResult is ManualPaymentSubmissionResult &&
+            paymentResult.success) ||
+        paymentResult is PaymentRouteResult ||
+        paymentResult == true;
+
+    if (!paymentSucceeded) {
+      HelperUtils.showSnackBarMessage(
+          context, 'somethingWentWrong'.translate(context));
+      return;
+    }
+
+    final Map<String, dynamic> data = _buildSubmissionPayload();
+    if (paymentReference != null && paymentReference.isNotEmpty) {
+      data['payment_transaction_id'] = paymentReference;
+    }
+    context.read<SendVerificationFieldCubit>().send(data: data);
+  }
+
+  Map<String, dynamic> _buildSubmissionPayload() {
+    final Map<String, dynamic> data =
+        convertToCustomFields(AbstractField.fieldsData);
+
+    final Map<String, dynamic> files = AbstractField.files;
+
+    files.forEach((key, value) {
+      if (key.startsWith('custom_field_files[') && key.endsWith(']')) {
+        final String index =
+            key.substring('custom_field_files['.length, key.length - 1);
+        final String newKey = 'verification_field_files[$index]';
+        data[newKey] = value;
+      } else {
+        data[key] = value;
+      }
+    });
+
+    return data;
+  }
+
+  String? _extractPaymentReference(dynamic result) {
+    if (result == null) return null;
+
+    if (result is PaymentRouteResult) {
+      if (result.kind == PaymentRouteKind.walletSuccess) {
+        return result.walletTxnId?.toString();
+      }
+      if (result.kind == PaymentRouteKind.bankTransferCreated) {
+        return result.manualRequestId?.toString();
+      }
+    }
+
+    if (result is ManualPaymentSubmissionResult) {
+      final List<dynamic> candidates = [
+        result.paymentTransactionId,
+        result.manualPaymentId,
+        result.paymentTransaction?['id'],
+        result.manualPaymentRequest?['id'],
+        result.raw['payment_transaction_id'],
+        result.raw['manual_payment_id'],
+        result.raw['id'],
+      ];
+      for (final dynamic candidate in candidates) {
+        if (candidate == null) continue;
+        final String normalized = candidate.toString().trim();
+        if (normalized.isNotEmpty) return normalized;
+      }
+    }
+
+    if (result is Map<String, dynamic>) {
+      final List<dynamic> candidates = [
+        result['payment_transaction_id'],
+        result['transaction_id'],
+        result['manual_payment_id'],
+        result['manual_payment_request_id'],
+        result['id'],
+      ];
+      for (final dynamic candidate in candidates) {
+        if (candidate == null) continue;
+        final String normalized = candidate.toString().trim();
+        if (normalized.isNotEmpty) return normalized;
+      }
+    }
+
+    if (result is int) {
+      return result.toString();
+    }
+
+    if (result is String && result.trim().isNotEmpty) {
+      return result.trim();
+    }
+
+    return null;
   }
 }
 

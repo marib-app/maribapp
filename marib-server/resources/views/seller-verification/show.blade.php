@@ -56,7 +56,7 @@
                         <tbody>
                         @foreach($verification->verification_field_values as $index => $fieldValue)
                             @php
-                                $field = $fieldValue->verificationField;
+                                $field = $fieldValue->verification_field;
                                 $val = $fieldValue->value;
                                 $display = '';
                                 if ($field && $field->type === 'fileinput' && !empty($val)) {

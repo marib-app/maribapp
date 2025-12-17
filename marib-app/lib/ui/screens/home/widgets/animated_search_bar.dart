@@ -3,8 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:marib/app/routes.dart';
+import 'package:marib/utils/extensions/extensions.dart';
 
-/// بسيط ومتناسق مع واجهة الهوم، يحافظ على التلميحات المتبدلة والانتقال لشاشة البحث.
+/// Animated search bar used on home screen hero area.
 class AnimatedSearchBar extends StatefulWidget {
   const AnimatedSearchBar({super.key});
 
@@ -14,15 +15,16 @@ class AnimatedSearchBar extends StatefulWidget {
 
 class _AnimatedSearchBarState extends State<AnimatedSearchBar>
     with WidgetsBindingObserver {
-  final List<String> hints = const [
-    "ابحث عن منتج، خدمة أو إعلان",
-    "جرّب كلمات مثل: كمبيوتر، عقار، صيانة",
-    "اكتب اسم المتجر أو البائع للوصول السريع",
+  static const List<String> _hintKeys = <String>[
+    'homeSearchHint1',
+    'homeSearchHint2',
+    'homeSearchHint3',
   ];
 
   int currentHintIndex = 0;
   Timer? _timer;
   bool _isLifecycleResumed = true;
+  String? _lastHintsSignature;
 
   Duration _getDurationForHint(String text) {
     final base = 4.0;
@@ -30,7 +32,7 @@ class _AnimatedSearchBarState extends State<AnimatedSearchBar>
     return Duration(seconds: (base + extra).ceil());
   }
 
-  void _startTimer() {
+  void _startTimer(List<String> hints) {
     if (!_isLifecycleResumed || hints.isEmpty) return;
     _cancelTimer();
     _timer = Timer(_getDurationForHint(hints[currentHintIndex]), () {
@@ -38,7 +40,7 @@ class _AnimatedSearchBarState extends State<AnimatedSearchBar>
       setState(() {
         currentHintIndex = (currentHintIndex + 1) % hints.length;
       });
-      _startTimer();
+      _startTimer(hints);
     });
   }
 
@@ -55,7 +57,7 @@ class _AnimatedSearchBarState extends State<AnimatedSearchBar>
         WidgetsBinding.instance.lifecycleState;
     _isLifecycleResumed =
         lifecycleState == null || lifecycleState == AppLifecycleState.resumed;
-    if (_isLifecycleResumed) _startTimer();
+    // Timer will be (re)started in build with the translated hints.
   }
 
   @override
@@ -69,19 +71,52 @@ class _AnimatedSearchBarState extends State<AnimatedSearchBar>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     final bool shouldResume = state == AppLifecycleState.resumed;
     if (shouldResume == _isLifecycleResumed) return;
-    _isLifecycleResumed = shouldResume;
-    if (shouldResume) {
-      _startTimer();
-    } else {
-      _cancelTimer();
-    }
+    setState(() {
+      _isLifecycleResumed = shouldResume;
+      if (!shouldResume) {
+        _cancelTimer();
+      } else {
+        currentHintIndex = 0;
+        _cancelTimer();
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bool isRtl = Directionality.of(context) == TextDirection.rtl;
+    final TextAlign localeAlign = isRtl ? TextAlign.right : TextAlign.left;
+    final Alignment hintAlignment =
+        isRtl ? Alignment.centerRight : Alignment.centerLeft;
+    final String languageCode =
+        Localizations.localeOf(context).languageCode.toLowerCase();
     final double screenWidth = MediaQuery.of(context).size.width;
     final double hintFontSize = screenWidth < 360 ? 14 : 15;
+
+    final List<String> hintTexts = (languageCode.startsWith('ar'))
+        ? const [
+            'ابحث عن منتجات أو خدمات أو مواقع',
+            'جرّب كتابة لابتوب، فيلا، أو مقهى',
+            'اعثر على العروض القريبة والمنتجات الرائجة',
+          ]
+        : _hintKeys.map((key) => key.translate(context)).toList();
+
+    if (hintTexts.isEmpty) {
+      hintTexts.add('searchHintLbl'.translate(context));
+    }
+
+    final String signature = hintTexts.join('|');
+    if (_lastHintsSignature != signature) {
+      _lastHintsSignature = signature;
+      currentHintIndex = 0;
+      _cancelTimer();
+    }
+
+    // Restart timer with updated translations.
+    if (_timer == null && _isLifecycleResumed) {
+      _startTimer(hintTexts);
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -130,7 +165,7 @@ class _AnimatedSearchBarState extends State<AnimatedSearchBar>
                     switchOutCurve: Curves.easeInCubic,
                     layoutBuilder: (currentChild, previousChildren) {
                       return Stack(
-                        alignment: Alignment.centerLeft,
+                        alignment: hintAlignment,
                         children: <Widget>[
                           ...previousChildren,
                           if (currentChild != null) currentChild,
@@ -156,10 +191,10 @@ class _AnimatedSearchBarState extends State<AnimatedSearchBar>
                       );
                     },
                     child: Align(
-                      alignment: Alignment.centerLeft,
-                      key: ValueKey(currentHintIndex),
+                      alignment: hintAlignment,
+                      key: ValueKey(currentHintIndex % hintTexts.length),
                       child: Text(
-                        hints[currentHintIndex],
+                        hintTexts[currentHintIndex % hintTexts.length],
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         softWrap: false,
@@ -168,6 +203,7 @@ class _AnimatedSearchBarState extends State<AnimatedSearchBar>
                           fontSize: hintFontSize,
                           fontWeight: FontWeight.w500,
                         ),
+                        textAlign: localeAlign,
                       ),
                     ),
                   ),

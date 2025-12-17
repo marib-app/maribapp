@@ -10,6 +10,7 @@ import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/hive_keys.dart';
 import 'package:marib/data/cubits/item/fetch_popular_items_cubit.dart';
+import 'package:marib/data/cubits/item/fetch_nearby_items_cubit.dart';
 
 import 'package:marib/data/model/category_model.dart';
 import 'package:marib/data/model/item_filter_model.dart';
@@ -57,6 +58,9 @@ class SearchScreen extends StatefulWidget {
             BlocProvider(
               create: (context) => FetchPopularItemsCubit(),
             ),
+            BlocProvider(
+              create: (context) => FetchNearbyItemsCubit(),
+            ),
           ],
           child: SearchScreen(
             autoFocus: arguments?['autoFocus'],
@@ -79,8 +83,10 @@ class SearchScreenState extends State<SearchScreen>
   bool isFocused = false;
   String previousSearchQuery = "";
   late final TextEditingController searchController;
-  late final ScrollController _scrollController;
   late final _SearchDebounceCoordinator _debounce;
+  bool _initializedNearby = false;
+  bool _showNearbySection = false;
+  ShortcutType? _activeShortcut;
   ItemFilterModel? filter;
 
   //to store selected filter categories
@@ -101,52 +107,70 @@ class SearchScreenState extends State<SearchScreen>
     searchController = TextEditingController();
 
     searchController.addListener(searchItemListener);
-    _scrollController = ScrollController()..addListener(_handleScroll);
     _lastInstance = this;
-
   }
 
-  void _handleScroll() {
-    if (!_scrollController.hasClients) {
-      return;
+  bool _handleScrollNotification(ScrollNotification notification) {
+    final metrics = notification.metrics;
+    if (!metrics.hasPixels || metrics.maxScrollExtent <= 0) {
+      return false;
     }
 
-    final position = _scrollController.position;
-    if (!position.hasPixels || position.maxScrollExtent <= 0) {
-      return;
-    }
-
-    final double triggerOffset = position.maxScrollExtent * 0.75;
-    if (position.pixels < triggerOffset) {
-      return;
+    final double triggerOffset = metrics.maxScrollExtent * 0.75;
+    if (metrics.pixels < triggerOffset) {
+      return false;
     }
 
     final searchCubit = context.read<SearchItemCubit>();
     final searchState = searchCubit.state;
     if (_shouldShowSearchSections(searchState)) {
       if (!searchCubit.hasMoreData()) {
-        return;
+        return false;
       }
 
       _debounce.run(_DebounceScope.scroll, () {
         searchCubit.fetchMoreSearchData(searchController.text, filter);
       });
-      return;
+      return false;
     }
 
     final popularCubit = context.read<FetchPopularItemsCubit>();
-    if (!popularCubit.hasMoreData()) {
-      return;
+    final nearbyCubit = context.read<FetchNearbyItemsCubit>();
+    final nearbyState = nearbyCubit.state;
+    final bool canLoadNearbyMore = nearbyState is FetchNearbyItemsSuccess &&
+        nearbyState.items.length < nearbyState.total &&
+        !nearbyState.isLoadingMore;
+    if (_showNearbySection && canLoadNearbyMore) {
+      _debounce.run(_DebounceScope.scroll, () {
+        nearbyCubit.fetchMore();
+      });
+      return false;
     }
 
-    if (popularCubit.state is FetchPopularItemsSuccess &&
-        (popularCubit.state as FetchPopularItemsSuccess).isLoadingMore) {
+    if (popularCubit.hasMoreData()) {
+      if (popularCubit.state is FetchPopularItemsSuccess &&
+          (popularCubit.state as FetchPopularItemsSuccess).isLoadingMore) {
+        return false;
+      }
+
+      _debounce.run(_DebounceScope.scroll, () {
+        popularCubit.fetchMyMoreItems();
+      });
+    }
+    return false;
+  }
+
+  void _maybeFetchNearby() {
+    if (_initializedNearby) return;
+    final lat = _resolveLatitude();
+    final lng = _resolveLongitude();
+    if (lat == null || lng == null) {
       return;
     }
-
-    _debounce.run(_DebounceScope.scroll, () {
-      popularCubit.fetchMyMoreItems();
-    });
+    _initializedNearby = true;
+    context
+        .read<FetchNearbyItemsCubit>()
+        .fetchNearbyItems(latitude: lat, longitude: lng);
   }
 
   bool _shouldShowSearchSections(SearchItemState state) {
@@ -161,6 +185,7 @@ class SearchScreenState extends State<SearchScreen>
   List<CatalogSection> _buildSections({
     required SearchItemState searchState,
     required FetchPopularItemsState popularState,
+    required FetchNearbyItemsState nearbyState,
   }) {
     final sections = <CatalogSection>[
       _buildShortcutSection(),
@@ -169,6 +194,9 @@ class SearchScreenState extends State<SearchScreen>
     final bool showSearchResults = _shouldShowSearchSections(searchState);
 
     if (!showSearchResults) {
+      if (_showNearbySection) {
+        sections.addAll(_buildNearbySections(nearbyState));
+      }
       sections.addAll(_buildPopularSections(popularState));
     }
 
@@ -289,7 +317,10 @@ class SearchScreenState extends State<SearchScreen>
     }
 
     if (state is SearchItemSuccess) {
-      if (state.searchedItems.isEmpty) {
+      final List<ItemModel> displayItems =
+          _applyShortcutFilters(state.searchedItems);
+
+      if (displayItems.isEmpty) {
         return [
           _buildSearchHeaderSection(),
           _buildEmptyResultsSection(),
@@ -304,15 +335,15 @@ class SearchScreenState extends State<SearchScreen>
             horizontal: sidePadding,
             vertical: 8,
           ),
-          itemCount: state.searchedItems.length,
+          itemCount: displayItems.length,
           itemExtent: _listItemExtent,
           addRepaintBoundaries: true,
           itemBuilder: (context, index) {
-            final item = state.searchedItems[index];
+            final item = displayItems[index];
             return Padding(
               padding: EdgeInsetsDirectional.only(
                 top: index == 0 ? 4 : 0,
-                bottom: index == state.searchedItems.length - 1 ? 0 : 8,
+                bottom: index == displayItems.length - 1 ? 0 : 8,
               ),
               child: InkWell(
                 onTap: () {
@@ -415,6 +446,121 @@ class SearchScreenState extends State<SearchScreen>
     return const [];
   }
 
+  List<CatalogSection> _buildNearbySections(
+      FetchNearbyItemsState nearbyState) {
+    if (!_hasLocation) {
+      return [
+        CatalogBoxSection(
+          key: const ValueKey('nearby-unavailable'),
+          padding: EdgeInsets.symmetric(
+            horizontal: sidePadding,
+            vertical: 10,
+          ),
+          child: Text(
+            "pleaseEnableLocationServicesManually".translate(context),
+            style: TextStyle(
+              color: context.color.textDefaultColor.withOpacity(0.75),
+            ),
+          ),
+        ),
+      ];
+    }
+
+    if (nearbyState is FetchNearbyItemsInitial ||
+        nearbyState is FetchNearbyItemsInProgress) {
+      return [_buildShimmerSection(const ValueKey('nearby-loading'))];
+    }
+
+    if (nearbyState is FetchNearbyItemsFailed) {
+      return [
+        CatalogBoxSection(
+          key: const ValueKey('nearby-error'),
+          padding: EdgeInsets.symmetric(
+            horizontal: sidePadding,
+            vertical: 12,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "somethingWentWrong".translate(context),
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: context.color.textDefaultColor,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                nearbyState.error.toString(),
+                style: TextStyle(
+                  color: context.color.textDefaultColor.withOpacity(0.7),
+                ),
+              ),
+              TextButton(
+                onPressed: _maybeFetchNearby,
+                child: Text("retry".translate(context)),
+              ),
+            ],
+          ),
+        )
+      ];
+    }
+
+    if (nearbyState is FetchNearbyItemsSuccess) {
+      if (nearbyState.items.isEmpty) {
+        return const [CatalogBoxSection(child: SizedBox.shrink())];
+      }
+
+      final sections = <CatalogSection>[
+        _buildNearbyHeaderSection(),
+        CatalogListSection(
+          key: const ValueKey('nearby-results'),
+          padding: EdgeInsets.symmetric(
+            horizontal: sidePadding,
+            vertical: 8,
+          ),
+          itemCount: nearbyState.items.length,
+          itemExtent: _listItemExtent,
+          addRepaintBoundaries: true,
+          itemBuilder: (context, index) {
+            final item = nearbyState.items[index];
+            return Padding(
+              padding: EdgeInsetsDirectional.only(
+                top: index == 0 ? 4 : 0,
+                bottom: index == nearbyState.items.length - 1 ? 0 : 8,
+              ),
+              child: InkWell(
+                onTap: () {
+                  Navigator.pushNamed(
+                    context,
+                    Routes.adDetailsScreen,
+                    arguments: {
+                      'model': item,
+                    },
+                  );
+                },
+                child: ItemHorizontalCard(
+                  key: ValueKey('nearby-${item.id}'),
+                  item: item,
+                  showLikeButton: true,
+                  additionalImageWidth: 8,
+                ),
+              ),
+            );
+          },
+        ),
+      ];
+
+      if (nearbyState.isLoadingMore) {
+        sections.add(_buildLoadingMoreSection());
+      }
+
+      return sections;
+    }
+
+    return const [];
+  }
+
   CatalogSection _buildShortcutSection() {
     final shortcuts = [
       _Shortcut(label: "الأقرب لك", icon: Icons.near_me_rounded, type: ShortcutType.nearby),
@@ -433,24 +579,10 @@ class SearchScreenState extends State<SearchScreen>
               .map(
                 (s) => Padding(
                   padding: const EdgeInsetsDirectional.only(end: 8.0),
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                      side: BorderSide(
-                        color: context.color.territoryColor.withOpacity(0.6),
-                        width: 1,
-                      ),
-                      backgroundColor: context.color.secondaryColor,
-                      foregroundColor: context.color.territoryColor,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    onPressed: () => _applyShortcut(s.type),
-                    icon: Icon(s.icon, size: 18, color: context.color.territoryColor),
-                    label: Text(s.label)
-                        .size(context.font.small)
-                        .bold(weight: FontWeight.w700),
+                  child: _ShortcutChip(
+                    shortcut: s,
+                    isSelected: _activeShortcut == s.type,
+                    onTap: () => _applyShortcut(s.type),
                   ),
                 ),
               )
@@ -486,6 +618,22 @@ class SearchScreenState extends State<SearchScreen>
       child: Padding(
         padding: const EdgeInsetsDirectional.only(start: 5.0),
         child: Text("popularAds".translate(context))
+            .color(context.color.textDefaultColor.withOpacity(0.5))
+            .size(context.font.normal),
+      ),
+    );
+  }
+
+  CatalogSection _buildNearbyHeaderSection() {
+    return CatalogBoxSection(
+      key: const ValueKey('nearby-header'),
+      padding: EdgeInsets.symmetric(
+        horizontal: sidePadding,
+        vertical: 8,
+      ),
+      child: Padding(
+        padding: const EdgeInsetsDirectional.only(start: 5.0),
+        child: Text("nearByItems".translate(context))
             .color(context.color.textDefaultColor.withOpacity(0.5))
             .size(context.font.normal),
       ),
@@ -659,6 +807,12 @@ class SearchScreenState extends State<SearchScreen>
 
 //this will listen and manage search
   void searchItemListener() {
+    if (_showNearbySection && searchController.text.isNotEmpty) {
+      setState(() {
+        _showNearbySection = false;
+        _activeShortcut = null;
+      });
+    }
     _debounce.run(_DebounceScope.search, itemSearch);
 
     setState(() {});
@@ -682,20 +836,27 @@ class SearchScreenState extends State<SearchScreen>
   }
 
   void _applyShortcut(ShortcutType type) {
-    setState(() {
-      filter = null;
-      previousSearchQuery = "";
-    });
-
     switch (type) {
       case ShortcutType.nearby:
+        setState(() {
+          _showNearbySection = true;
+          _activeShortcut = ShortcutType.nearby;
+          filter = null;
+          previousSearchQuery = "";
+          searchController.text = "";
+          _initializedNearby = false;
+        });
         final lat = _resolveLatitude();
         final lng = _resolveLongitude();
         if (lat == null || lng == null) {
+          setState(() {
+            _showNearbySection = false;
+            _activeShortcut = null;
+          });
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                "الرجاء تفعيل الموقع للحصول على أقرب الإعلانات",
+                "أ?ب?أ?أ?أ?أ? أ?ب?أ?ب?ب? أ?ب?ب?ب?ب?أ? ب?ب?أ?أفب?ب? أ?ب?ب? أ°ب?أ?أ? أ?ب?أ?أ?ب?أ?ب?أ?أ?",
                 style: const TextStyle(color: Colors.white),
               ),
               backgroundColor: context.color.territoryColor,
@@ -703,29 +864,86 @@ class SearchScreenState extends State<SearchScreen>
           );
           return;
         }
+        _maybeFetchNearby();
+        return;
+
+      case ShortcutType.discounts:
+        setState(() {
+          _showNearbySection = false;
+          _activeShortcut = ShortcutType.discounts;
+          previousSearchQuery = "";
+          // API expects a truthy flag; use 1 to match other filters.
+          filter = ItemFilterModel(
+            customFields: const {'has_discount': 1},
+            sortBy: 'new-to-old',
+          );
+          searchController.text = "";
+        });
+        // Trigger a fresh search for discounted items even with an empty query.
+        context.read<SearchItemCubit>().searchItem(
+              "",
+              page: 1,
+              filter: filter,
+            );
+        previousSearchQuery = searchController.text;
+        return;
+
+      case ShortcutType.newToday:
+        setState(() {
+          _showNearbySection = false;
+          _activeShortcut = ShortcutType.newToday;
+          previousSearchQuery = "";
+        });
         filter = ItemFilterModel(
-          latitude: lat,
-          longitude: lng,
-          radius: 50,
+          postedSince: "today",
+          sortBy: 'new-to-old',
         );
         _triggerSearch(query: "");
         return;
 
-      case ShortcutType.discounts:
-        filter = null;
-        _triggerSearch(query: "تخفيض");
-        return;
-
-      case ShortcutType.newToday:
-        filter = ItemFilterModel(postedSince: "today");
-        _triggerSearch(query: "");
-        return;
-
       case ShortcutType.mostViewed:
-        filter = ItemFilterModel();
+        setState(() {
+          _showNearbySection = false;
+          _activeShortcut = ShortcutType.mostViewed;
+          previousSearchQuery = "";
+        });
+        filter = ItemFilterModel(sortBy: 'most-viewed');
         _triggerSearch(query: "");
         return;
     }
+  }
+
+  List<ItemModel> _applyShortcutFilters(List<ItemModel> items) {
+    switch (_activeShortcut) {
+      case ShortcutType.discounts:
+        return items.where(_hasDiscount).toList(growable: false);
+      case ShortcutType.newToday:
+        return items.where(_isWithin24Hours).toList(growable: false);
+      case ShortcutType.mostViewed:
+        final sorted = [...items];
+        sorted.sort((a, b) => (b.views ?? 0).compareTo(a.views ?? 0));
+        return sorted;
+      default:
+        return items;
+    }
+  }
+
+  bool _hasDiscount(ItemModel item) {
+    final double? base = item.price;
+    final double? finalPrice = item.finalPrice;
+    if (base != null && finalPrice != null && finalPrice < base) {
+      return true;
+    }
+    final discount = item.discount;
+    return discount?.isActive == true && (discount?.value != null);
+  }
+
+  bool _isWithin24Hours(ItemModel item) {
+    final createdStr = item.created;
+    if (createdStr == null || createdStr.isEmpty) return false;
+    final dt = DateTime.tryParse(createdStr);
+    if (dt == null) return false;
+    return DateTime.now().difference(dt).inHours < 24;
   }
 
   void _triggerSearch({required String query}) {
@@ -752,6 +970,9 @@ class SearchScreenState extends State<SearchScreen>
     if (v is String) return double.tryParse(v);
     return null;
   }
+
+  bool get _hasLocation =>
+      _resolveLatitude() != null && _resolveLongitude() != null;
 
   PreferredSizeWidget appBarWidget() {
     return AppBar(
@@ -935,20 +1156,31 @@ class SearchScreenState extends State<SearchScreen>
   Widget bodyData() {
     return BlocBuilder<SearchItemCubit, SearchItemState>(
       builder: (context, searchState) {
+        if (_showNearbySection) {
+          _maybeFetchNearby();
+        }
         return BlocBuilder<FetchPopularItemsCubit, FetchPopularItemsState>(
           builder: (context, popularState) {
-            final sections = _buildSections(
-              searchState: searchState,
-              popularState: popularState,
-            );
+            return BlocBuilder<FetchNearbyItemsCubit, FetchNearbyItemsState>(
+              builder: (context, nearbyState) {
+                final sections = _buildSections(
+                  searchState: searchState,
+                  popularState: popularState,
+                  nearbyState: nearbyState,
+                );
 
-            return CatalogScrollView(
-              controller: _scrollController,
-              primary: false,
-              physics: AppScrollBehavior.defaultPhysics,
-              scrollBehavior: const _NoStretchScrollBehavior(),
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              sections: sections,
+                return NotificationListener<ScrollNotification>(
+                  onNotification: _handleScrollNotification,
+                  child: CatalogScrollView(
+                    primary: false,
+                    physics: AppScrollBehavior.defaultPhysics,
+                    scrollBehavior: const _NoStretchScrollBehavior(),
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
+                    sections: sections,
+                  ),
+                );
+              },
             );
           },
         );
@@ -1015,8 +1247,6 @@ class SearchScreenState extends State<SearchScreen>
   void dispose() {
     searchController.removeListener(searchItemListener);
     searchController.dispose();
-    _scrollController.removeListener(_handleScroll);
-    _scrollController.dispose();
     _debounce.dispose();
     if (_lastInstance == this) {
       _lastInstance = null;
@@ -1025,9 +1255,69 @@ class SearchScreenState extends State<SearchScreen>
   }
 
   @visibleForTesting
-  ScrollController get scrollController => _scrollController;
   static TextEditingController? get activeSearchController =>
       _lastInstance?.searchController;
+}
+
+class _ShortcutChip extends StatelessWidget {
+  final _Shortcut shortcut;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _ShortcutChip({
+    required this.shortcut,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final Color activeColor = context.color.territoryColor;
+    final Color borderColor =
+        isSelected ? activeColor : activeColor.withOpacity(0.6);
+    final Color background =
+        isSelected ? activeColor.withOpacity(0.1) : context.color.secondaryColor;
+
+    return OutlinedButton.icon(
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        side: BorderSide(
+          color: borderColor,
+          width: 1,
+        ),
+        backgroundColor: background,
+        foregroundColor: activeColor,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
+      ),
+      onPressed: onTap,
+      icon: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Icon(shortcut.icon, size: 18, color: activeColor),
+          if (isSelected)
+            const Positioned(
+              top: -6,
+              right: -6,
+              child: Icon(Icons.check_circle, size: 14, color: Colors.green),
+            ),
+        ],
+      ),
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(shortcut.label)
+              .size(context.font.small)
+              .bold(weight: FontWeight.w700),
+          if (isSelected) ...[
+            const SizedBox(width: 6),
+            const Icon(Icons.check, size: 14, color: Colors.green),
+          ],
+        ],
+      ),
+    );
+  }
 }
 
 enum _DebounceScope { search, scroll }

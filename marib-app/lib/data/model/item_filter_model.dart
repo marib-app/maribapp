@@ -5,6 +5,7 @@ class ItemFilterModel {
   final String? minPrice;
   final String? categoryId;
   final String? postedSince;
+  final String? sortBy;
   final String? city;
   final String? state;
   final String? country;
@@ -22,6 +23,7 @@ class ItemFilterModel {
     this.minPrice,
     this.categoryId,
     this.postedSince,
+    this.sortBy,
     this.city,
     this.state,
     this.country,
@@ -40,6 +42,7 @@ class ItemFilterModel {
     String? minPrice,
     String? categoryId,
     String? postedSince,
+    String? sortBy,
     String? city,
     String? state,
     String? country,
@@ -57,6 +60,7 @@ class ItemFilterModel {
       minPrice: minPrice ?? this.minPrice,
       categoryId: categoryId ?? this.categoryId,
       postedSince: postedSince ?? this.postedSince,
+      sortBy: sortBy ?? this.sortBy,
       city: city ?? this.city,
       state: state ?? this.state,
       country: country ?? this.country,
@@ -77,6 +81,7 @@ class ItemFilterModel {
       'min_price': minPrice,
       'category_id': categoryId,
       'posted_since': postedSince,
+      'sort_by': sortBy,
       'city': city,
       'state': state,
       'country': country,
@@ -87,6 +92,7 @@ class ItemFilterModel {
       'latitude': latitude,
       'currency': currency,
     };
+    map.removeWhere((key, value) => value == null);
     if (userId != null) {
       map['user_id'] = userId;
     }
@@ -106,6 +112,7 @@ class ItemFilterModel {
       minPrice: map['min_price']?.toString(),
       categoryId: map['category_id']?.toString(),
       postedSince: map['posted_since']?.toString(),
+      sortBy: map['sort_by']?.toString(),
       area: map['area']?.toString(),
       radius:
           map['radius'] != null ? int.tryParse(map['radius'].toString()) : null,
@@ -129,7 +136,7 @@ class ItemFilterModel {
 
   @override
   String toString() {
-    return 'ItemFilterModel(maxPrice: $maxPrice, minPrice: $minPrice, categoryId: $categoryId, postedSince: $postedSince, city: $city, state: $state, country: $country, area: $area, areaId: $areaId, custom_fields: $customFields,radius:$radius,latitude:$latitude,longitude:$longitude,userId:$userId)';
+    return 'ItemFilterModel(maxPrice: $maxPrice, minPrice: $minPrice, categoryId: $categoryId, postedSince: $postedSince, sortBy: $sortBy, city: $city, state: $state, country: $country, area: $area, areaId: $areaId, custom_fields: $customFields,radius:$radius,latitude:$latitude,longitude:$longitude,userId:$userId)';
   }
 
   factory ItemFilterModel.createEmpty() {
@@ -138,6 +145,7 @@ class ItemFilterModel {
       minPrice: "",
       categoryId: "",
       postedSince: "",
+      sortBy: null,
       city: '',
       state: '',
       country: '',
@@ -159,6 +167,7 @@ class ItemFilterModel {
         other.minPrice == minPrice &&
         other.categoryId == categoryId &&
         other.postedSince == postedSince &&
+        other.sortBy == sortBy &&
         other.city == city &&
         other.state == state &&
         other.country == country &&
@@ -178,6 +187,7 @@ class ItemFilterModel {
         minPrice.hashCode ^
         categoryId.hashCode ^
         postedSince.hashCode ^
+        sortBy.hashCode ^
         city.hashCode ^
         state.hashCode ^
         country.hashCode ^

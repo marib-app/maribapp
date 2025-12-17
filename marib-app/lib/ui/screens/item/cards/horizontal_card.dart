@@ -344,10 +344,11 @@ class ItemDetailsSection extends StatelessWidget {
     final bool hideLocation = GeoRules.isDisabledForItem(item);
 
     return Column(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      mainAxisAlignment: MainAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 4),
+        const SizedBox(height: 2),
 
         // ✅ اسم المنتج (Marquee عند الطول)
         Builder(
@@ -402,7 +403,11 @@ class ItemDetailsSection extends StatelessWidget {
                 style: TextStyle(fontSize: context.font.normal),
               ),
             ),
-            if (showLikeButton) favButton(item: item, size: 32),
+            if (showLikeButton)
+              Padding(
+                padding: const EdgeInsetsDirectional.only(start: 4),
+                child: favButton(item: item, size: 28),
+              ),
           ],
         ),
 
@@ -637,36 +642,49 @@ class ItemHorizontalCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double cardHeight = 124 + (additionalHeight ?? 0);
-    final double imageWidth = 100 + (additionalImageWidth ?? 0);
+    // Compact card with a square thumbnail that adapts to the available height.
+    final double cardHeight = 134 + (additionalHeight ?? 0);
 
     return Container(
-      padding: const EdgeInsets.all(8),
-      margin: const EdgeInsets.symmetric(vertical: 4.5),
+      padding: const EdgeInsets.all(10),
+      margin: const EdgeInsets.symmetric(vertical: 6),
       decoration: BoxDecoration(
         color: context.color.secondaryColor,
         borderRadius: BorderRadius.circular(15),
         border: Border.all(color: context.color.borderColor, width: 1),
       ),
-      child: SizedBox(
-        height: cardHeight,
-        child: Row(
-          children: [
-            ItemImageSection(
-              item: item,
-              imageHeight: cardHeight - 2,
-              imageWidth: imageWidth,
-              statusButton: statusButton,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final double availableHeight = constraints.maxHeight.isFinite
+              ? constraints.maxHeight
+              : cardHeight;
+          final double statusOffset = statusButton != null ? 28 : 0;
+          final double maxImageHeight =
+              (availableHeight - statusOffset).clamp(90.0, availableHeight);
+          final double imageSize = (maxImageHeight + (additionalImageWidth ?? 0))
+              .clamp(90.0, maxImageHeight);
+
+          return SizedBox(
+            height: availableHeight,
+            child: Row(
+              children: [
+                ItemImageSection(
+                  item: item,
+                  imageHeight: imageSize,
+                  imageWidth: imageSize,
+                  statusButton: statusButton,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ItemDetailsSection(
+                    item: item,
+                    showLikeButton: showLikeButton ?? true,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: ItemDetailsSection(
-                item: item,
-                showLikeButton: showLikeButton ?? true,
-              ),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

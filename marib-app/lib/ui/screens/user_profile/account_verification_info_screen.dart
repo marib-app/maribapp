@@ -75,11 +75,7 @@ class _AccountVerificationInfoScreenState
     if (fields.isEmpty) {
       HelperUtils.showSnackBarMessage(
         context,
-        _local(
-          context,
-          ar: 'لا توجد حقول مطلوبة من الخادم حالياً',
-          en: 'No verification fields available from server.',
-        ),
+        'accountVerificationFieldsUnavailable'.translate(context),
       );
       return;
     }
@@ -108,7 +104,7 @@ class _AccountVerificationInfoScreenState
         appBar: UiUtils.buildAppBar(
           context,
           showBackButton: true,
-          title: "توثيق الحساب",
+          title: 'accountVerificationTitle'.translate(context),
         ),
         body: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16, 18, 16, 32),
@@ -122,9 +118,9 @@ class _AccountVerificationInfoScreenState
               const _DynamicPlanSection(),
               const SizedBox(height: 16),
               _SectionCard(
-                title: "لماذا التوثيق؟",
+                title: 'accountVerificationWhyTitle'.translate(context),
                 child: Text(
-                  "التوثيق يمنح حسابك مصداقية إضافية ويُظهر للآخرين أنك المالك الحقيقي، مما يعزز ثقة المشترين ويقلل من البلاغات والخلافات.",
+                  'accountVerificationWhyDescription'.translate(context),
                   style: TextStyle(
                     color: context.color.textDefaultColor.withOpacity(0.9),
                     height: 1.5,
@@ -132,12 +128,12 @@ class _AccountVerificationInfoScreenState
                 ),
               ),
               _SectionCard(
-                title: "التكلفة وما يشمله التوثيق",
+                title: 'accountVerificationCostTitle'.translate(context),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "رسوم التوثيق تُحسب حسب سياسة المنصة وتشمل مراجعة البيانات الرسمية، التأكد من هوية المالك، والتواصل للتحقق من النشاط.",
+                      'accountVerificationCostDescription'.translate(context),
                       style: TextStyle(
                         color: context.color.textDefaultColor.withOpacity(0.85),
                         height: 1.5,
@@ -149,7 +145,7 @@ class _AccountVerificationInfoScreenState
                         Icon(Icons.timer_outlined, size: 18, color: accent),
                         const SizedBox(width: 8),
                         Text(
-                          "مدة المراجعة عادة من 1 إلى 3 أيام عمل.",
+                          'accountVerificationReviewTimeline'.translate(context),
                           style: TextStyle(
                             color: context.color.textDefaultColor.withOpacity(0.85),
                           ),
@@ -160,23 +156,29 @@ class _AccountVerificationInfoScreenState
                 ),
               ),
               _SectionCard(
-                title: "كيف يعمل التوثيق؟",
+                title: 'accountVerificationHowTitle'.translate(context),
                 child: Column(
-                  children: const [
+                  children: [
                     _StepRow(
                       index: 1,
-                      title: "إرسال الطلب",
-                      subtitle: "نطلب منك رفع الهوية أو السجل التجاري وتعبئة بيانات المتجر.",
+                      title: 'accountVerificationStepSubmitTitle'
+                          .translate(context),
+                      subtitle: 'accountVerificationStepSubmitSubtitle'
+                          .translate(context),
                     ),
                     _StepRow(
                       index: 2,
-                      title: "مراجعة فريقنا",
-                      subtitle: "يتم التحقق من المستندات ومطابقتها مع بيانات الحساب.",
+                      title: 'accountVerificationStepReviewTitle'
+                          .translate(context),
+                      subtitle: 'accountVerificationStepReviewSubtitle'
+                          .translate(context),
                     ),
                     _StepRow(
                       index: 3,
-                      title: "الحصول على الشارة",
-                      subtitle: "ستظهر علامة التوثيق أمام اسمك في الإعلانات وصفحة البائع.",
+                      title: 'accountVerificationStepBadgeTitle'
+                          .translate(context),
+                      subtitle: 'accountVerificationStepBadgeSubtitle'
+                          .translate(context),
                     ),
                   ],
                 ),
@@ -187,12 +189,12 @@ class _AccountVerificationInfoScreenState
                 onPressed: () => _startVerificationFlow(context),
                 height: 48,
                 radius: 12,
-                buttonTitle: "طلب التوثيق",
+                buttonTitle: 'accountVerificationCta'.translate(context),
               ),
               const SizedBox(height: 10),
               Center(
                 child: Text(
-                  "ستتمكن من متابعة حالة الطلب وإرفاق أي ملاحظات إضافية من نفس الشاشة.",
+                  'accountVerificationFollowupNote'.translate(context),
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: context.color.textDefaultColor.withOpacity(0.8),
@@ -219,30 +221,17 @@ class _AccountVerificationInfoScreenState
     final bool isRejected = (model.status ?? '').toLowerCase().trim() == 'rejected';
     final String? rejectionReason = model.rejectionReason?.trim();
     final String statusHint = isRejected
-        ? _local(
-            context,
-            ar: 'تم رفض طلب التوثيق. يمكنك مراجعة السبب أدناه.',
-            en: 'Verification request was rejected. See the reason below.',
-          )
-        : _local(
-            context,
-            ar: 'يمكنك الإطلاع على صلاحية التوثيق وزمن انتهاءه.',
-            en: 'See your verification validity and expiry timeline.',
-          );
+        ? 'accountVerificationRejectedHint'.translate(context)
+        : 'accountVerificationValidityHint'.translate(context);
 
     final Color statusColor = expired
         ? context.color.error
         : _statusColor(model.status, context);
-    final String statusText = expired
-        ? _local(context, ar: 'انتهى الاشتراك', en: 'Expired')
-        : _statusLabel(model.status, context);
+    final String statusText =
+        expired ? 'expired'.translate(context) : _statusLabel(model.status, context);
 
     return _SectionCard(
-      title: _local(
-        context,
-        ar: 'حالة التوثيق الحالية',
-        en: 'Current verification status',
-      ),
+      title: 'accountVerificationCurrentStatusTitle'.translate(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -277,7 +266,7 @@ class _AccountVerificationInfoScreenState
           const SizedBox(height: 12),
           if (isRejected) ...[
             Text(
-              _local(context, ar: 'سبب الرفض', en: 'Rejection reason'),
+              'accountVerificationRejectionReason'.translate(context),
               style: TextStyle(
                 color: context.color.textColorDark,
                 fontWeight: FontWeight.w800,
@@ -287,8 +276,7 @@ class _AccountVerificationInfoScreenState
             Text(
               (rejectionReason != null && rejectionReason.isNotEmpty)
                   ? rejectionReason
-                  : _local(context,
-                      ar: 'لم يذكر سبب للرفض', en: 'No rejection reason provided'),
+                  : 'accountVerificationNoReason'.translate(context),
               style: TextStyle(
                 color: context.color.textDefaultColor,
                 height: 1.4,
@@ -297,18 +285,18 @@ class _AccountVerificationInfoScreenState
           ] else ...[
             _InfoRow(
               icon: Icons.event_available_rounded,
-              label: _local(context, ar: 'تاريخ التفعيل', en: 'Activated on'),
+              label: 'accountVerificationActivatedOn'.translate(context),
               value: approvedAt != null ? dateFmt.format(approvedAt.toLocal()) : '-',
             ),
             _InfoRow(
               icon: Icons.event_busy_rounded,
-              label: _local(context, ar: 'تاريخ الانتهاء', en: 'Expires on'),
+              label: 'accountVerificationExpiresOn'.translate(context),
               value: expiresAt != null ? dateFmt.format(expiresAt.toLocal()) : '-',
               valueColor: expired ? context.color.error : null,
             ),
             _InfoRow(
               icon: Icons.schedule_rounded,
-              label: _local(context, ar: 'الوقت المتبقي', en: 'Time remaining'),
+              label: 'accountVerificationTimeRemaining'.translate(context),
               value: _remainingLabel(context, expiresAt),
             ),
           ],
@@ -319,11 +307,11 @@ class _AccountVerificationInfoScreenState
 
   String _remainingLabel(BuildContext context, DateTime? expiresAt) {
     if (expiresAt == null) {
-      return _local(context, ar: 'غير محدد', en: 'Not available');
+      return 'notAvailable'.translate(context);
     }
     final Duration diff = expiresAt.difference(DateTime.now());
     if (diff.isNegative) {
-      return _local(context, ar: 'انتهى الاشتراك', en: 'Expired');
+      return 'expired'.translate(context);
     }
 
     final int days = diff.inDays;
@@ -333,15 +321,15 @@ class _AccountVerificationInfoScreenState
 
     if (days > 0) {
       parts.add(
-          '$days ${_local(context, ar: days == 1 ? 'يوم' : 'أيام', en: days == 1 ? 'day' : 'days')}');
+          '$days ${days == 1 ? 'dayLabel'.translate(context) : 'daysLabel'.translate(context)}');
     }
     if (hours > 0) {
       parts.add(
-          '$hours ${_local(context, ar: hours == 1 ? 'ساعة' : 'ساعات', en: hours == 1 ? 'hour' : 'hours')}');
+          '$hours ${hours == 1 ? 'hourLabel'.translate(context) : 'hoursLabel'.translate(context)}');
     }
     if (parts.isEmpty) {
       parts.add(
-          '$minutes ${_local(context, ar: 'دقيقة', en: minutes == 1 ? 'minute' : 'minutes')}');
+          '$minutes ${minutes == 1 ? 'minuteLabel'.translate(context) : 'minutesLabel'.translate(context)}');
     }
     return parts.join(' ');
   }
@@ -375,14 +363,6 @@ class _AccountVerificationInfoScreenState
         return Colors.orange;
     }
   }
-
-  String _local(BuildContext context, {required String ar, required String en}) {
-    final locale = Localizations.maybeLocaleOf(context);
-    if ((locale?.languageCode ?? 'ar').toLowerCase().startsWith('ar')) {
-      return ar;
-    }
-    return en;
-  }
 }
 
 class _StatusSection extends StatelessWidget {
@@ -396,15 +376,15 @@ class _StatusSection extends StatelessWidget {
       builder: (context, state) {
         if (state is FetchVerificationRequestInProgress ||
             state is FetchVerificationRequestInitial) {
-          return const _SectionCard(
-            title: 'حالة التوثيق الحالية',
-            child: Center(child: CircularProgressIndicator(strokeWidth: 2.2)),
+          return _SectionCard(
+            title: 'accountVerificationCurrentStatusTitle'.translate(context),
+            child: const Center(child: CircularProgressIndicator(strokeWidth: 2.2)),
           );
         }
 
         if (state is FetchVerificationRequestFail) {
           return _SectionCard(
-            title: 'حالة التوثيق الحالية',
+            title: 'accountVerificationCurrentStatusTitle'.translate(context),
             child: Text(
               state.error.toString(),
               style: TextStyle(color: context.color.error),
@@ -417,12 +397,12 @@ class _StatusSection extends StatelessWidget {
         }
 
         return _SectionCard(
-          title: 'حالة التوثيق الحالية',
+          title: 'accountVerificationCurrentStatusTitle'.translate(context),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'لم تقم بتقديم طلب توثيق بعد',
+                'accountVerificationNoRequestTitle'.translate(context),
                 style: TextStyle(
                   fontWeight: FontWeight.w700,
                   color: context.color.textColorDark,
@@ -430,7 +410,7 @@ class _StatusSection extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                'يمكنك إرسال طلب جديد من الأسفل لبدء عملية التوثيق.',
+                'accountVerificationNoRequestSubtitle'.translate(context),
                 style: TextStyle(color: context.color.textDefaultColor),
               ),
             ],
@@ -451,15 +431,15 @@ class _DynamicPlanSection extends StatelessWidget {
       builder: (context, state) {
         if (state is FetchSellerVerificationFieldInProgress ||
             state is FetchSellerVerificationFieldInitial) {
-          return const _SectionCard(
-            title: 'تفاصيل الاشتراك',
-            child: Center(child: CircularProgressIndicator(strokeWidth: 2.2)),
+          return _SectionCard(
+            title: 'accountVerificationPlanDetailsTitle'.translate(context),
+            child: const Center(child: CircularProgressIndicator(strokeWidth: 2.2)),
           );
         }
 
         if (state is FetchSellerVerificationFieldFail) {
           return _SectionCard(
-            title: 'تفاصيل الاشتراك',
+            title: 'accountVerificationPlanDetailsTitle'.translate(context),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -474,7 +454,7 @@ class _DynamicPlanSection extends StatelessWidget {
                   ).fetchSellerVerificationFields(
                         accountType: HiveUtils.getAccountTypeLower(), forceRefresh: true),
                   icon: const Icon(Icons.refresh),
-                  label: const Text('إعادة المحاولة'),
+                  label: Text('retry'.translate(context)),
                 ),
               ],
             ),
@@ -491,19 +471,25 @@ class _DynamicPlanSection extends StatelessWidget {
         final int durationDays = offering?.pricing?.durationDays ?? 30;
         final String currency = (offering?.pricing?.currency?.isNotEmpty == true)
             ? offering!.pricing!.currency!
-            : 'ريال يمني';
+            : 'currencyYemeniRial'.translate(context);
 
         final String priceLabel = (amount != null && amount > 0)
             ? '${amount % 1 == 0 ? amount.toStringAsFixed(0) : amount.toStringAsFixed(2)} $currency'
-            : 'X ريال يمني';
+            : 'X $currency';
+
+        final String descriptionTemplate =
+            'accountVerificationPlanDescription'.translate(context);
+        final String description = descriptionTemplate
+            .replaceFirst('{price}', priceLabel)
+            .replaceFirst('{days}', durationDays.toString());
 
         return _SectionCard(
-          title: 'تفاصيل الاشتراك',
+          title: 'accountVerificationPlanDetailsTitle'.translate(context),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'رسوم الاشتراك هي $priceLabel تكلفة الحصول على شارة التوثيق لمدة $durationDays يوم.',
+                description,
                 style: TextStyle(
                   color: context.color.textDefaultColor,
                   height: 1.5,
@@ -549,7 +535,7 @@ class _HeroCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "فعّل شارة التوثيق",
+                  'accountVerificationHeroTitle'.translate(context),
                   style: TextStyle(
                     color: context.color.textDefaultColor,
                     fontWeight: FontWeight.w800,
@@ -558,7 +544,7 @@ class _HeroCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  "أثبت هويتك وارفع ثقة عملائك مع شارة توثيق رسمية تظهر في كل إعلان.",
+                  'accountVerificationHeroSubtitle'.translate(context),
                   style: TextStyle(
                     color: context.color.textLightColor,
                     height: 1.4,

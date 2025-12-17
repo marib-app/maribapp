@@ -120,7 +120,7 @@ class VerifyAccountChip extends StatelessWidget {
               size: 18, color: context.color.territoryColor),
           const SizedBox(width: 6),
           Text(
-            "قم بتوثيق حسابك",
+            'verifyAccountCta'.translate(context),
             style: TextStyle(
               color: context.color.territoryColor,
               fontWeight: FontWeight.w700,
@@ -147,7 +147,7 @@ Widget buildVerificationStatusBadge({
   if (isVerified && !expired) {
     return VerifiedBadge(
       key: key,
-      label: "موثق",
+      label: 'verifiedLbl'.translate(context),
       color: Colors.green,
       onTap: onTap,
     );
@@ -156,7 +156,7 @@ Widget buildVerificationStatusBadge({
   if (normalized == "approved" && !expired) {
     return VerifiedBadge(
       key: key,
-      label: "موثق",
+      label: 'verifiedLbl'.translate(context),
       color: Colors.green,
       onTap: onTap,
     );
@@ -165,7 +165,7 @@ Widget buildVerificationStatusBadge({
   if (normalized == "pending" || normalized == "resubmitted") {
     return VerifiedBadge(
       key: key,
-      label: "جاري المراجعة",
+      label: 'underReview'.translate(context),
       color: Colors.amber,
       onTap: onTap,
     );
@@ -174,7 +174,7 @@ Widget buildVerificationStatusBadge({
   if (normalized == "rejected") {
     return VerifiedBadge(
       key: key,
-      label: "تم الرفض",
+      label: 'rejected'.translate(context),
       color: Colors.red,
       onTap: onTap,
     );

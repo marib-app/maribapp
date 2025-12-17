@@ -858,6 +858,8 @@ class ItemRepository {
       }
       // إزالة 'area' (يبدو أنها لا تُستخدم في الاستعلام)
       parameters.remove('area');
+      // Remove nested custom_fields; we send flattened keys instead.
+      parameters.remove('custom_fields');
 
       // الحقول المخصصة إن وجدت تُضاف كما هي
       if (filter.customFields != null) {

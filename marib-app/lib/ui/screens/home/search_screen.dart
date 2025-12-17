@@ -79,7 +79,7 @@ class SearchScreen extends StatefulWidget {
 class SearchScreenState extends State<SearchScreen>
     with TickerProviderStateMixin, AutomaticKeepAliveClientMixin<SearchScreen> {
   static SearchScreenState? _lastInstance;
-  static const double _listItemExtent = 160;
+  static const double _listItemExtent = 148;
   static const double sidePadding = Constant.defaultPadding;
 
   @override
@@ -88,10 +88,14 @@ class SearchScreenState extends State<SearchScreen>
   String previousSearchQuery = "";
   late final TextEditingController searchController;
   late final _SearchDebounceCoordinator _debounce;
+  late final ScrollController _scrollController;
   bool _initializedNearby = false;
   bool _showNearbySection = false;
   ShortcutType? _activeShortcut;
   ItemFilterModel? filter;
+  // cache filtered results to avoid recomputing on every frame
+  List<ItemModel> _cachedFilteredItems = const [];
+  String _cachedFilterSignature = '';
 
   //to store selected filter categories
   List<CategoryModel> categoryList = [];
@@ -109,33 +113,38 @@ class SearchScreenState extends State<SearchScreen>
     );
 
     searchController = TextEditingController();
+    _scrollController = ScrollController();
+    _scrollController.addListener(_onScroll);
 
     searchController.addListener(searchItemListener);
     _lastInstance = this;
   }
 
-  bool _handleScrollNotification(ScrollNotification notification) {
-    final metrics = notification.metrics;
-    if (!metrics.hasPixels || metrics.maxScrollExtent <= 0) {
-      return false;
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final metrics = _scrollController.position;
+    if (metrics.maxScrollExtent <= 0) return;
+    final double triggerOffset = metrics.maxScrollExtent - (_listItemExtent * 2);
+    if (metrics.pixels >= triggerOffset) {
+      _handleScrollMetrics(metrics);
     }
+  }
 
-    final double triggerOffset = metrics.maxScrollExtent * 0.75;
-    if (metrics.pixels < triggerOffset) {
-      return false;
-    }
-
+  void _handleScrollMetrics(ScrollMetrics metrics) {
     final searchCubit = context.read<SearchItemCubit>();
     final searchState = searchCubit.state;
     if (_shouldShowSearchSections(searchState)) {
+      if (searchState is SearchItemSuccess && searchState.isLoadingMore) {
+        return;
+      }
       if (!searchCubit.hasMoreData()) {
-        return false;
+        return;
       }
 
       _debounce.run(_DebounceScope.scroll, () {
         searchCubit.fetchMoreSearchData(searchController.text, filter);
       });
-      return false;
+      return;
     }
 
     final popularCubit = context.read<FetchPopularItemsCubit>();
@@ -148,20 +157,19 @@ class SearchScreenState extends State<SearchScreen>
       _debounce.run(_DebounceScope.scroll, () {
         nearbyCubit.fetchMore();
       });
-      return false;
+      return;
     }
 
     if (popularCubit.hasMoreData()) {
       if (popularCubit.state is FetchPopularItemsSuccess &&
           (popularCubit.state as FetchPopularItemsSuccess).isLoadingMore) {
-        return false;
+        return;
       }
 
       _debounce.run(_DebounceScope.scroll, () {
         popularCubit.fetchMyMoreItems();
       });
     }
-    return false;
   }
 
   void _maybeFetchNearby() {
@@ -212,31 +220,36 @@ class SearchScreenState extends State<SearchScreen>
   }
 
   CatalogSection _buildShortcutSection() {
+    final String langCode =
+        Localizations.localeOf(context).languageCode.toLowerCase();
+    final bool isRtl = langCode.startsWith('ar');
+
     final shortcuts = [
-      _Shortcut(label: "أقرب لك", icon: Icons.near_me_rounded, type: ShortcutType.nearby),
-      _Shortcut(label: "تخفيضات", icon: Icons.local_offer_outlined, type: ShortcutType.discounts),
-      _Shortcut(label: "جديد اليوم", icon: Icons.fiber_new_rounded, type: ShortcutType.newToday),
+      _Shortcut(
+        label: isRtl ? "أقرب لك" : "Nearby",
+        icon: Icons.near_me_rounded,
+        type: ShortcutType.nearby,
+      ),
+      _Shortcut(
+        label: isRtl ? "تخفيضات" : "Discounts",
+        icon: Icons.local_offer_outlined,
+        type: ShortcutType.discounts,
+      ),
+      _Shortcut(
+        label: isRtl ? "جديد اليوم" : "New today",
+        icon: Icons.fiber_new_rounded,
+        type: ShortcutType.newToday,
+      ),
     ];
 
-    return CatalogBoxSection(
+    return CatalogPersistentHeaderSection(
       key: const ValueKey('search-shortcuts'),
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: shortcuts
-              .map(
-                (s) => Padding(
-                  padding: const EdgeInsetsDirectional.only(end: 8.0),
-                  child: _ShortcutChip(
-                    shortcut: s,
-                    isSelected: _activeShortcut == s.type,
-                    onTap: () => _applyShortcut(s.type),
-                  ),
-                ),
-              )
-              .toList(),
-        ),
+      pinned: true,
+      delegate: _ShortcutHeaderDelegate(
+        shortcuts: shortcuts,
+        active: _activeShortcut,
+        onTap: _applyShortcut,
+        isRtl: isRtl,
       ),
     );
   }
@@ -328,8 +341,14 @@ class SearchScreenState extends State<SearchScreen>
     }
 
     if (state is SearchItemSuccess) {
-      final List<ItemModel> displayItems =
-          _applyShortcutFilters(state.searchedItems);
+      final List<ItemModel> sourceItems = state.searchedItems;
+      final String signature =
+          '${_activeShortcut}|${state.searchQuery}|${sourceItems.length}|${sourceItems.isNotEmpty ? sourceItems.first.id ?? 0 : 0}|${sourceItems.isNotEmpty ? sourceItems.last.id ?? 0 : 0}';
+      if (signature != _cachedFilterSignature) {
+        _cachedFilteredItems = _applyShortcutFilters(sourceItems);
+        _cachedFilterSignature = signature;
+      }
+      final List<ItemModel> displayItems = _cachedFilteredItems;
 
       if (displayItems.isEmpty) {
         return [
@@ -338,52 +357,20 @@ class SearchScreenState extends State<SearchScreen>
         ];
       }
 
-      final sections = <CatalogSection>[
-        _buildSearchHeaderSection(),
-        CatalogListSection(
-          key: const ValueKey('search-results'),
-          padding: EdgeInsets.symmetric(
-            horizontal: sidePadding,
-            vertical: 8,
-          ),
-          itemCount: displayItems.length,
-          itemExtent: _listItemExtent,
-          addRepaintBoundaries: true,
-          itemBuilder: (context, index) {
-            final item = displayItems[index];
-            return Padding(
-              padding: EdgeInsetsDirectional.only(
-                top: index == 0 ? 4 : 0,
-                bottom: index == displayItems.length - 1 ? 0 : 8,
-              ),
-              child: InkWell(
-                onTap: () {
-                  insertNewItem(item);
-                  Navigator.pushNamed(
-                    context,
-                    Routes.adDetailsScreen,
-                    arguments: {
-                      'model': item,
-                    },
-                  );
-                },
-                child: ItemHorizontalCard(
-                  key: ValueKey(item.id),
-                  item: item,
-                  showLikeButton: true,
-                  additionalImageWidth: 8,
-                ),
-              ),
-            );
-          },
-        ),
-      ];
-
-      if (state.isLoadingMore) {
-        sections.add(_buildLoadingMoreSection());
-      }
-
-      return sections;
+      return _buildPagedSections(
+        header: _buildSearchHeaderSection(),
+        items: displayItems,
+        isLoadingMore: state.isLoadingMore,
+        hasMore: state.hasMore,
+        onTap: (item) {
+          insertNewItem(item);
+          Navigator.pushNamed(
+            context,
+            Routes.adDetailsScreen,
+            arguments: {'model': item},
+          );
+        },
+      );
     }
     return const [];
   }
@@ -408,48 +395,20 @@ class SearchScreenState extends State<SearchScreen>
 
       final sections = <CatalogSection>[
         _buildPopularHeaderSection(),
-        CatalogListSection(
-          key: const ValueKey('popular-results'),
-          padding: EdgeInsets.symmetric(
-            horizontal: sidePadding,
-            vertical: 8,
-          ),
-          itemCount: popularState.items.length,
-          itemExtent: _listItemExtent,
-          addAutomaticKeepAlives: true,
-          addRepaintBoundaries: true,
-          itemBuilder: (context, index) {
-            final item = popularState.items[index];
-            return Padding(
-              padding: EdgeInsetsDirectional.only(
-                top: index == 0 ? 4 : 0,
-                bottom: index == popularState.items.length - 1 ? 0 : 8,
-              ),
-              child: InkWell(
-                onTap: () {
-                  Navigator.pushNamed(
-                    context,
-                    Routes.adDetailsScreen,
-                    arguments: {
-                      'model': item,
-                    },
-                  );
-                },
-                child: ItemHorizontalCard(
-                  key: ValueKey(item.id),
-                  item: item,
-                  showLikeButton: true,
-                  additionalImageWidth: 8,
-                ),
-              ),
+        ..._buildPagedSections(
+          header: const CatalogBoxSection(child: SizedBox.shrink()),
+          items: popularState.items,
+          isLoadingMore: popularState.isLoadingMore,
+          hasMore: popularCubit.hasMoreData(),
+          onTap: (item) {
+            Navigator.pushNamed(
+              context,
+              Routes.adDetailsScreen,
+              arguments: {'model': item},
             );
           },
         ),
       ];
-
-      if (popularState.isLoadingMore) {
-        sections.add(_buildLoadingMoreSection());
-      }
 
       return sections;
     }
@@ -533,28 +492,32 @@ class SearchScreenState extends State<SearchScreen>
           itemCount: nearbyState.items.length,
           itemExtent: _listItemExtent,
           addRepaintBoundaries: true,
+          addAutomaticKeepAlives: true,
+          addSemanticIndexes: false,
           itemBuilder: (context, index) {
             final item = nearbyState.items[index];
             return Padding(
               padding: EdgeInsetsDirectional.only(
                 top: index == 0 ? 4 : 0,
-                bottom: index == nearbyState.items.length - 1 ? 0 : 8,
+                bottom: index == nearbyState.items.length - 1 ? 2 : 6,
               ),
-              child: InkWell(
-                onTap: () {
-                  Navigator.pushNamed(
-                    context,
-                    Routes.adDetailsScreen,
-                    arguments: {
-                      'model': item,
-                    },
-                  );
-                },
-                child: ItemHorizontalCard(
-                  key: ValueKey('nearby-${item.id}'),
-                  item: item,
-                  showLikeButton: true,
-                  additionalImageWidth: 8,
+              child: RepaintBoundary(
+                child: InkWell(
+                  onTap: () {
+                    Navigator.pushNamed(
+                      context,
+                      Routes.adDetailsScreen,
+                      arguments: {
+                        'model': item,
+                      },
+                    );
+                  },
+                  child: ItemHorizontalCard(
+                    key: ValueKey('nearby-${item.id}'),
+                    item: item,
+                    showLikeButton: true,
+                    additionalImageWidth: 8,
+                  ),
                 ),
               ),
             );
@@ -564,6 +527,8 @@ class SearchScreenState extends State<SearchScreen>
 
       if (nearbyState.isLoadingMore) {
         sections.add(_buildLoadingMoreSection());
+      } else if (nearbyState.items.length >= nearbyState.total) {
+        sections.add(_buildEndOfListSection());
       }
 
       return sections;
@@ -687,6 +652,22 @@ class SearchScreenState extends State<SearchScreen>
       child: Center(
         child: UiUtils.progress(
           normalProgressColor: context.color.territoryColor,
+        ),
+      ),
+    );
+  }
+
+  CatalogSection _buildEndOfListSection() {
+    return CatalogBoxSection(
+      key: const ValueKey('end-of-list'),
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Center(
+        child: Text(
+          "noMoreDataFound".translate(context),
+          style: TextStyle(
+            color: context.color.textDefaultColor.withOpacity(0.6),
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
     );
@@ -1132,16 +1113,15 @@ class SearchScreenState extends State<SearchScreen>
                   nearbyState: nearbyState,
                 );
 
-                return NotificationListener<ScrollNotification>(
-                  onNotification: _handleScrollNotification,
-                  child: CatalogScrollView(
-                    primary: false,
-                    physics: AppScrollBehavior.defaultPhysics,
-                    scrollBehavior: const _NoStretchScrollBehavior(),
-                    keyboardDismissBehavior:
-                        ScrollViewKeyboardDismissBehavior.onDrag,
-                    sections: sections,
-                  ),
+                return CatalogScrollView(
+                  controller: _scrollController,
+                  primary: false,
+                  physics: AppScrollBehavior.defaultPhysics,
+                  scrollBehavior: const _NoStretchScrollBehavior(),
+                  cacheExtent: _listItemExtent * 6,
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  sections: sections,
                 );
               },
             );
@@ -1210,6 +1190,8 @@ class SearchScreenState extends State<SearchScreen>
   void dispose() {
     searchController.removeListener(searchItemListener);
     searchController.dispose();
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     _debounce.dispose();
     if (_lastInstance == this) {
       _lastInstance = null;
@@ -1283,6 +1265,69 @@ class _ShortcutChip extends StatelessWidget {
   }
 }
 
+class _ShortcutHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final List<_Shortcut> shortcuts;
+  final ShortcutType? active;
+  final ValueChanged<ShortcutType> onTap;
+  final bool isRtl;
+
+  _ShortcutHeaderDelegate({
+    required this.shortcuts,
+    required this.active,
+    required this.onTap,
+    required this.isRtl,
+  });
+
+  @override
+  double get minExtent => 70;
+
+  @override
+  double get maxExtent => 78;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Container(
+      color: context.color.backgroundColor,
+      padding: EdgeInsetsDirectional.fromSTEB(
+        isRtl ? 6 : 12,
+        10,
+        isRtl ? 6 : 0,
+        4,
+      ),
+      alignment: isRtl ? Alignment.centerRight : Alignment.centerLeft,
+      child: Directionality(
+        textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          reverse: isRtl,
+          child: Row(
+            textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
+            children: shortcuts
+                .map(
+                  (s) => Padding(
+                    padding: const EdgeInsetsDirectional.only(end: 8.0),
+                    child: _ShortcutChip(
+                      shortcut: s,
+                      isSelected: active == s.type,
+                      onTap: () => onTap(s.type),
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _ShortcutHeaderDelegate oldDelegate) {
+    return oldDelegate.active != active ||
+        oldDelegate.shortcuts != shortcuts ||
+        oldDelegate.isRtl != isRtl;
+  }
+}
+
 // Shortcut types for quick actions.
 enum ShortcutType { nearby, discounts, newToday }
 
@@ -1324,7 +1369,7 @@ class _SearchDebounceCoordinator {
   }
 }
 
-class _NoStretchScrollBehavior extends ScrollBehavior {
+  class _NoStretchScrollBehavior extends ScrollBehavior {
   const _NoStretchScrollBehavior();
   @override
   Widget buildViewportChrome(

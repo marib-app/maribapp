@@ -646,8 +646,8 @@ class ItemHorizontalCard extends StatelessWidget {
     final double cardHeight = 134 + (additionalHeight ?? 0);
 
     return Container(
-      padding: const EdgeInsets.all(10),
-      margin: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.all(8),
+      margin: const EdgeInsets.symmetric(vertical: 4),
       decoration: BoxDecoration(
         color: context.color.secondaryColor,
         borderRadius: BorderRadius.circular(15),

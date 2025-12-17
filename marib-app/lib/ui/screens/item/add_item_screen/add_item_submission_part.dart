@@ -983,4 +983,3 @@ class AddItemDetailsSubmissionService {
         id == Constant.realEstateRootCategoryId;
   }
 }
-

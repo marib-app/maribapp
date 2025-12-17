@@ -62,11 +62,23 @@ class SelectCategoryUI extends StatelessWidget {
   // ----------------------------------------------------------------------
   @override
   Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    // Use transparent status bar to blend with the screen and adjust icons per theme.
+    final Color statusColor = Colors.transparent;
+    final Brightness iconBrightness =
+        theme.brightness == Brightness.dark ? Brightness.light : Brightness.dark;
+
+    final SystemUiOverlayStyle overlay = SystemUiOverlayStyle(
+      statusBarColor: statusColor,
+      statusBarIconBrightness: iconBrightness,
+      statusBarBrightness: theme.brightness,
+      systemNavigationBarColor: statusColor,
+      systemNavigationBarIconBrightness: iconBrightness,
+    );
+    SystemChrome.setSystemUIOverlayStyle(overlay);
+
     return AnnotatedRegion(
-      value: UiUtils.getSystemUiOverlayStyle(
-        context: context,
-        statusBarColor: context.color.secondaryColor,
-      ),
+      value: overlay,
       child: SafeArea(
         child: Scaffold(
           appBar: UiUtils.buildAppBar(

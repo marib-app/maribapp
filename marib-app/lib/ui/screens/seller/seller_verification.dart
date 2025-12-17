@@ -560,9 +560,8 @@ class _SellerVerificationScreenState
       allowedGateways: const [
         BankTransferGateway.manualBank,
         BankTransferGateway.eastYemenBank,
-        BankTransferGateway.wallet,
       ],
-      allowWalletGateway: true,
+      allowWalletGateway: false,
     );
 
     final dynamic paymentResult = await BankTransferScreen.show(context, args);

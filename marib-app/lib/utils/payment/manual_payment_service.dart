@@ -188,6 +188,10 @@ String? _normalizePurposeForApi(String? purpose) {
     return 'wifi_plan';
   }
 
+  if (value == 'verification' || value.contains('verification')) {
+    return 'verification';
+  }
+
   return null;
 }
 

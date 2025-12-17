@@ -52,7 +52,7 @@ class PaymentController extends Controller
         }
 
         $purpose = strtolower($request->input('purpose', 'service'));
-        $supportedPurposes = ['service', 'order', 'wifi_plan', 'package'];
+        $supportedPurposes = ['service', 'order', 'wifi_plan', 'package', 'verification'];
 
         if (! in_array($purpose, $supportedPurposes, true)) {
             throw ValidationException::withMessages([
@@ -71,6 +71,10 @@ class PaymentController extends Controller
 
             if ($purpose === 'package') {
                 return $this->initiatePackagePayment($request, $user->getKey());
+            }
+
+            if ($purpose === 'verification') {
+                return $this->initiateVerificationPayment($request, $user->getKey());
             }
 
             return $this->initiateOrderPayment($request, $user->getKey());
@@ -100,7 +104,7 @@ class PaymentController extends Controller
         }
 
         $purpose = strtolower($request->input('purpose', 'service'));
-        $supportedPurposes = ['service', 'order', 'wifi_plan', 'package'];
+        $supportedPurposes = ['service', 'order', 'wifi_plan', 'package', 'verification'];
 
         if (! in_array($purpose, $supportedPurposes, true)) {
             throw ValidationException::withMessages([
@@ -118,6 +122,10 @@ class PaymentController extends Controller
 
         if ($purpose === 'package') {
             return $this->confirmPackagePayment($request, $user->getKey());
+        }
+
+        if ($purpose === 'verification') {
+            return $this->confirmVerificationPayment($request, $user->getKey());
         }
 
         return $this->confirmOrderPayment($request, $user->getKey());
@@ -528,6 +536,72 @@ class PaymentController extends Controller
         ], $request);
 
         return $this->buildPackageResponse($existing, $package, $statusCode, $availableGateways);
+    }
+
+    private function initiateVerificationPayment(Request $request, int $userId): JsonResponse
+    {
+        $validated = $request->validate([
+            'payment_method' => ['required', 'string', 'max:191'],
+            'currency' => ['nullable', 'string', 'size:3'],
+            'amount' => ['required', 'numeric', 'min:0'],
+            'metadata' => ['nullable', 'array'],
+        ]);
+
+        $method = $this->normalizePaymentMethodForPurpose($validated['payment_method'], 'verification');
+        $currency = strtoupper(trim($validated['currency'] ?? (string) config('app.currency', 'SAR')));
+        if ($currency === '') {
+            $currency = strtoupper((string) config('app.currency', 'SAR'));
+        }
+
+        if (! PaymentGatewayCurrencyPolicy::supports($method, $currency)) {
+            throw ValidationException::withMessages([
+                'currency' => __('gateway_currency_unsupported'),
+            ]);
+        }
+
+        $idempotencyKey = $this->resolveIdempotencyKey($request, [
+            'purpose' => 'verification',
+            'user' => $userId,
+            'method' => $method,
+            'currency' => $currency,
+            'amount' => $validated['amount'],
+        ]);
+
+        $existing = PaymentTransaction::query()
+            ->where('user_id', $userId)
+            ->where('idempotency_key', $idempotencyKey)
+            ->first();
+
+        if (! $existing) {
+            $payload = [
+                'amount' => $validated['amount'],
+                'currency' => $currency,
+                'metadata' => $validated['metadata'] ?? null,
+                'payment_gateway' => $method,
+                'payment_status' => 'pending',
+                'user_id' => $userId,
+                'idempotency_key' => $idempotencyKey,
+            ];
+
+            $existing = PaymentTransaction::create($payload);
+        }
+
+        $existing->loadMissing(['manualPaymentRequest.manualBank']);
+
+        $response = [
+            'transaction' => PaymentTransactionResource::make($existing)->resolve(),
+            'manual_payment_request' => $existing->manualPaymentRequest
+                ? ManualPaymentRequestResource::make($existing->manualPaymentRequest)->resolve()
+                : null,
+            'subject' => null,
+            'next' => null,
+            'payment_transaction_id' => $existing->getKey(),
+            'payment_intent_id' => $existing->idempotency_key,
+            'available_gateways' => ['manual_bank', 'east_yemen_bank'],
+            'allowed_gateways' => ['manual_bank', 'east_yemen_bank'],
+        ];
+
+        return response()->json($response, $this->inferStatusCode($existing));
     }
 
     private function initiateOrderPayment(Request $request, int $userId): JsonResponse
@@ -983,8 +1057,49 @@ class PaymentController extends Controller
         return $trimmed === '' ? null : $trimmed;
     }
 
+    private function confirmVerificationPayment(Request $request, int $userId): JsonResponse
+    {
+        $validated = $request->validate([
+            'payment_method' => ['required', 'string', 'max:191'],
+            'currency' => ['nullable', 'string', 'size:3'],
+            'amount' => ['nullable', 'numeric', 'min:0'],
+            'payment_transaction_id' => ['nullable', 'integer', 'exists:payment_transactions,id'],
+        ]);
 
-    
+        $method = $this->normalizePaymentMethodForPurpose($validated['payment_method'], 'verification');
+        $currency = strtoupper(trim($validated['currency'] ?? (string) config('app.currency', 'SAR')));
+        if ($currency === '') {
+            $currency = strtoupper((string) config('app.currency', 'SAR'));
+        }
+
+        if (! PaymentGatewayCurrencyPolicy::supports($method, $currency)) {
+            throw ValidationException::withMessages([
+                'currency' => __('gateway_currency_unsupported'),
+            ]);
+        }
+
+        $transaction = PaymentTransaction::query()
+            ->where('user_id', $userId)
+            ->when($validated['payment_transaction_id'] ?? null, static function ($query, $id) {
+                $query->whereKey($id);
+            })
+            ->orderByDesc('id')
+            ->firstOrFail();
+
+        $statusCode = $this->inferStatusCode($transaction);
+
+        return response()->json([
+            'transaction' => PaymentTransactionResource::make($transaction->loadMissing('manualPaymentRequest.manualBank'))->resolve(),
+            'manual_payment_request' => $transaction->manualPaymentRequest
+                ? ManualPaymentRequestResource::make($transaction->manualPaymentRequest)->resolve()
+                : null,
+            'payment_transaction_id' => $transaction->getKey(),
+            'payment_intent_id' => $transaction->idempotency_key,
+            'available_gateways' => ['manual_bank', 'east_yemen_bank'],
+            'allowed_gateways' => ['manual_bank', 'east_yemen_bank'],
+        ], $statusCode);
+    }
+
     private function confirmOrderPayment(Request $request, int $userId): JsonResponse
     {
         $validated = $request->validate([

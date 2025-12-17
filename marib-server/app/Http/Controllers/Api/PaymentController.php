@@ -12,6 +12,8 @@ use App\Models\Package;
 use App\Models\PaymentTransaction;
 use App\Models\Service;
 use App\Models\ServiceRequest;
+use App\Models\VerificationPayment;
+use App\Models\VerificationRequest;
 use App\Models\Wifi\WifiPlan;
 use App\Services\Logging\PaymentTrace;
 use App\Services\LegalNumberingService;
@@ -581,6 +583,11 @@ class PaymentController extends Controller
                 'payment_status' => 'pending',
                 'user_id' => $userId,
                 'idempotency_key' => $idempotencyKey,
+                'payable_type' => VerificationRequest::class,
+                'payable_id' => VerificationRequest::firstOrCreate(
+                    ['user_id' => $userId],
+                    ['status' => 'pending']
+                )->getKey(),
             ];
 
             $existing = PaymentTransaction::create($payload);
@@ -597,8 +604,8 @@ class PaymentController extends Controller
             'next' => null,
             'payment_transaction_id' => $existing->getKey(),
             'payment_intent_id' => $existing->idempotency_key,
-            'available_gateways' => ['manual_bank', 'east_yemen_bank'],
-            'allowed_gateways' => ['manual_bank', 'east_yemen_bank'],
+            'available_gateways' => ['manual_bank', 'east_yemen_bank', 'wallet'],
+            'allowed_gateways' => ['manual_bank', 'east_yemen_bank', 'wallet'],
         ];
 
         return response()->json($response, $this->inferStatusCode($existing));
@@ -1086,7 +1093,39 @@ class PaymentController extends Controller
             ->orderByDesc('id')
             ->firstOrFail();
 
+        $verificationRequest = VerificationRequest::firstOrCreate(
+            ['user_id' => $userId],
+            ['status' => 'pending']
+        );
+
+        if ($transaction->payable_type !== VerificationRequest::class || $transaction->payable_id !== $verificationRequest->getKey()) {
+            $transaction->payable_type = VerificationRequest::class;
+            $transaction->payable_id = $verificationRequest->getKey();
+        }
+
         $statusCode = $this->inferStatusCode($transaction);
+
+        $transaction->payment_gateway = $method;
+        $transaction->currency = $currency;
+        $transaction->amount = $validated['amount'] ?? $transaction->amount;
+        $transaction->payment_status = 'succeed';
+        $transaction->save();
+
+        $verificationPayment = VerificationPayment::updateOrCreate(
+            [
+                'verification_request_id' => $verificationRequest->getKey(),
+            ],
+            [
+                'user_id' => $userId,
+                'amount' => $transaction->amount,
+                'currency' => $transaction->currency,
+                'status' => 'paid',
+                'meta' => [
+                    'gateway' => $transaction->payment_gateway,
+                    'payment_transaction_id' => $transaction->getKey(),
+                ],
+            ]
+        );
 
         return response()->json([
             'transaction' => PaymentTransactionResource::make($transaction->loadMissing('manualPaymentRequest.manualBank'))->resolve(),
@@ -1095,8 +1134,9 @@ class PaymentController extends Controller
                 : null,
             'payment_transaction_id' => $transaction->getKey(),
             'payment_intent_id' => $transaction->idempotency_key,
-            'available_gateways' => ['manual_bank', 'east_yemen_bank'],
-            'allowed_gateways' => ['manual_bank', 'east_yemen_bank'],
+            'verification_payment_id' => $verificationPayment->getKey(),
+            'available_gateways' => ['manual_bank', 'east_yemen_bank', 'wallet'],
+            'allowed_gateways' => ['manual_bank', 'east_yemen_bank', 'wallet'],
         ], $statusCode);
     }
 

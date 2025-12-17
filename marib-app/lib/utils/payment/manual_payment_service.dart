@@ -1635,7 +1635,9 @@ class ManualPaymentService {
         paymentMethod: 'manual_bank',
         intentId: resolvedIntentId,
         transactionId: resolvedTransactionId,
+        purpose: purposeForBody,
         additionalData: {
+          'purpose': purposeForBody,
           if (serviceRequestId != null) 'service_request_id': serviceRequestId,
           if (wifiPlanId != null) 'wifi_plan_id': wifiPlanId,
           if (referenceValue != null && referenceValue.isNotEmpty)
@@ -1652,6 +1654,7 @@ class ManualPaymentService {
     required String paymentMethod,
     required String intentId,
     String? transactionId,
+    String? purpose,
     Map<String, dynamic>? additionalData,
   }) async {
     final String normalizedMethod =
@@ -1661,6 +1664,8 @@ class ManualPaymentService {
       'payment_method': normalizedMethod,
       'intent_id': intentId,
       'payment_intent_id': intentId,
+      if (purpose != null && purpose.trim().isNotEmpty)
+        'purpose': purpose.trim(),
       if (transactionId != null && transactionId.isNotEmpty)
         'transaction_id': transactionId,
       if (transactionId != null && transactionId.isNotEmpty)
@@ -1765,7 +1770,9 @@ class ManualPaymentService {
         paymentMethod: normalizedMethod,
         intentId: resolvedIntentId,
         transactionId: resolvedTransactionId,
+        purpose: purposeForBody,
         additionalData: {
+          'purpose': purposeForBody,
           if (serviceRequestId != null) 'service_request_id': serviceRequestId,
           if (wifiPlanId != null) 'wifi_plan_id': wifiPlanId,
           if (referenceValue != null && referenceValue.isNotEmpty)
@@ -1851,6 +1858,7 @@ class ManualPaymentService {
       paymentMethod: 'wallet',
       intentId: trimmedIntentId,
       transactionId: trimmedTransactionId,
+      purpose: purposeForBody,
       additionalData: additionalData.isEmpty ? null : additionalData,
     );
   }

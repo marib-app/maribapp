@@ -1,4 +1,4 @@
-@extends('layouts.main')
+﻿@extends('layouts.main')
 @section('title')
     {{ __("الحسابات الموثقة") }}
 @endsection
@@ -83,14 +83,17 @@
                                data-mobile-responsive="true"
                                data-sort-name="id"
                                data-sort-order="desc">
-                            <thead class="thead-dark">
+                                                        <thead class="thead-dark">
                             <tr>
                                 <th scope="col" data-field="id" data-align="center" data-sortable="true">#</th>
-                                <th scope="col" data-field="user_name" data-align="center" data-sortable="true">{{ __('المستخدم') }}</th>
-                                <th scope="col" data-field="plan" data-align="center" data-sortable="true">{{ __('الخطة') }}</th>
-                                <th scope="col" data-field="amount" data-align="center" data-sortable="true">{{ __('المبلغ') }}</th>
-                                <th scope="col" data-field="status" data-align="center" data-sortable="true">{{ __('الحالة') }}</th>
-                                <th scope="col" data-field="expires_at" data-align="center" data-sortable="true">{{ __('ينتهي في') }}</th>
+                                <th scope="col" data-field="user_name" data-align="center" data-sortable="true">المستخدم</th>
+                                <th scope="col" data-field="plan" data-align="center" data-sortable="true">الباقة</th>
+                                <th scope="col" data-field="amount" data-align="center" data-sortable="true">المبلغ</th>
+                                <th scope="col" data-field="currency" data-align="center" data-sortable="true">العملة</th>
+                                <th scope="col" data-field="gateway" data-align="center" data-sortable="true">طريقة الدفع</th>
+                                <th scope="col" data-field="status" data-align="center" data-sortable="true">الحالة</th>
+                                <th scope="col" data-field="expires_at" data-align="center" data-sortable="true">تاريخ الانتهاء</th>
+                                <th scope="col" data-field="created_at" data-align="center" data-sortable="true">تاريخ الدفع</th>
                             </tr>
                             </thead>
                         </table>
@@ -379,3 +382,4 @@
         });
     </script>
 @endsection
+

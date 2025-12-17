@@ -331,7 +331,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         orderId: orderIdParam,
         paymentMethod:
             ManualPaymentService.paymentMethodForApi(methodForSettings),
-        amount: isWalletTopUp ? widget.args.amount : null,
+        amount: widget.args.amount,
         serviceId: widget.args.serviceId ?? widget.args.itemId,
         wifiPlanId: wifiPlanIdParam,
         serviceRequestId: widget.args.serviceRequestId,
@@ -756,7 +756,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
     final bool walletPurpose = isWalletTopUp || normalizedWalletTopUp;
 
     final String? purposeParam;
-    if (purpose == 'order' || purpose == 'package') {
+    if (purpose == 'order' || purpose == 'package' || purpose == 'verification') {
       purposeParam = purpose;
     } else if (isWalletTopUp) {
       purposeParam = _walletTopUpPurpose;
@@ -815,7 +815,7 @@ class _BankTransferScreenState extends State<BankTransferScreen>
         orderId: orderIdParam,
         wifiPlanId: wifiPlanIdParam,
         paymentMethod: ManualPaymentService.paymentMethodForApi(selectedMethod),
-        amount: isWalletTopUp ? widget.args.amount : null,
+        amount: widget.args.amount,
         serviceId: widget.args.serviceId ?? widget.args.itemId,
         serviceRequestId: widget.args.serviceRequestId,
       );
@@ -1192,6 +1192,8 @@ class _BankTransferScreenState extends State<BankTransferScreen>
       } else if (normalizedPurpose == 'package') {
         purposeForApi = 'package';
         packageIdForApi = resolvedPackageId;
+      } else if (normalizedPurpose == 'verification') {
+        purposeForApi = 'verification';
       } else if (isWalletTopUp) {
         purposeForApi = ManualPaymentService.walletTopUpPurpose;
       } else if (normalizedPurpose == 'service') {

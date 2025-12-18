@@ -17,6 +17,7 @@ import 'package:marib/utils/ecommerce_department.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
+import 'package:flutter/foundation.dart';
 import 'product_management/product_management_arguments.dart';
 import 'product_management/unsupported_product_management.dart';
 import 'product_management/tabs/attributes_tab.dart';
@@ -207,41 +208,23 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
 
     final bool isSaving =
         state.attributesSaving || state.stockSaving || state.discountSaving;
+    final bool hasProductData = state.managedAttributes.isNotEmpty ||
+        (state.options?.attributes.isNotEmpty ?? false) ||
+        (state.options?.variantStocks.isNotEmpty ?? false) ||
+        ((state.options?.deliverySize ?? 0) > 0);
 
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-        child: Row(
-          children: <Widget>[
-            Expanded(
-              child: UiUtils.buildButton(
-                context,
-                onPressed: () => _onSavePressed(context, cubit),
-                buttonTitle: 'حفظ ومتابعة',
-                titleWhenProgress: 'جارٍ الحفظ...',
-                isInProgress: isSaving,
-                height: 48.rh(context),
-                fontSize: context.font.large,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: UiUtils.buildButton(
-                context,
-                onPressed: () {
-                  Navigator.of(context).maybePop();
-                },
-                buttonTitle: 'عودة',
-                height: 48.rh(context),
-                fontSize: context.font.large,
-                buttonColor: context.color.secondaryColor,
-                textColor: context.color.textDefaultColor,
-                border: BorderSide(
-                  color: context.color.borderColor.withOpacity(0.5),
-                ),
-              ),
-            ),
-          ],
+        child: UiUtils.buildButton(
+          context,
+          onPressed: () => _onSavePressed(context, cubit),
+          buttonTitle: 'حفظ ومعاينة الإعلان',
+          titleWhenProgress: 'جارٍ الحفظ...',
+          isInProgress: isSaving,
+          disabled: isSaving || !hasProductData,
+          height: 48.rh(context),
+          fontSize: context.font.large,
         ),
       ),
     );
@@ -249,14 +232,35 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
 
   Future<void> _onSavePressed(
       BuildContext context, ProductManagementCubit cubit) async {
+    debugPrint(
+        '[ProductManagementScreen] save pressed: item.id=${cubit.item.id} state.item.id=${cubit.state.item.id} optionsId=${cubit.state.options?.itemId}');
     Widgets.showLoader(context);
-    SubmissionOutcome outcome;
+    SubmissionOutcome? outcome;
     try {
+      final int? ensuredId = await cubit.ensureItemId();
+      if (ensuredId == null) {
+        debugPrint('[ProductManagementScreen] ensureItemId returned null');
+        return;
+      }
+      debugPrint(
+          '[ProductManagementScreen] ensureItemId ok: id=$ensuredId, submitting...');
       outcome = await cubit.submitAllAndReview();
+    } catch (e, st) {
+      debugPrint('[ProductManagementScreen] submit exception: $e\n$st');
+      HelperUtils.showSnackBarMessage(
+        context,
+        'تعذر الحفظ حالياً، يرجى المحاولة لاحقاً.',
+      );
+      return;
     } finally {
       if (mounted) {
         Widgets.hideLoder(context);
       }
+    }
+
+    if (outcome == null) {
+      debugPrint('[ProductManagementScreen] outcome is null');
+      return;
     }
 
     if (!mounted) {
@@ -264,27 +268,45 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
     }
 
     final String message = _resolveOutcomeMessage(outcome);
-    HelperUtils.showSnackBarMessage(context, message);
+    debugPrint(
+        '[ProductManagementScreen] submit outcome success=${outcome.success} message="$message"');
 
-    if (!outcome.success) {
+    final String normalizedMsg = message.toLowerCase();
+    final bool canProceed = outcome.success ||
+        normalizedMsg.contains('options saved for review');
+
+    if (!canProceed) {
+      HelperUtils.showSnackBarMessage(context, message);
       return;
     }
 
-    PendingItemDraft? reviewDraft = _pendingDraft;
-    if (reviewDraft != null) {
-      final pendingOptions = cubit.pendingProductOptions;
-      reviewDraft = reviewDraft.copyWith(
-        item: cubit.state.item,
-        productOptions: pendingOptions ?? reviewDraft.productOptions,
+    int? _validId(int? value) => (value != null && value > 0) ? value : null;
+    final int? itemId = _validId(cubit.state.item.id) ??
+        _validId(cubit.item.id) ??
+        _validId(cubit.state.options?.itemId);
+    if (itemId == null) {
+      HelperUtils.showSnackBarMessage(
+        context,
+        'تعذر فتح المعاينة حاليًا، لم يتم إنشاء الإعلان بعد.',
       );
+      return;
     }
+
+    ItemModel previewModel = cubit.state.item;
+    if (previewModel.id != itemId) {
+      previewModel = previewModel.copyWith(id: itemId);
+    }
+
+    HelperUtils.showSnackBarMessage(context, message);
+
     Navigator.of(context, rootNavigator: true).pushNamed(
-      Routes.productReviewScreen,
+      Routes.adDetailsScreen,
       arguments: <String, dynamic>{
-        'item': cubit.state.item,
+        'itemId': itemId,
+        'item': previewModel,
+        'model': previewModel,
         'options': cubit.state.options,
-        'message': message,
-        if (reviewDraft != null) 'pendingDraft': reviewDraft,
+        'preview': true,
       },
     );
   }

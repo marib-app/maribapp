@@ -196,33 +196,40 @@ void _showAboutSheet(BuildContext context, StorefrontDetails details) {
                           fontWeight: FontWeight.w700,
                         ),
                   ),
-                  if (description != null && description.isNotEmpty) ...[
-                    const SizedBox(height: 10),
+                  const SizedBox(height: 10),
+                  if (description != null && description.isNotEmpty)
                     Text(
                       description,
                       style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ],
-                  if (policyEntries.isNotEmpty) ...[
-                    const SizedBox(height: 18),
+                    )
+                  else
                     Text(
-                      'سياسة الاسترجاع',
-                      style:
-                          Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w700,
-                              ),
+                      'لا يوجد وصف للمتجر.',
+                      style: Theme.of(context).textTheme.bodyMedium,
                     ),
-                    const SizedBox(height: 10),
-                    ...policyEntries,
-                  ],
-                  if ((description == null || description.isEmpty) &&
-                      policyEntries.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 12),
-                      child: Text(
-                        'لا توجد تفاصيل متاحة.',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
+                  const SizedBox(height: 18),
+                  Divider(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.08),
+                    thickness: 1,
+                    height: 1,
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    'سياسة الاسترجاع الخاصة بالتاجر',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                  const SizedBox(height: 10),
+                  if (policyEntries.isNotEmpty)
+                    ...policyEntries
+                  else
+                    Text(
+                      'لا توجد سياسة استرجاع متاحة.',
+                      style: Theme.of(context).textTheme.bodyMedium,
                     ),
                 ],
               ),

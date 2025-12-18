@@ -13,6 +13,7 @@ import 'package:marib/data/repositories/item/item_purchase_options_repository.da
 import 'package:marib/utils/api.dart' show ApiHttpException;
 import 'package:marib/utils/errorFilter.dart';
 import 'package:marib/utils/logger.dart';
+import 'package:flutter/foundation.dart';
 import 'package:marib/utils/variant_key.dart';
 
 const List<String> _defaultSizeCatalog = <String>[
@@ -821,9 +822,27 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
 
   PendingProductOptions? get pendingProductOptions => _pendingProductOptions;
 
-  static const String genericSuccessMessage = '?? ??? ????????? ?????.';
+  static const String genericSuccessMessage = 'تم حفظ التعديلات بنجاح.';
   static const String genericFailureMessage =
-      '???? ??? ????????? ???? ??? ????.';
+      'حدث خطأ أثناء حفظ التعديلات.';
+
+  void _log(String message) {
+    debugPrint('[ProductManagementCubit] $message');
+  }
+
+  /// Ensures the item has a valid id (creating it if needed) and returns it.
+  Future<int?> ensureItemId() async {
+    _log(
+        'ensureItemId: item.id=${item.id} state.item.id=${state.item.id} options.itemId=${state.options?.itemId} pending=${_pendingProductOptions != null}');
+    final SubmissionOutcome? ensureOutcome = await _ensureItemExists();
+    if (ensureOutcome != null && !ensureOutcome.success) {
+      emit(state.copyWith(error: ensureOutcome.message));
+      _log('ensureItemId failed: ${ensureOutcome.message}');
+      return null;
+    }
+    _log('ensureItemId success -> id=${item.id}');
+    return item.id;
+  }
 
   Future<void> initialize() async {
     final int? itemId = item.id;
@@ -851,6 +870,13 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
           ErrorFilter.check(error).error?.toString() ?? error.toString();
       emit(state.copyWith(loading: false, error: message));
     }
+  }
+
+  Future<SubmissionOutcome> submitAllAndReview() async {
+    _log('submitAllAndReview start: item.id=${item.id} optionsId=${state.options?.itemId}');
+    final SubmissionOutcome outcome = await submitAll();
+    _log('submitAllAndReview result: success=${outcome.success} message="${outcome.message}"');
+    return outcome;
   }
 
   void toggleAttributeValue(String key, String value) {
@@ -1302,7 +1328,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
         deliverySize: null,
         deliverySizeInput: '',
         clearDeliverySize: true,
-        deliverySizeError: '???? ????? ??? ?????? ???????????.',
+        deliverySizeError: 'أدخل حجم الطرد أولاً.',
         clearDeliverySizeError: false,
         error: null,
       ));
@@ -1314,7 +1340,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       emit(state.copyWith(
         deliverySizeInput: trimmed,
         deliverySizeError:
-            '???? ????? ??????? ??????? ?????? ??? (??? ???? ?????? 2.5).',
+            'تنسيق الحجم غير صحيح (مثال 2.5).',
         clearDeliverySizeError: false,
         error: null,
       ));
@@ -1325,7 +1351,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     if (decimalIndex != -1 && trimmed.length - decimalIndex - 1 > 3) {
       emit(state.copyWith(
         deliverySizeInput: trimmed,
-        deliverySizeError: '???? ??????? ??? ????? ????? ????? ???.',
+        deliverySizeError: 'يسمح بثلاث منازل عشرية كحد أقصى.',
         clearDeliverySizeError: false,
         error: null,
       ));
@@ -1335,7 +1361,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     if (trimmed.endsWith('.')) {
       emit(state.copyWith(
         deliverySizeInput: trimmed,
-        deliverySizeError: '???? ????? ????? ?????? ??? ??????.',
+        deliverySizeError: 'أكمل القيمة بعد الفاصلة العشرية.',
         clearDeliverySizeError: false,
         error: null,
       ));
@@ -1345,7 +1371,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     if (parsed <= 0) {
       emit(state.copyWith(
         deliverySizeInput: trimmed,
-        deliverySizeError: '????? ??? ?? ???? ???? ?? ???.',
+        deliverySizeError: 'الحجم يجب أن يكون أكبر من صفر.',
         clearDeliverySizeError: false,
         error: null,
       ));
@@ -2035,7 +2061,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     if (!state.hasLoaded) {
       return const SubmissionOutcome(
         success: false,
-        message: '? ???? ??? ?? ??? ???? ????.',
+        message: 'لا يمكن المتابعة قبل تحميل البيانات.',
       );
     }
 
@@ -2047,7 +2073,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     if (state.hasStockVariants && state.variantForms.isEmpty) {
       return const SubmissionOutcome(
         success: false,
-        message: '? ???? ??? ?? ??? ???? ????.',
+        message: 'لا يمكن المتابعة بدون ضبط المخزون للخيارات.',
       );
     }
 
@@ -2134,34 +2160,9 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     return _successOutcome(lastOutcome.message);
   }
 
-  Future<SubmissionOutcome> submitAllAndReview() async {
-    final SubmissionOutcome outcome = await submitAll();
-
-    if (outcome.success) {
-      final String normalized = _normalizeOutcomeMessage(
-        outcome.message,
-        success: true,
-        fallback: genericSuccessMessage,
-      );
-      if (normalized == outcome.message) {
-        return outcome;
-      }
-      return SubmissionOutcome(success: true, message: normalized);
-    }
-
-    final String normalized = _normalizeOutcomeMessage(
-      outcome.message,
-      success: false,
-      fallback: genericFailureMessage,
-    );
-    if (normalized == outcome.message) {
-      return outcome;
-    }
-    return SubmissionOutcome(success: false, message: normalized);
-  }
 
   Future<SubmissionOutcome?> _ensureItemExists() async {
-    if (item.id != null) {
+    if (item.id != null && item.id! > 0) {
       return null;
     }
     if (_createItem == null) {
@@ -2300,7 +2301,14 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     }
     final double? deliverySize = _normalizeDeliverySize(options.deliverySize);
 
+    final ItemModel current = state.item;
+    final ItemModel? updatedItem =
+        (options.itemId > 0 && (current.id == null || current.id == 0))
+            ? current.copyWith(id: options.itemId)
+            : null;
+
     emit(state.copyWith(
+      itemOverride: updatedItem,
       loading: false,
       error: null,
       options: options,

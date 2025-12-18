@@ -27,6 +27,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:marib/utils/constant.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:marib/utils/ui_utils.dart';
+import 'package:path/path.dart' as p;
 
 
 
@@ -943,20 +944,42 @@ ${locationText.isNotEmpty ? "📍 الموقع: $locationText" : ""}
         return file;
       }
 
-      final filePath = file.absolute.path;
-      final lastIndex = filePath.lastIndexOf(RegExp(r'.png|.jp'));
-      final splitted = filePath.substring(0, (lastIndex));
-      final outPath = "${splitted}_out${filePath.substring(lastIndex)}";
+      final String filePath = file.absolute.path;
+      final String ext = p.extension(filePath).toLowerCase();
+      final String baseName = p.basenameWithoutExtension(filePath);
+      final String dir = p.dirname(filePath);
+
+      CompressFormat format;
+      String targetExt;
+
+      if (ext == '.png') {
+        format = CompressFormat.png;
+        targetExt = '.png';
+      } else if (ext == '.jpg' || ext == '.jpeg') {
+        format = CompressFormat.jpeg;
+        targetExt = '.jpg';
+      } else {
+        // Unsupported extension for compressor: keep original to avoid crash
+        return file;
+      }
+
+      final String outPath = p.join(dir, '${baseName}_out$targetExt');
 
       XFile? result = await FlutterImageCompress.compressAndGetFile(
         filePath,
         outPath,
         quality: Constant.uploadImageQuality,
+        format: format,
       );
 
-      return File(result!.path);
+      if (result == null) {
+        return file;
+      }
+
+      return File(result.path);
     } catch (e) {
-      throw Exception("Error compressing image: $e");
+      // If compression fails for any reason, fall back to the original file
+      return file;
     }
   }
 
@@ -989,7 +1012,6 @@ ${locationText.isNotEmpty ? "📍 الموقع: $locationText" : ""}
     }
   }
 }
-
 
 
 

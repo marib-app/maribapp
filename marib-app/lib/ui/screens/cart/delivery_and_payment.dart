@@ -89,6 +89,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
   bool _depositToggleValue = false;
   bool _depositRequired = false;
   bool _lastQuoteDepositEnabled = false;
+  bool _depositRecalculating = false;
   CheckoutShippingQuote? _shippingQuote;
   Map<String, dynamic>? _shippingPayment;
   bool _freeShippingApplied = false;
@@ -105,6 +106,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
   _CheckoutLoadError? _checkoutError;
   int? _lastRequestedAddressId;
   bool _requiresAddressBlock = true;
+  bool _initialCheckoutScheduled = false;
 
   @override
   void initState() {
@@ -133,11 +135,14 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
         (_latestCartState.deliveryPaymentOptions == null ||
             _latestCartState.deliveryPaymentOptions!.isEmpty) &&
             _cartItems.isNotEmpty;
-    if (needsDeliveryTimingOptions) {
-      unawaited(_cartCubit.refreshDeliveryPaymentTiming());
-    }
-
-    _loadCheckout();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _initialCheckoutScheduled) return;
+      _initialCheckoutScheduled = true;
+      if (needsDeliveryTimingOptions) {
+        unawaited(_cartCubit.refreshDeliveryPaymentTiming());
+      }
+      _loadCheckout();
+    });
   }
 
   Future<void> _applyCoupon() async {
@@ -160,6 +165,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
   Future<void> _loadCheckout({
     int? addressId,
     Future<CheckoutAddress?>? preloadedAddress,
+    bool lightweight = false,
   }) async {
     int? resolvedAddressId = addressId ?? _userAddress?.id;
     Future<CheckoutAddress?>? preloadedAddressFuture = preloadedAddress;
@@ -194,6 +200,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
             await _loadCheckout(
               addressId: selectedId,
               preloadedAddress: future,
+              lightweight: lightweight,
             );
             return;
           }
@@ -269,26 +276,34 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     final String? deliveryPaymentTimingToken =
         _stringValue(_latestCartState.deliveryPaymentTiming);
 
-    setState(() {
-      _loading = true;
-      _distanceFuture = null;
-      if (FeatureFlags.deliveryPricingEnabled) {
-        _userAddress = null;
-      }
+    if (!lightweight) {
+      setState(() {
+        _loading = true;
+        _distanceFuture = null;
+        if (FeatureFlags.deliveryPricingEnabled) {
+          _userAddress = null;
+        }
 
-      _deliveryInfo = null;
-      _deliveryPrice = null;
-      _shippingQuote = null;
-      _shippingPayment = null;
-      _freeShippingApplied = false;
-      _shippingAmount = null;
-      _shippingCurrency = null;
-      _departmentNotice = null;
-      _allowPayNow = true;
-      _allowPayOnDelivery = true;
-      _codFeeAmount = null;
-      _codFeeDisplay = null;
-    });
+        _deliveryInfo = null;
+        _deliveryPrice = null;
+        _shippingQuote = null;
+        _shippingPayment = null;
+        _freeShippingApplied = false;
+        _shippingAmount = null;
+        _shippingCurrency = null;
+        _departmentNotice = null;
+        _allowPayNow = true;
+        _allowPayOnDelivery = true;
+        _codFeeAmount = null;
+        _codFeeDisplay = null;
+      });
+    } else {
+      if (mounted) {
+        setState(() {
+          _depositRecalculating = true;
+        });
+      }
+    }
 
     final bool depositEnabledFlag = _shouldRequestDepositDetails;
     _lastQuoteDepositEnabled = depositEnabledFlag;
@@ -608,17 +623,22 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
           message: error.errorMessage?.toString(),
         );
       });
-    } catch (_) {
-      if (!mounted) return;
+      } catch (_) {
+        if (!mounted) return;
 
-      setState(() {
-        _restoreCheckoutSnapshot(previousState);
+        setState(() {
+          _restoreCheckoutSnapshot(previousState);
 
         _checkoutError = _createCheckoutError();
       });
     } finally {
       if (mounted) {
-        setState(() => _loading = false);
+        setState(() {
+          if (!lightweight) {
+            _loading = false;
+          }
+          _depositRecalculating = false;
+        });
 
         if (_pendingCheckoutReload) {
           _pendingCheckoutReload = false;
@@ -1841,19 +1861,25 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     return viewModel;
   }
 
-  void _handleDepositToggle(bool value) {
+  void _handleDepositToggle(bool value) async {
     if (!_depositToggleAllowed) {
       return;
     }
     final bool previous = _shouldRequestDepositDetails;
     setState(() {
       _depositToggleValue = value;
+      _depositRecalculating = true;
       if (_selectedPaymentMethod == 'wallet' && !_walletCanPay) {
         _selectedPaymentMethod = null;
       }
     });
+    // إذا تغيرت حالة الدفعة المقدمة أعد جلب بيانات السلة لإظهار الشيمر وتحديث الأجزاء المتأثرة.
     if (previous != _shouldRequestDepositDetails) {
-      _handleCartContextMutation();
+      await _loadCheckout(lightweight: true);
+    } else {
+      if (mounted) {
+        setState(() => _depositRecalculating = false);
+      }
     }
   }
 
@@ -4096,6 +4122,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
       ),
       child: DeliveryAndPaymentUI(
         loading: _loading,
+        depositRecalculating: _depositRecalculating,
         addressReady: addressReady,
         showAddressBlock: showAddressBlock,
         cartItems: _cartItems,

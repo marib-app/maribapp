@@ -31,6 +31,20 @@ import 'package:marib/utils/logger.dart';
 import 'package:marib/utils/featured_ads_config.dart';
 import 'package:marib/app/routes.dart';
 import 'dart:convert';
+import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
+
+String? _inferStoreIdentifierFromSnapshot(Map<String, dynamic>? snapshot) {
+  if (snapshot == null) return null;
+  final dynamic id = snapshot['id'] ?? snapshot['store_id'];
+  if (id is num) return id.toInt().toString();
+  if (id is String && id.trim().isNotEmpty) return id.trim();
+  final dynamic userId = snapshot['user_id'] ?? snapshot['owner_id'];
+  if (userId is num) return userId.toInt().toString();
+  if (userId is String && userId.trim().isNotEmpty) return userId.trim();
+  final String? slug = snapshot['slug']?.toString();
+  if (slug != null && slug.trim().isNotEmpty) return slug.trim();
+  return null;
+}
 
 class Section_screen extends StatefulWidget {
   final String categoryId; // ظ…ط¹ط±ظپ ط§ظ„ظپط¦ط© ط§ظ„ط­ط§ظ„ظٹط©
@@ -68,6 +82,12 @@ class Section_screen extends StatefulWidget {
     final String? storefrontId = _parseStoreIdentifier(arguments?['storeId']);
     final Map<String, dynamic>? storefrontSnapshot =
         _parseStorefrontSnapshot(arguments?['storeSnapshot']);
+    final String? sellerIdAsStore =
+        (sellerId != null && sellerId > 0) ? sellerId.toString() : null;
+    final String? fallbackStoreIdentifier =
+        storefrontId ??
+        _inferStoreIdentifierFromSnapshot(storefrontSnapshot) ??
+        sellerIdAsStore;
     final List<int>? sellerCategoryIds =
         _parseSellerCategoryIds(arguments?['sellerCategoryIds']);
     return BlurredRouter(
@@ -79,10 +99,11 @@ class Section_screen extends StatefulWidget {
           ),
         ];
 
-        if (storefrontId != null) {
+        if (fallbackStoreIdentifier != null) {
           providers.add(
             BlocProvider<StorefrontCubit>(
-              create: (context) => StorefrontCubit()..load(storefrontId),
+              create: (context) =>
+                  StorefrontCubit()..load(fallbackStoreIdentifier),
             ),
           );
         }
@@ -95,7 +116,7 @@ class Section_screen extends StatefulWidget {
             categoryIds: arguments?['categoryIds'],
             interfaceType: interfaceType,
             sellerId: sellerId,
-            storefrontId: storefrontId,
+            storefrontId: fallbackStoreIdentifier,
             storefrontSnapshot: storefrontSnapshot,
             sellerCategoryIds: sellerCategoryIds,
           ),
@@ -1070,14 +1091,7 @@ class Section_screenState extends State<Section_screen> {
         }
 
         if (state is StorefrontLoading) {
-          if (snapshot != null) {
-            return _buildStorefrontHeaderFromDetails(snapshot);
-          }
           return const _StorefrontHeaderPlaceholder();
-        }
-
-        if (snapshot != null) {
-          return _buildStorefrontHeaderFromDetails(snapshot);
         }
 
         return const _StorefrontHeaderPlaceholder();
@@ -1234,26 +1248,82 @@ class _StorefrontHeaderPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      padding: const EdgeInsets.all(28),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 18,
-            offset: const Offset(0, 12),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            height: 180,
+            child: Stack(
+              children: [
+                const Positioned.fill(
+                  child: ShimmerBox(
+                    borderRadius: BorderRadius.all(Radius.circular(18)),
+                  ),
+                ),
+                Positioned(
+                  bottom: 12,
+                  left: 16,
+                  right: 16,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: const [
+                      ShimmerBox(
+                        height: 72,
+                        width: 72,
+                        borderRadius: BorderRadius.all(Radius.circular(36)),
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ShimmerBox(height: 18, width: 160),
+                            SizedBox(height: 8),
+                            ShimmerBox(height: 14, width: 110),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            decoration: BoxDecoration(
+              color:
+                  Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Row(
+              children: [
+                Expanded(child: ShimmerBox(height: 20, width: 60)),
+                SizedBox(width: 12),
+                Expanded(child: ShimmerBox(height: 20, width: 60)),
+                SizedBox(width: 12),
+                Expanded(child: ShimmerBox(height: 20, width: 60)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          const SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                ShimmerBox(height: 38, width: 110, borderRadius: BorderRadius.all(Radius.circular(28))),
+                SizedBox(width: 8),
+                ShimmerBox(height: 38, width: 140, borderRadius: BorderRadius.all(Radius.circular(28))),
+                SizedBox(width: 8),
+                ShimmerBox(height: 38, width: 120, borderRadius: BorderRadius.all(Radius.circular(28))),
+              ],
+            ),
           ),
         ],
-      ),
-      child: const Center(
-        child: SizedBox(
-          height: 28,
-          width: 28,
-          child: CircularProgressIndicator(strokeWidth: 2.4),
-        ),
       ),
     );
   }

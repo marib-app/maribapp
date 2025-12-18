@@ -1,6 +1,7 @@
 class StorefrontDetails {
   StorefrontDetails({
     required this.id,
+    this.userId,
     required this.name,
     required this.slug,
     required this.status,
@@ -20,6 +21,8 @@ class StorefrontDetails {
   });
 
   factory StorefrontDetails.fromJson(Map<String, dynamic> json) {
+    final int? userId =
+        _intValue(json['user_id'] ?? json['owner_id']);
     final int? followersCount = _intValue(
       json['followers_count'] ??
           json['followersCount'] ??
@@ -42,6 +45,7 @@ class StorefrontDetails {
 
     return StorefrontDetails(
       id: json['id'] as int? ?? 0,
+      userId: userId,
       name: json['name']?.toString() ?? '',
       slug: json['slug']?.toString() ?? '',
       description: json['description']?.toString(),
@@ -95,6 +99,8 @@ class StorefrontDetails {
   factory StorefrontDetails.fromSnapshot(Map<String, dynamic> json) {
     final int id =
         _intValue(json['id']) ?? _intValue(json['store_id']) ?? 0;
+    final int? userId =
+        _intValue(json['user_id'] ?? json['owner_id']);
     final String slug = json['slug']?.toString() ?? '';
     final String name = json['name']?.toString() ?? '';
     final String? description = json['description']?.toString();
@@ -211,6 +217,7 @@ class StorefrontDetails {
 
     return StorefrontDetails(
       id: id,
+      userId: userId,
       name: name,
       slug: slug,
       description: description,
@@ -228,6 +235,7 @@ class StorefrontDetails {
   }
 
   final int id;
+  final int? userId;
   final String name;
   final String slug;
   final String? description;

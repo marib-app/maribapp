@@ -859,7 +859,7 @@ class Api {
   /// ï؟½ï؟½ï؟½ï؟½ï؟½ ï؟½ï؟½ï؟½ï؟½ï؟½ï؟½ ï؟½ï؟½ï؟½ï؟½ï؟½ï؟½ ï؟½ï؟½ï؟½ ï؟½ï؟½ï؟½ï؟½ï؟½ï؟½ï؟½ ï؟½ï؟½ ï؟½ï؟½ï؟½ï؟½ï؟½ ï؟½ï؟½ï؟½ï؟½ï؟½ï؟½ï؟½.
   static String storefrontShowApi(dynamic storeId) {
     final String normalized = _normalizeStoreIdentifier(storeId);
-    return 'stores/$normalized';
+    return 'storefront/stores/$normalized';
   }
 
   /// مسار متابعة متجر.

@@ -210,19 +210,16 @@ class AddItemDetailsSubmissionService {
       return;
     }
 
-    final bool openProductManagement = _shouldOpenProductManagement(draft);
-
     model.pendingDraft = draft;
     model.item = draft.item;
     model.isSubmittingWithoutLocation = true;
 
     Navigator.of(context, rootNavigator: true)
         .pushNamed(
-          Routes.productReviewScreen,
+          Routes.productManagementScreen,
           arguments: <String, dynamic>{
             'item': draft.item,
             'pendingDraft': draft,
-            'openProductManagement': openProductManagement,
           },
         )
         .whenComplete(() => model.isSubmittingWithoutLocation = false);
@@ -426,19 +423,16 @@ class AddItemDetailsSubmissionService {
         return;
       }
 
-      final bool openProductManagement = _shouldOpenProductManagement(draft);
-
       model.pendingDraft = draft;
       model.item = draft.item;
       model.isSubmittingWithoutLocation = true;
 
       Navigator.of(context, rootNavigator: true)
           .pushNamed(
-            Routes.productReviewScreen,
+            Routes.productManagementScreen,
             arguments: <String, dynamic>{
               'item': draft.item,
               'pendingDraft': draft,
-              'openProductManagement': openProductManagement,
             },
           )
           .whenComplete(() => model.isSubmittingWithoutLocation = false);

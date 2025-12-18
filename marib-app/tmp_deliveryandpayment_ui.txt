@@ -328,6 +328,7 @@ class DeliveryAndPaymentUI extends StatelessWidget {
     MoneyFormatter totalFormatter, {
     bool depositLoading = false,
   }) {
+  ) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
     String? restrictionMessage;

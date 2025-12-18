@@ -3,6 +3,9 @@
 namespace App\Models;
 use App\Models\AdminNotification;
 use App\Models\Concerns\NotifiesAdminOnApprovalStatus;
+use App\Models\StoreFollower;
+use App\Models\UserFcmToken;
+use App\Services\NotificationService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Models\ItemStock;
 use App\Models\ItemAttribute;
@@ -20,6 +23,21 @@ use function url;
 class Item extends Model {
     use HasFactory, SoftDeletes;
     use NotifiesAdminOnApprovalStatus;
+
+    protected static function booted(): void
+    {
+        static::created(function (Item $item): void {
+            if ($item->status === 'approved') {
+                $item->notifyStoreFollowers();
+            }
+        });
+
+        static::updated(function (Item $item): void {
+            if ($item->wasChanged('status') && $item->status === 'approved') {
+                $item->notifyStoreFollowers();
+            }
+        });
+    }
 
     protected $fillable = [
         'category_id',
@@ -307,6 +325,57 @@ class Item extends Model {
             'end' => $this->discount_end?->toIso8601String(),
             'is_active' => $this->hasActiveDiscount(),
         ];
+    }
+
+    private function notifyStoreFollowers(): void
+    {
+        if ($this->store_id === null) {
+            return;
+        }
+
+        $store = $this->store()->first();
+        if ($store === null) {
+            return;
+        }
+
+        $followerIds = StoreFollower::query()
+            ->where('store_id', $store->getKey())
+            ->pluck('user_id')
+            ->filter()
+            ->values()
+            ->all();
+
+        if ($followerIds === []) {
+            return;
+        }
+
+        $tokens = UserFcmToken::query()
+            ->whereIn('user_id', $followerIds)
+            ->pluck('fcm_token')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($tokens === []) {
+            return;
+        }
+
+        $title = __('متجر :store أضاف منتجاً جديداً', ['store' => $store->name]);
+        $body = $this->name;
+
+        NotificationService::sendFcmNotification(
+            $tokens,
+            $title,
+            $body,
+            'store_new_item',
+            [
+                'store_id' => $store->getKey(),
+                'item_id' => $this->getKey(),
+                'store_name' => $store->name,
+                'item_name' => $this->name,
+            ]
+        );
     }
     
     public function scopeApproved($query) {

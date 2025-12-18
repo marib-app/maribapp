@@ -105,6 +105,11 @@ class Store extends Model
         return $this->hasMany(StoreGatewayAccount::class);
     }
 
+    public function followers(): HasMany
+    {
+        return $this->hasMany(StoreFollower::class);
+    }
+
     public function items(): HasMany
     {
         return $this->hasMany(Item::class);

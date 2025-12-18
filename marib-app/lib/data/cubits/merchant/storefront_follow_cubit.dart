@@ -43,11 +43,11 @@ class StorefrontFollowState extends Equatable {
 
 class StorefrontFollowCubit extends Cubit<StorefrontFollowState> {
   StorefrontFollowCubit({
-    required int storeId,
+    required dynamic storeIdentifier,
     required StorefrontFollowRepository repository,
     required bool initialIsFollowing,
     required int initialFollowersCount,
-  })  : _storeId = storeId,
+  })  : _storeId = storeIdentifier,
         _repository = repository,
         super(
           StorefrontFollowState(
@@ -60,14 +60,21 @@ class StorefrontFollowCubit extends Cubit<StorefrontFollowState> {
     required StorefrontDetails details,
     StorefrontFollowRepository? repository,
   }) : this(
-          storeId: details.id,
+          storeIdentifier: _resolveStoreIdentifier(details),
           repository: repository ?? const StorefrontFollowRepository(),
           initialIsFollowing: details.isFollowed,
           initialFollowersCount: details.followersCount ?? 0,
         );
 
-  final int _storeId;
+  final dynamic _storeId;
   final StorefrontFollowRepository _repository;
+
+  static dynamic _resolveStoreIdentifier(StorefrontDetails details) {
+    if (details.id != 0) return details.id;
+    if (details.slug.trim().isNotEmpty) return details.slug;
+    if (details.userId != null && details.userId! > 0) return details.userId;
+    return null;
+  }
 
   Future<void> toggleFollow() async {
     if (state.isLoading) return;
@@ -86,12 +93,17 @@ class StorefrontFollowCubit extends Cubit<StorefrontFollowState> {
     );
 
     try {
-      if (targetFollow) {
-        await _repository.follow(_storeId);
-      } else {
-        await _repository.unfollow(_storeId);
-      }
-      emit(state.copyWith(isLoading: false));
+      final result = targetFollow
+          ? await _repository.follow(_storeId)
+          : await _repository.unfollow(_storeId);
+
+      emit(
+        state.copyWith(
+          isFollowing: result.isFollowing,
+          followersCount: result.followersCount ?? state.followersCount,
+          isLoading: false,
+        ),
+      );
     } catch (error) {
       emit(
         state.copyWith(

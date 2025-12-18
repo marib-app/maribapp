@@ -543,15 +543,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     return false;
   }
 
-  Future<void> _openProductReviewScreen() async {
-    FocusScope.of(context).unfocus();
-    final ItemModel reviewItem = _currentItem;
-    await Navigator.of(context, rootNavigator: true).pushNamed(
-      Routes.productReviewScreen,
-      arguments: {'item': reviewItem},
-    );
-  }
-
   void _fetchCustomFieldsForCurrentItem() {
     final allCategoryIds = _currentItem.allCategoryIds;
     if (allCategoryIds != null && allCategoryIds.isNotEmpty) {
@@ -1869,21 +1860,11 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
             ? null
             : selectedCustomFields;
 
-    int? syntheticVariantId;
-    if (variantKey == null || variantKey.isEmpty) {
-      final String signature = _buildSyntheticVariantSignature(
-        variantAttributes,
-        customFields,
-      );
-      syntheticVariantId = _stableHash(signature);
-    }
-
     return Cart.fromItemModel(
       item,
       quantity: _selectedQuantity,
       selectedCustomFields: customFields,
       variantKey: variantKey,
-      variantId: syntheticVariantId,
       variantAttributes: variantAttributes,
       stockSnapshot: stockSnapshot,
       unitPrice: unitPrice,
@@ -2034,7 +2015,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
         onUpdateFields: (newFields) =>
             setState(() => moreDetailDynamicFields = newFields),
         onPausePressed: () => _changeAdStatus('inactive'),
-        onResumePressed: _openProductReviewScreen,
+        onResumePressed: () => _changeAdStatus('approved'),
       ),
     );
   }
@@ -2051,7 +2032,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
         model: _currentItem,
         isAddedByMe: isAddedByMe,
         onPausePressed: () => _changeAdStatus('inactive'),
-        onResumePressed: _openProductReviewScreen,
+        onResumePressed: () => _changeAdStatus('approved'),
         moreDetailDynamicFields: moreDetailDynamicFields,
         onRenewPressed: () {},
 

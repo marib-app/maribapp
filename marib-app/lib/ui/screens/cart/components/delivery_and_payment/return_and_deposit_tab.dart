@@ -14,6 +14,7 @@ class CartReturnAndDepositTab extends StatelessWidget {
     this.depositInfo,
     this.onToggleDeposit,
     this.initiallyExpanded = false,
+    this.storageKey,
   });
 
   /// حالة التحميل العامة للشاشة، لإظهار هيكل عظمى عند عدم توفر البيانات بعد.
@@ -30,6 +31,9 @@ class CartReturnAndDepositTab extends StatelessWidget {
 
   /// ما إذا كان التبويب يجب أن يظهر موسعًا بشكل افتراضي.
   final bool initiallyExpanded;
+
+  /// مفتاح تخزين حالة التوسيع لئلا يُغلق بعد أول فتح.
+  final Key? storageKey;
 
   bool get _hasReturnPolicy =>
       returnPolicyText != null && returnPolicyText!.trim().isNotEmpty;
@@ -84,7 +88,7 @@ class CartReturnAndDepositTab extends StatelessWidget {
       );
     }
 
-    final Widget body = (!_hasContent)
+    final Widget body = (loading || !_hasContent)
         ? buildLoadingSkeleton()
         : Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -125,6 +129,7 @@ class CartReturnAndDepositTab extends StatelessWidget {
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
+          key: storageKey ?? const PageStorageKey<String>('cart_return_deposit'),
           initiallyExpanded: initiallyExpanded,
           tilePadding: const EdgeInsets.symmetric(horizontal: 16),
           leading: SvgPicture.asset(AppIcons.money, width: 24, height: 24),

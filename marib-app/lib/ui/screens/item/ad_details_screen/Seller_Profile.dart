@@ -227,7 +227,9 @@ class SellerInfoSection extends StatelessWidget {
 class SellerActions extends StatelessWidget {
   final User user;
 
-  const SellerActions({super.key, required this.user});
+  const SellerActions({super.key, required this.user, this.disableActions = false});
+
+  final bool disableActions;
 
   @override
   Widget build(BuildContext context) {
@@ -247,6 +249,11 @@ class SellerActions extends StatelessWidget {
         IconActionButton(
           assetName: AppIcons.message,
           onTap: () {
+            if (disableActions) {
+              HelperUtils.showSnackBarMessage(
+                  context, 'لا يمكنك القيام بهذا الإجراء في وضع المعاينة.');
+              return;
+            }
             HelperUtils.launchPathURL(
               isTelephone: false,
               isSMS: true,
@@ -260,6 +267,11 @@ class SellerActions extends StatelessWidget {
         IconActionButton(
           assetName: AppIcons.call,
           onTap: () {
+            if (disableActions) {
+              HelperUtils.showSnackBarMessage(
+                  context, 'لا يمكنك القيام بهذا الإجراء في وضع المعاينة.');
+              return;
+            }
             HelperUtils.launchPathURL(
               isTelephone: true,
               isSMS: false,
@@ -326,12 +338,18 @@ class IconActionButton extends StatelessWidget {
 
 // دالة عرض معلومات المعلن
 
-Widget setSellerDetails(BuildContext context, ItemModel model) {
+Widget setSellerDetails(BuildContext context, ItemModel model,
+    {bool disableActions = false}) {
   final user = model.user;
   if (user == null) return SizedBox.shrink();
 
   return InkWell(
     onTap: () {
+      if (disableActions) {
+        HelperUtils.showSnackBarMessage(
+            context, 'لا يمكنك القيام بهذا الإجراء في وضع المعاينة.');
+        return;
+      }
       if (_isMerchantAccount(user) && user.id != null) {
         final String displayName = _merchantDisplayName(user);
         final seller_category_utils.SellerCategoryIdentifiers sellerCategories =
@@ -379,7 +397,7 @@ Widget setSellerDetails(BuildContext context, ItemModel model) {
         children: [
           SellerProfileImage(imageUrl: _merchantProfileImage(user)),
           Expanded(child: SellerInfoSection(user: user)),
-          SellerActions(user: user),
+          SellerActions(user: user, disableActions: disableActions),
         ],
       ),
     ),

@@ -232,6 +232,8 @@ class AdDetailsScreen extends StatefulWidget {
   static Route route(RouteSettings routeSettings) {
     final Map? arguments = routeSettings.arguments as Map?;
     final ItemModel initialModel = arguments?['model'] as ItemModel;
+    final bool previewArg =
+        (arguments?['preview'] == true || arguments?['previewAsCustomer'] == true);
 
     final _AdDetailsRouteConfig config =
         _AdDetailsRouteConfig.from(routeSettings.arguments);
@@ -289,7 +291,7 @@ class AdDetailsScreen extends StatefulWidget {
         child: AdDetailsScreen(
           model: config.initialModel,
           initialSummary: config.initialSummary,
-          previewAsCustomer: config.previewAsCustomer,
+          previewAsCustomer: previewArg || config.previewAsCustomer,
         ),
       ),
     );
@@ -2089,9 +2091,15 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       child: bottomButtonWidget(
         context: context,
         model: _currentItem,
-        isAddedByMe: isAddedByMe,
-        onPausePressed: () => _changeAdStatus('inactive'),
-        onResumePressed: () => _changeAdStatus('approved'),
+        isAddedByMe: widget.previewAsCustomer ? false : isAddedByMe,
+        onPausePressed: widget.previewAsCustomer
+            ? () => HelperUtils.showSnackBarMessage(context,
+                'لا يمكنك القيام بهذا الإجراء في وضع المعاينة.')
+            : () => _changeAdStatus('inactive'),
+        onResumePressed: widget.previewAsCustomer
+            ? () => HelperUtils.showSnackBarMessage(context,
+                'لا يمكنك القيام بهذا الإجراء في وضع المعاينة.')
+            : () => _changeAdStatus('approved'),
         moreDetailDynamicFields: moreDetailDynamicFields,
         onRenewPressed: () {},
 
@@ -2276,7 +2284,14 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
 
               // حالة المفضلة (الإعجاب)
               isFavorite: isFavorite,
-              onToggleFavorite: _onToggleFavorite,
+              onToggleFavorite: () {
+                if (widget.previewAsCustomer) {
+                  HelperUtils.showSnackBarMessage(context,
+                      'لا يمكنك القيام بهذا الإجراء في وضع المعاينة.');
+                  return;
+                }
+                _onToggleFavorite();
+              },
               // 👈 دالة بالأسفل
 
               // تمرير الموديل والمعرّف الآمن
@@ -2287,11 +2302,21 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
 
               // ✅ أزرار التراكب العلوي
               onShare: () {
+                if (widget.previewAsCustomer) {
+                  HelperUtils.showSnackBarMessage(context,
+                      'لا يمكنك القيام بهذا الإجراء في وضع المعاينة.');
+                  return;
+                }
                 // مشاركة ذكية بالرابط/السلَج
                 final slug = item.slug ?? "${item.id}";
                 HelperUtils.share(context, slug, model: item);
               },
               onReport: () {
+                if (widget.previewAsCustomer) {
+                  HelperUtils.showSnackBarMessage(context,
+                      'لا يمكنك القيام بهذا الإجراء في وضع المعاينة.');
+                  return;
+                }
                 final int? itemId = item.id ?? widget.model.id;
                 if (itemId == null || itemId <= 0) {
                   HelperUtils.showSnackBarMessage(
@@ -2366,7 +2391,8 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
 
                 // بيانات البائع (للزائر فقط)
                 if (!isAddedByMe && item.user != null)
-                  setSellerDetails(context, item),
+                setSellerDetails(context, item,
+                    disableActions: widget.previewAsCustomer),
 
                 // الخريطة (لو الإحداثيات متوفرة)
                 if (!hideLocation &&
@@ -2606,6 +2632,9 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   }
 
   Widget relatedAds() {
+    if (widget.previewAsCustomer) {
+      return const SizedBox.shrink();
+    }
     return BlocBuilder<FetchRelatedItemsCubit, FetchRelatedItemsState>(
         builder: (context, state) {
       if (state is FetchRelatedItemsInProgress) {

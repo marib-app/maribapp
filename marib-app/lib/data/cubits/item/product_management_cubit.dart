@@ -1638,7 +1638,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
               entries.isEmpty) {
             return _AttributesPayloadResult.failure(SubmissionOutcome(
               success: false,
-              message: '?? ???? ????? ??? ?????? ???? ????????.',
+              message: 'لا يمكن المتابعة قبل إتمام الحقول المطلوبة.',
             ));
           }
 
@@ -1664,7 +1664,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
               options.isEmpty) {
             return _AttributesPayloadResult.failure(SubmissionOutcome(
               success: false,
-              message: '?? ???? ????? ??? ?????? ???? ????????.',
+              message: 'لا يمكن المتابعة قبل إتمام الحقول المطلوبة.',
             ));
           }
 
@@ -1713,7 +1713,8 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
         stackTrace,
         name: "ProductManagementCubit",
       );
-      final String fallbackMessage = '???? ??? ?????? ???? ??? ????.';
+      final String fallbackMessage =
+          'حدث خطأ أثناء حفظ الخصائص، يرجى المحاولة لاحقاً.';
       final String message =
           _extractFailureMessage(error, fallback: fallbackMessage);
       return _failureOutcome(message, fallback: fallbackMessage);
@@ -1724,7 +1725,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     if (state.hasStockVariants && state.variantForms.isEmpty) {
       return const _StockRowsResult.failure(SubmissionOutcome(
         success: false,
-        message: '?? ???? ????? ??? ?????? ???? ????????.',
+        message: 'لا يمكن المتابعة قبل إتمام الحقول المطلوبة.',
       ));
     }
 
@@ -1769,7 +1770,8 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
         stackTrace,
         name: "ProductManagementCubit",
       );
-      final String fallbackMessage = '???? ??? ??????? ???? ??????.';
+      final String fallbackMessage =
+          'حدث خطأ أثناء حفظ المخزون، يرجى المحاولة لاحقاً.';
       final String message =
           _extractFailureMessage(error, fallback: fallbackMessage);
       return _failureOutcome(message, fallback: fallbackMessage);
@@ -1785,14 +1787,14 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       if (state.discountValue == null) {
         return const _DiscountPayloadResult.failure(SubmissionOutcome(
           success: false,
-          message: '?? ???? ????? ??? ?????? ???? ????????.',
+          message: 'لا يمكن المتابعة قبل إتمام الحقول المطلوبة.',
         ));
       }
 
       if (state.discountStart == null || state.discountEnd == null) {
         return const _DiscountPayloadResult.failure(SubmissionOutcome(
           success: false,
-          message: '?? ???? ????? ??? ?????? ???? ????????.',
+          message: 'لا يمكن المتابعة قبل إتمام الحقول المطلوبة.',
         ));
       }
 
@@ -1829,7 +1831,8 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
         stackTrace,
         name: "ProductManagementCubit",
       );
-      final String fallbackMessage = '???? ??? ?????? ????? ???? ??????.';
+      final String fallbackMessage =
+          'حدث خطأ أثناء حفظ بيانات الخصم، يرجى المحاولة لاحقاً.';
       final String message =
           _extractFailureMessage(error, fallback: fallbackMessage);
       return _failureOutcome(message, fallback: fallbackMessage);
@@ -2165,7 +2168,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     if (_createItem == null) {
       return const SubmissionOutcome(
         success: false,
-        message: '?? ???? ????? ??? ?????? ???? ????????.',
+        message: 'لا يمكن المتابعة قبل إتمام الحقول المطلوبة.',
       );
     }
 
@@ -2194,7 +2197,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
         name: "ProductManagementCubit",
       );
       final String fallbackMessage =
-          '???? ????? ??????? ??? ???????? ???? ??? ????.';
+          'حدث خطأ أثناء إنشاء مسودة المنتج، يرجى المحاولة لاحقاً.';
       final String message =
           _extractFailureMessage(error, fallback: fallbackMessage);
       return _failureOutcome(message, fallback: fallbackMessage);

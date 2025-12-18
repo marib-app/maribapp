@@ -679,9 +679,8 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     final Map<String, String> sanitized = <String, String>{};
 
     for (final ItemPurchaseAttributeOption attribute in options.attributes) {
-      final List<String> allowed = attribute.allowedValues.isNotEmpty
-          ? attribute.allowedValues
-          : attribute.values;
+      final List<String> allowed =
+          _filteredAllowedValues(attribute, options, source);
       final String key = attribute.key;
       final String? rawValue = source[key]?.trim();
 
@@ -1158,9 +1157,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
 
     if (triggerDependentFetches) {
       _fetchCustomFieldsForCurrentItem();
-      if (_isEcommerceItem) {
-        _fetchPurchaseOptionsForCurrentItem(forceRefresh: true);
-      }
+      _fetchPurchaseOptionsForCurrentItem(forceRefresh: true);
       _fetchAuxiliaryDataForCurrentItem();
       setItemClick();
     }
@@ -1465,10 +1462,6 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   }
 
   Widget _buildPurchaseOptionsSection() {
-    if (!_isEcommerceItem) {
-      return const SizedBox.shrink();
-    }
-
     final bool hideQuantitySelector =
         _shouldHideQuantitySelectorForItem(_currentItem);
 
@@ -1649,9 +1642,8 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   }
 
   Widget _buildAttributeSelector(ItemPurchaseAttributeOption attribute) {
-    final List<String> values = attribute.allowedValues.isNotEmpty
-        ? attribute.allowedValues
-        : attribute.values;
+    final List<String> values = _filteredAllowedValues(
+        attribute, _purchaseOptions!, _selectedAttributes);
     final bool isRequired = attribute.requiredForCheckout;
     final String? currentValueRaw = _selectedAttributes[attribute.key];
 
@@ -1975,7 +1967,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
             : isOwner
                 ? _buildOwnerBottomBar(context)
                 : _buildPublicBottomBar(context),
-        body: isOwner ? _buildOwnerBody(context) : _buildPublicBody(context),
+        body: _buildPublicBody(context),
       );
     }
 
@@ -1984,6 +1976,73 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       bottomNavigationBar: _buildLoadingBottomBar(context, isOwner),
       body: _AdDetailsLoadingBody(isOwner: isOwner),
     );
+  }
+
+  List<String> _filteredAllowedValues(
+    ItemPurchaseAttributeOption attribute,
+    ItemPurchaseOptions options,
+    Map<String, String> selections,
+  ) {
+    final List<String> base =
+        attribute.allowedValues.isNotEmpty ? attribute.allowedValues : attribute.values;
+
+    // إذا لا يوجد مخزون متنوع، أرجع القائمة الأصلية
+    final bool hasVariantSpecificStock = options.variantStocks.any(
+      (ItemVariantStockOption stock) =>
+          (stock.variantKey ?? '').trim().isNotEmpty,
+    );
+    if (!hasVariantSpecificStock) return base;
+
+    final Set<String> matchingValues = <String>{};
+
+    for (final ItemVariantStockOption stock in options.variantStocks) {
+      final String rawKey = (stock.variantKey ?? '').trim();
+      if (rawKey.isEmpty) continue;
+
+      final Map<String, String> decoded = _decodeVariantKey(rawKey);
+      final String? thisValue = decoded[attribute.key];
+      if (thisValue == null) continue;
+
+      // تحقق من تطابق باقي السمات المؤثرة على المخزون
+      bool matches = true;
+      for (final ItemPurchaseAttributeOption attr in options.attributes) {
+        if (!attr.affectsStock || attr.key == attribute.key) continue;
+        final String? selected = selections[attr.key];
+        final String? variantVal = decoded[attr.key];
+        if (selected != null &&
+            selected.isNotEmpty &&
+            variantVal != null &&
+            variantVal.isNotEmpty &&
+            selected.trim() != variantVal.trim()) {
+          matches = false;
+          break;
+        }
+      }
+      if (!matches) continue;
+
+      final int available = stock.availableStock ?? stock.stock ?? 0;
+      if (available <= 0) continue;
+
+      matchingValues.add(thisValue);
+    }
+
+    if (matchingValues.isEmpty) return base;
+
+    final List<String> filtered =
+        base.where((val) => matchingValues.contains(val)).toList();
+    return filtered.isEmpty ? base : filtered;
+  }
+
+  Map<String, String> _decodeVariantKey(String rawKey) {
+    final Map<String, String> result = {};
+    for (final String part in rawKey.split('|')) {
+      final int idx = part.indexOf('=');
+      if (idx <= 0) continue;
+      final String k = Uri.decodeComponent(part.substring(0, idx));
+      final String v = Uri.decodeComponent(part.substring(idx + 1));
+      result[k] = v;
+    }
+    return result;
   }
 
   String _buildSyntheticVariantSignature(
@@ -2093,12 +2152,17 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
         model: _currentItem,
         isAddedByMe: widget.previewAsCustomer ? false : isAddedByMe,
         onPausePressed: widget.previewAsCustomer
-            ? () => HelperUtils.showSnackBarMessage(context,
-                'لا يمكنك القيام بهذا الإجراء في وضع المعاينة.')
+            ? () async {
+                HelperUtils.showSnackBarMessage(
+                    context, 'لا يمكنك القيام بهذا الإجراء في وضع المعاينة.');
+                return false;
+              }
             : () => _changeAdStatus('inactive'),
         onResumePressed: widget.previewAsCustomer
-            ? () => HelperUtils.showSnackBarMessage(context,
-                'لا يمكنك القيام بهذا الإجراء في وضع المعاينة.')
+            ? () async {
+                HelperUtils.showSnackBarMessage(
+                    context, 'لا يمكنك القيام بهذا الإجراء في وضع المعاينة.');
+              }
             : () => _changeAdStatus('approved'),
         moreDetailDynamicFields: moreDetailDynamicFields,
         onRenewPressed: () {},
@@ -2423,7 +2487,22 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                 const SizedBox(height: 8),
 
                 // زر الإبلاغ
-                if (!isAddedByMe) reportedAdsWidget(),
+                if (!isAddedByMe)
+                  AbsorbPointer(
+                    absorbing: widget.previewAsCustomer,
+                    child: Opacity(
+                      opacity: widget.previewAsCustomer ? 0.6 : 1,
+                      child: GestureDetector(
+                        onTap: () {
+                          if (widget.previewAsCustomer) {
+                            HelperUtils.showSnackBarMessage(context,
+                                'لا يمكنك القيام بهذا الإجراء في وضع المعاينة.');
+                          }
+                        },
+                        child: reportedAdsWidget(),
+                      ),
+                    ),
+                  ),
 
                 const SizedBox(height: 8),
 
@@ -2632,6 +2711,9 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   }
 
   Widget relatedAds() {
+    if (widget.previewAsCustomer) {
+      return const SizedBox.shrink();
+    }
     if (widget.previewAsCustomer) {
       return const SizedBox.shrink();
     }

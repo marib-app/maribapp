@@ -676,11 +676,20 @@ ${locationText.isNotEmpty ? "📍 الموقع: $locationText" : ""}
       display = 'somethingWentWrong'.translate(context);
     }
 
+    // Keep snackbar color unified across the app even when a type is passed.
+    final ThemeData theme = Theme.of(context);
+    final Color? backgroundColor = type != null
+        ? (theme.brightness == Brightness.dark
+                ? Colors.grey[800]
+                : Colors.grey[900])
+            ?.withOpacity(0.9)
+        : null;
+
     UiUtils.showSoftSnackBar(
       context,
       message: display,
       duration: Duration(seconds: messageDuration),
-      backgroundColor: type?.value,
+      backgroundColor: backgroundColor,
       onClosed: onClose,
     );
   }
@@ -1012,7 +1021,6 @@ ${locationText.isNotEmpty ? "📍 الموقع: $locationText" : ""}
     }
   }
 }
-
 
 
 

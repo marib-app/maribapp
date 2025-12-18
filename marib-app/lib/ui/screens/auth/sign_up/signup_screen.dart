@@ -163,7 +163,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
   };
 
   String? countryCode;
-  String? flagEmoji = "??‡???‡?";
+  String? flagEmoji = "🇾🇪";
 
   // Social login
   String? currentSelectedAccountType;
@@ -869,7 +869,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
                                 officeWhatsapp: _officeWhatsappController,
                                 officeLocation: _officeLocationController,
                                 prefixText:
-                                    "${flagEmoji ?? "??‡???‡?"} ${countryCode ?? "+967"}",
+                                    "${flagEmoji ?? "🇾🇪"} ${countryCode ?? "+967"}",
                                 onPickCountry: _showCountryPicker,
                                 isLocationLoading: _isLocationLoading,
                                 onGetLocation: _getLocationCallback(),
@@ -977,7 +977,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
                           whatsapp: _businessWhatsappController,
                           location: _businessLocationController,
                           prefixText:
-                              "${flagEmoji ?? "??‡???‡?"} ${countryCode ?? "+967"}",
+                              "${flagEmoji ?? "🇾🇪"} ${countryCode ?? "+967"}",
                           onPickCountry: _showCountryPicker,
                           isLocationLoading: _isLocationLoading,
                           onGetLocation: _getLocationCallback(),
@@ -1215,7 +1215,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
       if (staffUsername.isEmpty) {
         HelperUtils.showSnackBarMessage(
           context,
-          "???? ????? ??? ???????? ????? ????? ???? ??????.",
+          "يرجى إدخال اسم المستخدم الخاص بموظف المتجر.",
           messageDuration: 3,
         );
         return false;
@@ -1225,7 +1225,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
           !_staffUsernamePattern.hasMatch(staffUsername)) {
         HelperUtils.showSnackBarMessage(
           context,
-          "??????? ??? ?? ???? ?? ${Constant.storeStaffEmailMinLength} ??? ${Constant.storeStaffEmailMaxLength} ????? ?????? ??? ???? ???????? ?? ????? ?? (. - _).",
+          "يجب أن يكون اسم المستخدم بين ${Constant.storeStaffEmailMinLength} و ${Constant.storeStaffEmailMaxLength} حرفاً، ويسمح فقط بالأحرف والأرقام والرموز (. - _).",
           messageDuration: 4,
         );
         return false;

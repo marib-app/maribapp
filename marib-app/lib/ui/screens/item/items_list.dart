@@ -7,7 +7,6 @@ import 'package:marib/data/cubits/category/fetch_sub_categories_cubit.dart';
 import 'package:marib/data/model/category_model.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/constant.dart';
-import 'package:marib/utils/hive_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
@@ -40,6 +39,7 @@ class ItemsList extends StatefulWidget {
   final List<String> categoryIds;
   final String interfaceType;
   final String? initialSortBy;
+  final int? sellerId;
 
   const ItemsList(
       {super.key,
@@ -47,7 +47,8 @@ class ItemsList extends StatefulWidget {
       required this.categoryName,
       required this.categoryIds,
       required this.interfaceType,
-      this.initialSortBy});
+      this.initialSortBy,
+      this.sellerId});
 
   @override
   ItemsListState createState() => ItemsListState();
@@ -55,6 +56,7 @@ class ItemsList extends StatefulWidget {
   static Route route(RouteSettings routeSettings) {
     Map? arguments = routeSettings.arguments as Map?;
     final String catId = arguments?['catID'] as String;
+    final int? sellerId = _parseSellerId(arguments?['sellerId']);
     return BlurredRouter(
       builder: (_) => MultiBlocProvider(
         providers: [
@@ -69,9 +71,30 @@ class ItemsList extends StatefulWidget {
           categoryIds: arguments?['categoryIds'],
           interfaceType: arguments?['interfaceType'],
           initialSortBy: arguments?['initialSortBy'],
+          sellerId: sellerId,
         ),
       ),
     );
+  }
+
+  static int? _parseSellerId(dynamic raw) {
+    if (raw == null) {
+      return null;
+    }
+    if (raw is int) {
+      return raw;
+    }
+    if (raw is String) {
+      final String trimmed = raw.trim();
+      if (trimmed.isEmpty) {
+        return null;
+      }
+      return int.tryParse(trimmed);
+    }
+    if (raw is num) {
+      return raw.toInt();
+    }
+    return int.tryParse(raw.toString());
   }
 }
 
@@ -187,6 +210,27 @@ class ItemsListState extends State<ItemsList> {
   String? sortBy;
   ItemFilterModel? filter;
 
+  int? get _lockedSellerId {
+    final int? rawSellerId = widget.sellerId;
+    if (rawSellerId == null || rawSellerId <= 0) {
+      return null;
+    }
+    return rawSellerId;
+  }
+
+  ItemFilterModel _effectiveFilter({
+    required String categoryId,
+    ItemFilterModel? base,
+  }) {
+    final ItemFilterModel normalized =
+        (base ?? ItemFilterModel()).copyWith(categoryId: categoryId);
+    final int? sellerId = _lockedSellerId;
+    if (sellerId == null) {
+      return normalized;
+    }
+    return normalized.copyWith(userId: sellerId);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -198,24 +242,11 @@ class ItemsListState extends State<ItemsList> {
     controller = ScrollController()..addListener(_loadMore);
 
     context.read<FetchItemFromCategoryCubit>().fetchItemFromCategory(
-        categoryId: int.parse(
-          widget.categoryId,
-        ),
-        search: "",
-        sortBy: sortBy,
-        filter: ItemFilterModel(
-          // Remove location filtering to show all items regardless of location
-          // country: HiveUtils.getCountryName() ?? "",
-          // areaId: HiveUtils.getAreaId() != null
-          //     ? int.parse(HiveUtils.getAreaId().toString())
-          //     : null,
-          // city: HiveUtils.getCityName() ?? "",
-          // state: HiveUtils.getStateName() ?? "",
-          categoryId: widget.categoryId,
-          // radius: HiveUtils.getNearbyRadius() ?? null,
-          // latitude: HiveUtils.getLatitude() ?? null,
-          // longitude: HiveUtils.getLongitude() ?? null
-        ));
+          categoryId: int.parse(widget.categoryId),
+          search: "",
+          sortBy: sortBy,
+          filter: _effectiveFilter(categoryId: widget.categoryId, base: filter),
+        );
 
     Future.delayed(Duration.zero, () {
       selectedcategoryId = widget.categoryId;
@@ -249,7 +280,7 @@ class ItemsListState extends State<ItemsList> {
           categoryId: parsedId,
           search: "",
           sortBy: sortBy,
-          filter: ItemFilterModel(categoryId: categoryId),
+          filter: _effectiveFilter(categoryId: categoryId, base: filter),
         );
 
     setState(() {});
@@ -280,10 +311,12 @@ class ItemsListState extends State<ItemsList> {
                         ? widget.categoryIds
                         : [selectedcategoryId],
                     onApply: (updatedFilter, selectedSort) {
-                      filter = updatedFilter;
                       sortBy = selectedSort;
-                      final ItemFilterModel baseFilter = updatedFilter.copyWith(
-                          categoryId: selectedcategoryId);
+                      final ItemFilterModel baseFilter = _effectiveFilter(
+                        categoryId: selectedcategoryId,
+                        base: updatedFilter,
+                      );
+                      filter = baseFilter;
                       context
                           .read<FetchItemFromCategoryCubit>()
                           .fetchItemFromCategory(
@@ -313,10 +346,10 @@ class ItemsListState extends State<ItemsList> {
       },
     ).then((value) {
       if (value == true) {
-        final ItemFilterModel baseFilter =
-            filter ?? ItemFilterModel(categoryId: selectedcategoryId);
-        ItemFilterModel updatedFilter =
-            baseFilter.copyWith(categoryId: selectedcategoryId);
+        final ItemFilterModel updatedFilter = _effectiveFilter(
+          categoryId: selectedcategoryId,
+          base: filter,
+        );
         context.read<FetchItemFromCategoryCubit>().fetchItemFromCategory(
             categoryId: int.tryParse(selectedcategoryId) ??
                 int.parse(widget.categoryId),
@@ -350,10 +383,19 @@ class ItemsListState extends State<ItemsList> {
   void itemSearch() {
     // if (searchController.text.isNotEmpty) {
     if (previousSearchQuery != searchController.text) {
+      final String currentCategoryId =
+          selectedcategoryId.isNotEmpty ? selectedcategoryId : widget.categoryId;
       final int currentCat =
-          int.tryParse(selectedcategoryId) ?? int.parse(widget.categoryId);
+          int.tryParse(currentCategoryId) ?? int.parse(widget.categoryId);
       context.read<FetchItemFromCategoryCubit>().fetchItemFromCategory(
-          categoryId: currentCat, search: searchController.text);
+            categoryId: currentCat,
+            search: searchController.text,
+            sortBy: null,
+            filter: _effectiveFilter(
+              categoryId: currentCategoryId,
+              base: filter,
+            ),
+          );
       previousSearchQuery = searchController.text;
       sortBy = null;
       setState(() {});
@@ -369,15 +411,11 @@ class ItemsListState extends State<ItemsList> {
             catId: currentCat,
             search: searchController.text,
             sortBy: sortBy,
-            filter: ItemFilterModel(
-              // Remove location filtering for loading more items
-              // country: HiveUtils.getCountryName() ?? "",
-              // areaId: HiveUtils.getAreaId() != null
-              //     ? int.parse(HiveUtils.getAreaId().toString())
-              //     : null,
-              // city: HiveUtils.getCityName() ?? "",
-              // state: HiveUtils.getStateName() ?? "",
-              categoryId: selectedcategoryId,
+            filter: _effectiveFilter(
+              categoryId: selectedcategoryId.isNotEmpty
+                  ? selectedcategoryId
+                  : widget.categoryId,
+              base: filter,
             ));
       }
     }
@@ -555,7 +593,10 @@ class ItemsListState extends State<ItemsList> {
                 onRefresh: () async {
                   searchbody = {};
                   Constant.itemFilter = null;
-                  final int currentCat = int.tryParse(selectedcategoryId) ??
+                  final String currentCategoryId = selectedcategoryId.isNotEmpty
+                      ? selectedcategoryId
+                      : widget.categoryId;
+                  final int currentCat = int.tryParse(currentCategoryId) ??
                       int.parse(widget.categoryId);
 
                   context
@@ -563,6 +604,10 @@ class ItemsListState extends State<ItemsList> {
                       .fetchItemFromCategory(
                         categoryId: currentCat,
                         search: "",
+                        filter: _effectiveFilter(
+                          categoryId: currentCategoryId,
+                          base: filter,
+                        ),
                       );
                 },
                 color: context.color.territoryColor,
@@ -616,8 +661,11 @@ class ItemsListState extends State<ItemsList> {
           "categoryIds": widget.categoryIds
         }).then((value) {
           if (value == true) {
-            ItemFilterModel updatedFilter =
-                filter!.copyWith(categoryId: selectedcategoryId);
+            final ItemFilterModel updatedFilter = _effectiveFilter(
+              categoryId: selectedcategoryId,
+              base: filter,
+            );
+            filter = updatedFilter;
             context.read<FetchItemFromCategoryCubit>().fetchItemFromCategory(
                 categoryId: int.parse(
                   selectedcategoryId,
@@ -711,7 +759,11 @@ class ItemsListState extends State<ItemsList> {
                             selectedcategoryId,
                           ),
                           search: searchController.text.toString(),
-                          sortBy: null);
+                          sortBy: null,
+                          filter: _effectiveFilter(
+                            categoryId: selectedcategoryId,
+                            base: filter,
+                          ));
 
                   setState(() {
                     sortBy = null;
@@ -736,7 +788,11 @@ class ItemsListState extends State<ItemsList> {
                             selectedcategoryId,
                           ),
                           search: searchController.text.toString(),
-                          sortBy: "new-to-old");
+                          sortBy: "new-to-old",
+                          filter: _effectiveFilter(
+                            categoryId: selectedcategoryId,
+                            base: filter,
+                          ));
                   setState(() {
                     sortBy = "new-to-old";
                     FocusManager.instance.primaryFocus?.unfocus();
@@ -756,7 +812,11 @@ class ItemsListState extends State<ItemsList> {
                             selectedcategoryId,
                           ),
                           search: searchController.text.toString(),
-                          sortBy: "old-to-new");
+                          sortBy: "old-to-new",
+                          filter: _effectiveFilter(
+                            categoryId: selectedcategoryId,
+                            base: filter,
+                          ));
                   setState(() {
                     sortBy = "old-to-new";
                     FocusManager.instance.primaryFocus?.unfocus();
@@ -776,7 +836,11 @@ class ItemsListState extends State<ItemsList> {
                             selectedcategoryId,
                           ),
                           search: searchController.text.toString(),
-                          sortBy: "price-high-to-low");
+                          sortBy: "price-high-to-low",
+                          filter: _effectiveFilter(
+                            categoryId: selectedcategoryId,
+                            base: filter,
+                          ));
                   setState(() {
                     sortBy = "price-high-to-low";
                     FocusManager.instance.primaryFocus?.unfocus();
@@ -796,7 +860,11 @@ class ItemsListState extends State<ItemsList> {
                             selectedcategoryId,
                           ),
                           search: searchController.text.toString(),
-                          sortBy: "price-low-to-high");
+                          sortBy: "price-low-to-high",
+                          filter: _effectiveFilter(
+                            categoryId: selectedcategoryId,
+                            base: filter,
+                          ));
                   setState(() {
                     sortBy = "price-low-to-high";
                     FocusManager.instance.primaryFocus?.unfocus();
@@ -1215,13 +1283,19 @@ class ItemsListState extends State<ItemsList> {
 
   void _retryLoadMore() {
     final cubit = context.read<FetchItemFromCategoryCubit>();
+    final String currentCategoryId = selectedcategoryId.isNotEmpty
+        ? selectedcategoryId
+        : widget.categoryId;
     final int currentCat =
-        int.tryParse(selectedcategoryId) ?? int.parse(widget.categoryId);
+        int.tryParse(currentCategoryId) ?? int.parse(widget.categoryId);
     cubit.fetchItemFromCategoryMore(
       catId: currentCat,
       search: searchController.text,
       sortBy: sortBy,
-      filter: ItemFilterModel(categoryId: selectedcategoryId),
+      filter: _effectiveFilter(
+        categoryId: currentCategoryId,
+        base: filter,
+      ),
     );
   }
 
@@ -1285,10 +1359,17 @@ class ItemsListState extends State<ItemsList> {
   }
 
   void _retryInitialFetch() {
+    final String currentCategoryId = selectedcategoryId.isNotEmpty
+        ? selectedcategoryId
+        : widget.categoryId;
     context.read<FetchItemFromCategoryCubit>().fetchItemFromCategory(
           categoryId:
-              int.tryParse(selectedcategoryId) ?? int.parse(widget.categoryId),
+              int.tryParse(currentCategoryId) ?? int.parse(widget.categoryId),
           search: searchController.text.toString(),
+          filter: _effectiveFilter(
+            categoryId: currentCategoryId,
+            base: filter,
+          ),
         );
   }
 

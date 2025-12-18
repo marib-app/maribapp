@@ -198,6 +198,8 @@ class AdImageHeader extends StatefulWidget {
 }
 
 class _AdImageHeaderState extends State<AdImageHeader> {
+  late PageController _controller;
+  bool _ownsController = false;
   late int currentImageIndex;
 
   bool get _hasImages => widget.images.isNotEmpty;
@@ -208,11 +210,24 @@ class _AdImageHeaderState extends State<AdImageHeader> {
   @override
   void initState() {
     super.initState();
+    _setupController();
     currentImageIndex = _normalizeIndex(widget.currentImageIndex, _totalCount);
+  }
+
+  @override
+  void dispose() {
+    _controller.removeListener(_handlePagePosition);
+    if (_ownsController) {
+      _controller.dispose();
+    }
+    super.dispose();
   }
   @override
   void didUpdateWidget(covariant AdImageHeader oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.pageController != widget.pageController) {
+      _swapController(widget.pageController);
+    }
     final int normalizedIndex = _normalizeIndex(
       widget.currentImageIndex,
       _totalCount,
@@ -220,6 +235,46 @@ class _AdImageHeaderState extends State<AdImageHeader> {
     if (normalizedIndex != currentImageIndex) {
       setState(() {
         currentImageIndex = normalizedIndex;
+      });
+    }
+  }
+
+  void _setupController() {
+    final int initial =
+        _normalizeIndex(widget.currentImageIndex, _totalCount);
+    if (widget.pageController != null) {
+      _controller = widget.pageController!;
+      _ownsController = false;
+    } else {
+      _controller = PageController(initialPage: initial);
+      _ownsController = true;
+    }
+    _controller.addListener(_handlePagePosition);
+  }
+
+  void _swapController(PageController? newController) {
+    _controller.removeListener(_handlePagePosition);
+    if (_ownsController) {
+      _controller.dispose();
+    }
+    if (newController != null) {
+      _controller = newController;
+      _ownsController = false;
+    } else {
+      _controller = PageController(initialPage: currentImageIndex);
+      _ownsController = true;
+    }
+    _controller.addListener(_handlePagePosition);
+  }
+
+  void _handlePagePosition() {
+    if (!_controller.hasClients || _totalCount <= 0) return;
+    final double? page = _controller.page;
+    if (page == null) return;
+    final int pageIndex = page.round().clamp(0, _totalCount - 1);
+    if (pageIndex != currentImageIndex) {
+      setState(() {
+        currentImageIndex = pageIndex;
       });
     }
   }
@@ -249,23 +304,21 @@ class _AdImageHeaderState extends State<AdImageHeader> {
                 ? null
                 : () {
                     final bool isVideoSlide =
-                        _hasVideo && currentImageIndex == 0;
+                        _hasVideo && currentImageIndex == _totalCount - 1;
                     if (isVideoSlide) {
                       widget.onVideoTap?.call();
                       return;
                     }
                     if (widget.images.isEmpty) return;
-                    final int initialIndex =
-                        _hasVideo ? currentImageIndex - 1 : currentImageIndex;
                     Navigator.push(
                       context,
                       AppPageRoute.build(
                         builder: (context) => FullscreenGalleryPage(
+                          videoUrl: widget.videoUrl,
+                          videoThumbnail: widget.videoThumbnail,
                           images: widget.images,
-                          initialIndex: initialIndex.clamp(
-                            0,
-                            widget.images.length - 1,
-                          ),
+                          initialIndex:
+                              currentImageIndex.clamp(0, _totalCount - 1),
                           heroTagBuilder: (index) => widget.modelId != null
                               ? 'ad-image-${widget.modelId}-$index'
                               : 'ad-image-$index',
@@ -322,20 +375,25 @@ class _AdImageHeaderState extends State<AdImageHeader> {
   }
 
   Widget _buildImageIndicator() {
+    final int total = _totalCount;
+    if (total <= 1) return const SizedBox.shrink();
+
+    if (widget.pageIndicatorBuilder != null) {
+      return widget.pageIndicatorBuilder!(context, currentImageIndex, total);
+    }
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(_totalCount, (index) {
+      children: List.generate(total, (index) {
+        final bool isActive = currentImageIndex == index;
         return AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           margin: const EdgeInsets.symmetric(horizontal: 4),
-          width: currentImageIndex == index ? 20 : 8,
+          width: isActive ? 20 : 8,
           height: 8,
           decoration: BoxDecoration(
-            color: currentImageIndex == index
-                ? Theme
-                .of(context)
-                .colorScheme
-                .primary
+            color: isActive
+                ? Theme.of(context).colorScheme.primary
                 : Colors.white.withOpacity(0.7),
             borderRadius: BorderRadius.circular(4),
           ),
@@ -349,7 +407,7 @@ class _AdImageHeaderState extends State<AdImageHeader> {
       return _buildPlaceholder();
     }
     return PageView.builder(
-      controller: widget.pageController,
+      controller: _controller,
       itemCount: _totalCount,
       onPageChanged: (index) {
         if (widget.onImagePageChanged != null) {
@@ -361,11 +419,11 @@ class _AdImageHeaderState extends State<AdImageHeader> {
       },
 
       itemBuilder: (context, index) {
-        if (_hasVideo && index == 0) {
+        if (_hasVideo && index == _totalCount - 1) {
           return _buildVideoSlide();
         }
 
-        final int imageIndex = _hasVideo ? index - 1 : index;
+        final int imageIndex = index;
         final AdImageSource imageSource = widget.images[imageIndex];
         final String imageUrl = imageSource.detailUrl;
         return Hero(

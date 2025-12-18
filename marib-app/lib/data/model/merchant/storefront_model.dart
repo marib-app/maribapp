@@ -7,6 +7,10 @@ class StorefrontDetails {
     this.description,
     this.logoUrl,
     this.bannerUrl,
+    this.isFollowed = false,
+    this.followersCount,
+    this.itemsCount,
+    this.ratingsAverage,
     this.contact,
     this.location,
     this.settings,
@@ -16,6 +20,26 @@ class StorefrontDetails {
   });
 
   factory StorefrontDetails.fromJson(Map<String, dynamic> json) {
+    final int? followersCount = _intValue(
+      json['followers_count'] ??
+          json['followersCount'] ??
+          json['followers'] ??
+          json['followers_total'],
+    );
+    final int? itemsCount = _intValue(
+      json['items_count'] ??
+          json['itemsCount'] ??
+          json['products_count'] ??
+          json['productsCount'] ??
+          json['products_total'],
+    );
+    final double? ratingsAverage = _doubleValue(
+      json['ratings_avg'] ??
+          json['ratingsAverage'] ??
+          json['average_rating'] ??
+          json['rating_avg'],
+    );
+
     return StorefrontDetails(
       id: json['id'] as int? ?? 0,
       name: json['name']?.toString() ?? '',
@@ -23,6 +47,15 @@ class StorefrontDetails {
       description: json['description']?.toString(),
       logoUrl: json['logo_url']?.toString(),
       bannerUrl: json['banner_url']?.toString(),
+      isFollowed: _boolValue(
+            json['is_followed'] ??
+                json['is_following'] ??
+                json['following'],
+          ) ??
+          false,
+      followersCount: followersCount,
+      itemsCount: itemsCount,
+      ratingsAverage: ratingsAverage,
       status: StorefrontStatus.fromJson(
         (json['status'] as Map<String, dynamic>?) ?? const <String, dynamic>{},
       ),
@@ -69,6 +102,28 @@ class StorefrontDetails {
         json['logo_url']?.toString() ?? json['logo_path']?.toString();
     final String? banner =
         json['banner_url']?.toString() ?? json['banner_path']?.toString();
+
+    final bool isFollowed =
+        _boolValue(json['is_followed'] ?? json['is_following']) ?? false;
+    final int? followersCount = _intValue(
+      json['followers_count'] ??
+          json['followersCount'] ??
+          json['followers'] ??
+          json['followers_total'],
+    );
+    final int? itemsCount = _intValue(
+      json['items_count'] ??
+          json['itemsCount'] ??
+          json['products_count'] ??
+          json['productsCount'] ??
+          json['products_total'],
+    );
+    final double? ratingsAverage = _doubleValue(
+      json['ratings_avg'] ??
+          json['ratingsAverage'] ??
+          json['average_rating'] ??
+          json['rating_avg'],
+    );
 
     final bool allowDelivery = _boolValue(json['allow_delivery']);
     final bool allowPickup = _boolValue(json['allow_pickup']);
@@ -161,6 +216,10 @@ class StorefrontDetails {
       description: description,
       logoUrl: logo,
       bannerUrl: banner,
+      isFollowed: isFollowed,
+      followersCount: followersCount,
+      itemsCount: itemsCount,
+      ratingsAverage: ratingsAverage,
       status: status,
       contact: contact,
       location: location,
@@ -174,6 +233,10 @@ class StorefrontDetails {
   final String? description;
   final String? logoUrl;
   final String? bannerUrl;
+  final bool isFollowed;
+  final int? followersCount;
+  final int? itemsCount;
+  final double? ratingsAverage;
   final StorefrontStatus status;
   final StorefrontContact? contact;
   final StorefrontLocation? location;
@@ -183,6 +246,31 @@ class StorefrontDetails {
   final List<StorefrontManualBank> manualBanks;
 
   bool get isOpenNow => status.isOpenNow;
+
+  StorefrontDetails copyWith({
+    bool? isFollowed,
+    int? followersCount,
+  }) {
+    return StorefrontDetails(
+      id: id,
+      name: name,
+      slug: slug,
+      description: description,
+      logoUrl: logoUrl,
+      bannerUrl: bannerUrl,
+      isFollowed: isFollowed ?? this.isFollowed,
+      followersCount: followersCount ?? this.followersCount,
+      itemsCount: itemsCount,
+      ratingsAverage: ratingsAverage,
+      status: status,
+      contact: contact,
+      location: location,
+      settings: settings,
+      policies: policies,
+      workingHours: workingHours,
+      manualBanks: manualBanks,
+    );
+  }
 
   static int? _intValue(dynamic raw) {
     if (raw == null) {

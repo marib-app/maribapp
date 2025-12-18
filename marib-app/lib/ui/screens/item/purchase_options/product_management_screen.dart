@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import 'package:marib/app/navigation/app_page_route.dart';
 import 'package:marib/app/navigation/motion/route_motion.dart';
@@ -16,6 +16,7 @@ import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/ecommerce_department.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/helper_utils.dart';
+import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
 import 'product_management/product_management_arguments.dart';
 import 'product_management/unsupported_product_management.dart';
 import 'product_management/tabs/attributes_tab.dart';
@@ -140,7 +141,7 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
     final color = context.color;
 
     if (state.loading) {
-      return const Center(child: CircularProgressIndicator());
+      return const _ProductManagementShimmer();
     }
 
     if (state.error != null) {
@@ -309,5 +310,63 @@ class _ProductManagementScreenState extends State<ProductManagementScreen>
     }
 
     return trimmed;
+  }
+}
+
+class _ProductManagementShimmer extends StatelessWidget {
+  const _ProductManagementShimmer();
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.color;
+    return Container(
+      color: color.primaryColor,
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CustomShimmer(height: 26, width: 180, borderRadius: 10),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(child: CustomShimmer(height: 44, borderRadius: 14)),
+              const SizedBox(width: 12),
+              Expanded(child: CustomShimmer(height: 44, borderRadius: 14)),
+              const SizedBox(width: 12),
+              Expanded(child: CustomShimmer(height: 44, borderRadius: 14)),
+              const SizedBox(width: 12),
+              Expanded(child: CustomShimmer(height: 44, borderRadius: 14)),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Expanded(
+            child: ListView.separated(
+              itemCount: 6,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (_, __) => Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: color.secondaryColor,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: color.borderColor.withOpacity(0.3),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    CustomShimmer(height: 18, width: 120, borderRadius: 8),
+                    const SizedBox(height: 12),
+                    CustomShimmer(height: 14, width: 180, borderRadius: 6),
+                    const SizedBox(height: 16),
+                    CustomShimmer(height: 44, borderRadius: 12),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

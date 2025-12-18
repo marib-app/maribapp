@@ -39,11 +39,23 @@
     durationDays = _parseInt(json['duration_days']);
     approvedAt = _parseDate(json['approved_at']);
     expiresAt = _parseDate(json['expires_at']);
-    if (json['verification_field_values'] != null) {
+    final dynamic rawFieldValues = json['verification_field_values'];
+    if (rawFieldValues is Iterable) {
       verificationFieldValues = <VerificationFieldValues>[];
-      json['verification_field_values'].forEach((v) {
-        verificationFieldValues!.add(new VerificationFieldValues.fromJson(v));
-      });
+      for (final dynamic value in rawFieldValues) {
+        if (value is Map<String, dynamic>) {
+          verificationFieldValues!.add(VerificationFieldValues.fromJson(value));
+          continue;
+        }
+
+        if (value is Map) {
+          verificationFieldValues!.add(
+            VerificationFieldValues.fromJson(
+              value.map((key, val) => MapEntry(key.toString(), val)),
+            ),
+          );
+        }
+      }
     }
   }
 

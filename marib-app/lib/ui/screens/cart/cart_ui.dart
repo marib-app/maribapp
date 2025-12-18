@@ -15,6 +15,7 @@ import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/currency_utils.dart';
 import 'package:marib/utils/money_formatter.dart';
 import 'package:marib/utils/store_status_view_model.dart';
+import 'package:marib/utils/delivery_department.dart';
 import 'package:marib/ui/widgets/store_status_card.dart';
 
 class CartUI extends StatelessWidget {
@@ -129,15 +130,24 @@ class CartUI extends StatelessWidget {
     final StoreStatusViewModel storeStatus =
         StoreStatusViewModel.fromMap(store);
     final String? inferredStoreName = _resolveCartStoreName(cartItems);
+    final String? inferredDepartmentLabel =
+        _resolveCartDepartmentLabel(cartItems);
 
     final String localizedFallbackRaw =
         UiUtils.getTranslatedLabel(context, 'notAvailable');
     final String fallbackStoreName = localizedFallbackRaw == 'notAvailable'
         ? 'غير متوفر'
         : localizedFallbackRaw;
-    final String resolvedStoreName = storeStatus.hasData
-        ? (storeStatus.name ?? fallbackStoreName)
-        : (inferredStoreName ?? fallbackStoreName);
+
+    String? _trimOrNull(String? value) {
+      final String? trimmed = value?.trim();
+      return (trimmed == null || trimmed.isEmpty) ? null : trimmed;
+    }
+
+    final String resolvedStoreName = _trimOrNull(storeStatus.name) ??
+        _trimOrNull(inferredStoreName) ??
+        _trimOrNull(inferredDepartmentLabel) ??
+        fallbackStoreName;
 
     final String? whatsappLabelRaw = supportWhatsappLabel?.trim();
     final String? whatsappNumberRaw = supportWhatsappNumber?.trim();
@@ -186,23 +196,25 @@ class CartUI extends StatelessWidget {
       HelperUtils.showSnackBarMessage(context, message);
     }
 
+    final String? sanitizedWhatsappNumber =
+        sanitizeWhatsappNumber(whatsappNumberRaw);
+    final String whatsappTooltip = (whatsappLabelRaw != null &&
+            whatsappLabelRaw.isNotEmpty)
+        ? whatsappLabelRaw
+        : 'تواصل عبر واتساب';
+
     Uri? buildWhatsappUri() {
-      final Uri? directUri = normalizeWhatsappUrl(whatsappUrlRaw);
-      if (directUri != null) {
-        return directUri;
+      final String? sanitizedNumber = sanitizedWhatsappNumber;
+      if (sanitizedNumber != null) {
+        final StringBuffer buffer =
+            StringBuffer('https://wa.me/$sanitizedNumber');
+        if (whatsappMessageRaw != null && whatsappMessageRaw.isNotEmpty) {
+          buffer.write('?text=${Uri.encodeComponent(whatsappMessageRaw)}');
+        }
+        return Uri.tryParse(buffer.toString());
       }
 
-      final String? sanitizedNumber = sanitizeWhatsappNumber(whatsappNumberRaw);
-      if (sanitizedNumber == null) {
-        return null;
-      }
-
-      final StringBuffer buffer =
-          StringBuffer('https://wa.me/$sanitizedNumber');
-      if (whatsappMessageRaw != null && whatsappMessageRaw.isNotEmpty) {
-        buffer.write('?text=${Uri.encodeComponent(whatsappMessageRaw)}');
-      }
-      return Uri.tryParse(buffer.toString());
+      return normalizeWhatsappUrl(whatsappUrlRaw);
     }
 
     Future<void> openWhatsappSupport() async {
@@ -863,10 +875,10 @@ class CartUI extends StatelessWidget {
     ScrollPhysics buildScrollPhysics() {
       if (onRefresh != null) {
         return const AlwaysScrollableScrollPhysics(
-          parent: BouncingScrollPhysics(),
+          parent: ClampingScrollPhysics(),
         );
       }
-      return const BouncingScrollPhysics();
+      return const ClampingScrollPhysics();
     }
 
     Widget wrapWithRefreshIndicator(Widget child) {
@@ -953,6 +965,7 @@ class CartUI extends StatelessWidget {
         cartItems.isEmpty;
     final ScrollPhysics scrollPhysics = buildScrollPhysics();
     final bool hasCartItems = cartItems.isNotEmpty;
+    final bool showWhatsappButton = hasCartItems && sanitizedWhatsappNumber != null;
     final bool hideCartControls = !isLoading && cartItems.isEmpty;
     final bool showEmptyGuidance = hideCartControls && !showLoadErrorState;
     final bool showErrorGuidance = hideCartControls && showLoadErrorState;
@@ -963,20 +976,8 @@ class CartUI extends StatelessWidget {
         alignment: Alignment.topCenter,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
-          child: Container(
+          child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-            decoration: BoxDecoration(
-              color: context.color.secondaryColor,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: accent.withOpacity(0.25)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 18,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -1109,27 +1110,12 @@ class CartUI extends StatelessWidget {
             }
 
             final Cart item = cartItems[index - 1];
-            return AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
-              decoration: BoxDecoration(
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: CartHorizontalCard(
-                item: item,
-                showCheckbox: true,
-                isSelected: selectedItemIds.contains(item.selectionKey),
-                onToggleSelect: () => onToggleSelectItem(item),
-                buttonShape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
+            return CartHorizontalCard(
+              item: item,
+              showCheckbox: true,
+              isSelected: selectedItemIds.contains(item.selectionKey),
+              onToggleSelect: () => onToggleSelectItem(item),
+              showShadow: true,
             );
           },
         ),
@@ -1150,10 +1136,12 @@ class CartUI extends StatelessWidget {
       );
     }
 
-    return Scaffold(
-      backgroundColor: context.color.primaryColor,
-      body: Stack(
-        children: [
+    return ScrollConfiguration(
+      behavior: const _CartScrollBehavior(),
+      child: Scaffold(
+        backgroundColor: context.color.primaryColor,
+        body: Stack(
+          children: [
           Column(
             children: [
               AppBar(
@@ -1298,42 +1286,47 @@ class CartUI extends StatelessWidget {
               ),
             ],
           ),
-          Positioned(
-            right: whatsappRight,
-            bottom: whatsappBottom,
-            child: Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.12),
-                    blurRadius: 12,
-                    offset: const Offset(0, 6),
+          if (showWhatsappButton)
+            Positioned(
+              right: whatsappRight,
+              bottom: whatsappBottom,
+              child: Tooltip(
+                message: whatsappTooltip,
+                child: Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.12),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: Material(
-                color: const Color(0xFF25D366),
-                shape: const CircleBorder(),
-                child: InkWell(
-                  onTap: openWhatsappSupport,
-                  customBorder: const CircleBorder(),
-                  child: const SizedBox(
-                    height: 50,
-                    width: 60,
-                    child: Center(
-                      child: FaIcon(
-                        FontAwesomeIcons.whatsapp,
-                        color: Colors.white,
-                        size: 28,
+                  child: Material(
+                    color: const Color(0xFF25D366),
+                    shape: const CircleBorder(),
+                    child: InkWell(
+                      onTap: openWhatsappSupport,
+                      customBorder: const CircleBorder(),
+                      child: const SizedBox(
+                        height: 50,
+                        width: 60,
+                        child: Center(
+                          child: FaIcon(
+                            FontAwesomeIcons.whatsapp,
+                            color: Colors.white,
+                            size: 28,
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1383,6 +1376,42 @@ class CartUI extends StatelessWidget {
       }
     }
     return null;
+  }
+
+  String? _resolveCartDepartmentLabel(List<Cart> items) {
+    if (items.isEmpty) {
+      return null;
+    }
+
+    final String sectionRaw = items.first.section.trim();
+    if (sectionRaw.isEmpty) {
+      return null;
+    }
+
+    final String? normalized = normalizeDeliveryDepartment(sectionRaw);
+    switch (normalized) {
+      case 'shein':
+        return 'شي إن';
+      case 'computer':
+        return 'الكمبيوتر';
+      case 'store':
+        return 'المتجر';
+      default:
+        return null;
+    }
+  }
+}
+
+class _CartScrollBehavior extends ScrollBehavior {
+  const _CartScrollBehavior();
+
+  @override
+  Widget buildOverscrollIndicator(
+    BuildContext context,
+    Widget child,
+    ScrollableDetails details,
+  ) {
+    return child;
   }
 }
 

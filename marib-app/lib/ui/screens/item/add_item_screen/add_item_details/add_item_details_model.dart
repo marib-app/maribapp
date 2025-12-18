@@ -44,7 +44,7 @@ class AddItemDetailsModel {
 
   ItemModel? item;
   PendingItemDraft? pendingDraft;
-  String selectedCurrency = 'YER';
+  String? selectedCurrency;
   String selectedCountryCode = '+967';
   String coverImageUrl = '';
 
@@ -53,6 +53,9 @@ class AddItemDetailsModel {
   bool isFetchingShein = false;
   bool isCoverUpdateScheduled = false;
   bool isSubmittingWithoutLocation = false;
+
+  bool _priceListenerAttached = false;
+  bool _isFormattingPrice = false;
 
   double? latitude;
   double? longitude;
@@ -80,5 +83,51 @@ class AddItemDetailsModel {
     adAdditionalDetailsController.dispose();
     reviewLinkController.dispose();
     adProductLinkController.dispose();
+  }
+
+  void ensurePriceFormatterAttached() {
+    if (_priceListenerAttached) return;
+    _priceListenerAttached = true;
+    adPriceController.addListener(_formatPriceField);
+    _formatPriceField();
+  }
+
+  void _formatPriceField() {
+    if (_isFormattingPrice) return;
+    final String raw = adPriceController.text;
+    final TextSelection selection = adPriceController.selection;
+    final String formatted = _formatGrouped(raw);
+    if (formatted == raw) return;
+
+    // Adjust caret to best-effort position near the end
+    int newOffset = selection.baseOffset + (formatted.length - raw.length);
+    if (newOffset < 0) newOffset = 0;
+    if (newOffset > formatted.length) newOffset = formatted.length;
+
+    _isFormattingPrice = true;
+    adPriceController.value = TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: newOffset),
+    );
+    _isFormattingPrice = false;
+  }
+
+  String _formatGrouped(String raw) {
+    // Keep digits and a single decimal point. Commas are added as thousand separators.
+    final String cleaned = raw.replaceAll(RegExp(r'[^0-9.]'), '');
+    if (cleaned.isEmpty) return '';
+
+    final int dotIndex = cleaned.indexOf('.');
+    String intPart = dotIndex == -1 ? cleaned : cleaned.substring(0, dotIndex);
+    String fracPart = dotIndex == -1
+        ? ''
+        : cleaned.substring(dotIndex + 1).replaceAll(RegExp(r'[^0-9]'), '');
+
+    // Group from the right every 3 digits with commas.
+    final RegExp groupRe = RegExp(r'\B(?=(\d{3})+(?!\d))');
+    final String groupedInt = intPart.replaceAllMapped(groupRe, (Match m) => ',');
+
+    if (fracPart.isEmpty) return groupedInt;
+    return '$groupedInt.$fracPart';
   }
 }

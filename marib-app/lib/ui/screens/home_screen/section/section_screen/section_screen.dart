@@ -5,9 +5,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:marib/data/cubits/home/fetch_home_screen_cubit.dart';
 import 'package:marib/data/cubits/item/fetch_item_summary_cubit.dart';
+import 'package:marib/data/cubits/merchant/storefront_follow_cubit.dart';
 import 'package:marib/data/cubits/merchant/storefront_cubit.dart';
 import 'package:marib/data/model/item_filter_model.dart';
 import 'package:marib/data/model/merchant/storefront_model.dart';
+import 'package:marib/data/repositories/merchant/storefront_follow_repository.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/extensions/extensions.dart';
@@ -306,7 +308,9 @@ class Section_screenState extends State<Section_screen> {
   late final String? _requestSectionSlug;
   late final bool _enableFeaturedAds;
   bool get _hasStorefrontContext =>
-      widget.storefrontId != null || widget.storefrontSnapshot != null;
+      widget.storefrontId != null ||
+      widget.storefrontSnapshot != null ||
+      widget.sellerId != null;
 
   bool _isValidCategoryId(String? raw) {
     if (raw == null) return false;
@@ -528,8 +532,9 @@ class Section_screenState extends State<Section_screen> {
     );
     _featuredStyleOverride = _featuredAdsConfig?.styleOverride;
     _featuredOrderMode = _featuredAdsConfig?.orderMode;
-    _enableFeaturedAds = _featuredAdsConfig?.enableFeaturedAds ??
-        _featuredAdRootIds.contains(_catId);
+    _enableFeaturedAds = !_hasStorefrontContext &&
+        (_featuredAdsConfig?.enableFeaturedAds ??
+            _featuredAdRootIds.contains(_catId));
     _sellerCategoryIds = _normalizeSellerCategoryIds(widget.sellerCategoryIds);
     _snapshotStorefront = _deriveSnapshotDetails(widget.storefrontSnapshot);
 
@@ -592,7 +597,8 @@ class Section_screenState extends State<Section_screen> {
         (normalizedInterfaceType == null || normalizedInterfaceType.isEmpty)
             ? 'homepage'
             : normalizedInterfaceType;
-    _hasAdSlider = (_featuredAdsConfig?.enableAdSlider ?? true) &&
+    _hasAdSlider = !_hasStorefrontContext &&
+        (_featuredAdsConfig?.enableAdSlider ?? true) &&
         _sliderInterfaceType.isNotEmpty;
     if (_hasAdSlider) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1084,20 +1090,38 @@ class Section_screenState extends State<Section_screen> {
     final String? phone = contact?.phone;
     final String? whatsapp = contact?.whatsapp ?? contact?.phone;
 
-    return MerchantStorefrontHeader(
-      details: details,
-      onCallTap: _hasContactValue(phone) ? () => _launchPhone(phone) : null,
-      onWhatsappTap:
-          _hasContactValue(whatsapp) ? () => _launchWhatsApp(whatsapp) : null,
-      onDirectionsTap: details.location != null
-          ? () => _launchDirections(details.location)
-          : null,
-      onFollowTap: () {
-        HelperUtils.showSnackBarMessage(
-          context,
-          'storefrontFollowComingSoon'.translate(context),
-        );
-      },
+    return BlocProvider<StorefrontFollowCubit>(
+      create: (_) => StorefrontFollowCubit.fromDetails(
+        details: details,
+        repository: const StorefrontFollowRepository(),
+      ),
+      child: BlocConsumer<StorefrontFollowCubit, StorefrontFollowState>(
+        listenWhen: (previous, current) =>
+            current.errorMessage != null &&
+            current.errorMessage != previous.errorMessage,
+        listener: (context, state) {
+          if (state.errorMessage?.isNotEmpty == true) {
+            HelperUtils.showSnackBarMessage(context, state.errorMessage!);
+          }
+        },
+        builder: (context, followState) {
+          return MerchantStorefrontHeader(
+            details: details,
+            isFollowingOverride: followState.isFollowing,
+            followersCountOverride: followState.followersCount,
+            isFollowLoading: followState.isLoading,
+            onCallTap: _hasContactValue(phone) ? () => _launchPhone(phone) : null,
+            onWhatsappTap: _hasContactValue(whatsapp)
+                ? () => _launchWhatsApp(whatsapp)
+                : null,
+            onDirectionsTap: details.location != null
+                ? () => _launchDirections(details.location)
+                : null,
+            onFollowTap: () =>
+                context.read<StorefrontFollowCubit>().toggleFollow(),
+          );
+        },
+      ),
     );
   }
 

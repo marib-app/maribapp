@@ -46,7 +46,9 @@ class MoreDetailsUI extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
+      top: false,
       child: Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         // ✅ يثبّت الزر أسفل الشاشة حتى مع ظهور الكيبورد
         resizeToAvoidBottomInset: false,
 
@@ -54,6 +56,8 @@ class MoreDetailsUI extends StatelessWidget {
           context,
           showBackButton: true,
           title: "AdDetails".translate(context),
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          statusBarColor: Theme.of(context).scaffoldBackgroundColor,
         ),
 
         // ✅ بدون أي padding مرتبط بالكيبورد

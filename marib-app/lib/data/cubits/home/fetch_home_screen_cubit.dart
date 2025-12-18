@@ -60,6 +60,55 @@ class FetchHomeScreenCubit extends HydratedCubit<FetchHomeScreenState> {
   final Map<String, int> _sectionPage = <String, int>{};
   final Set<String> _loadingSections = <String>{};
 
+  static String _normalizeItemKeyPart(String? value) {
+    if (value == null) return '';
+    return value.trim().toLowerCase();
+  }
+
+  static List<ItemModel> _dedupeItems(Iterable<ItemModel> items) {
+    final Set<int> seenIds = <int>{};
+    final Set<String> seenKeys = <String>{};
+    final List<ItemModel> result = <ItemModel>[];
+
+    for (final ItemModel item in items) {
+      final int? rawId = item.id;
+      final int? id = (rawId != null && rawId > 0) ? rawId : null;
+
+      if (id != null) {
+        if (!seenIds.add(id)) continue;
+        result.add(item);
+        continue;
+      }
+
+      final String slug = _normalizeItemKeyPart(item.slug);
+      if (slug.isNotEmpty) {
+        final String key = 'slug:$slug';
+        if (!seenKeys.add(key)) continue;
+        result.add(item);
+        continue;
+      }
+
+      final String name = _normalizeItemKeyPart(item.name);
+      final String image = _normalizeItemKeyPart(
+        item.thumbnailUrl ??
+            item.thumbnailFallbackUrl ??
+            item.detailImageUrl ??
+            item.detailImageFallbackUrl ??
+            item.image,
+      );
+      final String price = item.price?.toString() ?? '';
+
+      final String key = 'misc:$name|$price|$image';
+      if (key != 'misc:||') {
+        if (!seenKeys.add(key)) continue;
+      }
+
+      result.add(item);
+    }
+
+    return result;
+  }
+
   static String? _cleanInterfaceType(String? value) {
     final String? normalized = SliderInterfaceMapper.normalize(value);
     if (normalized != null && normalized.isNotEmpty) {
@@ -184,18 +233,32 @@ class FetchHomeScreenCubit extends HydratedCubit<FetchHomeScreenState> {
         rootIdentifier: resolvedRootIdentifier,
         orderMode: orderMode,
         styleKey: styleKey,
-        rootCategoryId: rootCategoryId,
-        page: 1,
-      );
+          rootCategoryId: rootCategoryId,
+          page: 1,
+        );
+
+      final List<HomeScreenSection> normalizedSections = homeScreenDataList
+          .map((HomeScreenSection section) {
+            final List<ItemModel>? items = section.sectionData;
+            if (items == null || items.isEmpty) {
+              return section;
+            }
+            final List<ItemModel> uniqueItems = _dedupeItems(items);
+            if (uniqueItems.length == items.length) {
+              return section;
+            }
+            return section.copyWith(sectionData: uniqueItems);
+          })
+          .toList(growable: false);
 
       _sectionPage.clear();
-      for (final HomeScreenSection section in homeScreenDataList) {
+      for (final HomeScreenSection section in normalizedSections) {
         _sectionPage[_sectionKey(section)] = 1;
       }
 
       emit(
         FetchHomeScreenSuccess(
-          homeScreenDataList,
+          normalizedSections,
           interfaceType: resolvedInterfaceType,
           slug: resolvedSlug,
           rootIdentifier: resolvedRootIdentifier,
@@ -208,9 +271,13 @@ class FetchHomeScreenCubit extends HydratedCubit<FetchHomeScreenState> {
   }
 
   String _sectionKey(HomeScreenSection section) {
-    final String type = section.sectionType ?? '';
-    final String key =
-        section.filter ?? section.slug ?? section.sectionId?.toString() ?? '';
+    final String type = (section.sectionType ?? '').trim().toLowerCase();
+    final String key = (section.filter ??
+            section.slug ??
+            section.sectionId?.toString() ??
+            '')
+        .trim()
+        .toLowerCase();
     return '$type::$key';
   }
 
@@ -218,14 +285,13 @@ class FetchHomeScreenCubit extends HydratedCubit<FetchHomeScreenState> {
     List<HomeScreenSection> sections,
     HomeScreenSection target,
   ) {
-    return sections.firstWhere(
-      (element) =>
-          (element.filter?.toLowerCase() ?? '') ==
-              (target.filter?.toLowerCase() ?? '') &&
-          (element.sectionType?.toLowerCase() ?? '') ==
-              (target.sectionType?.toLowerCase() ?? ''),
-      orElse: () => target,
-    );
+    final String wantedKey = _sectionKey(target);
+    for (final HomeScreenSection element in sections) {
+      if (_sectionKey(element) == wantedKey) {
+        return element;
+      }
+    }
+    return null;
   }
 
   Future<void> loadMoreSection(HomeScreenSection section) async {
@@ -249,14 +315,19 @@ class FetchHomeScreenCubit extends HydratedCubit<FetchHomeScreenState> {
         orderMode: section.filter,
         styleKey: section.style,
         rootCategoryId: null,
-        page: nextPage,
-      );
+          page: nextPage,
+        );
 
-      HomeScreenSection fetched =
-          _findMatchingSection(response, section) ?? section;
-      if (fetched.sectionData == null || fetched.sectionData!.isEmpty) {
-        fetched = fetched.copyWith(hasMore: false, sectionData: const []);
-      }
+      final HomeScreenSection fetched = (() {
+        final HomeScreenSection? match = _findMatchingSection(response, section);
+        if (match == null) {
+          return section.copyWith(hasMore: false, sectionData: const []);
+        }
+        if (match.sectionData == null || match.sectionData!.isEmpty) {
+          return match.copyWith(hasMore: false, sectionData: const []);
+        }
+        return match;
+      })();
 
       final List<HomeScreenSection> updatedSections = <HomeScreenSection>[];
       for (final HomeScreenSection existing in currentState.sections) {
@@ -265,10 +336,13 @@ class FetchHomeScreenCubit extends HydratedCubit<FetchHomeScreenState> {
           continue;
         }
 
-        final List<ItemModel> combined = <ItemModel>[
-          ...?existing.sectionData,
+        final List<ItemModel> uniqueExisting =
+            _dedupeItems(existing.sectionData ?? const <ItemModel>[]);
+        final List<ItemModel> combined = _dedupeItems(<ItemModel>[
+          ...uniqueExisting,
           ...?fetched.sectionData,
-        ];
+        ]);
+        final bool addedNewItems = combined.length > uniqueExisting.length;
 
         double? _minPrice(Iterable<double?> values) {
           double? result;
@@ -306,7 +380,7 @@ class FetchHomeScreenCubit extends HydratedCubit<FetchHomeScreenState> {
                 ...combined.map((e) => e.price),
               ],
             ),
-            hasMore: fetched.hasMore ?? false,
+            hasMore: (fetched.hasMore ?? false) && addedNewItems,
           ),
         );
       }
@@ -351,6 +425,19 @@ class FetchHomeScreenCubit extends HydratedCubit<FetchHomeScreenState> {
           }
         }
       }
+      final List<HomeScreenSection> normalizedSections = sections
+          .map((HomeScreenSection section) {
+            final List<ItemModel>? items = section.sectionData;
+            if (items == null || items.isEmpty) {
+              return section;
+            }
+            final List<ItemModel> uniqueItems = _dedupeItems(items);
+            if (uniqueItems.length == items.length) {
+              return section;
+            }
+            return section.copyWith(sectionData: uniqueItems);
+          })
+          .toList(growable: false);
 
       final String? interfaceType =
           _cleanInterfaceType(json['interfaceType'] as String?) ??
@@ -364,8 +451,28 @@ class FetchHomeScreenCubit extends HydratedCubit<FetchHomeScreenState> {
       _currentSlug = slug ?? _defaultSlug;
       _currentRootIdentifier = rootIdentifier ?? _defaultRootIdentifier;
 
+      _sectionPage.clear();
+      final Map<String, dynamic>? rawPages =
+          json['sectionPage'] as Map<String, dynamic>?;
+      if (rawPages != null) {
+        rawPages.forEach((key, value) {
+          final int? page = value is int
+              ? value
+              : value is num
+                  ? value.toInt()
+                  : int.tryParse(value.toString());
+          if (page != null && page > 0) {
+            _sectionPage[key] = page;
+          }
+        });
+      } else {
+        for (final HomeScreenSection section in normalizedSections) {
+          _sectionPage[_sectionKey(section)] = 1;
+        }
+      }
+
       return FetchHomeScreenSuccess(
-        sections,
+        normalizedSections,
         interfaceType: interfaceType,
         slug: slug,
         rootIdentifier: rootIdentifier,
@@ -389,6 +496,7 @@ class FetchHomeScreenCubit extends HydratedCubit<FetchHomeScreenState> {
       'interfaceType': state.interfaceType,
       'slug': state.slug,
       'rootIdentifier': state.rootIdentifier,
+      'sectionPage': _sectionPage,
       'sections': state.sections
           .map((HomeScreenSection section) => section.toJson())
           .toList(),

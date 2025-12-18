@@ -464,9 +464,20 @@ String _cartVariantSignature(Cart cart) {
     return value.toString();
   }
 
-  final variantId = (cart.variantId ?? '').trim();
-  final attrs = cart.variantAttributes ?? <String, dynamic>{};
-  return '$variantId|${normalize(attrs)}';
+  final String variantId = (cart.variantId ?? '').trim();
+  final Map<String, dynamic> attrs = cart.variantAttributes ?? <String, dynamic>{};
+  final String variantKey = (cart.variantKey ?? '').trim();
+  final List<Map<String, dynamic>> scf =
+      cart.selectedCustomFields ?? const <Map<String, dynamic>>[];
+
+  final Map<String, dynamic> normalizedScf = <String, dynamic>{};
+  for (final Map<String, dynamic> field in scf) {
+    final dynamic key = field['id'] ?? field['field_id'] ?? field['name'] ?? field['label'];
+    if (key == null) continue;
+    normalizedScf[key.toString()] = normalize(field['value'] ?? field['values']);
+  }
+
+  return '$variantId|$variantKey|${normalize(attrs)}|${normalize(normalizedScf)}';
 }
 
 bool _isDuplicateCartLine(Iterable<Cart> existingItems, Cart incoming) {
@@ -936,14 +947,6 @@ class _AdDetailsBottomBarState extends State<AdDetailsBottomBar> {
           HelperUtils.showSnackBarMessage(
             context,
             'لا يمكن إضافة هذا المنتج لأن السلة مضبوطة على عملة $existingCurrency بينما المنتج بعملة $incomingCurrency.',
-          );
-          return;
-        }
-
-        if (_isDuplicateCartLine(existingItems, cartItem)) {
-          HelperUtils.showSnackBarMessage(
-            context,
-            "productAlreadyInCart".translate(context),
           );
           return;
         }

@@ -369,6 +369,56 @@ class _CartScreenState extends State<CartScreen> {
     String? supportWhatsappLabel;
     dynamic supportWhatsappData;
 
+    const List<String> numberKeys = <String>[
+      'whatsapp_number',
+      'whatsappNumber',
+      'whatsapp',
+      'number',
+      'phone',
+      'phone_number',
+      'contact',
+      'value',
+      'recipient',
+    ];
+    const List<String> urlKeys = <String>[
+      'whatsapp_url',
+      'whatsappUrl',
+      'wa_url',
+      'waUrl',
+      'wa_link',
+      'waLink',
+      'url',
+      'link',
+      'href',
+      'ready_url',
+      'readyUrl',
+      'action_url',
+      'actionUrl',
+      'deep_link',
+      'deepLink',
+    ];
+    const List<String> messageKeys = <String>[
+      'message',
+      'default_message',
+      'defaultMessage',
+      'prefill',
+      'text',
+      'body',
+    ];
+    const List<String> labelKeys = <String>[
+      'label',
+      'title',
+      'button_label',
+      'buttonLabel',
+      'button_text',
+      'buttonText',
+      'cta',
+      'cta_text',
+      'ctaText',
+      'name',
+      'text',
+    ];
+
     if (supportMap != null) {
       supportWhatsappData = supportMap['whatsapp'] ?? supportMap['whatsApp'];
 
@@ -381,56 +431,6 @@ class _CartScreenState extends State<CartScreen> {
         whatsappMap = _firstMap(channelsMap['whatsapp']);
         supportWhatsappData ??= channelsMap['whatsapp'];
       }
-
-      const List<String> numberKeys = <String>[
-        'whatsapp_number',
-        'whatsappNumber',
-        'whatsapp',
-        'number',
-        'phone',
-        'phone_number',
-        'contact',
-        'value',
-        'recipient',
-      ];
-      const List<String> urlKeys = <String>[
-        'whatsapp_url',
-        'whatsappUrl',
-        'wa_url',
-        'waUrl',
-        'wa_link',
-        'waLink',
-        'url',
-        'link',
-        'href',
-        'ready_url',
-        'readyUrl',
-        'action_url',
-        'actionUrl',
-        'deep_link',
-        'deepLink',
-      ];
-      const List<String> messageKeys = <String>[
-        'message',
-        'default_message',
-        'defaultMessage',
-        'prefill',
-        'text',
-        'body',
-      ];
-      const List<String> labelKeys = <String>[
-        'label',
-        'title',
-        'button_label',
-        'buttonLabel',
-        'button_text',
-        'buttonText',
-        'cta',
-        'cta_text',
-        'ctaText',
-        'name',
-        'text',
-      ];
 
       supportWhatsappNumber = _firstStringValue(whatsappMap, numberKeys) ??
           _firstStringValue(supportMap, numberKeys);
@@ -463,6 +463,33 @@ class _CartScreenState extends State<CartScreen> {
           }
         }
       }
+    }
+
+    final Map<String, dynamic>? departmentPolicyMap =
+        _castToStringKeyedMap(cartState.departmentPolicy);
+    if (departmentPolicyMap != null) {
+      final dynamic policyWhatsappData = departmentPolicyMap['whatsapp'] ??
+          departmentPolicyMap['whatsApp'] ??
+          departmentPolicyMap['support'] ??
+          departmentPolicyMap['support_info'] ??
+          departmentPolicyMap['supportInfo'];
+
+      Map<String, dynamic>? whatsappMap = _firstMap(policyWhatsappData);
+      final Map<String, dynamic>? channelsMap =
+          _firstMap(departmentPolicyMap['channels']) ??
+              _firstMap(departmentPolicyMap['contact_channels']);
+      if (channelsMap != null && whatsappMap == null) {
+        whatsappMap = _firstMap(channelsMap['whatsapp']);
+      }
+
+      supportWhatsappNumber ??= _firstStringValue(whatsappMap, numberKeys) ??
+          _firstStringValue(departmentPolicyMap, numberKeys);
+      supportWhatsappUrl ??= _firstStringValue(whatsappMap, urlKeys) ??
+          _firstStringValue(departmentPolicyMap, urlKeys);
+      supportWhatsappMessage ??= _firstStringValue(whatsappMap, messageKeys) ??
+          _firstStringValue(departmentPolicyMap, messageKeys);
+      supportWhatsappLabel ??= _firstStringValue(whatsappMap, labelKeys) ??
+          _firstStringValue(departmentPolicyMap, labelKeys);
     }
 
     return AnnotatedRegion(
@@ -575,9 +602,11 @@ class _CartScreenState extends State<CartScreen> {
           onTapSafetyTipAction: _handleSafetyTipAction,
           onDismissSafetyTip: _dismissSafetyTipsBanner,
           showCouponSection: false,
-          deliveryPaymentOptions: cartState.deliveryPaymentOptions,
-          deliveryPaymentTiming: cartState.deliveryPaymentTiming,
-          onSelectDeliveryPaymentTiming: _updateDeliveryPaymentTiming,
+          // Checkout-related settings (delivery/payment timing, policies, etc.)
+          // are loaded and shown inside the checkout screen only.
+          deliveryPaymentOptions: null,
+          deliveryPaymentTiming: null,
+          onSelectDeliveryPaymentTiming: null,
           onRetry: () => _initLoad(),
           onRefresh: _initLoad,
         ),

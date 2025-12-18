@@ -1,26 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:marib/data/cubits/cart/cart_cubit.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/app_icon.dart';
 import 'dart:async' show Timer;
 import 'package:flutter/services.dart';
-
-import 'dart:async';
 
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 
 import 'dart:ui' as ui show TextDirection;
 
-import 'dart:ui';
-import 'package:flutter/rendering.dart';
-
-import 'package:flutter/widgets.dart';
 
 // الواجهة الجديدة
 
 // ⚠️ الملف المنطقي (مثلاً يُعرّف ViewMode) بنفس مكانه القديم:
-import 'package:marib/ui/screens/item/items_list.dart';
-
 enum ViewMode {
   list,
   grid,
@@ -77,10 +71,6 @@ class _SmartSearchAppBarState extends State<SmartSearchAppBar>
     with WidgetsBindingObserver {
   final FocusNode _focusNode = FocusNode();
   late final ValueNotifier<bool> _showClear;
-  final GlobalKey _cartActionKey =
-      GlobalKey(debugLabel: 'smartSearchCartAction');
-  double _cartActionWidth = 0;
-  bool _cartWidthUpdatePending = false;
 
   late final List<String> _hints;
   late final IconData _hintIcon;
@@ -106,8 +96,6 @@ class _SmartSearchAppBarState extends State<SmartSearchAppBar>
     if (_isLifecycleResumed) {
       _startHintsRotation(interval: widget.hintInterval);
     }
-
-    _scheduleCartWidthUpdate();
   }
 
   @override
@@ -139,15 +127,6 @@ class _SmartSearchAppBarState extends State<SmartSearchAppBar>
   @override
   void didUpdateWidget(covariant SmartSearchAppBar oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.showCartAction != widget.showCartAction) {
-      if (widget.showCartAction) {
-        _scheduleCartWidthUpdate();
-      } else if (_cartActionWidth != 0) {
-        setState(() {
-          _cartActionWidth = 0;
-        });
-      }
-    }
   }
 
   void _startHintsRotation({Duration interval = const Duration(seconds: 3)}) {
@@ -188,35 +167,6 @@ class _SmartSearchAppBarState extends State<SmartSearchAppBar>
     }
   }
 
-  void _scheduleCartWidthUpdate() {
-    if (_cartWidthUpdatePending || !widget.showCartAction) return;
-    _cartWidthUpdatePending = true;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) {
-        _cartWidthUpdatePending = false;
-        return;
-      }
-      final context = _cartActionKey.currentContext;
-      if (context == null) {
-        _cartWidthUpdatePending = false;
-        return;
-      }
-      final renderObject = context.findRenderObject();
-      if (renderObject is! RenderBox || !renderObject.hasSize) {
-        _cartWidthUpdatePending = false;
-        return;
-      }
-      final width = renderObject.size.width;
-      if ((_cartActionWidth - width).abs() > 0.5) {
-        setState(() {
-          _cartActionWidth = width;
-        });
-      }
-      _cartWidthUpdatePending = false;
-    });
-  }
-
   String _nextLabel(ViewMode m) {
     switch (m) {
       case ViewMode.list:
@@ -239,9 +189,6 @@ class _SmartSearchAppBarState extends State<SmartSearchAppBar>
   Widget build(BuildContext context) {
     final showHintOverlay =
         !_focusNode.hasFocus && widget.searchController.text.isEmpty;
-    if (!_cartWidthUpdatePending) {
-      _scheduleCartWidthUpdate();
-    }
 
     return AppBar(
       toolbarHeight: widget.toolbarH,
@@ -256,18 +203,8 @@ class _SmartSearchAppBarState extends State<SmartSearchAppBar>
       titleSpacing: 0,
       title: LayoutBuilder(
         builder: (context, constraints) {
-          double maxWidth = constraints.maxWidth;
-          if (widget.showCartAction && maxWidth.isFinite) {
-            final widthToSubtract = _cartActionWidth;
-            maxWidth = maxWidth - widthToSubtract;
-
-            if (maxWidth < 0) {
-              maxWidth = 0;
-            }
-          }
-
           return ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: maxWidth),
+            constraints: BoxConstraints(maxWidth: constraints.maxWidth),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 180),
               curve: Curves.easeOut,
@@ -393,17 +330,38 @@ class _SmartSearchAppBarState extends State<SmartSearchAppBar>
             mainAxisSize: MainAxisSize.min,
             children: [
               if (widget.showCartAction)
-                IconButton(
-                  key: _cartActionKey,
-                  tooltip: 'السلة',
-                  onPressed: widget.onCartTap,
-                  padding: const EdgeInsets.all(10),
-                  constraints:
-                      const BoxConstraints(minHeight: 48, minWidth: 48),
-                  icon: Icon(
-                    Icons.shopping_cart_outlined,
-                    color: context.color.territoryColor,
-                  ),
+                Builder(
+                  builder: (context) {
+                    final int cartCount =
+                        context.select<CartCubit, int>((c) => c.distinctItemsCount);
+                    return IconButton(
+                      tooltip: 'السلة',
+                      onPressed: widget.onCartTap,
+                      padding: const EdgeInsets.all(10),
+                      constraints:
+                          const BoxConstraints(minHeight: 48, minWidth: 48),
+                       icon: Stack(
+                         clipBehavior: Clip.none,
+                         children: [
+                           UiUtils.getSvg(
+                             AppIcons.cart,
+                             height: 24,
+                             width: 24,
+                             color: context.color.territoryColor,
+                           ),
+                           if (cartCount > 0)
+                             PositionedDirectional(
+                               top: -2,
+                               end: -2,
+                                child: _CartBadgeDot(
+                                  value: cartCount,
+                                  color: context.color.territoryColor,
+                                ),
+                              ),
+                         ],
+                       ),
+                     );
+                  },
                 ),
               Semantics(
                 button: true,
@@ -439,6 +397,40 @@ class _SmartSearchAppBarState extends State<SmartSearchAppBar>
             minHeight: 2,
             backgroundColor: Colors.transparent,
             color: context.color.territoryColor,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CartBadgeDot extends StatelessWidget {
+  const _CartBadgeDot({
+    required this.value,
+    required this.color,
+  });
+
+  final int value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final String text = value > 99 ? '99+' : value.toString();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+      constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(9),
+        border: Border.all(color: Colors.white, width: 1),
+      ),
+      child: Center(
+        child: Text(
+          text,
+          style: const TextStyle(
+            fontSize: 10,
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ),

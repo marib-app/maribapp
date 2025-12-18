@@ -1030,10 +1030,8 @@ class _HomeTabViewState extends State<HomeTabView> {
                                 final List<CategoryModel> sellerFiltered =
                                     _filterCategoriesByAllowedIds(
                                         rootChildren, sellerCategorySet);
-                                if (sellerFiltered.isNotEmpty) {
-                                  processedRootChildren = sellerFiltered;
-                                  sellerFilterApplied = true;
-                                }
+                                processedRootChildren = sellerFiltered;
+                                sellerFilterApplied = true;
                               }
 
                               final Set<int> allowedCategoryIds = <int>{};
@@ -1125,9 +1123,7 @@ class _HomeTabViewState extends State<HomeTabView> {
                                     sellerFilteredSubcats =
                                     _filterCategoriesByAllowedIds(
                                         visibleSubcats, sellerCategorySet!);
-                                if (sellerFilteredSubcats.isNotEmpty) {
-                                  visibleSubcats = sellerFilteredSubcats;
-                                }
+                                visibleSubcats = sellerFilteredSubcats;
                               }
                               if (hasAllowedHints) {
                                 visibleSubcats =
@@ -1219,6 +1215,8 @@ class _HomeTabViewState extends State<HomeTabView> {
                                           'categoryIds': categoryPath,
                                           'interfaceType':
                                               widget.interfaceType ?? '',
+                                          'sellerId':
+                                              widget.currentFilter?.userId,
                                         },
                                       );
                                     },
@@ -1264,6 +1262,8 @@ class _HomeTabViewState extends State<HomeTabView> {
                                           'categoryIds': categoryPath,
                                           'interfaceType':
                                               widget.interfaceType ?? '',
+                                          'sellerId':
+                                              widget.currentFilter?.userId,
                                         },
                                       );
                                     },

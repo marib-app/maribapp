@@ -1,5 +1,6 @@
 ﻿// ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:async';
+import 'dart:convert';
 import 'dart:ui';
 
 import 'package:flick_video_player/flick_video_player.dart';
@@ -829,14 +830,14 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     if (limit != null) {
       if (limit <= 0) {
         _notifyQuantityRestriction(
-          'هذه التوليفة غير متوفرة حالياً في المخزون.',
+          'This variant is out of stock.',
           color: Theme.of(context).colorScheme.error,
         );
         return;
       }
       if (_selectedQuantity >= limit) {
         _notifyQuantityRestriction(
-          'لقد وصلت للكمية المتاحة لهذه التوليفة.',
+          'No additional quantity available for this variant.',
           color: Theme.of(context).colorScheme.primary,
         );
         return;
@@ -1493,7 +1494,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'تعذر تحميل خيارات المنتج حالياً. تأكد من اتصالك بالإنترنت ثم أعد المحاولة.',
+                      'Unable to load purchase options for this item. Please refresh to try again.',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: colorScheme.error,
                         height: 1.4,
@@ -1507,7 +1508,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                 alignment: AlignmentDirectional.centerStart,
                 child: OutlinedButton.icon(
                   icon: const Icon(Icons.refresh_rounded),
-                  label: const Text('إعادة المحاولة'),
+                  label: const Text('Retry'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: colorScheme.error,
                     side: BorderSide(color: colorScheme.error.withOpacity(0.5)),
@@ -1557,7 +1558,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
         !isOutOfStock) {
       children.add(
         Text(
-          'خيارات الشراء',
+          'Choose options',
           style: Theme.of(context)
               .textTheme
               .titleMedium
@@ -1607,7 +1608,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
                 const SizedBox(width: 8),
                 Flexible(
                   child: Text(
-                    'نفد مخزون هذا المنتج',
+                    'Requested quantity is not available',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Theme.of(context).colorScheme.error,
@@ -1695,14 +1696,14 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
 
     if (key.contains('color') ||
         key.contains('colour') ||
-        key.contains('اللون')) {
+        key.contains('لون')) {
       return true;
     }
 
     final String name = attribute.name.toLowerCase();
     if (name.contains('color') ||
         name.contains('colour') ||
-        name.contains('اللون')) {
+        name.contains('لون')) {
       return true;
     }
 
@@ -1811,36 +1812,34 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
 
         if (attribute.requiredForCheckout && value.isEmpty) {
           throw CartBuildException(
-            'الرجاء اختيار قيمة للسمة "$displayName" قبل المتابعة.',
+            'Please select "$displayName" before continuing.',
           );
         }
         if (attribute.affectsStock && options.variantStocks.isNotEmpty) {
           if (value.isEmpty) {
             throw CartBuildException(
-              'اختر قيمة للسمة "$displayName" لتحديد التوليفة المتاحة في المخزون.',
+              'Select "$displayName" to set stock for this variant.',
             );
           }
         }
       }
     }
 
-    final String? variantKey = options != null
+    String? variantKey = options != null
         ? _computeVariantKey(options, selections)
         : _selectedVariantKey;
 
     final ItemVariantStockOption? stockOption =
         options != null ? _findVariantStock(variantKey) : _selectedVariantStock;
-
     if (stockOption != null && stockOption.availableStock <= 0) {
-      throw CartBuildException(
-          'التوليفة المحددة غير متوفرة حالياً في المخزون.');
+      throw CartBuildException('This variant is out of stock.');
     }
 
     if (variantKey != null &&
         options != null &&
         options.variantStocks.isNotEmpty &&
         stockOption == null) {
-      throw CartBuildException('لم يتم العثور على مخزون للتوليفة المحددة.');
+      throw CartBuildException('No matching variant stock was found.');
     }
 
     if (stockOption != null &&
@@ -1870,11 +1869,21 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
             ? null
             : selectedCustomFields;
 
+    int? syntheticVariantId;
+    if (variantKey == null || variantKey.isEmpty) {
+      final String signature = _buildSyntheticVariantSignature(
+        variantAttributes,
+        customFields,
+      );
+      syntheticVariantId = _stableHash(signature);
+    }
+
     return Cart.fromItemModel(
       item,
       quantity: _selectedQuantity,
       selectedCustomFields: customFields,
       variantKey: variantKey,
+      variantId: syntheticVariantId,
       variantAttributes: variantAttributes,
       stockSnapshot: stockSnapshot,
       unitPrice: unitPrice,
@@ -1977,6 +1986,39 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       bottomNavigationBar: _buildLoadingBottomBar(context, isOwner),
       body: _AdDetailsLoadingBody(isOwner: isOwner),
     );
+  }
+
+  String _buildSyntheticVariantSignature(
+    Map<String, dynamic>? variantAttributes,
+    List<Map<String, dynamic>>? customFields,
+  ) {
+    String normalize(dynamic value) {
+      if (value is Map) {
+        final entries = value.entries
+            .map((e) => MapEntry(e.key.toString(), normalize(e.value)))
+            .toList()
+          ..sort((a, b) => a.key.compareTo(b.key));
+        return jsonEncode({for (final e in entries) e.key: e.value});
+      }
+      if (value is List) return jsonEncode(value.map(normalize).toList());
+      return value.toString();
+    }
+
+    final Map<String, dynamic> scf = <String, dynamic>{};
+    for (final Map<String, dynamic> field
+        in customFields ?? const <Map<String, dynamic>>[]) {
+      final dynamic key =
+          field['id'] ?? field['field_id'] ?? field['name'] ?? field['label'];
+      if (key == null) continue;
+      scf[key.toString()] = normalize(field['value'] ?? field['values']);
+    }
+
+    return '${normalize(variantAttributes ?? <String, dynamic>{})}|${normalize(scf)}';
+  }
+
+  int _stableHash(String input) {
+    final int hash = input.hashCode & 0x7fffffff;
+    return hash == 0 ? 1 : hash;
   }
 
   Widget _buildOwnerBottomBar(BuildContext context) {
@@ -4299,3 +4341,4 @@ class _FetchErrorView extends StatelessWidget {
     );
   }
 }
+

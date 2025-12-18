@@ -6,16 +6,17 @@ class MerchantDisplayHelper {
 
   static String resolveDisplayName({
     required bool isMerchant,
-    Map<String, dynamic>? store,
+    dynamic store,
     dynamic additionalInfo,
     String? fallbackName,
   }) {
+    final Map<String, dynamic>? normalizedStore = _normalizeStore(store);
     final String? trimmedFallback = _string(fallbackName);
     if (!isMerchant) {
       return trimmedFallback ?? '';
     }
 
-    final String? storeName = _string(store?['name']);
+    final String? storeName = _string(normalizedStore?['name']);
     if (storeName != null) {
       return storeName;
     }
@@ -33,12 +34,13 @@ class MerchantDisplayHelper {
 
   static String? resolveProfileImage({
     required bool isMerchant,
-    Map<String, dynamic>? store,
+    dynamic store,
     String? fallbackImage,
   }) {
+    final Map<String, dynamic>? normalizedStore = _normalizeStore(store);
     final List<String?> candidates = <String?>[
-      if (isMerchant) _string(store?['logo_path']),
-      if (isMerchant) _string(store?['banner_path']),
+      if (isMerchant) _string(normalizedStore?['logo_path']),
+      if (isMerchant) _string(normalizedStore?['banner_path']),
       _string(fallbackImage),
     ];
 
@@ -48,6 +50,20 @@ class MerchantDisplayHelper {
       }
     }
 
+    return null;
+  }
+
+  static Map<String, dynamic>? _normalizeStore(dynamic raw) {
+    if (raw == null) {
+      return null;
+    }
+    if (raw is Map<String, dynamic>) {
+      return Map<String, dynamic>.from(raw);
+    }
+    if (raw is Map) {
+      return raw
+          .map((key, value) => MapEntry(key.toString(), value));
+    }
     return null;
   }
 

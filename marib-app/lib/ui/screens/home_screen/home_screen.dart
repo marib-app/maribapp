@@ -21,6 +21,7 @@ import 'package:marib/data/cubits/system/get_api_keys_cubit.dart';
 import 'package:marib/data/cubits/home/fetch_home_all_items_cubit.dart';
 import 'package:marib/data/cubits/home/fetch_home_screen_cubit.dart';
 import 'package:marib/data/cubits/notifications/unread_notifications_cubit.dart';
+import 'package:marib/data/cubits/cart/cart_cubit.dart';
 
 import 'package:marib/data/model/system_settings_model.dart';
 
@@ -89,6 +90,10 @@ class HomeScreenState extends State<HomeScreen>
     r<FetchHomeScreenCubit>().fetch(interfaceType: "homepage");
     r<FetchHomeAllItemsCubit>().fetch();
     unawaited(r<UnreadNotificationsCubit>().refresh(silent: true));
+
+    if (HiveUtils.isUserAuthenticated()) {
+      unawaited(r<CartCubit>().fetchCart().catchError((_) {}));
+    }
 
     // if (HiveUtils.isUserAuthenticated()) {
     //   fetchApiKeys(); // ← فعّلها إن كنت تحتاج مفاتيح فعلاً
@@ -171,6 +176,7 @@ class HomeScreenState extends State<HomeScreen>
     super.build(context);
     final int unreadCount =
         context.watch<UnreadNotificationsCubit>().state;
+    final int cartCount = context.watch<CartCubit>().distinctItemsCount;
 
     final List<Widget> bodySlivers = <Widget>[
       _buildHomeContentSliver(),
@@ -190,10 +196,15 @@ class HomeScreenState extends State<HomeScreen>
       mobile: '',
       profileUrl: '',
       isVerified: false,
-      cartCount: 0,
+      cartCount: cartCount,
       notifCount: unreadCount,
       onAvatarTap: null,
-      onCartTap: () {},
+      onCartTap: () {
+        UiUtils.checkUser(
+          context: context,
+          onNotGuest: () => Navigator.pushNamed(context, Routes.cart),
+        );
+      },
       onNotificationTap: () {},
       onInfoTap: () {},
     );

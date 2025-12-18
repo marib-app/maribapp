@@ -144,7 +144,9 @@ ManagedAttributeType _resolveManagedAttributeType(
   }
 
   final String normalizedName = attribute.name.toLowerCase();
-  if (normalizedName.contains('????') || normalizedName.contains('size')) {
+  if (normalizedName.contains('مقاس') ||
+      normalizedName.contains('مقاسات') ||
+      normalizedName.contains('size')) {
     return ManagedAttributeType.size;
   }
 
@@ -154,11 +156,11 @@ ManagedAttributeType _resolveManagedAttributeType(
 String _defaultAttributeName(ManagedAttributeType type) {
   switch (type) {
     case ManagedAttributeType.color:
-      return '?????';
+      return 'الألوان المتوفرة';
     case ManagedAttributeType.size:
-      return '??????';
+      return 'المقاسات المتاحة';
     case ManagedAttributeType.custom:
-      return '??? ??????';
+      return '';
   }
 }
 
@@ -190,9 +192,7 @@ List<CustomFieldColorEntry> _normalizeColorEntries(
   return normalized.values.toList(growable: false);
 }
 
-
 final RegExp _hexColorPattern = RegExp(r'^[0-9A-F]{6}$');
-
 
 double? _normalizeDeliverySize(dynamic value) {
   if (value == null) {
@@ -233,8 +233,12 @@ ManagedPurchaseAttribute _createManagedAttribute(
   ItemPurchaseAttributeOption option,
 ) {
   final ManagedAttributeType type = _resolveManagedAttributeType(option);
-  final String name =
-      option.name.isEmpty ? _defaultAttributeName(type) : option.name;
+  final String name;
+  if (type == ManagedAttributeType.color || type == ManagedAttributeType.size) {
+    name = _defaultAttributeName(type);
+  } else {
+    name = option.name.isEmpty ? _defaultAttributeName(type) : option.name;
+  }
   final Map<String, dynamic> metadata =
       Map<String, dynamic>.from(option.metadata ?? const <String, dynamic>{});
 
@@ -314,7 +318,6 @@ class ManagedPurchaseAttribute extends Equatable {
   final Map<String, dynamic> metadata;
   final int? position;
 
-
   Set<String> get suggestedColorCodes {
     final Set<String> codes = <String>{};
 
@@ -349,8 +352,11 @@ class ManagedPurchaseAttribute extends Equatable {
         return;
       }
       final String raw = source.toString();
-      if (raw.contains(',') || raw.contains(' ') || raw.contains(';') ||
-          raw.contains('|') || raw.contains('/')) {
+      if (raw.contains(',') ||
+          raw.contains(' ') ||
+          raw.contains(';') ||
+          raw.contains('|') ||
+          raw.contains('/')) {
         final Iterable<String> parts = raw
             .split(RegExp(r"[\s,;|/]+"))
             .where((String element) => element.isNotEmpty);
@@ -418,7 +424,7 @@ class ManagedPurchaseAttribute extends Equatable {
             .map((CustomFieldColorEntry entry) =>
                 '${entry.code}:${entry.quantity ?? ''}')
             .join('|'),
-        options.join('|'),
+        "${options.length}|${options.join('|')}",
         metadata.entries
             .map((MapEntry<String, dynamic> entry) =>
                 '${entry.key}:${entry.value}')
@@ -472,7 +478,6 @@ class VariantStockFormState extends Equatable {
       ];
 }
 
-
 class ProductVariant extends Equatable {
   const ProductVariant({
     required this.id,
@@ -494,20 +499,18 @@ class ProductVariant extends Equatable {
 
   @override
   List<Object?> get props => <Object?>[
-    id,
-    attributes.entries
-        .map((MapEntry<String, String> entry) =>
-    '${entry.key}:${entry.value}')
-        .join('|'),
-    stock,
-    hidden,
-    lastVisibleStock,
-    reservedStock,
-    availableStock,
-  ];
+        id,
+        attributes.entries
+            .map((MapEntry<String, String> entry) =>
+                '${entry.key}:${entry.value}')
+            .join('|'),
+        stock,
+        hidden,
+        lastVisibleStock,
+        reservedStock,
+        availableStock,
+      ];
 }
-
-
 
 class ProductManagementState extends Equatable {
   const ProductManagementState({
@@ -594,7 +597,6 @@ class ProductManagementState extends Equatable {
   final String deliverySizeInput;
   final String? deliverySizeError;
 
-
   bool get loadingAttributes => loading && options == null;
 
   List<ItemPurchaseAttributeOption> get availableAttributes {
@@ -607,7 +609,7 @@ class ProductManagementState extends Equatable {
         .toSet();
     return currentOptions.attributes
         .where((ItemPurchaseAttributeOption attribute) =>
-    !managedKeys.contains(attribute.key))
+            !managedKeys.contains(attribute.key))
         .toList(growable: false);
   }
 
@@ -618,23 +620,21 @@ class ProductManagementState extends Equatable {
 
     final ItemPurchaseOptions? currentOptions = options;
     final Map<String, ItemVariantStockOption> stockMap =
-    <String, ItemVariantStockOption>{};
+        <String, ItemVariantStockOption>{};
 
     if (currentOptions != null) {
-      for (final ItemVariantStockOption entry
-      in currentOptions.variantStocks) {
+      for (final ItemVariantStockOption entry in currentOptions.variantStocks) {
         stockMap[entry.variantKey] = entry;
       }
     }
 
     final List<MapEntry<String, VariantStockFormState>> entries =
-    variantForms.entries.toList()
-      ..sort((MapEntry<String, VariantStockFormState> a,
-          MapEntry<String, VariantStockFormState> b) =>
-          a.key.compareTo(b.key));
+        variantForms.entries.toList()
+          ..sort((MapEntry<String, VariantStockFormState> a,
+                  MapEntry<String, VariantStockFormState> b) =>
+              a.key.compareTo(b.key));
 
-    return entries
-        .map((MapEntry<String, VariantStockFormState> entry) {
+    return entries.map((MapEntry<String, VariantStockFormState> entry) {
       final VariantStockFormState form = entry.value;
       final ItemVariantStockOption? stockOption = stockMap[entry.key];
       return ProductVariant(
@@ -646,8 +646,7 @@ class ProductManagementState extends Equatable {
         reservedStock: stockOption?.reservedStock,
         availableStock: stockOption?.availableStock,
       );
-    })
-        .toList(growable: false);
+    }).toList(growable: false);
   }
 
   bool get hasLoaded => options != null;
@@ -823,7 +822,8 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
   PendingProductOptions? get pendingProductOptions => _pendingProductOptions;
 
   static const String genericSuccessMessage = '?? ??? ????????? ?????.';
-  static const String genericFailureMessage = '???? ??? ????????? ???? ??? ????.';
+  static const String genericFailureMessage =
+      '???? ??? ????????? ???? ??? ????.';
 
   Future<void> initialize() async {
     final int? itemId = item.id;
@@ -893,9 +893,12 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     _updateAttributeOptions(key, current);
   }
 
-
   void toggleAttributeOption(String key, String value) {
     toggleAttributeValue(key, value);
+  }
+
+  void setAttributeOptions(String key, List<String> options) {
+    _updateAttributeOptions(key, options);
   }
 
   void _updateAttributeOptions(String key, List<String> options,
@@ -905,7 +908,16 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       return;
     }
 
-    final List<String> sanitized = _normalizeOptionValues(options);
+    final List<String> sanitized;
+    final List<String> selectionSource;
+    if (attribute.type == ManagedAttributeType.custom) {
+      sanitized =
+          options.map((String value) => value.trim()).toList(growable: false);
+      selectionSource = _normalizeOptionValues(sanitized);
+    } else {
+      sanitized = _normalizeOptionValues(options);
+      selectionSource = sanitized;
+    }
     final List<ManagedPurchaseAttribute> nextManaged = state.managedAttributes
         .map((ManagedPurchaseAttribute item) =>
             item.key == key ? item.copyWith(options: sanitized) : item)
@@ -913,10 +925,10 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
 
     final Map<String, List<String>> nextSelections =
         Map<String, List<String>>.from(state.attributeSelections);
-    if (sanitized.isEmpty) {
+    if (selectionSource.isEmpty) {
       nextSelections.remove(key);
     } else {
-      nextSelections[key] = _sortedSelectionsFromOptions(sanitized);
+      nextSelections[key] = _sortedSelectionsFromOptions(selectionSource);
     }
 
     emit(state.copyWith(
@@ -987,7 +999,6 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     _recomputeVariantState();
   }
 
-
   void addAttributeFromOption(ItemPurchaseAttributeOption option) {
     if (state.attributeByKey(option.key) != null) {
       return;
@@ -1000,16 +1011,16 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     );
 
     final Map<String, List<String>> nextSelections =
-    Map<String, List<String>>.from(state.attributeSelections);
+        Map<String, List<String>>.from(state.attributeSelections);
     final Map<String, List<CustomFieldColorEntry>> nextColorSelections =
-    Map<String, List<CustomFieldColorEntry>>.from(state.colorSelections);
+        Map<String, List<CustomFieldColorEntry>>.from(state.colorSelections);
     final Map<String, String> nextTextInputs =
-    Map<String, String>.from(state.textInputs);
+        Map<String, String>.from(state.textInputs);
 
     if (attribute.type == ManagedAttributeType.color) {
       if (attribute.colorEntries.isNotEmpty) {
         final List<CustomFieldColorEntry> entries =
-        attribute.colorEntries.toList(growable: false);
+            attribute.colorEntries.toList(growable: false);
         nextColorSelections[attribute.key] = entries;
         final List<String> codes = entries
             .map((CustomFieldColorEntry entry) => entry.code)
@@ -1040,9 +1051,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
 
   void addCustomAttribute({String? name}) {
     final String key = _generateTemporaryAttributeKey('custom');
-    final String resolvedName = (name ?? '').trim().isEmpty
-        ? _defaultAttributeName(ManagedAttributeType.custom)
-        : name!.trim();
+    final String resolvedName = (name ?? '').trim();
     final ManagedPurchaseAttribute attribute = ManagedPurchaseAttribute(
       id: null,
       key: key,
@@ -1094,9 +1103,15 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       return;
     }
 
-    final String normalized = name.trim().isEmpty
-        ? _defaultAttributeName(attribute.type)
-        : name.trim();
+    final String normalized;
+    if (attribute.type == ManagedAttributeType.color ||
+        attribute.type == ManagedAttributeType.size) {
+      normalized = _defaultAttributeName(attribute.type);
+    } else {
+      normalized = name.trim().isEmpty
+          ? _defaultAttributeName(attribute.type)
+          : name.trim();
+    }
 
     final List<ManagedPurchaseAttribute> next = state.managedAttributes
         .map((ManagedPurchaseAttribute item) =>
@@ -1112,7 +1127,6 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
   void renameAttribute(String key, String name) {
     setAttributeName(key, name);
   }
-
 
   void setAttributeRequired(String key, bool required) {
     final ManagedPurchaseAttribute? attribute = state.attributeByKey(key);
@@ -1157,8 +1171,14 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       return;
     }
 
-    final String resolved =
-        (value ?? '???? ${attribute.options.length + 1}').trim();
+    final String resolved;
+    if (value != null) {
+      resolved = value.trim();
+    } else if (attribute.type == ManagedAttributeType.custom) {
+      resolved = '';
+    } else {
+      resolved = 'الخيار ${attribute.options.length + 1}';
+    }
     final List<String> options = <String>[...attribute.options, resolved];
     _updateAttributeOptions(key, options);
   }
@@ -1263,20 +1283,17 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       return;
     }
 
-    final String asciiDigits = value
-        .replaceAllMapped(
+    final String asciiDigits = value.replaceAllMapped(
       RegExp('[0-9?-?]'),
-          (Match match) {
+      (Match match) {
         final int codeUnit = match.group(0)!.codeUnitAt(0);
         final int base = codeUnit >= 0x06F0 ? 0x06F0 : 0x0660;
         return (codeUnit - base).toString();
       },
-    )
-        .replaceAll('?', '.');
+    ).replaceAll('?', '.');
 
-    final String sanitized = asciiDigits
-        .replaceAll(',', '.')
-        .replaceAll('?', '.');
+    final String sanitized =
+        asciiDigits.replaceAll(',', '.').replaceAll('?', '.');
 
     final String trimmed = sanitized.trim();
 
@@ -1390,7 +1407,6 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     emit(state.copyWith(variantForms: next));
   }
 
-
   void updateVariantStock(ProductVariant variant, int? stock) {
     setVariantStock(variant.id, stock ?? 0);
   }
@@ -1438,7 +1454,6 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     emit(state.copyWith(variantForms: next));
   }
 
-
   void resetVariantStocks() {
     final ItemPurchaseOptions? currentOptions = state.options;
     if (currentOptions == null) {
@@ -1447,8 +1462,8 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
 
     if (!state.hasStockVariants) {
       final ItemVariantStockOption generalStockOption =
-      currentOptions.variantStocks.firstWhere(
-            (ItemVariantStockOption element) => element.variantKey.trim().isEmpty,
+          currentOptions.variantStocks.firstWhere(
+        (ItemVariantStockOption element) => element.variantKey.trim().isEmpty,
         orElse: () => const ItemVariantStockOption(
           variantKey: '',
           stock: 0,
@@ -1465,7 +1480,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     }
 
     final Map<String, ItemVariantStockOption> stockMap =
-    <String, ItemVariantStockOption>{};
+        <String, ItemVariantStockOption>{};
     for (final ItemVariantStockOption entry in currentOptions.variantStocks) {
       if (entry.variantKey.trim().isEmpty) {
         continue;
@@ -1474,7 +1489,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     }
 
     final Map<String, VariantStockFormState> nextForms =
-    <String, VariantStockFormState>{};
+        <String, VariantStockFormState>{};
     bool changed = false;
 
     state.variantForms.forEach((String key, VariantStockFormState form) {
@@ -1501,17 +1516,14 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     }
   }
 
-
   void setGeneralStock(int stock) {
     final int normalized = stock < 0 ? 0 : stock;
     emit(state.copyWith(generalStock: normalized));
   }
 
-
   void updateGeneralStock(int? stock) {
     setGeneralStock(stock ?? 0);
   }
-
 
   Future<SubmissionOutcome> saveStock() async {
     final SubmissionOutcome? ensureOutcome = await _ensureItemExists();
@@ -1586,7 +1598,6 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       ));
     }
 
-
     final List<Map<String, dynamic>> attributesPayload =
         <Map<String, dynamic>>[];
 
@@ -1624,7 +1635,8 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
           break;
         case ManagedAttributeType.size:
         case ManagedAttributeType.custom:
-          final List<String> options = attribute.options;
+          final List<String> options =
+              _normalizeOptionValues(attribute.options);
           if ((attribute.requiredForCheckout || attribute.affectsStock) &&
               options.isEmpty) {
             return _AttributesPayloadResult.failure(SubmissionOutcome(
@@ -1777,8 +1789,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
   Future<SubmissionOutcome> _persistDiscount(
       int itemId, Map<String, dynamic> payload) async {
     try {
-      final PurchaseOptionsUpdateResult result =
-          await _repository.saveDiscount(
+      final PurchaseOptionsUpdateResult result = await _repository.saveDiscount(
         itemId: itemId,
         payload: payload,
       );
@@ -1801,7 +1812,6 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       return _failureOutcome(message, fallback: fallbackMessage);
     }
   }
-
 
   SubmissionOutcome _storePendingProductOptions(
     _AttributesPayloadResult attributesResult,
@@ -1829,21 +1839,16 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     _applyOptions(derived, finalPrice: derived.finalPrice);
   }
 
-  ItemPurchaseOptions _buildOptionsFromPending(
-      PendingProductOptions pending) {
-    final List<Map<String, dynamic>> attributePayload =
-        pending.attributes
-            .map((Map<String, dynamic> entry) =>
-                Map<String, dynamic>.from(entry))
-            .toList(growable: false);
+  ItemPurchaseOptions _buildOptionsFromPending(PendingProductOptions pending) {
+    final List<Map<String, dynamic>> attributePayload = pending.attributes
+        .map((Map<String, dynamic> entry) => Map<String, dynamic>.from(entry))
+        .toList(growable: false);
 
     final List<Map<String, dynamic>> stockPayload =
         pending.stockRows.map((Map<String, dynamic> entry) {
-      final Map<String, dynamic> normalized =
-          Map<String, dynamic>.from(entry);
+      final Map<String, dynamic> normalized = Map<String, dynamic>.from(entry);
       final int stock = _normalizeStockValue(normalized['stock']);
-      final int reserved =
-          _normalizeStockValue(normalized['reserved_stock']);
+      final int reserved = _normalizeStockValue(normalized['reserved_stock']);
       final int available = normalized.containsKey('available_stock')
           ? _normalizeStockValue(normalized['available_stock'])
           : stock;
@@ -2051,8 +2056,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       if (!pendingStock.isSuccess) {
         return pendingStock.outcome!;
       }
-      final _DiscountPayloadResult pendingDiscount =
-          _buildDiscountPayload();
+      final _DiscountPayloadResult pendingDiscount = _buildDiscountPayload();
       if (!pendingDiscount.isSuccess) {
         return pendingDiscount.outcome!;
       }
@@ -2129,12 +2133,12 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
 
     return _successOutcome(lastOutcome.message);
   }
+
   Future<SubmissionOutcome> submitAllAndReview() async {
     final SubmissionOutcome outcome = await submitAll();
 
     if (outcome.success) {
-      final String normalized =
-          _normalizeOutcomeMessage(
+      final String normalized = _normalizeOutcomeMessage(
         outcome.message,
         success: true,
         fallback: genericSuccessMessage,
@@ -2145,8 +2149,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       return SubmissionOutcome(success: true, message: normalized);
     }
 
-    final String normalized =
-        _normalizeOutcomeMessage(
+    final String normalized = _normalizeOutcomeMessage(
       outcome.message,
       success: false,
       fallback: genericFailureMessage,
@@ -2599,6 +2602,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     final String text = value.toString().trim();
     return text.isEmpty ? null : text;
   }
+
   SubmissionOutcome _successOutcome(String message, {String? fallback}) {
     return SubmissionOutcome(
       success: true,
@@ -2652,8 +2656,3 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     return sanitized;
   }
 }
-
-
-
-
-

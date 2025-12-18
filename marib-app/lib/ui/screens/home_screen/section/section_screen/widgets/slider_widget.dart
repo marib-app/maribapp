@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shimmer/shimmer.dart';
 
 import 'package:marib/data/cubits/category/fetch_category_cubit.dart';
+import 'package:marib/data/model/category_model.dart';
 import 'package:marib/utils/slider_interface_mapper.dart';
 import 'package:flutter/foundation.dart';
 import 'package:marib/ui/theme/extensions/shimmer_colors.dart';
@@ -346,10 +347,18 @@ class _PcSliderWidgetState extends State<PcSliderWidget> {
   ) {
     try {
       final parent = state.categories.firstWhere((c) => c.id == parentId);
-      final children = parent.children ?? const [];
+      final List<CategoryModel> children =
+          parent.children ?? const <CategoryModel>[];
+      final Set<int>? sellerSet = _sellerCategoryIdSet;
+      final bool restrictBySeller = sellerSet != null && sellerSet.isNotEmpty;
+      final List<CategoryModel> visibleChildren = restrictBySeller
+          ? children
+              .where((child) => _categoryMatchesAllowed(child, sellerSet))
+              .toList(growable: false)
+          : children;
       final List<Map<String, dynamic>> base = [
         {'id': 0, 'name': 'الكل'},
-        ...children.map((c) => {'id': c.id, 'name': c.name}),
+        ...visibleChildren.map((c) => {'id': c.id, 'name': c.name}),
       ];
       return _reorderForSellerCategories(base);
     } catch (e) {
@@ -371,6 +380,29 @@ class _PcSliderWidgetState extends State<PcSliderWidget> {
       }
     }
     return normalized.isEmpty ? null : normalized;
+  }
+
+  bool _categoryMatchesAllowed(
+    CategoryModel category,
+    Set<int> allowedIds,
+  ) {
+    final int? categoryId = category.id;
+    if (categoryId != null && allowedIds.contains(categoryId)) {
+      return true;
+    }
+
+    final List<CategoryModel>? children = category.children;
+    if (children == null || children.isEmpty) {
+      return false;
+    }
+
+    for (final CategoryModel child in children) {
+      if (_categoryMatchesAllowed(child, allowedIds)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   List<Map<String, dynamic>> _reorderForSellerCategories(

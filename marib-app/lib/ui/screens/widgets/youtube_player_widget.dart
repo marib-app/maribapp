@@ -10,7 +10,10 @@ class YoutubePlayerWidget extends StatefulWidget {
       {super.key,
       required this.videoUrl,
       required this.onLandscape,
-      required this.onPortrate});
+      required this.onPortrate,
+      this.enableCaptions = false});
+
+  final bool enableCaptions;
 
   @override
   State<YoutubePlayerWidget> createState() => _YoutubePlayerWidgetState();
@@ -28,15 +31,16 @@ class _YoutubePlayerWidgetState extends State<YoutubePlayerWidget> {
     if(getVideoId()!=null) {
       controller = YoutubePlayerController(
         initialVideoId: getVideoId()!,
-        flags: const YoutubePlayerFlags(
+        flags: YoutubePlayerFlags(
           showLiveFullscreenButton: true,
           autoPlay: false,
+          enableCaption: widget.enableCaptions,
         ),
       );
     }
     super.initState();
   }
-
+ 
   @override
   Widget build(BuildContext context) {
     return getVideoId()!=null?SizedBox(

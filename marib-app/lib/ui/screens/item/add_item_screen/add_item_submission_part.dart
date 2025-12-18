@@ -16,26 +16,26 @@ class AddItemDetailsSubmissionService {
   int _screenStack = 0;
 
   final List<Map<String, String>> arabCountries = const <Map<String, String>>[
-    {'name': '╪د┘┘è┘à┘', 'code': '+967'},
-    {'name': '╪د┘╪│╪╣┘ê╪»┘è╪ر', 'code': '+966'},
-    {'name': '┘à╪╡╪▒', 'code': '+20'},
-    {'name': '╪د┘╪ح┘à╪د╪▒╪د╪ز', 'code': '+971'},
-    {'name': '╪د┘╪ث╪▒╪»┘', 'code': '+962'},
-    {'name': '╪│┘ê╪▒┘è╪د', 'code': '+963'},
-    {'name': '╪د┘╪╣╪▒╪د┘é', 'code': '+964'},
-    {'name': '╪د┘┘â┘ê┘è╪ز', 'code': '+965'},
-    {'name': '╪د┘╪ذ╪ص╪▒┘è┘', 'code': '+973'},
-    {'name': '┘é╪╖╪▒', 'code': '+974'},
-    {'name': '╪╣┘┘à╪د┘', 'code': '+968'},
-    {'name': '╪د┘╪ش╪▓╪د╪خ╪▒', 'code': '+213'},
-    {'name': '╪ز┘ê┘╪│', 'code': '+216'},
-    {'name': '┘┘è╪ذ┘è╪د', 'code': '+218'},
-    {'name': '╪د┘┘à╪║╪▒╪ذ', 'code': '+212'},
-    {'name': '┘à┘ê╪▒┘è╪ز╪د┘┘è╪د', 'code': '+222'},
-    {'name': '┘┘╪│╪╖┘è┘', 'code': '+970'},
-    {'name': '┘╪ذ┘╪د┘', 'code': '+961'},
-    {'name': '╪د┘╪│┘ê╪»╪د┘', 'code': '+249'},
-    {'name': '╪ش┘è╪ذ┘ê╪ز┘è', 'code': '+253'},
+    {'name': 'اليمن', 'code': '+967'},
+    {'name': 'السعودية', 'code': '+966'},
+    {'name': 'مصر', 'code': '+20'},
+    {'name': 'الإمارات', 'code': '+971'},
+    {'name': 'الأردن', 'code': '+962'},
+    {'name': 'سوريا', 'code': '+963'},
+    {'name': 'العراق', 'code': '+964'},
+    {'name': 'الكويت', 'code': '+965'},
+    {'name': 'البحرين', 'code': '+973'},
+    {'name': 'قطر', 'code': '+974'},
+    {'name': 'عُمان', 'code': '+968'},
+    {'name': 'الجزائر', 'code': '+213'},
+    {'name': 'تونس', 'code': '+216'},
+    {'name': 'ليبيا', 'code': '+218'},
+    {'name': 'المغرب', 'code': '+212'},
+    {'name': 'موريتانيا', 'code': '+222'},
+    {'name': 'فلسطين', 'code': '+970'},
+    {'name': 'لبنان', 'code': '+961'},
+    {'name': 'السودان', 'code': '+249'},
+    {'name': 'جيبوتي', 'code': '+253'},
   ];
 
 // add_item_details_submission_service.dart
@@ -46,18 +46,18 @@ class AddItemDetailsSubmissionService {
     required String storeRootId,        // Constant.storeRootCategoryIdAsString
   }) {
     final it = (interfaceType ?? '').toLowerCase().trim();
-    // ╪د┘╪ث┘é╪│╪د┘à ╪د┘┘à╪│┘à┘ê╪ص ╪ذ┘ç╪د ╪ذ╪د┘╪د╪│┘à
+    // الأقسام المسموح بها بالاسم
     const allowedTypes = {'shein_products', 'computer_section'};
     if (allowedTypes.contains(it)) return true;
     if (isSheinCategory) return true;
 
-    // ┘╪ص╪╡ ╪ذ╪د┘┘à╪╣╪▒┘ّ┘╪د╪ز (┘à┘ ╪د┘┘é┘è┘à ╪د┘╪ز┘è ╪ث╪╣╪╖┘è╪ز┘┘è┘ç╪د)
+    // فحص بالمعرفات (من القيم التي أعطيتنيها)
     final ids = {
       ...?(categoryIds?.map((e) => e.toString())),
     };
-    if (ids.contains(storeRootId)) return true; // ┘à╪ز╪ش╪▒
-    if (ids.contains('4')) return true;         // ╪┤┘è ╪ح┘ root = 4
-    if (ids.contains('5')) return true;         // ┘â┘à╪ذ┘è┘ê╪ز╪▒ root = 5
+    if (ids.contains(storeRootId)) return true; // متجر
+    if (ids.contains('4')) return true;         // شي إن root = 4
+    if (ids.contains('5')) return true;         // كمبيوتر root = 5
     return false;
   }
 
@@ -66,10 +66,11 @@ class AddItemDetailsSubmissionService {
   Future<void> openProductManagementOrCreateDraft(BuildContext context) async {
     final ItemModel current = model.item ?? ItemModel();
 
-    // ╪ز╪ص┘é┘ّ┘é ╪د┘┘é╪│┘à (┘à╪ز╪ش╪▒/┘â┘à╪ذ┘è┘ê╪ز╪▒/╪┤┘è ╪ح┘)
+    // تحقق القسم (متجر/كمبيوتر/شي إن)
     if (!supportsProductOptionsForItem(current)) {
       HelperUtils.showSnackBarMessage(
-        context, '╪«┘è╪د╪▒╪د╪ز ╪د┘┘à┘╪ز╪ش ┘à╪ز╪د╪ص╪ر ┘┘é╪╖ ┘╪ث┘é╪│╪د┘à ╪د┘┘à╪ز╪ش╪▒ ╪ث┘ê ╪د┘┘â┘à╪ذ┘è┘ê╪ز╪▒ ╪ث┘ê ╪┤┘è ╪ح┘',
+        context,
+        'خيارات المنتج متاحة فقط لأقسام المتجر أو الكمبيوتر أو شي إن',
       );
       return;
     }
@@ -99,18 +100,18 @@ class AddItemDetailsSubmissionService {
     } catch (e) {
       if (kDebugMode) print('[debug] openProductManagementOrCreateDraft error: $e');
     }
-    // ┘┘ê ╪╣┘╪»┘ç id ╪ش╪د┘ç╪▓: ╪د┘╪ز╪ص ┘à╪ذ╪د╪┤╪▒╪ر
+    // لو عنده id جاهز: افتح مباشرة
     
     if (id > 0) {
       Navigator.pushNamed(
         context,
         Routes.productManagementScreen,
-        arguments: current, // ┘è╪»╪╣┘à┘ç _resolveItem(arguments)
+        arguments: current, // يدعمه _resolveItem(arguments)
       );
       return;
     }
 
-    // ┘à╪د ┘┘è id ظçْ ╪ث┘╪┤╪خ ┘à╪│┘ê╪»╪ر ╪│╪▒┘è╪╣╪ر ╪ذ╪»┘ê┘ ┘à┘ê┘é╪╣ (╪ز╪ص╪ز╪د╪ش ╪╡┘ê╪▒╪ر ╪╣┘┘ë ╪د┘╪ث┘é┘)
+    // ما في id ⇒ أنشئ مسودة سريعة بدون موقع (تحتاج صورة على الأقل)
     // Build mainImageFile and galleryFiles considering Map entries
     final List<File> galleryFiles = <File>[];
     File? flaggedMainFile;
@@ -169,7 +170,7 @@ class AddItemDetailsSubmissionService {
     if (!stored.containsKey('price')) {
       stored['price'] = model.adPriceController.text.trim();
     }
-    if (!stored.containsKey('currency')) {
+    if (!stored.containsKey('currency') && model.selectedCurrency != null) {
       stored['currency'] = model.selectedCurrency;
     }
     if (!stored.containsKey('contact')) {
@@ -285,6 +286,23 @@ class AddItemDetailsSubmissionService {
       return;
     }
 
+    final String rawPrice = model.adPriceController.text.trim();
+    if (rawPrice.isEmpty) {
+      HelperUtils.showSnackBarMessage(
+        context,
+        'الرجاء إدخال سعر الإعلان',
+      );
+      return;
+    }
+
+    if ((model.selectedCurrency ?? '').trim().isEmpty) {
+      HelperUtils.showSnackBarMessage(
+        context,
+        'الرجاء اختيار العملة',
+      );
+      return;
+    }
+
     model.resetLegacyCustomFields();
 
     final List<File> galleryFiles = <File>[];
@@ -324,8 +342,8 @@ class AddItemDetailsSubmissionService {
       UiUtils.showBlurredDialoge(
         context,
         dialoge: const BlurredDialogBox(
-          title: '╪د┘╪╡┘ê╪▒╪ر ┘à╪╖┘┘ê╪ذ╪ر',
-          content: Text('┘è╪▒╪ش┘ë ╪د╪«╪ز┘è╪د╪▒ ╪╡┘ê╪▒╪ر ┘ê╪د╪ص╪»╪ر ╪╣┘┘ë ╪د┘╪ث┘é┘ ┘╪ح╪╣┘╪د┘┘â.'),
+          title: 'الصورة مطلوبة',
+          content: Text('يرجى اختيار صورة واحدة على الأقل لإعلانك.'),
         ),
       );
       return;
@@ -869,7 +887,7 @@ class AddItemDetailsSubmissionService {
     if (!model.isEdit && mainImageFile == null) {
       HelperUtils.showSnackBarMessage(
         context,
-        '┘è╪▒╪ش┘ë ╪ح╪╢╪د┘╪ر ╪╡┘ê╪▒╪ر ╪▒╪خ┘è╪│┘è╪ر ┘é╪ذ┘ ╪د┘┘à╪ز╪د╪ذ╪╣╪ر.',
+        'يرجى إضافة صورة رئيسية قبل المتابعة.',
       );
       return null;
     }

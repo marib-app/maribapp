@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
+import 'package:marib/utils/ui_utils.dart';
 
 class SheinGrabberPage extends StatefulWidget {
   final String startUrl;
@@ -274,15 +276,41 @@ class _SheinGrabberPageState extends State<SheinGrabberPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
+    final ThemeData theme = Theme.of(context);
+    final Color scaffoldBackgroundColor = theme.scaffoldBackgroundColor;
+    final Color appBarForegroundColor =
+        theme.appBarTheme.foregroundColor ?? theme.colorScheme.onSurface;
+    final SystemUiOverlayStyle overlay = UiUtils.getSystemUiOverlayStyle(
+      context: context,
+      statusBarColor: scaffoldBackgroundColor,
+    );
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: overlay,
+      child: Scaffold(
+        backgroundColor: scaffoldBackgroundColor,
+        appBar: AppBar(
+        systemOverlayStyle: overlay,
+        backgroundColor: scaffoldBackgroundColor,
+        foregroundColor: appBarForegroundColor,
         title: const Text('جلب منتج شي-إن'),
         actions: [
           TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: appBarForegroundColor,
+            ),
             onPressed: _extracting ? null : _extract,
             child: _extracting
-                ? const CircularProgressIndicator()
-                : const Text('استخراج', style: TextStyle(color: Colors.white)),
+                ? SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(appBarForegroundColor),
+                    ),
+                  )
+                : const Text('استخراج'),
           ),
         ],
       ),
@@ -323,6 +351,7 @@ class _SheinGrabberPageState extends State<SheinGrabberPage> {
       )
           : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      ),
     );
   }
 }

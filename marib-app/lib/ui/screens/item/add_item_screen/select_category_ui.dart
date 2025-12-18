@@ -63,29 +63,25 @@ class SelectCategoryUI extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    // Use transparent status bar to blend with the screen and adjust icons per theme.
-    final Color statusColor = Colors.transparent;
-    final Brightness iconBrightness =
-        theme.brightness == Brightness.dark ? Brightness.light : Brightness.dark;
-
-    final SystemUiOverlayStyle overlay = SystemUiOverlayStyle(
-      statusBarColor: statusColor,
-      statusBarIconBrightness: iconBrightness,
-      statusBarBrightness: theme.brightness,
-      systemNavigationBarColor: statusColor,
-      systemNavigationBarIconBrightness: iconBrightness,
+    final Color scaffoldBackgroundColor = theme.scaffoldBackgroundColor;
+    final SystemUiOverlayStyle overlay = UiUtils.getSystemUiOverlayStyle(
+      context: context,
+      statusBarColor: scaffoldBackgroundColor,
     );
-    SystemChrome.setSystemUIOverlayStyle(overlay);
 
-    return AnnotatedRegion(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
       value: overlay,
       child: SafeArea(
+        top: false,
         child: Scaffold(
+          backgroundColor: scaffoldBackgroundColor,
           appBar: UiUtils.buildAppBar(
             context,
             showBackButton: true,
             title: "adListing".translate(context),
             onBackPress: onBackToRoot,
+            backgroundColor: scaffoldBackgroundColor,
+            statusBarColor: scaffoldBackgroundColor,
           ),
           body: SingleChildScrollView(
             controller: controller,
@@ -267,21 +263,28 @@ class SelectNestedCategoryUI extends StatelessWidget {
   // ----------------------------------------------------------------------
   @override
   Widget build(BuildContext context) {
-    return AnnotatedRegion(
-      value: UiUtils.getSystemUiOverlayStyle(
-        context: context,
-        statusBarColor: context.color.secondaryColor,
-      ),
+    final ThemeData theme = Theme.of(context);
+    final Color scaffoldBackgroundColor = theme.scaffoldBackgroundColor;
+    final SystemUiOverlayStyle overlay = UiUtils.getSystemUiOverlayStyle(
+      context: context,
+      statusBarColor: scaffoldBackgroundColor,
+    );
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: overlay,
       child: PopScope(
         canPop: true,
         onPopInvoked: onSystemBackDidPop,
         child: SafeArea(
+          top: false,
           child: Scaffold(
-            backgroundColor: context.color.backgroundColor,
+            backgroundColor: scaffoldBackgroundColor,
             appBar: UiUtils.buildAppBar(
               context,
               showBackButton: true,
               title: "adListing".translate(context),
+              backgroundColor: scaffoldBackgroundColor,
+              statusBarColor: scaffoldBackgroundColor,
             ),
             body: Padding(
               padding: const EdgeInsets.only(top: 0.0),

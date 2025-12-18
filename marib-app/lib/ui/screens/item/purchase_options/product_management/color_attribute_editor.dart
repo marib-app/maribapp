@@ -1,14 +1,13 @@
 import 'dart:collection';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:marib/data/constants/color_catalog.dart';
 import 'package:marib/data/model/custom_field/custom_field_model.dart';
-import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/extensions/extensions.dart';
+import 'package:marib/ui/screens/item/add_item_screen/custom_filed_structure/fields/custom_color_field.dart'
+    show ColorWheelPickerSheet;
 
 import 'product_management_color_utils.dart';
-import 'product_management_input_decorations.dart';
 import 'package:marib/ui/theme/theme.dart';
 
 
@@ -31,7 +30,7 @@ class ColorAttributeEditor {
     final List<CustomFieldColorEntry> initial = currentEntries
         .map(
           (CustomFieldColorEntry entry) =>
-              CustomFieldColorEntry(code: entry.code, quantity: entry.quantity),
+              CustomFieldColorEntry(code: entry.code),
         )
         .toList(growable: false);
 
@@ -73,48 +72,47 @@ class ColorAttributeEditorSheet extends StatefulWidget {
 class _ColorAttributeEditorSheetState
     extends State<ColorAttributeEditorSheet> {
   late LinkedHashMap<String, CustomFieldColorEntry> _entries;
-  late Map<String, TextEditingController> _controllers;
-  late TextEditingController _hexController;
 
   @override
   void initState() {
     super.initState();
     _entries = LinkedHashMap<String, CustomFieldColorEntry>();
-    _controllers = <String, TextEditingController>{};
     for (final CustomFieldColorEntry entry in widget.entries) {
       final String code = entry.code.toUpperCase();
-      _entries[code] =
-          CustomFieldColorEntry(code: code, quantity: entry.quantity);
-      _controllers[code] =
-          TextEditingController(text: entry.quantity?.toString() ?? '');
+      _entries[code] = CustomFieldColorEntry(code: code);
     }
-    _hexController = TextEditingController();
   }
 
   @override
   void dispose() {
-    for (final TextEditingController controller in _controllers.values) {
-      controller.dispose();
-    }
-    _hexController.dispose();
     super.dispose();
+  }
+
+  String _displayColorLabel(BuildContext context, String code) {
+    final String label = ColorCatalog.nameForHex(code, context: context).trim();
+    if (label.isEmpty) {
+      return 'لون';
+    }
+    if (label.startsWith('#')) {
+      return 'لون مخصص';
+    }
+    return label;
   }
 
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final ColorScheme palette = context.color;
-    final List<String> suggested = widget.suggestedCodes
-        .map((String code) => code.toUpperCase())
-        .toSet()
+    final List<Map<String, String>> paletteEntries = ColorCatalog.basePalette;
+    final Set<String> paletteCodes = <String>{
+      for (final Map<String, String> entry in paletteEntries)
+        if (ProductManagementColorUtils.normalizeColorValue(entry['hex']) != null)
+          ProductManagementColorUtils.normalizeColorValue(entry['hex'])!,
+    };
+    final List<String> customSelectedCodes = _entries.keys
+        .where((String code) => !paletteCodes.contains(code))
         .toList(growable: false)
       ..sort();
-
-    final Set<String> recommendedSet = suggested.toSet();
-
-    final List<Map<String, String>> paletteEntries = ColorCatalog.basePalette;
-
-    final double bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return FractionallySizedBox(
       heightFactor: 0.92,
@@ -163,50 +161,6 @@ class _ColorAttributeEditorSheetState
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       Text(
-                        'الألوان المحددة',
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      if (_entries.isEmpty)
-                        Text(
-                          'لم يتم اختيار أي لون بعد. اختر لونًا من اللوحات أو أضف لونًا مخصصًا.',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: palette.textDefaultColor.withOpacity(0.7),
-                          ),
-                        )
-                      else
-                        Column(
-                          children: _entries.values
-                              .map((CustomFieldColorEntry entry) =>
-                                  _buildSelectedColorTile(context, entry))
-                              .toList(growable: false),
-                        ),
-                      const SizedBox(height: 24),
-                      if (suggested.isNotEmpty) ...<Widget>[
-                        Text(
-                          'الألوان المقترحة',
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Wrap(
-                          spacing: 10,
-                          runSpacing: 10,
-                          children: suggested
-                              .map((String code) => ColorChoiceChip(
-                                    code: code,
-                                    label: '#$code',
-                                    selected: _entries.containsKey(code),
-                                    onTap: () => _toggleColor(code),
-                                  ))
-                              .toList(growable: false),
-                        ),
-                        const SizedBox(height: 24),
-                      ],
-                      Text(
                         'الألوان الشائعة',
                         style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w600,
@@ -216,119 +170,66 @@ class _ColorAttributeEditorSheetState
                       Wrap(
                         spacing: 10,
                         runSpacing: 10,
-                        children:
-                            paletteEntries.map((Map<String, String> entry) {
-                          final String? rawHex = entry['hex'];
-                          final String? normalized =
-                              ProductManagementColorUtils.normalizeColorValue(
-                                  rawHex);
-                          if (normalized == null) {
-                            return const SizedBox.shrink();
-                          }
-                          final bool selected =
-                              _entries.containsKey(normalized);
-                          final bool isRecommended =
-                              recommendedSet.contains(normalized);
-                          final String label = entry['name'] ?? '#$normalized';
-                          return ColorChoiceChip(
-                            code: normalized,
-                            label: label,
-                            selected: selected,
-                            onTap: () => _toggleColor(normalized),
-                            muted: isRecommended,
-                          );
-                        }).toList(growable: false),
-                      ),
-                      const SizedBox(height: 24),
-                      Text(
-                        'إضافة لون مخصص',
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
                         children: <Widget>[
-                          Expanded(
-                            child: TextField(
-                              controller: _hexController,
-                              textCapitalization: TextCapitalization.characters,
-                              decoration: ProductManagementInputDecorations
-                                  .themed(
-                                context,
-                                hint: '#AABBCC',
-                                label: 'كود اللون',
-                              ),
-                              inputFormatters: <TextInputFormatter>[
-                                FilteringTextInputFormatter.allow(
-                                  RegExp(r'[0-9a-fA-F#]'),
-                                ),
-                              ],
+                          ...paletteEntries.map((Map<String, String> entry) {
+                            final String? rawHex = entry['hex'];
+                            final String? normalized =
+                                ProductManagementColorUtils.normalizeColorValue(
+                                    rawHex);
+                            if (normalized == null) {
+                              return const SizedBox.shrink();
+                            }
+                            final bool selected = _entries.containsKey(normalized);
+                            final String label =
+                                _displayColorLabel(context, normalized);
+                            return ColorChoiceChip(
+                              code: normalized,
+                              label: label,
+                              selected: selected,
+                              onTap: () => _toggleColor(normalized),
+                            );
+                          }),
+                          ...customSelectedCodes.map(
+                            (String code) => ColorChoiceChip(
+                              code: code,
+                              label: _displayColorLabel(context, code),
+                              selected: true,
+                              onTap: () => _toggleColor(code),
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          FilledButton(
-                            onPressed: _addCustomColor,
-                            style: FilledButton.styleFrom(
-                              backgroundColor: palette.territoryColor,
-                              foregroundColor: palette.secondaryColor,
+                          ActionChip(
+                            avatar: Icon(
+                              Icons.colorize_outlined,
+                              color: palette.territoryColor,
                             ),
-                            child: const Text('إضافة'),
+                            label: Text(
+                              'لون مخصص',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: palette.territoryColor,
+                              ),
+                            ),
+                            onPressed: _openCustomColorPicker,
+                            backgroundColor: palette.secondaryColor,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: BorderSide(
+                                color: palette.borderColor.withOpacity(0.5),
+                              ),
+                            ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'حدد كمية اختيارية لكل لون (مثل عدد القطع المتوفرة).',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: palette.textDefaultColor.withOpacity(0.7),
+                      if (_entries.isEmpty) ...<Widget>[
+                        const SizedBox(height: 12),
+                        Text(
+                          'اختر لونًا واحدًا أو أكثر.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: palette.textDefaultColor.withOpacity(0.7),
+                          ),
                         ),
-                      ),
+                      ],
                       const SizedBox(height: 12),
-                      Column(
-                        children: _entries.entries
-                            .map((MapEntry<String, CustomFieldColorEntry> entry) {
-                          final String code = entry.key;
-                          final CustomFieldColorEntry value = entry.value;
-                          final TextEditingController controller =
-                              _controllers.putIfAbsent(
-                            code,
-                            () => TextEditingController(
-                              text: value.quantity?.toString() ?? '',
-                            ),
-                          );
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: Row(
-                              children: <Widget>[
-                                Expanded(
-                                  child: TextField(
-                                    controller: controller,
-                                    keyboardType:
-                                        const TextInputType.numberWithOptions(
-                                      decimal: false,
-                                    ),
-                                    decoration:
-                                        ProductManagementInputDecorations.themed(
-                                      context,
-                                      label: '#$code',
-                                    ),
-                                    onChanged: (String raw) =>
-                                        _updateQuantity(code, raw),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                IconButton(
-                                  tooltip: 'حذف اللون',
-                                  onPressed: () => _removeColor(code),
-                                  icon: const Icon(Icons.delete_outline),
-                                ),
-                              ],
-                            ),
-                          );
-                        }).toList(growable: false),
-                      ),
-                      SizedBox(height: bottomInset + 12),
                     ],
                   ),
                 ),
@@ -350,7 +251,7 @@ class _ColorAttributeEditorSheetState
                         onPressed: _save,
                         style: FilledButton.styleFrom(
                           backgroundColor: palette.territoryColor,
-                          foregroundColor: palette.secondaryColor,
+                          foregroundColor: palette.buttonColor,
                         ),
                         child: const Text('حفظ'),
                       ),
@@ -365,74 +266,6 @@ class _ColorAttributeEditorSheetState
     );
   }
 
-  Widget _buildSelectedColorTile(
-    BuildContext context,
-    CustomFieldColorEntry entry,
-  ) {
-    final ThemeData theme = Theme.of(context);
-    final ColorScheme palette = context.color;
-    final Color color =
-        ProductManagementColorUtils.colorFromHex(entry.code) ??
-            palette.borderColor;
-    final TextEditingController controller = _controllers.putIfAbsent(
-      entry.code,
-      () => TextEditingController(text: entry.quantity?.toString() ?? ''),
-    );
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      decoration: BoxDecoration(
-        color: palette.secondaryColor,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: palette.borderColor.withOpacity(0.4)),
-      ),
-      child: Row(
-        children: <Widget>[
-          Container(
-            width: 22,
-            height: 22,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: color,
-              border: Border.all(color: Colors.black.withOpacity(0.18), width: 1),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  '#${entry.code}',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: controller,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: false),
-                  decoration: ProductManagementInputDecorations.themed(
-                    context,
-                    label: 'الكمية المتوفرة',
-                  ),
-                  onChanged: (String raw) => _updateQuantity(entry.code, raw),
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            tooltip: 'إزالة اللون',
-            onPressed: () => _removeColor(entry.code),
-            icon: const Icon(Icons.delete_outline),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _toggleColor(String value) {
     setState(() {
       final String? normalized =
@@ -442,55 +275,32 @@ class _ColorAttributeEditorSheetState
       }
       if (_entries.containsKey(normalized)) {
         _entries.remove(normalized);
-        _controllers.remove(normalized)?.dispose();
       } else {
-        _entries[normalized] =
-            CustomFieldColorEntry(code: normalized, quantity: 0);
-        _controllers[normalized] = TextEditingController(text: '0');
+        _entries[normalized] = CustomFieldColorEntry(code: normalized);
       }
     });
   }
 
-  void _addCustomColor() {
+  Future<void> _openCustomColorPicker() async {
+    final String? hex = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const ColorWheelPickerSheet(),
+    );
+
+    if (!mounted || hex == null || hex.trim().isEmpty) {
+      return;
+    }
+
     final String? normalized =
-        ProductManagementColorUtils.normalizeColorValue(_hexController.text);
+        ProductManagementColorUtils.normalizeColorValue(hex);
     if (normalized == null) {
-      HelperUtils.showSnackBarMessage(
-        context,
-        'يرجى إدخال كود لون صالح مكوَّن من 6 خانات.',
-      );
       return;
     }
 
     setState(() {
-      if (!_entries.containsKey(normalized)) {
-        _entries[normalized] =
-            CustomFieldColorEntry(code: normalized, quantity: 0);
-        _controllers[normalized] = TextEditingController(text: '0');
-      }
-      _hexController.clear();
-    });
-  }
-
-  void _removeColor(String code) {
-    setState(() {
-      _entries.remove(code);
-      _controllers.remove(code)?.dispose();
-    });
-  }
-
-  void _updateQuantity(String code, String raw) {
-    final int? parsed = int.tryParse(raw);
-    setState(() {
-      final CustomFieldColorEntry? current = _entries[code];
-      if (current == null) {
-        return;
-      }
-      final int? normalized = parsed == null ? null : parsed;
-      _entries[code] = CustomFieldColorEntry(
-        code: code,
-        quantity: normalized,
-      );
+      _entries[normalized] = CustomFieldColorEntry(code: normalized);
     });
   }
 
@@ -523,7 +333,13 @@ class ColorChoiceChip extends StatelessWidget {
     final Color color =
         ProductManagementColorUtils.colorFromHex(code) ??
             palette.borderColor;
-    final String displayLabel = label ?? '#$code';
+    String displayLabel = (label ?? '').trim();
+    if (displayLabel.isEmpty) {
+      displayLabel = ColorCatalog.nameForHex(code, context: context).trim();
+    }
+    if (displayLabel.isEmpty || displayLabel.startsWith('#')) {
+      displayLabel = 'لون مخصص';
+    }
 
     return ChoiceChip(
       label: Text(displayLabel),
@@ -533,7 +349,10 @@ class ColorChoiceChip extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: color,
-          border: Border.all(color: Colors.black.withOpacity(0.18), width: 1),
+          border: Border.all(
+            color: palette.textDefaultColor.withOpacity(0.18),
+            width: 1,
+          ),
         ),
       ),
       selected: selected,
@@ -566,10 +385,11 @@ class ColorSelectionChip extends StatelessWidget {
     final Color color =
         ProductManagementColorUtils.colorFromHex(entry.code) ??
             palette.borderColor;
-    final int? quantity = entry.quantity;
-
-    final String quantityLabel =
-        quantity != null && quantity > 0 ? ' × $quantity' : '';
+    String displayLabel =
+        ColorCatalog.nameForHex(entry.code, context: context).trim();
+    if (displayLabel.isEmpty || displayLabel.startsWith('#')) {
+      displayLabel = 'لون مخصص';
+    }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -587,12 +407,15 @@ class ColorSelectionChip extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: color,
-              border: Border.all(color: Colors.black.withOpacity(0.18), width: 1),
+              border: Border.all(
+                color: palette.textDefaultColor.withOpacity(0.18),
+                width: 1,
+              ),
             ),
           ),
           const SizedBox(width: 8),
           Text(
-            '#${entry.code}$quantityLabel',
+            displayLabel,
             style: theme.textTheme.bodyMedium?.copyWith(
               fontWeight: FontWeight.w600,
               color: palette.textDefaultColor,
@@ -625,9 +448,10 @@ class ColorAttributeChip extends StatelessWidget {
     final Color color =
         ProductManagementColorUtils.colorFromHex(code) ??
             palette.borderColor;
-    final int? quantity = entry?.quantity;
-    final String label =
-        '#$code${quantity != null && quantity > 0 ? ' × $quantity' : ''}';
+    String label = ColorCatalog.nameForHex(code, context: context).trim();
+    if (label.isEmpty || label.startsWith('#')) {
+      label = 'لون مخصص';
+    }
 
     return FilterChip(
       label: Text(
@@ -643,7 +467,10 @@ class ColorAttributeChip extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: color,
-          border: Border.all(color: Colors.black.withOpacity(0.18), width: 1),
+          border: Border.all(
+            color: palette.textDefaultColor.withOpacity(0.18),
+            width: 1,
+          ),
         ),
       ),
       selected: isSelected,

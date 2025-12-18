@@ -553,6 +553,10 @@ class _ProfileGlassCard extends StatelessWidget {
                         ValueListenableBuilder<bool>(
                           valueListenable: verificationBadgeLoadingNotifier,
                           builder: (context, badgeLoading, _) {
+                            if (!HiveUtils.isUserAuthenticated()) {
+                              return const SizedBox.shrink();
+                            }
+
                             void handleVerificationTap() {
                               if (isVerified || hasExistingRequest) {
                                 showVerificationSubscriptionSheet(

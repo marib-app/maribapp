@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:marib/data/constants/color_catalog.dart';
 import 'package:marib/data/model/custom_field/custom_field_model.dart';
 import 'package:marib/data/model/item/purchase_options.dart';
 import 'package:marib/data/cubits/item/product_management_cubit.dart';
+import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart';
 import 'package:marib/utils/extensions/extensions.dart';
+import 'package:marib/utils/ui_utils.dart';
 
 import 'package:marib/ui/theme/theme.dart';
 
-import '../color_attribute_editor.dart';
-import '../product_management_color_utils.dart';
-import '../product_management_input_decorations.dart';
-import '../widgets/common_widgets.dart';
+import 'package:marib/ui/screens/item/purchase_options/product_management/color_attribute_editor.dart';
+import 'package:marib/ui/screens/item/purchase_options/product_management/product_management_color_utils.dart';
+import 'package:marib/ui/screens/item/purchase_options/product_management/product_management_input_decorations.dart';
+import 'package:marib/ui/screens/item/purchase_options/product_management/widgets/common_widgets.dart';
 
 class AttributesTab extends StatefulWidget {
   const AttributesTab({super.key, required this.state});
@@ -151,6 +154,133 @@ class _AttributesTabState extends State<AttributesTab> {
     return controller;
   }
 
+  String _displayColorName(BuildContext context, String code) {
+    final String label = ColorCatalog.nameForHex(code, context: context).trim();
+    if (label.isEmpty) {
+      return 'لون';
+    }
+    if (label.startsWith('#')) {
+      return 'لون مخصص';
+    }
+    return label;
+  }
+
+  Widget _buildMorePill(BuildContext context, int count) {
+    final ColorScheme palette = context.color;
+    final ThemeData theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: palette.primaryColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: palette.borderColor.withValues(alpha: 0.45)),
+      ),
+      child: Text(
+        '+$count',
+        style: theme.textTheme.bodySmall?.copyWith(
+          fontWeight: FontWeight.w700,
+          color: palette.textDefaultColor,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildColorPill(BuildContext context, CustomFieldColorEntry entry) {
+    final ColorScheme palette = context.color;
+    final ThemeData theme = Theme.of(context);
+    final Color dotColor =
+        ProductManagementColorUtils.colorFromHex(entry.code) ??
+            palette.borderColor;
+    final String label = _displayColorName(context, entry.code);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: palette.primaryColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: palette.borderColor.withValues(alpha: 0.45)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Container(
+            width: 14,
+            height: 14,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: dotColor,
+              border: Border.all(
+                color: palette.textDefaultColor.withValues(alpha: 0.18),
+                width: 1,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: theme.textTheme.bodySmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: palette.textDefaultColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSizePill(BuildContext context, String size) {
+    final ColorScheme palette = context.color;
+    final ThemeData theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: palette.territoryColor.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+        border:
+            Border.all(color: palette.territoryColor.withValues(alpha: 0.35)),
+      ),
+      child: Text(
+        size,
+        style: theme.textTheme.bodySmall?.copyWith(
+          fontWeight: FontWeight.w800,
+          color: palette.territoryColor,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmRemoveAttribute(
+    BuildContext context,
+    ProductManagementCubit cubit,
+    ManagedPurchaseAttribute attribute,
+  ) async {
+    final String attributeName = switch (attribute.type) {
+      ManagedAttributeType.color => 'الألوان المتوفرة',
+      ManagedAttributeType.size => 'المقاسات المتاحة',
+      ManagedAttributeType.custom => attribute.name.trim(),
+    };
+
+    final String message = attributeName.isEmpty
+        ? 'هل أنت متأكد من حذف هذه السمة؟'
+        : 'هل أنت متأكد من حذف سمة "$attributeName"؟';
+
+    final bool? confirmed = await UiUtils.showBlurredDialoge(
+      context,
+      dialoge: BlurredDialogBox(
+        title: 'تأكيد الحذف',
+        cancelButtonName: 'إلغاء',
+        acceptButtonName: 'حذف',
+        cancelTextColor: context.color.textColorDark,
+        content: Text(message),
+      ),
+    ) as bool?;
+
+    if (confirmed == true) {
+      cubit.removeAttribute(attribute.key);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final ProductManagementState state = widget.state;
@@ -160,19 +290,48 @@ class _AttributesTabState extends State<AttributesTab> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (state.availableAttributes.isEmpty &&
-        state.managedAttributes.isEmpty) {
-      return const ProductManagementEmptyState(
-        message: 'لم يتم العثور على سمات مناسبة لهذا المنتج.',
-      );
-    }
+    final ColorScheme palette = context.color;
+    const EdgeInsets listPadding = EdgeInsets.fromLTRB(16, 16, 16, 96);
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+    final Widget body =
+        (state.availableAttributes.isEmpty && state.managedAttributes.isEmpty)
+            ? ListView(
+                padding: listPadding,
+                children: const <Widget>[
+                  ProductManagementEmptyState(
+                    message:
+                        'يمكنك إضافة الألوان المتوفرة أو المقاسات المتاحة أو أي خيارات شراء أخرى من زر الإضافة العائم بالأسفل.',
+                  ),
+                ],
+              )
+            : ListView(
+                padding: listPadding,
+                children: <Widget>[
+                  _buildManagedAttributes(context, cubit, state),
+                  const SizedBox(height: 16),
+                  _buildAvailableAttributes(context, cubit, state),
+                ],
+              );
+
+    return Stack(
       children: <Widget>[
-        _buildManagedAttributes(context, cubit, state),
-        const SizedBox(height: 16),
-        _buildAvailableAttributes(context, cubit, state),
+        body,
+        Positioned(
+          left: 16,
+          bottom: 16,
+          child: SafeArea(
+            top: false,
+            child: FloatingActionButton(
+              heroTag: 'product-management-add-attribute',
+              mini: true,
+              tooltip: 'إضافة سمة جديدة',
+              backgroundColor: palette.territoryColor,
+              foregroundColor: palette.buttonColor,
+              onPressed: () => _showAddAttributeMenu(context),
+              child: const Icon(Icons.add),
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -191,7 +350,7 @@ class _AttributesTabState extends State<AttributesTab> {
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: palette.borderColor.withOpacity(0.4)),
+          side: BorderSide(color: palette.borderColor.withValues(alpha: 0.4)),
         ),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -208,14 +367,8 @@ class _AttributesTabState extends State<AttributesTab> {
               Text(
                 'أضف سمات جديدة من القائمة أدناه لتخصيص خيارات الشراء.',
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: palette.textDefaultColor.withOpacity(0.7),
+                  color: palette.textDefaultColor.withValues(alpha: 0.7),
                 ),
-              ),
-              const SizedBox(height: 12),
-              FilledButton.icon(
-                onPressed: () => _showAddAttributeMenu(context),
-                icon: const Icon(Icons.add),
-                label: const Text('إضافة سمة جديدة'),
               ),
             ],
           ),
@@ -233,12 +386,6 @@ class _AttributesTabState extends State<AttributesTab> {
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
-            ),
-            const Spacer(),
-            IconButton(
-              tooltip: 'إضافة سمة جديدة',
-              onPressed: () => _showAddAttributeMenu(context),
-              icon: const Icon(Icons.add),
             ),
           ],
         ),
@@ -266,43 +413,264 @@ class _AttributesTabState extends State<AttributesTab> {
   ) {
     final ThemeData theme = Theme.of(context);
     final ColorScheme palette = context.color;
+
+    if (attribute.type == ManagedAttributeType.color) {
+      final Map<String, CustomFieldColorEntry> unique =
+          <String, CustomFieldColorEntry>{};
+      for (final CustomFieldColorEntry entry in attribute.colorEntries) {
+        final String code = entry.code.toUpperCase().trim();
+        if (code.isEmpty) continue;
+        unique.putIfAbsent(code, () => entry);
+      }
+      final List<CustomFieldColorEntry> selected =
+          unique.values.toList(growable: false);
+      const int chipLimit = 10;
+      final List<CustomFieldColorEntry> visible =
+          selected.take(chipLimit).toList(growable: false);
+      final int remaining = selected.length - visible.length;
+      return Card(
+        color: palette.secondaryColor,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: BorderSide(color: palette.borderColor.withValues(alpha: 0.38)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: palette.territoryColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      Icons.palette_outlined,
+                      size: 20,
+                      color: palette.territoryColor,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Text(
+                          'الألوان المتوفرة',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        if (selected.isNotEmpty)
+                          Text(
+                            '${selected.length} لون',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: palette.textDefaultColor
+                                  .withValues(alpha: 0.65),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'حذف السمة',
+                    onPressed: () async {
+                      await _confirmRemoveAttribute(context, cubit, attribute);
+                    },
+                    icon: const Icon(Icons.delete_outline),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              if (selected.isEmpty)
+                Text(
+                  'لم يتم تحديد ألوان بعد',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: palette.textDefaultColor.withValues(alpha: 0.7),
+                  ),
+                )
+              else
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: <Widget>[
+                    ...visible.map((e) => _buildColorPill(context, e)),
+                    if (remaining > 0) _buildMorePill(context, remaining),
+                  ],
+                ),
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    ColorAttributeEditor.show(
+                      context: context,
+                      attributeKey: attribute.key,
+                      attributeName: 'الألوان المتوفرة',
+                      currentEntries: attribute.colorEntries,
+                      suggestedCodes: attribute.suggestedColorCodes,
+                      onSave: (List<CustomFieldColorEntry> entries) {
+                        cubit.setColorAttributeEntries(attribute.key, entries);
+                      },
+                    );
+                  },
+                  icon: const Icon(Icons.edit_outlined),
+                  label: Text(
+                      selected.isEmpty ? 'تحديد الألوان' : 'تعديل الألوان'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: palette.territoryColor,
+                    side: BorderSide(
+                      color: palette.territoryColor.withValues(alpha: 0.45),
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (attribute.type == ManagedAttributeType.size) {
+      final List<String> selected = attribute.options
+          .map((String value) => value.trim())
+          .where((String value) => value.isNotEmpty)
+          .toSet()
+          .toList(growable: false)
+        ..sort();
+      const int chipLimit = 12;
+      final List<String> visible =
+          selected.take(chipLimit).toList(growable: false);
+      final int remaining = selected.length - visible.length;
+      return Card(
+        color: palette.secondaryColor,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: BorderSide(color: palette.borderColor.withValues(alpha: 0.38)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: palette.territoryColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      Icons.straighten,
+                      size: 20,
+                      color: palette.territoryColor,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Text(
+                          'المقاسات المتاحة',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        if (selected.isNotEmpty)
+                          Text(
+                            '${selected.length} مقاس',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: palette.textDefaultColor
+                                  .withValues(alpha: 0.65),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'حذف السمة',
+                    onPressed: () async {
+                      await _confirmRemoveAttribute(context, cubit, attribute);
+                    },
+                    icon: const Icon(Icons.delete_outline),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              if (selected.isEmpty)
+                Text(
+                  'لم يتم تحديد مقاسات بعد',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: palette.textDefaultColor.withValues(alpha: 0.7),
+                  ),
+                )
+              else
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: <Widget>[
+                    ...visible.map((size) => _buildSizePill(context, size)),
+                    if (remaining > 0) _buildMorePill(context, remaining),
+                  ],
+                ),
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => _openSizeSelector(
+                      context, cubit, attribute.key, attribute.options),
+                  icon: const Icon(Icons.edit_outlined),
+                  label: Text(
+                      selected.isEmpty ? 'تحديد المقاسات' : 'تعديل المقاسات'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: palette.territoryColor,
+                    side: BorderSide(
+                      color: palette.territoryColor.withValues(alpha: 0.45),
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     final TextEditingController nameController =
         _ensureNameController(attribute.key, attribute.name);
-
-    Widget content;
-    if (attribute.type == ManagedAttributeType.size) {
-      content = SizeAttributeManager(
-        catalog: _defaultSizeCatalog,
-        selected: attribute.options,
-        onToggle: (String value) =>
-            cubit.toggleAttributeOption(attribute.key, value),
-      );
-    } else if (attribute.type == ManagedAttributeType.color) {
-      content = ColorAttributeManager(
-        entries: attribute.colorEntries,
-        onManage: () {
-          ColorAttributeEditor.show(
-            context: context,
-            attributeKey: attribute.key,
-            attributeName: attribute.name,
-            currentEntries: attribute.colorEntries,
-            suggestedCodes: attribute.suggestedColorCodes,
-            onSave: (List<CustomFieldColorEntry> entries) {
-              cubit.setColorAttributeEntries(attribute.key, entries);
-            },
-          );
-        },
-      );
-    } else {
-      content = _buildCustomOptions(context, attribute, cubit);
-    }
+    final Widget content = _buildCustomOptions(context, attribute, cubit);
 
     return Card(
       color: palette.secondaryColor,
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: palette.borderColor.withOpacity(0.4)),
+        side: BorderSide(color: palette.borderColor.withValues(alpha: 0.4)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -317,6 +685,7 @@ class _AttributesTabState extends State<AttributesTab> {
                     decoration: ProductManagementInputDecorations.themed(
                       context,
                       label: 'اسم السمة',
+                      hint: 'مثال: خامة المنتج',
                     ),
                     onChanged: (String value) =>
                         cubit.renameAttribute(attribute.key, value),
@@ -324,7 +693,9 @@ class _AttributesTabState extends State<AttributesTab> {
                 ),
                 IconButton(
                   tooltip: 'حذف السمة',
-                  onPressed: () => cubit.removeAttribute(attribute.key),
+                  onPressed: () async {
+                    await _confirmRemoveAttribute(context, cubit, attribute);
+                  },
                   icon: const Icon(Icons.delete_outline),
                 ),
               ],
@@ -335,6 +706,166 @@ class _AttributesTabState extends State<AttributesTab> {
         ),
       ),
     );
+  }
+
+  Future<void> _openSizeSelector(
+    BuildContext context,
+    ProductManagementCubit cubit,
+    String attributeKey,
+    List<String> current,
+  ) async {
+    final List<String>? selected = await showModalBottomSheet<List<String>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext sheetContext) {
+        final ThemeData theme = Theme.of(sheetContext);
+        final ColorScheme palette = sheetContext.color;
+        final Set<String> selectedSet = Set<String>.from(
+            current.map((e) => e.trim()).where((e) => e.isNotEmpty));
+
+        return StatefulBuilder(
+          builder:
+              (BuildContext _, void Function(void Function()) setSheetState) {
+            void toggle(String size) {
+              setSheetState(() {
+                if (selectedSet.contains(size)) {
+                  selectedSet.remove(size);
+                } else {
+                  selectedSet.add(size);
+                }
+              });
+            }
+
+            return FractionallySizedBox(
+              heightFactor: 0.85,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: palette.secondaryColor,
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(24)),
+                ),
+                child: SafeArea(
+                  top: false,
+                  child: Column(
+                    children: <Widget>[
+                      const SizedBox(height: 12),
+                      Container(
+                        width: 48,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          color: palette.borderColor.withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 12, 8),
+                        child: Row(
+                          children: <Widget>[
+                            Expanded(
+                              child: Text(
+                                'المقاسات المتاحة',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: () => Navigator.of(sheetContext).pop(),
+                              icon: const Icon(Icons.close),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 12,
+                          ),
+                          child: Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            children: _defaultSizeCatalog.map((String size) {
+                              final bool selected = selectedSet.contains(size);
+                              return FilterChip(
+                                label: Text(size),
+                                selected: selected,
+                                onSelected: (_) => toggle(size),
+                                labelStyle:
+                                    theme.textTheme.bodyMedium?.copyWith(
+                                  fontWeight: selected
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
+                                  color: selected
+                                      ? palette.territoryColor
+                                      : palette.textDefaultColor,
+                                ),
+                                selectedColor: palette.territoryColor
+                                    .withValues(alpha: 0.12),
+                                backgroundColor: palette.secondaryColor,
+                                side: BorderSide(
+                                  color: selected
+                                      ? palette.territoryColor
+                                      : palette.borderColor
+                                          .withValues(alpha: 0.5),
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              );
+                            }).toList(growable: false),
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 16,
+                        ),
+                        child: Row(
+                          children: <Widget>[
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () =>
+                                    Navigator.of(sheetContext).pop(),
+                                child: const Text('إلغاء'),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: FilledButton(
+                                onPressed: () {
+                                  final List<String> result = selectedSet
+                                      .toList(growable: false)
+                                    ..sort();
+                                  Navigator.of(sheetContext).pop(result);
+                                },
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: palette.territoryColor,
+                                  foregroundColor: palette.buttonColor,
+                                ),
+                                child: const Text('حفظ'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    if (!mounted || selected == null) {
+      return;
+    }
+
+    cubit.setAttributeOptions(attributeKey, selected);
   }
 
   Widget _buildCustomOptions(
@@ -356,7 +887,7 @@ class _AttributesTabState extends State<AttributesTab> {
           child: Text(
             'لم يتم إضافة خيارات بعد. أضف خيارات متعددة ليختار منها المشتري.',
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
+              color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
             ),
           ),
         ),
@@ -439,7 +970,7 @@ class _AttributesTabState extends State<AttributesTab> {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: palette.borderColor.withOpacity(0.4)),
+        side: BorderSide(color: palette.borderColor.withValues(alpha: 0.4)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -458,7 +989,8 @@ class _AttributesTabState extends State<AttributesTab> {
               runSpacing: 8,
               children: available
                   .map(
-                    (ItemPurchaseAttributeOption attribute) => _buildAvailableChip(
+                    (ItemPurchaseAttributeOption attribute) =>
+                        _buildAvailableChip(
                       context,
                       cubit,
                       attribute,
@@ -480,8 +1012,8 @@ class _AttributesTabState extends State<AttributesTab> {
     final ThemeData theme = Theme.of(context);
     final ColorScheme palette = context.color;
 
-    final bool isManaged = widget.state.managedAttributes
-        .any((ManagedPurchaseAttribute managed) => managed.key == attribute.key);
+    final bool isManaged = widget.state.managedAttributes.any(
+        (ManagedPurchaseAttribute managed) => managed.key == attribute.key);
 
     if (ProductManagementColorUtils.isColorAttribute(attribute)) {
       final List<CustomFieldColorEntry> entries = attribute.colorEntries;
@@ -495,9 +1027,8 @@ class _AttributesTabState extends State<AttributesTab> {
       );
     }
 
-    final String label = attribute.name.trim().isEmpty
-        ? attribute.key
-        : attribute.name;
+    final String label =
+        attribute.name.trim().isEmpty ? attribute.key : attribute.name;
 
     return TextAttributeChip(
       label: label,
@@ -546,8 +1077,8 @@ class _AttributesTabState extends State<AttributesTab> {
                 ),
                 ListTile(
                   leading: const Icon(Icons.view_list_outlined),
-                  title: Text('إضافة سمة مخصصة',
-                      style: theme.textTheme.bodyLarge),
+                  title:
+                      Text('إضافة سمة مخصصة', style: theme.textTheme.bodyLarge),
                   onTap: () {
                     Navigator.of(sheetContext).pop();
                     cubit.addCustomAttribute();
@@ -587,12 +1118,12 @@ class TextAttributeChip extends StatelessWidget {
         fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
         color: isSelected ? color.territoryColor : color.textDefaultColor,
       ),
-      selectedColor: color.territoryColor.withOpacity(0.12),
+      selectedColor: color.territoryColor.withValues(alpha: 0.12),
       backgroundColor: color.secondaryColor,
       side: BorderSide(
         color: isSelected
             ? color.territoryColor
-            : color.borderColor.withOpacity(0.5),
+            : color.borderColor.withValues(alpha: 0.5),
       ),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
@@ -658,7 +1189,7 @@ class ColorAttributeManager extends StatelessWidget {
           Text(
             'لم يتم اختيار ألوان بعد.',
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: palette.textDefaultColor.withOpacity(0.6),
+              color: palette.textDefaultColor.withValues(alpha: 0.6),
             ),
           )
         else

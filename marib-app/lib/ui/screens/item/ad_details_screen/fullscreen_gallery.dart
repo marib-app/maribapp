@@ -1,22 +1,26 @@
-// معرض الصور المحسّن – تكبير سلس + سحب احترافي للإغلاق + شريط علوي ومصغّرات
-import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
-import 'ad_image_source.dart';
-import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
+import 'package:marib/ui/screens/widgets/video_view_screen.dart';
 import 'package:marib/ui/theme/extensions/shimmer_colors.dart';
+import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
+
+import 'ad_image_source.dart';
 
 class FullscreenGalleryPage extends StatefulWidget {
+  final String? videoUrl;
+  final String? videoThumbnail;
   final List<AdImageSource> images;
 
   final int initialIndex;
-  // اختياري: هيرو تاج للانتقال السلس من القائمة
   final String Function(int index)? heroTagBuilder;
 
   const FullscreenGalleryPage({
     super.key,
     required this.images,
+    this.videoUrl,
+    this.videoThumbnail,
     this.initialIndex = 0,
     this.heroTagBuilder,
   });
@@ -30,26 +34,24 @@ class _FullscreenGalleryPageState extends State<FullscreenGalleryPage> {
   final ScrollController _thumbCtrl = ScrollController();
 
   int _currentIndex = 0;
-
-  // سحب للإغلاق لأعلى/أسفل
   double _dragOffset = 0;
 
-  // ===== خصائص شريط المصغّرات (كما في النسخة الطويلة) =====
   static const double _thumbSpacing = 8.0;
-  double _lastThumbExtent = 0; // itemExtent الأخير
-  EdgeInsets _lastThumbPadding = EdgeInsets.zero;
+  double _lastThumbExtent = 0;
   bool _thumbDragging = false;
+
+  bool get _hasVideo => (widget.videoUrl?.trim().isNotEmpty ?? false);
+  int get _totalCount => widget.images.length + (_hasVideo ? 1 : 0);
 
   @override
   void initState() {
     super.initState();
-    _currentIndex = widget.images.isEmpty
-        ? 0
-        : widget.initialIndex.clamp(0, widget.images.length - 1);
+    _currentIndex =
+        _totalCount == 0 ? 0 : widget.initialIndex.clamp(0, _totalCount - 1);
     _controller = PageController(initialPage: _currentIndex);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || widget.images.isEmpty) return;
+      if (!mounted || _totalCount == 0) return;
       _ensureThumbVisible(_currentIndex, jump: true, itemExtent: _lastThumbExtent);
       _prefetchNeighbors(_currentIndex);
     });
@@ -70,7 +72,6 @@ class _FullscreenGalleryPageState extends State<FullscreenGalleryPage> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // ===== السحب للإغلاق + معرض بزووم جاهز =====
           GestureDetector(
             onVerticalDragUpdate: (details) {
               setState(() => _dragOffset += details.delta.dy);
@@ -88,21 +89,33 @@ class _FullscreenGalleryPageState extends State<FullscreenGalleryPage> {
               child: Transform.translate(
                 offset: Offset(0, _dragOffset),
                 child: PhotoViewGallery.builder(
-                  itemCount: widget.images.length,
+                  itemCount: _totalCount,
                   pageController: _controller,
-                  backgroundDecoration: const BoxDecoration(color: Colors.transparent),
+                  backgroundDecoration:
+                      const BoxDecoration(color: Colors.transparent),
                   onPageChanged: (index) {
                     setState(() => _currentIndex = index);
                     _ensureThumbVisible(index, itemExtent: _lastThumbExtent);
                     _prefetchNeighbors(index);
                   },
                   builder: (context, index) {
-                    final AdImageSource image = widget.images[index];
-                    final String? tag = widget.heroTagBuilder?.call(index);
+                    final bool isVideoIndex =
+                        _hasVideo && index == _totalCount - 1;
+                    if (isVideoIndex) {
+                      return PhotoViewGalleryPageOptions.customChild(
+                        child: _buildVideoSlide(),
+                        minScale: PhotoViewComputedScale.contained,
+                        maxScale: PhotoViewComputedScale.contained,
+                      );
+                    }
+
+                    final int imageIndex = index;
+                    final AdImageSource image = widget.images[imageIndex];
+                    final String? tag = widget.heroTagBuilder?.call(imageIndex);
                     return PhotoViewGalleryPageOptions(
                       imageProvider: image.buildFullScreenProvider(),
                       heroAttributes:
-                      tag != null ? PhotoViewHeroAttributes(tag: tag) : null,
+                          tag != null ? PhotoViewHeroAttributes(tag: tag) : null,
                       minScale: PhotoViewComputedScale.contained,
                       maxScale: PhotoViewComputedScale.covered * 3.0,
                       initialScale: PhotoViewComputedScale.contained,
@@ -113,21 +126,23 @@ class _FullscreenGalleryPageState extends State<FullscreenGalleryPage> {
               ),
             ),
           ),
-
-          // ===== شريط علوي (إغلاق + عدّاد) =====
           Positioned(
             top: 0,
             left: 0,
             right: 0,
             child: SafeArea(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.black.withOpacity(0.5) : Colors.white.withOpacity(0.15),
+                    color: isDark
+                        ? Colors.black.withOpacity(0.5)
+                        : Colors.white.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   child: Row(
                     children: [
                       IconButton(
@@ -136,7 +151,7 @@ class _FullscreenGalleryPageState extends State<FullscreenGalleryPage> {
                       ),
                       const Spacer(),
                       Text(
-                        "${_currentIndex + 1} / ${widget.images.length}",
+                        "${_currentIndex + 1} / $_totalCount",
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 16,
@@ -149,8 +164,6 @@ class _FullscreenGalleryPageState extends State<FullscreenGalleryPage> {
               ),
             ),
           ),
-
-          // ===== شريط المصغّرات (النسخة الاحترافية) =====
           Align(
             alignment: Alignment.bottomCenter,
             child: SafeArea(
@@ -158,11 +171,10 @@ class _FullscreenGalleryPageState extends State<FullscreenGalleryPage> {
               minimum: const EdgeInsets.only(bottom: 12),
               child: LayoutBuilder(
                 builder: (context, cons) {
-                  final l = _thumbLayout(cons); // يحسب أبعاد العناصر ديناميكيًا
+                  final l = _thumbLayout(cons);
                   _lastThumbExtent = l.itemExtent;
-                  _lastThumbPadding = l.padding;
 
-                  final stripHeight = l.itemH + l.padding.vertical + 12; // مؤشر أسفل المصغّر
+                  final stripHeight = l.itemH + l.padding.vertical + 12;
 
                   return Container(
                     height: stripHeight,
@@ -210,8 +222,9 @@ class _FullscreenGalleryPageState extends State<FullscreenGalleryPage> {
                             padding: l.padding,
                             scrollDirection: Axis.horizontal,
                             itemExtent: l.itemExtent,
-                            itemCount: widget.images.length,
-                            itemBuilder: (_, i) => _thumb(i, w: l.itemW, h: l.itemH),
+                            itemCount: _totalCount,
+                            itemBuilder: (_, i) =>
+                                _thumb(i, w: l.itemW, h: l.itemH),
                           ),
                         ),
                       ],
@@ -226,19 +239,17 @@ class _FullscreenGalleryPageState extends State<FullscreenGalleryPage> {
     );
   }
 
-  // ======= تخطيط المصغّرات ديناميكيًا =======
   ({double itemW, double itemH, double itemExtent, EdgeInsets padding})
-  _thumbLayout(BoxConstraints c) {
+      _thumbLayout(BoxConstraints c) {
     final w = c.maxWidth;
 
-    // عدد المصغّرات الظاهر تقريبياً حسب العرض
     final visible = w < 360
         ? 4.5
         : w < 480
-        ? 5.5
-        : w < 768
-        ? 6.5
-        : 8.5;
+            ? 5.5
+            : w < 768
+                ? 6.5
+                : 8.5;
 
     const gap = 8.0;
     const hPad = 10.0;
@@ -247,25 +258,80 @@ class _FullscreenGalleryPageState extends State<FullscreenGalleryPage> {
     final innerW = w - (hPad * 2);
     final rawItemW = (innerW - gap * (visible - 1)) / visible;
 
-    // حدود منطقية حتى ما تصغر/تكبر زيادة
     final itemW = rawItemW.clamp(50.0, 88.0);
     final itemH = (itemW * 0.78).clamp(42.0, 80.0);
     final itemExtent = itemW + gap;
 
     return (
-    itemW: itemW,
-    itemH: itemH,
-    itemExtent: itemExtent,
-    padding: const EdgeInsets.symmetric(horizontal: hPad, vertical: vPad),
+      itemW: itemW,
+      itemH: itemH,
+      itemExtent: itemExtent,
+      padding: const EdgeInsets.symmetric(horizontal: hPad, vertical: vPad),
     );
   }
 
-  // ======= عنصر المصغّر =======
   Widget _thumb(int i, {required double w, required double h}) {
     final selected = i == _currentIndex;
-    final AdImageSource image = widget.images[i];
-    final String url = image.displayUrl;
     final selColor = Theme.of(context).colorScheme.primary;
+
+    Widget child;
+    if (_hasVideo && i == _totalCount - 1) {
+      final bool hasThumb =
+          widget.videoThumbnail != null && widget.videoThumbnail!.isNotEmpty;
+      child = Stack(
+        fit: StackFit.expand,
+        children: [
+          if (hasThumb)
+            CachedNetworkImage(
+              imageUrl: widget.videoThumbnail!,
+              fit: BoxFit.cover,
+              placeholder: (_, __) => ShimmerBox(
+                width: w,
+                height: h,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              errorWidget: (_, __, ___) => Container(
+                color: Colors.black26,
+                child: const Icon(Icons.videocam_rounded,
+                    color: Colors.white70, size: 22),
+              ),
+            ) 
+          else
+            Container(
+              color: Colors.black26,
+              child: const Icon(Icons.videocam_rounded,
+                  color: Colors.white70, size: 22),
+            ),
+          const Center(
+            child: Icon(Icons.play_arrow_rounded,
+                color: Colors.white, size: 28),
+          ),
+        ],
+      );
+    } else {
+      final int imageIndex = i;
+      final AdImageSource image = widget.images[imageIndex];
+      final String url = image.displayUrl;
+      child = CachedNetworkImage(
+        imageUrl: url,
+        fit: BoxFit.cover,
+        memCacheWidth: kAdDetailImageMaxEdge,
+        memCacheHeight: kAdDetailImageMaxEdge,
+        maxWidthDiskCache: kAdDetailImageMaxEdge,
+        maxHeightDiskCache: kAdDetailImageMaxEdge,
+        placeholder: (_, __) => const ShimmerBox(
+          width: double.infinity,
+          height: double.infinity,
+          borderRadius: BorderRadius.zero,
+        ),
+        errorWidget: (_, __, ___) => ShimmerBox(
+          width: double.infinity,
+          height: double.infinity,
+          borderRadius: BorderRadius.zero,
+          animate: false,
+        ),
+      );
+    }
 
     return GestureDetector(
       onTap: () {
@@ -274,7 +340,6 @@ class _FullscreenGalleryPageState extends State<FullscreenGalleryPage> {
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOut,
         );
-        // HapticFeedback.selectionClick(); // فعّلها لو تبغى نبضة
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
@@ -291,24 +356,24 @@ class _FullscreenGalleryPageState extends State<FullscreenGalleryPage> {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: selected
                       ? [
-                    BoxShadow(
-                      color: selColor.withOpacity(.40),
-                      blurRadius: 14,
-                      spreadRadius: 1,
-                    ),
-                    BoxShadow(
-                      color: Colors.black.withOpacity(.30),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ]
+                          BoxShadow(
+                            color: selColor.withOpacity(.40),
+                            blurRadius: 14,
+                            spreadRadius: 1,
+                          ),
+                          BoxShadow(
+                            color: Colors.black.withOpacity(.30),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ]
                       : [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(.22),
-                      blurRadius: 6,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
+                          BoxShadow(
+                            color: Colors.black.withOpacity(.22),
+                            blurRadius: 6,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
                 ),
                 child: Container(
                   width: w,
@@ -321,29 +386,8 @@ class _FullscreenGalleryPageState extends State<FullscreenGalleryPage> {
                     ),
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: CachedNetworkImage(
-                      imageUrl: url,
-                      fit: BoxFit.cover,
-                      memCacheWidth: kAdDetailImageMaxEdge,
-                      memCacheHeight: kAdDetailImageMaxEdge,
-                      maxWidthDiskCache: kAdDetailImageMaxEdge,
-                      maxHeightDiskCache: kAdDetailImageMaxEdge,
-                      placeholder: (_, __) => const ShimmerBox(
-                        width: double.infinity,
-                        height: double.infinity,
-                        borderRadius: BorderRadius.zero,
-                      ),
-                      errorWidget: (_, __, ___) => ShimmerBox(
-                        width: double.infinity,
-                        height: double.infinity,
-                        borderRadius: BorderRadius.zero,
-                        animate: false,
-                        baseColor: Theme.of(context)
-                            .colorScheme
-                            .shimmerContentColor,
-                      ),
-                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    child: child,
                   ),
                 ),
               ),
@@ -367,11 +411,80 @@ class _FullscreenGalleryPageState extends State<FullscreenGalleryPage> {
     );
   }
 
-  // ======= Snap + تمركز المصغّر المحدد =======
+  Widget _buildVideoSlide() {
+    final bool hasThumb =
+        widget.videoThumbnail != null && widget.videoThumbnail!.isNotEmpty;
+
+    Widget base;
+    if (hasThumb) {
+      base = CachedNetworkImage(
+        imageUrl: widget.videoThumbnail!,
+        fit: BoxFit.cover,
+        placeholder: (_, __) => const ShimmerBox(
+          width: double.infinity,
+          height: double.infinity,
+          borderRadius: BorderRadius.zero,
+        ),
+        errorWidget: (_, __, ___) => Container(
+          color: Colors.black45,
+          child: const Icon(Icons.videocam_rounded,
+              color: Colors.white70, size: 56),
+        ),
+      );
+    } else {
+      base = Container(
+        color: Colors.black45,
+        child:
+            const Icon(Icons.videocam_rounded, color: Colors.white70, size: 56),
+      );
+    }
+
+    return GestureDetector(
+      onTap: _openVideo,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          base,
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Colors.black38, Colors.transparent, Colors.black54],
+              ),
+            ),
+          ),
+          Center(
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white70, width: 1.6),
+              ),
+              child: const Icon(Icons.play_arrow_rounded,
+                  color: Colors.white, size: 48),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openVideo() {
+    final String? url = widget.videoUrl?.trim();
+    if (url == null || url.isEmpty) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => VideoViewScreen(videoUrl: url),
+      ),
+    );
+  }
+
   void _snapThumbsToNearest() {
     if (!_thumbCtrl.hasClients || _lastThumbExtent == 0) return;
     final rawIndex = _thumbCtrl.offset / _lastThumbExtent;
-    final nearest = rawIndex.round().clamp(0, widget.images.length - 1);
+    final nearest = rawIndex.round().clamp(0, _totalCount - 1);
     _thumbCtrl.animateTo(
       nearest * _lastThumbExtent,
       duration: const Duration(milliseconds: 220),
@@ -386,10 +499,13 @@ class _FullscreenGalleryPageState extends State<FullscreenGalleryPage> {
 
     final viewport = _thumbCtrl.position.viewportDimension;
     final targetOffset =
-        (i * extent) - (viewport - (extent - _thumbSpacing)) / 2; // تمركز العنصر
+        (i * extent) - (viewport - (extent - _thumbSpacing)) / 2;
 
     final clamped = targetOffset
-        .clamp(_thumbCtrl.position.minScrollExtent, _thumbCtrl.position.maxScrollExtent)
+        .clamp(
+          _thumbCtrl.position.minScrollExtent,
+          _thumbCtrl.position.maxScrollExtent,
+        )
         .toDouble();
 
     if (jump) {
@@ -403,14 +519,21 @@ class _FullscreenGalleryPageState extends State<FullscreenGalleryPage> {
     }
   }
 
-  // تهيئة تحميل صور الجيران لانتقال أنعم
   void _prefetchNeighbors(int i) {
     Future<void> prefetch(AdImageSource image) async {
       try {
         await precacheImage(image.buildFullScreenProvider(), context);
       } catch (_) {}
     }
-    if (i - 1 >= 0) prefetch(widget.images[i - 1]);
-    if (i + 1 < widget.images.length) prefetch(widget.images[i + 1]);
+
+    void tryPrefetch(int galleryIndex) {
+      if (_hasVideo && galleryIndex == _totalCount - 1) return;
+      final int imageIndex = galleryIndex;
+      if (imageIndex < 0 || imageIndex >= widget.images.length) return;
+      prefetch(widget.images[imageIndex]);
+    }
+
+    tryPrefetch(i - 1);
+    tryPrefetch(i + 1);
   }
 }

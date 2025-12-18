@@ -81,6 +81,43 @@ class AddItemDetailsInitializationService {
   void _handleGalleryUpdate(dynamic images) {
     try {
       model.galleryItems.addAll(List<dynamic>.from(images as Iterable));
+
+      // If the user hasn't chosen a main image yet, set the first picked one
+      // as the default cover so the "رئيسية" badge is visible immediately.
+      if (model.coverImageFile == null &&
+          model.coverImageUrl.isEmpty &&
+          model.galleryItems.isNotEmpty) {
+        final dynamic first = model.galleryItems.first;
+        try {
+          if (first is File) {
+            model.coverImagePicker.pickedFile = first;
+            model.coverImagePicker.lastPayload = {"error": "", "file": [first]};
+            model.coverImageUrl = '';
+          } else if (first is String && first.isNotEmpty) {
+            model.coverImagePicker.pickedFile = null;
+            model.coverImagePicker.lastPayload = {"error": "", "file": []};
+            model.coverImageUrl = first;
+          } else if (first is Map) {
+            final dynamic fileVal = first['file'];
+            final dynamic urlVal = first['url'];
+            if (fileVal is File) {
+              model.coverImagePicker.pickedFile = fileVal;
+              model.coverImagePicker.lastPayload = {
+                "error": "",
+                "file": [fileVal]
+              };
+              model.coverImageUrl = '';
+            } else if (urlVal is String && urlVal.isNotEmpty) {
+              model.coverImagePicker.pickedFile = null;
+              model.coverImagePicker.lastPayload = {"error": "", "file": []};
+              model.coverImageUrl = urlVal;
+            }
+          }
+        } catch (_) {
+          // ignore
+        }
+      }
+
       if (kDebugMode) {
         final int fileCount = model.galleryItems.where((e) => e is File).length;
         final int mapCount = model.galleryItems.where((e) => e is Map).length;
@@ -116,7 +153,9 @@ class AddItemDetailsInitializationService {
     model.adProductLinkController.text = current.productLink ?? '';
 
     model.coverImageUrl = HelperUtils.absoluteImage(current.image);
-    model.selectedCurrency = current.currency ?? 'YER';
+    model.selectedCurrency = current.currency?.trim().isNotEmpty == true
+        ? current.currency
+        : null;
 
     final Iterable<int> ids = _initialCategoryIdsFromItem(current);
     model.selectedCategoryIds

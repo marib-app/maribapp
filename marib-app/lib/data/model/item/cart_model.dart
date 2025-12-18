@@ -380,8 +380,12 @@ class Cart extends ItemModel {
     }
 
 
-    final Map<String, dynamic>? variantAttributes =
-    _parseJsonMap(json['variant_attributes'] ?? pivotMap?['variant_attributes']);
+    final Map<String, dynamic>? variantAttributes = _parseJsonMap(
+      json['variant_attributes'] ??
+          pivotMap?['variant_attributes'] ??
+          json['attributes'] ??
+          pivotMap?['attributes'],
+    );
     final Map<String, dynamic>? stockSnapshot =
     _parseJsonMap(json['stock_snapshot'] ?? pivotMap?['stock_snapshot']);
 
@@ -606,24 +610,6 @@ class Cart extends ItemModel {
     if (value is num) return value.toDouble();
     if (value is String) {
       return double.tryParse(value.replaceAll(',', ''));
-    }
-    return null;
-  }
-
-
-  static bool? _parseBool(dynamic value) {
-    if (value == null) return null;
-    if (value is bool) return value;
-    if (value is num) return value != 0;
-    if (value is String) {
-      final String normalized = value.trim().toLowerCase();
-      if (normalized.isEmpty) return null;
-      if (<String>['true', '1', 'yes', 'y'].contains(normalized)) {
-        return true;
-      }
-      if (<String>['false', '0', 'no', 'n'].contains(normalized)) {
-        return false;
-      }
     }
     return null;
   }

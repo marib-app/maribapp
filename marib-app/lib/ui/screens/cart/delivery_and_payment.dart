@@ -114,6 +114,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
         AddressesRepository(checkoutRepository: _checkoutRepository);
 
     _cartCubit = context.read<CartCubit>();
+    _cartCubit.setCheckoutDetailsSyncEnabled(true);
     _latestCartState = _cartCubit.state;
     _store = _latestCartState.store;
     _cartItems = _latestCartState.items;
@@ -127,6 +128,15 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
     _cartQuantitySnapshot = _buildCartQuantitySnapshot(_cartItems);
     _cartSubscription = _cartCubit.stream.listen(_onCartStateChanged);
     _addressController.addListener(() => setState(() {}));
+
+    final bool needsDeliveryTimingOptions =
+        (_latestCartState.deliveryPaymentOptions == null ||
+            _latestCartState.deliveryPaymentOptions!.isEmpty) &&
+            _cartItems.isNotEmpty;
+    if (needsDeliveryTimingOptions) {
+      unawaited(_cartCubit.refreshDeliveryPaymentTiming());
+    }
+
     _loadCheckout();
   }
 
@@ -2282,6 +2292,7 @@ class _DeliveryandpaymentScreenState extends State<DeliveryandpaymentScreen> {
   @override
   void dispose() {
     _cartSubscription.cancel();
+    _cartCubit.setCheckoutDetailsSyncEnabled(false);
     _addressController.dispose();
     super.dispose();
   }

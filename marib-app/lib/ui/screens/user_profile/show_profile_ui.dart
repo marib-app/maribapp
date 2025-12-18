@@ -271,6 +271,24 @@ class _HeaderSection extends StatelessWidget {
                     isUserAuthenticated &&
                     !hasExistingRequest;
 
+                if (!isUserAuthenticated) {
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          displayName,
+                          style:
+                              Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 20,
+                                  ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  );
+                }
+
                 return Row(
                   children: [
                     Expanded(

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:marib/data/model/item/cart_model.dart';
@@ -218,10 +217,43 @@ class CartCubit extends Cubit<CartState> {
   final CartRepository _repository;
   final CartTipsRepository _tipsRepository;
   PendingCartAddition? _pendingAdditionCache;
+  final Set<String> _quantityInFlight = <String>{};
+  final Map<String, int> _quantityTargets = <String, int>{};
   bool _checkoutRefreshInProgress = false;
   bool _checkoutRefreshPending = false;
+  bool _checkoutDetailsSyncEnabled = false;
+
+  /// Controls whether checkout-related endpoints (policies, delivery, etc.) are
+  /// kept in sync. This should be enabled only from the checkout flow screens.
+  void setCheckoutDetailsSyncEnabled(bool enabled) {
+    _checkoutDetailsSyncEnabled = enabled;
+  }
+
+  bool get checkoutDetailsSyncEnabled => _checkoutDetailsSyncEnabled;
 
   Future<void> fetchCart() async {
+    if (!HiveUtils.isUserAuthenticated()) {
+      emit(
+        state.copyWith(
+          items: const <Cart>[],
+          discounts: const <CartDiscount>[],
+          lastUpdated: DateTime.now(),
+          clearSafetyTips: true,
+          departmentPolicy: null,
+          support: null,
+          deliveryQuote: null,
+          blocking: null,
+          deliveryPaymentOptions: null,
+          deliveryPaymentTiming: null,
+          currency: null,
+          currencyCode: null,
+          store: null,
+          departmentNotice: null,
+        ),
+      );
+      return;
+    }
+
     final PendingCartAddition? existingPendingAddition =
         state.pendingAddition ?? _pendingAdditionCache;
     final bool preservePendingAddition = existingPendingAddition != null;
@@ -251,7 +283,7 @@ class CartCubit extends Cubit<CartState> {
             summary.deliveryPaymentOptions ?? state.deliveryPaymentOptions,
         deliveryPaymentTiming:
             summary.deliveryPaymentTiming ?? state.deliveryPaymentTiming,
-        checkoutLoading: true,
+        checkoutLoading: _checkoutDetailsSyncEnabled,
         currency: summary.currency ?? state.currency,
         currencyCode: summary.currencyCode ?? state.currencyCode,
         store: summary.store,
@@ -262,7 +294,7 @@ class CartCubit extends Cubit<CartState> {
       _pendingAdditionCache = existingPendingAddition;
     }
 
-    unawaited(refreshCheckoutDetails(force: true));
+    // Checkout details are loaded only when the checkout flow is active.
   }
 
   Future<void> refreshCheckoutDetails({bool force = false}) async {
@@ -282,6 +314,13 @@ class CartCubit extends Cubit<CartState> {
           store: null,
         ),
       );
+      return;
+    }
+
+    if (!_checkoutDetailsSyncEnabled) {
+      if (state.checkoutLoading) {
+        emit(state.copyWith(checkoutLoading: false));
+      }
       return;
     }
 
@@ -330,13 +369,13 @@ class CartCubit extends Cubit<CartState> {
         'error': error.toString(),
       });
     } finally {
-      final bool shouldRetry = _checkoutRefreshPending;
-      _checkoutRefreshInProgress = false;
-      if (shouldRetry) {
-        _checkoutRefreshPending = false;
-        unawaited(refreshCheckoutDetails(force: true));
-      }
+    final bool shouldRetry = _checkoutRefreshPending;
+    _checkoutRefreshInProgress = false;
+    if (shouldRetry) {
+      _checkoutRefreshPending = false;
+      unawaited(refreshCheckoutDetails(force: true));
     }
+  }
   }
 
   Future<void> updateDeliveryPaymentTiming(String timing) async {
@@ -374,7 +413,7 @@ class CartCubit extends Cubit<CartState> {
           deliveryPaymentOptions:
               summary.deliveryPaymentOptions ?? state.deliveryPaymentOptions,
           deliveryPaymentTiming: summary.deliveryPaymentTiming ?? normalized,
-          checkoutLoading: true,
+          checkoutLoading: _checkoutDetailsSyncEnabled,
           currency: summary.currency ?? state.currency,
           currencyCode: summary.currencyCode ?? state.currencyCode,
           store: summary.store,
@@ -386,9 +425,13 @@ class CartCubit extends Cubit<CartState> {
           summary.deliveryPaymentTiming == null ||
           summary.deliveryPaymentTiming!.trim().isEmpty;
       if (requiresRefresh) {
-        await refreshDeliveryPaymentTiming();
+        if (_checkoutDetailsSyncEnabled) {
+          await refreshDeliveryPaymentTiming();
+        }
       }
-      unawaited(refreshCheckoutDetails());
+      if (_checkoutDetailsSyncEnabled) {
+        unawaited(refreshCheckoutDetails());
+      }
     } catch (_) {
       emit(
         state.copyWith(
@@ -544,7 +587,7 @@ class CartCubit extends Cubit<CartState> {
               summary.deliveryPaymentOptions ?? state.deliveryPaymentOptions,
           deliveryPaymentTiming:
               summary.deliveryPaymentTiming ?? state.deliveryPaymentTiming,
-          checkoutLoading: true,
+          checkoutLoading: _checkoutDetailsSyncEnabled,
           currency: summary.currency ?? state.currency,
           currencyCode: summary.currencyCode ?? state.currencyCode,
           store: summary.store,
@@ -565,9 +608,13 @@ class CartCubit extends Cubit<CartState> {
               summary.deliveryPaymentTiming!.trim().isEmpty;
 
       if (shouldRefreshPaymentTiming) {
-        await refreshDeliveryPaymentTiming();
+        if (_checkoutDetailsSyncEnabled) {
+          await refreshDeliveryPaymentTiming();
+        }
       }
-      unawaited(refreshCheckoutDetails());
+      if (_checkoutDetailsSyncEnabled) {
+        unawaited(refreshCheckoutDetails());
+      }
     } catch (error, _) {
       _recordTelemetry('cart_add.failed', <String, dynamic>{
         'department': normalizedDepartment,
@@ -579,6 +626,9 @@ class CartCubit extends Cubit<CartState> {
   }
 
   Future<void> refreshDeliveryPaymentTiming() async {
+    if (!_checkoutDetailsSyncEnabled) {
+      return;
+    }
     try {
       final CartSummary summary =
           await _repository.fetchDeliveryPaymentTiming();
@@ -607,10 +657,12 @@ class CartCubit extends Cubit<CartState> {
           currency: summary.currency ?? state.currency,
           currencyCode: summary.currencyCode ?? state.currencyCode,
           store: summary.store,
-          checkoutLoading: true,
+          checkoutLoading: _checkoutDetailsSyncEnabled,
         ),
       );
-      unawaited(refreshCheckoutDetails());
+      if (_checkoutDetailsSyncEnabled) {
+        unawaited(refreshCheckoutDetails());
+      }
     } catch (_) {
       // Ignore delivery payment timing fetch failures.
     }
@@ -670,46 +722,7 @@ class CartCubit extends Cubit<CartState> {
     final Cart? item = _findItem(itemId: id);
     if (item == null) return;
 
-    await _updateItemQuantity(item, quantity);
-  }
-
-  Future<void> _updateItemQuantity(Cart item, int quantity) async {
-    final CartSummary summary = await _repository.updateQuantity(
-      itemId: item.id!,
-      quantity: quantity,
-      cartItemId: item.cartItemId,
-      variantId: item.variantId,
-      variantKey: item.variantKey,
-      attributes: item.variantAttributes,
-      stockSnapshot: item.stockSnapshot,
-      unitPrice: item.unitPrice,
-      unitPriceLocked: item.unitPriceLocked,
-      currency: item.currency,
-    );
-
-    _syncSection(summary.items);
-
-    emit(
-      state.copyWith(
-        items: summary.items,
-        discounts: summary.discounts,
-        lastUpdated: DateTime.now(),
-        clearSafetyTips: true,
-        departmentPolicy: summary.departmentPolicy ?? state.departmentPolicy,
-        support: summary.support ?? state.support,
-        deliveryQuote: summary.deliveryQuote ?? state.deliveryQuote,
-        blocking: summary.blocking ?? state.blocking,
-        deliveryPaymentOptions:
-            summary.deliveryPaymentOptions ?? state.deliveryPaymentOptions,
-        deliveryPaymentTiming:
-            summary.deliveryPaymentTiming ?? state.deliveryPaymentTiming,
-        checkoutLoading: true,
-        currency: summary.currency ?? state.currency,
-        currencyCode: summary.currencyCode ?? state.currencyCode,
-        store: summary.store,
-      ),
-    );
-    unawaited(refreshCheckoutDetails());
+    await _updateItemQuantityOptimistic(item, quantity);
   }
 
   Future<void> increaseQuantity({int? cartItemId, required int itemId}) async {
@@ -720,7 +733,7 @@ class CartCubit extends Cubit<CartState> {
 
     if (item == null) return;
 
-    await _updateItemQuantity(item, item.quantity + 1);
+    await _updateItemQuantityOptimistic(item, item.quantity + 1);
   }
 
   Future<void> decreaseQuantity({int? cartItemId, required int itemId}) async {
@@ -730,7 +743,108 @@ class CartCubit extends Cubit<CartState> {
     );
     if (item == null || item.quantity <= 1) return;
 
-    await _updateItemQuantity(item, item.quantity - 1);
+    await _updateItemQuantityOptimistic(item, item.quantity - 1);
+  }
+
+  Future<void> _updateItemQuantityOptimistic(
+    Cart item,
+    int quantity,
+  ) async {
+    final String key = item.selectionKey;
+
+    _quantityTargets[key] = quantity;
+
+    void _applyOptimistic(int q) {
+      final List<Cart> optimisticItems = List<Cart>.from(state.items);
+      final int index = optimisticItems.indexWhere(
+        (Cart candidate) => candidate.selectionKey == key,
+      );
+      if (index != -1) {
+        optimisticItems[index].quantity = q;
+        _syncSection(optimisticItems);
+        emit(
+          state.copyWith(
+            items: optimisticItems,
+            lastUpdated: DateTime.now(),
+          ),
+        );
+      }
+    }
+
+    _applyOptimistic(quantity);
+
+    if (_quantityInFlight.contains(key)) {
+      return;
+    }
+
+    _quantityInFlight.add(key);
+
+    try {
+      while (true) {
+        final int desired = _quantityTargets[key] ?? quantity;
+
+        try {
+          final CartSummary summary = await _repository.updateQuantity(
+            itemId: item.id!,
+            quantity: desired,
+            cartItemId: item.cartItemId,
+            variantId: item.variantId,
+            variantKey: item.variantKey,
+            attributes: item.variantAttributes,
+            stockSnapshot: item.stockSnapshot,
+            unitPrice: item.unitPrice,
+            unitPriceLocked: item.unitPriceLocked,
+            currency: item.currency,
+          );
+
+          _syncSection(summary.items);
+
+          emit(
+            state.copyWith(
+              items: summary.items,
+              discounts: summary.discounts,
+              lastUpdated: DateTime.now(),
+              clearSafetyTips: true,
+              departmentPolicy: summary.departmentPolicy ?? state.departmentPolicy,
+              support: summary.support ?? state.support,
+              deliveryQuote: summary.deliveryQuote ?? state.deliveryQuote,
+              blocking: summary.blocking ?? state.blocking,
+              deliveryPaymentOptions:
+                  summary.deliveryPaymentOptions ?? state.deliveryPaymentOptions,
+              deliveryPaymentTiming:
+                  summary.deliveryPaymentTiming ?? state.deliveryPaymentTiming,
+              checkoutLoading: _checkoutDetailsSyncEnabled,
+              currency: summary.currency ?? state.currency,
+              currencyCode: summary.currencyCode ?? state.currencyCode,
+              store: summary.store,
+            ),
+          );
+          if (_checkoutDetailsSyncEnabled) {
+            unawaited(refreshCheckoutDetails());
+          }
+        } catch (error) {
+          AppTelemetry.record('cart_quantity_update_failed', <String, dynamic>{
+            'itemId': item.id,
+            'cartItemId': item.cartItemId,
+            'quantity': desired,
+            'error': error.toString(),
+          });
+          unawaited(fetchCart().catchError((_) {}));
+          break;
+        }
+
+        final int? pending = _quantityTargets[key];
+        if (pending != null && pending != desired) {
+          _applyOptimistic(pending);
+          continue;
+        }
+
+        _quantityTargets.remove(key);
+        break;
+      }
+    } finally {
+      _quantityInFlight.remove(key);
+    }
   }
 
   Future<void> removeItem({int? cartItemId, required int itemId}) async {
@@ -740,34 +854,79 @@ class CartCubit extends Cubit<CartState> {
     );
     if (item == null) return;
 
-    final CartSummary summary = await _repository.removeItem(
-      itemId: item.id!,
-      cartItemId: item.cartItemId,
-      variantKey: item.variantKey,
-    );
+    final int existingIndex =
+        state.items.indexWhere((Cart candidate) => candidate.selectionKey == item.selectionKey);
 
-    _syncSection(summary.items);
+    if (existingIndex != -1) {
+      final List<Cart> optimisticItems = List<Cart>.from(state.items)
+        ..removeAt(existingIndex);
+      _syncSection(optimisticItems);
+      emit(
+        state.copyWith(
+          items: optimisticItems,
+          lastUpdated: DateTime.now(),
+        ),
+      );
+    }
 
-    emit(
-      state.copyWith(
-        items: summary.items,
-        discounts: summary.discounts,
-        lastUpdated: DateTime.now(),
-        departmentPolicy: summary.departmentPolicy ?? state.departmentPolicy,
-        support: summary.support ?? state.support,
-        deliveryQuote: summary.deliveryQuote ?? state.deliveryQuote,
-        blocking: summary.blocking ?? state.blocking,
-        deliveryPaymentOptions:
-            summary.deliveryPaymentOptions ?? state.deliveryPaymentOptions,
-        deliveryPaymentTiming:
-            summary.deliveryPaymentTiming ?? state.deliveryPaymentTiming,
-        checkoutLoading: true,
-        currency: summary.currency ?? state.currency,
-        currencyCode: summary.currencyCode ?? state.currencyCode,
-        store: summary.store,
-      ),
-    );
-    unawaited(refreshCheckoutDetails());
+    try {
+      final CartSummary summary = await _repository.removeItem(
+        itemId: item.id!,
+        cartItemId: item.cartItemId,
+        variantKey: item.variantKey,
+      );
+
+      _syncSection(summary.items);
+
+      emit(
+        state.copyWith(
+          items: summary.items,
+          discounts: summary.discounts,
+          lastUpdated: DateTime.now(),
+          departmentPolicy: summary.departmentPolicy ?? state.departmentPolicy,
+          support: summary.support ?? state.support,
+          deliveryQuote: summary.deliveryQuote ?? state.deliveryQuote,
+          blocking: summary.blocking ?? state.blocking,
+          deliveryPaymentOptions:
+              summary.deliveryPaymentOptions ?? state.deliveryPaymentOptions,
+          deliveryPaymentTiming:
+              summary.deliveryPaymentTiming ?? state.deliveryPaymentTiming,
+          checkoutLoading: _checkoutDetailsSyncEnabled,
+          currency: summary.currency ?? state.currency,
+          currencyCode: summary.currencyCode ?? state.currencyCode,
+          store: summary.store,
+        ),
+      );
+      if (_checkoutDetailsSyncEnabled) {
+        unawaited(refreshCheckoutDetails());
+      }
+    } catch (error) {
+      AppTelemetry.record('cart_remove_failed', <String, dynamic>{
+        'itemId': itemId,
+        'cartItemId': cartItemId,
+        'error': error.toString(),
+      });
+
+      if (existingIndex != -1) {
+        final List<Cart> rollbackItems = List<Cart>.from(state.items);
+        if (rollbackItems
+            .any((Cart candidate) => candidate.selectionKey == item.selectionKey)) {
+          unawaited(fetchCart().catchError((_) {}));
+          return;
+        }
+        final int insertAt = existingIndex.clamp(0, rollbackItems.length);
+        rollbackItems.insert(insertAt, item);
+        _syncSection(rollbackItems);
+        emit(
+          state.copyWith(
+            items: rollbackItems,
+            lastUpdated: DateTime.now(),
+          ),
+        );
+      }
+
+      unawaited(fetchCart().catchError((_) {}));
+    }
   }
 
   Future<void> clearCart() async {
@@ -787,13 +946,15 @@ class CartCubit extends Cubit<CartState> {
             summary.deliveryPaymentOptions ?? state.deliveryPaymentOptions,
         deliveryPaymentTiming:
             summary.deliveryPaymentTiming ?? state.deliveryPaymentTiming,
-        checkoutLoading: true,
+        checkoutLoading: _checkoutDetailsSyncEnabled,
         currency: summary.currency ?? state.currency,
         currencyCode: summary.currencyCode ?? state.currencyCode,
         store: summary.store,
       ),
     );
-    unawaited(refreshCheckoutDetails());
+    if (_checkoutDetailsSyncEnabled) {
+      unawaited(refreshCheckoutDetails());
+    }
   }
 
   Future<void> applyCoupon(String rawCode) async {
@@ -839,13 +1000,15 @@ class CartCubit extends Cubit<CartState> {
               summary.deliveryPaymentOptions ?? state.deliveryPaymentOptions,
           deliveryPaymentTiming:
               summary.deliveryPaymentTiming ?? state.deliveryPaymentTiming,
-          checkoutLoading: true,
+          checkoutLoading: _checkoutDetailsSyncEnabled,
           currency: summary.currency ?? state.currency,
           currencyCode: summary.currencyCode ?? state.currencyCode,
           store: summary.store,
         ),
       );
-      unawaited(refreshCheckoutDetails());
+      if (_checkoutDetailsSyncEnabled) {
+        unawaited(refreshCheckoutDetails());
+      }
     } on ApiHttpException catch (error) {
       if (error.statusCode == 429) {
         emit(
@@ -930,13 +1093,15 @@ class CartCubit extends Cubit<CartState> {
               summary.deliveryPaymentOptions ?? state.deliveryPaymentOptions,
           deliveryPaymentTiming:
               summary.deliveryPaymentTiming ?? state.deliveryPaymentTiming,
-          checkoutLoading: true,
+          checkoutLoading: _checkoutDetailsSyncEnabled,
           currency: summary.currency ?? state.currency,
           currencyCode: summary.currencyCode ?? state.currencyCode,
           store: summary.store,
         ),
       );
-      unawaited(refreshCheckoutDetails());
+      if (_checkoutDetailsSyncEnabled) {
+        unawaited(refreshCheckoutDetails());
+      }
     } on ApiHttpException catch (error) {
       if (error.statusCode == 429) {
         emit(
@@ -1150,17 +1315,26 @@ class CartCubit extends Cubit<CartState> {
             summary.deliveryPaymentOptions ?? state.deliveryPaymentOptions,
         deliveryPaymentTiming:
             summary.deliveryPaymentTiming ?? state.deliveryPaymentTiming,
-        checkoutLoading: true,
+        checkoutLoading: _checkoutDetailsSyncEnabled,
         currency: summary.currency ?? state.currency,
         currencyCode: summary.currencyCode ?? state.currencyCode,
         store: summary.store,
       ),
     );
-    unawaited(refreshCheckoutDetails());
+    if (_checkoutDetailsSyncEnabled) {
+      unawaited(refreshCheckoutDetails());
+    }
   }
 
-  int get totalItems =>
-      state.items.fold(0, (int total, Cart item) => total + item.quantity);
+  int get totalItems {
+    if (!HiveUtils.isUserAuthenticated()) return 0;
+    return state.items.fold(0, (int total, Cart item) => total + item.quantity);
+  }
+
+  int get distinctItemsCount {
+    if (!HiveUtils.isUserAuthenticated()) return 0;
+    return state.items.length;
+  }
 
   int getQuantityForCartItem({int? cartItemId, required int itemId}) {
     final Cart? item = _findItem(
@@ -1405,31 +1579,6 @@ class CartCubit extends Cubit<CartState> {
     }
     final String trimmed = value.trim();
     return trimmed.isEmpty ? null : trimmed;
-  }
-
-  String? _readString(Map<String, dynamic>? map, Iterable<String> keys) {
-    if (map == null) return null;
-    for (final String key in keys) {
-      if (!map.containsKey(key)) continue;
-      final dynamic value = map[key];
-      if (value == null) {
-        continue;
-      }
-      if (value is String) {
-        final String trimmed = value.trim();
-        if (trimmed.isNotEmpty) {
-          return trimmed;
-        }
-      } else if (value is Enum) {
-        return value.name;
-      } else {
-        final String text = value.toString().trim();
-        if (text.isNotEmpty) {
-          return text;
-        }
-      }
-    }
-    return null;
   }
 
   int? _readInt(Map<String, dynamic>? map, Iterable<String> keys) {

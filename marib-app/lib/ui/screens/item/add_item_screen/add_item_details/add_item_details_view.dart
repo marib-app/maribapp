@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -69,16 +69,23 @@ class AddItemDetailsView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    model.ensurePriceFormatterAttached();
+    final ThemeData theme = Theme.of(context);
+    final Color scaffoldBackgroundColor = theme.scaffoldBackgroundColor;
     final mediaQuery = MediaQuery.of(context);
     final double bottomInset = mediaQuery.viewInsets.bottom;
     final double footerHeight = 64 + mediaQuery.padding.bottom;
 
     return SafeArea(
+      top: false,
       child: Scaffold(
+        backgroundColor: scaffoldBackgroundColor,
         appBar: UiUtils.buildAppBar(
           context,
           title: 'تفاصيل الإعلان',
           showBackButton: true,
+          backgroundColor: scaffoldBackgroundColor,
+          statusBarColor: scaffoldBackgroundColor,
         ),
         bottomNavigationBar: Padding(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
@@ -150,6 +157,72 @@ class AddItemDetailsView extends StatelessWidget {
     }
   }
 
+  void _openGalleryViewer(BuildContext context, int initialSourceIndex) {
+    if (model.galleryItems.isEmpty) return;
+
+    final List<ImageProvider> providers = <ImageProvider>[];
+    final List<int> sourceIndices = <int>[];
+    int initialIndex = 0;
+    int mainIndex = 0;
+
+    for (int idx = 0; idx < model.galleryItems.length; idx++) {
+      final dynamic item = model.galleryItems[idx];
+      ImageProvider? provider;
+      bool isMain = false;
+
+      if (item is File) {
+        provider = FileImage(item);
+        isMain = model.coverImageFile?.path == item.path;
+      } else if (item is String && item.isNotEmpty) {
+        provider = NetworkImage(item);
+        isMain = model.coverImageUrl == item;
+      } else if (item is Map) {
+        final dynamic fileVal = item['file'];
+        final dynamic urlVal = item['url'];
+        if (fileVal is File) {
+          provider = FileImage(fileVal);
+          isMain = model.coverImageFile?.path == fileVal.path;
+        } else if (urlVal is String && urlVal.isNotEmpty) {
+          provider = NetworkImage(urlVal);
+          isMain = model.coverImageUrl == urlVal;
+        }
+      }
+
+      if (provider == null) continue;
+
+      providers.add(provider);
+      sourceIndices.add(idx);
+      final int viewerIndex = providers.length - 1;
+
+      if (idx == initialSourceIndex) {
+        initialIndex = viewerIndex;
+      }
+      if (isMain) {
+        mainIndex = viewerIndex;
+      }
+    }
+
+    if (providers.isEmpty) return;
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => _InternalGalleryViewer(
+          providers: providers,
+          sourceIndices: sourceIndices,
+          initialIndex: initialIndex.clamp(0, providers.length - 1),
+          mainIndex: mainIndex.clamp(0, providers.length - 1),
+          onDelete: (int sourceIdx) {
+            if (sourceIdx < 0 || sourceIdx >= model.galleryItems.length) {
+              return;
+            }
+            onRemoveGalleryImage(sourceIdx);
+            onRefresh();
+          },
+        ),
+      ),
+    );
+  }
+
 
   // --- Media (Images & Video) ---
   Widget _buildMediaHeader(BuildContext context) {
@@ -181,153 +254,200 @@ class AddItemDetailsView extends StatelessWidget {
     );
   }
 
-
-
   Widget _buildMediaGrid(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-        childAspectRatio: 1,
-      ),
-      itemCount: model.galleryItems.length + 1,
-      itemBuilder: (context, index) {
-        if (index == 0) {
-          return InkWell(
-            onTap: () => onPickGalleryImage(ImageSource.gallery),
-            borderRadius: BorderRadius.circular(16),
-            child: Container(
-              decoration: BoxDecoration(
-                color: colors.secondaryColor,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: colors.borderColor.withOpacity(0.4)),
-              ),
-              child: const Center(child: Icon(Icons.add, size: 36)),
-            ),
-          );
-        }
+    final theme = Theme.of(context);
+    const int maxGalleryImages = 15;
+    final int remaining = maxGalleryImages - model.galleryItems.length;
+    final TextStyle? errorStyle = theme.inputDecorationTheme.errorStyle ??
+        theme.textTheme.bodySmall?.copyWith(color: colors.error);
 
-        final dynamic item = model.galleryItems[index - 1];
-        ImageProvider? image;
-        if (item is File) {
-          image = FileImage(item);
-        } else if (item is String && item.isNotEmpty) {
-          image = NetworkImage(item);
-        }
-
-        final bool isMain = (item is File && model.coverImageFile?.path == item.path) ||
-            (item is String && model.coverImageUrl == item);
-
-        return GestureDetector(
-          onLongPress: () {
-            // Mark this image as the cover. If the image is a local File,
-            // store it in the PickImage.pickedFile so `model.coverImageFile`
-            // becomes non-null. If it's a remote URL (String or Map url),
-            // set `coverImageUrl` instead.
-            try {
-              if (item is File) {
-                model.coverImagePicker.pickedFile = item;
-                model.coverImagePicker.lastPayload = {"error": "", "file": [item]};
-                model.coverImageUrl = '';
-                if (kDebugMode) {
-                  // ignore: avoid_print
-                  print('[debug] long-press -> set cover pickedFile=${item.path}');
-                }
-              } else if (item is Map) {
-                final dynamic fileVal = item['file'];
-                final dynamic urlVal = item['url'];
-                if (fileVal is File) {
-                  model.coverImagePicker.pickedFile = fileVal;
-                  model.coverImagePicker.lastPayload = {"error": "", "file": [fileVal]};
-                  model.coverImageUrl = '';
-                  if (kDebugMode) {
-                    // ignore: avoid_print
-                    print('[debug] long-press -> set cover pickedFile=${fileVal.path} from Map');
-                  }
-                } else if (urlVal is String && urlVal.isNotEmpty) {
-                  model.coverImagePicker.pickedFile = null;
-                  model.coverImagePicker.lastPayload = {"error": "", "file": []};
-                  model.coverImageUrl = urlVal;
-                  if (kDebugMode) {
-                    // ignore: avoid_print
-                    print('[debug] long-press -> set cover url=$urlVal');
-                  }
-                }
-              } else if (item is String) {
-                model.coverImagePicker.pickedFile = null;
-                model.coverImagePicker.lastPayload = {"error": "", "file": []};
-                model.coverImageUrl = item;
-                if (kDebugMode) {
-                  // ignore: avoid_print
-                  print('[debug] long-press -> set cover url=$item (String)');
-                }
-              }
-            } catch (_) {
-              // ignore
-            }
-            onRefresh();
-          },
-          child: Stack(
-            children: <Widget>[
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: colors.borderColor.withOpacity(0.4)),
-                  image: image == null
-                      ? null
-                      : DecorationImage(image: image, fit: BoxFit.cover),
-                  color: colors.secondaryColor,
-                ),
-                child: image == null
-                    ? const Center(child: Icon(Icons.image_outlined))
-                    : null,
-              ),
-              PositionedDirectional(
-                top: 6,
-                end: 6,
-                child: InkWell(
-                  onTap: () => onRemoveGalleryImage(index - 1),
-                  child: Container(
-                    width: 26,
-                    height: 26,
-                    decoration: BoxDecoration(
-                      color: Colors.black45,
-                      borderRadius: BorderRadius.circular(26),
-                    ),
-                    child: const Icon(Icons.close, size: 16, color: Colors.white),
-                  ),
-                ),
-              ),
-              if (isMain)
-                PositionedDirectional(
-                  bottom: 6,
-                  start: 6,
-                  child: Container(
-                    padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.black54,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        Icon(Icons.star, size: 14, color: Colors.amber),
-                        SizedBox(width: 4),
-                        Text('رئيسية',
-                            style: TextStyle(color: Colors.white, fontSize: 12)),
-                      ],
-                    ),
-                  ),
-                ),
-            ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            childAspectRatio: 1,
           ),
-        );
-      },
+          itemCount: model.galleryItems.length + 1,
+          itemBuilder: (context, index) {
+            if (index == 0) {
+              return InkWell(
+                onTap: () => onPickGalleryImage(ImageSource.gallery),
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: colors.secondaryColor,
+                    borderRadius: BorderRadius.circular(16),
+                    border:
+                        Border.all(color: colors.borderColor.withOpacity(0.4)),
+                  ),
+                  child: const Center(child: Icon(Icons.add, size: 36)),
+                ),
+              );
+            }
+
+            final dynamic item = model.galleryItems[index - 1];
+            ImageProvider? image;
+            if (item is File) {
+              image = FileImage(item);
+            } else if (item is String && item.isNotEmpty) {
+              image = NetworkImage(item);
+            } else if (item is Map) {
+              final dynamic fileVal = item['file'];
+              final dynamic urlVal = item['url'];
+              if (fileVal is File) {
+                image = FileImage(fileVal);
+              } else if (urlVal is String && urlVal.isNotEmpty) {
+                image = NetworkImage(urlVal);
+              }
+            }
+
+            final bool isMain = (item is File &&
+                    model.coverImageFile?.path == item.path) ||
+                (item is String && model.coverImageUrl == item) ||
+                (item is Map &&
+                    ((item['file'] is File &&
+                            model.coverImageFile?.path ==
+                                (item['file'] as File).path) ||
+                        (item['url'] is String &&
+                            model.coverImageUrl == item['url'])));
+
+            return GestureDetector(
+              onLongPress: () {
+                // Mark this image as the cover. If the image is a local File,
+                // store it in the PickImage.pickedFile so `model.coverImageFile`
+                // becomes non-null. If it's a remote URL (String or Map url),
+                // set `coverImageUrl` instead.
+                try {
+                  if (item is File) {
+                    model.coverImagePicker.pickedFile = item;
+                    model.coverImagePicker.lastPayload = {
+                      "error": "",
+                      "file": [item]
+                    };
+                    model.coverImageUrl = '';
+                    if (kDebugMode) {
+                      // ignore: avoid_print
+                      print(
+                          '[debug] long-press -> set cover pickedFile=${item.path}');
+                    }
+                  } else if (item is Map) {
+                    final dynamic fileVal = item['file'];
+                    final dynamic urlVal = item['url'];
+                    if (fileVal is File) {
+                      model.coverImagePicker.pickedFile = fileVal;
+                      model.coverImagePicker.lastPayload = {
+                        "error": "",
+                        "file": [fileVal]
+                      };
+                      model.coverImageUrl = '';
+                      if (kDebugMode) {
+                        // ignore: avoid_print
+                        print(
+                            '[debug] long-press -> set cover pickedFile=${fileVal.path} from Map');
+                      }
+                    } else if (urlVal is String && urlVal.isNotEmpty) {
+                      model.coverImagePicker.pickedFile = null;
+                      model.coverImagePicker.lastPayload = {
+                        "error": "",
+                        "file": []
+                      };
+                      model.coverImageUrl = urlVal;
+                      if (kDebugMode) {
+                        // ignore: avoid_print
+                        print('[debug] long-press -> set cover url=$urlVal');
+                      }
+                    }
+                  } else if (item is String) {
+                    model.coverImagePicker.pickedFile = null;
+                    model.coverImagePicker.lastPayload = {"error": "", "file": []};
+                    model.coverImageUrl = item;
+                    if (kDebugMode) {
+                      // ignore: avoid_print
+                      print('[debug] long-press -> set cover url=$item (String)');
+                    }
+                  }
+                } catch (_) {
+                  // ignore
+                }
+                onRefresh();
+              },
+              onTap: () => _openGalleryViewer(context, index - 1),
+              child: Stack(
+                children: <Widget>[
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: colors.borderColor.withOpacity(0.4)),
+                      image: image == null
+                          ? null
+                          : DecorationImage(image: image, fit: BoxFit.cover),
+                      color: colors.secondaryColor,
+                    ),
+                    child: image == null
+                        ? const Center(child: Icon(Icons.image_outlined))
+                        : null,
+                  ),
+                  PositionedDirectional(
+                    top: 6,
+                    end: 6,
+                    child: InkWell(
+                      onTap: () => onRemoveGalleryImage(index - 1),
+                      child: Container(
+                        width: 26,
+                        height: 26,
+                        decoration: BoxDecoration(
+                          color: Colors.black45,
+                          borderRadius: BorderRadius.circular(26),
+                        ),
+                        child: const Icon(Icons.close, size: 16, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                  if (isMain)
+                    PositionedDirectional(
+                      bottom: 6,
+                      start: 6,
+                      child: Container(
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.black54,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            Icon(Icons.star, size: 14, color: Colors.amber),
+                            SizedBox(width: 4),
+                            Text('رئيسية',
+                                style:
+                                    TextStyle(color: Colors.white, fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
+        ),
+        if (model.galleryItems.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          Text(
+            remaining > 0
+                ? 'يمكنك إضافة $remaining صورة أخرى'
+                : 'تم بلوغ الحد الأقصى للصور (15 صورة)',
+            style: errorStyle,
+          ),
+        ],
+      ],
     );
   }
 
@@ -524,6 +644,15 @@ class AddItemDetailsView extends StatelessWidget {
 
   Widget _buildContactSection(BuildContext context) {
     final theme = Theme.of(context);
+
+    String formatCountryOption(Map<String, String> country) {
+      final String name = (country['name'] ?? '').trim();
+      final String code = (country['code'] ?? '').trim();
+      if (name.isEmpty) return code;
+      if (code.isEmpty) return name;
+      return '$name (\u200E$code\u200E)';
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -536,7 +665,7 @@ class AddItemDetailsView extends StatelessWidget {
               child: DropdownButtonFormField<String>(
                 value: model.selectedCountryCode,
                 decoration: InputDecoration(
-                  labelText: 'المقدمة',
+                  labelText: 'مفتاح الرقم',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -551,7 +680,8 @@ class AddItemDetailsView extends StatelessWidget {
                       DropdownMenuItem<String>(
                         value: country['code'],
                         child: Text(
-                          '${country['code']} (${country['name']})',
+                          formatCountryOption(country),
+                          textDirection: TextDirection.rtl,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -800,6 +930,251 @@ class AddItemDetailsView extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(model.locationAddress ?? '', style: theme.textTheme.bodyMedium),
+        ],
+      ),
+    );
+  }
+}
+
+class _InternalGalleryViewer extends StatefulWidget {
+  const _InternalGalleryViewer({
+    required this.providers,
+    required this.sourceIndices,
+    required this.initialIndex,
+    required this.mainIndex,
+    required this.onDelete,
+  });
+
+  final List<ImageProvider> providers;
+  final List<int> sourceIndices;
+  final int initialIndex;
+  final int mainIndex;
+  final void Function(int sourceIndex) onDelete;
+
+  @override
+  State<_InternalGalleryViewer> createState() => _InternalGalleryViewerState();
+}
+
+class _InternalGalleryViewerState extends State<_InternalGalleryViewer> {
+  late final PageController _controller;
+  late List<ImageProvider> _providers;
+  late List<int> _sourceIndices;
+  late int _current;
+
+  @override
+  void initState() {
+    super.initState();
+    _providers = List<ImageProvider>.from(widget.providers);
+    _sourceIndices = List<int>.from(widget.sourceIndices);
+    _current = widget.initialIndex.clamp(0, _providers.isEmpty ? 0 : _providers.length - 1);
+    _controller = PageController(initialPage: _current);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _deleteCurrent() {
+    if (_providers.isEmpty) {
+      Navigator.of(context).pop();
+      return;
+    }
+
+    final int removeIdx = _current;
+    final int removedSourceIdx = _sourceIndices[removeIdx];
+    widget.onDelete(removedSourceIdx);
+
+    setState(() {
+      _providers.removeAt(removeIdx);
+      _sourceIndices.removeAt(removeIdx);
+
+      // Underlying model list shrinks; fix indices for remaining items.
+      for (int i = 0; i < _sourceIndices.length; i++) {
+        if (_sourceIndices[i] > removedSourceIdx) {
+          _sourceIndices[i] = _sourceIndices[i] - 1;
+        }
+      }
+
+      if (_providers.isEmpty) {
+        _current = 0;
+        return;
+      }
+
+      // After deletion go to the previous image (or 0).
+      _current = (removeIdx - 1).clamp(0, _providers.length - 1);
+    });
+
+    UiUtils.showSoftSnackBar(
+      context,
+      message: 'تم حذف الصورة',
+      iconPath: 'assets/image/showSoftSnackBar.png',
+    );
+
+    if (_providers.isEmpty) {
+      Navigator.of(context).pop();
+    } else {
+      _controller.jumpToPage(_current);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final int total = _providers.length;
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          PageView.builder(
+            controller: _controller,
+            itemCount: total,
+            onPageChanged: (i) => setState(() => _current = i),
+            itemBuilder: (_, i) => InteractiveViewer(
+              child: DecoratedBox(
+                decoration: const BoxDecoration(color: Colors.black),
+                child: Center(
+                  child: Image(
+                    image: _providers[i],
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 16,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              top: false,
+              child: SizedBox(
+                height: 80,
+                child: ListView.separated(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  scrollDirection: Axis.horizontal,
+                  itemCount: total,
+                  separatorBuilder: (_, __) => const SizedBox(width: 10),
+                  itemBuilder: (context, i) {
+                    final bool selected = i == _current;
+                    return GestureDetector(
+                      onTap: () => _controller.animateToPage(
+                        i,
+                        duration: const Duration(milliseconds: 220),
+                        curve: Curves.easeOut,
+                      ),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 160),
+                        padding: const EdgeInsets.all(3),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: selected
+                                ? Colors.white
+                                : Colors.white54.withOpacity(0.4),
+                            width: selected ? 2 : 1,
+                          ),
+                          boxShadow: selected
+                              ? [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.35),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 3),
+                                  )
+                                ]
+                              : null,
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image(
+                            image: _providers[i],
+                            width: 80,
+                            height: 80,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 40,
+            left: 16,
+            child: SafeArea(
+              child: Column(
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.45),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.45),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: IconButton(
+                      icon:
+                          const Icon(Icons.delete_outline, color: Colors.white),
+                      onPressed: _deleteCurrent,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+            top: 40,
+            right: 16,
+            child: SafeArea(
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.45),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  '${_current + 1} / $total',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );

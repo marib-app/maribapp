@@ -168,6 +168,17 @@ class AddItemDetailsState extends CloudState<AddItemDetails>
   }
 
   Future<void> _pickGalleryImage(ImageSource source) async {
+    const int maxGalleryImages = 15;
+
+    if (model.galleryItems.length >= maxGalleryImages) {
+      UiUtils.showSoftSnackBar(
+        context,
+        message: 'لا يمكن إضافة أكثر من 15 صورة',
+        iconPath: 'assets/image/showSoftSnackBar.png',
+      );
+      return;
+    }
+
     setState(() => model.isUploadingGallery = true);
     try {
       await model.galleryPicker.pick(
@@ -183,6 +194,20 @@ class AddItemDetailsState extends CloudState<AddItemDetails>
           print('[debug] _pickGalleryImage after pick -> galleryPicker.pickedFile=${model.galleryPicker.pickedFile} lastPayload=${model.galleryPicker.lastPayload}');
         } catch (_) {}
       }
+
+      // Enforce max image count and show a unified alert if the user exceeded it.
+      final int afterCount = model.galleryItems.length;
+      if (afterCount > maxGalleryImages) {
+        model.galleryItems.removeRange(
+          maxGalleryImages,
+          afterCount,
+        );
+        UiUtils.showSoftSnackBar(
+          context,
+          message: 'لا يمكن إضافة أكثر من 15 صورة',
+          iconPath: 'assets/image/showSoftSnackBar.png',
+        );
+      }
     } finally {
       if (!mounted) {
         model.isUploadingGallery = false;
@@ -195,6 +220,9 @@ class AddItemDetailsState extends CloudState<AddItemDetails>
   void _removeGalleryImage(int index) {
     setState(() {
       final dynamic removed = model.galleryItems[index];
+      bool removedWasCover = false;
+      final String? coverPath = model.coverImageFile?.path;
+      final String coverUrl = model.coverImageUrl;
       if (removed is Map) {
         final dynamic rawId = removed['id'];
         final int? imageId = rawId is int
@@ -203,15 +231,45 @@ class AddItemDetailsState extends CloudState<AddItemDetails>
         if (imageId != null && !model.deletedImageIds.contains(imageId)) {
           model.deletedImageIds.add(imageId);
         }
-        if (removed['isMain'] == true ||
-            removed['url'] == model.coverImageUrl) {
-          model.coverImageUrl = '';
-        }
-      } else if (removed is File &&
-          model.coverImagePicker.pickedFile == removed) {
-        model.coverImagePicker.pickedFile = null;
+        final dynamic fileVal = removed['file'];
+        final dynamic urlVal = removed['url'];
+        removedWasCover = removed['isMain'] == true ||
+            (urlVal is String && urlVal == coverUrl) ||
+            (fileVal is File && coverPath != null && fileVal.path == coverPath);
+      } else if (removed is File) {
+        removedWasCover = coverPath != null && removed.path == coverPath;
+      } else if (removed is String && removed.isNotEmpty) {
+        removedWasCover = removed == coverUrl;
       }
       model.galleryItems.removeAt(index);
+
+      if (removedWasCover) {
+        model.coverImagePicker.pickedFile = null;
+        model.coverImagePicker.lastPayload = {"error": "", "file": []};
+        model.coverImageUrl = '';
+
+        if (model.galleryItems.isNotEmpty) {
+          final dynamic next = model.galleryItems.first;
+          if (next is File) {
+            model.coverImagePicker.pickedFile = next;
+            model.coverImagePicker.lastPayload = {"error": "", "file": [next]};
+          } else if (next is String && next.isNotEmpty) {
+            model.coverImageUrl = next;
+          } else if (next is Map) {
+            final dynamic fileVal = next['file'];
+            final dynamic urlVal = next['url'];
+            if (fileVal is File) {
+              model.coverImagePicker.pickedFile = fileVal;
+              model.coverImagePicker.lastPayload = {
+                "error": "",
+                "file": [fileVal]
+              };
+            } else if (urlVal is String && urlVal.isNotEmpty) {
+              model.coverImageUrl = urlVal;
+            }
+          }
+        }
+      }
     });
   }
 
@@ -262,7 +320,7 @@ class AddItemDetailsState extends CloudState<AddItemDetails>
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: UiUtils.getSystemUiOverlayStyle(
         context: context,
-        statusBarColor: context.color.secondaryColor,
+        statusBarColor: context.color.backgroundColor,
       ),
       child: MultiBlocListener(
         listeners: <BlocListener<dynamic, dynamic>>[

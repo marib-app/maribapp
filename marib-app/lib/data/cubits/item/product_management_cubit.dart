@@ -1309,17 +1309,14 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       return;
     }
 
-    final String asciiDigits = value.replaceAllMapped(
-      RegExp('[0-9?-?]'),
-      (Match match) {
-        final int codeUnit = match.group(0)!.codeUnitAt(0);
-        final int base = codeUnit >= 0x06F0 ? 0x06F0 : 0x0660;
-        return (codeUnit - base).toString();
-      },
-    ).replaceAll('?', '.');
+    // حوّل الأرقام العربية/الفارسية إلى إنجليزية واسمح فقط بالأرقام والنقطة.
+    final String convertedDigits = value
+        .replaceAll(',', '.')
+        .replaceAllMapped(RegExp(r'[\u0660-\u0669\u06F0-\u06F9]'),
+            (Match m) => (m.group(0)!.codeUnitAt(0) % 0x660).toString());
 
     final String sanitized =
-        asciiDigits.replaceAll(',', '.').replaceAll('?', '.');
+        convertedDigits.replaceAll(RegExp(r'[^0-9\\.]'), '');
 
     final String trimmed = sanitized.trim();
 

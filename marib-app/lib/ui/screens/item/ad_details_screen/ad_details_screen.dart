@@ -217,11 +217,13 @@ class _ItemDetailsRepositoryImpl implements ItemDetailsRepository {
 class AdDetailsScreen extends StatefulWidget {
   final ItemModel model;
   final Object? initialSummary;
+  final bool previewAsCustomer;
 
   const AdDetailsScreen({
     super.key,
     required this.model,
     this.initialSummary,
+    this.previewAsCustomer = false,
   });
 
   @override
@@ -287,6 +289,7 @@ class AdDetailsScreen extends StatefulWidget {
         child: AdDetailsScreen(
           model: config.initialModel,
           initialSummary: config.initialSummary,
+          previewAsCustomer: config.previewAsCustomer,
         ),
       ),
     );
@@ -298,16 +301,19 @@ class _AdDetailsRouteConfig {
     required this.itemId,
     required this.initialModel,
     this.initialSummary,
+    this.previewAsCustomer = false,
   });
 
   final int itemId;
   final ItemModel initialModel;
   final Object? initialSummary;
+  final bool previewAsCustomer;
 
   factory _AdDetailsRouteConfig.from(dynamic arguments) {
     ItemModel? initialModel;
     Object? initialSummary;
     int? itemId;
+    bool previewAsCustomer = false;
 
     void inspect(dynamic value) {
       if (value == null) {
@@ -342,6 +348,10 @@ class _AdDetailsRouteConfig {
         inspect(value['itemId']);
         inspect(value['item_id']);
         inspect(value['id']);
+        final dynamic previewRaw = value['preview'] ?? value['previewAsCustomer'];
+        if (previewRaw is bool && previewRaw) {
+          previewAsCustomer = true;
+        }
       }
     }
 
@@ -361,6 +371,7 @@ class _AdDetailsRouteConfig {
       itemId: itemId!,
       initialModel: initialModel!,
       initialSummary: initialSummary,
+      previewAsCustomer: previewAsCustomer,
     );
   }
 }
@@ -466,11 +477,13 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   int _selectedQuantity = 1;
   bool _isEcommerceItem = false;
 
-  bool get isAddedByMe =>
-      (_currentItem.user?.id != null
-          ? _currentItem.user!.id.toString()
-          : _currentItem.userId?.toString() ?? "") ==
-      HiveUtils.getUserId();
+  bool get isAddedByMe {
+    if (widget.previewAsCustomer) return false;
+    return (_currentItem.user?.id != null
+            ? _currentItem.user!.id.toString()
+            : _currentItem.userId?.toString() ?? "") ==
+        HiveUtils.getUserId();
+  }
 
   bool get _hasLocalItemDetails {
     final ItemModel item = _currentItem;
@@ -1938,7 +1951,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     BuildContext context,
     FetchItemDetailsState state,
   ) {
-    final bool isOwner = isAddedByMe;
+    final bool isOwner = widget.previewAsCustomer ? false : isAddedByMe;
     final bool shouldShowLoadingLayout =
         _isEcommerceItem && _purchaseOptions == null && _purchaseOptionsLoading;
 
@@ -1955,9 +1968,11 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     if (state is FetchItemDetailsSuccess && !shouldShowLoadingLayout) {
       return Scaffold(
         backgroundColor: context.color.secondaryDetailsColor,
-        bottomNavigationBar: isOwner
-            ? _buildOwnerBottomBar(context)
-            : _buildPublicBottomBar(context),
+        bottomNavigationBar: widget.previewAsCustomer
+            ? _buildPreviewBottomBar(context)
+            : isOwner
+                ? _buildOwnerBottomBar(context)
+                : _buildPublicBottomBar(context),
         body: isOwner ? _buildOwnerBody(context) : _buildPublicBody(context),
       );
     }
@@ -2016,6 +2031,50 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
             setState(() => moreDetailDynamicFields = newFields),
         onPausePressed: () => _changeAdStatus('inactive'),
         onResumePressed: () => _changeAdStatus('approved'),
+      ),
+    );
+  }
+
+  Widget _buildPreviewBottomBar(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        child: Row(
+          children: [
+            Expanded(
+              child: UiUtils.buildButton(
+                context,
+                onPressed: () {
+                  Navigator.of(context).maybePop();
+                },
+                buttonTitle: 'تعديل الإعلان',
+                height: 46,
+                fontSize: context.font.large,
+                buttonColor: context.color.secondaryColor,
+                textColor: context.color.textDefaultColor,
+                border: BorderSide(
+                  color: context.color.borderColor.withOpacity(0.5),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: UiUtils.buildButton(
+                context,
+                onPressed: () async {
+                  final bool ok = await _changeAdStatus('approved');
+                  if (ok && mounted) {
+                    HelperUtils.showSnackBarMessage(
+                        context, 'تم نشر الإعلان');
+                  }
+                },
+                buttonTitle: 'نشر الإعلان',
+                height: 46,
+                fontSize: context.font.large,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

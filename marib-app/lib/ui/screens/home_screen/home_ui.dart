@@ -16,7 +16,6 @@ import 'package:marib/ui/screens/item/cards/sections_adapter.dart';
 
 import 'package:marib/ui/screens/widgets/errors/no_internet.dart';
 import 'package:marib/ui/screens/widgets/errors/something_went_wrong.dart';
-import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/app_icon.dart';
 import 'package:marib/utils/constant.dart';
@@ -67,6 +66,7 @@ class HomeScreenUI extends StatelessWidget {
   final bool hideFabOnScroll;
   final double? expandedHeight;
   final Widget? appBarBackdrop;
+  final bool showHeaderShimmer;
 
   const HomeScreenUI({
     super.key,
@@ -91,6 +91,7 @@ class HomeScreenUI extends StatelessWidget {
     this.hideFabOnScroll = true,
     this.expandedHeight,
     this.appBarBackdrop,
+    this.showHeaderShimmer = false,
   });
 
   @override
@@ -224,7 +225,7 @@ class HomeScreenUI extends StatelessWidget {
                           : ((current - kToolbarHeight) / denom)
                               .clamp(0.0, 1.0);
 
-                      final Widget header = appBarLeading ??
+                      Widget header = appBarLeading ??
                           ProfileHeaderUI(
                             isAuthenticated: isAuthenticated ?? auth,
                             name: accountName,
@@ -242,10 +243,14 @@ class HomeScreenUI extends StatelessWidget {
                                 ? "ظ…ط±ط­ط¨ظ‹ط§ ط¨ظƒ: $idStr"
                                 : null,
                             welcomeColor: Theme.of(context)
-                                .colorScheme
-                                .onPrimary
-                                .withOpacity(.85),
+                              .colorScheme
+                              .onPrimary
+                              .withOpacity(.85),
                           );
+
+                      if (showHeaderShimmer) {
+                        header = const ProfileHeaderShimmer();
+                      }
 
                       return Stack(
                         fit: StackFit.expand,
@@ -416,6 +421,63 @@ class _FabHiderState extends State<_FabHider> {
 /* =======================
    Header UI (ط¯ط§ط®ظ„ظٹ) ظ…ط¹ طھط­ط¬ظٹظ… ظ…ط±ظ†
    ======================= */
+
+class ProfileHeaderShimmer extends StatelessWidget {
+  const ProfileHeaderShimmer({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsetsDirectional.only(
+        start: 10.rw(context),
+        end: 10.rw(context),
+        bottom: (12.rh(context)).floorToDouble(),
+      ),
+      child: Row(
+        children: [
+          const ShimmerBox(
+            width: 58,
+            height: 58,
+            borderRadius: BorderRadius.all(Radius.circular(18)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ShimmerBox(
+                  height: 16,
+                  width: MediaQuery.of(context).size.width * 0.35,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                const SizedBox(height: 8),
+                ShimmerBox(
+                  height: 12,
+                  width: MediaQuery.of(context).size.width * 0.5,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Row(
+            children: List.generate(
+              3,
+              (index) => Padding(
+                padding: EdgeInsetsDirectional.only(start: index == 0 ? 0 : 8),
+                child: const ShimmerBox(
+                  width: 44,
+                  height: 44,
+                  borderRadius: BorderRadius.all(Radius.circular(14)),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class ProfileHeaderUI extends StatelessWidget {
   const ProfileHeaderUI({
@@ -946,61 +1008,241 @@ extension on _BadgeDot {
 /// ظ†ظپط³ ط§ظ„ط´ظٹظ…ط± ط§ظ„ط³ط§ط¨ظ‚ ظ„ظƒظ† ظƒط¯ط§ظ„ط© ظˆط§ط¬ظ‡ط©
 
 Widget homeShimmerEffect(BuildContext context) {
-  const defaultPadding = 16.0;
-  return Padding(
-    padding:
-        const EdgeInsets.symmetric(vertical: 24, horizontal: defaultPadding),
-    child: Column(
+  const double horizontalPadding = 18.0;
+  const double sectionGap = 18.0;
+
+  Widget sectionHeader(double titleWidth, double actionWidth) {
+    return Row(
       children: [
-        const _ShimmerBox(h: 52),
-        const SizedBox(height: 12),
-        const _ShimmerBox(h: 170),
-        const SizedBox(height: 24),
-        const _ShimmerBox(h: 52),
+        ShimmerBox(
+          height: 16,
+          width: titleWidth,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        const Spacer(),
+        ShimmerBox(
+          height: 12,
+          width: actionWidth,
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ],
+    );
+  }
+
+  return Padding(
+    padding: const EdgeInsets.symmetric(
+      vertical: 20,
+      horizontal: horizontalPadding,
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const ShimmerBox(
+          height: 50,
+          borderRadius: BorderRadius.all(Radius.circular(14)),
+        ),
+        const SizedBox(height: sectionGap),
+        const ShimmerBox(
+          height: 180,
+          borderRadius: BorderRadius.all(Radius.circular(20)),
+        ),
+        const SizedBox(height: sectionGap),
+        sectionHeader(160, 68),
         const SizedBox(height: 12),
         SizedBox(
-          height: 100,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: 10,
+          height: 96,
+          child: ListView.separated(
             physics: const NeverScrollableScrollPhysics(),
+            shrinkWrap: true,
             scrollDirection: Axis.horizontal,
-            itemBuilder: (context, index) => Padding(
-              padding: EdgeInsets.symmetric(horizontal: index == 0 ? 0 : 8.0),
-              child: const Column(
-                children: [
-                  _ShimmerBox(h: 70, w: 66),
-                  SizedBox(height: 5),
-                  _ShimmerBox(h: 10, w: 48),
-                  SizedBox(height: 4),
-                  _ShimmerBox(h: 10, w: 60),
-                ],
-              ),
+            itemCount: 6,
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemBuilder: (context, index) => const Column(
+              children: [
+                ShimmerBox(
+                  height: 56,
+                  width: 56,
+                  borderRadius: BorderRadius.all(Radius.circular(18)),
+                ),
+                SizedBox(height: 8),
+                ShimmerBox(
+                  height: 10,
+                  width: 60,
+                  borderRadius: BorderRadius.all(Radius.circular(8)),
+                ),
+              ],
             ),
           ),
         ),
+        const SizedBox(height: sectionGap),
+        sectionHeader(150, 72),
         const SizedBox(height: 12),
-        for (int i = 0; i < 6; i++) ...[
-          const _ShimmerBox(h: 52),
-          const SizedBox(height: 12),
-        ]
+        const Row(
+          children: [
+            Expanded(
+              child: ShimmerBox(
+                height: 110,
+                borderRadius: BorderRadius.all(Radius.circular(16)),
+              ),
+            ),
+            SizedBox(width: 12),
+            Expanded(
+              child: ShimmerBox(
+                height: 110,
+                borderRadius: BorderRadius.all(Radius.circular(16)),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: sectionGap),
+        sectionHeader(180, 82),
+        const SizedBox(height: 12),
+        GridView.builder(
+          physics: const NeverScrollableScrollPhysics(),
+          shrinkWrap: true,
+          itemCount: 4,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            childAspectRatio: 0.72,
+          ),
+          itemBuilder: (context, index) => const _HomeGridCardShimmer(),
+        ),
+        const SizedBox(height: sectionGap),
+        sectionHeader(150, 70),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 170,
+          child: ListView.separated(
+            physics: const NeverScrollableScrollPhysics(),
+            shrinkWrap: true,
+            scrollDirection: Axis.horizontal,
+            itemCount: 4,
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemBuilder: (context, index) => const SizedBox(
+              width: 220,
+              child: _HomeWideCardShimmer(),
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+        const _BottomNavShimmer(),
       ],
     ),
   );
 }
 
-class _ShimmerBox extends StatelessWidget {
-  const _ShimmerBox({required this.h, this.w});
-
-  final double h;
-  final double? w;
+class _HomeGridCardShimmer extends StatelessWidget {
+  const _HomeGridCardShimmer();
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      clipBehavior: Clip.antiAliasWithSaveLayer,
-      borderRadius: const BorderRadius.all(Radius.circular(10)),
-      child: CustomShimmer(height: h, width: w ?? double.maxFinite),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: const [
+        ShimmerBox(
+          height: 140,
+          borderRadius: BorderRadius.all(Radius.circular(16)),
+        ),
+        SizedBox(height: 10),
+        ShimmerBox(
+          height: 12,
+          width: 120,
+          borderRadius: BorderRadius.all(Radius.circular(8)),
+        ),
+        SizedBox(height: 6),
+        ShimmerBox(
+          height: 12,
+          width: 80,
+          borderRadius: BorderRadius.all(Radius.circular(8)),
+        ),
+      ],
+    );
+  }
+}
+
+class _HomeWideCardShimmer extends StatelessWidget {
+  const _HomeWideCardShimmer();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: const [
+        ShimmerBox(
+          height: 120,
+          borderRadius: BorderRadius.all(Radius.circular(18)),
+        ),
+        SizedBox(height: 12),
+        ShimmerBox(
+          height: 12,
+          width: 140,
+          borderRadius: BorderRadius.all(Radius.circular(8)),
+        ),
+        SizedBox(height: 8),
+        ShimmerBox(
+          height: 12,
+          width: 90,
+          borderRadius: BorderRadius.all(Radius.circular(8)),
+        ),
+      ],
+    );
+  }
+}
+
+class _BottomNavShimmer extends StatelessWidget {
+  const _BottomNavShimmer();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 96,
+      child: Stack(
+        alignment: Alignment.bottomCenter,
+        children: [
+          const ShimmerBox(
+            height: 64,
+            width: double.infinity,
+            borderRadius: BorderRadius.all(Radius.circular(22)),
+          ),
+          Positioned(
+            bottom: 12,
+            left: 0,
+            right: 0,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: List.generate(
+                4,
+                (index) => const Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ShimmerBox(
+                      width: 30,
+                      height: 30,
+                      borderRadius: BorderRadius.all(Radius.circular(10)),
+                    ),
+                    SizedBox(height: 6),
+                    ShimmerBox(
+                      width: 42,
+                      height: 8,
+                      borderRadius: BorderRadius.all(Radius.circular(6)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const Positioned(
+            top: 0,
+            child: ShimmerBox(
+              width: 64,
+              height: 64,
+              borderRadius: BorderRadius.all(Radius.circular(32)),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

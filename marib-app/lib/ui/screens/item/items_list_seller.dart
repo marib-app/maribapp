@@ -26,6 +26,7 @@ import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
 import 'package:marib/app/routes.dart';
 import 'package:marib/utils/seller_category_utils.dart'
     as seller_category_utils;
+import 'seller_card.dart';
 
 class ItemsListSeller extends StatefulWidget {
   final String categoryId, categoryName;
@@ -278,26 +279,9 @@ class ItemsListListState extends State<ItemsListSeller> {
     return SliverList(
       delegate: SliverChildBuilderDelegate(
         (context, index) {
-          int firstItemIndex = index * 2;
-          int? secondItemIndex =
-              (firstItemIndex + 1 < sellers.length) ? firstItemIndex + 1 : null;
-
-          return Row(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              Expanded(
-                child: buildSellerCard(sellers[firstItemIndex]),
-              ),
-              if (secondItemIndex != null)
-                Expanded(
-                  child: buildSellerCard(sellers[secondItemIndex]),
-                )
-              else
-                Expanded(child: Container()),
-            ],
-          );
+          return SellerCard(seller: sellers[index]);
         },
-        childCount: (sellers.length / 2).ceil(),
+        childCount: sellers.length,
       ),
     );
   }
@@ -553,8 +537,12 @@ class ItemsListListState extends State<ItemsListSeller> {
       _stringValue(contactInfo?['business_logo']),
       _stringValue(additionalInfo?['store_cover']),
       _stringValue(additionalInfo?['business_logo']),
+      _stringValue(storeData?['banner_url']),
+      _stringValue(storeData?['bannerUrl']),
       _stringValue(storeData?['banner_path']),
       _stringValue(storeData?['logo_path']),
+      _stringValue(storeData?['logo_url']),
+      _stringValue(storeData?['logoUrl']),
       _stringValue(businessLogo),
       _stringValue(fallbackProfile),
     ];

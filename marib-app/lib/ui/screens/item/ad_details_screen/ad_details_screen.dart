@@ -79,6 +79,7 @@ import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/utils/item_category_ids.dart';
 import 'package:marib/utils/responsiveSize.dart';
 import 'package:marib/utils/slider_interface_mapper.dart';
+import 'package:marib/utils/variant_key.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/validator.dart';
 import 'package:marquee/marquee.dart';
@@ -517,10 +518,17 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   }
 
   Future<bool> _changeAdStatus(String newStatus) async {
-    if (newStatus.trim().toLowerCase() == 'active') {
-      throw ArgumentError(
-        'استخدم تدفّق المراجعة قبل النشر بدلاً من استدعاء _changeAdStatus بحالة "active".',
+    final String normalized = newStatus.trim().toLowerCase();
+    final String statusToSend =
+        (normalized == 'approved') ? 'active' : normalized;
+
+    // منع النشر من خارج وضع المعاينة
+    if (statusToSend == 'active' && !widget.previewAsCustomer) {
+      HelperUtils.showSnackBarMessage(
+        context,
+        'لا يمكن نشر الإعلان إلا بعد معاينته والتأكيد من شاشة المعاينة.',
       );
+      return false;
     }
     final cubit = context.read<ChangeMyItemStatusCubit>();
     final int? id = _currentItem.id ?? widget.model.id;
@@ -531,7 +539,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     final int? userId = _currentItem.userId ?? widget.model.userId;
     await cubit.changeMyItemStatus(
       id: id,
-      status: newStatus,
+      status: statusToSend,
       userId: userId,
     );
 
@@ -539,12 +547,12 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     if (statusState is ChangeMyItemStatusSuccess) {
       if (mounted) {
         setState(() {
-          _currentItem.status = newStatus;
-          if (newStatus == 'inactive') {
+          _currentItem.status = statusToSend;
+          if (statusToSend == 'inactive') {
             _currentItem.active = false;
-          } else if (newStatus == 'sold out') {
+          } else if (statusToSend == 'sold out') {
             _currentItem.active = false;
-          } else if (newStatus == 'approved') {
+          } else if (statusToSend == 'active') {
             _currentItem.active = true;
           }
         });
@@ -652,13 +660,15 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       _purchaseOptionsError = null;
       _selectedAttributes = sanitized;
       _selectedVariantKey = _computeVariantKey(options, sanitized);
-      _selectedVariantStock = _findVariantStock(_selectedVariantKey);
+      _selectedVariantStock =
+          _resolveVariantStockForSelections(options, sanitized);
       _selectedQuantity = 1;
       _enforceQuantityConstraints();
       _currentItem = _currentItem.copyWith(
         price: options.basePrice,
         finalPrice: options.finalPrice,
-        discount: options.discount ?? _currentItem.discount,
+        discount: _forceActiveDiscount(options.discount) ??
+            _currentItem.discount,
       );
     }
 
@@ -677,6 +687,8 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
         ? Map<String, String>.from(seed)
         : Map<String, String>.from(_selectedAttributes);
     final Map<String, String> sanitized = <String, String>{};
+    final List<ItemPurchaseAttributeOption> affecting =
+        _affectingAttributes(options);
 
     for (final ItemPurchaseAttributeOption attribute in options.attributes) {
       final List<String> allowed =
@@ -699,7 +711,9 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
         continue;
       }
 
-      if (attribute.requiredForCheckout && allowed.isNotEmpty) {
+      final bool affects =
+          attribute.affectsStock || affecting.any((a) => a.key == attribute.key);
+      if ((attribute.requiredForCheckout || affects) && allowed.isNotEmpty) {
         sanitized[key] = allowed.first;
       }
     }
@@ -711,28 +725,18 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     ItemPurchaseOptions options,
     Map<String, String> selections,
   ) {
-    final bool hasVariantSpecificStock = options.variantStocks.any(
-      (ItemVariantStockOption stock) {
-        final String key = (stock.variantKey ?? '').trim();
-        return key.isNotEmpty;
-      },
-    );
-
-    if (!hasVariantSpecificStock) {
-      return null;
-    }
-
+    final List<ItemPurchaseAttributeOption> affectingAttrs =
+        _affectingAttributes(options);
     final List<MapEntry<String, String>> affecting =
         <MapEntry<String, String>>[];
 
-    for (final ItemPurchaseAttributeOption attribute in options.attributes) {
-      if (!attribute.affectsStock) {
-        continue;
-      }
-
+    for (final ItemPurchaseAttributeOption attribute in affectingAttrs) {
       final String? value = selections[attribute.key]?.trim();
       if (value != null && value.isNotEmpty) {
         affecting.add(MapEntry(attribute.key.trim(), value));
+      } else {
+        // مطلوب تحديد كل السمات المؤثرة قبل بناء مفتاح التشكيلة
+        return null;
       }
     }
 
@@ -740,17 +744,21 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       return null;
     }
 
-    affecting.sort(
-      (MapEntry<String, String> a, MapEntry<String, String> b) =>
-          a.key.toLowerCase().compareTo(b.key.toLowerCase()),
+    final bool hasVariantSpecificStock = options.variantStocks.any(
+      (ItemVariantStockOption stock) =>
+          ((stock.variantKey ?? '').trim().isNotEmpty),
     );
 
-    return affecting
-        .map(
-          (MapEntry<String, String> entry) =>
-              '${Uri.encodeComponent(entry.key)}=${Uri.encodeComponent(entry.value)}',
-        )
-        .join('|');
+    if (!hasVariantSpecificStock) {
+      return null;
+    }
+
+    final Map<String, Object?> map = <String, Object?>{
+      for (final MapEntry<String, String> entry in affecting)
+        entry.key: entry.value,
+    };
+
+    return VariantKeyCodec.encode(map);
   }
 
   ItemVariantStockOption? _findVariantStock(String? variantKey) {
@@ -758,6 +766,9 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     if (options == null) {
       return null;
     }
+
+    final String canonicalVariantKey =
+        variantKey != null ? VariantKeyCodec.canonicalize(variantKey) : '';
 
     if (variantKey == null || variantKey.isEmpty) {
       for (final ItemVariantStockOption stock in options.variantStocks) {
@@ -772,13 +783,186 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       return null;
     }
 
+    // مطابقة مباشرة
     for (final ItemVariantStockOption stock in options.variantStocks) {
-      if (stock.variantKey == variantKey) {
+      if ((stock.variantKey ?? '').trim() ==
+          canonicalVariantKey) {
+        return stock;
+      }
+    }
+
+    // مطابقة مرنة: قارن التشكيلة بناءً على السمات المؤثرة على المخزون بصرف النظر عن ترتيب الترميز وبشكل غير حساس لحالة الأحرف
+    final Map<String, String> currentSelections = <String, String>{};
+    for (final ItemPurchaseAttributeOption attr
+        in _affectingAttributes(options)) {
+      final String? val = _selectedAttributes[attr.key];
+      if (val != null && val.isNotEmpty) {
+        currentSelections[attr.key.toLowerCase()] = val.toLowerCase();
+      }
+    }
+
+    for (final ItemVariantStockOption stock in options.variantStocks) {
+      final String rawKey = (stock.variantKey ?? '').trim();
+      if (rawKey.isEmpty) continue;
+      final Map<String, String> decoded =
+          VariantKeyCodec.decode(rawKey.isEmpty ? canonicalVariantKey : rawKey)
+              .map((k, v) => MapEntry(k.toLowerCase().trim(), v.toLowerCase().trim()));
+
+      bool matches = true;
+      for (final MapEntry<String, String> entry in currentSelections.entries) {
+        if ((decoded[entry.key] ?? '').trim() != entry.value.trim()) {
+          matches = false;
+          break;
+        }
+      }
+      if (matches) {
+        return stock;
+      }
+    }
+
+    // fallback: مخزون عام (مفتاح فارغ) إن وُجد
+    for (final ItemVariantStockOption stock in options.variantStocks) {
+      if ((stock.variantKey ?? '').trim().isEmpty) {
         return stock;
       }
     }
 
     return null;
+  }
+
+  int? _availableStock(ItemVariantStockOption? stock) {
+    if (stock == null) return null;
+    final int a = stock.availableStock;
+    final int l = stock.lastVisibleStock;
+    final int s = stock.stock;
+    final int maxVal = [a, l, s].reduce((v, e) => v > e ? v : e);
+    return maxVal > 0 ? maxVal : 0;
+  }
+
+  List<ItemPurchaseAttributeOption> _affectingAttributes(
+      ItemPurchaseOptions options) {
+    final List<ItemPurchaseAttributeOption> affecting =
+        options.attributes.where((a) => a.affectsStock).toList();
+    if (affecting.isNotEmpty) {
+      return affecting;
+    }
+    return options.attributes;
+  }
+
+  ItemVariantStockOption? _resolveVariantStockForSelections(
+      ItemPurchaseOptions options, Map<String, String> selections) {
+    // إذا كانت كل السمات المؤثرة محددة، حاول المطابقة الكاملة أولاً
+    final bool allAffectingSelected = _affectingAttributes(options)
+        .every((a) => (selections[a.key]?.isNotEmpty ?? false));
+
+    if (allAffectingSelected) {
+      final String? vk = _computeVariantKey(options, selections);
+      final ItemVariantStockOption? exact = _findVariantStock(vk);
+      if (exact != null) return exact;
+    }
+
+    // مطابقة جزئية: اختر أفضل صف يطابق السمات المحددة حالياً
+    final Map<String, String> selectedLower = <String, String>{};
+    for (final ItemPurchaseAttributeOption attr in _affectingAttributes(options)) {
+      final String? val = selections[attr.key];
+      if (val != null && val.isNotEmpty) {
+        selectedLower[attr.key.toLowerCase()] = val.toLowerCase();
+      }
+    }
+
+    ItemVariantStockOption? best;
+    int bestScore = -1;
+    for (final ItemVariantStockOption stock in options.variantStocks) {
+      final String rawKey = (stock.variantKey ?? '').trim();
+      final Map<String, String> decoded =
+          VariantKeyCodec.decode(rawKey).map(
+                (k, v) => MapEntry(k.toLowerCase().trim(), v.toLowerCase().trim()),
+              );
+
+      bool matches = true;
+      for (final MapEntry<String, String> entry in selectedLower.entries) {
+        if ((decoded[entry.key] ?? '') != entry.value) {
+          matches = false;
+          break;
+        }
+      }
+      if (!matches) continue;
+
+      // نقاط المطابقة = عدد السمات المتطابقة + تفضيل المتاح > 0
+      final int available = _availableStock(stock) ?? 0;
+      final int score = selectedLower.length + (available > 0 ? 1000 : 0) + available;
+
+      if (score > bestScore) {
+        bestScore = score;
+        best = stock;
+      }
+    }
+
+    // محاولة أخيرة: مطابقة بالقيم فقط (تجاهل مفاتيح السمات) لاختيار توليفة تحمل نفس القيم
+    if (best == null || (_availableStock(best) ?? 0) == 0) {
+      ItemVariantStockOption? valueMatch;
+      int valueMatchScore = -1;
+      final Set<String> selectedValues =
+          selectedLower.values.where((v) => v.isNotEmpty).toSet();
+
+      for (final ItemVariantStockOption stock in options.variantStocks) {
+        final String rawKey = (stock.variantKey ?? '').trim();
+        final Map<String, String> decoded =
+            VariantKeyCodec.decode(rawKey).map(
+                  (k, v) =>
+                      MapEntry(k.toLowerCase().trim(), v.toLowerCase().trim()),
+                );
+        final Set<String> decodedVals =
+            decoded.values.where((v) => v.isNotEmpty).toSet();
+
+        if (selectedValues.every((val) => decodedVals.contains(val))) {
+          final int avail = _availableStock(stock) ?? 0;
+          final int score = selectedValues.length + (avail > 0 ? 1000 : 0) + avail;
+          if (score > valueMatchScore) {
+            valueMatchScore = score;
+            valueMatch = stock;
+          }
+        }
+      }
+      if (valueMatch != null) {
+        best = valueMatch;
+      }
+    }
+
+    // إذا لم نجد أي صف مطابق، رجوع للمخزون العام (مفتاح فارغ) إن وجد
+    ItemVariantStockOption? general;
+    for (final ItemVariantStockOption s in options.variantStocks) {
+      if ((s.variantKey ?? '').trim().isEmpty) {
+        general = s;
+        break;
+      }
+    }
+
+    // ابحث عن أول صف بمخزون مرئي > 0
+    ItemVariantStockOption? firstAvailable;
+    for (final ItemVariantStockOption s in options.variantStocks) {
+      final int avail = _availableStock(s) ?? 0;
+      if (avail > 0) {
+        firstAvailable = s;
+        break;
+      }
+    }
+
+    return best ??
+        general ??
+        firstAvailable ??
+        (options.variantStocks.isNotEmpty ? options.variantStocks.first : null);
+  }
+
+  ItemDiscount? _forceActiveDiscount(ItemDiscount? discount) {
+    if (discount == null) return null;
+    return ItemDiscount(
+      type: discount.type,
+      value: discount.value,
+      start: discount.start,
+      end: discount.end,
+      isActive: true,
+    );
   }
 
   void _onAttributeSelectionChanged(String key, String? value) {
@@ -804,7 +988,8 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     void update() {
       _selectedAttributes = sanitized;
       _selectedVariantKey = _computeVariantKey(options, sanitized);
-      _selectedVariantStock = _findVariantStock(_selectedVariantKey);
+      _selectedVariantStock =
+          _resolveVariantStockForSelections(options, sanitized);
       _enforceQuantityConstraints();
     }
 
@@ -820,7 +1005,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       _selectedQuantity = 1;
     }
 
-    final int? limit = _selectedVariantStock?.availableStock;
+    final int? limit = _availableStock(_selectedVariantStock);
     if (limit != null) {
       if (limit <= 0) {
         _selectedQuantity = 1;
@@ -831,7 +1016,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   }
 
   void _incrementQuantity() {
-    final int? limit = _selectedVariantStock?.availableStock;
+    final int? limit = _availableStock(_selectedVariantStock);
     if (limit != null) {
       if (limit <= 0) {
         _notifyQuantityRestriction(
@@ -1543,8 +1728,27 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     final String? deliverySizeText = deliverySizeTotal != null
         ? _formatDeliverySize(deliverySizeTotal)
         : null;
-    final int? stockLimit = _selectedVariantStock?.availableStock;
-    final bool isOutOfStock = stockLimit != null && stockLimit <= 0;
+    final int? effectiveStock = _availableStock(_selectedVariantStock);
+    final bool hasVariantStocks = options.variantStocks.isNotEmpty;
+    final List<ItemVariantStockOption> specificVariantStocks =
+        options.variantStocks
+            .where((s) => (s.variantKey).trim().isNotEmpty)
+            .toList(growable: false);
+    final bool allVariantsOut = hasVariantStocks &&
+        specificVariantStocks.isNotEmpty &&
+        specificVariantStocks.every((s) => (_availableStock(s) ?? 0) <= 0);
+    final int affectingCount = options.attributes
+        .where((a) => a.affectsStock)
+        .length;
+    final bool hasCompleteSelection = affectingCount == 0 ||
+        options.attributes
+            .where((a) => a.affectsStock)
+            .every((a) => (_selectedAttributes[a.key]?.isNotEmpty ?? false));
+    final bool isOutOfStock = hasCompleteSelection &&
+        effectiveStock != null &&
+        effectiveStock <= 0 &&
+        hasVariantStocks &&
+        _selectedVariantStock != null;
     final List<Widget> children = <Widget>[];
 
     if (_purchaseOptionsLoading) {
@@ -1552,9 +1756,43 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       children.add(const SizedBox(height: 12));
     }
 
-    if (!hideQuantitySelector &&
-        options.attributes.isNotEmpty &&
-        !isOutOfStock) {
+    if (allVariantsOut) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.error.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.error.withOpacity(0.3),
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.error_outline,
+                  color: Theme.of(context).colorScheme.error),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'نفد المخزون لهذا المنتج.',
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyMedium
+                      ?.copyWith(
+                        color: Theme.of(context).colorScheme.error,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (!hideQuantitySelector && options.attributes.isNotEmpty) {
       children.add(
         Text(
           'Choose options',
@@ -1573,7 +1811,8 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
 
       children.add(
         VariantStockInfo(
-          availableStock: _selectedVariantStock?.availableStock,
+          availableStock: effectiveStock,
+          selectedQuantity: _selectedQuantity,
           hasVariantStocks: options.variantStocks.isNotEmpty,
         ),
       );
@@ -1583,48 +1822,10 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       if (children.isNotEmpty) {
         children.add(const SizedBox(height: 20));
       }
-      if (isOutOfStock) {
-        children.add(
-          Container(
-            width: double.infinity,
-            margin: const EdgeInsets.symmetric(vertical: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.error.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Theme.of(context).colorScheme.error.withOpacity(0.25),
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.warning_amber_rounded,
-                  color: Theme.of(context).colorScheme.error,
-                  size: 22,
-                ),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Text(
-                    'Requested quantity is not available',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.error,
-                          fontWeight: FontWeight.w700,
-                        ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      } else {
-        children.add(_buildQuantitySelector());
-        if (hasDeliverySize && deliverySizeText != null) {
-          children.add(const SizedBox(height: 12));
-          children.add(DeliverySizeDisplay(valueText: deliverySizeText));
-        }
+      children.add(_buildQuantitySelector());
+      if (hasDeliverySize && deliverySizeText != null) {
+        children.add(const SizedBox(height: 12));
+        children.add(DeliverySizeDisplay(valueText: deliverySizeText));
       }
     }
 
@@ -1709,7 +1910,7 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
   }
 
   Widget _buildQuantitySelector() {
-    final int? stockLimit = _selectedVariantStock?.availableStock;
+    final int? stockLimit = _availableStock(_selectedVariantStock);
     final bool isOutOfStock = stockLimit != null && stockLimit <= 0;
     final bool canIncrement;
     final bool canDecrement = _selectedQuantity > 1 && !isOutOfStock;
@@ -1740,14 +1941,8 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     if (!mounted) {
       return;
     }
-    final ThemeData theme = Theme.of(context);
-    UiUtils.showSoftSnackBar(
-      context,
-      message: message,
-      backgroundColor: (color ?? theme.colorScheme.error),
-      backgroundOpacity: 0.88,
-      textColor: Colors.white,
-    );
+    // Use the unified app snackbar style; ignore custom colors to keep consistency.
+    HelperUtils.showSnackBarMessage(context, message);
   }
 
   String? _formatDeliverySize(double? value) {
@@ -1829,7 +2024,8 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
 
     final ItemVariantStockOption? stockOption =
         options != null ? _findVariantStock(variantKey) : _selectedVariantStock;
-    if (stockOption != null && stockOption.availableStock <= 0) {
+    final int? available = _availableStock(stockOption);
+    if (available != null && available <= 0) {
       throw CartBuildException('This variant is out of stock.');
     }
 
@@ -1841,8 +2037,9 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     }
 
     if (stockOption != null &&
-        stockOption.availableStock > 0 &&
-        _selectedQuantity > stockOption.availableStock) {
+        available != null &&
+        available > 0 &&
+        _selectedQuantity > available) {
       throw CartBuildException(
           'الكمية المطلوبة تتجاوز المتاح للتوليفة الحالية.');
     }
@@ -1993,13 +2190,14 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
     );
     if (!hasVariantSpecificStock) return base;
 
-    final Set<String> matchingValues = <String>{};
+    final Set<String> matchingAvailable = <String>{};
+    final Set<String> matchingAny = <String>{};
 
     for (final ItemVariantStockOption stock in options.variantStocks) {
       final String rawKey = (stock.variantKey ?? '').trim();
       if (rawKey.isEmpty) continue;
 
-      final Map<String, String> decoded = _decodeVariantKey(rawKey);
+      final Map<String, String> decoded = VariantKeyCodec.decode(rawKey);
       final String? thisValue = decoded[attribute.key];
       if (thisValue == null) continue;
 
@@ -2020,16 +2218,22 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       }
       if (!matches) continue;
 
-      final int available = stock.availableStock ?? stock.stock ?? 0;
-      if (available <= 0) continue;
-
-      matchingValues.add(thisValue);
+      final int available =
+          _availableStock(stock) ?? 0;
+      if (available > 0) {
+        matchingAvailable.add(thisValue);
+      } else {
+        matchingAny.add(thisValue);
+      }
     }
 
-    if (matchingValues.isEmpty) return base;
+    final Set<String> effective =
+        matchingAvailable.isNotEmpty ? matchingAvailable : matchingAny;
+
+    if (effective.isEmpty) return base;
 
     final List<String> filtered =
-        base.where((val) => matchingValues.contains(val)).toList();
+        base.where((val) => effective.contains(val)).toList();
     return filtered.isEmpty ? base : filtered;
   }
 
@@ -2091,7 +2295,9 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
         onUpdateFields: (newFields) =>
             setState(() => moreDetailDynamicFields = newFields),
         onPausePressed: () => _changeAdStatus('inactive'),
-        onResumePressed: () => _changeAdStatus('approved'),
+        onResumePressed: () async {
+          await _changeAdStatus('approved');
+        },
       ),
     );
   }
@@ -2123,10 +2329,25 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
               child: UiUtils.buildButton(
                 context,
                 onPressed: () async {
-                  final bool ok = await _changeAdStatus('approved');
-                  if (ok && mounted) {
+                  try {
+                    final bool ok = await _changeAdStatus('approved');
+                    if (!mounted || !ok) return;
+
                     HelperUtils.showSnackBarMessage(
                         context, 'تم نشر الإعلان');
+                    Navigator.of(context, rootNavigator: true).pushReplacementNamed(
+                      Routes.successItemScreen,
+                      arguments: <String, dynamic>{
+                        'model': _currentItem,
+                        'isEdit': false,
+                      },
+                    );
+                  } catch (e) {
+                    if (!mounted) return;
+                    HelperUtils.showSnackBarMessage(
+                      context,
+                      e.toString(),
+                    );
                   }
                 },
                 buttonTitle: 'نشر الإعلان',

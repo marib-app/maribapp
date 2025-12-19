@@ -4,6 +4,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:marib/data/model/merchant/storefront_model.dart';
 import 'package:marib/data/repositories/merchant/storefront_follow_repository.dart';
+import 'package:marib/data/repositories/merchant/storefront_repository.dart';
 
 class StorefrontFollowState extends Equatable {
   const StorefrontFollowState({
@@ -45,29 +46,38 @@ class StorefrontFollowCubit extends Cubit<StorefrontFollowState> {
   StorefrontFollowCubit({
     required dynamic storeIdentifier,
     required StorefrontFollowRepository repository,
+    required StorefrontRepository storefrontRepository,
     required bool initialIsFollowing,
     required int initialFollowersCount,
   })  : _storeId = storeIdentifier,
         _repository = repository,
+        _storefrontRepository = storefrontRepository,
         super(
           StorefrontFollowState(
             isFollowing: initialIsFollowing,
             followersCount: max(0, initialFollowersCount),
           ),
-        );
+        ) {
+    // Sync with server to ensure initial state matches backend, even if snapshot is stale.
+    Future.microtask(_refreshFromServer);
+  }
 
   StorefrontFollowCubit.fromDetails({
     required StorefrontDetails details,
     StorefrontFollowRepository? repository,
+    StorefrontRepository? storefrontRepository,
   }) : this(
           storeIdentifier: _resolveStoreIdentifier(details),
           repository: repository ?? const StorefrontFollowRepository(),
+          storefrontRepository:
+              storefrontRepository ?? const StorefrontRepository(),
           initialIsFollowing: details.isFollowed,
           initialFollowersCount: details.followersCount ?? 0,
         );
 
   final dynamic _storeId;
   final StorefrontFollowRepository _repository;
+  final StorefrontRepository _storefrontRepository;
 
   static dynamic _resolveStoreIdentifier(StorefrontDetails details) {
     if (details.id != 0) return details.id;
@@ -104,6 +114,7 @@ class StorefrontFollowCubit extends Cubit<StorefrontFollowState> {
           isLoading: false,
         ),
       );
+      await _refreshFromServer();
     } catch (error) {
       emit(
         state.copyWith(
@@ -114,5 +125,34 @@ class StorefrontFollowCubit extends Cubit<StorefrontFollowState> {
         ),
       );
     }
+  }
+
+  Future<void> _refreshFromServer() async {
+    final String? identifier = _normalizeIdentifier(_storeId);
+    if (identifier == null) return;
+    try {
+      final StorefrontFollowResult status =
+          await _repository.status(identifier);
+      final StorefrontDetails fresh =
+          await _storefrontRepository.fetchStore(identifier);
+      emit(
+        state.copyWith(
+          isFollowing: status.isFollowing || fresh.isFollowed,
+          followersCount:
+              status.followersCount ?? fresh.followersCount ?? state.followersCount,
+          isLoading: false,
+        ),
+      );
+    } catch (_) {
+      // Silent fallback: keep optimistic state.
+    }
+  }
+
+  String? _normalizeIdentifier(dynamic raw) {
+    if (raw == null) return null;
+    final String id = raw.toString().trim();
+    if (id.isEmpty) return null;
+    if (id == 'null' || id == '0') return null;
+    return id;
   }
 }

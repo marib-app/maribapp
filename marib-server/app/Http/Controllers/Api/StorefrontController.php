@@ -22,6 +22,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Laravel\Sanctum\PersonalAccessToken;
 
 use App\Services\Store\StoreStatusService;
 
@@ -44,16 +45,19 @@ class StorefrontController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        $currentUser = $this->resolveCurrentUser($request);
+        $viewerId = $this->resolveViewerId($request, $currentUser);
         $validated = $request->validate([
             'q' => ['nullable', 'string', 'max:191'],
             'page' => ['nullable', 'integer', 'min:1'],
-            'per_page' => ['nullable', 'integer', 'min:5', 'max:50'],
+            // Allow larger page sizes; we will override small values to return all stores.
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:1000'],
         ]);
 
-        $perPage = $validated['per_page'] ?? 12;
+        $requestedPerPage = $validated['per_page'] ?? null;
         $term = $validated['q'] ?? null;
 
-        $stores = Store::query()
+        $query = Store::query()
             ->where('status', StoreStatusEnum::APPROVED->value)
             ->withCount('followers')
             ->when($term, static function ($query) use ($term) {
@@ -69,11 +73,25 @@ class StorefrontController extends Controller
                 'settings',
                 'workingHours' => static fn ($query) => $query->orderBy('weekday'),
             ])
-            ->latest('approved_at')
-            ->paginate($perPage);
+            ->latest('approved_at');
+
+        // Always return all approved stores (capped) to avoid client-side defaults like 10.
+        $totalStores = (int) (clone $query)->count();
+        $effectivePerPage = $totalStores;
+        if ($requestedPerPage !== null && $requestedPerPage > 0) {
+            // If the client requests fewer than available, still return all to avoid the 10-store cap.
+            $effectivePerPage = max($requestedPerPage, $totalStores);
+        }
+        $effectivePerPage = max(1, min($effectivePerPage, 1000));
+
+        $stores = $query->paginate($effectivePerPage);
 
         $mapped = $stores->getCollection()->map(
-            fn (Store $store) => $this->formatStoreSummary($store)
+            fn (Store $store) => $this->formatStoreSummary(
+                $store,
+                currentUser: $currentUser,
+                viewerId: $viewerId,
+            )
         );
 
         return $this->paginateResponse($stores, $mapped->values()->all());
@@ -81,6 +99,7 @@ class StorefrontController extends Controller
 
     public function show(Request $request, string $store): JsonResponse
     {
+        $currentUser = $this->resolveCurrentUser($request);
         $storeModel = $this->resolveStoreOrResponse($store);
         if ($storeModel === null) {
             return response()->json(['message' => 'Store not found'], 404);
@@ -93,7 +112,12 @@ class StorefrontController extends Controller
         $storeModel->loadCount('followers');
 
         return response()->json([
-            'data' => $this->formatStoreSummary($storeModel, includeDetails: true),
+            'data' => $this->formatStoreSummary(
+                $storeModel,
+                includeDetails: true,
+                currentUser: $currentUser,
+                viewerId: $this->resolveViewerId($request, $currentUser),
+            ),
         ]);
     }
 
@@ -179,14 +203,46 @@ class StorefrontController extends Controller
                     'user_id' => $user->getKey(),
                 ]);
             });
-            $this->notifyStoreOwnerOfFollower($storeModel, $user);
+            $this->notifyStoreOwnerOfFollowerSafe($storeModel, $user);
         }
+
+        $followersCount = $storeModel->followers()->count();
+        $isFollowing = StoreFollower::query()
+            ->where('store_id', $storeModel->getKey())
+            ->where('user_id', $user->getKey())
+            ->exists();
+        $this->notifyFollowerConfirmationSafe($user, $storeModel);
+
+        return response()->json([
+            'data' => [
+                'is_following' => $isFollowing,
+                'followers_count' => $followersCount,
+            ],
+        ]);
+    }
+
+    public function followStatus(Request $request, string $store): JsonResponse
+    {
+        $storeModel = $this->resolveStoreOrResponse($store, includeInactive: true);
+        if ($storeModel === null) {
+            return response()->json(['message' => 'Store not found'], 404);
+        }
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        $isFollowing = StoreFollower::query()
+            ->where('store_id', $storeModel->getKey())
+            ->where('user_id', $user->getKey())
+            ->exists();
 
         $followersCount = $storeModel->followers()->count();
 
         return response()->json([
             'data' => [
-                'is_following' => true,
+                'is_following' => $isFollowing,
                 'followers_count' => $followersCount,
             ],
         ]);
@@ -210,10 +266,14 @@ class StorefrontController extends Controller
             ->delete();
 
         $followersCount = $storeModel->followers()->count();
+        $isFollowing = StoreFollower::query()
+            ->where('store_id', $storeModel->getKey())
+            ->where('user_id', $user->getKey())
+            ->exists();
 
         return response()->json([
             'data' => [
-                'is_following' => false,
+                'is_following' => $isFollowing,
                 'followers_count' => $followersCount,
             ],
         ]);
@@ -236,16 +296,18 @@ class StorefrontController extends Controller
         ], $extra));
     }
 
-    private function formatStoreSummary(Store $store, bool $includeDetails = false): array
+    private function formatStoreSummary(Store $store, bool $includeDetails = false, ?User $currentUser = null, ?int $viewerId = null): array
     {
         $settings = $store->settings;
         $statusPayload = $this->storeStatusService->resolve($store);
-        $currentUser = auth('sanctum')->user() ?? Auth::user();
+        $currentUser = $currentUser ?? auth('sanctum')->user() ?? Auth::user();
         $followersCount = $store->followers_count ?? $store->followers()->count();
-        $isFollowed = $currentUser
+        // Prefer the authenticated user if available; fall back to viewerId header/query.
+        $effectiveViewerId = $currentUser?->getKey() ?? $viewerId;
+        $isFollowed = $effectiveViewerId
             ? StoreFollower::query()
                 ->where('store_id', $store->getKey())
-                ->where('user_id', $currentUser->getKey())
+                ->where('user_id', $effectiveViewerId)
                 ->exists()
             : false;
 
@@ -444,6 +506,70 @@ class StorefrontController extends Controller
         return $query->firstOrFail();
     }
 
+    private function resolveCurrentUser(Request $request): ?User
+    {
+        $user = $request->user();
+        if ($user instanceof User) {
+            return $user;
+        }
+
+        $sanctum = Auth::guard('sanctum');
+        if (method_exists($sanctum, 'setRequest')) {
+            $sanctum->setRequest($request);
+        }
+
+        $user = $sanctum->user();
+        if ($user instanceof User) {
+            return $user;
+        }
+
+        $bearer = $request->bearerToken();
+        if (is_string($bearer) && $bearer !== '') {
+            $token = PersonalAccessToken::findToken($bearer);
+            if ($token && $token->tokenable instanceof User) {
+                return $token->tokenable;
+            }
+        }
+
+        return null;
+    }
+
+    private function resolveViewerId(Request $request, ?User $currentUser = null): ?int
+    {
+        if ($currentUser instanceof User) {
+            return $currentUser->getKey();
+        }
+
+        $headerId = $request->header('X-User-Id');
+        if (is_string($headerId)) {
+            $headerId = trim($headerId);
+        }
+        if (is_numeric($headerId)) {
+            $id = (int) $headerId;
+            return $id > 0 ? $id : null;
+        }
+
+        $queryId = $request->input('viewer_id');
+        if (is_string($queryId)) {
+            $queryId = trim($queryId);
+        }
+        if (is_numeric($queryId)) {
+            $id = (int) $queryId;
+            return $id > 0 ? $id : null;
+        }
+
+        $userIdInput = $request->input('user_id');
+        if (is_string($userIdInput)) {
+            $userIdInput = trim($userIdInput);
+        }
+        if (is_numeric($userIdInput)) {
+            $id = (int) $userIdInput;
+            return $id > 0 ? $id : null;
+        }
+
+        return null;
+    }
+
     private function notifyStoreOwnerOfFollower(Store $store, User $follower): void
     {
         $ownerId = $store->user_id;
@@ -481,9 +607,105 @@ class StorefrontController extends Controller
         );
     }
 
-    /**
-     * @return array<int, array<string, mixed>>
-     */
+    private function notifyFollowerConfirmation(User $follower, Store $store): void
+    {
+        $tokens = UserFcmToken::query()
+            ->where('user_id', $follower->getKey())
+            ->pluck('fcm_token')
+            ->filter()
+            ->values()
+            ->all();
+
+        if ($tokens === []) {
+            return;
+        }
+
+        $title = __('تمت متابعة المتجر');
+        $body = __('أنت تتابع المتجر :store. ستصلك إشعارات بكل جديد.', [
+            'store' => $store->name,
+        ]);
+
+        NotificationService::sendFcmNotification(
+            $tokens,
+            $title,
+            $body,
+            'store_follow_confirmation',
+            [
+                'store_id' => $store->getKey(),
+                'store_name' => $store->name,
+            ]
+        );
+    }
+
+                private function notifyStoreOwnerOfFollowerSafe(Store $store, User $follower): void
+    {
+        $ownerId = $store->user_id;
+        if ($ownerId === null || $ownerId === $follower->getKey()) {
+            return;
+        }
+
+        $tokens = UserFcmToken::query()
+            ->where('user_id', $ownerId)
+            ->pluck('fcm_token')
+            ->filter()
+            ->values()
+            ->all();
+
+        if ($tokens === []) {
+            return;
+        }
+
+        $title = 'تمت متابعة جديدة لمتجرك';
+        $body = sprintf(
+            '%s قام بمتابعة متجرك %s',
+            $follower->name ?? 'مستخدم',
+            $store->name
+        );
+
+        NotificationService::sendFcmNotification(
+            $tokens,
+            $title,
+            $body,
+            'store_follow',
+            [
+                'store_id' => $store->getKey(),
+                'follower_id' => $follower->getKey(),
+                'store_name' => $store->name,
+            ]
+        );
+    }
+
+    private function notifyFollowerConfirmationSafe(User $follower, Store $store): void
+    {
+        $tokens = UserFcmToken::query()
+            ->where('user_id', $follower->getKey())
+            ->pluck('fcm_token')
+            ->filter()
+            ->values()
+            ->all();
+
+        if ($tokens === []) {
+            return;
+        }
+
+        $title = 'تمت متابعة المتجر';
+        $body = sprintf(
+            'أنت تتابع المتجر %s. ستصلك إشعارات بكل جديد.',
+            $store->name
+        );
+
+        NotificationService::sendFcmNotification(
+            $tokens,
+            $title,
+            $body,
+            'store_follow_confirmation',
+            [
+                'store_id' => $store->getKey(),
+                'store_name' => $store->name,
+            ]
+        );
+    }
+
     private function formatStoreManualBanks(Store $store): array
     {
         $accounts = StoreGatewayAccount::query()

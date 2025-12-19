@@ -2,10 +2,15 @@ import 'package:marib/utils/api.dart';
 import 'package:marib/data/model/user_model.dart'; // Assuming UserModel can be reused or adapted
 
 class SellerRepository {
-  Future<List<UserModel>> fetchSellers({required int accountType, int? page}) async {
+  Future<Map<String, dynamic>> fetchSellers({
+    required int accountType,
+    int? page,
+    int perPage = 200,
+  }) async {
     try {
       Map<String, String> params = {
         "account_type": accountType.toString(),
+        "per_page": perPage.toString(),
       };
       if (page != null) {
         params["page"] = page.toString();
@@ -19,6 +24,8 @@ class SellerRepository {
       if (response['error'] == false) {
         final dynamic responseData = response['data'];
         List<dynamic> sellersData = [];
+        int currentPage = 1;
+        int lastPage = 1;
 
         if (responseData is List) {
           sellersData = responseData;
@@ -29,11 +36,17 @@ class SellerRepository {
           } else {
             throw ApiException('Invalid data format received from server');
           }
+          currentPage = (responseData['current_page'] as int?) ?? currentPage;
+          lastPage = (responseData['last_page'] as int?) ?? lastPage;
         } else {
           throw ApiException('Unexpected data format received from server');
         }
 
-        return sellersData.map((e) => UserModel.fromJson(e)).toList();
+        return {
+          'sellers': sellersData.map((e) => UserModel.fromJson(e)).toList(),
+          'current_page': currentPage,
+          'last_page': lastPage,
+        };
 
 
       } else {

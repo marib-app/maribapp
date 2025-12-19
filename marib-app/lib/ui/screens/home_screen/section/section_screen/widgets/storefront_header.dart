@@ -100,7 +100,7 @@ class MerchantStorefrontHeader extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsetsDirectional.only(end: 8),
                         child: _StorefrontActionChip(
-                          label: 'حول',
+                          label: 'aboutUs'.translate(context),
                           icon: Icons.info_outline_rounded,
                           onTap: () => _showAboutSheet(context, details),
                         ),
@@ -190,8 +190,8 @@ void _showAboutSheet(BuildContext context, StorefrontDetails details) {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  Text(
-                    'حول المتجر',
+                  Text( 
+                    'aboutUs'.translate(context),
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
@@ -204,7 +204,7 @@ void _showAboutSheet(BuildContext context, StorefrontDetails details) {
                     )
                   else
                     Text(
-                      'لا يوجد وصف للمتجر.',
+                      'noDataFound'.translate(context),
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   const SizedBox(height: 18),
@@ -218,7 +218,7 @@ void _showAboutSheet(BuildContext context, StorefrontDetails details) {
                   ),
                   const SizedBox(height: 18),
                   Text(
-                    'سياسة الاسترجاع الخاصة بالتاجر',
+                    'Policies',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
@@ -228,7 +228,7 @@ void _showAboutSheet(BuildContext context, StorefrontDetails details) {
                     ...policyEntries
                   else
                     Text(
-                      'لا توجد سياسة استرجاع متاحة.',
+                      'noDataFound'.translate(context),
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                 ],
@@ -303,40 +303,67 @@ class _StorefrontHero extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                IconButton.filledTonal(
-                  onPressed: isFollowLoading ? null : onFollowTap ?? () {},
-                  style: IconButton.styleFrom(
-                    backgroundColor: colors.surface.withValues(alpha: 0.9),
-                    foregroundColor: colors.onSurface,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                  ),
-                  icon: isFollowLoading
-                      ? SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(colors.primary),
-                          ),
-                        )
-                      : Icon(
-                          isFollowing
-                              ? Icons.star_rounded
-                              : Icons.star_border_rounded,
-                          size: 20,
+                  TextButton.icon(
+                    onPressed: isFollowLoading ? null : onFollowTap ?? () {},
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      backgroundColor: isFollowing
+                          ? colors.primary.withValues(alpha: 0.12)
+                          : colors.surface.withValues(alpha: 0.9),
+                      foregroundColor:
+                        isFollowing ? colors.primary : colors.onSurface,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        side: BorderSide(
+                          color: isFollowing
+                              ? colors.primary.withValues(alpha: 0.6)
+                              : colors.onSurface.withValues(alpha: 0.12),
                         ),
-                  tooltip: isFollowing
-                      ? 'storefrontFollowCta'.translate(context)
-                      : 'storefrontFollowCta'.translate(context),
-                )
-              ],
+                      ),
+                    ),
+                    icon: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 200),
+                      child: isFollowLoading
+                          ? SizedBox(
+                              key: const ValueKey('follow_loading'),
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  colors.primary,
+                                ),
+                              ),
+                            )
+                          : Icon(
+                              isFollowing
+                                  ? Icons.check_circle_rounded
+                                  : Icons.person_add_alt_rounded,
+                              key: ValueKey(isFollowing),
+                              size: 20,
+                            ),
+                    ),
+                    label: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 200),
+                      child: Text(
+                        isFollowing ? 'متابع' : 'أتابع',
+                        key: ValueKey(isFollowing),
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color:
+                              isFollowing ? colors.primary : colors.onSurface,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  )
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
     );
   }
 }
@@ -638,6 +665,14 @@ class _StorefrontActionChip extends StatelessWidget {
     );
   }
 }
+
+
+
+
+
+
+
+
 
 
 

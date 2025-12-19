@@ -516,11 +516,24 @@ class _BlurCardListItemState extends State<_BlurCardListItem> {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    UiUtils.getImage(
-                      imageUrl,
-                      fit: BoxFit.fill,
-                      width: double.infinity,
-                      height: double.infinity,
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final double dpr = MediaQuery.of(context).devicePixelRatio;
+                        final double targetWidthPx =
+                            (constraints.maxWidth * dpr).clamp(320, 720);
+                        final double targetHeightPx =
+                            (constraints.maxHeight * dpr).clamp(320, 900);
+
+                        return UiUtils.getImage(
+                          imageUrl,
+                          fit: BoxFit.cover,
+                          width: constraints.maxWidth,
+                          height: constraints.maxHeight,
+                          cacheWidth: targetWidthPx.round(),
+                          cacheHeight: targetHeightPx.round(),
+                          allowHiResCache: true,
+                        );
+                      },
                     ),
 
                     // طبقة بلور وتعتيـم خفيف

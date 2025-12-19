@@ -356,11 +356,24 @@ class _ClassifiedListItem extends StatelessWidget {
                 child: SizedBox(
                   width: ScreenScaler.s(110),
                   height: ScreenScaler.s(110),
-                  child: UiUtils.getImage(
-                    model.image ?? '',
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    height: double.infinity,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final double dpr = MediaQuery.of(context).devicePixelRatio;
+                      final double targetWidthPx =
+                          (constraints.maxWidth * dpr).clamp(260, 640);
+                      final double targetHeightPx =
+                          (constraints.maxHeight * dpr).clamp(260, 640);
+
+                      return UiUtils.getImage(
+                        model.image ?? '',
+                        fit: BoxFit.cover,
+                        width: constraints.maxWidth,
+                        height: constraints.maxHeight,
+                        cacheWidth: targetWidthPx.round(),
+                        cacheHeight: targetHeightPx.round(),
+                        allowHiResCache: true,
+                      );
+                    },
                   ),
                 ),
               ),

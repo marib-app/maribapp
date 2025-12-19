@@ -214,6 +214,7 @@ class ItemVariantStockOption {
     required this.stock,
     required this.reservedStock,
     required this.availableStock,
+    required this.lastVisibleStock,
   });
 
   factory ItemVariantStockOption.fromJson(Map<String, dynamic> json) {
@@ -221,11 +222,22 @@ class ItemVariantStockOption {
     final String normalizedVariantKey = rawVariantKey.isEmpty
         ? ''
         : VariantKeyCodec.canonicalize(rawVariantKey);
+    final int stockVal = _parseInt(json['stock']) ?? 0;
+    final int reserved = _parseInt(json['reserved_stock']) ?? 0;
+    final int availableRaw = _parseInt(json['available_stock']) ?? stockVal;
+    final int lastVisibleRaw =
+        _parseInt(json['last_visible_stock']) ?? _parseInt(json['lastVisibleStock']) ?? availableRaw;
+
+    // اختَر أكبر قيمة بين الحقول لضمان عرض المخزون الفعلي حتى لو حقل واحد فقط كان صحيحاً
+    final int computedMax = [stockVal, availableRaw, lastVisibleRaw]
+        .fold<int>(0, (prev, e) => e > prev ? e : prev);
+
     return ItemVariantStockOption(
       variantKey: normalizedVariantKey,
-      stock: _parseInt(json['stock']) ?? 0,
-      reservedStock: _parseInt(json['reserved_stock']) ?? 0,
-      availableStock: _parseInt(json['available_stock']) ?? 0,
+      stock: stockVal,
+      reservedStock: reserved,
+      availableStock: computedMax,
+      lastVisibleStock: computedMax,
     );
   }
 
@@ -233,6 +245,7 @@ class ItemVariantStockOption {
   final int stock;
   final int reservedStock;
   final int availableStock;
+  final int lastVisibleStock;
 }
 
 class ItemPurchaseOptions {
@@ -394,5 +407,3 @@ String? _normalizeString(dynamic value) {
   final String normalized = value.toString().trim();
   return normalized.isEmpty ? null : normalized;
 }
-
-

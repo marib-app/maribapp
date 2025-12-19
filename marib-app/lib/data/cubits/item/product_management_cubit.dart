@@ -1492,6 +1492,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
           stock: 0,
           reservedStock: 0,
           availableStock: 0,
+          lastVisibleStock: 0,
         ),
       );
       emit(state.copyWith(generalStock: generalStockOption.stock));
@@ -1735,15 +1736,24 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       final SplayTreeMap<String, VariantStockFormState> ordered =
           SplayTreeMap<String, VariantStockFormState>.from(state.variantForms);
       ordered.forEach((String key, VariantStockFormState value) {
+        final int stock = value.stock;
+        final int available = stock; // نحفظ الكمية الفعلية دائماً
         rows.add(<String, dynamic>{
-          'variant_key': key,
-          'stock': value.hidden ? 0 : value.stock,
+          'variant_key': VariantKeyCodec.canonicalize(key),
+          'stock': stock,
+          'available_stock': available,
+          'reserved_stock': 0,
+          'last_visible_stock': stock,
         });
       });
     } else {
+      final int stock = (state.generalStock ?? 0);
       rows.add(<String, dynamic>{
         'variant_key': '',
-        'stock': (state.generalStock ?? 0),
+        'stock': stock,
+        'available_stock': stock,
+        'reserved_stock': 0,
+        'last_visible_stock': stock,
       });
     }
 
@@ -1784,28 +1794,21 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     };
 
     if (state.discountEnabled) {
-      if (state.discountValue == null) {
-        return const _DiscountPayloadResult.failure(SubmissionOutcome(
-          success: false,
-          message: 'لا يمكن المتابعة قبل إتمام الحقول المطلوبة.',
-        ));
-      }
+      final DateTime now = DateTime.now();
+      final double value = state.discountValue ?? 0;
+      final DateTime start = state.discountStart ?? now;
+      final DateTime end =
+          state.discountEnd ?? start.add(const Duration(days: 30));
 
-      if (state.discountStart == null || state.discountEnd == null) {
-        return const _DiscountPayloadResult.failure(SubmissionOutcome(
-          success: false,
-          message: 'لا يمكن المتابعة قبل إتمام الحقول المطلوبة.',
-        ));
-      }
-
-      final DateFormat formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
+      // السيرفر يتوقع تواريخ بدون توقيت (Y-m-d)
+      final DateFormat formatter = DateFormat('yyyy-MM-dd');
 
       payload['discount_type'] = state.discountType;
       payload['discount_value'] = state.discountType == 'percent'
-          ? math.min(state.discountValue!, 90)
-          : math.max(state.discountValue!, 0);
-      payload['discount_start'] = formatter.format(state.discountStart!);
-      payload['discount_end'] = formatter.format(state.discountEnd!);
+          ? math.min(value, 90)
+          : math.max(value, 0);
+      payload['discount_start'] = formatter.format(start);
+      payload['discount_end'] = formatter.format(end);
     }
 
     return _DiscountPayloadResult.success(payload);
@@ -1878,11 +1881,16 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       final int available = normalized.containsKey('available_stock')
           ? _normalizeStockValue(normalized['available_stock'])
           : stock;
+      final int lastVisible = normalized.containsKey('last_visible_stock')
+          ? _normalizeStockValue(normalized['last_visible_stock'])
+          : available;
+      final String variantKeyRaw = (normalized['variant_key'] ?? '').toString();
       return <String, dynamic>{
-        'variant_key': (normalized['variant_key'] ?? '').toString(),
+        'variant_key': VariantKeyCodec.canonicalize(variantKeyRaw),
         'stock': stock,
         'reserved_stock': reserved,
         'available_stock': available,
+        'last_visible_stock': lastVisible,
       };
     }).toList(growable: false);
 
@@ -2273,6 +2281,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
         stock: 0,
         reservedStock: 0,
         availableStock: 0,
+        lastVisibleStock: 0,
       ),
     );
 
@@ -2357,6 +2366,7 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
           stock: 0,
           reservedStock: 0,
           availableStock: 0,
+          lastVisibleStock: 0,
         ),
       );
 

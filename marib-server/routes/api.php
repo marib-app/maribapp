@@ -214,6 +214,7 @@ Route::group(['middleware' => ['auth:sanctum']], static function () {
     Route::prefix('storefront')->group(function (): void {
         Route::post('stores/{store}/follow', [StorefrontController::class, 'follow']);
         Route::post('stores/{store}/unfollow', [StorefrontController::class, 'unfollow']);
+        Route::get('stores/{store}/follow-status', [StorefrontController::class, 'followStatus']);
     });
 
     Route::patch('addresses/{address}/default', [AddressController::class, 'setDefault'])

@@ -1101,6 +1101,9 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
       html: html,
       dateLine: dateLine,
       ratingText: ratingText,
+      ratingValue: _data?.rating,
+      ratingCount: _data?.totalRatings,
+      viewsCount: _data?.views,
       directiveHidden: hideActionButton,
       buttonTitle: buttonTitle,
       chatRedirectEnabled: chatRedirectEnabled,
@@ -1176,3 +1179,4 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
 }
 
 enum _NextAction { customFields, payment, directRequest, none }
+

@@ -1,0 +1,120 @@
+        if ($tokens === []) {
+            return;
+        }
+
+        $title = __('طھظ…طھ ظ…طھط§ط¨ط¹ط© ط§ظ„ظ…طھط¬ط±');
+        $body = __('ط£ظ†طھ طھطھط§ط¨ط¹ ط§ظ„ظ…طھط¬ط± :store. ط³طھطµظ„ظƒ ط£ط®ط¨ط§ط± ط¬ط¯ظٹط©.', [
+            'store' => $store->name,
+        ]);
+
+        NotificationService::sendFcmNotification(
+            $tokens,
+            $title,
+            $body,
+            'store_follow_confirmation',
+            [
+                'store_id' => $store->getKey(),
+                'store_name' => $store->name,
+            ]
+        );
+    }
+
+    private function notifyStoreOwnerOfFollowerSafe(Store $store, User $follower): void
+    {
+        $ownerId = $store->user_id;
+        if ($ownerId === null || $ownerId === $follower->getKey()) {
+            return;
+        }
+
+        $tokens = UserFcmToken::query()
+            ->where('user_id', $ownerId)
+            ->pluck('fcm_token')
+            ->filter()
+            ->values()
+            ->all();
+
+        if ($tokens === []) {
+            return;
+        }
+
+        $title = 'تمت متابعة جديدة لمتجرك';
+        $body = sprintf(
+            '%s قام بمتابعة متجرك %s',
+            $follower->name ?? 'مستخدم',
+            $store->name
+        );
+
+        NotificationService::sendFcmNotification(
+            $tokens,
+            $title,
+            $body,
+            'store_follow',
+            [
+                'store_id' => $store->getKey(),
+                'follower_id' => $follower->getKey(),
+                'store_name' => $store->name,
+            ]
+        );
+    }
+
+    private function notifyFollowerConfirmationSafe(User $follower, Store $store): void
+    {
+        $tokens = UserFcmToken::query()
+            ->where('user_id', $follower->getKey())
+            ->pluck('fcm_token')
+            ->filter()
+            ->values()
+            ->all();
+
+        if ($tokens === []) {
+            return;
+        }
+
+        $title = 'تمت متابعة المتجر';
+        $body = sprintf(
+            'أنت تتابع المتجر %s. ستصلك إشعارات بكل جديد.',
+            $store->name
+        );
+
+        NotificationService::sendFcmNotification(
+            $tokens,
+            $title,
+            $body,
+            'store_follow_confirmation',
+            [
+                'store_id' => $store->getKey(),
+                'store_name' => $store->name,
+            ]
+        );
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function formatStoreManualBanks(Store $store): array
+    {
+        $accounts = StoreGatewayAccount::query()
+            ->where('store_id', $store->getKey())
+            ->where('is_active', true)
+            ->whereHas('storeGateway', static fn ($query) => $query->where('is_active', true))
+            ->with('storeGateway')
+            ->orderBy('id')
+            ->get();
+
+        return $accounts->map(static function (StoreGatewayAccount $account) {
+            $gateway = $account->storeGateway;
+
+            return array_filter([
+                'store_gateway_account_id' => $account->getKey(),
+                'store_gateway_id' => $account->store_gateway_id,
+                'gateway' => $gateway ? [
+                    'id' => $gateway->getKey(),
+                    'name' => $gateway->name,
+                    'logo_url' => $gateway->logo_url,
+                ] : null,
+                'beneficiary_name' => $account->beneficiary_name,
+                'account_number' => $account->account_number,
+            ], static fn ($value) => $value !== null && $value !== '');
+        })->values()->all();
+    }
+}

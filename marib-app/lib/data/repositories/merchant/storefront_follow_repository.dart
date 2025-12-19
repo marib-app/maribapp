@@ -71,4 +71,13 @@ class StorefrontFollowRepository {
     }
     return fallback;
   }
+
+  Future<StorefrontFollowResult> status(dynamic storeIdentifier) async {
+    final Map<String, dynamic> response = await Api.get(
+      url:
+          'storefront/stores/${Uri.encodeComponent(storeIdentifier.toString().trim())}/follow-status',
+      useBaseUrl: true,
+    );
+    return _parseResponse(response, fallback: false);
+  }
 }

@@ -491,19 +491,29 @@ Widget buildClassifiedCard(
                           children: [
                             // ✅ الصورة مرِنة ومقصوصة بنفس حافة الأعلى (مطابقة تمامًا للإطار)
                             Expanded(
-                              child: ClipRRect(
-                                clipBehavior: Clip.antiAlias,
-                                borderRadius: BorderRadius.vertical(
-                                  top: Radius.circular(r - bw), // تطابق الإطار
-                                ),
-                                child: UiUtils.getImage(
-                                  resolvedThumb,
-                                  fit: BoxFit.fill,
-                                  width: double.infinity,
-                                  fallbackUrl: fallbackThumb,
-                                  cacheWidth: 200,
-                                  cacheHeight: 200,
-                                ),
+                              child: LayoutBuilder(
+                                builder: (context, constraints) {
+                                  final double dpr = MediaQuery.of(context).devicePixelRatio;
+                                  final double targetWidthPx = (constraints.maxWidth * dpr).clamp(260, 640);
+                                  final double targetHeightPx = (constraints.maxHeight * dpr).clamp(320, 900);
+
+                                  return ClipRRect(
+                                    clipBehavior: Clip.antiAlias,
+                                    borderRadius: BorderRadius.vertical(
+                                      top: Radius.circular(r - bw), // Íكتفة الإطار
+                                    ),
+                                    child: UiUtils.getImage(
+                                      resolvedThumb,
+                                      fit: BoxFit.cover,
+                                      width: constraints.maxWidth,
+                                      height: constraints.maxHeight,
+                                      fallbackUrl: fallbackThumb,
+                                      cacheWidth: targetWidthPx.round(),
+                                      cacheHeight: targetHeightPx.round(),
+                                      allowHiResCache: true,
+                                    ),
+                                  );
+                                },
                               ),
                             ),
                             // العنوان مع نفس المقاسات
@@ -585,6 +595,11 @@ Widget buildClassifiedCard(
 
 // شبكة الشيمر (كما هي لديك)
 Widget buildClassifiedShimmerGrid(BuildContext context) {
+  final double r = ScreenScaler.s(16);
+  final double titleH = ScreenScaler.s(16);
+  final double ratingH = ScreenScaler.s(16);
+  final double gap = ScreenScaler.s(6);
+
   return GridView.builder(
     itemCount: 6,
     shrinkWrap: true,
@@ -597,76 +612,92 @@ Widget buildClassifiedShimmerGrid(BuildContext context) {
       childAspectRatio: 0.54,
     ),
     itemBuilder: (context, index) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: context.color.secondaryColor,
-              borderRadius: BorderRadius.circular(ScreenScaler.s(10)),
-              border: Border.all(
-                color: context.color.borderColor.darken(90),
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(ScreenScaler.s(1)),
+      return LayoutBuilder(
+        builder: (ctx, constraints) {
+          final double cellWidth = constraints.maxWidth;
+          final double cellHeight = constraints.hasBoundedHeight && constraints.maxHeight.isFinite
+              ? constraints.maxHeight
+              : (cellWidth / 0.54);
+          final double imageHeight = (cellWidth * (4 / 3))
+              .clamp(80.0, (cellHeight * 0.7).clamp(0, cellHeight));
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: context.color.secondaryColor,
+                  borderRadius: BorderRadius.circular(r),
+                  border: Border.all(
+                    color: context.color.borderColor.darken(90),
                   ),
-                  child: AspectRatio(
-                    aspectRatio: 3 / 4,
-                    child: const CustomShimmer(
-                      width: double.infinity,
-                      height: double.infinity,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(r - ScreenScaler.s(1)),
+                      ),
+                      child: SizedBox(
+                        width: double.infinity,
+                        height: imageHeight,
+                        child: const CustomShimmer(
+                          width: double.infinity,
+                          height: double.infinity,
+                        ),
+                      ),
                     ),
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: ScreenScaler.s(10),
+                        vertical: ScreenScaler.s(8),
+                      ),
+                      child: CustomShimmer(
+                        width: ScreenScaler.s(72),
+                        height: titleH,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.only(
+                  top: gap,
+                  left: ScreenScaler.s(8),
+                  right: ScreenScaler.s(8),
+                ),
+                child: SizedBox(
+                  height: ratingH,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: ScreenScaler.s(16),
+                        height: ScreenScaler.s(16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      SizedBox(width: ScreenScaler.s(6)),
+                      CustomShimmer(
+                        width: ScreenScaler.s(22),
+                        height: ScreenScaler.s(10),
+                      ),
+                      SizedBox(width: ScreenScaler.s(6)),
+                      CustomShimmer(
+                        width: ScreenScaler.s(32),
+                        height: ScreenScaler.s(10),
+                      ),
+                    ],
                   ),
                 ),
-                Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: ScreenScaler.s(10),
-                    vertical: ScreenScaler.s(8),
-                  ),
-                  child: CustomShimmer(
-                    width: ScreenScaler.s(80),
-                    height: ScreenScaler.s(14),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: EdgeInsets.only(
-              top: ScreenScaler.s(6),
-              left: ScreenScaler.s(8),
-              right: ScreenScaler.s(8),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: ScreenScaler.s(16),
-                  height: ScreenScaler.s(16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                SizedBox(width: ScreenScaler.s(6)),
-                CustomShimmer(
-                  width: ScreenScaler.s(24),
-                  height: ScreenScaler.s(10),
-                ),
-                SizedBox(width: ScreenScaler.s(6)),
-                CustomShimmer(
-                  width: ScreenScaler.s(36),
-                  height: ScreenScaler.s(10),
-                ),
-              ],
-            ),
-          ),
-        ],
+              ),
+            ],
+          );
+        },
       );
     },
   );

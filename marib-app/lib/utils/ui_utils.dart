@@ -1295,6 +1295,7 @@ class UiUtils {
   static const int _defaultCacheDimension = 200;
   static const int _minCacheDimension = 160;
   static const int _maxCacheDimension = 240;
+  static const int _maxHiResCacheDimension = 512;
   static final RegExp _preferredThumbnailExtension =
       RegExp(r'\.(avif|webp)(?:\?|#|\b)', caseSensitive: false);
 
@@ -1309,6 +1310,7 @@ class UiUtils {
     List<String>? alternateUrls,
     int? cacheWidth,
     int? cacheHeight,
+    bool allowHiResCache = false,
   }) {
     final List<String> candidates = _prepareImageCandidates(
       primary: url,
@@ -1316,8 +1318,10 @@ class UiUtils {
       fallback: fallbackUrl,
     );
 
-    final int resolvedCacheWidth = _resolveCacheDimension(cacheWidth);
-    final int resolvedCacheHeight = _resolveCacheDimension(cacheHeight);
+    final int resolvedCacheWidth =
+        _resolveCacheDimension(cacheWidth, allowHiRes: allowHiResCache);
+    final int resolvedCacheHeight =
+        _resolveCacheDimension(cacheHeight, allowHiRes: allowHiResCache);
 
     return _AdaptiveNetworkImage(
       urls: candidates,
@@ -1364,10 +1368,11 @@ class UiUtils {
     return _preferredThumbnailExtension.hasMatch(url);
   }
 
-  static int _resolveCacheDimension(int? dimension) {
+  static int _resolveCacheDimension(int? dimension, {bool allowHiRes = false}) {
+    final int maxDim = allowHiRes ? _maxHiResCacheDimension : _maxCacheDimension;
     final int resolved = dimension ?? _defaultCacheDimension;
     if (resolved < _minCacheDimension) return _minCacheDimension;
-    if (resolved > _maxCacheDimension) return _maxCacheDimension;
+    if (resolved > maxDim) return maxDim;
     return resolved;
   }
 

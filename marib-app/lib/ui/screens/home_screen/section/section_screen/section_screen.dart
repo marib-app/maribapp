@@ -46,6 +46,16 @@ String? _inferStoreIdentifierFromSnapshot(Map<String, dynamic>? snapshot) {
   return null;
 }
 
+String? _inferStoreIdentifierFromDetails(StorefrontDetails? details) {
+  if (details == null) return null;
+  if (details.id != 0) return details.id.toString();
+  if ((details.slug).trim().isNotEmpty) return details.slug.trim();
+  if (details.userId != null && details.userId! > 0) {
+    return details.userId.toString();
+  }
+  return null;
+}
+
 class Section_screen extends StatefulWidget {
   final String categoryId; // ظ…ط¹ط±ظپ ط§ظ„ظپط¦ط© ط§ظ„ط­ط§ظ„ظٹط©
   final String categoryName; // ط§ط³ظ… ط§ظ„ظپط¦ط© ط§ظ„ط­ط§ظ„ظٹط©
@@ -1062,8 +1072,10 @@ class Section_screenState extends State<Section_screen> {
   }
 
   Widget? _buildStorefrontHeader() {
-    final String? storeIdentifier = widget.storefrontId;
     final StorefrontDetails? snapshot = _snapshotStorefront;
+    final String? storeIdentifier = widget.storefrontId ??
+        _inferStoreIdentifierFromDetails(snapshot) ??
+        widget.sellerId?.toString();
 
     if (storeIdentifier == null && snapshot == null) {
       return null;
@@ -1073,10 +1085,17 @@ class Section_screenState extends State<Section_screen> {
       return _buildStorefrontHeaderFromDetails(snapshot);
     }
 
-    return BlocBuilder<StorefrontCubit, StorefrontState>(
+    final StorefrontCubit? existingCubit = _findStorefrontCubit(context);
+    final Widget consumer = BlocBuilder<StorefrontCubit, StorefrontState>(
       builder: (context, state) {
         if (state is StorefrontSuccess) {
           return _buildStorefrontHeaderFromDetails(state.details);
+        }
+
+        if (snapshot != null &&
+            (state is StorefrontLoading || state is StorefrontInitial)) {
+          // Avoid showing endless shimmer when we already have snapshot data.
+          return _buildStorefrontHeaderFromDetails(snapshot);
         }
 
         if (state is StorefrontFailure) {
@@ -1097,6 +1116,15 @@ class Section_screenState extends State<Section_screen> {
         return const _StorefrontHeaderPlaceholder();
       },
     );
+
+    if (existingCubit == null && storeIdentifier != null) {
+      return BlocProvider<StorefrontCubit>(
+        create: (_) => StorefrontCubit()..load(storeIdentifier),
+        child: consumer,
+      );
+    }
+
+    return consumer;
   }
 
   Widget _buildStorefrontHeaderFromDetails(StorefrontDetails details) {
@@ -1137,6 +1165,14 @@ class Section_screenState extends State<Section_screen> {
         },
       ),
     );
+  }
+
+  StorefrontCubit? _findStorefrontCubit(BuildContext context) {
+    try {
+      return context.read<StorefrontCubit>();
+    } catch (_) {
+      return null;
+    }
   }
 
   StorefrontDetails? _deriveSnapshotDetails(

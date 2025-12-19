@@ -174,6 +174,10 @@ class HomeScreenState extends State<HomeScreen>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    final FetchHomeScreenState homeFetchState =
+        context.watch<FetchHomeScreenCubit>().state;
+    final bool isHomeLoading = homeFetchState is FetchHomeScreenInitial ||
+        homeFetchState is FetchHomeScreenInProgress;
     final int unreadCount =
         context.watch<UnreadNotificationsCubit>().state;
     final int cartCount = context.watch<CartCubit>().distinctItemsCount;
@@ -198,6 +202,7 @@ class HomeScreenState extends State<HomeScreen>
       isVerified: false,
       cartCount: cartCount,
       notifCount: unreadCount,
+      showHeaderShimmer: isHomeLoading,
       onAvatarTap: null,
       onCartTap: () {
         UiUtils.checkUser(

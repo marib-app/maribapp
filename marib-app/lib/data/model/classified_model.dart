@@ -530,9 +530,13 @@ class ClassifiedSummary {
           _asString(json['image_url']),
       isMain: _asBool(json['is_main']) || _asBool(json['isMain']),
       status: _asBool(json['status'], defaultValue: true),
-      rating: _asDouble(json['rating']) ?? _asDouble(json['avg_rating']),
-      totalRatings:
-          _asInt(json['total_ratings']) ?? _asInt(json['ratings_count']),
+      rating: _asDouble(json['rating']) ??
+          _asDouble(json['avg_rating']) ??
+          _asDouble(json['average_rating']),
+      totalRatings: _asInt(json['total_ratings']) ??
+          _asInt(json['ratings_count']) ??
+          _asInt(json['reviews_count']) ??
+          _asInt(json['total_reviews']),
       categoryId: _asInt(json['category_id']) ??
           _asInt(json['cat_id']) ??
           _asInt(json['categoryId']),

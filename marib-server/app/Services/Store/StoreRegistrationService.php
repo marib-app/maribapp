@@ -83,6 +83,21 @@ class StoreRegistrationService
     {
         $name = $payload['name'] ?? $payload['business_name'] ?? $user->name;
 
+        $logoValue = $payload['logo']
+            ?? $payload['logo_path']
+            ?? $payload['logo_url']
+            ?? $payload['business_logo']
+            ?? null;
+
+        $bannerValue = $payload['banner']
+            ?? $payload['banner_path']
+            ?? $payload['banner_url']
+            ?? $payload['cover']
+            ?? $payload['cover_path']
+            ?? $payload['cover_url']
+            ?? $payload['cover_image']
+            ?? null;
+
         return array_filter([
             'name' => $name,
             'description' => $payload['description'] ?? $payload['business_description'] ?? null,
@@ -96,8 +111,8 @@ class StoreRegistrationService
             'location_state' => $payload['state'] ?? null,
             'location_country' => $payload['country'] ?? null,
             'location_notes' => $payload['location_notes'] ?? null,
-            'logo_path' => $this->maybeStoreMedia($payload['logo'] ?? $payload['business_logo'] ?? null, 'stores/logos'),
-            'banner_path' => $this->maybeStoreMedia($payload['banner'] ?? null, 'stores/banners'),
+            'logo_path' => $this->maybeStoreMedia($logoValue, 'stores/logos'),
+            'banner_path' => $this->maybeStoreMedia($bannerValue, 'stores/banners'),
         ], static fn ($value) => $value !== null);
     }
 

@@ -147,7 +147,6 @@ use App\Services\ImageVariantService;
 use JsonException;
 
 
-
 class ApiController extends Controller {
 
 
@@ -7704,6 +7703,12 @@ class ApiController extends Controller {
                     'serviceCustomFieldValues',
                     'owner',
                 ])
+                ->withAvg(['reviews as avg_rating' => function ($q) {
+                    $q->where('status', ServiceReview::STATUS_APPROVED);
+                }], 'rating')
+                ->withCount(['reviews as reviews_count' => function ($q) {
+                    $q->where('status', ServiceReview::STATUS_APPROVED);
+                }])
                 
                 ->findOrFail($request->id);
 
@@ -7718,6 +7723,12 @@ class ApiController extends Controller {
                 'serviceCustomFieldValues',
                 'owner',
             ])
+            ->withAvg(['reviews as avg_rating' => function ($q) {
+                $q->where('status', ServiceReview::STATUS_APPROVED);
+            }], 'rating')
+            ->withCount(['reviews as reviews_count' => function ($q) {
+                $q->where('status', ServiceReview::STATUS_APPROVED);
+            }])
             
             ->where('status', true)
             ->where(function($q){
@@ -7833,6 +7844,10 @@ private function mapService(Service $s, bool $includeOwnerEmail = false): array
     $ownerId = $owner
         ? (int) $owner->id
         : ($s->owner_id !== null ? (int) $s->owner_id : null);
+
+    $avgRating = $s->avg_rating ?? $s->reviews_avg_rating ?? null;
+    $avgRating = $avgRating !== null ? round((float) $avgRating, 2) : null;
+    $reviewsCount = isset($s->reviews_count) ? (int) $s->reviews_count : null;
 
     return [
         'id'                => (int) $s->id,
@@ -9114,18 +9129,57 @@ private function formatServiceFieldValueForApi(ServiceCustomField $field, ?Servi
             }
 
 
-            $perPage = $request->integer('per_page');
-            if ($perPage === null || $perPage <= 0) {
-                $perPage = 10;
-            }
-
-            $perPage = (int) min($perPage, 50);
-
-            $users = User::query()
+            $usersQuery = User::query()
                 ->with(['store'])
                 ->where('account_type', $accountType)
-                ->orderByDesc('updated_at')
-                ->paginate($perPage);
+                ->orderByDesc('updated_at');
+
+            // If per_page is not provided, return all matching users (with a reasonable cap).
+            $perPage = $request->integer('per_page');
+            if ($perPage === null || $perPage <= 0) {
+                $perPage = (clone $usersQuery)->count();
+            }
+            if ($perPage <= 0) {
+                $perPage = 50;
+            }
+            $perPage = (int) min($perPage, 500);
+
+            $users = $usersQuery->paginate($perPage);
+
+            // Enrich store data with media URLs/counts so client can render real cover/logo.
+            $users->getCollection()->transform(function (User $user) {
+                if ($user->relationLoaded('store') && $user->store) {
+                    $store = $user->store;
+                    if (! $store->getAttribute('banner_url')) {
+                        $bannerPath = $store->getAttribute('banner_path');
+                        $store->setAttribute(
+                            'banner_url',
+                            $bannerPath
+                                ? (preg_match('#^https?://#i', $bannerPath) ? $bannerPath : Storage::url($bannerPath))
+                                : null
+                        );
+                    }
+                    if (! $store->getAttribute('logo_url')) {
+                        $logoPath = $store->getAttribute('logo_path');
+                        $store->setAttribute(
+                            'logo_url',
+                            $logoPath
+                                ? (preg_match('#^https?://#i', $logoPath) ? $logoPath : Storage::url($logoPath))
+                                : null
+                        );
+                    }
+                    $store->setAttribute(
+                        'followers_count',
+                        $store->getAttribute('followers_count') ?? $store->followers()->count()
+                    );
+                    $store->setAttribute(
+                        'items_count',
+                        $store->getAttribute('items_count') ?? $store->items()->count()
+                    );
+                }
+
+                return $user;
+            });
 
             return response()->json([
                 'error' => false,

@@ -3,13 +3,18 @@ import 'package:marib/data/model/user_model.dart';
 import 'package:marib/settings.dart';
 import 'package:marib/ui/screens/home_screen/section/section_screen/section_screen.dart';
 import 'package:marib/utils/constant.dart';
-import 'package:marib/utils/seller_category_utils.dart' as seller_category_utils;
+import 'package:marib/utils/seller_category_utils.dart'
+    as seller_category_utils;
 import 'package:marib/utils/ui_utils.dart';
 
 class SellerCard extends StatelessWidget {
   const SellerCard({super.key, required this.seller});
 
   final UserModel seller;
+
+  static const String _defaultStoreName = '\u0645\u062a\u062c\u0631';
+  static const String _categoryName =
+      '\u0627\u0644\u0645\u062a\u062c\u0631 \u0627\u0644\u0625\u0644\u0643\u062a\u0631\u0648\u0646\u064a';
 
   @override
   Widget build(BuildContext context) {
@@ -18,34 +23,43 @@ class SellerCard extends StatelessWidget {
 
     final int? id = seller.id;
     final Map<String, dynamic> store = _resolveStoreMap(seller);
+
     final String displayName =
-        (_pick(store, 'name') ?? seller.name ?? 'متجر').toString();
+        (_pick(store, 'name') ?? seller.name ?? _defaultStoreName).toString();
 
-    final String logo = _normalizeImage(
-      _pick(store, 'logo') ??
-          _pick(store, 'logo_url') ??
-          _pick(store, 'logoUrl') ??
-          _pick(store, 'business_logo') ??
-          _pick(store, 'office_logo') ??
-          _pick(store, 'profile') ??
-          _pick(store, 'image') ??
-          seller.profile,
-    );
-    final String cover = _normalizeImage(
-      _pick(store, 'cover') ??
-          _pick(store, 'cover_url') ??
-          _pick(store, 'coverUrl') ??
-          _pick(store, 'cover_image') ??
-          _pick(store, 'banner') ??
-          _pick(store, 'banner_image') ??
-          _pick(store, 'bannerImage') ??
-          _pick(store, 'bannerUrl') ??
-          _pick(store, 'image') ??
-          _pick(store, 'profile') ??
-          seller.profile,
-    );
+    final String logo = _normalizeImage(_pickFirst(store, [
+          'logo_path',
+          'logoPath',
+          'logo',
+          'logo_url',
+          'logoUrl',
+          'business_logo',
+          'office_logo',
+          'profile',
+          'image',
+        ]) ??
+        seller.profile);
 
-    final _StoreAvailabilityStatus status =
+    final String cover = _normalizeImage(_pickFirst(store, [
+          'cover_path',
+          'coverPath',
+          'banner_path',
+          'bannerPath',
+          'cover',
+          'cover_url',
+          'coverUrl',
+          'cover_image',
+          'banner',
+          'banner_url',
+          'bannerUrl',
+          'banner_image',
+          'bannerImage',
+          'image',
+          'profile',
+        ]) ??
+        seller.profile);
+
+    final _StoreAvailabilityStatus availability =
         _resolveStoreAvailabilityStatus(store);
 
     final sellerCategories =
@@ -64,7 +78,8 @@ class SellerCard extends StatelessWidget {
             MaterialPageRoute(
               builder: (_) => Section_screen(
                 categoryId: Constant.storeRootCategoryIdAsString,
-                categoryName: 'المتجر الإلكتروني',
+                categoryName: _categoryName,
+                storefrontSnapshot: store.isNotEmpty ? store : null,
                 categoryIds: <String>[Constant.storeRootCategoryIdAsString],
                 interfaceType: 'e_store',
                 sellerId: id,
@@ -83,17 +98,16 @@ class SellerCard extends StatelessWidget {
             child: Stack(
               children: [
                 Positioned.fill(
-                  child: cover.isNotEmpty
-                      ? Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            UiUtils.getImage(cover, fit: BoxFit.cover),
-                            Container(
-                              color: colors.background.withOpacity(0.35),
-                            ),
-                          ],
-                        )
-                      : Container(color: colors.surfaceVariant),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      if (cover.isNotEmpty)
+                        UiUtils.getImage(cover, fit: BoxFit.cover),
+                      Container(
+                        color: colors.background.withOpacity(0.35),
+                      ),
+                    ],
+                  ),
                 ),
                 Positioned(
                   top: 12,
@@ -106,9 +120,11 @@ class SellerCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      status.primaryLabel,
+                      availability.primaryLabel,
                       style: TextStyle(
-                        color: status.isOpenNow ? colors.primary : colors.error,
+                        color: availability.isOpenNow
+                            ? colors.primary
+                            : colors.error,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -146,7 +162,9 @@ class SellerCard extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              displayName.isEmpty ? 'متجر' : displayName,
+                              displayName.isEmpty
+                                  ? _defaultStoreName
+                                  : displayName,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: theme.textTheme.titleMedium?.copyWith(
@@ -163,19 +181,19 @@ class SellerCard extends StatelessWidget {
                                   colors,
                                   Icons.people_outline_rounded,
                                   _intValue(store['followers_count']),
-                                  'متابع',
+                                  '\u0645\u062a\u0627\u0628\u0639',
                                 ),
                                 _statChip(
                                   colors,
                                   Icons.inventory_2_outlined,
                                   _intValue(store['items_count']),
-                                  'منتج',
+                                  '\u0645\u0646\u062a\u062c',
                                 ),
                                 _statChip(
                                   colors,
                                   Icons.star_rate_rounded,
                                   _doubleValue(store['ratings_avg']),
-                                  'تقييم',
+                                  '\u062a\u0642\u064a\u064a\u0645',
                                 ),
                               ],
                             ),
@@ -206,7 +224,6 @@ class SellerCard extends StatelessWidget {
           store[key] = rawValue;
           return;
         }
-        // Prefer non-empty values over empty strings
         final String currentString = current.toString().trim();
         if (currentString.isEmpty || currentString == '-') {
           store[key] = rawValue;
@@ -217,7 +234,8 @@ class SellerCard extends StatelessWidget {
     if (seller.store is Map<String, dynamic>) {
       merge(seller.store as Map<String, dynamic>);
     } else if (seller.store is Map) {
-      merge((seller.store as Map).map((key, value) => MapEntry(key.toString(), value)));
+      merge((seller.store as Map)
+          .map((key, value) => MapEntry(key.toString(), value)));
     }
 
     final Map<String, dynamic>? info =
@@ -231,7 +249,8 @@ class SellerCard extends StatelessWidget {
       }
       if (info['store_media'] is Map) {
         merge(Map<String, dynamic>.from(info['store_media'] as Map));
-      } else if (info['store_media'] is List && (info['store_media'] as List).isNotEmpty) {
+      } else if (info['store_media'] is List &&
+          (info['store_media'] as List).isNotEmpty) {
         final dynamic first = (info['store_media'] as List).first;
         if (first is Map) merge(Map<String, dynamic>.from(first));
       }
@@ -251,30 +270,29 @@ class SellerCard extends StatelessWidget {
       Map<String, dynamic> store) {
     final String? opening = _stringValue(store['opening_time']);
     final String? closing = _stringValue(store['closing_time']);
-    final String status =
-        (store['status'] ?? store['store_status'] ?? '').toString().toLowerCase();
-
+    final String status = (store['status'] ?? store['store_status'] ?? '')
+        .toString()
+        .toLowerCase();
     final bool isOpen = status == 'open' ||
         status == 'opened' ||
         status == '1' ||
-        status == 'مفتوح' ||
+        status == '\u0645\u0641\u062a\u0648\u062d' ||
         status == 'open_now';
 
     final String primary;
     if (isOpen && opening != null && closing != null) {
-      primary = 'مفتوح $opening - $closing';
+      primary = '\u0645\u0641\u062a\u0648\u062d $opening - $closing';
     } else if (isOpen) {
-      primary = 'مفتوح الآن';
+      primary = '\u0645\u0641\u062a\u0648\u062d \u0627\u0644\u0622\u0646';
     } else {
-      primary = 'مغلق';
+      primary = '\u0645\u063a\u0644\u0642';
     }
 
     return _StoreAvailabilityStatus(
       isOpenNow: isOpen,
       primaryLabel: primary,
-      secondaryLabel: (opening != null && closing != null)
-          ? '$opening - $closing'
-          : null,
+      secondaryLabel:
+          (opening != null && closing != null) ? '$opening - $closing' : null,
     );
   }
 
@@ -299,10 +317,14 @@ class SellerCard extends StatelessWidget {
       return null;
     }
 
-    final List<String> bases = <String>[
+    final String baseWithoutApi =
+        Constant.baseUrl.replaceFirst(RegExp(r'/api/?$'), '');
+    final List<String> rawBases = <String>[
+      baseWithoutApi,
+      ...Constant.apiBaseUrlCandidates
+          .map((b) => b.replaceFirst(RegExp(r'/api/?$'), '')),
       Constant.baseUrl,
       ...Constant.apiBaseUrlCandidates,
-      Constant.baseUrl.replaceFirst(RegExp(r'/api/?$'), ''),
       ...AppSettings.hostUrlCandidates,
       'https://marib.app',
       'http://marib.app',
@@ -310,14 +332,22 @@ class SellerCard extends StatelessWidget {
       'http://maribsrv.com',
     ];
 
-    final List<String> expandedBases = <String>[...bases];
-    for (final base in bases) {
-      if (base.startsWith('http://')) {
-        expandedBases.add(base.replaceFirst('http://', 'https://'));
+    final List<String> bases = <String>[];
+    for (final base in rawBases) {
+      final normalized = base.trim().replaceFirst(RegExp(r'/$'), '');
+      if (normalized.isEmpty) continue;
+      if (!bases.contains(normalized)) {
+        bases.add(normalized);
+        if (normalized.startsWith('http://')) {
+          final secure = normalized.replaceFirst('http://', 'https://');
+          if (!bases.contains(secure)) {
+            bases.add(secure);
+          }
+        }
       }
     }
 
-    for (final base in expandedBases) {
+    for (final base in bases) {
       final resolved = tryBuild(base);
       if (resolved != null && resolved.isNotEmpty) return resolved;
     }
@@ -342,6 +372,14 @@ class SellerCard extends StatelessWidget {
       if (_isEmptyValue(v)) continue;
       final String s = v.toString().trim();
       if (s.isNotEmpty) return s;
+    }
+    return null;
+  }
+
+  String? _pickFirst(Map<String, dynamic> store, List<String> keys) {
+    for (final key in keys) {
+      final String? value = _pick(store, key);
+      if (value != null) return value;
     }
     return null;
   }
@@ -372,6 +410,41 @@ class SellerCard extends StatelessWidget {
     if (v is num) return v.toDouble();
     return double.tryParse(v.toString());
   }
+
+  Widget _statChip(
+    ColorScheme colors,
+    IconData icon,
+    num? value,
+    String label,
+  ) {
+    final String display;
+    if (value != null) {
+      display = value >= 1000
+          ? '${(value / 1000).toStringAsFixed(1)}k'
+          : value.toString();
+    } else {
+      display = '-';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: colors.surface.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: colors.primary),
+          const SizedBox(width: 4),
+          Text(
+            '$display $label',
+            style: TextStyle(color: colors.onSurface, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _StoreAvailabilityStatus {
@@ -384,38 +457,4 @@ class _StoreAvailabilityStatus {
   final bool isOpenNow;
   final String primaryLabel;
   final String? secondaryLabel;
-}
-
-Widget _statChip(
-  ColorScheme colors,
-  IconData icon,
-  num? value,
-  String label,
-) {
-  final String display;
-  if (value != null) {
-    display =
-        value >= 1000 ? '${(value / 1000).toStringAsFixed(1)}k' : value.toString();
-  } else {
-    display = '—';
-  }
-
-  return Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-    decoration: BoxDecoration(
-      color: colors.surface.withOpacity(0.9),
-      borderRadius: BorderRadius.circular(12),
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 16, color: colors.primary),
-        const SizedBox(width: 4),
-        Text(
-          '$display $label',
-          style: TextStyle(color: colors.onSurface, fontSize: 12),
-        ),
-      ],
-    ),
-  );
 }

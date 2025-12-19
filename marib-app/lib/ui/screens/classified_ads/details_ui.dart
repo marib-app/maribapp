@@ -1,11 +1,10 @@
-// lib/ui/screens/classified_ads/details_ui.dart
-// واجهة العرض فقط — بدون منطق. مطابق للشكل السابق 1:1.
+﻿// lib/ui/screens/classified_ads/details_ui.dart
+// ????? ????? ??? ? ???? ????. ????? ????? ?????? 1:1.
 
 import 'package:flutter/material.dart';
 
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
-import 'package:marib/utils/responsiveSize.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
 import 'package:marib/utils/app_icon.dart';
@@ -13,7 +12,7 @@ import 'package:marib/utils/app_icon.dart';
 import 'app_html.dart';
 
 class ClassifiedDetailsUI extends StatelessWidget {
-  // ===== الحالة والبيانات المعروضة =====
+  // ===== ?????? ????????? ???????? =====
   final bool loading;
 
   final String appBarTitle;
@@ -25,6 +24,9 @@ class ClassifiedDetailsUI extends StatelessWidget {
   final String? dateLine;
 
   final String ratingText;
+  final double? ratingValue;
+  final int? ratingCount;
+  final int? viewsCount;
 
   final bool directiveHidden;
   final String buttonTitle;
@@ -34,18 +36,18 @@ class ClassifiedDetailsUI extends StatelessWidget {
   final Widget? ownerPanel;
   final VoidCallback? onChatTap;
 
-  // ===== ردود الأفعال (callbacks) =====
+  // ===== ???? ??????? (callbacks) =====
   final VoidCallback? onBack;
   final VoidCallback? onShare;
   final VoidCallback? onReportTap;
   final VoidCallback? onRateTap;
 
-  /// ✅ مطلوب وغير قابل لأن يكون null لإرضاء onPressed
+  /// ? ????? ???? ???? ??? ???? null ?????? onPressed
   final VoidCallback onContinueTap;
 
   const ClassifiedDetailsUI({
     super.key,
-    // حالة
+    // ????
     required this.loading,
     required this.appBarTitle,
     required this.hasImage,
@@ -53,11 +55,14 @@ class ClassifiedDetailsUI extends StatelessWidget {
     required this.html,
     required this.dateLine,
     required this.ratingText,
+    this.ratingValue,
+    this.ratingCount,
+    this.viewsCount,
     required this.directiveHidden,
     required this.buttonTitle,
     this.chatRedirectEnabled = false,
     required this.isReporting,
-    // أفعال
+    // ?????
     this.onBack,
     this.onShare,
     this.onReportTap,
@@ -77,46 +82,10 @@ class ClassifiedDetailsUI extends StatelessWidget {
 
       extendBodyBehindAppBar: extendBehindAppBar,
 
-      // AppBar — يظهر فقط أثناء التحميل. في الحالة المحمّلة نستخدم SliverAppBar داخل الجسم.
-      appBar: loading
-          ? AppBar(
-              backgroundColor: context.color.primaryColor,
-              elevation: 0,
-              leading: Material(
-                clipBehavior: Clip.antiAlias,
-                color: Colors.transparent,
-                type: MaterialType.circle,
-                child: InkWell(
-                  onTap: onBack,
-                  child: Padding(
-                    padding: const EdgeInsetsDirectional.only(start: 15),
-                    child: Directionality(
-                      textDirection: Directionality.of(context),
-                      child: RotatedBox(
-                        quarterTurns:
-                            Directionality.of(context) == TextDirection.rtl
-                                ? 2
-                                : -4,
-                        child: UiUtils.getSvg(
-                          AppIcons.arrowLeft,
-                          fit: BoxFit.none,
-                          color: context.color.textDefaultColor,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              title: Text(
-                appBarTitle,
-                style: TextStyle(color: context.color.textDefaultColor),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            )
-          : null,
+      // AppBar مخفي أثناء الشيمر (نكتفي بالهيدر داخل الـ Sliver بعد التحميل)
+      appBar: null,
 
-      // BottomNavigationBar — شيمر أثناء التحميل، أو زر "متابعة" حسب directive
+      // BottomNavigationBar ? ???? ????? ??????? ?? ?? "??????" ??? directive
       bottomNavigationBar: loading
           ? SafeArea(
               top: false,
@@ -145,7 +114,7 @@ class ClassifiedDetailsUI extends StatelessWidget {
                       buttonTitle: buttonTitle,
                       radius: 12,
                       height: 54,
-                      onPressed: onContinueTap, // غير قابلة لـ null الآن
+                      onPressed: onContinueTap, // ??? ????? ?? null ????
                     ),
                   ),
                 )),
@@ -161,6 +130,9 @@ class ClassifiedDetailsUI extends StatelessWidget {
               html: html,
               dateLine: dateLine,
               ratingText: ratingText,
+              ratingValue: ratingValue,
+              ratingCount: ratingCount,
+              viewsCount: viewsCount,
               isReporting: isReporting,
               onReportTap: onReportTap,
               onRateTap: onRateTap,
@@ -174,107 +146,95 @@ class ClassifiedDetailsUI extends StatelessWidget {
 }
 
 // ===============================
-// شيمر أثناء التحميل (مطابق للشكل)
+// ???? ????? ??????? (????? ?????)
 // ===============================
 class _LoadingBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final double screenH = MediaQuery.of(context).size.height;
+    final double heroH = (screenH * 0.40).clamp(180, 320);
+    const widths = [0.95, 0.88, 0.92, 0.6, 0.75];
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 100), // مساحة للـ FAB
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 110), // ????? ??? ??????? ???????
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // صورة البانر (شيمر) — نفس مقاس السلايدر 395/150
-          SizedBox(
-            width: double.infinity,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: AspectRatio(
-                aspectRatio: 395 / 150,
-                child: const CustomShimmer(
-                  width: double.infinity,
-                  height: double.infinity,
-                ),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: SizedBox(
+              width: double.infinity,
+              height: heroH,
+              child: const CustomShimmer(
+                width: double.infinity,
+                height: double.infinity,
               ),
             ),
           ),
-          const SizedBox(height: 10),
-
-          // شيمر لأزرار (إبلاغ + تقييم)
+          const SizedBox(height: 14),
           Row(
             children: [
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: const SizedBox(
-                    height: 42,
-                    child: CustomShimmer(
-                      width: double.infinity,
-                      height: double.infinity,
+              for (int i = 0; i < 3; i++) ...[
+                if (i > 0) const SizedBox(width: 10),
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: const SizedBox(
+                      height: 62,
+                      child: CustomShimmer(
+                        width: double.infinity,
+                        height: double.infinity,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: const SizedBox(
-                    height: 42,
-                    child: CustomShimmer(
-                      width: double.infinity,
-                      height: double.infinity,
-                    ),
-                  ),
-                ),
-              ),
+              ],
             ],
           ),
-          const SizedBox(height: 10),
-
-          // شيمر لسطر التاريخ
+          const SizedBox(height: 16),
           ClipRRect(
             borderRadius: BorderRadius.circular(6),
             child: const SizedBox(
-              width: 220,
+              width: 180,
               height: 12,
-              child: CustomShimmer(width: 220, height: 12),
+              child: CustomShimmer(width: 180, height: 12),
             ),
           ),
-          const SizedBox(height: 12),
-
-          // شيمر لفقرات النص
-          for (int i = 0; i < 6; i++) ...[
-            ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: const SizedBox(
-                width: double.infinity,
-                height: 12,
-                child: CustomShimmer(width: double.infinity, height: 12),
+          const SizedBox(height: 18),
+          ...List.generate(5, (i) {
+            final double w = i < widths.length ? widths[i] : widths.last;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: SizedBox(
+                  width: MediaQuery.of(context).size.width * w,
+                  height: 12,
+                  child: const CustomShimmer(
+                    width: double.infinity,
+                    height: double.infinity,
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-          ],
-          const SizedBox(height: 16),
+            );
+          }),
         ],
       ),
     );
   }
 }
-
-// ===============================
-// الجسم بعد التحميل
-// ===============================
 class _LoadedBody extends StatelessWidget {
   final String appBarTitle;
   final VoidCallback? onBack;
   final bool hasImage;
   final String? imageUrl;
-
   final String html;
   final String? dateLine;
 
   final String ratingText;
+  final double? ratingValue;
+  final int? ratingCount;
+  final int? viewsCount;
 
   final bool isReporting;
 
@@ -294,6 +254,9 @@ class _LoadedBody extends StatelessWidget {
     required this.html,
     required this.dateLine,
     required this.ratingText,
+    this.ratingValue,
+    this.ratingCount,
+    this.viewsCount,
     required this.isReporting,
     required this.onReportTap,
     required this.onRateTap,
@@ -305,6 +268,19 @@ class _LoadedBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isRtl = Directionality.of(context) == TextDirection.rtl;
+    final String ratingLabel = ratingText;
+    final String? ratingSubtitle = (ratingValue != null || ratingCount != null)
+        ? '${(ratingValue ?? 0).toStringAsFixed(1)}${ratingCount != null ? ' (${ratingCount}${isRtl ? ' تقييم' : ' reviews'})' : ''}'
+        : null;
+    final String viewsText = viewsCount != null ? viewsCount.toString() : '0';
+    final String viewsLabel = isRtl ? 'الزيارات' : 'Views';
+    final String reportLabel = isRtl ? 'إبلاغ' : 'Report';
+    final String reportValue =
+        isRtl ? 'الإبلاغ عن الخدمة' : 'Report service';
+    final String ratingFallback =
+        isRtl ? 'لا يوجد تقييم' : 'No rating yet';
+
     return Stack(
       children: [
         CustomScrollView(
@@ -321,26 +297,39 @@ class _LoadedBody extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // أزرار تحت الصورة: إبلاغ + تقييم
+                    // شريط البيانات المختصرة (تقييم - زيارات - إبلاغ)
                     Row(
                       children: [
                         Expanded(
-                          child: _ReportButton(
-                            isReporting: isReporting,
-                            onTap: onReportTap,
+                          child: _MetaBadge(
+                            icon: Icons.star_rounded,
+                            label: ratingLabel,
+                            value: ratingSubtitle ?? ratingFallback,
+                            onTap: onRateTap,
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 10),
                         Expanded(
-                          child: _PillButton(
-                            icon: Icons.star_rounded,
-                            label: ratingText,
-                            emphasize: true,
-                            onTap: onRateTap,
+                          child: _MetaBadge(
+                            icon: Icons.remove_red_eye_outlined,
+                            label: viewsLabel,
+                            value: viewsText,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _MetaBadge(
+                            icon: Icons.flag_rounded,
+                            label: reportLabel,
+                            value: reportValue,
+                            busy: isReporting,
+                            onTap: isReporting ? null : onReportTap,
                           ),
                         ),
                       ],
                     ),
+                    const SizedBox(height: 16),
+
                     if (ownerPanel != null) ...[
                       const SizedBox(height: 12),
                       ownerPanel!,
@@ -348,7 +337,7 @@ class _LoadedBody extends StatelessWidget {
 
                     const SizedBox(height: 12),
 
-                    // التاريخ فقط
+                    // السطر التعريفي
                     if (dateLine != null)
                       Text(dateLine!)
                           .size(context.font.smaller)
@@ -356,7 +345,7 @@ class _LoadedBody extends StatelessWidget {
 
                     const SizedBox(height: 12),
 
-                    // الوصف HTML
+                    // نص HTML
                     AppHtml(
                       data: html,
                       baseUrl: null,
@@ -374,7 +363,7 @@ class _LoadedBody extends StatelessWidget {
           ],
         ),
 
-        // زر مشاركة عائم (يسار) يختفي بالتمرير
+        // أزرار عائمة (مشاركة) وأخرى ثانوية
         Positioned(
           left: 20,
           bottom: 24,
@@ -479,26 +468,41 @@ class _HeaderSliver extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
         ),
         background: hasImage
-            ? Stack(
-                fit: StackFit.expand,
-                children: [
-                  UiUtils.getImage(
-                    imageUrl!,
-                    fit: BoxFit.cover,
-                  ),
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.black.withOpacity(0.35),
-                          Colors.black.withOpacity(0.05),
-                        ],
+            ? LayoutBuilder(
+                builder: (context, constraints) {
+                  final double dpr = MediaQuery.of(context).devicePixelRatio;
+                  final double targetWidthPx =
+                      (constraints.maxWidth * dpr).clamp(360, 900);
+                  final double targetHeightPx =
+                      (constraints.maxHeight * dpr).clamp(360, 1200);
+
+                  return Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      UiUtils.getImage(
+                        imageUrl!,
+                        fit: BoxFit.cover,
+                        width: constraints.maxWidth,
+                        height: constraints.maxHeight,
+                        cacheWidth: targetWidthPx.round(),
+                        cacheHeight: targetHeightPx.round(),
+                        allowHiResCache: true,
                       ),
-                    ),
-                  ),
-                ],
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.black.withOpacity(0.35),
+                              Colors.black.withOpacity(0.05),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
               )
             : null,
       ),
@@ -507,125 +511,120 @@ class _HeaderSliver extends StatelessWidget {
 }
 
 // ===============================
-// زر الإبلاغ (Stack مع مؤشر تحميل صغير)
+// Meta badges (compact info tiles)
 // ===============================
-class _ReportButton extends StatelessWidget {
-  final bool isReporting;
-  final VoidCallback? onTap;
-
-  const _ReportButton({
-    required this.isReporting,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final btn = _PillButton(
-      icon: Icons.flag_rounded,
-      label: 'إبلاغ',
-      enabled: !isReporting,
-      onTap: isReporting ? null : onTap,
-    );
-
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        btn,
-        if (isReporting)
-          const IgnorePointer(
-            ignoring: true,
-            child: SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-// ===============================
-// زر Pills مساعد (يحافظ على ستايلك)
-// ===============================
-class _PillButton extends StatelessWidget {
+class _MetaBadge extends StatelessWidget {
   final IconData icon;
   final String label;
+  final String value;
+  final bool busy;
   final VoidCallback? onTap;
-  final bool enabled;
   final bool emphasize;
 
-  const _PillButton({
+  const _MetaBadge({
     required this.icon,
     required this.label,
+    required this.value,
+    this.busy = false,
     this.onTap,
-    this.enabled = true,
     this.emphasize = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final br = BorderRadius.circular(12);
-    final bg =
-        context.color.secondaryColor.withOpacity(emphasize ? 0.20 : 0.14);
+    final br = BorderRadius.circular(14);
+    final bg = emphasize
+        ? context.color.secondaryColor.withOpacity(0.16)
+        : context.color.secondaryColor.withOpacity(0.10);
     final borderColor = emphasize
-        ? context.color.textColorDark.withOpacity(0.20)
-        : Colors.transparent;
+        ? context.color.territoryColor.withOpacity(0.35)
+        : context.color.borderColor.withOpacity(0.35);
+    final textColor = context.color.textColorDark;
 
-    final child = Container(
-      height: 42,
+    final tile = Container(
+      height: 64,
       decoration: BoxDecoration(
-        color: enabled ? bg : bg.withOpacity(0.6),
+        color: bg,
         borderRadius: br,
-        border: Border.all(color: borderColor, width: emphasize ? 1 : 0),
-        boxShadow: [
-          if (emphasize)
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-        ],
+        border: Border.all(color: borderColor),
+        boxShadow: emphasize
+            ? [
+                BoxShadow(
+                  color: context.color.territoryColor.withOpacity(0.12),
+                  blurRadius: 10,
+                  offset: const Offset(0, 6),
+                )
+              ]
+            : null,
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            icon,
-            size: 20,
-            color: enabled
-                ? context.color.textColorDark.withOpacity(0.85)
-                : context.color.textColorDark.withOpacity(0.35),
-          ),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: context.font.normal,
-                fontWeight: emphasize ? FontWeight.w600 : FontWeight.w500,
-                color: enabled
-                    ? context.color.textColorDark
-                    : context.color.textColorDark.withOpacity(0.45),
-              ),
+          Container(
+            height: 34,
+            width: 34,
+            decoration: BoxDecoration(
+              color: context.color.territoryColor.withOpacity(0.16),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              size: 18,
+              color: context.color.territoryColor,
             ),
           ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: context.font.normal,
+                    fontWeight: FontWeight.w700,
+                    color: textColor,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: context.font.smaller,
+                    color: textColor.withOpacity(0.72),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (busy) ...[
+            const SizedBox(width: 8),
+            const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          ],
         ],
       ),
     );
 
-    if (!enabled || onTap == null) return child;
+    if (onTap == null) return tile;
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         borderRadius: br,
         onTap: onTap,
-        child: child,
+        child: tile,
       ),
     );
   }
 }
+
+

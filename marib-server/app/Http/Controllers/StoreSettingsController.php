@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Setting;
 use App\Models\StoreGateway;
 use App\Models\StoreGatewayAccount;
+use App\Models\StorefrontUiSetting;
+use App\Models\Category;
 use App\Services\CachingService;
 use App\Services\FileService;
 use App\Services\ResponseService;
@@ -27,9 +29,55 @@ class StoreSettingsController extends Controller
             ->orderBy('name')
             ->get();
 
+        $storeRootId = config('cart.department_roots.store');
+        $storeRootId = (int) env('CART_STORE_ROOT_CATEGORY_ID', 3);
+
+        $allCategories = Category::query()
+            ->select(['id', 'name', 'slug', 'parent_category_id'])
+            ->orderBy('parent_category_id')
+            ->orderBy('name')
+            ->get();
+
+        $storeCategoryIds = collect();
+        if ($storeRootId) {
+            // اجمع كل الأبناء (بعمق) للجذر المحدد
+            $storeCategoryIds->push($storeRootId);
+            $queue = [$storeRootId];
+            while (!empty($queue)) {
+                $current = array_shift($queue);
+                $children = $allCategories
+                    ->where('parent_category_id', $current)
+                    ->pluck('id')
+                    ->all();
+                foreach ($children as $childId) {
+                    if (!$storeCategoryIds->contains($childId)) {
+                        $storeCategoryIds->push($childId);
+                        $queue[] = $childId;
+                    }
+                }
+            }
+        }
+
+        $categories = $storeCategoryIds->isNotEmpty()
+            ? $allCategories->whereIn('id', $storeCategoryIds)
+            : collect();
+
+        $uiSetting = StorefrontUiSetting::query()->first();
+        if (! $uiSetting) {
+            $uiSetting = new StorefrontUiSetting([
+                'enabled' => true,
+                'featured_categories' => [],
+                'promotion_slots' => [],
+                'new_offers_items' => [],
+                'discount_items' => [],
+            ]);
+        }
+
         return view('seller-store-settings.index', [
             'storeTerms'            => $storeTerms,
             'storeGateways'        => $storeGateways,
+            'uiSetting'            => $uiSetting,
+            'categories'           => $categories,
         ]);
     }
 
@@ -60,6 +108,104 @@ class StoreSettingsController extends Controller
             ResponseService::logErrorResponse($throwable, 'StoreSettingsController -> storeTerms');
             ResponseService::errorResponse();
         }
+    }
+
+    public function storeUiSettings(Request $request)
+    {
+        ResponseService::noPermissionThenRedirect('seller-store-settings-manage');
+
+        $validator = Validator::make($request->all(), [
+            'enabled' => ['nullable', 'boolean'],
+            'featured_categories' => ['nullable', 'string'],
+            'promotion_slots' => ['nullable', 'string'],
+            'new_offers_items' => ['nullable', 'string'],
+            'discount_items' => ['nullable', 'string'],
+        ]);
+
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput();
+        }
+
+        try {
+            $data = $validator->validated();
+            $featured = $this->decodeJsonField($data['featured_categories'] ?? '');
+            $promotions = $this->decodeJsonField($data['promotion_slots'] ?? '');
+            $newOffers = $this->decodeJsonField($data['new_offers_items'] ?? '');
+            $discounts = $this->decodeJsonField($data['discount_items'] ?? '');
+
+            StorefrontUiSetting::query()->updateOrCreate(
+                ['id' => StorefrontUiSetting::query()->value('id')],
+                [
+                    'store_id' => null,
+                    'enabled' => $request->boolean('enabled'),
+                    'featured_categories' => $featured,
+                    'promotion_slots' => $promotions,
+                    'new_offers_items' => $newOffers,
+                    'discount_items' => $discounts,
+                ]
+            );
+
+            return redirect()
+                ->route('seller-store-settings.index')
+                ->with('success', __('Storefront UI settings updated.'));
+        } catch (Throwable $throwable) {
+            ResponseService::logErrorResponse($throwable, 'StoreSettingsController -> storeUiSettings', 'Error occurred while saving storefront UI settings.', false);
+
+            return back()->withErrors([
+                'message' => __('Failed to save storefront UI settings. Please check your JSON payloads and try again.'),
+            ])->withInput();
+        }
+    }
+
+    private function decodeJsonField(?string $raw): ?array
+    {
+        $raw = trim((string) $raw);
+        if ($raw === '') {
+            return [];
+        }
+
+        $decoded = json_decode($raw, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new \InvalidArgumentException('Invalid JSON provided.');
+        }
+
+        return $decoded;
+    }
+
+    public function searchStoreItems(Request $request)
+    {
+        ResponseService::noPermissionThenSendJson('seller-store-settings-manage');
+
+        $query = trim($request->get('q', ''));
+        $limit = min(max((int) $request->get('limit', 20), 1), 50);
+
+        $itemsQuery = \App\Models\Item::query()
+            ->select(['id', 'name', 'thumbnail_url', 'image', 'interface_type', 'price'])
+            ->where(function ($q) {
+                $q->where('interface_type', 'e_store')
+                    ->orWhere('interface_type', 'store');
+            });
+
+        if ($query !== '') {
+            $itemsQuery->where('name', 'like', '%' . $query . '%');
+        }
+
+        $items = $itemsQuery
+            ->orderByDesc('id')
+            ->limit($limit)
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'name' => $item->name,
+                    'price' => $item->price,
+                    'thumbnail' => $item->thumbnail_url ?: $item->image,
+                ];
+            });
+
+        return response()->json([
+            'data' => $items,
+        ]);
     }
 
 

@@ -19,6 +19,7 @@ import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/geo_rules.dart';
 import 'package:marib/utils/currency_utils.dart';
+import 'package:marib/ui/screens/item/cards/widgets/stock_badge.dart';
 
 /// ✅ تعريف كلاس حالة الإعلان (محجوز / مباعة...)
 class StatusButton {
@@ -65,6 +66,7 @@ class ItemImageSection extends StatelessWidget {
   final double imageHeight;
   final double imageWidth;
   final StatusButton? statusButton;
+  final int? remaining;
 
   const ItemImageSection({
     super.key,
@@ -72,6 +74,7 @@ class ItemImageSection extends StatelessWidget {
     required this.imageHeight,
     required this.imageWidth,
     this.statusButton,
+    this.remaining,
   });
 
   String? _discountLabel() {
@@ -115,6 +118,7 @@ class ItemImageSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final isNew = _isItemNew(item.created);
     final String? discountText = _discountLabel();
+    final int? available = remaining;
 
     final String? preferredThumb =
         (item.thumbnailUrl?.trim().isNotEmpty ?? false)
@@ -187,6 +191,12 @@ class ItemImageSection extends StatelessWidget {
                     ),
                   ),
                 ),
+              ),
+            if (available != null)
+              PositionedDirectional(
+                bottom: 8,
+                start: 8,
+                child: StockBadge(count: available, dense: true),
               ),
           ],
         ),
@@ -653,6 +663,7 @@ class ItemHorizontalCard extends StatelessWidget {
   final VoidCallback? onTap;
   final double? additionalImageWidth;
   final bool? showLikeButton;
+  final int? remainingStock;
 
   const ItemHorizontalCard({
     super.key,
@@ -664,10 +675,50 @@ class ItemHorizontalCard extends StatelessWidget {
     this.statusButton,
     this.additionalImageWidth,
     this.showLikeButton,
+    this.remainingStock,
   });
 
   @override
   Widget build(BuildContext context) {
+    int? _extractRemaining(ItemModel? item) {
+      if (item == null) return null;
+      final dyn = item as dynamic;
+      const keys = [
+        'availableStock',
+        'available_stock',
+        'availableQuantity',
+        'available_quantity',
+        'remainingStock',
+        'remaining',
+        'stock',
+        'quantity',
+        'qty',
+      ];
+      int? parse(dynamic v) {
+        if (v == null) return null;
+        if (v is int) return v;
+        if (v is double) return v.round();
+        if (v is String) return int.tryParse(v.trim());
+        return null;
+      }
+
+      for (final key in keys) {
+        try {
+          final val = dyn.toJson()[key];
+          final parsed = parse(val);
+          if (parsed != null) return parsed;
+        } catch (_) {
+          try {
+            final val = dyn[key];
+            final parsed = parse(val);
+            if (parsed != null) return parsed;
+          } catch (_) {}
+        }
+      }
+      return null;
+    }
+
+    final int? resolvedRemaining = remainingStock ?? _extractRemaining(item);
     // Compact card with a square thumbnail that adapts to the available height.
     final double cardHeight = 134 + (additionalHeight ?? 0);
 
@@ -687,8 +738,9 @@ class ItemHorizontalCard extends StatelessWidget {
           final double statusOffset = statusButton != null ? 28 : 0;
           final double maxImageHeight =
               (availableHeight - statusOffset).clamp(90.0, availableHeight);
-          final double imageSize = (maxImageHeight + (additionalImageWidth ?? 0))
-              .clamp(90.0, maxImageHeight);
+          final double imageSize =
+              (maxImageHeight + (additionalImageWidth ?? 0))
+                  .clamp(90.0, maxImageHeight);
 
           return SizedBox(
             height: availableHeight,
@@ -699,6 +751,7 @@ class ItemHorizontalCard extends StatelessWidget {
                   imageHeight: imageSize,
                   imageWidth: imageSize,
                   statusButton: statusButton,
+                  remaining: resolvedRemaining,
                 ),
                 const SizedBox(width: 12),
                 Expanded(

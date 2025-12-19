@@ -1,4 +1,4 @@
-// lib/new_code/data/service_ratings_api.dart
+﻿// lib/new_code/data/service_ratings_api.dart
 import 'package:flutter/foundation.dart';
 import 'package:marib/utils/api.dart';
 import 'package:marib/data/model/seller_ratings_model.dart' show UserRatings;
@@ -69,12 +69,12 @@ class ServiceRatingsApi {
     _getOverride = null;
   }
 
-  // جلب التعليقات/التقييمات لخدمة معيّنة
+  // ط¬ظ„ط¨ ط§ظ„طھط¹ظ„ظٹظ‚ط§طھ/ط§ظ„طھظ‚ظٹظٹظ…ط§طھ ظ„ط®ط¯ظ…ط© ظ…ط¹ظٹظ‘ظ†ط©
   static Future<ServiceRatingsResult> fetchRatings({
     int? serviceId,
     int page = 1,
     int perPage = 20,
-    String? sort, // "newest" | "highest" | "lowest" ...الخ (اختياري)
+    String? sort, // "newest" | "highest" | "lowest" ...ط§ظ„ط® (ط§ط®طھظٹط§ط±ظٹ)
     String? serviceUid,
   }) async {
     final String? uid = _normalizeUid(serviceUid);
@@ -84,14 +84,22 @@ class ServiceRatingsApi {
       serviceUid: uid,
     );
 
-    // نستخدم getItemApi لأنه الأكثر ثباتًا لديكم،
-    // ونمرر مفاتيح شائعة للترقيم/الفرز كي يتجاهلها الباك إند إن لم يدعمها.
+    // ظ†ط³طھط®ط¯ظ… getItemApi ظ„ط£ظ†ظ‡ ط§ظ„ط£ظƒط«ط± ط«ط¨ط§طھظ‹ط§ ظ„ط¯ظٹظƒظ…طŒ
+    // ظˆظ†ظ…ط±ط± ظ…ظپط§طھظٹط­ ط´ط§ط¦ط¹ط© ظ„ظ„طھط±ظ‚ظٹظ…/ط§ظ„ظپط±ط² ظƒظٹ ظٹطھط¬ط§ظ‡ظ„ظ‡ط§ ط§ظ„ط¨ط§ظƒ ط¥ظ†ط¯ ط¥ظ† ظ„ظ… ظٹط¯ط¹ظ…ظ‡ط§.
     final Map<String, dynamic> resp = await _performGet(
       url: Api.serviceReviewsApi,
       queryParameters: {
         Api.page: page,
         'per_page': perPage,
         'service_id': resolvedServiceId,
+        'item_id': resolvedServiceId,
+        'department': 'services',
+        'report_department': 'services',
+        // مرر القيمتين المفرد والجمع لزيادة التوافق
+        'type': 'services',
+        'item_type': 'services',
+        'type_alt': 'service',
+        'item_type_alt': 'service',
         if (uid != null) 'service_uid': uid,
         if (uid != null) 'uid': uid,
         if (sort != null) 'sort': sort,
@@ -99,8 +107,8 @@ class ServiceRatingsApi {
     );
 
     if (kDebugMode) {
-      // اطبع مفتاحًا واحدًا صغيرًا للتشخيص فقط
-      // (بدون إغراق اللوج)
+      // ط§ط·ط¨ط¹ ظ…ظپطھط§ط­ظ‹ط§ ظˆط§ط­ط¯ظ‹ط§ طµط؛ظٹط±ظ‹ط§ ظ„ظ„طھط´ط®ظٹطµ ظپظ‚ط·
+      // (ط¨ط¯ظˆظ† ط¥ط؛ط±ط§ظ‚ ط§ظ„ظ„ظˆط¬)
       // ignore: avoid_print
       print(
           '[ratings] got response keys: ${resp.keys.take(6).toList()} for serviceId=$resolvedServiceId');
@@ -119,7 +127,7 @@ class ServiceRatingsApi {
       _fallbackTrackers.remove(trackerKey);
     }
 
-    // استنتاج الترقيم من الاستجابة إن وُجد
+    // ط§ط³طھظ†طھط§ط¬ ط§ظ„طھط±ظ‚ظٹظ… ظ…ظ† ط§ظ„ط§ط³طھط¬ط§ط¨ط© ط¥ظ† ظˆظڈط¬ط¯
     final pg = _extractPagination(resp,
         fallbackPage: page,
         perPage: perPage,
@@ -155,7 +163,7 @@ class ServiceRatingsApi {
     );
   }
 
-  /// إضافة تقييم/تعليق جديد
+  /// ط¥ط¶ط§ظپط© طھظ‚ظٹظٹظ…/طھط¹ظ„ظٹظ‚ ط¬ط¯ظٹط¯
   static Future<bool> addRating({
     required int serviceId,
     required int stars, // 1..5
@@ -172,7 +180,14 @@ class ServiceRatingsApi {
 
     final payload = <String, dynamic>{
       'service_id': resolvedServiceId,
+      'item_id': resolvedServiceId,
       'rating': stars,
+      'department': 'services',
+      'report_department': 'services',
+      'type': 'services',
+      'item_type': 'services',
+      'type_alt': 'service',
+      'item_type_alt': 'service',
       if (text.isNotEmpty) 'review': text,
       if (uid != null) 'service_uid': uid,
       if (uid != null) 'uid': uid,
@@ -205,14 +220,14 @@ class ServiceRatingsApi {
       throw ApiException(
         (serverMessage != null && serverMessage.isNotEmpty)
             ? serverMessage
-            : 'تعذر إرسال التقييم',
+            : 'طھط¹ط°ط± ط¥ط±ط³ط§ظ„ ط§ظ„طھظ‚ظٹظٹظ…',
       );
     }
 
     return true;
   }
 
-  // (اختياري) جلب تقييم المستخدم الحالي لهذه الخدمة — لمنع التكرار أو لعرض زر "عدل تقييمك"
+  // (ط§ط®طھظٹط§ط±ظٹ) ط¬ظ„ط¨ طھظ‚ظٹظٹظ… ط§ظ„ظ…ط³طھط®ط¯ظ… ط§ظ„ط­ط§ظ„ظٹ ظ„ظ‡ط°ظ‡ ط§ظ„ط®ط¯ظ…ط© â€” ظ„ظ…ظ†ط¹ ط§ظ„طھظƒط±ط§ط± ط£ظˆ ظ„ط¹ط±ط¶ ط²ط± "ط¹ط¯ظ„ طھظ‚ظٹظٹظ…ظƒ"
 
   static Future<UserRatings?> getMyReview({
     int? serviceId,
@@ -229,15 +244,38 @@ class ServiceRatingsApi {
       url: Api.myServiceReviewsApi,
       queryParameters: {
         'service_id': resolvedServiceId,
+        'item_id': resolvedServiceId,
+        'department': 'services',
+        'report_department': 'services',
+        'type': 'services',
+        'item_type': 'services',
+        'type_alt': 'service',
+        'item_type_alt': 'service',
         if (uid != null) 'service_uid': uid,
         if (uid != null) 'uid': uid,
       },
     );
     final row = _firstRow(resp);
-    return row == null ? null : _toUserRatings(row);
+    if (row != null) {
+      final parsed = _toUserRatings(row);
+      if (parsed != null) return parsed;
+    }
+
+    // قد يعود كائن مفرد بدلاً من قائمة
+    if (resp is Map<String, dynamic>) {
+      final dataNode = resp['data'];
+      if (dataNode is Map<String, dynamic>) {
+        final parsed = _toUserRatings(dataNode);
+        if (parsed != null) return parsed;
+      }
+      final parsed = _toUserRatings(resp);
+      if (parsed != null) return parsed;
+    }
+
+    return null;
   }
 
-  /// (اختياري) الإبلاغ عن تعليق/تقييم معيّن
+  /// (ط§ط®طھظٹط§ط±ظٹ) ط§ظ„ط¥ط¨ظ„ط§ط؛ ط¹ظ† طھط¹ظ„ظٹظ‚/طھظ‚ظٹظٹظ… ظ…ط¹ظٹظ‘ظ†
   static Future<bool> reportReview({
     required int reviewId,
     required int serviceId,
@@ -293,7 +331,7 @@ class ServiceRatingsApi {
 
     final String? uid = _normalizeUid(serviceUid);
     if (uid == null) {
-      throw ApiException('تعذر العثور على الخدمة المطلوبة.');
+      throw ApiException('طھط¹ط°ط± ط§ظ„ط¹ط«ظˆط± ط¹ظ„ظ‰ ط§ظ„ط®ط¯ظ…ط© ط§ظ„ظ…ط·ظ„ظˆط¨ط©.');
     }
 
     try {
@@ -321,7 +359,7 @@ class ServiceRatingsApi {
       }
     }
 
-    throw ApiException('تعذر العثور على الخدمة المطلوبة.');
+    throw ApiException('طھط¹ط°ط± ط§ظ„ط¹ط«ظˆط± ط¹ظ„ظ‰ ط§ظ„ط®ط¯ظ…ط© ط§ظ„ظ…ط·ظ„ظˆط¨ط©.');
   }
 
   static String? _normalizeUid(String? value) {
@@ -452,7 +490,7 @@ class ServiceRatingsApi {
     return null;
   }
 
-  /// يحاول استخراج مصفوفة التعليقات/التقييمات من أنماط شائعة
+  /// ظٹط­ط§ظˆظ„ ط§ط³طھط®ط±ط§ط¬ ظ…طµظپظˆظپط© ط§ظ„طھط¹ظ„ظٹظ‚ط§طھ/ط§ظ„طھظ‚ظٹظٹظ…ط§طھ ظ…ظ† ط£ظ†ظ…ط§ط· ط´ط§ط¦ط¹ط©
   static List<Map<String, dynamic>> _extractReviewRows(
       Map<String, dynamic> resp) {
     dynamic root = resp;
@@ -466,10 +504,10 @@ class ServiceRatingsApi {
           .toList();
     }
 
-    // شائع: { data: {...} } أو { item: {...} }
+    // ط´ط§ط¦ط¹: { data: {...} } ط£ظˆ { item: {...} }
     root = root[Api.data] ?? root['data'] ?? root;
 
-    // في حال كان الجذر يحوي مباشرة على قائمة داخل data
+    // ظپظٹ ط­ط§ظ„ ظƒط§ظ† ط§ظ„ط¬ط°ط± ظٹط­ظˆظٹ ظ…ط¨ط§ط´ط±ط© ط¹ظ„ظ‰ ظ‚ط§ط¦ظ…ط© ط¯ط§ط®ظ„ data
     if (root is Map) {
       final direct = root[Api.data] ?? root['data'];
       if (direct is List) {
@@ -482,7 +520,7 @@ class ServiceRatingsApi {
 
     root = root[Api.item] ?? root['item'] ?? root['service'] ?? root;
 
-    // أنماط كثيرة: reviews, ratings, comments, feedback, list, items, result
+    // ط£ظ†ظ…ط§ط· ظƒط«ظٹط±ط©: reviews, ratings, comments, feedback, list, items, result
     for (final key in const [
       'reviews',
       'ratings',
@@ -509,7 +547,7 @@ class ServiceRatingsApi {
       }
     }
 
-    // أحيانًا تكون المصفوفة مباشرة
+    // ط£ط­ظٹط§ظ†ظ‹ط§ طھظƒظˆظ† ط§ظ„ظ…طµظپظˆظپط© ظ…ط¨ط§ط´ط±ط©
     if (root is List) {
       return root
           .whereType<Map>()
@@ -517,7 +555,7 @@ class ServiceRatingsApi {
           .toList();
     }
 
-    // لا شيء
+    // ظ„ط§ ط´ظٹط،
     return const <Map<String, dynamic>>[];
   }
 
@@ -526,10 +564,10 @@ class ServiceRatingsApi {
     return rows.isNotEmpty ? rows.first : null;
   }
 
-  /// تحويل مرن إلى UserRatings
+  /// طھط­ظˆظٹظ„ ظ…ط±ظ† ط¥ظ„ظ‰ UserRatings
   static UserRatings? _toUserRatings(Map<String, dynamic> m) {
     try {
-      // وفّر مفاتيح افتراضية لكي يقرأها موديل UserRatings بسلاسة
+      // ظˆظپظ‘ط± ظ…ظپط§طھظٹط­ ط§ظپطھط±ط§ط¶ظٹط© ظ„ظƒظٹ ظٹظ‚ط±ط£ظ‡ط§ ظ…ظˆط¯ظٹظ„ UserRatings ط¨ط³ظ„ط§ط³ط©
       final rating = m['ratings'] ?? m['rating'] ?? m['stars'] ?? 0;
       final review = (m['review'] ??
               m['comment'] ??
@@ -555,7 +593,7 @@ class ServiceRatingsApi {
     }
   }
 
-  /// إستنتاج معلومات الترقيم من أنماط شائعة أو من طول النتائج
+  /// ط¥ط³طھظ†طھط§ط¬ ظ…ط¹ظ„ظˆظ…ط§طھ ط§ظ„طھط±ظ‚ظٹظ… ظ…ظ† ط£ظ†ظ…ط§ط· ط´ط§ط¦ط¹ط© ط£ظˆ ظ…ظ† ط·ظˆظ„ ط§ظ„ظ†طھط§ط¦ط¬
   static _Pager _extractPagination(
     Map<String, dynamic> resp, {
     required int fallbackPage,
@@ -592,7 +630,7 @@ class ServiceRatingsApi {
     }
 
 
-    // 1) Laravel pagination شائع:
+    // 1) Laravel pagination ط´ط§ط¦ط¹:
     // meta: { current_page, last_page, next_page_url, per_page }
 
     dynamic meta = resp['meta'];
@@ -608,7 +646,7 @@ class ServiceRatingsApi {
           ? meta['current_page'] as int
           : int.tryParse('${meta['current_page'] ?? ''}') ?? fallbackPage;
 
-      // قد تكون في meta.pagination.{...}
+      // ظ‚ط¯ طھظƒظˆظ† ظپظٹ meta.pagination.{...}
       final pagination = meta['pagination'];
       if (pagination is Map) {
         final int current2 = (pagination['current_page'] is int)
@@ -647,7 +685,7 @@ class ServiceRatingsApi {
       return _Pager(hasMore: hasMore, nextPage: current + 1);
     }
 
-    // 3) fallback: استنتج من طول النتائج
+    // 3) fallback: ط§ط³طھظ†طھط¬ ظ…ظ† ط·ظˆظ„ ط§ظ„ظ†طھط§ط¦ط¬
     final tracker =
         _fallbackTrackers.putIfAbsent(trackerKey, () => _FallbackPageTracker());
     final String signature = _rowsSignature(rawRows);
@@ -669,8 +707,8 @@ class ServiceRatingsApi {
       tracker.lastReportedTotal = reportedTotal;
     }
 
-    // لم يتم العثور على أي معلومات ترقيم صريحة في الاستجابة، لذلك نتوقف بعد
-    // هذه الجولة حتى لا ندخل في حلقات لا نهائية عند تكرار نفس النتائج.
+    // ظ„ظ… ظٹطھظ… ط§ظ„ط¹ط«ظˆط± ط¹ظ„ظ‰ ط£ظٹ ظ…ط¹ظ„ظˆظ…ط§طھ طھط±ظ‚ظٹظ… طµط±ظٹط­ط© ظپظٹ ط§ظ„ط§ط³طھط¬ط§ط¨ط©طŒ ظ„ط°ظ„ظƒ ظ†طھظˆظ‚ظپ ط¨ط¹ط¯
+    // ظ‡ط°ظ‡ ط§ظ„ط¬ظˆظ„ط© ط­طھظ‰ ظ„ط§ ظ†ط¯ط®ظ„ ظپظٹ ط­ظ„ظ‚ط§طھ ظ„ط§ ظ†ظ‡ط§ط¦ظٹط© ط¹ظ†ط¯ طھظƒط±ط§ط± ظ†ظپط³ ط§ظ„ظ†طھط§ط¦ط¬.
     bool hasMore = false;
 
     final bool duplicateBySignature = previousSignature != null &&
@@ -961,3 +999,5 @@ class _FallbackPageTracker {
   int? lastReportedTotal;
   final Set<String> seenRowKeys = <String>{};
 }
+
+

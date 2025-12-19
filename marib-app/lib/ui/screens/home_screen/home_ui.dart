@@ -433,47 +433,54 @@ class ProfileHeaderShimmer extends StatelessWidget {
         end: 10.rw(context),
         bottom: (12.rh(context)).floorToDouble(),
       ),
-      child: Row(
-        children: [
-          const ShimmerBox(
-            width: 58,
-            height: 58,
-            borderRadius: BorderRadius.all(Radius.circular(18)),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ShimmerBox(
-                  height: 16,
-                  width: MediaQuery.of(context).size.width * 0.35,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                const SizedBox(height: 8),
-                ShimmerBox(
-                  height: 12,
-                  width: MediaQuery.of(context).size.width * 0.5,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ],
+      child: SizedBox(
+        height: 72,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const ShimmerBox(
+              width: 58,
+              height: 58,
+              borderRadius: BorderRadius.all(Radius.circular(18)),
             ),
-          ),
-          const SizedBox(width: 12),
-          Row(
-            children: List.generate(
-              3,
-              (index) => Padding(
-                padding: EdgeInsetsDirectional.only(start: index == 0 ? 0 : 8),
-                child: const ShimmerBox(
-                  width: 44,
-                  height: 44,
-                  borderRadius: BorderRadius.all(Radius.circular(14)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ShimmerBox(
+                    height: 16,
+                    width: MediaQuery.of(context).size.width * 0.35,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  const SizedBox(height: 8),
+                  ShimmerBox(
+                    height: 12,
+                    width: MediaQuery.of(context).size.width * 0.5,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Row(
+              children: List.generate(
+                3,
+                (index) => Padding(
+                  padding:
+                      EdgeInsetsDirectional.only(start: index == 0 ? 0 : 8),
+                  child: const ShimmerBox(
+                    width: 44,
+                    height: 44,
+                    borderRadius: BorderRadius.all(Radius.circular(14)),
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

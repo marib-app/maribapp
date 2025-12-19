@@ -783,6 +783,9 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
         Route::delete('/gateways/{storeGateway}', [StoreSettingsController::class, 'destroyGateway'])->name('gateways.destroy');
         Route::patch('/gateways/{storeGateway}/toggle', [StoreSettingsController::class, 'toggleGateway'])->name('gateways.toggle');
         Route::patch('/gateway-accounts/{storeGatewayAccount}/toggle', [StoreSettingsController::class, 'toggleGatewayAccount'])->name('gateway-accounts.toggle');
+
+        Route::post('/ui', [StoreSettingsController::class, 'storeUiSettings'])->name('ui.store');
+        Route::get('/items', [StoreSettingsController::class, 'searchStoreItems'])->name('items');
     });
 
     Route::group([

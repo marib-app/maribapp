@@ -134,9 +134,9 @@ class CartHorizontalCard extends StatelessWidget {
         normalizedKey.contains('colors') ||
         normalizedKey.contains('colours') ||
         normalizedKey.contains('لون') ||
-        normalizedKey.contains('اللون') ||
-        normalizedKey.contains('الالوان') ||
-        normalizedKey.contains('الوان');
+        normalizedKey.contains('ط·آ§ط¸â€‍لون') ||
+        normalizedKey.contains('ط·آ§ط¸â€‍ط·آ§ط¸â€‍ط¸ث†ط·آ§ط¸â€ ') ||
+        normalizedKey.contains('ط·آ§ط¸â€‍ط¸ث†ط·آ§ط¸â€ ');
   }
 
   bool _looksLikeSizeKey(String normalizedKey) {
@@ -144,11 +144,11 @@ class CartHorizontalCard extends StatelessWidget {
     return normalizedKey.contains('size') ||
         normalizedKey.contains('sizes') ||
         normalizedKey.contains('مقاس') ||
-        normalizedKey.contains('مقاسات') ||
-        normalizedKey.contains('حجم') ||
-        normalizedKey.contains('الحجم') ||
-        normalizedKey.contains('قياس') ||
-        normalizedKey.contains('القياس');
+        normalizedKey.contains('مقاسط·آ§ط·ع¾') ||
+        normalizedKey.contains('ط·آ­ط·آ¬ط¸â€¦') ||
+        normalizedKey.contains('ط·آ§ط¸â€‍ط·آ­ط·آ¬ط¸â€¦') ||
+        normalizedKey.contains('ط¸â€ڑط¸ظ¹ط·آ§ط·آ³') ||
+        normalizedKey.contains('ط·آ§ط¸â€‍ط¸â€ڑط¸ظ¹ط·آ§ط·آ³');
   }
 
   bool _looksLikeHexColorToken(String token) {
@@ -215,27 +215,27 @@ class CartHorizontalCard extends StatelessWidget {
 
     final String arabic = trimmed.replaceAll(' ', '');
     const List<String> arabicColors = <String>[
-      'أسود',
-      'اسود',
-      'أبيض',
-      'ابيض',
-      'أحمر',
-      'احمر',
-      'أزرق',
-      'ازرق',
-      'أخضر',
-      'اخضر',
-      'أصفر',
-      'اصفر',
-      'وردي',
-      'زهري',
-      'رمادي',
-      'بني',
-      'بيج',
-      'بنفسجي',
-      'برتقالي',
-      'ذهبي',
-      'فضي',
+      'ط·آ£ط·آ³ط¸ث†ط·آ¯',
+      'ط·آ§ط·آ³ط¸ث†ط·آ¯',
+      'ط·آ£ط·آ¨ط¸ظ¹ط·آ¶',
+      'ط·آ§ط·آ¨ط¸ظ¹ط·آ¶',
+      'ط·آ£ط·آ­ط¸â€¦ط·آ±',
+      'ط·آ§ط·آ­ط¸â€¦ط·آ±',
+      'ط·آ£ط·آ²ط·آ±ط¸â€ڑ',
+      'ط·آ§ط·آ²ط·آ±ط¸â€ڑ',
+      'ط·آ£ط·آ®ط·آ¶ط·آ±',
+      'ط·آ§ط·آ®ط·آ¶ط·آ±',
+      'ط·آ£ط·آµط¸ظ¾ط·آ±',
+      'ط·آ§ط·آµط¸ظ¾ط·آ±',
+      'ط¸ث†ط·آ±ط·آ¯ط¸ظ¹',
+      'ط·آ²ط¸â€،ط·آ±ط¸ظ¹',
+      'ط·آ±ط¸â€¦ط·آ§ط·آ¯ط¸ظ¹',
+      'ط·آ¨ط¸â€ ط¸ظ¹',
+      'ط·آ¨ط¸ظ¹ط·آ¬',
+      'ط·آ¨ط¸â€ ط¸ظ¾ط·آ³ط·آ¬ط¸ظ¹',
+      'ط·آ¨ط·آ±ط·ع¾ط¸â€ڑط·آ§ط¸â€‍ط¸ظ¹',
+      'ط·آ°ط¸â€،ط·آ¨ط¸ظ¹',
+      'ط¸ظ¾ط·آ¶ط¸ظ¹',
     ];
     return arabicColors.any(arabic.contains);
   }
@@ -268,11 +268,12 @@ class CartHorizontalCard extends StatelessWidget {
       return true;
     }
 
-    if (condensed.contains('فري') && condensed.contains('سايز')) {
+    if (condensed.contains('ط¸ظ¾ط·آ±ط¸ظ¹') &&
+        condensed.contains('ط·آ³ط·آ§ط¸ظ¹ط·آ²')) {
       return true;
     }
 
-    if (condensed.contains('مقاس') && condensed.contains('واحد')) {
+    if (condensed.contains('مقاس') && condensed.contains('ط¸ث†ط·آ§ط·آ­ط·آ¯')) {
       return true;
     }
 
@@ -349,7 +350,9 @@ class CartHorizontalCard extends StatelessWidget {
         if (label.isEmpty) {
           final int? fieldId = _asInt(field['field_id'] ?? field['id']);
           final List<CustomFieldModel>? definitions = cart.customFields;
-          if (fieldId != null && definitions != null && definitions.isNotEmpty) {
+          if (fieldId != null &&
+              definitions != null &&
+              definitions.isNotEmpty) {
             for (final CustomFieldModel def in definitions) {
               if (def.id == fieldId) {
                 final String? name = def.name?.trim();
@@ -498,7 +501,9 @@ class CartHorizontalCard extends StatelessWidget {
         if (label.isEmpty) {
           final int? fieldId = _asInt(field['field_id'] ?? field['id']);
           final List<CustomFieldModel>? definitions = cart.customFields;
-          if (fieldId != null && definitions != null && definitions.isNotEmpty) {
+          if (fieldId != null &&
+              definitions != null &&
+              definitions.isNotEmpty) {
             for (final CustomFieldModel def in definitions) {
               if (def.id == fieldId) {
                 final String? name = def.name?.trim();
@@ -703,7 +708,8 @@ class CartHorizontalCard extends StatelessWidget {
 
       if (availableStock != null) {
         if (availableStock <= 0) {
-          HelperUtils.showSnackBarMessage(context, 'هذا المنتج غير متوفر حالياً.');
+          HelperUtils.showSnackBarMessage(
+              context, 'هذا المنتج غير متوفر حالياً.');
           return;
         }
         if (!canIncrease) {
@@ -745,8 +751,9 @@ class CartHorizontalCard extends StatelessWidget {
       required bool enabled,
       required Color activeColor,
     }) {
-      final Color iconColor =
-          enabled ? activeColor : context.color.textDefaultColor.withOpacity(0.3);
+      final Color iconColor = enabled
+          ? activeColor
+          : context.color.textDefaultColor.withOpacity(0.3);
       return InkResponse(
         onTap: onTap,
         radius: 26,
@@ -805,7 +812,8 @@ class CartHorizontalCard extends StatelessWidget {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
     final String rawPriceLabel = HelperUtils.formatPrice(item.unitPriceValue);
-    final String priceLabel = rawPriceLabel.isEmpty ? 'غير متوفر' : rawPriceLabel;
+    final String priceLabel =
+        rawPriceLabel.isEmpty ? 'غير متوفر' : rawPriceLabel;
     final String currencyLabel = _resolveCurrencyLabel(
       currency: item.currency,
       currencyCode: item.currencyCode,
@@ -818,152 +826,158 @@ class CartHorizontalCard extends StatelessWidget {
         ? Colors.black.withOpacity(0.22)
         : Colors.black.withOpacity(0.08);
 
-    final Widget card = Container(
-      decoration: BoxDecoration(
-        color: context.color.secondaryColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.color.borderColor.withOpacity(0.6)),
-        boxShadow: showShadow
-            ? [
-                BoxShadow(
-                  color: shadowColor,
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ]
-            : null,
-      ),
-      padding: const EdgeInsets.all(12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (showCheckbox)
-            Padding(
-              padding: const EdgeInsetsDirectional.only(top: 6, end: 10),
-              child: InkResponse(
-                onTap: onToggleSelect,
-                radius: 20,
-                child: Icon(
-                  isSelected
-                      ? Icons.check_circle
-                      : Icons.radio_button_unchecked,
-                  color: isSelected ? Colors.green : Colors.grey,
-                  size: 22,
-                ),
-              ),
-            ),
-          InkWell(
-            onTap: () => _openAdDetails(context),
-            borderRadius: BorderRadius.circular(14),
-            child: SizedBox(
-              width: 92 + (additionalImageWidth ?? 0),
-              height: 92,
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(14),
-                      child: UiUtils.getImage(
-                        item.image ?? "",
-                        fit: BoxFit.cover,
-                      ),
+    final Widget card = Stack(
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: context.color.secondaryColor,
+            borderRadius: BorderRadius.circular(16),
+            border:
+                Border.all(color: context.color.borderColor.withOpacity(0.6)),
+            boxShadow: showShadow
+                ? [
+                    BoxShadow(
+                      color: shadowColor,
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : null,
+          ),
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (showCheckbox)
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(top: 6, end: 10),
+                  child: InkResponse(
+                    onTap: onToggleSelect,
+                    radius: 20,
+                    child: Icon(
+                      isSelected
+                          ? Icons.check_circle
+                          : Icons.radio_button_unchecked,
+                      color: isSelected ? Colors.green : Colors.grey,
+                      size: 22,
                     ),
                   ),
-                  if (item.isFeature ?? false)
-                    const PositionedDirectional(
-                      start: 6,
-                      top: 6,
-                      child: PromotedCard(type: PromoteCardType.icon),
-                    ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        (item.name ?? '').firstUpperCase(),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: context.font.normal,
-                          fontWeight: FontWeight.w700,
-                          color: context.color.textDefaultColor,
+                ),
+              InkWell(
+                onTap: () => _openAdDetails(context),
+                borderRadius: BorderRadius.circular(14),
+                child: SizedBox(
+                  width: 92 + (additionalImageWidth ?? 0),
+                  height: 92,
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(14),
+                          child: UiUtils.getImage(
+                            item.image ?? "",
+                            fit: BoxFit.cover,
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      tooltip: 'حذف',
-                      visualDensity: VisualDensity.compact,
-                      padding: EdgeInsets.zero,
-                      constraints:
-                          const BoxConstraints(minHeight: 36, minWidth: 36),
-                      icon: const Icon(
-                        Icons.delete_outline,
-                        color: Colors.redAccent,
-                        size: 22,
-                      ),
-                      onPressed: () => unawaited(_requestDelete(context)),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      priceLabel,
-                      style: TextStyle(
-                        fontSize: context.font.large,
-                        fontWeight: FontWeight.w800,
-                        color: context.color.territoryColor,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      currencyLabel,
-                      style: TextStyle(
-                        fontSize: context.font.normal * 0.75,
-                        fontWeight: FontWeight.w700,
-                        color: context.color.textDefaultColor.withOpacity(0.6),
-                      ),
-                    ),
-                  ],
-                ),
-                if (attributes.isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: attributes.map((text) => _chip(context, text)).toList(),
+                      if (item.isFeature ?? false)
+                        const PositionedDirectional(
+                          start: 6,
+                          top: 6,
+                          child: PromotedCard(type: PromoteCardType.icon),
+                        ),
+                    ],
                   ),
-                ],
-                const SizedBox(height: 12),
-                Row(
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(child: _stockLabel(context, availableStock)),
-                    _quantityControls(context, availableStock),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            (item.name ?? '').firstUpperCase(),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: context.font.normal,
+                              fontWeight: FontWeight.w700,
+                              color: context.color.textDefaultColor,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          tooltip: 'حذف',
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                          constraints:
+                              const BoxConstraints(minHeight: 36, minWidth: 36),
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            color: Colors.redAccent,
+                            size: 22,
+                          ),
+                          onPressed: () => unawaited(_requestDelete(context)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          priceLabel,
+                          style: TextStyle(
+                            fontSize: context.font.large,
+                            fontWeight: FontWeight.w800,
+                            color: context.color.territoryColor,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          currencyLabel,
+                          style: TextStyle(
+                            fontSize: context.font.normal * 0.75,
+                            fontWeight: FontWeight.w700,
+                            color:
+                                context.color.textDefaultColor.withOpacity(0.6),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (attributes.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: attributes
+                            .map((text) => _chip(context, text))
+                            .toList(),
+                      ),
+                    ],
+                    const SizedBox(height: 52),
+                    if (addBottom != null && addBottom!.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      ...addBottom!,
+                    ],
                   ],
                 ),
-                if (addBottom != null && addBottom!.isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  ...addBottom!,
-                ],
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+        PositionedDirectional(
+          bottom: 10,
+          end: 12,
+          child: _quantityControls(context, availableStock),
+        ),
+      ],
     );
-
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: card,

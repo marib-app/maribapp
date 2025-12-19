@@ -1683,7 +1683,7 @@ class _SignupScreenState extends CloudState<SignupScreen> {
                   context, Routes.main, {"from": "signup"});
             } else {
               Navigator.of(context).pushNamedAndRemoveUntil(
-                  Routes.locationPermissionScreen, (route) => false);
+                  Routes.main, (route) => false);
             }
           } else {
             // ???¬?§?±??/???‚?§?±??

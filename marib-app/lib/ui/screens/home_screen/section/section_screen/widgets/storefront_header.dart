@@ -4,6 +4,7 @@ import 'package:marib/data/model/merchant/storefront_model.dart';
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/ui_utils.dart';
+import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
 
 class MerchantStorefrontHeader extends StatelessWidget {
   const MerchantStorefrontHeader({
@@ -303,62 +304,55 @@ class _StorefrontHero extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                  TextButton.icon(
-                    onPressed: isFollowLoading ? null : onFollowTap ?? () {},
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 10,
-                      ),
-                      backgroundColor: isFollowing
-                          ? colors.primary.withValues(alpha: 0.12)
-                          : colors.surface.withValues(alpha: 0.9),
-                      foregroundColor:
-                        isFollowing ? colors.primary : colors.onSurface,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        side: BorderSide(
-                          color: isFollowing
-                              ? colors.primary.withValues(alpha: 0.6)
-                              : colors.onSurface.withValues(alpha: 0.12),
-                        ),
-                      ),
-                    ),
-                    icon: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 200),
-                      child: isFollowLoading
-                          ? SizedBox(
-                              key: const ValueKey('follow_loading'),
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  colors.primary,
-                                ),
-                              ),
-                            )
-                          : Icon(
-                              isFollowing
-                                  ? Icons.check_circle_rounded
-                                  : Icons.person_add_alt_rounded,
-                              key: ValueKey(isFollowing),
-                              size: 20,
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  child: isFollowLoading
+                      ? ShimmerBox(
+                          key: const ValueKey('follow_shimmer'),
+                          width: 120,
+                          height: 44,
+                          borderRadius: BorderRadius.circular(14),
+                        )
+                      : TextButton.icon(
+                          key: ValueKey(isFollowing),
+                          onPressed: onFollowTap ?? () {},
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 10,
                             ),
-                    ),
-                    label: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 200),
-                      child: Text(
-                        isFollowing ? 'متابع' : 'أتابع',
-                        key: ValueKey(isFollowing),
-                        style: theme.textTheme.labelLarge?.copyWith(
-                          color:
-                              isFollowing ? colors.primary : colors.onSurface,
-                          fontWeight: FontWeight.w700,
+                            backgroundColor: isFollowing
+                                ? colors.primary.withValues(alpha: 0.12)
+                                : colors.surface.withValues(alpha: 0.9),
+                            foregroundColor: isFollowing
+                                ? colors.primary
+                                : colors.onSurface,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              side: BorderSide(
+                                color: isFollowing
+                                    ? colors.primary.withValues(alpha: 0.6)
+                                    : colors.onSurface.withValues(alpha: 0.12),
+                              ),
+                            ),
+                          ),
+                          icon: Icon(
+                            isFollowing
+                                ? Icons.check_circle_rounded
+                                : Icons.person_add_alt_rounded,
+                            size: 20,
+                          ),
+                          label: Text(
+                            isFollowing ? 'متابع' : 'أتابع',
+                            style: theme.textTheme.labelLarge?.copyWith(
+                              color: isFollowing
+                                  ? colors.primary
+                                  : colors.onSurface,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                  )
+                )
                 ],
               ),
             ),

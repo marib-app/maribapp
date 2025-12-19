@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
@@ -13,6 +13,7 @@ class ItemCommentsList extends StatefulWidget {
   final ValueChanged<bool>? onCanReviewChanged;
   final ValueChanged<int?>? onServiceIdResolved;
   final String? serviceUid;
+  final ValueChanged<List<UserRatings>>? onRatingsUpdated;
 
   const ItemCommentsList({
     super.key,
@@ -21,6 +22,7 @@ class ItemCommentsList extends StatefulWidget {
     this.onServiceIdResolved,
     this.serviceUid,
     this.padding = const EdgeInsets.symmetric(horizontal: 16),
+    this.onRatingsUpdated,
   });
 
   @override
@@ -28,6 +30,7 @@ class ItemCommentsList extends StatefulWidget {
 }
 
 class ItemCommentsListState extends State<ItemCommentsList> {
+  static final Map<String, List<UserRatings>> _localCache = {};
   final _scroll = ScrollController();
 
   final List<UserRatings> _items = [];
@@ -35,19 +38,35 @@ class ItemCommentsListState extends State<ItemCommentsList> {
   bool _loadingMore = false;
   bool _hasMore = true;
   int _page = 1;
-  String? _sort; // 'default' | 'recent' | 'top' (اختياري)
+  String? _sort; // 'default' | 'recent' | 'top'
   int? _serviceId;
   bool _paginationEnded = false;
   bool _endOfListNotified = false;
 
+  static String? _cacheKeyFor(int? serviceId, String? serviceUid) {
+    final uid = serviceUid?.trim();
+    if (uid != null && uid.isNotEmpty) return 'uid:$uid';
+    if (serviceId != null && serviceId > 0) return 'id:$serviceId';
+    return null;
+  }
+
+  static List<UserRatings> cachedRatings({
+    int? serviceId,
+    String? serviceUid,
+  }) {
+    final key = _cacheKeyFor(serviceId, serviceUid);
+    if (key == null) return const [];
+    return List<UserRatings>.from(_localCache[key] ?? const <UserRatings>[]);
+  }
+
   @override
   void initState() {
     super.initState();
-    // تهيئة timeago بالعربية (بهدوء لو كانت مسجلة مسبقًا)
     try {
       timeago.setLocaleMessages('ar', timeago.ArMessages());
     } catch (_) {}
     _serviceId = widget.serviceId;
+    _restoreCachedLocal();
     _loadFirst();
     _scroll.addListener(_onScroll);
   }
@@ -68,13 +87,60 @@ class ItemCommentsListState extends State<ItemCommentsList> {
     }
   }
 
-  /// تُستدعى من الخارج لتحديث القائمة
+  /// ط¥ط¹ط§ط¯ط© ط§ظ„طھط­ظ…ظٹظ„ ظ…ط¹ ط§ط®طھظٹط§ط± ط§ظ„طھط±طھظٹط¨
   Future<void> reload({String? sort}) async {
     _sort = sort ?? _sort;
     await _loadFirst();
   }
 
+  void addLocalRating({required double stars, required String review}) {
+    final now = DateTime.now().toIso8601String();
+    _serviceId ??= widget.serviceId;
+    final key = _cacheKey;
+    final rating = UserRatings(
+      id: DateTime.now().millisecondsSinceEpoch,
+      itemId: _serviceId,
+      ratings: stars,
+      review: review,
+      createdAt: now,
+      updatedAt: now,
+    );
+    if (key != null) {
+      final list = _localCache.putIfAbsent(key, () => []);
+      list.insert(0, rating);
+    }
+    setState(() {
+      _loading = false;
+      _items.insert(0, rating);
+    });
+    _emitUpdated();
+  }
+
+  String? get _cacheKey {
+    return _cacheKeyFor(_serviceId ?? widget.serviceId, widget.serviceUid);
+  }
+
+  void _restoreCachedLocal() {
+    final key = _cacheKey;
+    if (key != null && _localCache.containsKey(key)) {
+      final cached = _localCache[key]!;
+      if (cached.isNotEmpty) {
+        _items.insertAll(0, cached);
+        _loading = false;
+        _emitUpdated();
+      }
+    }
+  }
+
+  void _addIfMissing(UserRatings rating) {
+    final key = _ratingKey(rating);
+    if (!_items.any((e) => _ratingKey(e) == key)) {
+      _items.insert(0, rating);
+    }
+  }
+
   Future<void> _loadFirst() async {
+    final List<UserRatings> preserved = List<UserRatings>.from(_items);
     setState(() {
       _loading = true;
       _items.clear();
@@ -83,6 +149,7 @@ class ItemCommentsListState extends State<ItemCommentsList> {
       _paginationEnded = false;
       _endOfListNotified = false;
     });
+    bool anyAdded = false;
     try {
       final res = await ServiceRatingsApi.fetchRatings(
         serviceId: _serviceId,
@@ -98,6 +165,18 @@ class ItemCommentsListState extends State<ItemCommentsList> {
       );
       if (uniqueFirst.isNotEmpty) {
         _items.addAll(uniqueFirst);
+        anyAdded = true;
+      }
+      for (final r in preserved) {
+        _addIfMissing(r);
+      }
+      final my = await ServiceRatingsApi.getMyReview(
+        serviceId: _serviceId,
+        serviceUid: widget.serviceUid,
+      );
+      if (my != null) {
+        _addIfMissing(my);
+        anyAdded = true;
       }
 
       final bool duplicateResponse = res.list.isNotEmpty && uniqueFirst.isEmpty;
@@ -115,9 +194,35 @@ class ItemCommentsListState extends State<ItemCommentsList> {
         _notifyPaginationEndOnce();
       }
     } catch (_) {
-      // بإمكانك عرض SnackBar هنا لو حبيت
+      for (final r in preserved) {
+        _addIfMissing(r);
+      }
+      try {
+        final my = await ServiceRatingsApi.getMyReview(
+          serviceId: _serviceId,
+          serviceUid: widget.serviceUid,
+        );
+        if (my != null) {
+          _addIfMissing(my);
+          anyAdded = true;
+        }
+      } catch (_) {}
+      _hasMore = false;
+      _paginationEnded = _items.isNotEmpty;
     } finally {
-      if (mounted) setState(() => _loading = false);
+      final key = _cacheKey;
+      if (key != null) {
+        _localCache[key] = List<UserRatings>.from(_items);
+      }
+      if (_paginationEnded && !_endOfListNotified && _items.isNotEmpty) {
+        _notifyPaginationEndOnce();
+      }
+      if (mounted) {
+        setState(() => _loading = false);
+        if (anyAdded || _items.isNotEmpty) {
+          _emitUpdated();
+        }
+      }
     }
   }
 
@@ -156,9 +261,12 @@ class ItemCommentsListState extends State<ItemCommentsList> {
         _notifyPaginationEndOnce();
       }
     } catch (_) {
-      // تجاهل هادئ
+      // ignore
     } finally {
-      if (mounted) setState(() => _loadingMore = false);
+      if (mounted) {
+        setState(() => _loadingMore = false);
+        _emitUpdated();
+      }
     }
   }
 
@@ -181,6 +289,10 @@ class ItemCommentsListState extends State<ItemCommentsList> {
         const SnackBar(content: Text('تم عرض جميع التعليقات.')),
       );
     });
+  }
+
+  void _emitUpdated() {
+    widget.onRatingsUpdated?.call(List<UserRatings>.unmodifiable(_items));
   }
 
   String _ratingKey(UserRatings rating) {
@@ -252,7 +364,9 @@ class ItemCommentsListState extends State<ItemCommentsList> {
     }
 
     if (_items.isEmpty) {
-      return const Center(child: Text('لا توجد تعليقات بعد'));
+      final isRtl = Directionality.of(context) == TextDirection.rtl;
+      String _t(String ar, String en) => isRtl ? ar : en;
+      return Center(child: Text(_t('لا توجد تعليقات بعد', 'No comments yet')));
     }
 
     return RefreshIndicator(

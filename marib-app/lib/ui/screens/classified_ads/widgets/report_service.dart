@@ -440,13 +440,17 @@ class ReportService {
     try {
       final String reasonTextNorm = (reasonText ?? '').trim();
       final String detailsNorm = (details ?? '').trim();
+      final String dept = type == 'service' ? 'services' : type;
 
       final Map<String, dynamic> payload = {
         Api.itemId: itemId,
-        Api.type: type,
-        Api.itemType: type,
-        'department': type == 'service' ? 'services' : type,
-        'report_to': type == 'service' ? 'services' : type,
+        Api.type: 'service',
+        Api.itemType: 'service',
+        'department': dept,
+        'report_to': dept,
+        'report_department': dept,
+        'report_type': 'service',
+        'item_department': dept,
         if ((reasonId ?? 0) > 0) 'report_reason_id': reasonId,
         if ((reasonId ?? 0) > 0) 'reason_id': reasonId,
       };

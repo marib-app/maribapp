@@ -34,6 +34,7 @@ class HiveKeys {
   static const String isUserFirstTime = "isUserFirstTime";
   static const String isUserSkip = "isUserSkip";
   static const String isProfileCompleted = "isProfileCompleted";
+  static const String corePermissionsGranted = "corePermissionsGranted";
   static String languageBox = "language";
   static String currentLanguageKey = "currentLanguage";
 

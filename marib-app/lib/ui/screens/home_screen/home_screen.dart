@@ -174,43 +174,75 @@ class HomeScreenState extends State<HomeScreen>
     });
   }
 
-  void _showPermissionPromptIfNeeded() {
-    if (_permissionsPromptShown || !HiveUtils.isUserAuthenticated()) return;
+  Future<void> _showPermissionPromptIfNeeded() async {
     _permissionsPromptShown = true;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (sheetContext) {
-        return _PermissionPromptSheet(
-          onAllow: () async {
-            Navigator.of(sheetContext).pop();
-            await _requestCorePermissions();
-          },
-          onSkip: () => Navigator.of(sheetContext).pop(),
-        );
-      },
-    );
+    await HiveUtils.setCorePermissionsSnapshot(true);
+    return;
   }
 
   Future<void> _requestCorePermissions() async {
-    final List<Permission> permissions = <Permission>[
-      Permission.notification,
-      Permission.locationWhenInUse,
-      if (Platform.isAndroid) Permission.storage else Permission.photos,
-      Permission.camera,
-      Permission.microphone,
-    ];
-
-    for (final Permission perm in permissions) {
-      final PermissionStatus status = await perm.status;
-      if (status.isGranted) continue;
-      await perm.request();
+    // إشعارات
+    if (!_isGrantedOrLimited(await Permission.notification.status)) {
+      await Permission.notification.request();
     }
+
+    // موقع أثناء الاستخدام
+    if (!_isGrantedOrLimited(await Permission.locationWhenInUse.status)) {
+      await Permission.locationWhenInUse.request();
+    }
+
+    // كاميرا
+    if (!_isGrantedOrLimited(await Permission.camera.status)) {
+      await Permission.camera.request();
+    }
+
+    // مايكروفون
+    if (!_isGrantedOrLimited(await Permission.microphone.status)) {
+      await Permission.microphone.request();
+    }
+
+    // وسائط (صور/تخزين) - يكفي إذن واحد منهما
+    if (!await _isMediaPermissionSatisfied()) {
+      if (Platform.isIOS) {
+        await Permission.photos.request();
+      } else if (Platform.isAndroid) {
+        // جرّب photos للأجهزة الحديثة ثم التخزين كخيار أوسع
+        await Permission.photos.request();
+        if (!await _isMediaPermissionSatisfied()) {
+          await Permission.storage.request();
+        }
+      }
+    }
+  }
+
+  Future<bool> _needsCorePermissions() async {
+    if (!_isGrantedOrLimited(await Permission.notification.status)) {
+      return true;
+    }
+    if (!_isGrantedOrLimited(await Permission.locationWhenInUse.status)) {
+      return true;
+    }
+    if (!_isGrantedOrLimited(await Permission.camera.status)) {
+      return true;
+    }
+    if (!_isGrantedOrLimited(await Permission.microphone.status)) {
+      return true;
+    }
+    if (!await _isMediaPermissionSatisfied()) {
+      return true;
+    }
+    return false;
+  }
+
+  bool _isGrantedOrLimited(PermissionStatus status) {
+    return status.isGranted || status.isLimited;
+  }
+
+  Future<bool> _isMediaPermissionSatisfied() async {
+    // أي من الصور أو التخزين يكفي
+    final photoStatus = await Permission.photos.status;
+    final storageStatus = await Permission.storage.status;
+    return _isGrantedOrLimited(photoStatus) || _isGrantedOrLimited(storageStatus);
   }
 
   @override

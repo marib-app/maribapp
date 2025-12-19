@@ -336,6 +336,9 @@ class Section_screenState extends State<Section_screen> {
   bool _showAdSlider = false;
   bool _requestedSlider = false;
 
+  int? _sellerUserId;
+  int? _storeId;
+  bool _waitingForStorefrontResolution = false;
   late final String? _requestSectionSlug;
   late final bool _enableFeaturedAds;
   bool get _hasStorefrontContext =>
@@ -445,18 +448,32 @@ class Section_screenState extends State<Section_screen> {
       source: source,
       categoryIdOverride: categoryIdOverride,
     );
-    final int? sellerId = widget.sellerId;
+    final int? sellerId = _sellerUserId ?? widget.sellerId;
+    final int? storeId = _storeId;
 
-    if (source == null) {
-      return ItemFilterModel(
-        categoryId: resolvedCategoryId,
-        userId: sellerId,
-      );
-    }
+    final ItemFilterModel built = source == null
+        ? ItemFilterModel(
+            categoryId: resolvedCategoryId,
+            userId: sellerId,
+            storeId: storeId,
+          )
+        : source.copyWith(
+            categoryId: resolvedCategoryId,
+            userId: sellerId ?? source.userId,
+            storeId: storeId ?? source.storeId,
+          );
 
-    return source.copyWith(
-      categoryId: resolvedCategoryId,
-      userId: sellerId ?? source.userId,
+    return _applyStorefrontGuard(built);
+  }
+
+  ItemFilterModel _applyStorefrontGuard(ItemFilterModel filter) {
+    if (!_hasStorefrontContext) return filter;
+    final int? sellerId = _sellerUserId ?? widget.sellerId;
+    final int? storeId = _storeId;
+    if (sellerId == null && storeId == null) return filter;
+    return filter.copyWith(
+      userId: sellerId ?? filter.userId,
+      storeId: storeId ?? filter.storeId,
     );
   }
 
@@ -524,17 +541,27 @@ class Section_screenState extends State<Section_screen> {
     String? search,
     int? categoryId,
   }) async {
+    if (_hasStorefrontContext &&
+        _sellerUserId == null &&
+        _storeId == null &&
+        _waitingForStorefrontResolution) {
+      return;
+    }
+
     final ItemFilterModel effectiveFilter = _buildEffectiveFilter(
       base: baseFilter,
       categoryIdOverride: categoryId,
     );
+    final ItemFilterModel guardedFilter = _applyStorefrontGuard(
+      effectiveFilter,
+    );
 
     final int resolvedCategoryId = _resolveCategoryIdInt(
-      source: effectiveFilter,
+      source: guardedFilter,
       categoryIdOverride: categoryId,
     );
 
-    filter = effectiveFilter;
+    filter = guardedFilter;
 
     final String query = search ?? searchController.text;
 
@@ -542,7 +569,7 @@ class Section_screenState extends State<Section_screen> {
           categoryId: resolvedCategoryId,
           search: query,
           sortBy: sortBy,
-          filter: effectiveFilter,
+          filter: guardedFilter,
           perPage: FetchItemSummaryCubit.defaultPerPage,
         );
   }
@@ -566,12 +593,16 @@ class Section_screenState extends State<Section_screen> {
     _enableFeaturedAds = !_hasStorefrontContext &&
         (_featuredAdsConfig?.enableFeaturedAds ??
             _featuredAdRootIds.contains(_catId));
-    _sellerCategoryIds = _normalizeSellerCategoryIds(widget.sellerCategoryIds);
     _snapshotStorefront = _deriveSnapshotDetails(widget.storefrontSnapshot);
+    _sellerUserId = _resolveSellerId();
+    _storeId = _resolveStoreId();
+    _waitingForStorefrontResolution =
+        _hasStorefrontContext && _sellerUserId == null && _storeId == null;
+    _sellerCategoryIds = _normalizeSellerCategoryIds(widget.sellerCategoryIds);
 
     // (ط§ط®طھظٹط§ط±ظٹ) ظ„ظˆ ظ‡ط°ظ‡ ط§ظ„ظ…طھط؛ظٹط±ط§طھ ط¹ظ†ط¯ظƒ ط£طµظ„ط§ظ‹ â€” ظˆط¥ظ„ط§ ط§ط­ط°ظپ ط§ظ„ط³ط·ظˆط± ط§ظ„ط«ظ„ط§ط«ط©:
     // searchbody = {};
-    // selectedcategoryId = widget.categoryId;
+    // selectedcategoryId = widget.categoryId; 
     // selectedcategoryName = widget.categoryName;
     // searchbody[Api.categoryId] = widget.categoryId;
 
@@ -595,7 +626,8 @@ class Section_screenState extends State<Section_screen> {
       radius: radius,
       latitude: lat,
       longitude: lon,
-      userId: widget.sellerId,
+      userId: _sellerUserId,
+      storeId: _storeId,
     );
 
     final ItemFilterModel effectiveFilter = _buildEffectiveFilter(
@@ -608,13 +640,15 @@ class Section_screenState extends State<Section_screen> {
 
     _requestSectionSlug = _resolveRequestSectionSlug();
 
-    unawaited(
-      _refreshData(
-        baseFilter: effectiveFilter,
-        categoryId: _catId,
-        search: '',
-      ),
-    );
+    if (!_waitingForStorefrontResolution) {
+      unawaited(
+        _refreshData(
+          baseFilter: effectiveFilter,
+          categoryId: _catId,
+          search: '',
+        ),
+      );
+    }
 
     // ظ„ط¶ظ…ط§ظ† طھظˆظپط± ط§ظ„ط¨ظٹط§ظ†ط§طھ ظ‚ط¨ظ„ ط¨ظ†ط§ط، HomeTabView.
     if (_enableFeaturedAds) {
@@ -663,6 +697,10 @@ class Section_screenState extends State<Section_screen> {
     }
     if (!mapEquals(oldWidget.storefrontSnapshot, widget.storefrontSnapshot)) {
       _snapshotStorefront = _deriveSnapshotDetails(widget.storefrontSnapshot);
+      _sellerUserId = _resolveSellerId();
+      _storeId = _resolveStoreId();
+      _waitingForStorefrontResolution =
+          _hasStorefrontContext && _sellerUserId == null && _storeId == null;
     }
   }
 
@@ -716,6 +754,12 @@ class Section_screenState extends State<Section_screen> {
   // ط³ط­ط¨ ظ„ظ„طھط­ط¯ظٹط«
   // =========================
   Future<void> _handleRefresh() async {
+    if (_hasStorefrontContext &&
+        _sellerUserId == null &&
+        _storeId == null &&
+        _waitingForStorefrontResolution) {
+      return;
+    }
     try {
       HapticFeedback.selectionClick();
       setState(() => showShimmer = true);
@@ -731,17 +775,20 @@ class Section_screenState extends State<Section_screen> {
       }
 
       final ItemFilterModel effectiveFilter = _buildEffectiveFilter();
+      final ItemFilterModel guardedFilter = _applyStorefrontGuard(
+        effectiveFilter,
+      );
       final int resolvedCategoryId = _resolveCategoryIdInt(
-        source: effectiveFilter,
+        source: guardedFilter,
       );
 
-      filter = effectiveFilter;
+      filter = guardedFilter;
 
       await context.read<FetchItemSummaryCubit>().fetchSummaries(
             categoryId: resolvedCategoryId,
             search: searchController.text,
             sortBy: sortBy,
-            filter: effectiveFilter,
+            filter: guardedFilter,
             perPage: FetchItemSummaryCubit.defaultPerPage,
           );
 
@@ -784,7 +831,7 @@ class Section_screenState extends State<Section_screen> {
     final VoidCallback? onCartTap =
         showCartAction ? () => Navigator.pushNamed(context, Routes.cart) : null;
 
-    return AnnotatedRegion<SystemUiOverlayStyle>(
+    return _wrapWithStorefrontListener(AnnotatedRegion<SystemUiOverlayStyle>(
       value: overlay,
       child: BlocListener<FetchItemSummaryCubit, FetchItemSummaryState>(
         listenWhen: (prev, curr) => prev.runtimeType != curr.runtimeType,
@@ -1068,6 +1115,61 @@ class Section_screenState extends State<Section_screen> {
               );
             }),
       ),
+    ));
+  }
+
+  void _handleStorefrontResolved(StorefrontDetails details) {
+    final int? newSellerId = details.userId;
+    final int? newStoreId = details.id > 0 ? details.id : null;
+    if (newSellerId == null || newSellerId <= 0) {
+      // Even if seller missing, storeId might be useful.
+      if (newStoreId == null) {
+        return;
+      }
+    }
+
+    final bool sellerChanged = _sellerUserId != newSellerId;
+    final bool wasWaiting = _waitingForStorefrontResolution;
+    _sellerUserId = newSellerId ?? _sellerUserId;
+    _storeId = newStoreId ?? _storeId;
+    _waitingForStorefrontResolution = false;
+
+    // Rebuild filters with the resolved seller id.
+    final ItemFilterModel baseFilter = (filter ??
+            _initialFilter ??
+            ItemFilterModel(categoryId: _catId.toString()))
+        .copyWith(
+      categoryId: _catId.toString(),
+      userId: newSellerId,
+      storeId: newStoreId ?? _storeId,
+    );
+
+    setState(() {
+      _initialFilter = baseFilter;
+      filter = baseFilter;
+    });
+
+    unawaited(
+      _refreshData(
+        baseFilter: baseFilter,
+        categoryId: _catId,
+        search: searchController.text,
+      ),
+    );
+  }
+
+  Widget _wrapWithStorefrontListener(Widget child) {
+    final StorefrontCubit? cubit = _findStorefrontCubit(context);
+    if (cubit == null) return child;
+    return BlocListener<StorefrontCubit, StorefrontState>(
+      bloc: cubit,
+      listenWhen: (previous, current) => current is StorefrontSuccess,
+      listener: (_, state) {
+        if (state is StorefrontSuccess) {
+          _handleStorefrontResolved(state.details);
+        }
+      },
+      child: child,
     );
   }
 
@@ -1141,6 +1243,9 @@ class Section_screenState extends State<Section_screen> {
           }
         },
         builder: (context, followState) {
+          if (followState.isLoading) {
+            return const _StorefrontHeaderPlaceholder();
+          }
           return MerchantStorefrontHeader(
             details: details,
             isFollowingOverride: followState.isFollowing,
@@ -1180,6 +1285,55 @@ class Section_screenState extends State<Section_screen> {
     } catch (_) {
       return null;
     }
+  }
+
+  int? _resolveSellerId() {
+    if (widget.sellerId != null && widget.sellerId! > 0) {
+      return widget.sellerId;
+    }
+    final StorefrontDetails? snap = _snapshotStorefront;
+    if (snap != null) {
+      if (snap.userId != null && snap.userId! > 0) {
+        return snap.userId;
+      }
+    }
+    final Map<String, dynamic>? raw = widget.storefrontSnapshot;
+    if (raw != null) {
+      final dynamic owner = raw['user_id'] ?? raw['owner_id'];
+      if (owner is num && owner > 0) {
+        return owner.toInt();
+      }
+      if (owner is String) {
+        final int? parsed = int.tryParse(owner.trim());
+        if (parsed != null && parsed > 0) return parsed;
+      }
+    }
+    return null;
+  }
+
+  int? _resolveStoreId() {
+    if (widget.storefrontId != null) {
+      final int? parsed = int.tryParse(widget.storefrontId!.trim());
+      if (parsed != null && parsed > 0) {
+        return parsed;
+      }
+    }
+    final StorefrontDetails? snap = _snapshotStorefront;
+    if (snap != null && snap.id > 0) {
+      return snap.id;
+    }
+    final Map<String, dynamic>? raw = widget.storefrontSnapshot;
+    if (raw != null) {
+      final dynamic id = raw['id'] ?? raw['store_id'];
+      if (id is num && id > 0) {
+        return id.toInt();
+      }
+      if (id is String) {
+        final int? parsed = int.tryParse(id.trim());
+        if (parsed != null && parsed > 0) return parsed;
+      }
+    }
+    return null;
   }
 
   bool _hasContactValue(String? raw) {

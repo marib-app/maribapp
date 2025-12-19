@@ -572,6 +572,16 @@ class HiveUtils {
     return Hive.box(HiveKeys.authBox).get(HiveKeys.isUserSkip) ?? false;
   }
 
+  static bool hasCorePermissionsSnapshot() {
+    return Hive.box(HiveKeys.authBox).get(HiveKeys.corePermissionsGranted) ??
+        false;
+  }
+
+  static Future<void> setCorePermissionsSnapshot(bool value) async {
+    await Hive.box(HiveKeys.authBox)
+        .put(HiveKeys.corePermissionsGranted, value);
+  }
+
   /// طھظ…ظٹظٹط² ط£ظ† ط§ظ„ظ…ط³طھط®ط¯ظ… ظ„ظ… ظٹط¹ط¯ ط¬ط¯ظٹط¯ظ‹ط§ (ظٹظڈظ†طµط­ ط§ط³طھط¯ط¹ط§ط¤ظ‡ط§ ط¨ط¹ط¯ ط£ظˆظ„ طھط´ط؛ظٹظ„)
   static Future<void> setUserIsNotNew() {
     return Hive.box(HiveKeys.authBox).put(HiveKeys.isUserFirstTime, false);

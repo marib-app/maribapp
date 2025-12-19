@@ -17,6 +17,7 @@ class ItemFilterModel {
   final String? currency;
   final Map<String, dynamic>? customFields;
   final int? userId;
+  final int? storeId;
 
   ItemFilterModel({
     this.maxPrice,
@@ -28,12 +29,13 @@ class ItemFilterModel {
     this.state,
     this.country,
     this.area,
-    this.radius,
     this.areaId,
+    this.radius,
     this.latitude,
     this.longitude,
     this.currency,
     this.userId,
+    this.storeId,
     this.customFields = const {},
   });
 
@@ -53,6 +55,7 @@ class ItemFilterModel {
     double? longitude,
     String? currency,
     int? userId,
+    int? storeId,
     Map<String, dynamic>? customFields,
   }) {
     return ItemFilterModel(
@@ -65,13 +68,14 @@ class ItemFilterModel {
       state: state ?? this.state,
       country: country ?? this.country,
       area: area ?? this.area,
-      radius: radius ?? this.radius,
       areaId: areaId ?? this.areaId,
+      radius: radius ?? this.radius,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
-      userId: userId ?? this.userId,
-      customFields: customFields ?? this.customFields,
       currency: currency ?? this.currency,
+      userId: userId ?? this.userId,
+      storeId: storeId ?? this.storeId,
+      customFields: customFields ?? this.customFields,
     );
   }
 
@@ -95,6 +99,9 @@ class ItemFilterModel {
     map.removeWhere((key, value) => value == null);
     if (userId != null) {
       map['user_id'] = userId;
+    }
+    if (storeId != null) {
+      map['store_id'] = storeId;
     }
     if (customFields != null && customFields!.isNotEmpty) {
       map['custom_fields'] = customFields;
@@ -125,6 +132,9 @@ class ItemFilterModel {
       userId: map['user_id'] != null
           ? int.tryParse(map['user_id'].toString())
           : null,
+      storeId: map['store_id'] != null
+          ? int.tryParse(map['store_id'].toString())
+          : null,
       customFields: Map<String, dynamic>.from(map['custom_fields'] ?? {}),
     );
   }
@@ -136,7 +146,7 @@ class ItemFilterModel {
 
   @override
   String toString() {
-    return 'ItemFilterModel(maxPrice: $maxPrice, minPrice: $minPrice, categoryId: $categoryId, postedSince: $postedSince, sortBy: $sortBy, city: $city, state: $state, country: $country, area: $area, areaId: $areaId, custom_fields: $customFields,radius:$radius,latitude:$latitude,longitude:$longitude,userId:$userId)';
+    return 'ItemFilterModel(maxPrice: $maxPrice, minPrice: $minPrice, categoryId: $categoryId, postedSince: $postedSince, sortBy: $sortBy, city: $city, state: $state, country: $country, area: $area, areaId: $areaId, custom_fields: $customFields,radius:$radius,latitude:$latitude,longitude:$longitude,userId:$userId,storeId:$storeId)';
   }
 
   factory ItemFilterModel.createEmpty() {
@@ -156,6 +166,7 @@ class ItemFilterModel {
       longitude: null,
       customFields: const {},
       userId: null,
+      storeId: null,
     );
   }
 
@@ -178,6 +189,7 @@ class ItemFilterModel {
         other.longitude == longitude &&
         other.currency == currency &&
         other.userId == userId &&
+        other.storeId == storeId &&
         other.customFields == customFields;
   }
 
@@ -197,6 +209,7 @@ class ItemFilterModel {
         latitude.hashCode ^
         longitude.hashCode ^
         currency.hashCode ^
+        (storeId?.hashCode ?? 0) ^
         (userId?.hashCode ?? 0) ^
         customFields.hashCode;
   }

@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\StoreGatewayController;
 use App\Http\Controllers\Api\StoreGatewayPublicController;
 use App\Http\Controllers\Api\StoreOnboardingController;
 use App\Http\Controllers\Api\StorefrontController;
+use App\Http\Controllers\Api\StorefrontUiController;
 use App\Http\Controllers\Api\NotificationInboxController;
 use App\Http\Controllers\Api\NotificationPreferenceController;
 use App\Http\Controllers\Api\FeaturedAdsConfigController;
@@ -61,6 +62,8 @@ Route::get('diag', fn() => response('ok', 200));
 Route::middleware(InitializeApiMetrics::class)
     ->get('ping', fn () => response()->json(['ok' => true]))
     ->name('ping');
+
+Route::get('storefront/ui-config', [StorefrontUiController::class, 'show'])->name('api.storefront.ui-config');
     
 Route::prefix('admin')->group(function (): void {
     Route::post('login', [AdminAuthController::class, 'login'])->name('admin.api.login');

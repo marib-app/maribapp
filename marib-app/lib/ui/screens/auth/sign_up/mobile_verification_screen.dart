@@ -392,7 +392,7 @@ class _MobileVerificationScreenState extends State<MobileVerificationScreen> {
                       clearCacheBeforeFetch: true,
                     );
                     Navigator.of(context).pushNamedAndRemoveUntil(
-                        Routes.locationPermissionScreen, (route) => false);
+                        Routes.main, (route) => false);
                   }
                 }
               }

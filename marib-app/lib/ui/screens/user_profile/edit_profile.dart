@@ -736,7 +736,7 @@ class UserProfileScreenState extends State<UserProfileScreen> {
                   context, Routes.main, {"from": widget.from});
             } else {
               Navigator.of(context).pushNamedAndRemoveUntil(
-                  Routes.locationPermissionScreen, (route) => false);
+                  Routes.main, (route) => false);
             }
           },
         );

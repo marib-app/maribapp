@@ -1,10 +1,11 @@
-// lib/new_code/ui/classified_ads/widgets/addrating.dart
-import 'package:flutter/material.dart';
-import 'dart:ui';
+﻿// lib/ui/screens/classified_ads/widgets/addrating.dart
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:marib/ui/theme/theme.dart';
+import 'package:marib/ui/widgets/standard_bottom_sheet_scaffold.dart';
 import 'package:marib/utils/api.dart';
+import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/helper_utils.dart';
-import 'package:marib/utils/hive_utils.dart';
 import 'package:marib/ui/screens/classified_ads/widgets/service_ratings_api.dart';
 
 class AddRatingBottomSheet extends StatefulWidget {
@@ -12,13 +13,13 @@ class AddRatingBottomSheet extends StatefulWidget {
     super.key,
     this.serviceId,
     this.serviceTitle,
-    this.sellerId, // احتياطي للتوافق مع الاستدعاءات السابقة
+    this.sellerId,
     this.serviceUid,
   });
 
-  final int? serviceId; // معرّف الخدمة
-  final String? serviceTitle; // غير مستخدم للإرسال، فقط للعرض إن لزم
-  final int? sellerId; // لم يعد مطلوبًا من واجهة الخدمة الحالية
+  final int? serviceId;
+  final String? serviceTitle;
+  final int? sellerId;
   final String? serviceUid;
 
   @override
@@ -29,18 +30,22 @@ class _AddRatingBottomSheetState extends State<AddRatingBottomSheet>
     with SingleTickerProviderStateMixin {
   final TextEditingController _controller = TextEditingController();
 
-  final List<String> _emojis = ["😡", "🙁", "😐", "🙂", "😍"];
-  final List<String> _labels = ["سيّئ جدًا", "سيّئ", "عادي", "جيد", "ممتاز"];
+  static const List<String> _emojis = ["😔", "🙁", "😐", "🙂", "🤩"];
+  static const List<Map<String, String>> _labelPairs = [
+    {"ar": "سيئ جداً", "en": "Very bad"},
+    {"ar": "سيئ", "en": "Bad"},
+    {"ar": "مقبول", "en": "Okay"},
+    {"ar": "جيد", "en": "Good"},
+    {"ar": "ممتاز", "en": "Excellent"},
+  ];
 
-  final List<String> _suggestions = const [
-    "الخدمة ممتازة وسريعة.",
-    "تواصل رائع واحترام للمواعيد.",
-    "السعر مناسب مقابل الجودة.",
-    "تأخير في التسليم.",
-    "التواصل كان ضعيفًا.",
-    "تجربة رائعة وأنصح بها.",
-    "الردود كانت بطيئة.",
-    "جودة العمل عالية.",
+  static const List<Map<String, String>> _suggestionPairs = [
+    {"ar": "جودة الخدمة لا تطابق الوصف", "en": "Quality did not match description"},
+    {"ar": "تأخير أو عدم الالتزام بالوقت", "en": "Delay or timing issues"},
+    {"ar": "تواصل غير احترافي من مقدم الخدمة", "en": "Unprofessional communication"},
+    {"ar": "سعر غير مناسب مقابل الخدمة", "en": "Price does not match value"},
+    {"ar": "أنصح بالتعامل معهم", "en": "I recommend dealing with them"},
+    {"ar": "تجربة مميزة وخدمة رائعة", "en": "Great experience and service"},
   ];
 
   int? _selectedSuggestion;
@@ -58,8 +63,10 @@ class _AddRatingBottomSheetState extends State<AddRatingBottomSheet>
       upperBound: 1.12,
     );
     _controller.addListener(() {
+      final suggestions = _localizedSuggestions;
       if (_selectedSuggestion != null &&
-          _controller.text.trim() != _suggestions[_selectedSuggestion!]) {
+          _selectedSuggestion! < suggestions.length &&
+          _controller.text.trim() != suggestions[_selectedSuggestion!]) {
         setState(() => _selectedSuggestion = null);
       }
     });
@@ -72,26 +79,38 @@ class _AddRatingBottomSheetState extends State<AddRatingBottomSheet>
     super.dispose();
   }
 
+  bool get _isRtl => Directionality.of(context) == TextDirection.rtl;
+  String _t(String ar, String en) => _isRtl ? ar : en;
+
+  List<String> get _localizedLabels =>
+      _labelPairs.map((p) => _t(p["ar"]!, p["en"]!)).toList();
+
+  List<String> get _localizedSuggestions =>
+      _suggestionPairs.map((p) => _t(p["ar"]!, p["en"]!)).toList();
+
   void _onRatingChanged(int v) {
     setState(() => _rating = v.toDouble());
     _emojiAnim.forward(from: .9);
   }
 
-  // ---------- إرسال ----------
   Future<void> _submit() async {
     final stars = _rating.toInt();
     String text = _controller.text.trim();
 
     if (stars == 0) {
-      HelperUtils.showSnackBarMessage(context, "اختر عدد النجوم");
+      HelperUtils.showSnackBarMessage(
+          context, _t('ط§ط®طھط± طھظ‚ظٹظٹظ…ظƒ ط£ظˆظ„ط§ظ‹', 'Please select a rating'));
       return;
     }
-    if (text.isEmpty) text = "تم إرسال تقييم من التطبيق";
+    if (text.isEmpty) {
+      text = _t('ط£ط¶ظپ ط±ط£ظٹظƒ ط­ظˆظ„ ط§ظ„ط®ط¯ظ…ط©', 'Share a few words about the service');
+    }
 
     final int? serviceId = widget.serviceId;
 
     if (serviceId == null) {
-      HelperUtils.showSnackBarMessage(context, "تعذّر تحديد الخدمة.");
+      HelperUtils.showSnackBarMessage(
+          context, _t('لا يوجد معرف خدمة صالح', 'Service id is missing'));
       return;
     }
 
@@ -107,10 +126,15 @@ class _AddRatingBottomSheetState extends State<AddRatingBottomSheet>
       if (!mounted) return;
 
       if (ok) {
-        HelperUtils.showSnackBarMessage(context, "تم ارسال تقييمك بنجاح");
-        Navigator.of(context).pop(true); // لتحديث القائمة
+        HelperUtils.showSnackBarMessage(
+            context, _t('تم إرسال تقييمك بنجاح', 'Rating submitted successfully'));
+        Navigator.of(context).pop(<String, dynamic>{
+          'stars': stars.toDouble(),
+          'review': text,
+        });
       } else {
-        HelperUtils.showSnackBarMessage(context, "تعذر إرسال التقييم");
+        HelperUtils.showSnackBarMessage(
+            context, _t('تعذر إرسال التقييم', 'Failed to submit rating'));
       }
     } catch (e, stack) {
       if (kDebugMode) {
@@ -121,7 +145,9 @@ class _AddRatingBottomSheetState extends State<AddRatingBottomSheet>
         final message = e.toString().trim();
         HelperUtils.showSnackBarMessage(
           context,
-          message.isNotEmpty ? message : "تعذر إرسال التقييم",
+          message.isNotEmpty
+              ? message
+              : _t('تعذر إرسال التقييم', 'Failed to submit rating'),
         );
       }
     } finally {
@@ -129,227 +155,323 @@ class _AddRatingBottomSheetState extends State<AddRatingBottomSheet>
     }
   }
 
-  // ---------- الواجهة (كما هي) ----------
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colors = context.color;
     final insets = MediaQuery.of(context).viewInsets;
     final isDark = theme.brightness == Brightness.dark;
+    final accent = colors.territoryColor;
+    final labels = _localizedLabels;
+    final suggestions = _localizedSuggestions;
+
+    final titleText = _t('قيّم الخدمة', 'Rate the service');
+    final subtitleText =
+        _t('ملاحظاتك تساعدنا على تحسين جودة الخدمات.', 'Your feedback helps us improve.');
+    final noteText = _t(
+      'عزيزي العميل، نأخذ ملاحظاتك على محمل الجد. كن منصفاً وشارك تفاصيل تساعد الآخرين ومقدمي الخدمات.',
+      'We take your feedback seriously. Be fair and share details that help others and providers.',
+    );
+    final ratingLabel = _t('اختر التقييم', 'Choose rating');
+    final quickLabel = _t('اقتراحات سريعة', 'Quick suggestions');
+    final commentLabel = _t('اكتب رأيك', 'Share your experience');
+    final hintText = _t('اكتب رأيك هنا...', 'Type your feedback here...');
+    final submitText = _t('إرسال التقييم', 'Submit rating');
+    final serviceTitle = widget.serviceTitle?.trim();
 
     return AnimatedPadding(
-      duration: const Duration(milliseconds: 220),
+      duration: const Duration(milliseconds: 200),
       curve: Curves.easeOutCubic,
       padding: EdgeInsets.only(bottom: insets.bottom),
-      child: Container(
-        decoration: const BoxDecoration(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: DraggableScrollableSheet(
-          initialChildSize: 0.92,
-          minChildSize: 0.65,
-          maxChildSize: 0.98,
-          expand: false,
-          builder: (ctx, scrollCtrl) {
-            return CustomScrollView(
-              controller: scrollCtrl,
-              slivers: [
-                SliverToBoxAdapter(
-                  child: Column(
+      child: StandardBottomSheetScaffold(
+        header: StandardBottomSheetHeader(
+          onClosePressed: () => Navigator.of(context).maybePop(),
+          showCloseButton: true,
+          content: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                titleText,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 18,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                subtitleText,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: colors.textDefaultColor.withOpacity(0.72),
+                  height: 1.4,
+                ),
+              ),
+              if (serviceTitle != null && serviceTitle.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: colors.secondaryColor.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                        color: colors.borderColor.withOpacity(isDark ? 0.4 : 0.5)),
+                  ),
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const SizedBox(height: 8),
-                      Center(
-                        child: Container(
-                          width: 40,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: isDark ? Colors.white24 : Colors.black26,
-                            borderRadius: BorderRadius.circular(999),
+                      Icon(Icons.work_outline_rounded,
+                          size: 18, color: accent),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          serviceTitle,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: colors.textColorDark,
                           ),
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16),
-                        child: Row(
-                          children: [
-                            Icon(Icons.send_rounded, size: 20),
-                            SizedBox(width: 8),
-                            Text("ارسل تقييمك",
-                                style: TextStyle(fontWeight: FontWeight.bold)),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: isDark ? Colors.white10 : Colors.black12,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Text(
-                            "دقة تقييمكم مهمة — قد تفيد الآخرين أو تضرهم. فضلاً قدّم رأيًا صادقًا يعكس تجربتك الحقيقية.",
-                            textAlign: TextAlign.start,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16),
-                        child: Text("كم نجمة يستحق؟",
-                            style: TextStyle(fontWeight: FontWeight.w600)),
-                      ),
-                      const SizedBox(height: 6),
-                      Center(
-                        child: Column(
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: List.generate(5, (index) {
-                                final i = index + 1;
-                                return Padding(
-                                  padding:
-                                      const EdgeInsets.symmetric(horizontal: 4),
-                                  child: GestureDetector(
-                                    onTap: () => _onRatingChanged(i),
-                                    child: AnimatedScale(
-                                      duration:
-                                          const Duration(milliseconds: 160),
-                                      scale: _rating == i ? 1.12 : 1.0,
-                                      child: Icon(
-                                        _rating >= i
-                                            ? Icons.star_rounded
-                                            : Icons.star_border_rounded,
-                                        color: Colors.amber,
-                                        size: 32,
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              }),
-                            ),
-                            const SizedBox(height: 6),
-                            SizedBox(
-                              height: 40,
-                              child: Center(
-                                child: _rating > 0
-                                    ? ScaleTransition(
-                                        scale: _emojiAnim,
-                                        child: Text(
-                                          "${_emojis[_rating.toInt() - 1]}  ${_labels[_rating.toInt() - 1]}",
-                                          style: const TextStyle(
-                                              fontWeight: FontWeight.w600),
-                                        ),
-                                      )
-                                    : const SizedBox(),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16),
-                        child: Text("اقتراحات جاهزة",
-                            style: TextStyle(fontWeight: FontWeight.w600)),
-                      ),
-                      const SizedBox(height: 8),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        child: Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: List.generate(_suggestions.length, (i) {
-                            final selected = _selectedSuggestion == i;
-                            return ChoiceChip(
-                              label: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (selected) ...[
-                                    const Icon(Icons.check_circle_rounded,
-                                        size: 16),
-                                    const SizedBox(width: 6),
-                                  ],
-                                  Flexible(child: Text(_suggestions[i])),
-                                ],
-                              ),
-                              selected: selected,
-                              showCheckmark: false,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                side: BorderSide(
-                                    color: selected
-                                        ? Colors.amber
-                                        : (isDark
-                                            ? Colors.white12
-                                            : Colors.black12)),
-                              ),
-                              onSelected: (val) {
-                                setState(() {
-                                  _selectedSuggestion = val ? i : null;
-                                  if (val) {
-                                    _controller.text = _suggestions[i];
-                                    _controller.selection =
-                                        TextSelection.collapsed(
-                                            offset: _controller.text.length);
-                                  }
-                                });
-                              },
-                            );
-                          }),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16),
-                        child: Text("اكتب رأيك",
-                            style: TextStyle(fontWeight: FontWeight.w600)),
-                      ),
-                      const SizedBox(height: 6),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: TextField(
-                          controller: _controller,
-                          maxLines: 3,
-                          decoration: InputDecoration(
-                            hintText: "اكتب رأيك...",
-                            filled: true,
-                            border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12)),
-                            contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 10),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: SizedBox(
-                          width: double.infinity,
-                          height: 46,
-                          child: ElevatedButton(
-                            onPressed: _isSubmitting ? null : _submit,
-                            child: _isSubmitting
-                                ? const SizedBox(
-                                    width: 22,
-                                    height: 22,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2))
-                                : const Text("إرسال تقييمك"),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
                     ],
                   ),
                 ),
               ],
-            );
-          },
+            ],
+          ),
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: colors.secondaryColor.withOpacity(isDark ? 0.36 : 0.6),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: colors.borderColor.withOpacity(0.45)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: accent.withOpacity(0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child:
+                          Icon(Icons.info_rounded, color: accent, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        noteText,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: colors.textDefaultColor.withOpacity(0.8),
+                          height: 1.45,
+                        ),
+                        textAlign: TextAlign.start,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                ratingLabel,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: colors.textColorDark,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Center(
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(5, (index) {
+                        final i = index + 1;
+                        final selected = _rating >= i;
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 5),
+                          child: Material(
+                            color: selected
+                                ? accent.withOpacity(0.12)
+                                : colors.secondaryColor.withOpacity(0.3),
+                            shape: const CircleBorder(),
+                            child: IconButton(
+                              iconSize: 30,
+                              visualDensity: VisualDensity.compact,
+                              splashRadius: 26,
+                              onPressed: () => _onRatingChanged(i),
+                              icon: Icon(
+                                selected
+                                    ? Icons.star_rounded
+                                    : Icons.star_border_rounded,
+                                color: selected
+                                    ? accent
+                                    : colors.textDefaultColor.withOpacity(0.5),
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
+                    const SizedBox(height: 6),
+                    SizedBox(
+                      height: 38,
+                      child: Center(
+                        child: _rating > 0
+                            ? ScaleTransition(
+                                scale: _emojiAnim,
+                                child: Text(
+                                  "${_emojis[_rating.toInt() - 1]}  ${labels[_rating.toInt() - 1]}",
+                                  style: theme.textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: colors.textColorDark,
+                                  ),
+                                ),
+                              )
+                            : const SizedBox(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                quickLabel,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: colors.textColorDark,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 10,
+                children: List.generate(suggestions.length, (i) {
+                  final selected = _selectedSuggestion == i;
+                  return ChoiceChip(
+                    label: Text(
+                      suggestions[i],
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    selected: selected,
+                    showCheckmark: false,
+                    labelStyle: theme.textTheme.bodyMedium?.copyWith(
+                      color: selected
+                          ? accent
+                          : colors.textDefaultColor.withOpacity(0.8),
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                    ),
+                    backgroundColor:
+                        colors.secondaryColor.withOpacity(isDark ? 0.35 : 0.7),
+                    selectedColor: accent.withOpacity(isDark ? 0.22 : 0.14),
+                    side: BorderSide(
+                      color: selected
+                          ? accent
+                          : colors.borderColor.withOpacity(0.4),
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    onSelected: (val) {
+                      setState(() {
+                        _selectedSuggestion = val ? i : null;
+                        if (val) {
+                          _controller.text = suggestions[i];
+                          _controller.selection = TextSelection.collapsed(
+                            offset: _controller.text.length,
+                          );
+                        }
+                      });
+                    },
+                  );
+                }),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                commentLabel,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: colors.textColorDark,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _controller,
+                maxLines: 4,
+                cursorColor: accent,
+                decoration: InputDecoration(
+                  hintText: hintText,
+                  filled: true,
+                  fillColor: colors.secondaryColor.withOpacity(
+                    isDark ? 0.25 : 0.55,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide:
+                        BorderSide(color: colors.borderColor.withOpacity(0.6)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide:
+                        BorderSide(color: colors.borderColor.withOpacity(0.6)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide(color: accent, width: 1.4),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        footer: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
+          child: SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton(
+              onPressed: _isSubmitting || _rating == 0 ? null : _submit,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: accent,
+                foregroundColor: colors.secondaryColor,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              child: _isSubmitting
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.send_rounded, size: 18),
+                        const SizedBox(width: 8),
+                        Text(
+                          submitText,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w700, fontSize: 15),
+                        ),
+                      ],
+                    ),
+            ),
+          ),
         ),
       ),
     );

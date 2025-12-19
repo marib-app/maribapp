@@ -254,6 +254,9 @@ class FetchItemSummaryCubit extends Cubit<FetchItemSummaryState> {
     if (a.userId != b.userId) {
       return false;
     }
+    if (a.storeId != b.storeId) {
+      return false;
+    }
 
     return a.maxPrice == b.maxPrice &&
         a.minPrice == b.minPrice &&
@@ -281,10 +284,9 @@ class FetchItemSummaryCubit extends Cubit<FetchItemSummaryState> {
         : Map<String, dynamic>.from(filter.customFields!);
 
     return filter.copyWith(
-
+      storeId: filter.storeId,
       customFields: clonedCustomFields,
       userId: filter.userId,
-
     );
   }
 

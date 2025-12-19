@@ -61,6 +61,7 @@ class ItemsListListState extends State<ItemsListSeller> {
   static TextEditingController searchController = TextEditingController();
   String previousSearchQuery = "";
   Timer? _searchDelay;
+  String _searchQuery = "";
   String? sortBy;
   ItemFilterModel? filter;
   late Map<String, dynamic> searchbody;
@@ -125,6 +126,9 @@ class ItemsListListState extends State<ItemsListSeller> {
   ///This will call api after some delay
   void itemSearch() {
     if (previousSearchQuery != searchController.text) {
+      setState(() {
+        _searchQuery = searchController.text;
+      });
       context.read<FetchItemFromCategoryCubit>().fetchItemFromCategory(
           categoryId: int.parse(
             widget.categoryId,
@@ -211,6 +215,24 @@ class ItemsListListState extends State<ItemsListSeller> {
       slivers: [
         SliverToBoxAdapter(child: SizedBox(height: 2)),
         SliverToBoxAdapter(child: SliderWidget(interfaceType: "e_store")),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: TextField(
+              controller: searchController,
+              decoration: InputDecoration(
+                hintText: 'ابحث عن المتجر أو الإعلان',
+                prefixIcon: const Icon(Icons.search),
+                isDense: true,
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+        ),
         BlocBuilder<FetchSellersCubit, FetchSellersState>(
           builder: (context, state) {
             if (state is FetchSellersProgress) {
@@ -260,7 +282,9 @@ class ItemsListListState extends State<ItemsListSeller> {
                   ),
                 );
               }
-              return buildCardList(state.sellers);
+              final List<UserModel> sellersToShow =
+                  _filterSellers(state.sellers, _searchQuery);
+              return buildCardList(sellersToShow);
             } else if (state is FetchSellersFailure) {
               return SliverFillRemaining(
                 hasScrollBody: false,
@@ -273,6 +297,15 @@ class ItemsListListState extends State<ItemsListSeller> {
         ),
       ],
     );
+  }
+
+  List<UserModel> _filterSellers(List<UserModel> sellers, String query) {
+    final String normalized = query.trim().toLowerCase();
+    if (normalized.isEmpty) return sellers;
+
+    return sellers.where((seller) {
+      return _sellerMatchesQuery(seller, normalized);
+    }).toList(growable: false);
   }
 
   Widget buildCardList(List<UserModel> sellers) {
@@ -587,6 +620,38 @@ class ItemsListListState extends State<ItemsListSeller> {
       return numericId;
     }
     return _normalizeSlugIdentifier(storeData['slug']);
+  }
+
+  bool _sellerMatchesQuery(UserModel seller, String query) {
+    final Map<String, dynamic>? additionalInfo =
+        _coerceAdditionalInfo(seller.additionalInfo);
+    final Map<String, dynamic>? contactInfo =
+        _contactInfoFromAdditional(additionalInfo ?? seller.additionalInfo);
+    final Map<String, dynamic>? storeData = _cloneMap(seller.store);
+
+    String? businessName = _stringValue(contactInfo?['business_name']) ??
+        _stringValue(contactInfo?['office_name']) ??
+        _stringValue(contactInfo?['store_name']);
+    businessName ??= _stringValue(storeData?['name']);
+
+    final List<String?> candidates = <String?>[
+      businessName,
+      _stringValue(seller.name),
+      _stringValue(seller.email),
+      _stringValue(seller.mobile),
+      _stringValue(storeData?['slug']),
+      _stringValue(contactInfo?['business_category']),
+      _stringValue(contactInfo?['office_category']),
+      _stringValue(additionalInfo?['category']),
+    ];
+
+    for (final String? value in candidates) {
+      if (value != null && value.toLowerCase().contains(query)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   String? _normalizeNumericIdentifier(dynamic raw) {

@@ -56,6 +56,7 @@ class StorefrontFollowCubit extends Cubit<StorefrontFollowState> {
           StorefrontFollowState(
             isFollowing: initialIsFollowing,
             followersCount: max(0, initialFollowersCount),
+            isLoading: true,
           ),
         ) {
     // Sync with server to ensure initial state matches backend, even if snapshot is stale.
@@ -130,29 +131,30 @@ class StorefrontFollowCubit extends Cubit<StorefrontFollowState> {
   Future<void> _refreshFromServer() async {
     final String? identifier = _normalizeIdentifier(_storeId);
     if (identifier == null) return;
+    emit(state.copyWith(isLoading: true));
     bool isFollowing = state.isFollowing;
     int followersCount = state.followersCount;
 
     try {
-      final StorefrontFollowResult status =
-          await _repository.status(identifier);
-      isFollowing = status.isFollowing;
-      if (status.followersCount != null) {
-        followersCount = status.followersCount!;
-      }
-    } catch (_) {
-      // ignore, fall back to store fetch
-    }
-
-    try {
       final StorefrontDetails fresh =
           await _storefrontRepository.fetchStore(identifier);
-      isFollowing = fresh.isFollowed || isFollowing;
+      isFollowing = isFollowing || fresh.isFollowed;
       if (fresh.followersCount != null) {
         followersCount = fresh.followersCount!;
       }
     } catch (_) {
-      // ignore, keep whatever we have
+      // ignore store fetch failure
+    }
+
+    try {
+      final StorefrontFollowResult status =
+          await _repository.status(identifier);
+      isFollowing = isFollowing || status.isFollowing;
+      if (status.followersCount != null) {
+        followersCount = status.followersCount!;
+      }
+    } catch (_) {
+      // ignore status failure
     }
 
     emit(

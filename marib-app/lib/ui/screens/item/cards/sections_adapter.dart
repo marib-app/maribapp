@@ -1,28 +1,31 @@
-import 'package:marib/app/routes.dart';
-import 'package:marib/ui/screens/home_screen/home_screen.dart';
-import 'package:marib/ui/theme/theme.dart';
-import 'package:marib/utils/extensions/extensions.dart';
-import 'package:marib/data/repositories/favourites_repository.dart';
-import 'package:marib/utils/responsiveSize.dart';
-import 'package:marib/utils/ui_utils.dart';
-import 'package:marib/data/cubits/favorite/manage_fav_cubit.dart';
-import 'package:marib/data/model/item/item_model.dart';
 import 'package:flutter/material.dart';
-import 'package:marib/utils/app_icon.dart';
-import 'package:marib/data/cubits/favorite/favorite_cubit.dart';
-import 'package:marib/data/model/home/home_screen_section.dart';
-import 'package:marib/ui/screens/widgets/promoted_widget.dart';
-import 'package:marib/ui/screens/home/widgets/grid_list_adapter.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:marquee/marquee.dart';
-import 'package:marib/utils/helper_utils.dart';
-import 'package:marib/utils/constant.dart';
-import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
-
 import 'package:timeago/timeago.dart' as timeago;
-import 'package:marib/utils/currency_utils.dart';
 
-class SectionsAdapter extends StatelessWidget {
+import 'package:marib/app/routes.dart';
+import 'package:marib/data/cubits/favorite/favorite_cubit.dart';
+import 'package:marib/data/cubits/favorite/manage_fav_cubit.dart';
+import 'package:marib/data/model/home/home_screen_section.dart';
+import 'package:marib/data/model/merchant/storefront_ui_config.dart';
+import 'package:marib/utils/api.dart';
+import 'package:marib/data/model/item/item_model.dart';
+import 'package:marib/data/repositories/favourites_repository.dart';
+import 'package:marib/ui/screens/home/widgets/grid_list_adapter.dart';
+import 'package:marib/ui/screens/widgets/promoted_widget.dart';
+import 'package:marib/ui/screens/widgets/shimmerLoadingContainer.dart';
+import 'package:marib/ui/theme/theme.dart';
+import 'package:marib/utils/app_icon.dart';
+import 'package:marib/utils/constant.dart';
+import 'package:marib/utils/currency_utils.dart';
+import 'package:marib/utils/extensions/extensions.dart';
+import 'package:marib/utils/helper_utils.dart';
+import 'package:marib/utils/responsiveSize.dart';
+import 'package:marib/utils/ui_utils.dart';
+
+const double cardSidePadding = 16.0;
+
+class SectionsAdapter extends StatefulWidget {
   final HomeScreenSection section;
   final bool showLoadMore;
   final VoidCallback? onLoadMore;
@@ -34,8 +37,116 @@ class SectionsAdapter extends StatelessWidget {
     this.onLoadMore,
   });
 
-  /// واجهة العنوان + قائمة العناصر
-  Widget _buildSection(BuildContext context, Widget listWidget) {
+  @override
+  State<SectionsAdapter> createState() => _SectionsAdapterState();
+}
+
+class _SectionsAdapterState extends State<SectionsAdapter> {
+  final TextEditingController _searchController = TextEditingController();
+  String _query = '';
+  StorefrontUiConfig? _uiConfig;
+  bool _uiConfigLoading = false;
+  int _promoRotation = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_isStoreSection) {
+      _loadUiConfig();
+    }
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  bool get _isStoreSection {
+    final type = (widget.section.sectionType ?? '').toLowerCase();
+    final slug = (widget.section.slug ?? '').toLowerCase();
+    final root = (widget.section.rootIdentifier ?? '').toLowerCase();
+    return type == 'e_store' ||
+        type == 'estore' ||
+        type == 'store' ||
+        type == 'stores' ||
+        type.contains('store') ||
+        slug.contains('store') ||
+        root.contains('store');
+  }
+
+  List<ItemModel> _filterData(List<ItemModel> data) {
+    if (_query.trim().isEmpty) return data;
+    final q = _query.trim().toLowerCase();
+    return data.where((item) {
+      bool matches(String? value) => (value ?? '').toLowerCase().contains(q);
+      return matches(item.name) ||
+          matches(item.description) ||
+          matches(item.slug) ||
+          matches(item.city) ||
+          matches(item.state);
+    }).toList(growable: false);
+  }
+
+  Future<void> _loadUiConfig() async {
+    if (_uiConfigLoading) return;
+    setState(() => _uiConfigLoading = true);
+    try {
+      final res = await Api.get(
+        url: 'storefront/ui-config',
+        enableEtagCache: true,
+      );
+      final data = res['data'];
+      if (data is Map<String, dynamic>) {
+        _uiConfig = StorefrontUiConfig.fromJson(data);
+      }
+    } catch (_) {
+      // optional config
+    } finally {
+      if (mounted) {
+        setState(() => _uiConfigLoading = false);
+      }
+    }
+  }
+
+  List<_Entry> _buildEntries(List<ItemModel> data) {
+    final List<_Entry> entries = [];
+    final slots = (_uiConfig?.enabled ?? false)
+        ? _uiConfig?.promotionSlots ?? const <PromotionSlot>[]
+        : const <PromotionSlot>[];
+
+    if (slots.isEmpty) {
+      return data.map((item) => _Entry.item(item)).toList(growable: false);
+    }
+
+    int slotCursor = _promoRotation;
+    int sinceLastPromo = 0;
+
+    for (final item in data) {
+      entries.add(_Entry.item(item));
+      sinceLastPromo += 1;
+
+      if (slots.isEmpty) continue;
+      final PromotionSlot slot = slots[slotCursor % slots.length];
+      final int frequency = slot.frequency <= 0 ? 4 : slot.frequency;
+      if (sinceLastPromo >= frequency && slot.items.isNotEmpty) {
+        final PromotionItem promo = slot.items[slotCursor % slot.items.length];
+        entries.add(_Entry.promo(promo));
+        slotCursor += 1;
+        sinceLastPromo = 0;
+      }
+    }
+
+    _promoRotation = slotCursor;
+    return entries;
+  }
+
+  Widget _buildSection(
+    BuildContext context,
+    Widget listWidget, {
+    Widget? searchBar,
+    Widget? featuredRibbon,
+  }) {
     void _navigateSeeAll() {
       String? _mapFilterToSort(String? filter) {
         switch ((filter ?? '').toLowerCase()) {
@@ -51,23 +162,24 @@ class SectionsAdapter extends StatelessWidget {
         }
       }
 
-      final String? initialSort = _mapFilterToSort(section.filter);
+      final String? initialSort = _mapFilterToSort(widget.section.filter);
 
-      if (section.sectionId != null) {
+      if (widget.section.sectionId != null) {
         Navigator.pushNamed(
           context,
           Routes.sectionWiseItemsScreen,
           arguments: {
-            "title": section.title,
-            "sectionId": section.sectionId,
+            "title": widget.section.title,
+            "sectionId": widget.section.sectionId,
           },
         );
         return;
       }
 
-      final ItemModel? firstItem = (section.sectionData?.isNotEmpty ?? false)
-          ? section.sectionData!.first
-          : null;
+      final ItemModel? firstItem =
+          (widget.section.sectionData?.isNotEmpty ?? false)
+              ? widget.section.sectionData!.first
+              : null;
       final int? catId = firstItem?.category?.id;
       if (catId != null) {
         Navigator.pushNamed(
@@ -75,9 +187,9 @@ class SectionsAdapter extends StatelessWidget {
           Routes.itemsList,
           arguments: {
             'catID': catId.toString(),
-            'catName': section.title ?? firstItem?.category?.name ?? '',
+            'catName': widget.section.title ?? firstItem?.category?.name ?? '',
             'categoryIds': <String>[catId.toString()],
-            'interfaceType': section.sectionType ?? '',
+            'interfaceType': widget.section.sectionType ?? '',
             'initialSortBy': initialSort,
           },
         );
@@ -86,7 +198,7 @@ class SectionsAdapter extends StatelessWidget {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('لا توجد بيانات لعرض الكل'),
+          content: Text('تعذر فتح هذه الفئة، حاول مرة أخرى لاحقاً'),
         ),
       );
     }
@@ -94,9 +206,11 @@ class SectionsAdapter extends StatelessWidget {
     return Column(
       children: [
         TitleHeader(
-          title: section.title ?? "",
+          title: widget.section.title ?? "",
           onTap: _navigateSeeAll,
         ),
+        if (searchBar != null) searchBar,
+        if (featuredRibbon != null) featuredRibbon,
         listWidget,
       ],
     );
@@ -104,11 +218,41 @@ class SectionsAdapter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final data = section.sectionData;
+    final data = widget.section.sectionData;
     if (data == null || data.isEmpty) return const SizedBox.shrink();
 
+    final filteredData = _filterData(data);
+    final entries = _buildEntries(filteredData);
+    final bool isSearching = _query.trim().isNotEmpty;
+
     final height = MediaQuery.of(context).size.height / 3.5.rh(context);
-    final bool hasMore = showLoadMore && (section.hasMore ?? false);
+    final bool hasMore = widget.showLoadMore &&
+        (widget.section.hasMore ?? false) &&
+        !isSearching;
+
+    Widget? _buildSearchBar() {
+      if (!_isStoreSection) return null;
+      return Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: cardSidePadding,
+          vertical: 6,
+        ),
+        child: TextField(
+          controller: _searchController,
+          onChanged: (value) => setState(() => _query = value),
+          decoration: InputDecoration(
+            hintText: 'ابحث في المتاجر',
+            prefixIcon: const Icon(Icons.search),
+            isDense: true,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+      );
+    }
 
     Widget _loaderTile({double? width}) {
       final Widget shimmer = CustomShimmer(
@@ -116,15 +260,15 @@ class SectionsAdapter extends StatelessWidget {
         width: width,
         margin: const EdgeInsets.symmetric(vertical: 4),
       );
-      if (onLoadMore != null) {
-        WidgetsBinding.instance.addPostFrameCallback((_) => onLoadMore!());
+      if (widget.onLoadMore != null) {
+        WidgetsBinding.instance
+            .addPostFrameCallback((_) => widget.onLoadMore!());
       }
       return shimmer;
     }
 
-    switch (section.style) {
+    switch (widget.section.style) {
       case "style_1":
-        final int total = data.length + (hasMore ? 1 : 0);
         return _buildSection(
           context,
           GridListAdapter(
@@ -133,18 +277,22 @@ class SectionsAdapter extends StatelessWidget {
             listAxis: Axis.horizontal,
             listSaperator: (_, __) => const SizedBox(width: 14),
             builder: (_, index, __) {
-              if (hasMore && index >= data.length) {
+              if (hasMore && index >= entries.length) {
                 return _loaderTile(width: 220);
               }
-              final item = data[index];
-              return ICard(item: item, bigCard: true);
+              final entry = entries[index];
+              if (entry.isPromo) {
+                return _PromotionCard(promo: entry.promo!, width: 220);
+              }
+              return ICard(item: entry.item, bigCard: true);
             },
-            total: total,
+            total: entries.length + (hasMore ? 1 : 0),
           ),
+          searchBar: _buildSearchBar(),
+          featuredRibbon: _buildFeaturedRibbon(),
         );
 
       case "style_2":
-        final int total = data.length + (hasMore ? 1 : 0);
         return _buildSection(
           context,
           GridListAdapter(
@@ -153,18 +301,22 @@ class SectionsAdapter extends StatelessWidget {
             listAxis: Axis.horizontal,
             listSaperator: (_, __) => const SizedBox(width: 14),
             builder: (_, index, __) {
-              if (hasMore && index >= data.length) {
+              if (hasMore && index >= entries.length) {
                 return _loaderTile(width: 144);
               }
-              final item = data[index];
-              return ICard(item: item, width: 144);
+              final entry = entries[index];
+              if (entry.isPromo) {
+                return _PromotionCard(promo: entry.promo!, width: 144);
+              }
+              return ICard(item: entry.item, width: 144);
             },
-            total: total,
+            total: entries.length + (hasMore ? 1 : 0),
           ),
+          searchBar: _buildSearchBar(),
+          featuredRibbon: _buildFeaturedRibbon(),
         );
 
       case "style_3":
-        final int total = data.length + (hasMore ? 1 : 0);
         return _buildSection(
           context,
           GridListAdapter(
@@ -172,18 +324,22 @@ class SectionsAdapter extends StatelessWidget {
             crossAxisCount: 2,
             height: height,
             builder: (_, index, __) {
-              if (hasMore && index >= data.length) {
+              if (hasMore && index >= entries.length) {
                 return _loaderTile();
               }
-              final item = data[index];
-              return ICard(item: item, width: 192);
+              final entry = entries[index];
+              if (entry.isPromo) {
+                return _PromotionCard(promo: entry.promo!, width: 192);
+              }
+              return ICard(item: entry.item, width: 192);
             },
-            total: total,
+            total: entries.length + (hasMore ? 1 : 0),
           ),
+          searchBar: _buildSearchBar(),
+          featuredRibbon: _buildFeaturedRibbon(),
         );
 
       case "style_4":
-        final int total = data.length + (hasMore ? 1 : 0);
         return _buildSection(
           context,
           GridListAdapter(
@@ -192,19 +348,82 @@ class SectionsAdapter extends StatelessWidget {
             listAxis: Axis.horizontal,
             listSaperator: (_, __) => const SizedBox(width: 14),
             builder: (_, index, __) {
-              if (hasMore && index >= data.length) {
+              if (hasMore && index >= entries.length) {
                 return _loaderTile(width: 192);
               }
-              final item = data[index];
-              return ICard(item: item, width: 192);
+              final entry = entries[index];
+              if (entry.isPromo) {
+                return _PromotionCard(promo: entry.promo!, width: 192);
+              }
+              return ICard(item: entry.item, width: 192);
             },
-            total: total,
+            total: entries.length + (hasMore ? 1 : 0),
           ),
+          searchBar: _buildSearchBar(),
+          featuredRibbon: _buildFeaturedRibbon(),
         );
 
       default:
         return const SizedBox.shrink();
     }
+  }
+
+  Widget? _buildFeaturedRibbon() {
+    if (!_isStoreSection) return null;
+    final cats = (_uiConfig?.enabled ?? false)
+        ? _uiConfig?.featuredCategories ?? const <FeaturedCategory>[]
+        : const <FeaturedCategory>[];
+    if (cats.isEmpty) return null;
+
+    return SizedBox(
+      height: 44,
+      child: ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: cardSidePadding),
+        scrollDirection: Axis.horizontal,
+        itemBuilder: (_, index) {
+          final cat = cats[index];
+          return ActionChip(
+            backgroundColor: Colors.grey.shade200,
+            labelStyle: const TextStyle(fontWeight: FontWeight.w600),
+            label: Text(cat.label.isNotEmpty ? cat.label : 'فئة'),
+            avatar: cat.icon != null && cat.icon!.isNotEmpty
+                ? UiUtils.getSvg(
+                    cat.icon!,
+                    color: Colors.black54,
+                    width: 18,
+                    height: 18,
+                  )
+                : null,
+            onPressed: () => _openCategory(cat),
+          );
+        },
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemCount: cats.length,
+      ),
+    );
+  }
+
+  void _openCategory(FeaturedCategory cat) {
+    final idText = cat.id.trim();
+    final int? catId = int.tryParse(idText);
+    final String? slug = catId == null ? idText : null;
+
+    if (catId == null && (slug == null || slug.isEmpty)) {
+      UiUtils.showSoftSnackBar(context, message: 'تعذر فتح الفئة المحددة.');
+      return;
+    }
+
+    Navigator.pushNamed(
+      context,
+      Routes.itemsList,
+      arguments: {
+        'catID': catId?.toString() ?? '',
+        'catName': cat.label,
+        'categoryIds': catId != null ? <String>[catId.toString()] : <String>[],
+        if (slug != null && slug.isNotEmpty) 'slug': slug,
+        'interfaceType': widget.section.sectionType ?? '',
+      },
+    );
   }
 }
 
@@ -224,7 +443,7 @@ class TitleHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsetsDirectional.only(
-          top: 18, bottom: 12, start: sidePadding, end: sidePadding),
+          top: 18, bottom: 12, start: cardSidePadding, end: cardSidePadding),
       child: Row(
         children: [
           Expanded(
@@ -278,10 +497,7 @@ class _ItemCardState extends State<ICard> {
   @override
   void initState() {
     super.initState();
-    // تهيئة timeago بالعربية
     timeago.setLocaleMessages('ar', timeago.ArMessages());
-
-    // نحسب تاريخ الإنشاء مرة واحدة
     _createdAt =
         _extractCreatedAt(widget.item) ?? _parseAnyDate(widget.created);
   }
@@ -320,7 +536,6 @@ class _ItemCardState extends State<ICard> {
     return null;
   }
 
-  // ───────── helpers: قراءة التاريخ من حقول محتملة ─────────
   DateTime? _extractCreatedAt(ItemModel? item) {
     if (item == null) return null;
     final d = item as dynamic;
@@ -356,7 +571,6 @@ class _ItemCardState extends State<ICard> {
     if (v == null) return null;
     if (v is DateTime) return v;
     if (v is int) {
-      // تحوّط لكونه seconds أو millis
       return DateTime.fromMillisecondsSinceEpoch(
         v > 20000000000 ? v : v * 1000,
       );
@@ -374,8 +588,8 @@ class _ItemCardState extends State<ICard> {
     return null;
   }
 
-  // عنصر واجهة صغير لعرض التاريخ
   Widget _dateRow(BuildContext context) {
+    if (_createdAt == null) return const SizedBox.shrink();
     return Row(
       children: [
         const Icon(Icons.access_time, size: 14, color: Colors.grey),
@@ -423,15 +637,11 @@ class _ItemCardState extends State<ICard> {
     return UiUtils.ripple(
       onTap: () {
         final id = widget.item?.id;
-        if (id == null) {
-          // ممكن تحب تعرض Toast هنا بدل السكوت
-          // UiUtils.showToast(context, 'المعرف غير متوفر');
-          return;
-        }
+        if (id == null) return;
         Navigator.pushNamed(
           context,
           Routes.adDetailsScreen,
-          arguments: {"model": widget.item}, // ✅ يمرِّر ItemModel
+          arguments: {"model": widget.item},
         );
       },
       borderRadius: BorderRadius.circular(18),
@@ -450,7 +660,6 @@ class _ItemCardState extends State<ICard> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ✅ صورة المنتج + الشارات (مميز / جديد)
                 Stack(
                   children: [
                     ClipRRect(
@@ -469,23 +678,18 @@ class _ItemCardState extends State<ICard> {
                         ),
                       ),
                     ),
-
-                    // ⭐ شارة "مميز"
                     if (widget.item?.isFeature ?? false)
                       const PositionedDirectional(
                         start: 10,
                         top: 5,
                         child: PromotedCard(type: PromoteCardType.icon),
                       ),
-
-                    // 🟨 شارة "جديد" (أول 24 ساعة)
                     if (_isNew)
                       PositionedDirectional(
                         start: 10,
                         top: (widget.item?.isFeature ?? false) ? 31 : 5,
                         child: const _NewBadge(),
                       ),
-
                     if (discountText != null)
                       Positioned(
                         left: 0,
@@ -513,9 +717,6 @@ class _ItemCardState extends State<ICard> {
                       ),
                   ],
                 ),
-
-                // ✅ النصوص السفلية: السعر + الاسم + تاريخ النشر
-
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.all(10.0),
@@ -525,37 +726,13 @@ class _ItemCardState extends State<ICard> {
                       children: [
                         _buildPrice(context),
                         _buildTitle(widget.item?.name ?? "", context),
-
-                        // بدل الموقع → تاريخ النشر (مرن مع أسماء حقول مختلفة)
-                        if (_extractCreatedAt(widget.item) != null)
-                          Row(
-                            children: [
-                              const Icon(Icons.access_time,
-                                  size: 14, color: Colors.grey),
-                              const SizedBox(width: 5),
-                              Text(
-                                timeago.format(
-                                    _extractCreatedAt(widget.item)!,
-                                    locale:
-                                        UiUtils.resolveLanguageCode(context)),
-                                style: TextStyle(
-                                  fontSize: widget.bigCard == true
-                                      ? context.font.small
-                                      : context.font.smaller,
-                                  color: context.color.textDefaultColor
-                                      .withOpacity(0.6),
-                                ),
-                              ),
-                            ],
-                          ),
+                        _dateRow(context),
                       ],
                     ),
                   ),
                 ),
               ],
             ),
-
-            // ✅ زر المفضلة
             PositionedDirectional(
               top: 10,
               end: 10,
@@ -571,10 +748,9 @@ class _ItemCardState extends State<ICard> {
   }
 
   Widget _buildTitle(String title, BuildContext context) {
-    const int titleLengthThreshold = 18; // عدد الأحرف المسموح بها قبل التمرير
+    const int titleLengthThreshold = 18;
 
     if (title.length > titleLengthThreshold) {
-      // ✅ نص طويل → Marquee
       return SizedBox(
         height: 20,
         child: Marquee(
@@ -596,7 +772,6 @@ class _ItemCardState extends State<ICard> {
         ),
       );
     } else {
-      // ✅ نص عادي
       return Text(title)
           .setMaxLines(lines: 1)
           .size(context.font.large)
@@ -605,39 +780,40 @@ class _ItemCardState extends State<ICard> {
     }
   }
 
-  // 🔵 دالة لتنسيق السعر والعملة بألوان وأحجام مختلفة مع دعم الوضع الليلي، الحركة، والخطوط من الثيم
-
-  /// ✅ دالة لبناء عنصر السعر والعملة بشكل منسق
-  /// تُخفي العنصر تمامًا إذا كان السعر 0 أو غير صالح
   Widget _buildPrice(BuildContext context) {
-    final rawPrice = widget.item?.price ?? 0;
+    final double basePrice = widget.item?.price ?? 0;
+    final double finalPrice = widget.item?.finalPrice ?? basePrice;
+    final double displayPrice = finalPrice > 0 ? finalPrice : basePrice;
 
-    // إذا السعر صفر أو أقل، لا نعرض شيئًا
-    if (rawPrice <= 0) return const SizedBox.shrink();
-
-    final formattedPrice = HelperUtils.formatPrice(rawPrice);
-    final price = formattedPrice.isEmpty
-        ? '—'
-        : formattedPrice; // ✅ تنسيق السعر مثل "55 ألف"
-    //    final currency = widget.item?.currency ?? "";
+    final String display = HelperUtils.formatPrice(displayPrice).isNotEmpty
+        ? HelperUtils.formatPrice(displayPrice)
+        : displayPrice.toString();
+    final bool hasOriginal = basePrice > displayPrice && basePrice > 0;
+    final String? original =
+        hasOriginal ? HelperUtils.formatPrice(basePrice) : null;
 
     final currency = _resolveCurrency(widget.item);
 
     return Align(
-      alignment: Alignment.centerRight, // ✅ إرجاع السعر لليمين
+      alignment: Alignment.centerRight,
       child: RichText(
         text: TextSpan(
           children: [
-            // ✅ السعر - واضح وأبرز بلون أساسي
             TextSpan(
-              text: "$price ",
+              text: "$display ",
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     color: context.color.territoryColor,
                     fontWeight: FontWeight.bold,
                   ),
             ),
-
-            // ✅ العملة - لون هادئ وخط أصغر قليلاً
+            if (original != null && original.isNotEmpty)
+              TextSpan(
+                text: "$original ",
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: context.color.textDefaultColor.withOpacity(0.55),
+                      decoration: TextDecoration.lineThrough,
+                    ),
+              ),
             TextSpan(
               text: currency,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
@@ -696,7 +872,6 @@ class _ItemCardState extends State<ICard> {
                 listener: (context, state) {
                   if (state is UpdateFavoriteSuccess &&
                       state.item.id == itemId) {
-                    // مزامنة قائمة المفضلة بعد نجاح العملية
                     favoriteCubit.getFavorite();
                   }
                 },
@@ -708,7 +883,7 @@ class _ItemCardState extends State<ICard> {
                           : isLikeFromCubit;
 
                   return CircleAvatar(
-                    backgroundColor: Colors.black54, // ✅ نفس باقي الأزرار
+                    backgroundColor: Colors.black54,
                     radius: size / 2,
                     child: IconButton(
                       icon: inProgress
@@ -759,6 +934,7 @@ class _ItemCardState extends State<ICard> {
       ),
     );
   }
+
 }
 
 class _NewBadge extends StatelessWidget {
@@ -775,6 +951,79 @@ class _NewBadge extends StatelessWidget {
       child: const Text(
         "جديد",
         style: TextStyle(color: Colors.white, fontSize: 12),
+      ),
+    );
+  }
+}
+
+class _Entry {
+  final ItemModel? item;
+  final PromotionItem? promo;
+
+  const _Entry._({this.item, this.promo});
+
+  factory _Entry.item(ItemModel item) => _Entry._(item: item);
+
+  factory _Entry.promo(PromotionItem promo) => _Entry._(promo: promo);
+
+  bool get isPromo => promo != null;
+}
+
+class _PromotionCard extends StatelessWidget {
+  final PromotionItem promo;
+  final double? width;
+
+  const _PromotionCard({required this.promo, this.width});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return Container(
+      width: width ?? 220,
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      decoration: BoxDecoration(
+        color: colors.surfaceVariant,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.outline.withOpacity(0.2)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if ((promo.image ?? '').isNotEmpty)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: UiUtils.getImage(
+                  promo.image!,
+                  height: 90,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            const SizedBox(height: 8),
+            Text(
+              promo.title ?? 'عرض مميز',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            if ((promo.subtitle ?? '').isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                promo.subtitle!,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: colors.onSurface.withOpacity(0.7)),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

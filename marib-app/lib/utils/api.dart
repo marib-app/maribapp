@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 
 import 'package:flutter/widgets.dart';
 import 'package:dio/dio.dart';
@@ -17,7 +17,7 @@ import 'package:marib/data/cubits/favorite/favorite_cubit.dart';
 import 'package:marib/utils/errorFilter.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-// ✅ إضافة موديل الحساب البنكي
+// âœ… ط¥ط¶ط§ظپط© ظ…ظˆط¯ظٹظ„ ط§ظ„ط­ط³ط§ط¨ ط§ظ„ط¨ظ†ظƒظٹ
 import 'package:marib/utils/payment/bank_account.dart';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
@@ -216,9 +216,9 @@ class Api {
     _ensureNetworkInterceptor(_sharedDio);
   }
 
-  // تهيئة الهيدرز لكل الطلبات
-  // - لو المستخدم غير مسجل: نضيف اللغة فقط إن وجدت
-  // - لو مسجل: نضيف Bearer <JWT> + اللغة
+  // طھظ‡ظٹط¦ط© ط§ظ„ظ‡ظٹط¯ط±ط² ظ„ظƒظ„ ط§ظ„ط·ظ„ط¨ط§طھ
+  // - ظ„ظˆ ط§ظ„ظ…ط³طھط®ط¯ظ… ط؛ظٹط± ظ…ط³ط¬ظ„: ظ†ط¶ظٹظپ ط§ظ„ظ„ط؛ط© ظپظ‚ط· ط¥ظ† ظˆط¬ط¯طھ
+  // - ظ„ظˆ ظ…ط³ط¬ظ„: ظ†ط¶ظٹظپ Bearer <JWT> + ط§ظ„ظ„ط؛ط©
 
   static void clearCache() {
     _ApiResponseCache.clear();
@@ -627,7 +627,7 @@ class Api {
   static String stripeIntentAPI = "https://api.stripe.com/v1/payment_intents";
 
   // =======================
-  // مسارات الـ API (ثوابت)
+  // ظ…ط³ط§ط±ط§طھ ط§ظ„ظ€ API (ط«ظˆط§ط¨طھ)
   // =======================
 
   // Auth / Profile
@@ -831,59 +831,59 @@ class Api {
   static String deleteChatMessageApi = "delete-chat-message";
 
   // ==========================
-  // ✅ إضافات الدفع اليدوي/البنوك
+  // âœ… ط¥ط¶ط§ظپط§طھ ط§ظ„ط¯ظپط¹ ط§ظ„ظٹط¯ظˆظٹ/ط§ظ„ط¨ظ†ظˆظƒ
   // ==========================
-  /// مصفوفة بمسارات الـ API المحتملة للحصول على الحسابات البنكية اليدوية
+  /// ظ…طµظپظˆظپط© ط¨ظ…ط³ط§ط±ط§طھ ط§ظ„ظ€ API ط§ظ„ظ…ط­طھظ…ظ„ط© ظ„ظ„ط­طµظˆظ„ ط¹ظ„ظ‰ ط§ظ„ط­ط³ط§ط¨ط§طھ ط§ظ„ط¨ظ†ظƒظٹط© ط§ظ„ظٹط¯ظˆظٹط©
   static const List<String> _manualBankApiCandidates = <String>[
     'manual-banks',
     'manual-payments/banks',
-    // متروكة في النهاية للتوافق مع الإصدارات القديمة من الـ API
+    // ظ…طھط±ظˆظƒط© ظپظٹ ط§ظ„ظ†ظ‡ط§ظٹط© ظ„ظ„طھظˆط§ظپظ‚ ظ…ط¹ ط§ظ„ط¥طµط¯ط§ط±ط§طھ ط§ظ„ظ‚ط¯ظٹظ…ط© ظ…ظ† ط§ظ„ظ€ API
     'banks',
   ];
 
-  /// مسار فهرس بوابات المتجر الحالية للتاجر المصادق (المسار القديم).
+  /// ظ…ط³ط§ط± ظپظ‡ط±ط³ ط¨ظˆط§ط¨ط§طھ ط§ظ„ظ…طھط¬ط± ط§ظ„ط­ط§ظ„ظٹط© ظ„ظ„طھط§ط¬ط± ط§ظ„ظ…طµط§ط¯ظ‚ (ط§ظ„ظ…ط³ط§ط± ط§ظ„ظ‚ط¯ظٹظ…).
   static String storeGatewaysCatalogApi() => 'store-gateways';
 
-  /// مسار بوابات المتجر الجديدة (يجب تمرير هوية التاجر أو السلَج/المعرف).
+  /// ظ…ط³ط§ط± ط¨ظˆط§ط¨ط§طھ ط§ظ„ظ…طھط¬ط± ط§ظ„ط¬ط¯ظٹط¯ط© (ظٹط¬ط¨ طھظ…ط±ظٹط± ظ‡ظˆظٹط© ط§ظ„طھط§ط¬ط± ط£ظˆ ط§ظ„ط³ظ„ظژط¬/ط§ظ„ظ…ط¹ط±ظپ).
   static String storeGatewaysApi(dynamic seller) {
     final String normalized = _normalizeStoreIdentifier(seller);
     return 'stores/$normalized/gateways';
   }
 
-  /// مسار حفظ بيانات المتجر أثناء التسجيل.
+  /// ظ…ط³ط§ط± ط­ظپط¸ ط¨ظٹط§ظ†ط§طھ ط§ظ„ظ…طھط¬ط± ط£ط«ظ†ط§ط، ط§ظ„طھط³ط¬ظٹظ„.
   static const String storeOnboardingApi = 'store/onboarding';
 
-  /// مسار CRUD العام لحسابات بوابات المتجر.
+  /// ظ…ط³ط§ط± CRUD ط§ظ„ط¹ط§ظ… ظ„ط­ط³ط§ط¨ط§طھ ط¨ظˆط§ط¨ط§طھ ط§ظ„ظ…طھط¬ط±.
   static const String storeGatewayAccountsApi = 'store-gateway-accounts';
 
-  /// مسار إحضار مؤشرات المتجر للتاجر.
+  /// ظ…ط³ط§ط± ط¥ط­ط¶ط§ط± ظ…ط¤ط´ط±ط§طھ ط§ظ„ظ…طھط¬ط± ظ„ظ„طھط§ط¬ط±.
   static const String storeDashboardSummaryApi = 'store/dashboard/summary';
 
-  /// ����� ������ ������ ��� ������� �� ����� �������.
+  /// ï؟½ï؟½ï؟½ï؟½ï؟½ ï؟½ï؟½ï؟½ï؟½ï؟½ï؟½ ï؟½ï؟½ï؟½ï؟½ï؟½ï؟½ ï؟½ï؟½ï؟½ ï؟½ï؟½ï؟½ï؟½ï؟½ï؟½ï؟½ ï؟½ï؟½ ï؟½ï؟½ï؟½ï؟½ï؟½ ï؟½ï؟½ï؟½ï؟½ï؟½ï؟½ï؟½.
   static String storefrontShowApi(dynamic storeId) {
     final String normalized = _normalizeStoreIdentifier(storeId);
     return 'storefront/stores/$normalized';
   }
 
-  /// ���� ������ ����.
+  /// مسار متابعة متجر.
   static String storefrontFollowApi(dynamic storeId) {
     final String normalized = _normalizeStoreIdentifier(storeId);
     return 'storefront/stores/$normalized/follow';
   }
 
-  /// ���� ����� ������ ����.
+  /// مسار إلغاء متابعة متجر.
   static String storefrontUnfollowApi(dynamic storeId) {
     final String normalized = _normalizeStoreIdentifier(storeId);
     return 'storefront/stores/$normalized/unfollow';
   }
 
-  /// مسار حساب محدد ضمن [storeGatewayAccountsApi].
+  /// ظ…ط³ط§ط± ط­ط³ط§ط¨ ظ…ط­ط¯ط¯ ط¶ظ…ظ† [storeGatewayAccountsApi].
   static String storeGatewayAccountApi(dynamic accountId) {
     final String normalized = Uri.encodeComponent('$accountId');
     return '$storeGatewayAccountsApi/$normalized';
   }
 
-  /// بعض المتحكمات توفر تفعيل/تعطيل عبر PATCH/POST فرعي، نوفر مُساعدًا موحدًا.
+  /// ط¨ط¹ط¶ ط§ظ„ظ…طھط­ظƒظ…ط§طھ طھظˆظپط± طھظپط¹ظٹظ„/طھط¹ط·ظٹظ„ ط¹ط¨ط± PATCH/POST ظپط±ط¹ظٹطŒ ظ†ظˆظپط± ظ…ظڈط³ط§ط¹ط¯ظ‹ط§ ظ…ظˆط­ط¯ظ‹ط§.
   static String storeGatewayAccountActivationApi(
     dynamic accountId,
     String action,
@@ -905,7 +905,7 @@ class Api {
   static const int _manualBankMaxLoops = 20;
 
   // =======================
-  // مفاتيح عامة متداولة
+  // ظ…ظپط§طھظٹط­ ط¹ط§ظ…ط© ظ…طھط¯ط§ظˆظ„ط©
   // =======================
   static String id = "id";
   static String itemId = "item_id";
@@ -1017,7 +1017,7 @@ class Api {
   static String requestDeviceApi = "request-device";
   static String requestSupportApi = "contact-us";
 
-  /// POST عام (يدعم multipart تلقائيًا عند وجود File)
+  /// POST ط¹ط§ظ… (ظٹط¯ط¹ظ… multipart طھظ„ظ‚ط§ط¦ظٹظ‹ط§ ط¹ظ†ط¯ ظˆط¬ظˆط¯ File)
   static Future<Map<String, dynamic>> post({
     required String url,
     dynamic parameter,
@@ -1041,13 +1041,13 @@ class Api {
 
         parameter.forEach((key, value) {
           if (value is File) {
-            // ملف واحد → نحوله MultipartFile
+            // ظ…ظ„ظپ ظˆط§ط­ط¯ â†’ ظ†ط­ظˆظ„ظ‡ MultipartFile
             formMap[key] = MultipartFile.fromFileSync(
               value.path,
               filename: value.path.split('/').last,
             );
           } else if (value is List<File>) {
-            // قائمة ملفات → نحول كل عنصر
+            // ظ‚ط§ط¦ظ…ط© ظ…ظ„ظپط§طھ â†’ ظ†ط­ظˆظ„ ظƒظ„ ط¹ظ†طµط±
             formMap[key] = value
                 .map((file) => MultipartFile.fromFileSync(
                       file.path,
@@ -1055,12 +1055,12 @@ class Api {
                     ))
                 .toList();
           } else {
-            // قيم عادية
+            // ظ‚ظٹظ… ط¹ط§ط¯ظٹط©
             formMap[key] = value;
           }
         });
 
-        // إنشاء FormData قابل للإرسال
+        // ط¥ظ†ط´ط§ط، FormData ظ‚ط§ط¨ظ„ ظ„ظ„ط¥ط±ط³ط§ظ„
         formData = FormData.fromMap(
           formMap,
           ListFormat.multiCompatible,
@@ -1273,7 +1273,7 @@ class Api {
     }
   }
 
-  /// معالجة انتهاء صلاحية جلسة المستخدم
+  /// ظ…ط¹ط§ظ„ط¬ط© ط§ظ†طھظ‡ط§ط، طµظ„ط§ط­ظٹط© ط¬ظ„ط³ط© ط§ظ„ظ…ط³طھط®ط¯ظ…
   static void userExpired() {
     final BuildContext? ctx = Constant.navigatorKey.currentContext ??
         Constant.navigatorKey.currentState?.context;
@@ -1327,7 +1327,7 @@ class Api {
     });
   }
 
-  /// DELETE عام
+  /// DELETE ط¹ط§ظ…
   static Future<Map<String, dynamic>> delete({
     required String url,
     Map<String, dynamic>? queryParameters,
@@ -1647,7 +1647,7 @@ class Api {
     );
   }
 
-  /// GET عام
+  /// GET ط¹ط§ظ…
   static Future<Map<String, dynamic>> get({
     required String url,
     Map<String, dynamic>? queryParameters,
@@ -1785,13 +1785,13 @@ class Api {
   }
 
   // =========================================
-  // ✅ دوال الدفع اليدوي (البنوك) — إضافاتك
+  // âœ… ط¯ظˆط§ظ„ ط§ظ„ط¯ظپط¹ ط§ظ„ظٹط¯ظˆظٹ (ط§ظ„ط¨ظ†ظˆظƒ) â€” ط¥ط¶ط§ظپط§طھظƒ
   // =========================================
 
-  /// جلب قائمة الحسابات البنكية من السيرفر
-  /// - الراوت في لاراڤيل: GET /api/banks
-  /// - الدالة تدعم الرد بالشكل:
-  ///   { "data": [ ... ] } أو [ ... ] مباشرة
+  /// ط¬ظ„ط¨ ظ‚ط§ط¦ظ…ط© ط§ظ„ط­ط³ط§ط¨ط§طھ ط§ظ„ط¨ظ†ظƒظٹط© ظ…ظ† ط§ظ„ط³ظٹط±ظپط±
+  /// - ط§ظ„ط±ط§ظˆطھ ظپظٹ ظ„ط§ط±ط§ع¤ظٹظ„: GET /api/banks
+  /// - ط§ظ„ط¯ط§ظ„ط© طھط¯ط¹ظ… ط§ظ„ط±ط¯ ط¨ط§ظ„ط´ظƒظ„:
+  ///   { "data": [ ... ] } ط£ظˆ [ ... ] ظ…ط¨ط§ط´ط±ط©
 
   static Future<List<BankAccount>> fetchBanks() async {
     ApiHttpException? lastHttpError;
@@ -1856,7 +1856,7 @@ class Api {
       throw lastHttpError;
     }
 
-    throw ApiException('فشل في جلب الحسابات البنكية اليدوية');
+    throw ApiException('ظپط´ظ„ ظپظٹ ط¬ظ„ط¨ ط§ظ„ط­ط³ط§ط¨ط§طھ ط§ظ„ط¨ظ†ظƒظٹط© ط§ظ„ظٹط¯ظˆظٹط©');
   }
 
   static _ManualBankPage _parseManualBankResponse(
@@ -2026,21 +2026,21 @@ class Api {
     return null;
   }
 
-  // إرسال إثبات تحويل (رفع إيصال) للدفع اليدوي
-  // - الراوت في لاراڤيل: POST /api/payments/manual (محمي بمصادقة Sanctum)
-  // - يرسل Multipart يتضمن صورة الإيصال + بيانات التحويل
-  // - الحقول الاختيارية تُرسَل فقط عند توفرها
+  // ط¥ط±ط³ط§ظ„ ط¥ط«ط¨ط§طھ طھط­ظˆظٹظ„ (ط±ظپط¹ ط¥ظٹطµط§ظ„) ظ„ظ„ط¯ظپط¹ ط§ظ„ظٹط¯ظˆظٹ
+  // - ط§ظ„ط±ط§ظˆطھ ظپظٹ ظ„ط§ط±ط§ع¤ظٹظ„: POST /api/payments/manual (ظ…ط­ظ…ظٹ ط¨ظ…طµط§ط¯ظ‚ط© Sanctum)
+  // - ظٹط±ط³ظ„ Multipart ظٹطھط¶ظ…ظ† طµظˆط±ط© ط§ظ„ط¥ظٹطµط§ظ„ + ط¨ظٹط§ظ†ط§طھ ط§ظ„طھط­ظˆظٹظ„
+  // - ط§ظ„ط­ظ‚ظˆظ„ ط§ظ„ط§ط®طھظٹط§ط±ظٹط© طھظڈط±ط³ظژظ„ ظپظ‚ط· ط¹ظ†ط¯ طھظˆظپط±ظ‡ط§
 
   static Future<Map<String, dynamic>> submitManualPayment({
-    required int bankAccountId, // معرف الحساب البنكي من السيرفر
-    required double amount, // المبلغ المحوَّل
-    String? currency, // مثال: YER / SAR
-    String? transferDate, // بالتنسيق 'YYYY-MM-DD'
-    String? reference, // رقم مرجعي (اختياري)
-    String? notes, // ملاحظات (اختياري)
+    required int bankAccountId, // ظ…ط¹ط±ظپ ط§ظ„ط­ط³ط§ط¨ ط§ظ„ط¨ظ†ظƒظٹ ظ…ظ† ط§ظ„ط³ظٹط±ظپط±
+    required double amount, // ط§ظ„ظ…ط¨ظ„ط؛ ط§ظ„ظ…ط­ظˆظ‘ظژظ„
+    String? currency, // ظ…ط«ط§ظ„: YER / SAR
+    String? transferDate, // ط¨ط§ظ„طھظ†ط³ظٹظ‚ 'YYYY-MM-DD'
+    String? reference, // ط±ظ‚ظ… ظ…ط±ط¬ط¹ظٹ (ط§ط®طھظٹط§ط±ظٹ)
+    String? notes, // ظ…ظ„ط§ط­ط¸ط§طھ (ط§ط®طھظٹط§ط±ظٹ)
     Map<String, dynamic>?
-        contextData, // سياق ربط إضافي (اختياري) مثل {order_id:123}
-    required File receiptImage, // ملف صورة الإيصال
+        contextData, // ط³ظٹط§ظ‚ ط±ط¨ط· ط¥ط¶ط§ظپظٹ (ط§ط®طھظٹط§ط±ظٹ) ظ…ط«ظ„ {order_id:123}
+    required File receiptImage, // ظ…ظ„ظپ طµظˆط±ط© ط§ظ„ط¥ظٹطµط§ظ„
   }) async {
     final body = <String, dynamic>{
       'bank_account_id': bankAccountId,
@@ -2050,7 +2050,7 @@ class Api {
       if (reference != null) 'reference': reference,
       if (notes != null) 'notes': notes,
       if (contextData != null) 'context': contextData,
-      // Api.post سيحوّل File → MultipartFile تلقائيًا
+      // Api.post ط³ظٹط­ظˆظ‘ظ„ File â†’ MultipartFile طھظ„ظ‚ط§ط¦ظٹظ‹ط§
       'receipt_image': receiptImage,
     };
 
@@ -2230,10 +2230,10 @@ class Api {
     'account is deactivated',
     'deactivated. please contact',
     'deactivated please contact',
-    'تم الغاء التنشيط',
-    'تم إلغاء تنشيط',
-    'يتم الغاء التنشيط',
-    'الغاء تنشيط الحساب',
+    'طھظ… ط§ظ„ط؛ط§ط، ط§ظ„طھظ†ط´ظٹط·',
+    'طھظ… ط¥ظ„ط؛ط§ط، طھظ†ط´ظٹط·',
+    'ظٹطھظ… ط§ظ„ط؛ط§ط، ط§ظ„طھظ†ط´ظٹط·',
+    'ط§ظ„ط؛ط§ط، طھظ†ط´ظٹط· ط§ظ„ط­ط³ط§ط¨',
   ];
 
   /// Public helper for callers outside this class that only have the raw payload.
@@ -2310,4 +2310,5 @@ class _DioBaseOptionsSnapshot {
     return Map<String, dynamic>.from(source);
   }
 }
+
 

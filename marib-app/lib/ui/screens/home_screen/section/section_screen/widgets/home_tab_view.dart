@@ -1018,22 +1018,6 @@ class _HomeTabViewState extends State<HomeTabView> {
                                       ? itemState
                                       : null;
 
-                              final Set<int>? sellerCategorySet =
-                                  _sellerCategoryIdSet;
-                              final bool applySellerFilter =
-                                  sellerCategorySet != null &&
-                                      sellerCategorySet.isNotEmpty;
-                              List<CategoryModel> processedRootChildren =
-                                  rootChildren;
-                              bool sellerFilterApplied = false;
-                              if (applySellerFilter) {
-                                final List<CategoryModel> sellerFiltered =
-                                    _filterCategoriesByAllowedIds(
-                                        rootChildren, sellerCategorySet);
-                                processedRootChildren = sellerFiltered;
-                                sellerFilterApplied = true;
-                              }
-
                               final Set<int> allowedCategoryIds = <int>{};
                               if (successState != null) {
                                 for (final ItemSummary item
@@ -1056,6 +1040,28 @@ class _HomeTabViewState extends State<HomeTabView> {
 
                               final bool hasAllowedHints =
                                   allowedCategoryIds.isNotEmpty;
+
+                              final Set<int>? sellerCategorySet =
+                                  _sellerCategoryIdSet;
+                              final bool applySellerFilter =
+                                  sellerCategorySet != null &&
+                                      sellerCategorySet.isNotEmpty;
+                              List<CategoryModel> processedRootChildren =
+                                  rootChildren;
+                              bool sellerFilterApplied = false;
+                              if (applySellerFilter) {
+                                final List<CategoryModel> sellerFiltered =
+                                    _filterCategoriesByAllowedIds(
+                                        rootChildren, sellerCategorySet);
+                                processedRootChildren = sellerFiltered;
+                                sellerFilterApplied = true;
+                              } else if (hasAllowedHints) {
+                                // Restrict visible categories to those that have items for this seller/context.
+                                processedRootChildren =
+                                    _filterCategoriesByAllowedIds(
+                                        rootChildren, allowedCategoryIds);
+                              }
+
                               final List<CategoryModel>
                                   prioritizedRootChildren = hasAllowedHints
                                       ? _prioritizeCategoriesByAllowedIds(
@@ -1124,6 +1130,9 @@ class _HomeTabViewState extends State<HomeTabView> {
                                     _filterCategoriesByAllowedIds(
                                         visibleSubcats, sellerCategorySet!);
                                 visibleSubcats = sellerFilteredSubcats;
+                              } else if (hasAllowedHints) {
+                                visibleSubcats = _filterCategoriesByAllowedIds(
+                                    visibleSubcats, allowedCategoryIds);
                               }
                               if (hasAllowedHints) {
                                 visibleSubcats =

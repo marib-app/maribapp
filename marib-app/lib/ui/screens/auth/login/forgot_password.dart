@@ -269,7 +269,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 );
               } else {
                 Navigator.of(context).pushNamedAndRemoveUntil(
-                  Routes.locationPermissionScreen,
+                  Routes.main,
                       (route) => false,
                 );
               }

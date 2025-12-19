@@ -1,4 +1,4 @@
-// 🛒 الواجهة فقط
+// ًں›’ ط§ظ„ظˆط§ط¬ظ‡ط© ظپظ‚ط·
 import 'package:flutter/material.dart';
 import 'package:marib/data/model/item/cart_model.dart';
 import 'package:marib/ui/screens/cart/cart_horizontal_card.dart';
@@ -19,7 +19,7 @@ import 'package:marib/utils/delivery_department.dart';
 import 'package:marib/ui/widgets/store_status_card.dart';
 
 class CartUI extends StatelessWidget {
-  // مدخلات الحالة
+  // ظ…ط¯ط®ظ„ط§طھ ط§ظ„ط­ط§ظ„ط©
   final bool isLoading;
   final List<Cart> cartItems;
   final double subtotal;
@@ -46,11 +46,11 @@ class CartUI extends StatelessWidget {
   final bool selectAll;
   final Set<String> selectedItemIds;
 
-  // نفس تموضع زر الواتساب
+  // ظ†ظپط³ طھظ…ظˆط¶ط¹ ط²ط± ط§ظ„ظˆط§طھط³ط§ط¨
   final double whatsappBottom;
   final double whatsappRight;
 
-  // ردود الأفعال
+  // ط±ط¯ظˆط¯ ط§ظ„ط£ظپط¹ط§ظ„
   final VoidCallback onTapDeleteAll;
   final VoidCallback onToggleSelectAll;
   final void Function(Cart item) onToggleSelectItem;
@@ -136,7 +136,7 @@ class CartUI extends StatelessWidget {
     final String localizedFallbackRaw =
         UiUtils.getTranslatedLabel(context, 'notAvailable');
     final String fallbackStoreName = localizedFallbackRaw == 'notAvailable'
-        ? 'غير متوفر'
+        ? 'ط؛ظٹط± ظ…طھظˆظپط±'
         : localizedFallbackRaw;
 
     String? _trimOrNull(String? value) {
@@ -198,10 +198,10 @@ class CartUI extends StatelessWidget {
 
     final String? sanitizedWhatsappNumber =
         sanitizeWhatsappNumber(whatsappNumberRaw);
-    final String whatsappTooltip = (whatsappLabelRaw != null &&
-            whatsappLabelRaw.isNotEmpty)
-        ? whatsappLabelRaw
-        : 'تواصل عبر واتساب';
+    final String whatsappTooltip =
+        (whatsappLabelRaw != null && whatsappLabelRaw.isNotEmpty)
+            ? whatsappLabelRaw
+            : 'طھظˆط§طµظ„ ط¹ط¨ط± ظˆط§طھط³ط§ط¨';
 
     Uri? buildWhatsappUri() {
       final String? sanitizedNumber = sanitizedWhatsappNumber;
@@ -220,7 +220,8 @@ class CartUI extends StatelessWidget {
     Future<void> openWhatsappSupport() async {
       final Uri? uri = buildWhatsappUri();
       if (uri == null) {
-        showWhatsappSnack('بيانات التواصل عبر الواتساب غير متوفرة حالياً.');
+        showWhatsappSnack(
+            'ط¨ظٹط§ظ†ط§طھ ط§ظ„طھظˆط§طµظ„ ط¹ط¨ط± ط§ظ„ظˆط§طھط³ط§ط¨ ط؛ظٹط± ظ…طھظˆظپط±ط© ط­ط§ظ„ظٹط§ظ‹.');
         return;
       }
 
@@ -230,10 +231,10 @@ class CartUI extends StatelessWidget {
           mode: LaunchMode.externalApplication,
         );
         if (!launched) {
-          showWhatsappSnack('تعذر فتح تطبيق الواتساب.');
+          showWhatsappSnack('طھط¹ط°ط± ظپطھط­ طھط·ط¨ظٹظ‚ ط§ظ„ظˆط§طھط³ط§ط¨.');
         }
       } catch (_) {
-        showWhatsappSnack('تعذر فتح تطبيق الواتساب.');
+        showWhatsappSnack('طھط¹ط°ط± ظپطھط­ طھط·ط¨ظٹظ‚ ط§ظ„ظˆط§طھط³ط§ط¨.');
       }
     }
 
@@ -320,7 +321,7 @@ class CartUI extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        tip.title ?? 'نصيحة السلامة',
+                        tip.title ?? 'ظ†طµظٹط­ط© ط§ظ„ط³ظ„ط§ظ…ط©',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: context.color.textDefaultColor,
@@ -433,7 +434,7 @@ class CartUI extends StatelessWidget {
                   if (discount.amountDisplay != null) ...[
                     const SizedBox(height: 4),
                     Text(
-                      'قيمة الخصم: ${discount.amountDisplay}',
+                      'ظ‚ظٹظ…ط© ط§ظ„ط®طµظ…: ${discount.amountDisplay}',
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         color: accent,
@@ -465,7 +466,7 @@ class CartUI extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'قسيمة الخصم',
+            'ظ‚ط³ظٹظ…ط© ط§ظ„ط®طµظ…',
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 15,
@@ -481,7 +482,7 @@ class CartUI extends StatelessWidget {
                   enabled: !couponInProgress && !isLoading,
                   textInputAction: TextInputAction.done,
                   decoration: InputDecoration(
-                    hintText: 'أدخل رمز القسيمة',
+                    hintText: 'ط£ط¯ط®ظ„ ط±ظ…ط² ط§ظ„ظ‚ط³ظٹظ…ط©',
                     filled: true,
                     fillColor:
                         isDarkInput ? Colors.grey.shade900 : Colors.white,
@@ -515,7 +516,7 @@ class CartUI extends StatelessWidget {
                         width: 18,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('تطبيق'),
+                    : const Text('طھط·ط¨ظٹظ‚'),
               ),
             ],
           ),
@@ -713,7 +714,7 @@ class CartUI extends StatelessWidget {
           children: [
             ToggleButtons(
               borderRadius: BorderRadius.circular(12),
-              constraints: const BoxConstraints(minHeight: 40, minWidth: 72),
+              constraints: const BoxConstraints(minHeight: 52, minWidth: 72),
               borderColor: accent.withOpacity(0.4),
               selectedBorderColor: accent,
               fillColor: accent.withOpacity(0.12),
@@ -852,7 +853,7 @@ class CartUI extends StatelessWidget {
                 Icon(Icons.schedule, color: accent),
                 const SizedBox(width: 8),
                 Text(
-                  'وقت دفع المبلغ المتبقي',
+                  'ظˆظ‚طھ ط¯ظپط¹ ط§ظ„ظ…ط¨ظ„ط؛ ط§ظ„ظ…طھط¨ظ‚ظٹ',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: context.color.textDefaultColor,
@@ -899,7 +900,7 @@ class CartUI extends StatelessWidget {
       if (trimmed != null && trimmed.isNotEmpty) {
         return trimmed;
       }
-      return 'حدث خطأ أثناء تحميل السلة. حاول مرة أخرى.';
+      return 'ط­ط¯ط« ط®ط·ط£ ط£ط«ظ†ط§ط، طھط­ظ…ظٹظ„ ط§ظ„ط³ظ„ط©. ط­ط§ظˆظ„ ظ…ط±ط© ط£ط®ط±ظ‰.';
     }
 
     Widget buildErrorPlaceholder() {
@@ -942,7 +943,7 @@ class CartUI extends StatelessWidget {
                   ElevatedButton.icon(
                     onPressed: onRetry,
                     icon: const Icon(Icons.refresh),
-                    label: const Text('إعادة المحاولة'),
+                    label: const Text('ط¥ط¹ط§ط¯ط© ط§ظ„ظ…ط­ط§ظˆظ„ط©'),
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 20,
@@ -965,7 +966,8 @@ class CartUI extends StatelessWidget {
         cartItems.isEmpty;
     final ScrollPhysics scrollPhysics = buildScrollPhysics();
     final bool hasCartItems = cartItems.isNotEmpty;
-    final bool showWhatsappButton = hasCartItems && sanitizedWhatsappNumber != null;
+    final bool showWhatsappButton =
+        hasCartItems && sanitizedWhatsappNumber != null;
     final bool hideCartControls = !isLoading && cartItems.isEmpty;
     final bool showEmptyGuidance = hideCartControls && !showLoadErrorState;
     final bool showErrorGuidance = hideCartControls && showLoadErrorState;
@@ -988,7 +990,7 @@ class CartUI extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'سلة المشتريات فارغة',
+                  'ط³ظ„ط© ط§ظ„ظ…ط´طھط±ظٹط§طھ ظپط§ط±ط؛ط©',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: context.color.textDefaultColor,
@@ -998,7 +1000,7 @@ class CartUI extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'ابدأ التسوق الآن لإضافة منتجاتك المفضلة.',
+                  'ط§ط¨ط¯ط£ ط§ظ„طھط³ظˆظ‚ ط§ظ„ط¢ظ† ظ„ط¥ط¶ط§ظپط© ظ…ظ†طھط¬ط§طھظƒ ط§ظ„ظ…ظپط¶ظ„ط©.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: context.color.textDefaultColor.withOpacity(0.75),
@@ -1018,7 +1020,7 @@ class CartUI extends StatelessWidget {
                     ),
                     backgroundColor: accent,
                   ),
-                  child: const Text('تسوق الآن'),
+                  child: const Text('طھط³ظˆظ‚ ط§ظ„ط¢ظ†'),
                 ),
               ],
             ),
@@ -1084,12 +1086,12 @@ class CartUI extends StatelessWidget {
               }
 
               final List<Widget> headerChildren = [];
-    if (storeStatus.hasData && storeStatus.isOpenNow) {
-      headerChildren.add(
-        StoreStatusCard(
-          store: storeStatus,
-          moneyFormatter: moneyFormatter,
-          showManualBanks: true,
+              if (storeStatus.hasData && storeStatus.isOpenNow) {
+                headerChildren.add(
+                  StoreStatusCard(
+                    store: storeStatus,
+                    moneyFormatter: moneyFormatter,
+                    showManualBanks: true,
                   ),
                 );
                 headerChildren.add(const SizedBox(height: 8));
@@ -1142,181 +1144,183 @@ class CartUI extends StatelessWidget {
         backgroundColor: context.color.primaryColor,
         body: Stack(
           children: [
-          Column(
-            children: [
-              AppBar(
-                backgroundColor: context.color.primaryColor,
-                elevation: 0,
-                automaticallyImplyLeading: false,
-                titleSpacing: 16,
-                title: Row(
-                  children: [
-                    BackButton(color: context.color.textColorDark),
-                    const SizedBox(width: 8),
-                    Text("سلة المشتريات",
-                        style: TextStyle(color: context.color.textColorDark)),
-                    const Spacer(),
-                    if (hasCartItems)
-                      IconButton(
-                        icon: const Icon(Icons.delete,
-                            color: Colors.red, size: 26),
-                        onPressed: isLoading ? null : onTapDeleteAll,
-                      ),
-                  ],
+            Column(
+              children: [
+                AppBar(
+                  backgroundColor: context.color.primaryColor,
+                  elevation: 0,
+                  automaticallyImplyLeading: false,
+                  titleSpacing: 16,
+                  title: Row(
+                    children: [
+                      BackButton(color: context.color.textColorDark),
+                      const SizedBox(width: 8),
+                      Text("ط³ظ„ط© ط§ظ„ظ…ط´طھط±ظٹط§طھ",
+                          style: TextStyle(color: context.color.textColorDark)),
+                      const Spacer(),
+                      if (hasCartItems)
+                        IconButton(
+                          icon: const Icon(Icons.delete,
+                              color: Colors.red, size: 26),
+                          onPressed: isLoading ? null : onTapDeleteAll,
+                        ),
+                    ],
+                  ),
                 ),
-              ),
-              if (safetyBanner != null) safetyBanner,
-              Expanded(
-                child:
-                    showLoadErrorState ? buildErrorContent() : buildCartList(),
-              ),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.only(
-                    top: 10, left: 16, right: 16, bottom: 24),
-                decoration: BoxDecoration(
-                  color: context.color.territoryColor.withOpacity(0.4),
-                  borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(18)),
+                if (safetyBanner != null) safetyBanner,
+                Expanded(
+                  child: showLoadErrorState
+                      ? buildErrorContent()
+                      : buildCartList(),
                 ),
-                child: Column(
-                  children: [
-                    if (!hideCartControls &&
-                        !isLoading &&
-                        showCouponSection) ...[
-                      buildCouponSection(),
-                      const SizedBox(height: 16),
-                    ],
-                    if (!hideCartControls &&
-                        !isLoading &&
-                        deliveryTimingSection != null) ...[
-                      deliveryTimingSection,
-                      const SizedBox(height: 16),
-                    ],
-                    if (!hideCartControls)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 14),
-                        decoration: BoxDecoration(
-                          color: context.color.secondaryColor,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: context.color.borderColor,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: isDark
-                                  ? Colors.black.withOpacity(0.22)
-                                  : Colors.black.withOpacity(0.08),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              "المبلغ الإجمالي",
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: context.color.textDefaultColor,
-                              ),
-                            ),
-                            isLoading
-                                ? _buildShimmerLine(context, width: 80)
-                                : Text(
-                                    _formatTotalAmount(subtotal),
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w700,
-                                      color: context.color.textDefaultColor,
-                                    ),
-                                  ),
-                          ],
-                        ),
-                      ),
-                    if (!hideCartControls) const SizedBox(height: 16),
-                    UiUtils.buildButton(
-                      context,
-                      onPressed: onContinueToPayment,
-                      buttonTitle: "المتابعة الى الدفع",
-                      radius: 12,
-                      width: double.infinity,
-                      height: 40,
-                      disabled: hideCartControls || isLoading,
-                      onTapDisabledButton: hideCartControls
-                          ? () => HelperUtils.showSnackBarMessage(
-                                context,
-                                showEmptyGuidance
-                                    ? 'أضف منتجات إلى السلة للمتابعة إلى الدفع.'
-                                    : 'انتظر حتى يتم تحميل السلة قبل المتابعة.',
-                              )
-                          : null,
-                    ),
-                    if (showEmptyGuidance) ...[
-                      const SizedBox(height: 12),
-                      Text(
-                        'سلتك فارغة حالياً. أضف منتجات للمتابعة إلى الدفع.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color:
-                              context.color.textDefaultColor.withOpacity(0.7),
-                          fontSize: 13,
-                          height: 1.4,
-                        ),
-                      ),
-                    ],
-                    if (showErrorGuidance) ...[
-                      const SizedBox(height: 12),
-                      Text(
-                        'تعذر المتابعة قبل تحميل السلة بنجاح. حاول تحديث الصفحة أو إعادة المحاولة.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color:
-                              context.color.textDefaultColor.withOpacity(0.7),
-                          fontSize: 13,
-                          height: 1.4,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ),
-          if (showWhatsappButton)
-            Positioned(
-              right: whatsappRight,
-              bottom: whatsappBottom,
-              child: Tooltip(
-                message: whatsappTooltip,
-                child: Container(
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.only(
+                      top: 10, left: 16, right: 16, bottom: 24),
                   decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.12),
-                        blurRadius: 12,
-                        offset: const Offset(0, 6),
+                    color: context.color.territoryColor.withOpacity(0.4),
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(18)),
+                  ),
+                  child: Column(
+                    children: [
+                      if (!hideCartControls &&
+                          !isLoading &&
+                          showCouponSection) ...[
+                        buildCouponSection(),
+                        const SizedBox(height: 16),
+                      ],
+                      if (!hideCartControls &&
+                          !isLoading &&
+                          deliveryTimingSection != null) ...[
+                        deliveryTimingSection,
+                        const SizedBox(height: 16),
+                      ],
+                      if (!hideCartControls)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 14),
+                          decoration: BoxDecoration(
+                            color: context.color.secondaryColor,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: context.color.borderColor,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: isDark
+                                    ? Colors.black.withOpacity(0.22)
+                                    : Colors.black.withOpacity(0.08),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                "ط§ظ„ظ…ط¨ظ„ط؛ ط§ظ„ط¥ط¬ظ…ط§ظ„ظٹ",
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: context.color.textDefaultColor,
+                                ),
+                              ),
+                              isLoading
+                                  ? _buildShimmerLine(context, width: 80)
+                                  : Text(
+                                      _formatTotalAmount(subtotal),
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w700,
+                                        color: context.color.textDefaultColor,
+                                      ),
+                                    ),
+                            ],
+                          ),
+                        ),
+                      if (!hideCartControls) const SizedBox(height: 16),
+                      UiUtils.buildButton(
+                        context,
+                        onPressed: onContinueToPayment,
+                        buttonTitle: "المتابعة إلى الدفع",
+                        radius: 12,
+                        width: double.infinity,
+                        height: 52,
+                        disabled: hideCartControls || isLoading,
+                        onTapDisabledButton: hideCartControls
+                            ? () => HelperUtils.showSnackBarMessage(
+                                  context,
+                                  showEmptyGuidance
+                                      ? 'ط£ط¶ظپ ظ…ظ†طھط¬ط§طھ ط¥ظ„ظ‰ ط§ظ„ط³ظ„ط© ظ„ظ„ظ…طھط§ط¨ط¹ط© ط¥ظ„ظ‰ ط§ظ„ط¯ظپط¹.'
+                                      : 'ط§ظ†طھط¸ط± ط­طھظ‰ ظٹطھظ… طھط­ظ…ظٹظ„ ط§ظ„ط³ظ„ط© ظ‚ط¨ظ„ ط§ظ„ظ…طھط§ط¨ط¹ط©.',
+                                )
+                            : null,
                       ),
+                      if (showEmptyGuidance) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          'ط³ظ„طھظƒ ظپط§ط±ط؛ط© ط­ط§ظ„ظٹط§ظ‹. ط£ط¶ظپ ظ…ظ†طھط¬ط§طھ ظ„ظ„ظ…طھط§ط¨ط¹ط© ط¥ظ„ظ‰ ط§ظ„ط¯ظپط¹.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color:
+                                context.color.textDefaultColor.withOpacity(0.7),
+                            fontSize: 13,
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                      if (showErrorGuidance) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          'طھط¹ط°ط± ط§ظ„ظ…طھط§ط¨ط¹ط© ظ‚ط¨ظ„ طھط­ظ…ظٹظ„ ط§ظ„ط³ظ„ط© ط¨ظ†ط¬ط§ط­. ط­ط§ظˆظ„ طھط­ط¯ظٹط« ط§ظ„طµظپط­ط© ط£ظˆ ط¥ط¹ط§ط¯ط© ط§ظ„ظ…ط­ط§ظˆظ„ط©.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color:
+                                context.color.textDefaultColor.withOpacity(0.7),
+                            fontSize: 13,
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
-                  child: Material(
-                    color: const Color(0xFF25D366),
-                    shape: const CircleBorder(),
-                    child: InkWell(
-                      onTap: openWhatsappSupport,
-                      customBorder: const CircleBorder(),
-                      child: const SizedBox(
-                        height: 50,
-                        width: 60,
-                        child: Center(
-                          child: FaIcon(
-                            FontAwesomeIcons.whatsapp,
-                            color: Colors.white,
-                            size: 28,
+                ),
+              ],
+            ),
+            if (showWhatsappButton)
+              Positioned(
+                right: whatsappRight,
+                bottom: whatsappBottom,
+                child: Tooltip(
+                  message: whatsappTooltip,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.12),
+                          blurRadius: 12,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: Material(
+                      color: const Color(0xFF25D366),
+                      shape: const CircleBorder(),
+                      child: InkWell(
+                        onTap: openWhatsappSupport,
+                        customBorder: const CircleBorder(),
+                        child: const SizedBox(
+                          height: 50,
+                          width: 60,
+                          child: Center(
+                            child: FaIcon(
+                              FontAwesomeIcons.whatsapp,
+                              color: Colors.white,
+                              size: 28,
+                            ),
                           ),
                         ),
                       ),
@@ -1324,14 +1328,13 @@ class CartUI extends StatelessWidget {
                   ),
                 ),
               ),
-            ),
           ],
         ),
       ),
     );
   }
 
-  // ===== شيمرات العرض =====
+  // ===== ط´ظٹظ…ط±ط§طھ ط§ظ„ط¹ط±ط¶ =====
   Widget _buildShimmerItem(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return Shimmer.fromColors(
@@ -1391,11 +1394,11 @@ class CartUI extends StatelessWidget {
     final String? normalized = normalizeDeliveryDepartment(sectionRaw);
     switch (normalized) {
       case 'shein':
-        return 'شي إن';
+        return 'ط´ظٹ ط¥ظ†';
       case 'computer':
-        return 'الكمبيوتر';
+        return 'ط§ظ„ظƒظ…ط¨ظٹظˆطھط±';
       case 'store':
-        return 'المتجر';
+        return 'ط§ظ„ظ…طھط¬ط±';
       default:
         return null;
     }

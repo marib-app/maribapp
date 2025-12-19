@@ -422,6 +422,9 @@
         review: "{{ __('Review') }}",
         underReview: "{{ __('Under Review') }}",
         soldOut: "{{ __('Sold Out') }}",
+        report: "{{ __('Report') }}",
+        reportReason: "{{ __('Report reason') }}",
+        userReport: "{{ __('User report') }}",
 
     };
     const servicesFilterForm = $('#servicesFilterForm');
@@ -482,6 +485,57 @@
             default:
                 return '<span class="badge bg-warning text-dark">' + LABELS.pending + '</span>';
         }
+    }
+
+    function reviewServiceFormatter(value, row) {
+        const title = value || row?.service?.title || LABELS.notAvailable;
+        const id = row?.service?.id;
+        const safeTitle = escapeHtml(title);
+        if (id) {
+            const href = `${SERVICES_BASE_URL}/${id}`;
+            return `<a href="${href}" class="fw-semibold text-decoration-none">${safeTitle}</a>`;
+        }
+        return safeTitle;
+    }
+
+    function reviewUserFormatter(value, row) {
+        const name = value || row?.user?.name || LABELS.notAvailable;
+        return `<div class="d-flex align-items-center gap-2"><i class="bi bi-person-circle text-secondary"></i><span>${escapeHtml(name)}</span></div>`;
+    }
+
+    function reviewRatingFormatter(value, row) {
+        if (row?.is_report || value === 'report') {
+            return `<span class="badge bg-warning-subtle text-warning border border-warning-subtle">${LABELS.report}</span>`;
+        }
+        const numeric = Number(value);
+        if (!Number.isFinite(numeric)) {
+            return escapeHtml(value ?? LABELS.notAvailable);
+        }
+        return `<span class="fw-semibold">${numeric.toFixed(1)}</span> <i class="bi bi-star-fill text-warning"></i>`;
+    }
+
+    function reviewStatusFormatter(value, row) {
+        if (row?.is_report || value === 'report') {
+            return `<span class="badge bg-warning text-dark"><i class="bi bi-flag-fill me-1"></i>${LABELS.report}</span>`;
+        }
+        return reviewStatusBadge(value);
+    }
+
+    function reviewTextFormatter(value, row) {
+        const text = (value ?? '').toString().trim();
+        const label = row?.is_report ? LABELS.reportReason : LABELS.review;
+        const icon = row?.is_report ? 'bi-flag' : 'bi-chat-dots';
+        const content = text !== '' ? escapeHtml(text) : LABELS.userReport;
+        const accent = row?.is_report ? 'text-warning' : 'text-secondary';
+        return `
+            <div class="d-flex align-items-start gap-2" dir="auto">
+                <i class="bi ${icon} ${accent}"></i>
+                <div class="text-break">
+                    <div class="small text-muted">${label}</div>
+                    <div class="fw-semibold">${content}</div>
+                </div>
+            </div>
+        `;
     }
 
 
@@ -905,6 +959,11 @@
     window.categoryReviewsQueryParams = categoryReviewsQueryParams;
 
     window.deleteService = deleteService;
+    window.reviewServiceFormatter = reviewServiceFormatter;
+    window.reviewUserFormatter = reviewUserFormatter;
+    window.reviewRatingFormatter = reviewRatingFormatter;
+    window.reviewStatusFormatter = reviewStatusFormatter;
+    window.reviewTextFormatter = reviewTextFormatter;
 
 
 </script>

@@ -227,6 +227,9 @@ class ItemModel {
   User? user;
   List<GalleryImages>? galleryImages;
   List<ItemOffers>? itemOffers;
+  Map<String, dynamic>? stockSnapshot;
+  int? availableStock;
+  int? remainingStock;
   CategoryModel? category;
   List<CustomFieldModel>? customFields;
   ItemTipsMetadata? tips;
@@ -318,6 +321,9 @@ class ItemModel {
     this.review,
     this.currency,
     this.isPurchased,
+    this.stockSnapshot,
+    this.availableStock,
+    this.remainingStock,
   }) {
     this.latitude = latitude;
     this.longitude = longitude;

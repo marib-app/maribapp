@@ -3952,6 +3952,7 @@ class ApiController extends Controller {
             }
 
 
+            // Determine department: prefer client hint, fallback to category mapping
             $item = Item::select(['id', 'category_id'])->find($request->item_id);
             $categoryId = $item?->category_id;
 
@@ -3964,7 +3965,8 @@ class ApiController extends Controller {
                 ResponseService::errorResponse(__('The selected item could not be found.'));
             }
 
-            $department = $this->resolveReportDepartment($categoryId);
+            $clientDepartment = $request->input('department') ?? $request->input('report_department');
+            $department = $clientDepartment ?: $this->resolveReportDepartment($categoryId);
 
             if (empty($department)) {
                 ResponseService::errorResponse(__('Unable to determine the department for this report.'));

@@ -1,4 +1,5 @@
 ﻿import 'package:marib/ui/screens/auth/sign_up/mobile_signup_screen.dart';
+import 'package:flutter/material.dart';
 import 'package:marib/ui/screens/auth/sign_up/mobile_verification_screen.dart';
 import 'package:marib/ui/screens/cart/adress.dart';
 import 'package:marib/ui/screens/cart/delivery_and_payment.dart';
@@ -31,7 +32,6 @@ import 'package:marib/ui/screens/location/countries_screen.dart';
 import 'package:marib/ui/screens/location/states_screen.dart';
 import 'package:marib/ui/screens/seller/seller_verification_complete.dart';
 import 'package:marib/ui/screens/other/faqs_screen.dart';
-import 'package:marib/ui/screens/location_permission_screen.dart';
 import 'package:marib/ui/screens/my_review_screen.dart';
 import 'package:marib/ui/screens/sold_out_bought_screen.dart';
 import 'package:marib/ui/screens/support_screen.dart';
@@ -444,8 +444,11 @@ class Routes {
         return LanguagesListScreen.route(routeSettings);
       case contactUs:
         return ContactUs.route(routeSettings);
-      case locationPermissionScreen:
-        return LocationPermissionScreen.route(routeSettings);
+    case locationPermissionScreen:
+      return _buildFadeBlurOverlay(
+        settings: routeSettings,
+        builder: (context) => const Scaffold(),
+      );
       case profileSettings:
         return ProfileSettings.route(routeSettings);
       case filterScreen:

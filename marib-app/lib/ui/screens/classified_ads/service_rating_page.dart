@@ -1,27 +1,27 @@
-import 'package:flutter/foundation.dart';
-
+﻿import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'dart:ui';
-import 'package:marib/data/model/seller_ratings_model.dart' show UserRatings;
-import 'widgets/comments.dart';
-import 'widgets/addrating.dart';
-
-// ✅ أضفنا ربط بيانات التقييم العام من السيرفر
-import 'widgets/service_ratings_api.dart';
 import 'package:marib/app/routes.dart';
 import 'package:marib/data/model/seller_ratings_model.dart' show UserRatings;
+import 'package:marib/ui/theme/theme.dart';
+import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/hive_utils.dart';
+import 'widgets/addrating.dart';
+import 'widgets/comments.dart';
+import 'widgets/service_ratings_api.dart';
+
+String _tr(BuildContext context, String ar, String en) =>
+    Directionality.of(context) == TextDirection.rtl ? ar : en;
 
 const Map<int, int> _emptyRatingDistribution = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0};
 
 class ServiceRatingPage extends StatefulWidget {
   const ServiceRatingPage({super.key});
 
-  /// مفتاح قائمة التعليقات لنداء reload()
+  /// ظ…ظپطھط§ط­ ظ‚ط§ط¦ظ…ط© ط§ظ„طھط¹ظ„ظٹظ‚ط§طھ ظ„ظ†ط¯ط§ط، reload()
   static final GlobalKey<ItemCommentsListState> commentsKey =
       GlobalKey<ItemCommentsListState>();
 
-  /// ناشر بسيط لإعادة بناء كرت التقييم العام بعد إضافة تقييم
+  /// ظ†ط§ط´ط± ط¨ط³ظٹط· ظ„ط¥ط¹ط§ط¯ط© ط¨ظ†ط§ط، ظƒط±طھ ط§ظ„طھظ‚ظٹظٹظ… ط§ظ„ط¹ط§ظ… ط¨ط¹ط¯ ط¥ط¶ط§ظپط© طھظ‚ظٹظٹظ…
   static final ValueNotifier<int> headerRefresh = ValueNotifier<int>(0);
 
   @override
@@ -61,8 +61,9 @@ class _ServiceRatingPageState extends State<ServiceRatingPage> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bool isRtl = Directionality.of(context) == TextDirection.rtl;
+    String _t(String ar, String en) => isRtl ? ar : en;
 
-    // 🟢 القيم القادمة عبر Route
     final args = (ModalRoute.of(context)?.settings.arguments as Map?)
             ?.cast<String, dynamic>() ??
         const {};
@@ -83,7 +84,8 @@ class _ServiceRatingPageState extends State<ServiceRatingPage> {
     final int? sellerIdArg =
         sellerIdRaw is String ? int.tryParse(sellerIdRaw) : sellerIdRaw as int?;
     final String serviceTitleResolved =
-        (args['serviceTitle'] as String?)?.trim() ?? 'بدون عنوان';
+        (args['serviceTitle'] as String?)?.trim() ??
+            _t('بدون عنوان', 'Untitled service');
 
     final dynamic serviceUidRaw = args['serviceUid'] ?? args['service_uid'];
     final String? serviceUidArg = serviceUidRaw is String
@@ -98,19 +100,17 @@ class _ServiceRatingPageState extends State<ServiceRatingPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('تقييم الخدمة',
+        title: Text(_t('تقييم الخدمة', 'Rate service'),
             style: TextStyle(color: isDark ? Colors.white : Colors.black)),
         backgroundColor: isDark ? Colors.black : Colors.white,
         iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
         elevation: 0,
       ),
 
-      /// ✅ محتوى الصفحة
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            /// ✅ كرت التقييم العام — نفس الشكل، لكن القيم من السيرفر
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: ValueListenableBuilder<int>(
@@ -162,14 +162,20 @@ class _ServiceRatingPageState extends State<ServiceRatingPage> {
                       _scheduleCanReviewUpdate(result.canReview);
                       _scheduleServiceIdUpdate(result.serviceId);
                       final list = result.list;
+                      final cached = ItemCommentsListState.cachedRatings(
+                        serviceId: _serviceId ?? effectiveServiceId,
+                        serviceUid: serviceUidArg,
+                      );
+                      final effectiveList =
+                          list.isNotEmpty ? list : cached;
 
-                      final summary = _summaryFrom(list);
+                      final summary = _summaryFrom(effectiveList);
                       final double ratingValue =
-                          (result.averageRating > 0 || list.isEmpty)
+                          (result.averageRating > 0 || effectiveList.isEmpty)
                               ? result.averageRating
                               : summary.avg;
                       final int ratingCount =
-                          result.totalReviews >= summary.count
+                          result.totalReviews >= summary.count && summary.count > 0
                               ? result.totalReviews
                               : summary.count;
                       return OverallRatingSection(
@@ -184,12 +190,11 @@ class _ServiceRatingPageState extends State<ServiceRatingPage> {
               ),
             ),
 
-            // ✅ العنوان "آراء العملاء" — ثابت مع فلترة (حاليًا نعمل reload فقط)
+            // âœ… ط§ظ„ط¹ظ†ظˆط§ظ† "ط¢ط±ط§ط، ط§ظ„ط¹ظ…ظ„ط§ط،" â€” ط«ط§ط¨طھ ظ…ط¹ ظپظ„طھط±ط© (ط­ط§ظ„ظٹظ‹ط§ ظ†ط¹ظ…ظ„ reload ظپظ‚ط·)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: CommentsListSection(
                 onFilter: (value) {
-                  // لو رغبت تفعيل الفرز فعليًا، مرر value إلى reload(sort: value)
                   ServiceRatingPage.commentsKey.currentState?.reload();
                 },
               ),
@@ -197,7 +202,7 @@ class _ServiceRatingPageState extends State<ServiceRatingPage> {
 
             const SizedBox(height: 8),
 
-            // ✅ قائمة التعليقات — مربوطة بالسيرفر
+            // âœ… ظ‚ط§ط¦ظ…ط© ط§ظ„طھط¹ظ„ظٹظ‚ط§طھ â€” ظ…ط±ط¨ظˆط·ط© ط¨ط§ظ„ط³ظٹط±ظپط±
             Expanded(
               child: !hasLookupKey
                   ? const Center(
@@ -209,13 +214,16 @@ class _ServiceRatingPageState extends State<ServiceRatingPage> {
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       onCanReviewChanged: _updateCanReview,
                       onServiceIdResolved: _updateServiceId,
+                      onRatingsUpdated: (_) {
+                        ServiceRatingPage.headerRefresh.value++;
+                      },
                     ),
             ),
           ],
         ),
       ),
 
-      // ✅ زر إضافة تقييم — نفس الشكل. بعد الإرسال: نعيد تحميل التعليقات والرأس.
+      // âœ… ط²ط± ط¥ط¶ط§ظپط© طھظ‚ظٹظٹظ… â€” ظ†ظپط³ ط§ظ„ط´ظƒظ„. ط¨ط¹ط¯ ط§ظ„ط¥ط±ط³ط§ظ„: ظ†ط¹ظٹط¯ طھط­ظ…ظٹظ„ ط§ظ„طھط¹ظ„ظٹظ‚ط§طھ ظˆط§ظ„ط±ط£ط³.
       bottomNavigationBar: _buildAddRatingButton(
         context,
         serviceId: _serviceId ?? effectiveServiceId,
@@ -269,7 +277,8 @@ class _ServiceRatingPageState extends State<ServiceRatingPage> {
         ),
         const SizedBox(height: 8),
         Text(
-          'تعذّر تحميل التقييمات حالياً، جرّب التحديث لاحقاً.',
+          _tr(context, 'تعذر تحميل التقييمات حالياً، جرب التحديث لاحقاً.',
+              'Failed to load ratings, please try again.'),
           style: messageStyle,
           textAlign: TextAlign.start,
         ),
@@ -278,7 +287,7 @@ class _ServiceRatingPageState extends State<ServiceRatingPage> {
   }
 }
 
-// زر ثابت أسفل الشاشة لإضافة تقييم جديد (نفس تصميمك)
+// ط²ط± ط«ط§ط¨طھ ط£ط³ظپظ„ ط§ظ„ط´ط§ط´ط© ظ„ط¥ط¶ط§ظپط© طھظ‚ظٹظٹظ… ط¬ط¯ظٹط¯ (ظ†ظپط³ طھطµظ…ظٹظ…ظƒ)
 Widget _buildAddRatingButton(
   BuildContext context, {
   int? serviceId,
@@ -288,12 +297,14 @@ Widget _buildAddRatingButton(
   String? serviceUid,
 }) {
   final theme = Theme.of(context);
+  final colors = context.color;
+  final accent = colors.territoryColor;
+  final bool isRtl = Directionality.of(context) == TextDirection.rtl;
+  String _t(String ar, String en) => isRtl ? ar : en;
 
-  Widget buildInfoMessage(String message,
-      {IconData icon = Icons.info_outline}) {
-    final colorScheme = theme.colorScheme;
-    final bg = colorScheme.surfaceVariant.withOpacity(
-      theme.brightness == Brightness.dark ? 0.35 : 1,
+  Widget buildInfoMessage(String message, {IconData icon = Icons.info_outline}) {
+    final bg = colors.secondaryColor.withOpacity(
+      theme.brightness == Brightness.dark ? 0.4 : 0.7,
     );
 
     return Container(
@@ -302,17 +313,20 @@ Widget _buildAddRatingButton(
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colorScheme.outline.withOpacity(0.4)),
+        border: Border.all(color: colors.borderColor.withOpacity(0.35)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 22, color: colorScheme.primary),
+          Icon(icon, size: 22, color: accent),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               message,
-              style: theme.textTheme.bodyMedium?.copyWith(height: 1.4),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                height: 1.4,
+                color: colors.textColorDark,
+              ),
               textAlign: TextAlign.start,
             ),
           ),
@@ -331,22 +345,17 @@ Widget _buildAddRatingButton(
   }
 
   if (serviceId == null || serviceId <= 0) {
-    if (serviceUid != null && serviceUid.isNotEmpty) {
-      return wrapInfoMessage(
-        buildInfoMessage('جاري التحقق من الخدمة قبل السماح بإضافة تقييم...'),
-      );
-    }
-
-    return wrapInfoMessage(
-      buildInfoMessage('تعذّر تحديد الخدمة لإضافة تقييم.'),
-    );
+    final missing = _t(
+        'لا يمكن العثور على الخدمة الحالية لإضافة تقييم.',
+        'Cannot resolve the current service to add a rating.');
+    return wrapInfoMessage(buildInfoMessage(missing));
   }
 
   final bool isAuthenticated = HiveUtils.isUserAuthenticated();
 
   if (!isAuthenticated && canReview == false) {
     final info = buildInfoMessage(
-      'سجّل دخولك لإضافة تقييم جديد.',
+      _t('الرجاء تسجيل الدخول لإضافة تقييم.', 'Please log in to add a rating.'),
       icon: Icons.lock_outline,
     );
     return SafeArea(
@@ -362,7 +371,7 @@ Widget _buildAddRatingButton(
               height: 48,
               child: OutlinedButton.icon(
                 icon: const Icon(Icons.login),
-                label: const Text('سجّل دخولك'),
+                label: Text(_t('تسجيل الدخول', 'Log in')),
                 onPressed: () async {
                   await Navigator.pushNamed(
                     context,
@@ -385,13 +394,16 @@ Widget _buildAddRatingButton(
   if (canReview == false) {
     return wrapInfoMessage(
       buildInfoMessage(
-        'لا يمكنك إضافة تقييم حالياً. ربما أرسلت تقييماً سابقاً أو لا تملك صلاحية لذلك.',
+        _t('لقد قمت بتقييم هذه الخدمة مسبقاً، شكراً لمساهمتك.',
+            'You already rated this service, thank you.'),
         icon: Icons.info,
       ),
     );
   }
 
   final bool isLoading = canReview == null;
+  final loadingText = _t('جاري التحميل...', 'Loading...');
+  final actionText = _t('قيّم الخدمة', 'Rate service');
 
   return SafeArea(
     child: Padding(
@@ -403,19 +415,20 @@ Widget _buildAddRatingButton(
           icon: Icon(isLoading ? Icons.hourglass_top : Icons.rate_review,
               size: 22),
           label: Text(
-            isLoading ? 'جاري التحقق...' : 'إضافة تقييم',
+            isLoading ? loadingText : actionText,
             style: const TextStyle(fontSize: 16),
           ),
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFFF37A00),
-            foregroundColor: Colors.white,
+            backgroundColor: accent,
+            foregroundColor: colors.secondaryColor,
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
           onPressed: isLoading
               ? null
               : () async {
-                  final added = await showModalBottomSheet<bool>(
+                  final dynamic added =
+                      await showModalBottomSheet<dynamic>(
                     context: context,
                     isScrollControlled: true,
                     useSafeArea: true,
@@ -437,10 +450,21 @@ Widget _buildAddRatingButton(
                     ),
                   );
 
-                  if (added == true) {
-                    // 1) حدّث قائمة التعليقات
+                  if (added is Map) {
+                    final stars = (added['stars'] as num?)?.toDouble();
+                    final review = (added['review'] as String?)?.trim() ?? '';
+                    if (stars != null) {
+                      ServiceRatingPage.commentsKey.currentState
+                          ?.addLocalRating(
+                        stars: stars,
+                        review: review,
+                      );
+                      ServiceRatingPage.headerRefresh.value++;
+                    }
+                    // اترك التعليق المحلي ظاهر بدون إعادة تحميل فورية
+                    // (يمكن للمستخدم السحب للتحديث لاحقاً)
+                  } else if (added == true) {
                     ServiceRatingPage.commentsKey.currentState?.reload();
-                    // 2) وأعد بناء كرت الرأس
                     ServiceRatingPage.headerRefresh.value++;
                   }
                 },
@@ -449,8 +473,6 @@ Widget _buildAddRatingButton(
     ),
   );
 }
-
-// عنوان الخدمة (نفس واجهتك تمامًا)
 class OverallRatingSection extends StatelessWidget {
   final double ratingValue;
   final int ratingCount;
@@ -470,7 +492,8 @@ class OverallRatingSection extends StatelessWidget {
     final args =
         (ModalRoute.of(context)?.settings.arguments ?? const {}) as Map;
     final serviceTitleArg =
-        (args['serviceTitle'] as String?)?.trim() ?? 'بدون عنوان';
+        (args['serviceTitle'] as String?)?.trim() ??
+            _tr(context, 'بدون عنوان', 'Untitled service');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -479,9 +502,10 @@ class OverallRatingSection extends StatelessWidget {
           text: TextSpan(
             style: DefaultTextStyle.of(context).style.copyWith(fontSize: 12),
             children: [
-              const TextSpan(
-                  text: 'تقييمات المستخدمين لخدمة        ',
-                  style: TextStyle(fontWeight: FontWeight.w500)),
+              TextSpan(
+                  text: _tr(context, 'تقييمات المستخدمين لخدمة ',
+                      'User ratings for service '),
+                  style: const TextStyle(fontWeight: FontWeight.w500)),
               TextSpan(
                 text: serviceTitle,
                 style: const TextStyle(
@@ -526,7 +550,7 @@ class OverallRatingSection extends StatelessWidget {
                     }),
                   ),
                   const SizedBox(height: 4),
-                  Text('$ratingCount التقييمات',
+                  Text('$ratingCount ${_tr(context, 'تقييم', 'ratings')}',
                       style:
                           const TextStyle(fontSize: 12, color: Colors.black54)),
                 ],
@@ -577,7 +601,7 @@ class OverallRatingSection extends StatelessWidget {
   }
 }
 
-// حساب المتوسط والتوزيع من قائمة UserRatings (بدون أي تغيير في واجهتك)
+// ط­ط³ط§ط¨ ط§ظ„ظ…طھظˆط³ط· ظˆط§ظ„طھظˆط²ظٹط¹ ظ…ظ† ظ‚ط§ط¦ظ…ط© UserRatings (ط¨ط¯ظˆظ† ط£ظٹ طھط؛ظٹظٹط± ظپظٹ ظˆط§ط¬ظ‡طھظƒ)
 ({double avg, int count, Map<int, int> dist}) _summaryFrom(
     List<UserRatings> list) {
   if (list.isEmpty)
@@ -593,7 +617,7 @@ class OverallRatingSection extends StatelessWidget {
   return (avg: avg, count: list.length, dist: dist);
 }
 
-// نفس ويجت العنوان والفلترة التي عندك
+// ظ†ظپط³ ظˆظٹط¬طھ ط§ظ„ط¹ظ†ظˆط§ظ† ظˆط§ظ„ظپظ„طھط±ط© ط§ظ„طھظٹ ط¹ظ†ط¯ظƒ
 class CommentsListSection extends StatelessWidget {
   final ValueChanged<String>? onFilter;
 
@@ -602,28 +626,41 @@ class CommentsListSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
     final color = isDark ? Colors.white : Colors.black;
+    String _t(String ar, String en) => isRtl ? ar : en;
 
     return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          'آراء العملاء',
-          style: TextStyle(
-              color: color, fontWeight: FontWeight.w700, fontSize: 16),
+        Expanded(
+          child: Text(
+            _t('آراء العملاء', 'Reviews'),
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.w700,
+              fontSize: 16,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
-        const Spacer(),
         PopupMenuButton<String>(
           onSelected: (v) => onFilter?.call(v),
-          itemBuilder: (ctx) => const [
-            PopupMenuItem(value: 'default', child: Text('الافتراضي')),
-            PopupMenuItem(value: 'recent', child: Text('الأحدث')),
-            PopupMenuItem(value: 'top', child: Text('الأعلى تقييماً')),
+          itemBuilder: (ctx) => [
+            PopupMenuItem(
+                value: 'default', child: Text(_t('الافتراضي', 'Default'))),
+            PopupMenuItem(
+                value: 'recent', child: Text(_t('الأحدث', 'Recent'))),
+            PopupMenuItem(
+                value: 'top', child: Text(_t('الأعلى تقييماً', 'Top rated'))),
           ],
           child: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               Icon(Icons.sort, size: 18, color: color.withOpacity(0.8)),
               const SizedBox(width: 6),
-              Text('ترتيب', style: TextStyle(color: color.withOpacity(0.9))),
+              Text(_t('فرز', 'Sort'),
+                  style: TextStyle(color: color.withOpacity(0.9))),
             ],
           ),
         ),

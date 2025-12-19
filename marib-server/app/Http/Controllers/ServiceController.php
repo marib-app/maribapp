@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Http\UploadedFile;
 use App\Services\DepartmentReportService;
 use App\Models\ServiceRequest;
+use App\Models\UserReports;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -243,22 +244,35 @@ class ServiceController extends Controller
                 $sort = 'id';
             }
 
-            $total = (clone $reviewsQuery)->count();
+            $reviews = $reviewsQuery->orderBy($sort, $order)->get();
 
-            if ($limit <= 0) {
-                $reviews = $reviewsQuery->orderBy($sort, $order)->get();
-            } else {
-                $reviews = $reviewsQuery->orderBy($sort, $order)
-                    ->skip($offset)
-                    ->take($limit)
-                    ->get();
+            $serviceTitles = Service::whereIn('id', $serviceIds)
+                ->pluck('title', 'id');
+
+            $reportsQuery = UserReports::with(['user:id,name,profile'])
+                ->whereIn('item_id', $serviceIds)
+                ->department(DepartmentReportService::DEPARTMENT_SERVICES);
+
+            if ($search !== '') {
+                $reportsQuery->where(function ($q) use ($search) {
+                    $q->where('reason', 'like', "%{$search}%")
+                        ->orWhere('other_message', 'like', "%{$search}%")
+                        ->orWhereHas('user', function ($qu) use ($search) {
+                            $qu->where('name', 'like', "%{$search}%");
+                        });
+                });
             }
 
-            $rows = $reviews->map(function (ServiceReview $review) {
+            $reports = $reportsQuery->orderBy('created_at', $order)->get();
+
+            $reviewRows = $reviews->map(function (ServiceReview $review) {
                 return [
+                    'type' => 'review',
+                    'is_report' => false,
                     'id' => $review->id,
                     'rating' => $review->rating,
                     'status' => $review->status,
+                    'status_label' => $review->status,
                     'review' => $review->review,
                     'service' => $review->service ? [
                         'id' => $review->service->id,
@@ -271,11 +285,47 @@ class ServiceController extends Controller
                     ] : null,
                     'created_at' => optional($review->created_at)->toDateTimeString(),
                 ];
-            })->values();
+            });
+
+            $reportRows = $reports->map(function (UserReports $report) use ($serviceTitles) {
+                return [
+                    'type' => 'report',
+                    'is_report' => true,
+                    'id' => $report->id,
+                    'rating' => '-',
+                    'status' => 'report',
+                    'status_label' => __('Report'),
+                    'review' => trim($report->reason ?? $report->other_message ?? '') !== ''
+                        ? ($report->reason ?? $report->other_message ?? '')
+                        : __('User report'),
+                    'reason' => $report->reason,
+                    'other_message' => $report->other_message,
+                    'service' => [
+                        'id' => $report->item_id,
+                        'title' => $serviceTitles[$report->item_id] ?? __('Service #:id', ['id' => $report->item_id]),
+                    ],
+                    'user' => $report->user ? [
+                        'id' => $report->user->id,
+                        'name' => $report->user->name,
+                        'profile' => $report->user->profile,
+                    ] : null,
+                    'created_at' => optional($report->created_at)->toDateTimeString(),
+                ];
+            });
+
+            $combined = $reviewRows->concat($reportRows)
+                ->sortByDesc('created_at')
+                ->values();
+
+            $total = $combined->count();
+
+            if ($limit > 0) {
+                $combined = $combined->slice($offset, $limit)->values();
+            }
 
             return response()->json([
                 'total' => $total,
-                'rows' => $rows,
+                'rows' => $combined,
             ]);
         } catch (Throwable $th) {
             ResponseService::logErrorResponse($th, 'ServiceController -> categoryReviews');

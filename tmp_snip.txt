@@ -1,0 +1,80 @@
+        _requestFeaturedSections(
+          rootId: resolvedCategoryId,
+        );
+      }
+
+      // (ط§ط®طھظٹط§ط±ظٹ)
+      // Constant.itemFilter = null;
+      // searchbody = {};
+    } finally {
+      if (mounted) {
+        setState(() {
+          final bool wasShimmering = showShimmer;
+          showShimmer = false;
+          if (wasShimmering) {
+            _sliderRefreshToken++;
+          }
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final overlay = UiUtils.getSystemUiOverlayStyle(
+      context: context,
+      statusBarColor: context.color.secondaryColor,
+    );
+
+    final bool showCartAction = {
+      Constant.sheinRootCategoryId,
+      Constant.computerRootCategoryId,
+      Constant.storeRootCategoryId,
+    }.contains(_catId);
+
+    final VoidCallback? onCartTap =
+        showCartAction ? () => Navigator.pushNamed(context, Routes.cart) : null;
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: overlay,
+      child: BlocListener<FetchItemSummaryCubit, FetchItemSummaryState>(
+        listenWhen: (prev, curr) => prev.runtimeType != curr.runtimeType,
+        listener: (_, state) async {
+          if (!mounted) return;
+
+          if (state is FetchItemSummaryInitial ||
+              state is FetchItemSummaryLoading) {
+            debugPrint('[Realestate] state=Loading');
+            _sawLoading = true;
+            _loadingStart = DateTime.now();
+
+            setState(() {
+              showShimmer = true;
+              _showSlider = false; // ط§ط®ظپظگ ط´ط±ظٹط· ط§ظ„طھطµظ†ظٹظپط§طھ
+              _showAdSlider =
+                  _hasAdSlider; // ط­ط§ظپط¸ ط¹ظ„ظ‰ ط­ط§ظ„ط© ط§ظ„ط³ظ„ط§ظٹط¯ط± ط§ظ„ط¥ط¹ظ„ط§ظ†ظٹ
+            });
+            return;
+          }
+
+          if (state is FetchItemSummarySuccess) {
+            debugPrint('[Realestate] state=Success');
+
+            // ظپط±ط¶ ظ…ط¯ط© ط¯ظ†ظٹط§ ظ„ظ„ط´ظٹظ…ط±
+            final elapsed = _loadingStart == null
+                ? _minShimmer
+                : DateTime.now().difference(_loadingStart!);
+            final wait = elapsed >= _minShimmer
+                ? Duration.zero
+                : (_minShimmer - elapsed);
+
+            if (wait > Duration.zero) {
+              await Future.delayed(wait);
+              if (!mounted) return;
+            }
+
+            setState(() {
+              final bool wasShimmering = showShimmer;
+              showShimmer = false;
+              if (wasShimmering) {
+                _sliderRefreshToken++;

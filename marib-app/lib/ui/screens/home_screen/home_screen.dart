@@ -1,5 +1,6 @@
-// ignore_for_file: public_member_api_docs, sort_constructors_first
+﻿// ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:async';
+import 'dart:io';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:marib/app/routes.dart';
 import 'package:marib/utils/constant.dart';
@@ -38,7 +39,7 @@ import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/helper_utils.dart';
 //import 'package:marib/ui/code/section/sections/general_section_screen_paged.dart';
 
-import 'home_ui.dart'; // ← الواجهة المنفصلة
+import 'home_ui.dart'; // â†گ ط§ظ„ظˆط§ط¬ظ‡ط© ط§ظ„ظ…ظ†ظپطµظ„ط©
 
 const double sidePadding = 18;
 
@@ -59,31 +60,33 @@ class HomeScreenState extends State<HomeScreen>
   @override
   bool get wantKeepAlive => true;
 
-  /// ScrollController مع تنظيف صحيح + حارس منع التكرار
+  /// ScrollController ظ…ط¹ طھظ†ط¸ظٹظپ طµط­ظٹط­ + ط­ط§ط±ط³ ظ…ظ†ط¹ ط§ظ„طھظƒط±ط§ط±
   late final ScrollController _scrollController = ScrollController();
-  bool _isFetchingMore = false; // ← يمنع تكرار fetchMore عند الحافة
+  static bool _permissionsPromptShown = false;
+  bool _isFetchingMore = false; // â†گ ظٹظ…ظ†ط¹ طھظƒط±ط§ط± fetchMore ط¹ظ†ط¯ ط§ظ„ط­ط§ظپط©
 
-  /// ملاحظة: حذفت عناصر غير مستخدمة لتقليل الضوضاء والتسريبات:
+  /// ظ…ظ„ط§ط­ط¸ط©: ط­ط°ظپطھ ط¹ظ†ط§طµط± ط؛ظٹط± ظ…ط³طھط®ط¯ظ…ط© ظ„طھظ‚ظ„ظٹظ„ ط§ظ„ط¶ظˆط¶ط§ط، ظˆط§ظ„طھط³ط±ظٹط¨ط§طھ:
   /// - itemLocalList, isCategoryEmpty, _refreshIndicatorKey
 
   @override
   void initState() {
-    super.initState(); // ✅ ضع دائمًا أولاً
+    super.initState(); // âœ… ط¶ط¹ ط¯ط§ط¦ظ…ظ‹ط§ ط£ظˆظ„ط§ظ‹
     WidgetsBinding.instance.addObserver(this);
 
     initializeSettings();
     addPageScrollListener();
 
-    // ✅ تأجيل تهيئة خدمات الإشعارات وطلب الأذونات لما بعد أول إطار
+    // âœ… طھط£ط¬ظٹظ„ طھظ‡ظٹط¦ط© ط®ط¯ظ…ط§طھ ط§ظ„ط¥ط´ط¹ط§ط±ط§طھ ظˆط·ظ„ط¨ ط§ظ„ط£ط°ظˆظ†ط§طھ ظ„ظ…ط§ ط¨ط¹ط¯ ط£ظˆظ„ ط¥ط·ط§ط±
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      // طلب الإذن بعد الإطار الأول يقلل الإزعاج والمشاكل مع الـ context
+      // ط·ظ„ط¨ ط§ظ„ط¥ط°ظ† ط¨ط¹ط¯ ط§ظ„ط¥ط·ط§ط± ط§ظ„ط£ظˆظ„ ظٹظ‚ظ„ظ„ ط§ظ„ط¥ط²ط¹ط§ط¬ ظˆط§ظ„ظ…ط´ط§ظƒظ„ ظ…ط¹ ط§ظ„ظ€ context
       notificationPermissionChecker();
+      _showPermissionPromptIfNeeded();
       LocalAwsomeNotification().init(context);
       NotificationService.init(context);
     });
 
-    // ✅ تقليل استدعاءات context.read المتكررة
+    // âœ… طھظ‚ظ„ظٹظ„ ط§ط³طھط¯ط¹ط§ط،ط§طھ context.read ط§ظ„ظ…طھظƒط±ط±ط©
     final r = context.read;
     unawaited(r<SliderCubit>().fetchSlider(context));
     r<FetchCategoryCubit>().fetchCategories();
@@ -96,16 +99,16 @@ class HomeScreenState extends State<HomeScreen>
     }
 
     // if (HiveUtils.isUserAuthenticated()) {
-    //   fetchApiKeys(); // ← فعّلها إن كنت تحتاج مفاتيح فعلاً
+    //   fetchApiKeys(); // â†گ ظپط¹ظ‘ظ„ظ‡ط§ ط¥ظ† ظƒظ†طھ طھط­طھط§ط¬ ظ…ظپط§طھظٹط­ ظپط¹ظ„ط§ظ‹
     // }
 
-    // ✅ مستمع واحد منظّف في dispose
+    // âœ… ظ…ط³طھظ…ط¹ ظˆط§ط­ط¯ ظ…ظ†ط¸ظ‘ظپ ظپظٹ dispose
     _scrollController.addListener(_onScroll);
   }
 
   @override
   void dispose() {
-    // ✅ إزالة المستمع لتفادي تسريب الذاكرة
+    // âœ… ط¥ط²ط§ظ„ط© ط§ظ„ظ…ط³طھظ…ط¹ ظ„طھظپط§ط¯ظٹ طھط³ط±ظٹط¨ ط§ظ„ط°ط§ظƒط±ط©
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     NotificationService.disposeListeners();
@@ -131,14 +134,14 @@ class HomeScreenState extends State<HomeScreen>
   }
 
   void addPageScrollListener() {
-    // homeScreenController.addListener(pageScrollListener); // ← غير مستخدم حالياً
+    // homeScreenController.addListener(pageScrollListener); // â†گ ط؛ظٹط± ظ…ط³طھط®ط¯ظ… ط­ط§ظ„ظٹط§ظ‹
   }
 
   void fetchApiKeys() {
     context.read<GetApiKeysCubit>().fetch();
   }
 
-  /// ✅ مستمع التمرير مع حارس لمنع التكرار + قراءة Hive مرة واحدة
+  /// âœ… ظ…ط³طھظ…ط¹ ط§ظ„طھظ…ط±ظٹط± ظ…ط¹ ط­ط§ط±ط³ ظ„ظ…ظ†ط¹ ط§ظ„طھظƒط±ط§ط± + ظ‚ط±ط§ط،ط© Hive ظ…ط±ط© ظˆط§ط­ط¯ط©
   void _onScroll() {
     if (!_scrollController.isEndReached()) return;
 
@@ -147,7 +150,7 @@ class HomeScreenState extends State<HomeScreen>
 
     _isFetchingMore = true;
 
-    // ✅ اقرأ القيم من Hive مرة واحدة لتقليل I/O
+    // âœ… ط§ظ‚ط±ط£ ط§ظ„ظ‚ظٹظ… ظ…ظ† Hive ظ…ط±ط© ظˆط§ط­ط¯ط© ظ„طھظ‚ظ„ظٹظ„ I/O
     final city = HiveUtils.getCityName();
     final areaId = HiveUtils.getAreaId();
     final radius = HiveUtils.getNearbyRadius();
@@ -169,6 +172,45 @@ class HomeScreenState extends State<HomeScreen>
         .whenComplete(() {
       _isFetchingMore = false;
     });
+  }
+
+  void _showPermissionPromptIfNeeded() {
+    if (_permissionsPromptShown || !HiveUtils.isUserAuthenticated()) return;
+    _permissionsPromptShown = true;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        return _PermissionPromptSheet(
+          onAllow: () async {
+            Navigator.of(sheetContext).pop();
+            await _requestCorePermissions();
+          },
+          onSkip: () => Navigator.of(sheetContext).pop(),
+        );
+      },
+    );
+  }
+
+  Future<void> _requestCorePermissions() async {
+    final List<Permission> permissions = <Permission>[
+      Permission.notification,
+      Permission.locationWhenInUse,
+      if (Platform.isAndroid) Permission.storage else Permission.photos,
+      Permission.camera,
+      Permission.microphone,
+    ];
+
+    for (final Permission perm in permissions) {
+      final PermissionStatus status = await perm.status;
+      if (status.isGranted) continue;
+      await perm.request();
+    }
   }
 
   @override
@@ -194,9 +236,9 @@ class HomeScreenState extends State<HomeScreen>
       userId: HiveUtils.getUserId()?.toString(),
       showWelcomeLine: true,
 
-      // بيانات البروفايل (بدل appBarLeading)
+      // ط¨ظٹط§ظ†ط§طھ ط§ظ„ط¨ط±ظˆظپط§ظٹظ„ (ط¨ط¯ظ„ appBarLeading)
       isAuthenticated: HiveUtils.isUserAuthenticated(),
-      name: HiveUtils.getUserId()?.toString() ?? 'زائر',
+      name: HiveUtils.getUserId()?.toString() ?? 'ط²ط§ط¦ط±',
       mobile: '',
       profileUrl: '',
       isVerified: false,
@@ -300,7 +342,7 @@ class HomeScreenState extends State<HomeScreen>
                 children: [
                   const SizedBox(height: 8),
                   Text(
-                    'تعذّر تحميل الصفحة الرئيسية',
+                    'طھط¹ط°ظ‘ط± طھط­ظ…ظٹظ„ ط§ظ„طµظپط­ط© ط§ظ„ط±ط¦ظٹط³ظٹط©',
                     style: Theme.of(context).textTheme.titleMedium,
                     textAlign: TextAlign.center,
                   ),
@@ -308,7 +350,7 @@ class HomeScreenState extends State<HomeScreen>
                   ElevatedButton(
                     onPressed: () =>
                         context.read<FetchHomeScreenCubit>().fetch(),
-                    child: const Text('إعادة المحاولة'),
+                    child: const Text('ط¥ط¹ط§ط¯ط© ط§ظ„ظ…ط­ط§ظˆظ„ط©'),
                   ),
                 ],
               ),
@@ -334,7 +376,7 @@ class HomeScreenState extends State<HomeScreen>
   }
 
   // =======================
-  // تنقلات الأقسام (عزل الدوال يقلل إنشاء Closures داخل build)
+  // طھظ†ظ‚ظ„ط§طھ ط§ظ„ط£ظ‚ط³ط§ظ… (ط¹ط²ظ„ ط§ظ„ط¯ظˆط§ظ„ ظٹظ‚ظ„ظ„ ط¥ظ†ط´ط§ط، Closures ط¯ط§ط®ظ„ build)
   // =======================
   bool _navLockRealEstate = false;
   final Duration _navThrottle = const Duration(milliseconds: 700);
@@ -344,23 +386,23 @@ class HomeScreenState extends State<HomeScreen>
     _navLockRealEstate = true;
 
     try {
-      // 1) تجهيز خفيف قبل التنقّل لتقليل التقطيع:
-      // - لو عندك صورة أول شاشة في صفحة العقار، حضّرها هنا (اختياري).
-      // - precacheImage يساعد GPU/Cache ويخفّف jank أول فريم.
-      // مثال (عدّل المسار إن لديك Banner أولي في شاشة العقار):
+      // 1) طھط¬ظ‡ظٹط² ط®ظپظٹظپ ظ‚ط¨ظ„ ط§ظ„طھظ†ظ‚ظ‘ظ„ ظ„طھظ‚ظ„ظٹظ„ ط§ظ„طھظ‚ط·ظٹط¹:
+      // - ظ„ظˆ ط¹ظ†ط¯ظƒ طµظˆط±ط© ط£ظˆظ„ ط´ط§ط´ط© ظپظٹ طµظپط­ط© ط§ظ„ط¹ظ‚ط§ط±طŒ ط­ط¶ظ‘ط±ظ‡ط§ ظ‡ظ†ط§ (ط§ط®طھظٹط§ط±ظٹ).
+      // - precacheImage ظٹط³ط§ط¹ط¯ GPU/Cache ظˆظٹط®ظپظ‘ظپ jank ط£ظˆظ„ ظپط±ظٹظ….
+      // ظ…ط«ط§ظ„ (ط¹ط¯ظ‘ظ„ ط§ظ„ظ…ط³ط§ط± ط¥ظ† ظ„ط¯ظٹظƒ Banner ط£ظˆظ„ظٹ ظپظٹ ط´ط§ط´ط© ط§ظ„ط¹ظ‚ط§ط±):
       // await precacheImage(const AssetImage('assets/realestate/hero.jpg'), context);
 
-      // 2) (اختياري) Prefetch بيانات أولية لو عندك Cubit/Repo يدعم:
-      // يشغّل جلبًا خفيفًا في الخلفية قبل التنقّل بحيث الشاشة التالية تلاقي بيانات جاهزة.
+      // 2) (ط§ط®طھظٹط§ط±ظٹ) Prefetch ط¨ظٹط§ظ†ط§طھ ط£ظˆظ„ظٹط© ظ„ظˆ ط¹ظ†ط¯ظƒ Cubit/Repo ظٹط¯ط¹ظ…:
+      // ظٹط´ط؛ظ‘ظ„ ط¬ظ„ط¨ظ‹ط§ ط®ظپظٹظپظ‹ط§ ظپظٹ ط§ظ„ط®ظ„ظپظٹط© ظ‚ط¨ظ„ ط§ظ„طھظ†ظ‚ظ‘ظ„ ط¨ط­ظٹط« ط§ظ„ط´ط§ط´ط© ط§ظ„طھط§ظ„ظٹط© طھظ„ط§ظ‚ظٹ ط¨ظٹط§ظ†ط§طھ ط¬ط§ظ‡ط²ط©.
       // try {
       //   await context.read<FetchItemFromCategoryCubit>().prefetch(categoryId: "1");
       // } catch (_) {}
 
-      // 3) (اختياري) لمسة اهتزاز خفيفة UX
-      // if (await HapticFeedback.vibrate() is Future) { /* لا شيء */ }
+      // 3) (ط§ط®طھظٹط§ط±ظٹ) ظ„ظ…ط³ط© ط§ظ‡طھط²ط§ط² ط®ظپظٹظپط© UX
+      // if (await HapticFeedback.vibrate() is Future) { /* ظ„ط§ ط´ظٹط، */ }
       // HapticFeedback.selectionClick();
 
-      // 4) التنقّل الفعلي (نفس المسار ونفس المفاتيح تمامًا)
+      // 4) ط§ظ„طھظ†ظ‚ظ‘ظ„ ط§ظ„ظپط¹ظ„ظٹ (ظ†ظپط³ ط§ظ„ظ…ط³ط§ط± ظˆظ†ظپط³ ط§ظ„ظ…ظپط§طھظٹط­ طھظ…ط§ظ…ظ‹ط§)
       await Navigator.pushNamed(
         context,
         Routes.section_screen,
@@ -372,10 +414,10 @@ class HomeScreenState extends State<HomeScreen>
         },
       );
 
-      // 5) بعد الرجوع (اختياري): حدّث جزء من الصفحة لو لزم
+      // 5) ط¨ط¹ط¯ ط§ظ„ط±ط¬ظˆط¹ (ط§ط®طھظٹط§ط±ظٹ): ط­ط¯ظ‘ط« ط¬ط²ط، ظ…ظ† ط§ظ„طµظپط­ط© ظ„ظˆ ظ„ط²ظ…
       // context.read<FetchHomeScreenCubit>().refreshIfNeeded();
     } finally {
-      // فك القفل بعد فترة قصيرة لمنع السبام وتحسين السلاسة
+      // ظپظƒ ط§ظ„ظ‚ظپظ„ ط¨ط¹ط¯ ظپطھط±ط© ظ‚طµظٹط±ط© ظ„ظ…ظ†ط¹ ط§ظ„ط³ط¨ط§ظ… ظˆطھط­ط³ظٹظ† ط§ظ„ط³ظ„ط§ط³ط©
       await Future.delayed(_navThrottle);
       _navLockRealEstate = false;
     }
@@ -435,11 +477,144 @@ class HomeScreenState extends State<HomeScreen>
   }
 }
 
+class _PermissionPromptSheet extends StatelessWidget {
+  const _PermissionPromptSheet({
+    required this.onAllow,
+    required this.onSkip,
+  });
+
+  final VoidCallback onAllow;
+  final VoidCallback onSkip;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
+    Widget tile(IconData icon, String title, String subtitle) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: colors.primary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: colors.primary, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: theme.textTheme.titleSmall
+                        ?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colors.onSurface.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+          top: 16,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: colors.onSurface.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'فعّل أفضل التجربة',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'بضغطة واحدة نفعّل الأذونات الضرورية علشان توصلك التنبيهات وتظهر النتائج الأقرب وتقدر ترفع ملفاتك وتسجّل صوت/فيديو.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colors.onSurface.withValues(alpha: 0.75),
+              ),
+            ),
+            const SizedBox(height: 18),
+            tile(Icons.notifications_active_rounded, 'الإشعارات',
+                'علشان نرسل لك العروض والتنبيهات المهمة في وقتها.'),
+            tile(Icons.place_rounded, 'الموقع الجغرافي',
+                'لإظهار الإعلانات والخدمات الأقرب لك وتحديد التوصيل بدقة.'),
+            tile(Icons.photo_library_rounded, 'الصور والملفات',
+                'لرفع صور المنتجات والمستندات بدون خطوات إضافية.'),
+            tile(Icons.mic_none_rounded, 'الكاميرا والمايك',
+                'لتسجيل الملاحظات الصوتية أو مكالمات الدعم والشات.'),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: onAllow,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colors.primary,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: Text(
+                  'تفعيل الآن',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: colors.onPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Center(
+              child: TextButton(
+                onPressed: onSkip,
+                child: const Text('لاحقاً'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // =============
-// أذونات الإشعارات
+// ط£ط°ظˆظ†ط§طھ ط§ظ„ط¥ط´ط¹ط§ط±ط§طھ
 // =============
 Future<void> notificationPermissionChecker() async {
-  // ✅ طلب الإذن عند الحاجة فقط
+  // âœ… ط·ظ„ط¨ ط§ظ„ط¥ط°ظ† ط¹ظ†ط¯ ط§ظ„ط­ط§ط¬ط© ظپظ‚ط·
   if (!(await Permission.notification.isGranted)) {
     await Permission.notification.request();
   }

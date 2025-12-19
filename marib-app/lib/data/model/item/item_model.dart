@@ -70,14 +70,30 @@ class ItemSummary {
   });
 
   factory ItemSummary.fromJson(Map<String, dynamic> json) {
+    final ItemDiscount? discount = ItemDiscount.fromJson(json['discount']);
+    final double? basePrice = ItemModel._toDouble(json['price']);
+    double? finalPrice = ItemModel._toDouble(json['final_price']) ?? basePrice;
+
+    // إذا يوجد خصم مفعّل احسب السعر المخفض حتى لو لم يرسله الخادم
+    if (discount != null && discount.value != null && basePrice != null) {
+      final bool isFixed =
+          (discount.type ?? '').toLowerCase() == 'fixed';
+      final double discounted = isFixed
+          ? (basePrice - discount.value!).clamp(0, basePrice)
+          : (basePrice - (basePrice * (discount.value! / 100)))
+              .clamp(0, basePrice);
+      if (discounted < (finalPrice ?? basePrice)) {
+        finalPrice = discounted;
+      }
+    }
+
     return ItemSummary(
       id: ItemModel._toInt(json['id']),
       name: json['name'],
       slug: json['slug'],
       description: json['description'],
-      price: ItemModel._toDouble(json['price']),
-      finalPrice: ItemModel._toDouble(json['final_price']) ??
-          ItemModel._toDouble(json['price']),
+      price: basePrice,
+      finalPrice: finalPrice,
       image: json['image'] ??
           json['thumbnail_fallback_url'] ??
           json['thumbnail_url'],
@@ -104,7 +120,7 @@ class ItemSummary {
       city: json['city'],
       state: json['state'],
       country: json['country'],
-      discount: ItemDiscount.fromJson(json['discount']),
+      discount: discount,
     );
   }
 
@@ -427,7 +443,7 @@ class ItemModel {
 
     // price يدعم int/double/String
     m.price = _toDouble(json['price']);
-    m.finalPrice = _toDouble(json['final_price']) ?? m.price;
+    m.finalPrice = _toDouble(json['final_price']);
 
     m.id = json['id'];
     m.name = json['name'];

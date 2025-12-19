@@ -214,7 +214,6 @@ Route::group(['middleware' => ['auth:sanctum']], static function () {
     Route::prefix('storefront')->group(function (): void {
         Route::post('stores/{store}/follow', [StorefrontController::class, 'follow']);
         Route::post('stores/{store}/unfollow', [StorefrontController::class, 'unfollow']);
-        Route::get('stores/{store}/follow-status', [StorefrontController::class, 'followStatus']);
     });
 
     Route::patch('addresses/{address}/default', [AddressController::class, 'setDefault'])
@@ -352,6 +351,7 @@ Route::prefix('storefront')->group(function (): void {
     Route::get('stores/{store}', [StorefrontController::class, 'show']);
     Route::get('stores/{store}/products', [StorefrontController::class, 'products']);
     Route::get('stores/{store}/manual-banks', [StorefrontController::class, 'manualBankAccounts']);
+    Route::get('stores/{store}/follow-status', [StorefrontController::class, 'followStatus']);
 });
 
     

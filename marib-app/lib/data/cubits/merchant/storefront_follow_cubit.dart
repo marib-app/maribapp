@@ -130,22 +130,38 @@ class StorefrontFollowCubit extends Cubit<StorefrontFollowState> {
   Future<void> _refreshFromServer() async {
     final String? identifier = _normalizeIdentifier(_storeId);
     if (identifier == null) return;
+    bool isFollowing = state.isFollowing;
+    int followersCount = state.followersCount;
+
     try {
       final StorefrontFollowResult status =
           await _repository.status(identifier);
+      isFollowing = status.isFollowing;
+      if (status.followersCount != null) {
+        followersCount = status.followersCount!;
+      }
+    } catch (_) {
+      // ignore, fall back to store fetch
+    }
+
+    try {
       final StorefrontDetails fresh =
           await _storefrontRepository.fetchStore(identifier);
-      emit(
-        state.copyWith(
-          isFollowing: status.isFollowing || fresh.isFollowed,
-          followersCount:
-              status.followersCount ?? fresh.followersCount ?? state.followersCount,
-          isLoading: false,
-        ),
-      );
+      isFollowing = fresh.isFollowed || isFollowing;
+      if (fresh.followersCount != null) {
+        followersCount = fresh.followersCount!;
+      }
     } catch (_) {
-      // Silent fallback: keep optimistic state.
+      // ignore, keep whatever we have
     }
+
+    emit(
+      state.copyWith(
+        isFollowing: isFollowing,
+        followersCount: followersCount,
+        isLoading: false,
+      ),
+    );
   }
 
   String? _normalizeIdentifier(dynamic raw) {

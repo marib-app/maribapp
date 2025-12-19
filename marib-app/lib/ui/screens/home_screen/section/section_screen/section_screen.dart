@@ -1092,12 +1092,6 @@ class Section_screenState extends State<Section_screen> {
           return _buildStorefrontHeaderFromDetails(state.details);
         }
 
-        if (snapshot != null &&
-            (state is StorefrontLoading || state is StorefrontInitial)) {
-          // Avoid showing endless shimmer when we already have snapshot data.
-          return _buildStorefrontHeaderFromDetails(snapshot);
-        }
-
         if (state is StorefrontFailure) {
           if (snapshot != null) {
             return _buildStorefrontHeaderFromDetails(snapshot);

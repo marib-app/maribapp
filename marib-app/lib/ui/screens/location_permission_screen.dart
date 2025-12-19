@@ -45,6 +45,7 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> wit
     _fadeController = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 600));
     _fadeController.forward();
+    _bypassPermissionScreen();
     super.initState();
   }
 
@@ -117,6 +118,14 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> wit
     } finally {
       setState(() => _isLoading = false);
     }
+  }
+
+  void _bypassPermissionScreen() {
+    // تجاوز عرض شاشة إذن الموقع والانتقال مباشرة بالإعدادات الافتراضية
+    Future.microtask(() async {
+      if (!mounted) return;
+      await _setDefaultLocationAndNavigate();
+    });
   }
 
 
@@ -380,5 +389,4 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> wit
   }
 
 }
-
 

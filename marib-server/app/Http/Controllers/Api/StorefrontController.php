@@ -227,15 +227,16 @@ class StorefrontController extends Controller
         if ($storeModel === null) {
             return response()->json(['message' => 'Store not found'], 404);
         }
-        $user = $request->user();
 
-        if (!$user) {
+        $currentUser = $this->resolveCurrentUser($request);
+        $viewerId = $this->resolveViewerId($request, $currentUser);
+        if ($viewerId === null) {
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
         $isFollowing = StoreFollower::query()
             ->where('store_id', $storeModel->getKey())
-            ->where('user_id', $user->getKey())
+            ->where('user_id', $viewerId)
             ->exists();
 
         $followersCount = $storeModel->followers()->count();
@@ -317,7 +318,8 @@ class StorefrontController extends Controller
             'slug' => $store->slug,
             'description' => $includeDetails ? $store->description : null,
             'logo_url' => $this->resolveMediaUrl($store->logo_path),
-            'banner_url' => $this->resolveMediaUrl($store->banner_path),
+            'banner_url' => $this->resolveMediaUrl($store->banner_path)
+                ?? $this->resolveMediaUrl($store->logo_path),
             'status' => $statusPayload,
             'followers_count' => $followersCount,
             'is_followed' => $isFollowed,

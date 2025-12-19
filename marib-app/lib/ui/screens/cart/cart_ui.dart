@@ -1084,12 +1084,12 @@ class CartUI extends StatelessWidget {
               }
 
               final List<Widget> headerChildren = [];
-              if (storeStatus.hasData) {
-                headerChildren.add(
-                  StoreStatusCard(
-                    store: storeStatus,
-                    moneyFormatter: moneyFormatter,
-                    showManualBanks: true,
+    if (storeStatus.hasData && storeStatus.isOpenNow) {
+      headerChildren.add(
+        StoreStatusCard(
+          store: storeStatus,
+          moneyFormatter: moneyFormatter,
+          showManualBanks: true,
                   ),
                 );
                 headerChildren.add(const SizedBox(height: 8));

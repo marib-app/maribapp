@@ -395,7 +395,8 @@ class ItemDetailsSection extends StatelessWidget {
           children: [
             Expanded(
               child: _PriceInline(
-                price: item.price,
+                price: item.finalPrice ?? item.price,
+                originalPrice: item.price,
                 currency: item.currency,
                 currencyCode: item.currencyCode,
                 textColor: context.color.textDefaultColor,
@@ -548,6 +549,7 @@ Widget favButton({required ItemModel item, required double size}) {
 /// ✅ ويدجت سعر مبسط (بدون شيمر)
 class _PriceInline extends StatelessWidget {
   final num? price;
+  final num? originalPrice;
   final String? currency;
   final String? currencyCode;
   final Color textColor;
@@ -557,6 +559,7 @@ class _PriceInline extends StatelessWidget {
 
   const _PriceInline({
     required this.price,
+    this.originalPrice,
     required this.currency,
     required this.textColor,
     required this.priceColor,
@@ -574,6 +577,18 @@ class _PriceInline extends StatelessWidget {
           _priceLabel,
           style: style.copyWith(color: priceColor),
         ).bold(),
+        if (_showOriginal)
+          Padding(
+            padding: EdgeInsetsDirectional.only(start: spacing / 1.5),
+            child: Text(
+              _originalLabel,
+              style: style.copyWith(
+                color: textColor.withOpacity(0.6),
+                decoration: TextDecoration.lineThrough,
+                fontSize: (style.fontSize ?? 14) * 0.9,
+              ),
+            ),
+          ),
         SizedBox(width: spacing),
         Text(
           _currencyLabel,
@@ -592,6 +607,17 @@ class _PriceInline extends StatelessWidget {
       return 'غير متوفر';
     }
     return formatted;
+  }
+
+  String get _originalLabel {
+    return HelperUtils.formatPrice(originalPrice);
+  }
+
+  bool get _showOriginal {
+    if (originalPrice == null || price == null) return false;
+    final double current = price!.toDouble();
+    final double original = originalPrice!.toDouble();
+    return original > 0 && current >= 0 && original > current;
   }
 
   String get _currencyLabel {

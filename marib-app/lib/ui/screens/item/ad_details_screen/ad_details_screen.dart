@@ -664,11 +664,33 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
           _resolveVariantStockForSelections(options, sanitized);
       _selectedQuantity = 1;
       _enforceQuantityConstraints();
+
+      double finalPrice = options.finalPrice;
+      ItemDiscount? effectiveDiscount = _forceActiveDiscount(options.discount);
+      final double? computedDiscounted = _computeDiscountedPrice(
+        basePrice: options.basePrice,
+        discount: effectiveDiscount,
+      );
+      if (computedDiscounted != null) {
+        finalPrice = computedDiscounted;
+      } else if (options.finalPrice < options.basePrice &&
+          options.basePrice > 0) {
+        final double diff = options.basePrice - options.finalPrice;
+        final double percent = (diff / options.basePrice) * 100;
+        effectiveDiscount ??= ItemDiscount(
+          type: 'percent',
+          value: percent,
+          start: DateTime.now(),
+          end: DateTime.now().add(const Duration(days: 30)),
+          isActive: true,
+        );
+        finalPrice = options.finalPrice;
+      }
+
       _currentItem = _currentItem.copyWith(
         price: options.basePrice,
-        finalPrice: options.finalPrice,
-        discount: _forceActiveDiscount(options.discount) ??
-            _currentItem.discount,
+        finalPrice: finalPrice,
+        discount: effectiveDiscount ?? _currentItem.discount,
       );
     }
 
@@ -963,6 +985,25 @@ class AdDetailsScreenState extends CloudState<AdDetailsScreen> {
       end: discount.end,
       isActive: true,
     );
+  }
+
+  double? _computeDiscountedPrice({
+    required double basePrice,
+    required ItemDiscount? discount,
+  }) {
+    if (basePrice <= 0 || discount == null || discount.value == null) {
+      return null;
+    }
+    final double value = discount.value!;
+    double discounted;
+    if ((discount.type ?? '').toLowerCase() == 'fixed') {
+      discounted = (basePrice - value).clamp(0, basePrice);
+    } else {
+      // percent
+      discounted = basePrice - (basePrice * (value / 100));
+      if (discounted < 0) discounted = 0;
+    }
+    return discounted;
   }
 
   void _onAttributeSelectionChanged(String key, String? value) {

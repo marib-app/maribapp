@@ -1,4 +1,4 @@
-// 🛒 المنطق فقط
+// ًں›’ ط§ظ„ظ…ظ†ط·ظ‚ ظپظ‚ط·
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:marib/app/routes.dart';
@@ -8,8 +8,8 @@ import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/ui/theme/theme.dart';
-import 'package:flutter/services.dart'; // لو كنت تستخدم AnnotatedRegion بنمط النظام
-import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart'; // لتعريف BlurredDialogBox
+import 'package:flutter/services.dart'; // ظ„ظˆ ظƒظ†طھ طھط³طھط®ط¯ظ… AnnotatedRegion ط¨ظ†ظ…ط· ط§ظ„ظ†ط¸ط§ظ…
+import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart'; // ظ„طھط¹ط±ظٹظپ BlurredDialogBox
 
 import 'cart_ui.dart';
 import 'package:marib/data/model/cart/cart_discount.dart';
@@ -19,6 +19,8 @@ import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/constant.dart';
 import 'package:marib/utils/currency_utils.dart';
 import 'package:flutter/foundation.dart';
+import 'package:intl/intl.dart';
+import 'package:marib/utils/store_status_view_model.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -39,7 +41,7 @@ class _CartScreenState extends State<CartScreen> {
   final Set<String> _selectedItems = <String>{};
   final TextEditingController _couponController = TextEditingController();
 
-  // نفس القيم الأصلية
+  // ظ†ظپط³ ط§ظ„ظ‚ظٹظ… ط§ظ„ط£طµظ„ظٹط©
   final double _whatsappBottom = 155;
   final double _whatsappRight = 340;
   Set<String> _appliedCouponSnapshot = <String>{};
@@ -57,7 +59,7 @@ class _CartScreenState extends State<CartScreen> {
     super.dispose();
   }
 
-  // TODO: اربط بمصدر بياناتك الحقيقي بدلاً من أي بيانات مؤقتة.
+  // TODO: ط§ط±ط¨ط· ط¨ظ…طµط¯ط± ط¨ظٹط§ظ†ط§طھظƒ ط§ظ„ط­ظ‚ظٹظ‚ظٹ ط¨ط¯ظ„ط§ظ‹ ظ…ظ† ط£ظٹ ط¨ظٹط§ظ†ط§طھ ظ…ط¤ظ‚طھط©.
   Future<void> _initLoad() async {
     setState(() {
       _loading = true;
@@ -65,8 +67,8 @@ class _CartScreenState extends State<CartScreen> {
     });
 
     try {
-      // مثال: await context.read<CartCubit>().loadCartFromApi();
-      // ملاحظة: عند وصول البيانات، لا تنسَ ضبط الاختيارات/الافتراضي حسب حاجتك.
+      // ظ…ط«ط§ظ„: await context.read<CartCubit>().loadCartFromApi();
+      // ظ…ظ„ط§ط­ط¸ط©: ط¹ظ†ط¯ ظˆطµظˆظ„ ط§ظ„ط¨ظٹط§ظ†ط§طھطŒ ظ„ط§ طھظ†ط³ظژ ط¶ط¨ط· ط§ظ„ط§ط®طھظٹط§ط±ط§طھ/ط§ظ„ط§ظپطھط±ط§ط¶ظٹ ط­ط³ط¨ ط­ط§ط¬طھظƒ.
       final CartCubit cubit = context.read<CartCubit>();
       _syncCouponSnapshot(cubit.state.discounts);
       _lastCartState = cubit.state;
@@ -74,7 +76,7 @@ class _CartScreenState extends State<CartScreen> {
       _syncCouponSnapshot(cubit.state.discounts);
       _lastCartState = cubit.state;
     } catch (_) {
-      // TODO: تعامل مع الخطأ حسب نظام التنبيهات لديك
+      // TODO: طھط¹ط§ظ…ظ„ ظ…ط¹ ط§ظ„ط®ط·ط£ ط­ط³ط¨ ظ†ط¸ط§ظ… ط§ظ„طھظ†ط¨ظٹظ‡ط§طھ ظ„ط¯ظٹظƒ
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -285,16 +287,170 @@ class _CartScreenState extends State<CartScreen> {
     context.read<CartCubit>().clearSafetyTips();
   }
 
+  Future<void> _showStoreClosedSheet(StoreStatusViewModel status) async {
+    const String fallbackStore = '\u0627\u0644\u0645\u062a\u062c\u0631';
+    final String storeName = (status.name?.trim().isNotEmpty ?? false)
+        ? status.name!.trim()
+        : fallbackStore;
+    final String? nextOpen = status.formatNextOpenLabel(locale: 'ar');
+    final String sixHoursHint = DateFormat('EEEE d MMM, h:mm a', 'ar')
+        .format(DateTime.now().add(const Duration(hours: 6)));
+
+    await showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (BuildContext sheetContext) {
+        final Color accent = Colors.orange;
+        final TextStyle? titleStyle = Theme.of(context)
+            .textTheme
+            .titleMedium
+            ?.copyWith(fontWeight: FontWeight.w800);
+        final TextStyle? bodyStyle = Theme.of(context).textTheme.bodyMedium;
+
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 42,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 14),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade400,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+              Row(
+                children: [
+                  Icon(Icons.lock_clock, color: accent, size: 26),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      '\u0627\u0644\u0645\u062a\u062c\u0631  \u0645\u063a\u0644\u0642 \u0627\u0644\u0622\u0646',
+                      style: titleStyle,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: accent.withOpacity(0.07),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: accent.withOpacity(0.25)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildIconLine(
+                      icon: Icons.error_outline,
+                      color: accent,
+                      text:
+                          '\u0644\u0627 \u064a\u0645\u0643\u0646 \u0625\u062a\u0645\u0627\u0645 \u0627\u0644\u062f\u0641\u0639 \u0623\u0648 \u0627\u0644\u062a\u0648\u0635\u064a\u0644 \u0623\u062b\u0646\u0627\u0621 \u0625\u063a\u0644\u0627\u0642 \u0627\u0644\u0645\u062a\u062c\u0631.',
+                      style: bodyStyle,
+                    ),
+                    if (nextOpen != null && nextOpen.trim().isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      _buildIconLine(
+                        icon: Icons.schedule_outlined,
+                        color: Colors.teal,
+                        text:
+                            '\u0627\u0644\u0641\u062a\u062d \u0627\u0644\u0642\u0627\u062f\u0645: ',
+                        style: bodyStyle,
+                      ),
+                    ],
+                    const SizedBox(height: 10),
+                    _buildIconLine(
+                      icon: Icons.lightbulb_outline,
+                      color: Colors.blueGrey,
+                      text:
+                          '\u062c\u0631\u0651\u0628 \u0627\u0644\u0631\u062c\u0648\u0639 \u0628\u0639\u062f 6 \u0633\u0627\u0639\u0627\u062a \u0645\u0646 \u0627\u0644\u0622\u0646 ().',
+                      style: bodyStyle,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                '\u0644\u0627 \u064a\u0645\u0643\u0646\u0646\u0627 \u0627\u0633\u062a\u0644\u0627\u0645 \u0627\u0644\u0637\u0644\u0628 \u0648\u0645\u0639\u0627\u0644\u062c\u062a\u0647 \u0623\u062b\u0646\u0627\u0621 \u0627\u0644\u0625\u063a\u0644\u0627\u0642. \u0633\u0646\u0643\u0648\u0646 \u062c\u0627\u0647\u0632\u064a\u0646 \u0644\u062e\u062f\u0645\u062a\u0643 \u0628\u0645\u062c\u0631\u062f \u0641\u062a\u062d \u0627\u0644\u0645\u062a\u062c\u0631.',
+                style: bodyStyle?.copyWith(color: Colors.blueGrey.shade700),
+              ),
+              const SizedBox(height: 18),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(sheetContext).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    '\u062d\u0633\u0646\u0627\u064b \u0641\u0647\u0645\u062a',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildIconLine({
+    required IconData icon,
+    required Color color,
+    required String text,
+    TextStyle? style,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, color: color, size: 18),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: style,
+          ),
+        ),
+      ],
+    );
+  }
+
   void _continueToPayment(List<Cart> cartItems) {
     if (cartItems.isEmpty) {
       UiUtils.showBlurredDialoge(
         context,
         dialoge: BlurredDialogBox(
-          title: "تنبيه",
-          content: const Text("السلة فارغة، يرجى إضافة منتجات أولاً."),
+          title: "طھظ†ط¨ظٹظ‡",
+          content: const Text(
+              "ط§ظ„ط³ظ„ط© ظپط§ط±ط؛ط©طŒ ظٹط±ط¬ظ‰ ط¥ط¶ط§ظپط© ظ…ظ†طھط¬ط§طھ ط£ظˆظ„ط§ظ‹."),
           showCancleButton: false,
         ),
       );
+      return;
+    }
+    final StoreStatusViewModel storeStatus =
+        StoreStatusViewModel.fromMap(context.read<CartCubit>().state.store);
+    final bool storeClosed = storeStatus.hasData &&
+        !storeStatus.isOpenNow &&
+        !storeStatus.browseOnly;
+    if (storeClosed) {
+      _showStoreClosedSheet(storeStatus);
       return;
     }
     Navigator.pushNamed(context, Routes.deliveryandpayment);
@@ -542,8 +698,8 @@ class _CartScreenState extends State<CartScreen> {
                 final String title = ((discount?.displayTitle ?? '').trim());
                 final String message = title.isNotEmpty &&
                         title.toLowerCase() != resolvedCode.toLowerCase()
-                    ? 'تم تطبيق القسيمة $resolvedCode بنجاح: $title'
-                    : 'تم تطبيق القسيمة $resolvedCode بنجاح.';
+                    ? 'طھظ… طھط·ط¨ظٹظ‚ ط§ظ„ظ‚ط³ظٹظ…ط© $resolvedCode ط¨ظ†ط¬ط§ط­: $title'
+                    : 'طھظ… طھط·ط¨ظٹظ‚ ط§ظ„ظ‚ط³ظٹظ…ط© $resolvedCode ط¨ظ†ط¬ط§ط­.';
                 HelperUtils.showSnackBarMessage(context, message);
               }
             }
@@ -568,17 +724,18 @@ class _CartScreenState extends State<CartScreen> {
             if (cartItems.isEmpty) {
               HelperUtils.showSnackBarMessage(
                 context,
-                "السلة فارغة، لا يوجد عناصر للحذف.",
+                "ط§ظ„ط³ظ„ط© ظپط§ط±ط؛ط©طŒ ظ„ط§ ظٹظˆط¬ط¯ ط¹ظ†ط§طµط± ظ„ظ„ط­ط°ظپ.",
               );
             } else {
               UiUtils.showBlurredDialoge(
                 context,
                 dialoge: BlurredDialogBox(
-                  title: "تأكيد الحذف",
+                  title: "طھط£ظƒظٹط¯ ط§ظ„ط­ط°ظپ",
                   onAccept: _clearAll,
                   cancelTextColor: context.color.textColorDark,
                   svgImagePath: "assets/lottie/delete_user.json",
-                  content: const Text("هل أنت متأكد من حذف جميع المنتجات؟"),
+                  content: const Text(
+                      "ظ‡ظ„ ط£ظ†طھ ظ…طھط£ظƒط¯ ظ…ظ† ط­ط°ظپ ط¬ظ…ظٹط¹ ط§ظ„ظ…ظ†طھط¬ط§طھطں"),
                 ),
               );
             }

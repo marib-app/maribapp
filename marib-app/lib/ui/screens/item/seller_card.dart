@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:ui' as ui;
 import 'package:marib/data/model/user_model.dart';
 import 'package:marib/settings.dart';
 import 'package:marib/ui/screens/home_screen/section/section_screen/section_screen.dart';
@@ -56,6 +57,9 @@ class SellerCard extends StatelessWidget {
           'bannerImage',
           'image',
           'profile',
+          'logo_path',
+          'logo_url',
+          'logo',
         ]) ??
         seller.profile);
 
@@ -101,11 +105,20 @@ class SellerCard extends StatelessWidget {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      if (cover.isNotEmpty)
-                        UiUtils.getImage(cover, fit: BoxFit.cover),
-                      Container(
-                        color: colors.background.withOpacity(0.35),
-                      ),
+                      if (cover.isNotEmpty) ...[
+                        ImageFiltered(
+                          imageFilter:
+                              ui.ImageFilter.blur(sigmaX: 5, sigmaY: 4),
+                          child: UiUtils.getImage(cover, fit: BoxFit.cover),
+                        ),
+                        Container(
+                          color: Colors.black.withOpacity(0.10),
+                        ),
+                      ] else ...[
+                        Container(
+                          color: colors.background.withOpacity(0.15),
+                        ),
+                      ],
                     ],
                   ),
                 ),

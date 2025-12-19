@@ -41,7 +41,7 @@ class StoreStatusViewModel {
     }
 
     try {
-      final DateFormat formatter = DateFormat('EEEE d MMM، h:mm a', locale);
+      final DateFormat formatter = DateFormat('EEEE d MMM, h:mm a', locale);
       return formatter.format(nextOpenAt!);
     } catch (_) {
       return nextOpenAt!.toLocal().toString();
@@ -90,6 +90,7 @@ class StoreStatusViewModel {
     final Map<String, dynamic>? status = store['status'] is Map<String, dynamic>
         ? store['status'] as Map<String, dynamic>
         : null;
+    final bool hasStatus = status != null && status.isNotEmpty;
 
     DateTime? nextOpenAt;
     final dynamic nextOpenRaw = status?['next_open_at'];
@@ -126,15 +127,16 @@ class StoreStatusViewModel {
     }
 
     return StoreStatusViewModel(
-      hasData: true,
+      hasData: hasStatus,
       id: store['id'] is int
           ? store['id'] as int
           : int.tryParse('${store['id']}'),
       name: store['name']?.toString(),
       slug: store['slug']?.toString(),
       logoUrl: store['logo_url']?.toString(),
-      isOpenNow: status?['is_open_now'] ?? true,
-      browseOnly: (status?['closure_mode'] ?? 'full') == 'browse_only',
+      isOpenNow: status?['is_open_now'] == true,
+      browseOnly:
+          (status?['closure_mode'] ?? 'full').toString() == 'browse_only',
       minOrderAmount: minOrder,
       nextOpenAt: nextOpenAt,
       manualClosureReason: status?['closure_reason']?.toString(),

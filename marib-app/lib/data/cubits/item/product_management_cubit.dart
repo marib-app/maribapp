@@ -1800,15 +1800,13 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
       final DateTime end =
           state.discountEnd ?? start.add(const Duration(days: 30));
 
-      // السيرفر يتوقع تواريخ بدون توقيت (Y-m-d)
-      final DateFormat formatter = DateFormat('yyyy-MM-dd');
-
       payload['discount_type'] = state.discountType;
       payload['discount_value'] = state.discountType == 'percent'
           ? math.min(value, 90)
           : math.max(value, 0);
-      payload['discount_start'] = formatter.format(start);
-      payload['discount_end'] = formatter.format(end);
+      // أرسل ISO-8601 لضمان قبول التواريخ
+      payload['discount_start'] = start.toIso8601String();
+      payload['discount_end'] = end.toIso8601String();
     }
 
     return _DiscountPayloadResult.success(payload);
@@ -1817,6 +1815,10 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
   Future<SubmissionOutcome> _persistDiscount(
       int itemId, Map<String, dynamic> payload) async {
     try {
+      Logger.debug(
+        "[ProductManagementCubit] saveDiscount payload=$payload",
+        name: "ProductManagementCubit",
+      );
       final PurchaseOptionsUpdateResult result = await _repository.saveDiscount(
         itemId: itemId,
         payload: payload,
@@ -2286,17 +2288,18 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
     );
 
     final double basePrice = options.basePrice;
-    final double targetFinalPrice = finalPrice ?? options.finalPrice;
+    double targetFinalPrice = finalPrice ?? options.finalPrice;
 
     double? discountValue;
     DateTime? discountStart;
     DateTime? discountEnd;
-    bool discountEnabled = false;
+    bool discountEnabled = state.discountEnabled;
     String discountType = 'percent';
 
-    final ItemDiscount? discount = options.discount;
+    ItemDiscount? discount = options.discount;
     if (discount != null) {
-      discountEnabled = discount.isActive || options.finalPrice < basePrice;
+      discountEnabled =
+          discountEnabled || discount.isActive || options.finalPrice < basePrice;
       if (discount.type != null) {
         if (discount.type == 'fixed') {
           discountType = 'fixed';
@@ -2304,17 +2307,34 @@ class ProductManagementCubit extends Cubit<ProductManagementState> {
           discountType = 'percent';
         }
       }
-      discountValue = discount.value;
-      discountStart = discount.start;
-      discountEnd = discount.end;
+      discountValue = discount.value ?? discountValue ?? state.discountValue;
+      discountStart = discount.start ?? discountStart ?? state.discountStart;
+      discountEnd = discount.end ?? discountEnd ?? state.discountEnd;
     }
+
+    // إذا لم يرسل الخادم finalPrice لكن يوجد خصم، احسب السعر بعد الخصم محلياً
+    if ((targetFinalPrice <= 0 || targetFinalPrice >= basePrice) &&
+        discountValue != null &&
+        basePrice > 0) {
+      if (discountType == 'fixed') {
+        targetFinalPrice = (basePrice - discountValue).clamp(0, basePrice);
+      } else {
+        targetFinalPrice =
+            (basePrice - (basePrice * (discountValue / 100))).clamp(0, basePrice);
+      }
+    }
+
     final double? deliverySize = _normalizeDeliverySize(options.deliverySize);
 
     final ItemModel current = state.item;
-    final ItemModel? updatedItem =
-        (options.itemId > 0 && (current.id == null || current.id == 0))
-            ? current.copyWith(id: options.itemId)
-            : null;
+    final ItemModel? updatedItem = current.copyWith(
+      id: (options.itemId > 0 && (current.id == null || current.id == 0))
+          ? options.itemId
+          : current.id,
+      price: basePrice,
+      finalPrice: targetFinalPrice,
+      discount: discount,
+    );
 
     emit(state.copyWith(
       itemOverride: updatedItem,

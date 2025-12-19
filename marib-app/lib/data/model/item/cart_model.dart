@@ -14,6 +14,7 @@ class Cart extends ItemModel {
     required String name,
     required String image,
     required double price,
+    double? finalPrice,
     required int categoryId,
     required User? user,
     required this.section,
@@ -43,7 +44,7 @@ class Cart extends ItemModel {
     name: name,
     image: image,
     price: price,
-    finalPrice: price,
+    finalPrice: finalPrice ?? price,
     user: user,
     categoryId: categoryId,
     currency: currency,
@@ -187,6 +188,8 @@ class Cart extends ItemModel {
     }
 
     final double resolvedUnitPrice = unitPrice ?? item.finalPrice ?? item.price ?? 0;
+    final double basePrice = item.price ?? resolvedUnitPrice;
+    final double resolvedFinalPrice = item.finalPrice ?? resolvedUnitPrice;
     final String? explicitCurrency = _trimmed(currency);
     final String? resolvedCurrencyDisplay =
         explicitCurrency ?? _trimmed(item.currency);
@@ -198,7 +201,8 @@ class Cart extends ItemModel {
       id: item.id!,
       name: item.name ?? '',
       image: item.image ?? '',
-      price: resolvedUnitPrice,
+      price: basePrice,
+      finalPrice: resolvedFinalPrice,
       categoryId: item.categoryId ?? 0,
       user: item.user,
       quantity: quantity,
@@ -364,6 +368,8 @@ class Cart extends ItemModel {
         _parseDouble(json['final_unit_price']) ?? lockedUnitPrice;
     final double resolvedUnitPrice = finalUnitPrice ?? rawUnitPrice ??
         base.finalPrice ?? base.price ?? 0.0;
+    final double basePrice = base.price ?? resolvedUnitPrice;
+    final double resolvedFinalPrice = base.finalPrice ?? resolvedUnitPrice;
     final double? subtotal =
         _parseDouble(json['subtotal']) ?? _parseDouble(pivotMap?['subtotal']);
 
@@ -413,7 +419,8 @@ class Cart extends ItemModel {
       id: itemId,
       name: base.name ?? '',
       image: base.image ?? '',
-      price: resolvedUnitPrice,
+      price: basePrice,
+      finalPrice: resolvedFinalPrice,
       categoryId: base.categoryId ?? _parseInt(json['category_id']) ?? 0,
       user: resolvedUser,
 

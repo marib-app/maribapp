@@ -1,4 +1,4 @@
-// الواجهة فقط
+// ط§ظ„ظˆط§ط¬ظ‡ط© ظپظ‚ط·
 import 'package:flutter/material.dart';
 import 'package:marib/data/model/item/cart_model.dart';
 import 'package:marib/ui/theme/theme.dart';
@@ -20,18 +20,19 @@ import 'package:marib/utils/helper_utils.dart';
 import 'package:marib/utils/money_formatter.dart';
 import 'components/delivery_and_payment/manual_transfer_submission.dart';
 import 'dart:math' as math;
+import 'package:intl/intl.dart';
 import 'package:marib/ui/widgets/store_status_card.dart';
 import 'package:marib/utils/store_status_view_model.dart';
 
 class DeliveryAndPaymentUI extends StatelessWidget {
-  // حالة عامة
+  // ط­ط§ظ„ط© ط¹ط§ظ…ط©
   final bool loading;
   final bool depositRecalculating;
   final List<CartDiscount> discounts;
   final bool addressReady;
   final bool showAddressBlock;
 
-  // السلة
+  // ط§ظ„ط³ظ„ط©
   final List<Cart> cartItems;
   final TextEditingController couponController;
   final bool couponInProgress;
@@ -41,11 +42,11 @@ class DeliveryAndPaymentUI extends StatelessWidget {
   final VoidCallback? onDismissCouponMessage;
   final String requiredAmountDisplay;
 
-  // العنوان
+  // ط§ظ„ط¹ظ†ظˆط§ظ†
   final Map<String, dynamic>? address;
   final VoidCallback onManageAddresses;
 
-  // الدفع
+  // ط§ظ„ط¯ظپط¹
   final List<CheckoutBank> banks;
   final int? selectedBankIndex;
   final String? selectedPaymentMethod;
@@ -69,13 +70,13 @@ class DeliveryAndPaymentUI extends StatelessWidget {
   final String? shippingCurrency;
   final String? departmentNotice;
 
-  /// نص سياسة الاسترجاع المرسلة من الشاشة الرئيسية.
+  /// ظ†طµ ط³ظٹط§ط³ط© ط§ظ„ط§ط³طھط±ط¬ط§ط¹ ط§ظ„ظ…ط±ط³ظ„ط© ظ…ظ† ط§ظ„ط´ط§ط´ط© ط§ظ„ط±ط¦ظٹط³ظٹط©.
   final String? returnPolicyText;
 
-  /// بيانات الوديعة المنسّقة للعرض ضمن تبويب السياسات.
+  /// ط¨ظٹط§ظ†ط§طھ ط§ظ„ظˆط¯ظٹط¹ط© ط§ظ„ظ…ظ†ط³ظ‘ظ‚ط© ظ„ظ„ط¹ط±ط¶ ط¶ظ…ظ† طھط¨ظˆظٹط¨ ط§ظ„ط³ظٹط§ط³ط§طھ.
   final Map<String, dynamic>? depositInfo;
 
-  /// استدعاء يحدّث حالة تفعيل الدفعة المقدمة عند توفر خيار التبديل.
+  /// ط§ط³طھط¯ط¹ط§ط، ظٹط­ط¯ظ‘ط« ط­ط§ظ„ط© طھظپط¹ظٹظ„ ط§ظ„ط¯ظپط¹ط© ط§ظ„ظ…ظ‚ط¯ظ…ط© ط¹ظ†ط¯ طھظˆظپط± ط®ظٹط§ط± ط§ظ„طھط¨ط¯ظٹظ„.
   final ValueChanged<bool>? onToggleDeposit;
 
   final bool allowPayNow;
@@ -84,11 +85,11 @@ class DeliveryAndPaymentUI extends StatelessWidget {
   final String? codFeeDisplay;
   final bool payOnDeliverySelected;
 
-  // التوصيل
+  // ط§ظ„طھظˆطµظٹظ„
   final CheckoutDeliveryInfo? deliveryInfo;
   final String? deliveryPrice;
 
-  // الشريط السفلي
+  // ط§ظ„ط´ط±ظٹط· ط§ظ„ط³ظپظ„ظٹ
   final bool canProceed;
   final bool submitting;
   final Future<void> Function(ManualTransferSubmissionData? manualTransfer)
@@ -181,8 +182,9 @@ class DeliveryAndPaymentUI extends StatelessWidget {
             ? selectedTimingOption!.description
             : paymentTimingNote;
 
-    final String resolvedDeliveryFee =
-        freeShippingApplied ? 'مجانًا' : _resolveDeliveryFee(deliveryPrice);
+    final String resolvedDeliveryFee = freeShippingApplied
+        ? 'ظ…ط¬ط§ظ†ظ‹ط§'
+        : _resolveDeliveryFee(deliveryPrice);
 
     final bool showCheckoutError =
         checkoutErrorMessage != null && checkoutErrorMessage!.trim().isNotEmpty;
@@ -190,13 +192,17 @@ class DeliveryAndPaymentUI extends StatelessWidget {
     final bool hasReturnDepositTab = _hasReturnDepositToShow();
     final StoreStatusViewModel storeStatus =
         StoreStatusViewModel.fromMap(store);
+    final String resolvedStoreName =
+        (storeStatus.name?.trim().isNotEmpty ?? false)
+            ? storeStatus.name!.trim()
+            : 'ط§ظ„ظ…طھط¬ط±';
     final Map<String, dynamic>? assurance =
         store?['assurance'] is Map<String, dynamic>
             ? Map<String, dynamic>.from(store!['assurance'])
             : null;
     final bool showAssuranceBanner = assurance?['active'] == true;
     final String assuranceMessage = assurance?['message'] ??
-        'هذا الطلب يخضع لضمان تاجر موثَّق، وسيتم حماية المبلغ أو تعويضك عند حدوث مشكلة بالدفع.';
+        'ظ‡ط°ط§ ط§ظ„ط·ظ„ط¨ ظٹط®ط¶ط¹ ظ„ط¶ظ…ط§ظ† طھط§ط¬ط± ظ…ظˆط«ظ‘ظژظ‚طŒ ظˆط³ظٹطھظ… ط­ظ…ط§ظٹط© ط§ظ„ظ…ط¨ظ„ط؛ ط£ظˆ طھط¹ظˆظٹط¶ظƒ ط¹ظ†ط¯ ط­ط¯ظˆط« ظ…ط´ظƒظ„ط© ط¨ط§ظ„ط¯ظپط¹.';
     final MoneyFormatter totalFormatter = MoneyFormatter.fromCartCurrency(
       currency: orderCurrencyLabel,
       currencyCode: orderCurrencyCode,
@@ -211,6 +217,8 @@ class DeliveryAndPaymentUI extends StatelessWidget {
               canProceed,
               submitting,
               totalFormatter,
+              storeStatus,
+              resolvedStoreName,
               depositLoading: depositLoading,
             )
           : null,
@@ -219,7 +227,7 @@ class DeliveryAndPaymentUI extends StatelessWidget {
           : const Color(0xFFF0F2F4),
       appBar: UiUtils.buildAppBar(
         context,
-        title: 'بيانات التوصيل والدفع',
+        title: 'ط¨ظٹط§ظ†ط§طھ ط§ظ„طھظˆطµظٹظ„ ظˆط§ظ„ط¯ظپط¹',
         bottomHeight: 20,
         showBackButton: true,
       ),
@@ -229,7 +237,7 @@ class DeliveryAndPaymentUI extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              if (storeStatus.hasData) ...[
+              if (storeStatus.hasData && storeStatus.isOpenNow) ...[
                 StoreStatusCard(
                   store: storeStatus,
                   moneyFormatter: totalFormatter,
@@ -325,16 +333,20 @@ class DeliveryAndPaymentUI extends StatelessWidget {
     String totalAmountDisplay,
     bool isButtonEnabled,
     bool submitting,
-    MoneyFormatter totalFormatter, {
+    MoneyFormatter totalFormatter,
+    StoreStatusViewModel storeStatus,
+    String storeName, {
     bool depositLoading = false,
   }) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
     String? restrictionMessage;
     if (payOnDeliverySelected && !allowPayOnDelivery) {
-      restrictionMessage = '🚫 خيار الدفع عند الاستلام غير متاح لهذه الطلبية.';
+      restrictionMessage =
+          'ًںڑ« ط®ظٹط§ط± ط§ظ„ط¯ظپط¹ ط¹ظ†ط¯ ط§ظ„ط§ط³طھظ„ط§ظ… ط؛ظٹط± ظ…طھط§ط­ ظ„ظ‡ط°ظ‡ ط§ظ„ط·ظ„ط¨ظٹط©.';
     } else if (!payOnDeliverySelected && !allowPayNow) {
-      restrictionMessage = '🚫 خيار الدفع الآن غير متاح لهذه الطلبية.';
+      restrictionMessage =
+          'ًںڑ« ط®ظٹط§ط± ط§ظ„ط¯ظپط¹ ط§ظ„ط¢ظ† ط؛ظٹط± ظ…طھط§ط­ ظ„ظ‡ط°ظ‡ ط§ظ„ط·ظ„ط¨ظٹط©.';
     }
     final bool buttonEnabled = isButtonEnabled;
 
@@ -438,6 +450,148 @@ class DeliveryAndPaymentUI extends StatelessWidget {
     );
     final double viewInsets = MediaQuery.of(context).viewInsets.bottom;
     final double bottomKeyboardPadding = viewInsets > 0 ? 20 : 24;
+    final bool storeClosed = storeStatus.hasData &&
+        !storeStatus.isOpenNow &&
+        !storeStatus.browseOnly;
+
+    Future<void> showStoreClosedSheet() async {
+      const String fallbackStore = '\u0627\u0644\u0645\u062a\u062c\u0631';
+      final String storeName = (storeStatus.name?.trim().isNotEmpty ?? false)
+          ? storeStatus.name!.trim()
+          : fallbackStore;
+      final String? nextOpen = storeStatus.formatNextOpenLabel(locale: 'ar');
+      final String sixHoursHint = DateFormat('EEEE d MMM, h:mm a', 'ar')
+          .format(DateTime.now().add(const Duration(hours: 6)));
+
+      Widget buildIconLine({
+        required IconData icon,
+        required Color color,
+        required String text,
+        TextStyle? style,
+      }) {
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: color, size: 18),
+            const SizedBox(width: 8),
+            Expanded(child: Text(text, style: style)),
+          ],
+        );
+      }
+
+      await showModalBottomSheet<void>(
+        context: context,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+        ),
+        builder: (BuildContext sheetContext) {
+          final Color accent = Colors.orange;
+          final TextStyle? titleStyle = Theme.of(context)
+              .textTheme
+              .titleMedium
+              ?.copyWith(fontWeight: FontWeight.w800);
+          final TextStyle? bodyStyle = Theme.of(context).textTheme.bodyMedium;
+
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 42,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 14),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade400,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+                Row(
+                  children: [
+                    Icon(Icons.lock_clock, color: accent, size: 26),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        '\u0627\u0644\u0645\u062a\u062c\u0631  \u0645\u063a\u0644\u0642 \u0627\u0644\u0622\u0646',
+                        style: titleStyle,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: accent.withOpacity(0.07),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: accent.withOpacity(0.25)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      buildIconLine(
+                        icon: Icons.error_outline,
+                        color: accent,
+                        text:
+                            '\u0644\u0627 \u064a\u0645\u0643\u0646 \u0625\u062a\u0645\u0627\u0645 \u0627\u0644\u062f\u0641\u0639 \u0623\u0648 \u0627\u0644\u062a\u0648\u0635\u064a\u0644 \u0623\u062b\u0646\u0627\u0621 \u0625\u063a\u0644\u0627\u0642 \u0627\u0644\u0645\u062a\u062c\u0631.',
+                        style: bodyStyle,
+                      ),
+                      if (nextOpen != null && nextOpen.trim().isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        buildIconLine(
+                          icon: Icons.schedule_outlined,
+                          color: Colors.teal,
+                          text:
+                              '\u0627\u0644\u0641\u062a\u062d \u0627\u0644\u0642\u0627\u062f\u0645: ',
+                          style: bodyStyle,
+                        ),
+                      ],
+                      const SizedBox(height: 10),
+                      buildIconLine(
+                        icon: Icons.lightbulb_outline,
+                        color: Colors.blueGrey,
+                        text:
+                            '\u062c\u0631\u0651\u0628 \u0627\u0644\u0631\u062c\u0648\u0639 \u0628\u0639\u062f 6 \u0633\u0627\u0639\u0627\u062a \u0645\u0646 \u0627\u0644\u0622\u0646 ().',
+                        style: bodyStyle,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  '\u0644\u0627 \u064a\u0645\u0643\u0646\u0646\u0627 \u0627\u0633\u062a\u0644\u0627\u0645 \u0627\u0644\u0637\u0644\u0628 \u0648\u0645\u0639\u0627\u0644\u062c\u062a\u0647 \u0623\u062b\u0646\u0627\u0621 \u0627\u0644\u0625\u063a\u0644\u0627\u0642. \u0633\u0646\u0643\u0648\u0646 \u062c\u0627\u0647\u0632\u064a\u0646 \u0644\u062e\u062f\u0645\u062a\u0643 \u0628\u0645\u062c\u0631\u062f \u0641\u062a\u062d \u0627\u0644\u0645\u062a\u062c\u0631.',
+                  style: bodyStyle?.copyWith(color: Colors.blueGrey.shade700),
+                ),
+                const SizedBox(height: 18),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(sheetContext).pop(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      '\u062d\u0633\u0646\u0627\u064b \u0641\u0647\u0645\u062a',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    }
 
     return AnimatedPadding(
       duration: const Duration(milliseconds: 250),
@@ -558,7 +712,7 @@ class DeliveryAndPaymentUI extends StatelessWidget {
                                 ),
                                 textAlignVertical: TextAlignVertical.center,
                                 decoration: InputDecoration(
-                                  hintText: 'أدخل رمز الكوبون',
+                                  hintText: 'ط£ط¯ط®ظ„ ط±ظ…ط² ط§ظ„ظƒظˆط¨ظˆظ†',
                                   filled: true,
                                   fillColor: inputFillColor,
                                   border: inputBorder,
@@ -606,7 +760,7 @@ class DeliveryAndPaymentUI extends StatelessWidget {
                                           strokeWidth: 2),
                                     )
                                   : const Text(
-                                      'تطبيق الكوبون',
+                                      'طھط·ط¨ظٹظ‚ ط§ظ„ظƒظˆط¨ظˆظ†',
                                       style: TextStyle(
                                           fontWeight: FontWeight.w700),
                                     ),
@@ -681,7 +835,7 @@ class DeliveryAndPaymentUI extends StatelessWidget {
                       : Row(
                           children: [
                             Expanded(
-                              child: Text('المبلغ الإجمالي',
+                              child: Text('ط§ظ„ظ…ط¨ظ„ط؛ ط§ظ„ط¥ط¬ظ…ط§ظ„ظٹ',
                                   style: totalLabelStyle),
                             ),
                             Column(
@@ -714,6 +868,11 @@ class DeliveryAndPaymentUI extends StatelessWidget {
                     final String pm =
                         (selectedPaymentMethod ?? '').trim().toLowerCase();
 
+                    if (storeClosed) {
+                      await showStoreClosedSheet();
+                      return;
+                    }
+
                     if (pm == 'wallet') {
                       await onConfirm(null);
                       return;
@@ -739,7 +898,7 @@ class DeliveryAndPaymentUI extends StatelessWidget {
                         requiresPurchaseCodeGateway(bankMethod)) {
                       if (selectedBank == null && banks.length > 1) {
                         HelperUtils.showSnackBarMessage(
-                            context, 'اختر بنكًا أولًا');
+                            context, 'ط§ط®طھط± ط¨ظ†ظƒظ‹ط§ ط£ظˆظ„ظ‹ط§');
 
                         return;
                       }
@@ -753,7 +912,7 @@ class DeliveryAndPaymentUI extends StatelessWidget {
                     if (selectedBank != null || isBank) {
                       if (selectedBank == null) {
                         HelperUtils.showSnackBarMessage(
-                            context, 'اختر بنكًا أولًا');
+                            context, 'ط§ط®طھط± ط¨ظ†ظƒظ‹ط§ ط£ظˆظ„ظ‹ط§');
 
                         return;
                       }
@@ -790,9 +949,10 @@ class DeliveryAndPaymentUI extends StatelessWidget {
                       );
                       return;
                     }
-                    HelperUtils.showSnackBarMessage(context, 'حدد طريقة الدفع');
+                    HelperUtils.showSnackBarMessage(
+                        context, 'ط­ط¯ط¯ ط·ط±ظٹظ‚ط© ط§ظ„ط¯ظپط¹');
                   },
-                  buttonTitle: 'إكمال الدفع',
+                  buttonTitle: 'ط¥ظƒظ…ط§ظ„ ط§ظ„ط¯ظپط¹',
                   radius: 12,
                   height: 50,
                   showElevation: false,
@@ -800,7 +960,7 @@ class DeliveryAndPaymentUI extends StatelessWidget {
                   disabled: !buttonEnabled,
                   onTapDisabledButton: () {
                     final String feedbackMessage = restrictionMessage ??
-                        'يرجى إكمال بيانات التوصيل والدفع أولًا.';
+                        'ظٹط±ط¬ظ‰ ط¥ظƒظ…ط§ظ„ ط¨ظٹط§ظ†ط§طھ ط§ظ„طھظˆطµظٹظ„ ظˆط§ظ„ط¯ظپط¹ ط£ظˆظ„ظ‹ط§.';
                     HelperUtils.showSnackBarMessage(context, feedbackMessage);
                   },
                 ),
@@ -814,7 +974,7 @@ class DeliveryAndPaymentUI extends StatelessWidget {
 
   String _resolveDeliveryFee(String? deliveryFee) {
     final String? trimmed = deliveryFee?.trim();
-    if (trimmed != null && trimmed.isNotEmpty && trimmed != '—') {
+    if (trimmed != null && trimmed.isNotEmpty && trimmed != 'â€”') {
       return trimmed;
     }
     if (shippingAmount != null) {
@@ -823,7 +983,7 @@ class DeliveryAndPaymentUI extends StatelessWidget {
       }
       return _formatAmount(shippingAmount!);
     }
-    return '—';
+    return 'â€”';
   }
 
   String _formatAmount(double amount) {
@@ -986,7 +1146,7 @@ class _CheckoutErrorBanner extends StatelessWidget {
               Icon(icon, color: textColor),
               const SizedBox(width: 6),
               Text(
-                'تنبيه',
+                'طھظ†ط¨ظٹظ‡',
                 style: TextStyle(
                   color: textColor,
                   fontWeight: FontWeight.bold,
@@ -1014,7 +1174,7 @@ class _CheckoutErrorBanner extends StatelessWidget {
                       },
                 icon: Icon(Icons.refresh, color: textColor),
                 label: Text(
-                  'إعادة المحاولة',
+                  'ط¥ط¹ط§ط¯ط© ط§ظ„ظ…ط­ط§ظˆظ„ط©',
                   style: TextStyle(color: textColor),
                 ),
                 style: TextButton.styleFrom(

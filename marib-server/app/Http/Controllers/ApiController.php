@@ -9168,6 +9168,10 @@ private function formatServiceFieldValueForApi(ServiceCustomField $field, ?Servi
                                 : null
                         );
                     }
+                    // Fallback: use logo as banner if no cover uploaded.
+                    if (! $store->getAttribute('banner_url') && $store->getAttribute('logo_url')) {
+                        $store->setAttribute('banner_url', $store->getAttribute('logo_url'));
+                    }
                     $store->setAttribute(
                         'followers_count',
                         $store->getAttribute('followers_count') ?? $store->followers()->count()

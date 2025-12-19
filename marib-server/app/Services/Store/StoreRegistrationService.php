@@ -96,6 +96,11 @@ class StoreRegistrationService
             ?? $payload['cover_path']
             ?? $payload['cover_url']
             ?? $payload['cover_image']
+            ?? $payload['store_cover']
+            ?? $payload['store_image']
+            ?? $payload['store_photo']
+            ?? $payload['storefront']
+            ?? $payload['business_cover']
             ?? null;
 
         return array_filter([

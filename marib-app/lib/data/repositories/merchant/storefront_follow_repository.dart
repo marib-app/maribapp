@@ -1,4 +1,5 @@
 import 'package:marib/utils/api.dart';
+import 'package:marib/utils/hive_utils.dart';
 
 class StorefrontFollowResult {
   const StorefrontFollowResult({
@@ -73,11 +74,25 @@ class StorefrontFollowRepository {
   }
 
   Future<StorefrontFollowResult> status(dynamic storeIdentifier) async {
-    final Map<String, dynamic> response = await Api.get(
-      url:
-          'storefront/stores/${Uri.encodeComponent(storeIdentifier.toString().trim())}/follow-status',
-      useBaseUrl: true,
+    final String normalized = Uri.encodeComponent(
+      storeIdentifier.toString().trim(),
     );
-    return _parseResponse(response, fallback: false);
+    final String? viewerId = HiveUtils.getUserId();
+    try {
+      final Map<String, dynamic> response = await Api.get(
+        url: 'storefront/stores/$normalized/follow-status',
+        useBaseUrl: true,
+        queryParameters: viewerId != null && viewerId.trim().isNotEmpty
+            ? <String, dynamic>{
+                'viewer_id': viewerId,
+                'user_id': viewerId,
+              }
+            : null,
+      );
+      return _parseResponse(response, fallback: false);
+    } catch (_) {
+      // If status lookup fails (e.g., unauthenticated), return fallback=false
+      return const StorefrontFollowResult(isFollowing: false);
+    }
   }
 }

@@ -20,6 +20,48 @@ class StorefrontDetails {
     this.manualBanks = const <StorefrontManualBank>[],
   });
 
+  StorefrontDetails copyWith({
+    int? id,
+    int? userId,
+    String? name,
+    String? slug,
+    StorefrontStatus? status,
+    String? description,
+    String? logoUrl,
+    String? bannerUrl,
+    bool? isFollowed,
+    int? followersCount,
+    int? itemsCount,
+    double? ratingsAverage,
+    StorefrontContact? contact,
+    StorefrontLocation? location,
+    StorefrontSettings? settings,
+    List<StorefrontPolicy>? policies,
+    List<StorefrontWorkingHour>? workingHours,
+    List<StorefrontManualBank>? manualBanks,
+  }) {
+    return StorefrontDetails(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      name: name ?? this.name,
+      slug: slug ?? this.slug,
+      status: status ?? this.status,
+      description: description ?? this.description,
+      logoUrl: logoUrl ?? this.logoUrl,
+      bannerUrl: bannerUrl ?? this.bannerUrl,
+      isFollowed: isFollowed ?? this.isFollowed,
+      followersCount: followersCount ?? this.followersCount,
+      itemsCount: itemsCount ?? this.itemsCount,
+      ratingsAverage: ratingsAverage ?? this.ratingsAverage,
+      contact: contact ?? this.contact,
+      location: location ?? this.location,
+      settings: settings ?? this.settings,
+      policies: policies ?? this.policies,
+      workingHours: workingHours ?? this.workingHours,
+      manualBanks: manualBanks ?? this.manualBanks,
+    );
+  }
+
   factory StorefrontDetails.fromJson(Map<String, dynamic> json) {
     final int? userId =
         _intValue(json['user_id'] ?? json['owner_id']);
@@ -254,31 +296,6 @@ class StorefrontDetails {
   final List<StorefrontManualBank> manualBanks;
 
   bool get isOpenNow => status.isOpenNow;
-
-  StorefrontDetails copyWith({
-    bool? isFollowed,
-    int? followersCount,
-  }) {
-    return StorefrontDetails(
-      id: id,
-      name: name,
-      slug: slug,
-      description: description,
-      logoUrl: logoUrl,
-      bannerUrl: bannerUrl,
-      isFollowed: isFollowed ?? this.isFollowed,
-      followersCount: followersCount ?? this.followersCount,
-      itemsCount: itemsCount,
-      ratingsAverage: ratingsAverage,
-      status: status,
-      contact: contact,
-      location: location,
-      settings: settings,
-      policies: policies,
-      workingHours: workingHours,
-      manualBanks: manualBanks,
-    );
-  }
 
   static int? _intValue(dynamic raw) {
     if (raw == null) {

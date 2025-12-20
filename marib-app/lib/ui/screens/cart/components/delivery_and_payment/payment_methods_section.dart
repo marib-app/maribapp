@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -89,7 +89,7 @@ class PaymentMethodsSection extends StatelessWidget {
             SizedBox(height: 8),
             Text(
               'بمجرد تحديد عنوان بصلاحية جغرافية، ستظهر خيارات الدفع والمحفظة هنا.',
-              style: TextStyle(fontSize: 13),
+              style: TextStyle(fontSize: 12),
             ),
           ],
         ),
@@ -129,7 +129,7 @@ class PaymentMethodsSection extends StatelessWidget {
                   style: const TextStyle(
                     color: Colors.orangeAccent,
                     fontWeight: FontWeight.w600,
-                    fontSize: 13,
+                    fontSize: 12,
                   ),
                 ),
               ),
@@ -139,27 +139,9 @@ class PaymentMethodsSection extends StatelessWidget {
       );
     }
 
-    if (walletAvailable || walletSummary != null) {
-      paymentOptions.add(
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          child: _buildWalletCard(
-            context,
-            isDark: isDark,
-            textColor: textColor,
-            backgroundColor: backgroundColor,
-            lightBackground: lightBackground,
-            borderColor: borderColor,
-            secondaryColor: secondaryColor,
-            allowPayNow: allowPayNow,
-            payOnDeliverySelected: payOnDeliverySelected,
-          ),
-        ),
-      );
-    }
-
-    for (var index = 0; index < banks.length; index++) {
-      final CheckoutBank bank = banks[index];
+    void addBankCard(MapEntry<int, CheckoutBank> entry) {
+      final int index = entry.key;
+      final CheckoutBank bank = entry.value;
       final bool isManualBank = _isManualGateway(bank.paymentMethod);
       final bool manualAllowed = manualPaymentsEnabled || !isManualBank;
       final bool cardEnabled = allowPayNow && manualAllowed;
@@ -186,6 +168,44 @@ class PaymentMethodsSection extends StatelessWidget {
           ),
         ),
       );
+    }
+
+    final List<MapEntry<int, CheckoutBank>> eastEntries = banks
+        .asMap()
+        .entries
+        .where((e) => _isEastBank(e.value))
+        .toList();
+    final List<MapEntry<int, CheckoutBank>> otherEntries = banks
+        .asMap()
+        .entries
+        .where((e) => !_isEastBank(e.value))
+        .toList();
+
+    for (final entry in eastEntries) {
+      addBankCard(entry);
+    }
+
+    if (walletAvailable || walletSummary != null) {
+      paymentOptions.add(
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: _buildWalletCard(
+            context,
+            isDark: isDark,
+            textColor: textColor,
+            backgroundColor: backgroundColor,
+            lightBackground: lightBackground,
+            borderColor: borderColor,
+            secondaryColor: secondaryColor,
+            allowPayNow: allowPayNow,
+            payOnDeliverySelected: payOnDeliverySelected,
+          ),
+        ),
+      );
+    }
+
+    for (final entry in otherEntries) {
+      addBankCard(entry);
     }
 
     return Column(
@@ -365,7 +385,7 @@ class PaymentMethodsSection extends StatelessWidget {
                       Text(
                         'الرصيد المتاح: $balanceText',
                         style: TextStyle(
-                          fontSize: 13,
+                          fontSize: 12,
                           color: textColor.withOpacity(0.85),
                         ),
                       ),
@@ -473,7 +493,7 @@ class PaymentMethodsSection extends StatelessWidget {
                         Text(
                           accountName,
                           style: TextStyle(
-                            fontSize: 13,
+                            fontSize: 12,
                             color: textColor.withOpacity(0.8),
                           ),
                         ),
@@ -590,6 +610,12 @@ class PaymentMethodsSection extends StatelessWidget {
     return normalized == 'east_yemen_bank';
   }
 
+  bool _isEastBank(CheckoutBank bank) {
+    final String method = (bank.paymentMethod ?? '').trim().toLowerCase();
+    final String name = (bank.name ?? '').trim().toLowerCase();
+    return method.contains('east_yemen_bank') || name.contains('الشرق');
+  }
+
   Widget _buildBankLogo(CheckoutBank bank, bool isDark) {
     const double size = 45;
     final BorderRadius radius = BorderRadius.circular(10);
@@ -665,7 +691,7 @@ class PaymentMethodsSection extends StatelessWidget {
           children: [
             const Text(
               'يرجى إدخال كود الشراء المرسل من البنك لإتمام العملية.',
-              style: TextStyle(fontSize: 13),
+              style: TextStyle(fontSize: 12),
             ),
             const SizedBox(height: 16),
             TextField(
@@ -771,35 +797,24 @@ class PaymentMethodsSection extends StatelessWidget {
                 await Clipboard.setData(ClipboardData(text: value));
                 HelperUtils.showSnackBarMessage(
                   context,
-                  'تم نسخ $label',
+                  'تم النسخ',
                   messageDuration: 1,
                 );
               },
               borderRadius: BorderRadius.circular(10),
               child: Container(
+                width: double.infinity,
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
                   color: fieldColor,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        value,
-                        style: const TextStyle(
-                            fontSize: 14, fontWeight: FontWeight.w600),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Icon(
-                      Icons.copy_rounded,
-                      size: 18,
-                      color: isDark ? Colors.white70 : Colors.grey.shade600,
-                    ),
-                  ],
+                child: Text(
+                  value,
+                  style:
+                      const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ),
@@ -808,21 +823,99 @@ class PaymentMethodsSection extends StatelessWidget {
       );
     }
 
+    bool isNumericValue(String value) {
+      final String compact = value.replaceAll(RegExp(r'\s+'), '');
+      return RegExp(r'^\d+$').hasMatch(compact);
+    }
+
+    Widget buildPill(String label, String value) {
+      final Color borderColor =
+          isDark ? Colors.grey.shade600 : Colors.grey.shade400;
+      final Color textColor = isDark ? Colors.white : Colors.black87;
+
+      return InkWell(
+        onTap: () async {
+          if (value.isEmpty) return;
+          await Clipboard.setData(ClipboardData(text: value));
+          HelperUtils.showSnackBarMessage(context, 'تم النسخ', messageDuration: 1);
+        },
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: borderColor),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: textColor,
+              fontWeight: FontWeight.w700,
+              fontSize: 12,
+            ),
+          ),
+        ),
+      );
+    }
+
+    final String dialogTitle = 'الدفع عن طريق';
+    final String? beneficiaryLabel;
+    final String? beneficiaryValue;
+    if (accountName.isNotEmpty && !isNumericValue(accountName)) {
+      beneficiaryLabel = 'اسم المستفيد';
+      beneficiaryValue = accountName;
+    } else if (accountNumber.isNotEmpty || accountName.isNotEmpty) {
+      beneficiaryLabel = 'رقم الحساب';
+      beneficiaryValue =
+          accountNumber.isNotEmpty ? accountNumber : accountName;
+    } else {
+      beneficiaryLabel = null;
+      beneficiaryValue = null;
+    }
+
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         backgroundColor: isDark ? Colors.grey.shade900 : Colors.white,
-        title: const Text('💳 الدفع عن طريق حوالة مصرفية'),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(dialogTitle, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                const SizedBox(width: 6),
+                if (bankName.isNotEmpty)
+                  buildPill(bankName, bankName),
+              ],
+            ),
+            if (beneficiaryLabel != null &&
+                beneficiaryValue != null &&
+                beneficiaryValue.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Text(
+                    '$beneficiaryLabel:',
+                    style: TextStyle(
+                      color: isDark ? Colors.white70 : Colors.black87,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  buildPill(beneficiaryValue, beneficiaryValue),
+                ],
+              ),
+            ],
+          ],
+        ),
         content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (bankName.isNotEmpty) buildCopyTile('اسم البنك', bankName),
-              if (accountName.isNotEmpty)
-                buildCopyTile('اسم المستفيد', accountName),
               if (iban.isNotEmpty) buildCopyTile('رقم الآيبان', iban),
               if (accountNumber.isNotEmpty)
                 buildCopyTile('رقم الحساب', accountNumber),
@@ -983,3 +1076,5 @@ class PaymentMethodsSection extends StatelessWidget {
     });
   }
 }
+
+

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:marib/app/routes.dart';
@@ -34,6 +34,7 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
   bool _loading = true;
   String? _errorMessage;
   List<UserOrder> _orders = const <UserOrder>[];
+  _OrderFilter _selectedFilter = _OrderFilter.all;
 
   @override
   void initState() {
@@ -97,7 +98,7 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
   }
 
   Widget _buildBody() {
-    if (_loading && _orders.isEmpty) {
+    if (_loading) {
       return _buildLoadingSkeleton();
     }
 
@@ -109,31 +110,94 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
       return _buildEmptyState();
     }
 
-    return RefreshIndicator(
-      onRefresh: _refresh,
-      child: ListView.separated(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-        itemCount: _orders.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 12),
-        itemBuilder: (BuildContext context, int index) {
-          final UserOrder order = _orders[index];
-          return _OrderCard(
-            order: order,
-            dateFormat: _dateFormat,
-          );
-        },
-      ),
+    final List<UserOrder> visibleOrders = _filteredOrders;
+
+    if (!_loading && visibleOrders.isEmpty) {
+      return Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: _FilterChips(
+              selected: _selectedFilter,
+              onChanged: (filter) => setState(() => _selectedFilter = filter),
+            ),
+          ),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _refresh,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: context.color.secondaryColor,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: context.color.borderColor),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Icon(Icons.inbox_outlined, size: 48),
+                        SizedBox(height: 8),
+                        Text(
+                          'لا توجد طلبات في هذا التصنيف.',
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          child: _FilterChips(
+            selected: _selectedFilter,
+            onChanged: (filter) => setState(() => _selectedFilter = filter),
+          ),
+        ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: _refresh,
+            child: ListView.separated(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+              itemCount: visibleOrders.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              itemBuilder: (BuildContext context, int index) {
+                final UserOrder order = visibleOrders[index];
+                return _OrderCard(
+                  order: order,
+                  dateFormat: _dateFormat,
+                );
+              },
+            ),
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildErrorState() {
+    final Color accentColor = Theme.of(context).colorScheme.primary;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            Icon(Icons.error_outline, size: 56, color: accentColor),
+            const SizedBox(height: 12),
             Text(
               _errorMessage ?? 'تعذر تحميل الطلبات.',
               textAlign: TextAlign.center,
@@ -151,15 +215,17 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
   }
 
   Widget _buildEmptyState() {
+    final Color accentColor = Theme.of(context).colorScheme.primary;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: const [
-            Icon(Icons.inbox_outlined, size: 64),
-            SizedBox(height: 12),
-            Text(
+          children: [
+            Icon(Icons.inbox_outlined, size: 64, color: accentColor),
+            const SizedBox(height: 12),
+            const Text(
               'لا توجد طلبات متاحة حالياً.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
@@ -175,20 +241,30 @@ class _OrdersListScreenState extends State<OrdersListScreen> {
     final Color baseColor = colorScheme.shimmerBaseColor;
     final Color highlightColor = colorScheme.shimmerHighlightColor;
 
-    return RefreshIndicator(
-      onRefresh: _refresh,
-      child: Shimmer.fromColors(
-        baseColor: baseColor,
-        highlightColor: highlightColor,
-        period: const Duration(milliseconds: 1200),
-        child: ListView.separated(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-          itemCount: 3,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
-          itemBuilder: (_, __) => const _OrderCardSkeleton(),
+    return Column(
+      children: [
+        const Padding(
+          padding: EdgeInsets.fromLTRB(16, 12, 16, 8),
+          child: _FiltersSkeleton(),
         ),
-      ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: _refresh,
+            child: Shimmer.fromColors(
+              baseColor: baseColor,
+              highlightColor: highlightColor,
+              period: const Duration(milliseconds: 1200),
+              child: ListView.separated(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+                itemCount: 3,
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (_, __) => const _OrderCardSkeleton(),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -302,6 +378,12 @@ const Map<String, String> _statusLabelOverridesDefinitions =
   'payment pending': 'قيد الدفع',
   'awaiting payment': 'قيد الدفع',
   'waiting for payment': 'قيد الدفع',
+  'payment completed': 'مدفوع',
+  'payment complete': 'مدفوع',
+  'payment success': 'مدفوع',
+  'payment succeeded': 'مدفوع',
+  'payment received': 'مدفوع',
+  'payment captured': 'مدفوع',
   'pending': 'قيد المراجعة',
   'pending approval': 'قيد المراجعة',
   'pending review': 'قيد المراجعة',
@@ -339,6 +421,18 @@ const Map<String, String> _statusLabelOverridesDefinitions =
   'refunded': 'تم الإرجاع',
   'refund': 'تم الإرجاع',
   'partial refund': 'تم الإرجاع',
+  'paid': 'مدفوع',
+  'paid in full': 'مدفوع بالكامل',
+  'fully paid': 'مدفوع بالكامل',
+  'partial paid': 'مدفوع جزئياً',
+  'partially paid': 'مدفوع جزئياً',
+  'part payment': 'مدفوع جزئياً',
+  'unpaid': 'غير مدفوع',
+  'not paid': 'غير مدفوع',
+  'payment failed': 'فشل الدفع',
+  'payment error': 'فشل الدفع',
+  'payment declined': 'فشل الدفع',
+  'payment cancelled': 'إلغاء الدفع',
   'cancelled': 'ملغى',
   'canceled': 'ملغى',
   'declined': 'ملغى',
@@ -438,10 +532,257 @@ _StatusVisual _statusColors(String? rawStatus) {
   );
 }
 
+Color _statusIconColor(_StatusVisual visual) {
+  // اجعل الحالات المدفوعة خضراء للتمييز.
+  if (visual.label.contains('مدفوع')) {
+    return const Color(0xFF2E7D32);
+  }
+  return visual.textColor;
+}
+
+String _formatAddressShort(String value) {
+  // نظف الرموز غير المقروءة ثم احتفظ بالمحافظة والحي/الشارع فقط (دون الدولة ودون رموز).
+  final String cleaned = value
+      .replaceAll(RegExp(r'[\u0000-\u001F\u007F]+'), ' ')
+      .replaceAll(RegExp(r'[^\u0600-\u06FFa-zA-Z0-9 ,.\-]'), ' ')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
+
+  if (cleaned.isEmpty) return value;
+
+  final List<String> parts = cleaned
+      .split(RegExp(r'[،,/\-]+'))
+      .map((e) => e.trim())
+      .where((e) => e.isNotEmpty)
+      .toList();
+
+  // اعتبر الجزء الأول غالباً دولة، لذلك نتخطاه ونأخذ ما بعده.
+  final List<String> picked = parts.length > 1 ? parts.skip(1).take(2).toList() : parts.take(2).toList();
+  final String joined = picked.join(' ');
+
+  if (joined.length > 40) {
+    return '${joined.substring(0, 40).trim()}…';
+  }
+  return joined;
+}
+
+String _localizeShortLabel(String value) {
+  final String lower = value.toLowerCase();
+  if (lower.contains('pending')) return 'قيد الدفع';
+  if (lower.contains('paid')) return 'مدفوع';
+  if (lower.contains('unpaid') || lower.contains('not paid')) return 'غير مدفوع';
+  return value;
+}
+
+enum _OrderFilter {
+  all,
+  review,
+  processing,
+  shipping,
+  completed,
+  canceled,
+}
+
+enum OrderStatusCategory { review, processing, shipping, completed, canceled }
+
+const Map<_OrderFilter, String> _filterLabels = <_OrderFilter, String>{
+  _OrderFilter.all: 'كل الطلبات',
+  _OrderFilter.review: 'قيد المراجعة',
+  _OrderFilter.processing: 'قيد المعالجة',
+  _OrderFilter.shipping: 'الشحن',
+  _OrderFilter.completed: 'مكتملة',
+  _OrderFilter.canceled: 'ملغاة / فاشلة',
+};
+
+OrderStatusCategory _statusCategory(String? rawStatus) {
+  final String normalized = _normalizeStatusKey(rawStatus ?? '');
+  if (normalized.isEmpty) return OrderStatusCategory.review;
+
+  bool containsAny(List<String> tokens) =>
+      tokens.any((token) => normalized.contains(token));
+
+  if (containsAny(<String>[
+    'cancel',
+    'ملغى',
+    'ملغي',
+    'الغاء',
+    'failed',
+    'fail',
+    'فشل',
+    'فاشل',
+    'reject',
+    'مرفوض',
+    'مرفوضة',
+    'decline',
+    'رفض',
+    'return',
+    'ارجاع',
+    'مرتجع',
+    'refun',
+  ])) {
+    return OrderStatusCategory.canceled;
+  }
+
+  if (containsAny(<String>[
+    'delivered',
+    'completed',
+    'fulfilled',
+    'done',
+    'success',
+    'مكتمل',
+    'تم التسليم',
+    'تم التوصيل',
+    'تم الاستلام',
+  ])) {
+    return OrderStatusCategory.completed;
+  }
+
+  if (containsAny(<String>[
+    'ship',
+    'شحن',
+    'الشحن',
+    'delivery',
+    'توصيل',
+    'طريق',
+    'out for delivery',
+    'in transit',
+    'استلام',
+    'التسليم',
+    'pickup',
+  ])) {
+    return OrderStatusCategory.shipping;
+  }
+
+  if (containsAny(<String>[
+    'process',
+    'processing',
+    'progress',
+    'prepare',
+    'معالجة',
+    'قيد المعالجة',
+    'معالجه',
+    'الدفع',
+    'payment',
+  ])) {
+    return OrderStatusCategory.processing;
+  }
+
+  if (containsAny(<String>[
+    'pending',
+    'review',
+    'مراجعة',
+    'معلّق',
+    'معلق',
+    'انتظار',
+    'انتضار',
+    'approval',
+    'تأكيد',
+    'انتظار موافقة',
+  ])) {
+    return OrderStatusCategory.review;
+  }
+
+  return OrderStatusCategory.review;
+}
+
+extension _OrdersFilterExtension on _OrdersListScreenState {
+  List<UserOrder> get _filteredOrders {
+    if (_selectedFilter == _OrderFilter.all) return _orders;
+
+    return _orders.where((UserOrder order) {
+      final OrderStatusCategory category = _statusCategory(order.statusLabel);
+      switch (_selectedFilter) {
+        case _OrderFilter.review:
+          return category == OrderStatusCategory.review;
+        case _OrderFilter.processing:
+          return category == OrderStatusCategory.processing;
+        case _OrderFilter.shipping:
+          return category == OrderStatusCategory.shipping;
+        case _OrderFilter.completed:
+          return category == OrderStatusCategory.completed;
+        case _OrderFilter.canceled:
+          return category == OrderStatusCategory.canceled;
+        case _OrderFilter.all:
+          return true;
+      }
+    }).toList();
+  }
+}
 
 
+class _FilterChips extends StatelessWidget {
+  const _FilterChips({
+    required this.selected,
+    required this.onChanged,
+  });
 
+  final _OrderFilter selected;
+  final ValueChanged<_OrderFilter> onChanged;
 
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    final Color primary = scheme.primary;
+    final Color border = context.color.borderColor;
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: _OrderFilter.values.map((filter) {
+          final bool isSelected = filter == selected;
+          return Padding(
+            padding: const EdgeInsetsDirectional.only(end: 8),
+            child: ChoiceChip(
+              label: Text(_filterLabels[filter] ?? ''),
+              selected: isSelected,
+              pressElevation: 0,
+              selectedColor: primary.withOpacity(0.12),
+              backgroundColor: context.color.secondaryColor,
+              side: BorderSide(color: isSelected ? primary : border),
+              labelStyle: TextStyle(
+                color: isSelected ? primary : context.color.textDefaultColor,
+                fontWeight: FontWeight.w700,
+              ),
+              onSelected: (_) => onChanged(filter),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+class _FiltersSkeleton extends StatelessWidget {
+  const _FiltersSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final Color fill = Theme.of(context).colorScheme.shimmerContentColor;
+    Widget box(double width) => Container(
+          width: width,
+          height: 32,
+          decoration: BoxDecoration(
+            color: fill,
+            borderRadius: BorderRadius.circular(20),
+          ),
+        );
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          box(90),
+          const SizedBox(width: 8),
+          box(110),
+          const SizedBox(width: 8),
+          box(96),
+          const SizedBox(width: 8),
+          box(118),
+        ],
+      ),
+    );
+  }
+}
 
 
 class _OrderCard extends StatelessWidget {
@@ -455,41 +796,65 @@ class _OrderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String dateText = order.createdAt != null
+    final String? dateText = order.createdAt != null
         ? dateFormat.format(order.createdAt!)
-        : 'غير متوفر';
+        : null;
 
-    final String productName = order.items
+    final String? productName = order.items
         .map((OrderLine line) => line.name.trim())
         .firstWhere(
           (String name) => name.isNotEmpty,
-      orElse: () => 'غير متوفر',
-    );
+          orElse: () => '',
+        );
+
+    final String orderNumber = order.displayLabel;
+    final String totalText = order.totalLabel;
+    final String paymentMethod = _localizeShortLabel(order.paymentLabel.trim());
+    final String deliveryMethod = _localizeShortLabel(order.deliveryLabel.trim());
+    final String? address =
+        order.addressLabel != null ? _formatAddressShort(order.addressLabel!) : null;
+
+    const Set<String> dashTokens = <String>{'—', 'â€”', '-'};
+    final String totalClean = totalText.trim();
+    final String paymentClean = paymentMethod.trim();
+    final String deliveryClean = deliveryMethod.trim();
+
+    final bool hasTotal = totalClean.isNotEmpty && !dashTokens.contains(totalClean);
+    final bool hasPayment = paymentClean.isNotEmpty && !dashTokens.contains(paymentClean);
+    final bool hasDelivery = deliveryClean.isNotEmpty && !dashTokens.contains(deliveryClean);
 
     final TextTheme textTheme = Theme.of(context).textTheme;
     final Color textColor = context.color.textDefaultColor;
 
     final TextStyle labelStyle =
-    (textTheme.bodySmall ?? const TextStyle()).copyWith(
-      fontWeight: FontWeight.w600,
-      color: textColor.withOpacity(0.8),
-    );
+        (textTheme.bodySmall ?? const TextStyle()).copyWith(
+          fontWeight: FontWeight.w600,
+          color: textColor.withOpacity(0.75),
+        );
+    final TextStyle titleStyle =
+        (textTheme.titleMedium ?? const TextStyle(fontSize: 17)).copyWith(
+          fontWeight: FontWeight.w700,
+          color: textColor,
+        );
     final TextStyle valueStyle =
-    (textTheme.bodyLarge ?? const TextStyle(fontSize: 16)).copyWith(
-      fontWeight: FontWeight.w600,
-      color: textColor,
-    );
+        (textTheme.bodyLarge ?? const TextStyle(fontSize: 16)).copyWith(
+          fontWeight: FontWeight.w600,
+          color: textColor,
+        );
+    final TextStyle mutedStyle =
+        (textTheme.bodySmall ?? const TextStyle(fontSize: 12)).copyWith(
+          fontWeight: FontWeight.w600,
+          color: textColor.withOpacity(0.7),
+        );
 
     final _StatusVisual statusVisual = _statusColors(order.statusLabel);
 
-
     final BorderRadius borderRadius = BorderRadius.circular(16);
     final Color splashColor =
-    Theme.of(context).colorScheme.primary.withOpacity(0.16);
+        Theme.of(context).colorScheme.primary.withOpacity(0.16);
     final Color highlightColor =
-    Theme.of(context).colorScheme.primary.withOpacity(0.08);
-
-
+        Theme.of(context).colorScheme.primary.withOpacity(0.08);
+    final Color accentColor = Theme.of(context).colorScheme.primary;
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -510,94 +875,179 @@ class _OrderCard extends StatelessWidget {
           );
         },
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-
-
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: 92,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
-                        Text('الحالة', style: labelStyle),
-                        const SizedBox(height: 6),
-                        _StatusChip(
-                          label: statusVisual.label,
-                          backgroundColor: statusVisual.backgroundColor,
-                          textColor: statusVisual.textColor,
+                        Text('رقم الطلب', style: labelStyle),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            orderNumber,
+                            style: titleStyle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          productName,
-                          style: valueStyle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Text('رقم الطلب:', style: labelStyle),
-                            const SizedBox(width: 6),
-                            Flexible(
-                              child: Text(
-                                order.displayLabel,
-                                style: valueStyle,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                    const SizedBox(height: 6),
+                    if (dateText != null) ...[
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.calendar_today_outlined,
+                            size: 15,
+                            color: mutedStyle.color,
+                          ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              dateText,
+                              style: mutedStyle,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                          ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                    if (productName != null && productName.isNotEmpty)
+                      Text(
+                        productName,
+                        style: valueStyle.copyWith(
+                          fontWeight: FontWeight.w500,
                         ),
-                        const SizedBox(height: 4),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    if (address != null) ...[
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.location_on_outlined,
+                            size: 16,
+                            color: mutedStyle.color,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              address,
+                              style: mutedStyle,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 150),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _StatusChip(
+                      label: statusVisual.label,
+                      backgroundColor: statusVisual.backgroundColor,
+                      textColor: statusVisual.textColor,
+                    ),
+                    if (hasTotal)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text('تاريخ الطلب:', style: labelStyle),
+                            Text('الإجمالي', style: mutedStyle),
                             const SizedBox(width: 6),
                             Flexible(
                               child: Text(
-                                dateText,
+                                totalText,
                                 style: valueStyle.copyWith(
-                                  fontWeight: FontWeight.w500,
+                                  color: accentColor,
+                                  fontWeight: FontWeight.w800,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.end,
                               ),
                             ),
                           ],
                         ),
-                      ],
-                    ),
-                  ),
-                ],
+                      ),
+                    if (hasPayment) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.account_balance_wallet_outlined,
+                            size: 16,
+                            color: _statusIconColor(statusVisual),
+                          ),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              paymentMethod,
+                              style: mutedStyle.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.end,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    if (hasDelivery) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.local_shipping_outlined,
+                            size: 16,
+                            color: context.color.textDefaultColor,
+                          ),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              deliveryMethod,
+                              style: mutedStyle.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.end,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
               ),
-              const SizedBox(height: 12),
-
             ],
           ),
         ),
       ),
     );
   }
-}
-
-class _OrderDetailItem extends StatelessWidget {
+}class _OrderDetailItem extends StatelessWidget {
   const _OrderDetailItem({
     required this.title,
     this.value,
@@ -697,67 +1147,54 @@ class _OrderCardSkeleton extends StatelessWidget {
       ),
       color: cardColor,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(
-                  width: 92,
+                Expanded(
                   child: Column(
-                    mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      skeletonBox(width: 56),
+                      Row(
+                        children: [
+                          skeletonBox(width: 70, height: 10),
+                          const SizedBox(width: 8),
+                          skeletonBox(width: 120, height: 14, radius: 10),
+                        ],
+                      ),
                       const SizedBox(height: 6),
-                      skeletonBox(width: 82, height: 28, radius: 999),
+                      skeletonBox(width: 150, height: 12, radius: 8),
+                      const SizedBox(height: 8),
+                      skeletonBox(width: 180, height: 14, radius: 10),
+                      const SizedBox(height: 6),
+                      skeletonBox(width: 140, height: 12, radius: 8),
                     ],
                   ),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      skeletonBox(height: 18, radius: 10),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          skeletonBox(width: 70, height: 12),
-                          const SizedBox(width: 6),
-                          Expanded(child: skeletonBox(height: 14, radius: 10)),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          skeletonBox(width: 86, height: 12),
-                          const SizedBox(width: 6),
-                          Expanded(child: skeletonBox(height: 14, radius: 10)),
-                        ],
-                      ),
-                    ],
-                  ),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    skeletonBox(width: 90, height: 28, radius: 999),
+                    const SizedBox(height: 8),
+                    skeletonBox(width: 80, height: 14, radius: 8),
+                    const SizedBox(height: 4),
+                    skeletonBox(width: 56, height: 10, radius: 6),
+                    const SizedBox(height: 6),
+                    skeletonBox(width: 110, height: 12, radius: 8),
+                    const SizedBox(height: 4),
+                    skeletonBox(width: 96, height: 12, radius: 8),
+                  ],
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            skeletonBox(width: 110),
-            const SizedBox(height: 8),
-            skeletonBox(height: 10, radius: 6),
-            const SizedBox(height: 4),
-            skeletonBox(height: 10, radius: 6),
-            const SizedBox(height: 4),
-            skeletonBox(width: MediaQuery.of(context).size.width * 0.4, height: 10, radius: 6),
           ],
         ),
       ),
     );
   }
 }
-
 

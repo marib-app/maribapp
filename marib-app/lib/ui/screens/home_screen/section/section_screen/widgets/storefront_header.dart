@@ -2,6 +2,7 @@
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:marib/data/model/merchant/storefront_model.dart';
 import 'package:marib/ui/theme/theme.dart';
+import 'package:marib/app/routes.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/ui/widgets/shimmer/shimmer_box.dart';
@@ -50,6 +51,7 @@ class MerchantStorefrontHeader extends StatelessWidget {
           avatarSize: avatarSize,
           isFollowing: isFollowing,
           isFollowLoading: isFollowLoading,
+          followersCount: followersCount,
           onFollowTap: onFollowTap,
         ),
         Padding(
@@ -61,6 +63,7 @@ class MerchantStorefrontHeader extends StatelessWidget {
                 followersCount: followersCount,
                 itemsCount: itemsCount,
                 ratingsAverage: ratingsAverage,
+                ratingsCount: details.ratingsCount,
               ),
               const SizedBox(height: 14),
               SingleChildScrollView(
@@ -106,6 +109,24 @@ class MerchantStorefrontHeader extends StatelessWidget {
                           onTap: () => _showAboutSheet(context, details),
                         ),
                       ),
+                    Padding(
+                      padding: const EdgeInsetsDirectional.only(end: 8),
+                      child: _StorefrontActionChip(
+                        label: Directionality.of(context) == TextDirection.rtl
+                            ? '����� ������'
+                            : 'Store reviews',
+                        icon: Icons.reviews_rounded,
+                        onTap: () {
+                          Navigator.of(context, rootNavigator: true).pushNamed(
+                            Routes.storeRatingPage,
+                            arguments: {
+                              'storeId': details.id,
+                              'storeName': details.name,
+                            },
+                          );
+                        },
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -247,6 +268,7 @@ class _StorefrontHero extends StatelessWidget {
     required this.details,
     required this.avatarSize,
     required this.isFollowing,
+    required this.followersCount,
     this.isFollowLoading = false,
     this.onFollowTap,
   });
@@ -254,6 +276,7 @@ class _StorefrontHero extends StatelessWidget {
   final StorefrontDetails details;
   final double avatarSize;
   final bool isFollowing;
+  final int followersCount;
   final bool isFollowLoading;
   final VoidCallback? onFollowTap;
 
@@ -286,14 +309,20 @@ class _StorefrontHero extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        details.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          color: colors.onSurface,
-                          fontWeight: FontWeight.w800,
-                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              details.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                color: colors.onSurface,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 6),
                       _StatusChip(
@@ -343,7 +372,7 @@ class _StorefrontHero extends StatelessWidget {
                             size: 20,
                           ),
                           label: Text(
-                            isFollowing ? 'متابع' : 'أتابع',
+                            isFollowing ? '�����' : '�����',
                             style: theme.textTheme.labelLarge?.copyWith(
                               color: isFollowing
                                   ? colors.primary
@@ -367,11 +396,13 @@ class _StorefrontStatsRow extends StatelessWidget {
     this.followersCount,
     this.itemsCount,
     this.ratingsAverage,
+    this.ratingsCount,
   });
 
   final int? followersCount;
   final int? itemsCount;
   final double? ratingsAverage;
+  final int? ratingsCount;
 
   String _formatInt(int? value) {
     if (value == null) return '0';
@@ -379,7 +410,7 @@ class _StorefrontStatsRow extends StatelessWidget {
   }
 
   String _formatRating(double? value) {
-    if (value == null) return '—';
+    if (value == null) return '�';
     return value.toStringAsFixed(value % 1 == 0 ? 0 : 1);
   }
 
@@ -410,8 +441,8 @@ class _StorefrontStatsRow extends StatelessWidget {
           _VerticalDivider(color: colors.onSurface.withValues(alpha: 0.08)),
           _MetricTile(
             icon: Icons.star_rate_rounded,
-            value: _formatRating(ratingsAverage),
-            label: 'Rating',
+            value: _formatInt(ratingsCount ?? 0),
+            label: 'Reviews',
           ),
         ],
       ),
@@ -659,6 +690,7 @@ class _StorefrontActionChip extends StatelessWidget {
     );
   }
 }
+
 
 
 

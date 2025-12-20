@@ -27,25 +27,21 @@
 @endsection
 
 @section('content')
-    <section class="section section--items-index" data-page="items-index">
-        <div class="items-index container-fluid px-0">
+    <section class="section" data-page="items-index">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div id="filters" class="mb-3">
+                            @include('items.partials.filter-panel', ['categories' => $categories])
+                        </div>
 
-            <div class="items-index__layout">
-                <aside class="items-index__filters">
-
-                    @include('items.partials.filter-panel', ['categories' => $categories])
-                </aside>
-                <div class="items-index__results">
-                    @include('items.partials.results-pane', ['categories' => $categories])
-                
-
-
+                        @include('items.partials.results-pane', ['categories' => $categories])
+                    </div>
                 </div>
             </div>
         </div>
 
         @include('items.partials.status-modal')
-
     </section>
 @endsection
-

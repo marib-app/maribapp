@@ -355,6 +355,12 @@ Route::prefix('storefront')->group(function (): void {
     Route::get('stores/{store}/products', [StorefrontController::class, 'products']);
     Route::get('stores/{store}/manual-banks', [StorefrontController::class, 'manualBankAccounts']);
     Route::get('stores/{store}/follow-status', [StorefrontController::class, 'followStatus']);
+    Route::get('stores/{store}/reviews', [StorefrontController::class, 'reviews']);
+    Route::middleware('auth:sanctum')->group(function (): void {
+        Route::post('stores/{store}/reviews', [StorefrontController::class, 'addReview']);
+        Route::put('stores/{store}/reviews', [StorefrontController::class, 'updateReview']);
+        Route::delete('stores/{store}/reviews', [StorefrontController::class, 'deleteReview']);
+    });
 });
 
     

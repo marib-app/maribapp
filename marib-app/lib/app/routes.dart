@@ -1,5 +1,5 @@
 ﻿import 'package:marib/ui/screens/auth/sign_up/mobile_signup_screen.dart';
-import 'package:flutter/material.dart';
+// import removed duplicate
 import 'package:marib/ui/screens/auth/sign_up/mobile_verification_screen.dart';
 import 'package:marib/ui/screens/cart/adress.dart';
 import 'package:marib/ui/screens/cart/delivery_and_payment.dart';
@@ -79,6 +79,7 @@ import 'package:marib/ui/screens/classified_ads/classified_screen2.dart';
 import 'package:marib/ui/screens/classified_ads/classified_screen3.dart';
 import 'package:marib/ui/screens/classified_ads/units/service_payment_page.dart';
 import 'package:marib/ui/screens/home_screen/section/section_screen/section_screen.dart';
+import 'package:marib/ui/screens/storefront/store_rating_page.dart';
 
 import 'package:marib/ui/screens/item/purchase_options/product_purchase_options_screen.dart';
 import 'package:marib/ui/screens/item/promo/promote_ad_screen.dart';
@@ -125,6 +126,7 @@ class Routes {
   static const servicePaymentPage = '/service-payment';
   static const myReviewsScreen = '/myReviewsScreenRoute';
   static const serviceAddMoreDetails = '/service-add-more-details';
+  static const storeRatingPage = '/store-rating';
 
   // ط®ط¯ظ…ط§طھ ط§ط®ط±ظ‰
   static const otherServices = '/other-services';
@@ -362,6 +364,9 @@ class Routes {
       // ط§ظ„ط¯ظپط¹
       case Routes.servicePaymentPage:
         return ServicePaymentPage.route(routeSettings);
+
+      case Routes.storeRatingPage:
+        return StoreRatingPage.route(routeSettings);
 
       case Routes.section_screen: // ًں‘ˆ ظ…ط³ط§ط±ظƒ ط§ظ„ط¬ط¯ظٹط¯
         return Section_screen.route(routeSettings);
@@ -689,7 +694,7 @@ Route<T> _buildFadeBlurOverlay<T>({
     forwardDuration: const Duration(milliseconds: 220),
     builder: builder,
     barrierDismissible: barrierDismissible,
-    barrierColor: Colors.black.withOpacity(0.2),
+    barrierColor: Colors.black.withValues(alpha: 0.2),
     opaque: false,
   );
 }

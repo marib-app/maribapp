@@ -12,6 +12,7 @@ class StorefrontDetails {
     this.followersCount,
     this.itemsCount,
     this.ratingsAverage,
+    this.ratingsCount,
     this.contact,
     this.location,
     this.settings,
@@ -33,6 +34,7 @@ class StorefrontDetails {
     int? followersCount,
     int? itemsCount,
     double? ratingsAverage,
+    int? ratingsCount,
     StorefrontContact? contact,
     StorefrontLocation? location,
     StorefrontSettings? settings,
@@ -53,6 +55,7 @@ class StorefrontDetails {
       followersCount: followersCount ?? this.followersCount,
       itemsCount: itemsCount ?? this.itemsCount,
       ratingsAverage: ratingsAverage ?? this.ratingsAverage,
+      ratingsCount: ratingsCount ?? this.ratingsCount,
       contact: contact ?? this.contact,
       location: location ?? this.location,
       settings: settings ?? this.settings,
@@ -84,6 +87,12 @@ class StorefrontDetails {
           json['average_rating'] ??
           json['rating_avg'],
     );
+    final int? ratingsCount = _intValue(
+      json['ratings_count'] ??
+          json['reviews_count'] ??
+          json['ratingsCount'] ??
+          json['reviewsCount'],
+    );
 
     return StorefrontDetails(
       id: json['id'] as int? ?? 0,
@@ -102,6 +111,7 @@ class StorefrontDetails {
       followersCount: followersCount,
       itemsCount: itemsCount,
       ratingsAverage: ratingsAverage,
+      ratingsCount: ratingsCount,
       status: StorefrontStatus.fromJson(
         (json['status'] as Map<String, dynamic>?) ?? const <String, dynamic>{},
       ),
@@ -171,6 +181,12 @@ class StorefrontDetails {
           json['ratingsAverage'] ??
           json['average_rating'] ??
           json['rating_avg'],
+    );
+    final int? ratingsCount = _intValue(
+      json['ratings_count'] ??
+          json['reviews_count'] ??
+          json['ratingsCount'] ??
+          json['reviewsCount'],
     );
 
     final bool allowDelivery = _boolValue(json['allow_delivery']);
@@ -269,6 +285,7 @@ class StorefrontDetails {
       followersCount: followersCount,
       itemsCount: itemsCount,
       ratingsAverage: ratingsAverage,
+      ratingsCount: ratingsCount,
       status: status,
       contact: contact,
       location: location,
@@ -287,6 +304,7 @@ class StorefrontDetails {
   final int? followersCount;
   final int? itemsCount;
   final double? ratingsAverage;
+  final int? ratingsCount;
   final StorefrontStatus status;
   final StorefrontContact? contact;
   final StorefrontLocation? location;

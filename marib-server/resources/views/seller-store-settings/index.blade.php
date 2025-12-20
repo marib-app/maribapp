@@ -16,122 +16,162 @@
 
 @section('css')
     <style>
-        .storefront-settings-page {
-            font-family: 'Cairo', 'Tajawal', 'Noto Sans Arabic', 'Tahoma', 'Arial', sans-serif;
+        :root {
+            --sf-primary: #0d6efd;
+            --sf-surface: #f7f9fc;
+            --sf-border: #e7ebf3;
+            --sf-muted: #6c757d;
+            --sf-card-radius: 14px;
         }
-        .storefront-hero {
-            background: linear-gradient(135deg, #eef4ff 0%, #ffffff 60%);
-            border: 1px solid #e6edf7;
-        }
-        .pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 10px;
-            border-radius: 999px;
-            background: #f5f7fb;
-            border: 1px solid #e6edf7;
-            font-size: 12px;
-            color: #0d6efd;
-        }
+        .storefront-shell { font-family: 'Cairo','Tajawal','Noto Sans Arabic','Tahoma','Arial',sans-serif; }
+        .storefront-hero { background: linear-gradient(135deg,#eef4ff 0%,#ffffff 60%); border: 1px solid var(--sf-border); border-radius: 16px; }
+        .pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; background: #f5f7fb; border: 1px solid var(--sf-border); font-size: 12px; color: var(--sf-primary); }
+        .section-card { border: 1px solid var(--sf-border); border-radius: var(--sf-card-radius); background: #fff; }
+        .section-card .card-title { font-weight: 700; font-size: 15px; }
+        .sticky-actions { position: sticky; top: 12px; z-index: 3; }
+        .badge-dot { display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius: 10px; background: #f1f4f9; color: #0d6efd; font-size: 12px; }
+        .mini-label { font-size: 12px; color: var(--sf-muted); }
+        .list-row { border: 1px solid var(--sf-border); border-radius: 12px; padding: 10px 12px; background: #fbfcff; }
+        .ghost { color: var(--sf-muted); }
     </style>
 @endsection
 
 @section('content')
-    <section class="section storefront-settings-page">
-        <div class="card border-0 shadow-sm">
-            <div class="card-body">
-                <ul class="nav nav-tabs" id="sellerStoreSettingsTabs" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="seller-store-terms-tab" data-bs-toggle="tab" data-bs-target="#seller-store-terms" type="button" role="tab">
-                            {{ __('شروط وأحكام المتجر') }}
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="seller-store-gateways-tab" data-bs-toggle="tab" data-bs-target="#seller-store-gateways" type="button" role="tab">
-                            {{ __('بوابات الدفع') }}
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="storefront-ui-tab" data-bs-toggle="tab" data-bs-target="#storefront-ui" type="button" role="tab">
-                            {{ __('واجهة المتجر (فئات + عروض + تخفيضات)') }}
-                        </button>
-                    </li>
-                </ul>
+    <section class="section storefront-shell">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-3">
+            <div>
+                <div class="text-muted small">{{ __('لوحة التحكم / المتاجر الإلكترونية') }}</div>
+                <h3 class="fw-bold m-0">{{ __('إدارة واجهة المتجر') }}</h3>
+            </div>
+            <div class="d-flex gap-2 flex-wrap sticky-actions">
+                <button form="storefrontUiForm" type="submit" class="btn btn-primary">{{ __('حفظ واجهة المتجر') }}</button>
+                <button form="termsForm" type="submit" class="btn btn-outline-secondary">{{ __('حفظ الشروط') }}</button>
+            </div>
+        </div>
 
-                <div class="tab-content mt-4" id="sellerStoreSettingsTabsContent">
-                    {{-- شروط المتجر --}}
-                    <div class="tab-pane fade show active" id="seller-store-terms" role="tabpanel">
-                        <form class="create-form-without-reset" action="{{ route('seller-store-settings.terms.store') }}" method="post">
+        <div class="storefront-hero p-3 p-md-4 mb-4">
+            <div class="d-flex flex-wrap align-items-center gap-3">
+                <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:52px;height:52px;background:#0d6efd1a;">
+                    <i class="bi bi-magic text-primary fs-4"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <div class="fw-semibold fs-5 mb-1">{{ __('تصميم واجهة متجر متكاملة') }}</div>
+                    <div class="text-muted small">{{ __('تحكم كامل في الشريط المميز، بطاقات الترويج، العروض والتخفيضات دون تبويبات معقدة.') }}</div>
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <span class="pill"><i class="bi bi-sliders"></i>{{ __('إعداد سريع') }}</span>
+                    <span class="pill"><i class="bi bi-bag-heart"></i>{{ __('تجربة جذابة') }}</span>
+                    <span class="pill"><i class="bi bi-activity"></i>{{ __('حفظ فوري') }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-xl-4 col-12">
+                <div class="card section-card shadow-sm mb-4">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <div class="card-title mb-1">{{ __('الشروط والأحكام') }}</div>
+                                <div class="text-muted small">{{ __('نص عادي فقط كما سيظهر للمتاجر الإلكترونية.') }}</div>
+                            </div>
+                            <button form="termsForm" type="submit" class="btn btn-primary btn-sm">{{ __('حفظ') }}</button>
+                        </div>
+                        <form id="termsForm" class="create-form-without-reset" action="{{ route('seller-store-settings.terms.store') }}" method="post">
                             @csrf
-                            <div class="mb-3">
-                                <label class="form-label" for="store_terms_editor">{{ __('نص الشروط والأحكام') }}</label>
-                                <textarea id="store_terms_editor" name="store_terms_conditions" class="form-control" rows="12">{{ old('store_terms_conditions', $storeTerms) }}</textarea>
-                            </div>
-                            <div class="d-flex justify-content-end">
-                                <button type="submit" class="btn btn-primary">{{ __('حفظ الشروط') }}</button>
-                            </div>
+                            <textarea id="store_terms_editor" name="store_terms_conditions" class="form-control" rows="10" inputmode="text" placeholder="{{ __('اكتب نص الشروط كما سيظهر للمستخدمين (نص فقط بدون أكواد).') }}">{{ old('store_terms_conditions', strip_tags($storeTerms)) }}</textarea>
+                            <div class="text-muted small mt-2">{{ __('يُسمح بالنصوص العادية فقط، سيُزال أي HTML عند الحفظ.') }}</div>
                         </form>
                     </div>
+                </div>
 
-                    {{-- بوابات الدفع --}}
-                    <div class="tab-pane fade" id="seller-store-gateways" role="tabpanel">
-                        <div class="row g-3">
-                            <div class="col-12 d-flex justify-content-between align-items-center">
-                                <div class="text-muted">{{ __('إدارة بوابات الدفع الخاصة بالمتاجر.') }}</div>
-                                <a href="{{ route('seller-store-settings.gateways.index') }}" class="btn btn-primary">{{ __('إدارة البوابات') }}</a>
+                <div class="card section-card shadow-sm mb-4">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <div class="card-title mb-1">{{ __('بوابات الدفع') }}</div>
+                                <div class="text-muted small">{{ __('عرض وإدارة بوابات الدفع الخاصة بالمتاجر الإلكترونية.') }}</div>
                             </div>
-                            <div class="col-12">
-                                <div class="table-responsive">
-                                    <table class="table table-striped align-middle mb-0">
-                                        <thead>
-                                        <tr>
-                                            <th>{{ __('البوابة') }}</th>
-                                            <th>{{ __('الحالة') }}</th>
-                                            <th>{{ __('حسابات التاجر') }}</th>
-                                            <th>{{ __('آخر تحديث') }}</th>
-                                            <th>{{ __('ملاحظات') }}</th>
-                                        </tr>
-                                        </thead>
-                                        <tbody>
-                                        @forelse ($storeGateways as $gateway)
-                                            @php
-                                                $updatedAt = $gateway->updated_at;
-                                                $lastUpdated = $updatedAt
-                                                    ? $updatedAt->timezone(config('app.timezone', 'UTC'))->format('M j, Y H:i')
-                                                    : __('Never');
-                                                $notes = data_get($gateway, 'notes', data_get($gateway, 'note'));
-                                            @endphp
-                                            <tr>
-                                                <td>
-                                                    <div class="d-flex align-items-center gap-2">
-                                                        @if($gateway->logo_url)
-                                                            <img src="{{ $gateway->logo_url }}" alt="{{ $gateway->name }}" class="rounded border" style="width:40px;height:40px;object-fit:contain;">
-                                                        @else
-                                                            <span class="badge bg-light text-body-secondary border">{{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::limit($gateway->name, 3, '')) }}</span>
-                                                        @endif
-                                                        <div>
-                                                            <div class="fw-semibold">{{ $gateway->name }}</div>
-                                                            <div class="small text-muted text-break">{{ __('ID') }}: {{ $gateway->id }}</div>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td>@if($gateway->is_active)<span class="badge bg-success">{{ __('مفعّل') }}</span>@else<span class="badge bg-secondary">{{ __('معطّل') }}</span>@endif</td>
-                                                <td class="text-nowrap">{{ $gateway->accounts_count }}</td>
-                                                <td class="text-nowrap">{{ $lastUpdated }}</td>
-                                                <td class="text-break">@if(!empty($notes)){!! nl2br(e($notes)) !!}@else<span class="text-muted">{{ __('لا توجد ملاحظات') }}</span>@endif</td>
-                                            </tr>
-                                        @empty
-                                            <tr><td colspan="5" class="text-center text-muted py-4">{{ __('لا توجد بوابات مضافة بعد.') }}</td></tr>
-                                        @endforelse
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
+                            <a href="{{ route('seller-store-settings.gateways.index') }}" class="btn btn-primary btn-sm">{{ __('إدارة البوابات') }}</a>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-striped align-middle mb-0">
+                                <thead>
+                                <tr>
+                                    <th>{{ __('البوابة') }}</th>
+                                    <th>{{ __('الحالة') }}</th>
+                                    <th>{{ __('حسابات التاجر') }}</th>
+                                    <th>{{ __('آخر تحديث') }}</th>
+                                    <th>{{ __('ملاحظات') }}</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                @forelse ($storeGateways as $gateway)
+                                    @php
+                                        $updatedAt = $gateway->updated_at;
+                                        $lastUpdated = $updatedAt
+                                            ? $updatedAt->timezone(config('app.timezone', 'UTC'))->format('M j, Y H:i')
+                                            : __('Never');
+                                        $notes = data_get($gateway, 'notes', data_get($gateway, 'note'));
+                                    @endphp
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center gap-2">
+                                                @if($gateway->logo_url)
+                                                    <img src="{{ $gateway->logo_url }}" alt="{{ $gateway->name }}" class="rounded border" style="width:40px;height:40px;object-fit:contain;">
+                                                @else
+                                                    <span class="badge bg-light text-body-secondary border">{{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::limit($gateway->name, 3, '')) }}</span>
+                                                @endif
+                                                <div>
+                                                    <div class="fw-semibold">{{ $gateway->name }}</div>
+                                                    <div class="small text-muted text-break">{{ __('ID') }}: {{ $gateway->id }}</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>@if($gateway->is_active)<span class="badge bg-success">{{ __('مفعّل') }}</span>@else<span class="badge bg-secondary">{{ __('معطّل') }}</span>@endif</td>
+                                        <td class="text-nowrap">{{ $gateway->accounts_count }}</td>
+                                        <td class="text-nowrap">{{ $lastUpdated }}</td>
+                                        <td class="text-break">@if(!empty($notes)){!! nl2br(e($notes)) !!}@else<span class="text-muted">{{ __('لا توجد ملاحظات') }}</span>@endif</td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="5" class="text-center text-muted py-4">{{ __('لا توجد بوابات مضافة بعد.') }}</td></tr>
+                                @endforelse
+                                </tbody>
+                            </table>
                         </div>
                     </div>
-                    {{-- واجهة المتجر: فئات + ترويج + عروض + تخفيضات في نفس التبويب --}}
-                    <div class="tab-pane fade" id="storefront-ui" role="tabpanel">
+                </div>
+
+                <div class="card section-card shadow-sm">
+                    <div class="card-body">
+                        <div class="card-title mb-2">{{ __('ملخص سريع') }}</div>
+                        <div class="vstack gap-2 mini-label">
+                            <div class="d-flex justify-content-between"><span>{{ __('فئات مميزة') }}</span><span id="summaryCats" class="fw-semibold">0</span></div>
+                            <div class="d-flex justify-content-between"><span>{{ __('بطاقات ترويج') }}</span><span id="summaryPromos" class="fw-semibold">0</span></div>
+                            <div class="d-flex justify-content-between"><span>{{ __('عروض جديدة') }}</span><span id="summaryOffers" class="fw-semibold">0</span></div>
+                            <div class="d-flex justify-content-between"><span>{{ __('تخفيضات') }}</span><span id="summaryDiscounts" class="fw-semibold">0</span></div>
+                        </div>
+                        <hr>
+                        <div class="mini-label">{{ __('الحفظ يطبق فوراً على تطبيق المتاجر.') }}</div>
+                        <button form="storefrontUiForm" type="submit" class="btn btn-primary w-100 mt-3">{{ __('حفظ واجهة المتجر') }}</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-8 col-12">
+                <div class="card section-card shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                            <div>
+                                <div class="card-title mb-1">{{ __('مصمم الواجهة (شريط + عروض)') }}</div>
+                                <div class="text-muted small">{{ __('كل عناصر الواجهة في لوحة واحدة بدون تبويب منفصل.') }}</div>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" role="switch" id="storefront_ui_enabled" name="enabled" value="1" {{ $uiSetting->enabled ? 'checked' : '' }}>
+                                <label class="form-check-label" for="storefront_ui_enabled">{{ __('تشغيل الواجهة المخصصة') }}</label>
+                            </div>
+                        </div>
+
                         <form action="{{ route('seller-store-settings.ui.store') }}" method="post" id="storefrontUiForm">
                             @csrf
                             <textarea id="featured_categories" name="featured_categories" class="d-none"></textarea>
@@ -141,39 +181,20 @@
 
                             <div class="row g-4">
                                 <div class="col-12">
-                                    <div class="p-4 rounded-4 shadow-sm storefront-hero">
-                                        <div class="d-flex flex-wrap align-items-center gap-3">
-                                            <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:52px;height:52px;background:#0d6efd1a;">
-                                                <i class="bi bi-layout-text-window-reverse text-primary fs-4"></i>
-                                            </div>
-                                            <div class="flex-grow-1">
-                                                <div class="fw-semibold fs-5 mb-1">{{ __('تجربة متجر احترافية دون JSON يدوي') }}</div>
-                                                <div class="text-muted small">{{ __('شريط فئات + بطاقات ترويج + عروض + تخفيضات في واجهة واحدة') }}</div>
-                                            </div>
-                                            <div class="d-flex gap-2 flex-wrap">
-                                                <span class="pill"><i class="bi bi-shop"></i>{{ __('متاجر إلكترونية') }}</span>
-                                                <span class="pill"><i class="bi bi-sliders"></i>{{ __('شريط فئات') }}</span>
-                                                <span class="pill"><i class="bi bi-megaphone"></i>{{ __('بطاقات عروض') }}</span>
-                                                <span class="pill"><i class="bi bi-tags"></i>{{ __('تخفيضات') }}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="col-12">
-                                    <div class="card border-0 shadow-sm">
+                                    <div class="card section-card shadow-sm mb-4">
                                         <div class="card-body">
                                             <div class="d-flex justify-content-between align-items-center mb-3">
                                                 <div>
-                                                    <div class="fw-semibold">{{ __('فئات قسم المتجر (عرض فقط)') }}</div>
-                                                    <div class="text-muted small">{{ __('ترتيب بالأب ثم الاسم، مع إظهار الصورة إن وجدت.') }}</div>
+                                                    <div class="card-title mb-1">{{ __('فئات قسم المتجر (عرض فقط)') }}</div>
+                                                    <div class="text-muted small">{{ __('مرتبة بالأب ثم الاسم، لعرض المتوفر للقسم.') }}</div>
                                                 </div>
+                                                <span class="badge-dot"><i class="bi bi-eye"></i>{{ __('عرض فقط') }}</span>
                                             </div>
                                             @if(($categories ?? collect())->count() > 0)
                                                 <div class="row g-3">
                                                     @foreach($categories as $cat)
                                                         <div class="col-12 col-md-6 col-lg-4">
-                                                            <div class="border rounded-3 h-100 p-3 d-flex gap-3 align-items-center">
+                                                            <div class="border rounded-3 h-100 p-3 d-flex gap-3 align-items-center" style="border-color: var(--sf-border);">
                                                                 <div class="flex-shrink-0">
                                                                     @if(!empty($cat->image))
                                                                         <img src="{{ $cat->image }}" alt="{{ $cat->name }}" class="rounded" style="width:58px;height:58px;object-fit:cover;">
@@ -203,99 +224,71 @@
                                     </div>
                                 </div>
 
-                                <div class="col-12 col-lg-4">
-                                    <div class="card shadow-sm h-100 border-0">
-                                        <div class="card-body">
-                                            <div class="d-flex align-items-start gap-2 mb-3">
-                                                <div class="rounded-circle bg-primary-subtle text-primary d-flex align-items-center justify-content-center" style="width:38px;height:38px;">
-                                                    <i class="bi bi-toggle2-on"></i>
-                                                </div>
-                                                <div>
-                                                    <div class="fw-semibold">{{ __('تفعيل واجهة المتجر المخصصة') }}</div>
-                                                    <div class="text-muted small">{{ __('إيقافها يعيد الواجهة للوضع الافتراضي.') }}</div>
-                                                </div>
-                                            </div>
-                                            <div class="form-check form-switch mb-4">
-                                                <input class="form-check-input" type="checkbox" role="switch" id="storefront_ui_enabled" name="enabled" value="1" {{ $uiSetting->enabled ? 'checked' : '' }}>
-                                                <label class="form-check-label" for="storefront_ui_enabled">{{ __('تشغيل / إيقاف') }}</label>
-                                            </div>
-                                            <div class="vstack gap-2 small text-muted">
-                                                <div class="d-flex align-items-center gap-2"><i class="bi bi-collection-play text-primary"></i><span>{{ __('شريط فئات أفقي داخل التطبيق.') }}</span></div>
-                                                <div class="d-flex align-items-center gap-2"><i class="bi bi-megaphone text-success"></i><span>{{ __('بطاقات عروض بين المتاجر كل X بطاقات.') }}</span></div>
-                                                <div class="d-flex align-items-center gap-2"><i class="bi bi-magic text-warning"></i><span>{{ __('الحقول الفارغة يتم تجاهلها تلقائياً عند الحفظ.') }}</span></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="col-12 col-lg-8">
-                                    <div class="card shadow-sm mb-4 border-0">
+                                <div class="col-12">
+                                    <div class="card section-card shadow-sm mb-4">
                                         <div class="card-body">
                                             <div class="d-flex justify-content-between align-items-center mb-3">
                                                 <div>
-                                                    <div class="fw-semibold">{{ __('شريط الفئات المميزة') }}</div>
-                                                    <div class="text-muted small">{{ __('اختر الفئات التي تظهر كشرائح قابلة للتمرير.') }}</div>
+                                                    <div class="card-title mb-1">{{ __('الشريط المميز (فئات مختصرة)') }}</div>
+                                                    <div class="text-muted small">{{ __('اختر الفئات التي ستظهر كشرائح أفقية في التطبيق.') }}</div>
                                                 </div>
-                                                <button type="button" class="btn btn-sm btn-outline-primary" id="addCategoryBtn">
-                                                    {{ __('إضافة فئة') }}
+                                                <button type="button" class="btn btn-sm btn-outline-primary" id="addCategoryBtn" onclick="event.preventDefault(); if (window.sfAddCategory) { window.sfAddCategory(); } else { const list=document.getElementById('featuredCategoriesList'); if(list){ const idx=list.children.length+1; const card=document.createElement('div'); card.className='border rounded p-3 bg-light'; card.innerHTML=`<div class=\"fw-semibold mb-2\">{{ __('فئة') }} #${idx}</div><div class=\"text-muted small\">{{ __('تمت الإضافة، عيّن بياناتها بعد إعادة تحميل الصفحة') }}</div>`; list.appendChild(card);} } return false;">
+                                                    <i class="bi bi-plus-lg"></i> {{ __('إضافة فئة') }}
                                                 </button>
                                             </div>
                                             <div id="featuredCategoriesList" class="d-grid gap-3"></div>
-                                            <div class="text-muted small mt-3">{{ __('اختر الفئة من القائمة. اللون اختياري للتمييز.') }}</div>
-                                        </div>
-                                    </div>
-
-                                    <div class="card shadow-sm border-0">
-                                        <div class="card-body">
-                                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                                <div>
-                                                    <div class="fw-semibold">{{ __('بطاقات العروض بين المتاجر') }}</div>
-                                                    <div class="text-muted small">{{ __('تظهر بطاقة ترويج بعد عدد معين من بطاقات المتاجر.') }}</div>
-                                                </div>
-                                                <button type="button" class="btn btn-sm btn-outline-primary" id="addPromoBtn">
-                                                    {{ __('إضافة ترويج') }}
-                                                </button>
-                                            </div>
-                                            <div id="promotionCardsList" class="d-grid gap-3"></div>
-                                            <div class="text-muted small mt-3">{{ __('التكرار يحدد كل كم بطاقة متجر يظهر هذا الترويج.') }}</div>
-                                        </div>
-                                    </div>
-
-                                    <div class="card shadow-sm border-0 mt-4">
-                                        <div class="card-body">
-                                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                                <div>
-                                                    <div class="fw-semibold">{{ __('عروض جديدة داخل الواجهة') }}</div>
-                                                    <div class="text-muted small">{{ __('اختر إعلانات متاجر لإبرازها كعروض جديدة.') }}</div>
-                                                </div>
-                                                <button type="button" class="btn btn-sm btn-primary" data-select-items="offers">
-                                                    <i class="bi bi-plus"></i> {{ __('إضافة عرض') }}
-                                                </button>
-                                            </div>
-                                            <div id="offersList" class="d-grid gap-2"></div>
-                                            <div class="text-muted small mt-2">{{ __('يتم الحفظ مع إعدادات الواجهة مباشرة.') }}</div>
-                                        </div>
-                                    </div>
-
-                                    <div class="card shadow-sm border-0 mt-4">
-                                        <div class="card-body">
-                                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                                <div>
-                                                    <div class="fw-semibold">{{ __('تخفيضات مميزة داخل الواجهة') }}</div>
-                                                    <div class="text-muted small">{{ __('اختر إعلانات متاجر لتظهر كبطاقات تخفيضات.') }}</div>
-                                                </div>
-                                                <button type="button" class="btn btn-sm btn-success" data-select-items="discounts">
-                                                    <i class="bi bi-plus"></i> {{ __('إضافة تخفيض') }}
-                                                </button>
-                                            </div>
-                                            <div id="discountsList" class="d-grid gap-2"></div>
-                                            <div class="text-muted small mt-2">{{ __('يتم الحفظ مع إعدادات الواجهة مباشرة.') }}</div>
+                                            <div class="text-muted small mt-3">{{ __('اختر الفئة والاسم الظاهر، اللون والأيقونة اختيارية.') }}</div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div class="col-12 d-flex justify-content-end">
-                                    <button type="submit" class="btn btn-primary px-4">{{ __('حفظ إعدادات الواجهة') }}</button>
+                                <div class="col-12">
+                                    <div class="card section-card shadow-sm mb-4">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                                <div>
+                                                    <div class="card-title mb-1">{{ __('بطاقات الترويج بين المتاجر') }}</div>
+                                                    <div class="text-muted small">{{ __('تظهر بطاقة ترويج بعد عدد معيّن من بطاقات المتاجر.') }}</div>
+                                                </div>
+                                                <button type="button" class="btn btn-sm btn-outline-primary" id="addPromoBtn">
+                                                    <i class="bi bi-megaphone"></i> {{ __('إضافة ترويج') }}
+                                                </button>
+                                            </div>
+                                            <div id="promotionCardsList" class="d-grid gap-3"></div>
+                                            <div class="text-muted small mt-3">{{ __('اترك الحقول الفارغة إذا كنت لا تريد ترويجاً معيناً.') }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-12">
+                                    <div class="card section-card shadow-sm">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                                <div>
+                                                    <div class="card-title mb-1">{{ __('العروض والتخفيضات') }}</div>
+                                                    <div class="text-muted small">{{ __('اختر الإعلانات التي ستظهر كعروض جديدة أو تخفيضات ضمن الواجهة.') }}</div>
+                                                </div>
+                                                <div class="d-flex gap-2">
+                                                    <button type="button" class="btn btn-sm btn-outline-success" data-select-items="offers">
+                                                        <i class="bi bi-plus-lg"></i> {{ __('إضافة إلى العروض') }}
+                                                    </button>
+                                                    <button type="button" class="btn btn-sm btn-outline-warning" data-select-items="discounts">
+                                                        <i class="bi bi-plus-lg"></i> {{ __('إضافة إلى التخفيضات') }}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="row g-3">
+                                                <div class="col-md-6">
+                                                    <div class="mini-label mb-2">{{ __('عروض جديدة') }}</div>
+                                                    <div id="offersList" class="vstack gap-2"></div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="mini-label mb-2">{{ __('تخفيضات') }}</div>
+                                                    <div id="discountsList" class="vstack gap-2"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </form>
@@ -304,23 +297,20 @@
             </div>
         </div>
     </section>
-
-    {{-- Modal اختيار الإعلان --}}
-    <div class="modal fade" id="itemsPickerModal" tabindex="-1" aria-labelledby="itemsPickerLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    {{-- Modal اختيار الإعلانات --}}
+    <div class="modal fade" id="itemsPickerModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-scrollable modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="itemsPickerLabel">{{ __('اختر إعلاناً من المتاجر') }}</h5>
+                    <h5 class="modal-title">{{ __('اختر إعلانات') }}</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <div class="input-group mb-3">
-                        <span class="input-group-text"><i class="bi bi-search"></i></span>
-                        <input type="text" class="form-control" id="itemsSearchInput" placeholder="{{ __('ابحث بالاسم') }}">
+                        <input type="text" class="form-control" placeholder="{{ __('ابحث بالاسم أو المعرّف') }}" id="itemsSearchInput">
                         <button class="btn btn-outline-primary" type="button" id="itemsSearchBtn">{{ __('بحث') }}</button>
                     </div>
-                    <div id="itemsResults" class="list-group"></div>
-                    <div class="text-muted small mt-2">{{ __('يتم جلب إعلانات المتاجر فقط.') }}</div>
+                    <div class="list-group" id="itemsResults"></div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('إغلاق') }}</button>
@@ -328,20 +318,34 @@
             </div>
         </div>
     </div>
+    <script>
+        // ضمان وجود دالة إضافة الفئة فوراً حتى قبل تحميل بقية السكربتات
+        (function () {
+            if (window.sfAddCategory) return;
+            window.sfAddCategory = function () {
+                const list = document.getElementById('featuredCategoriesList');
+                if (!list) return false;
+                const idx = list.children.length + 1;
+                const card = document.createElement('div');
+                card.className = 'border rounded p-3 bg-light';
+                card.dataset.catCard = '1';
+                card.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                        <div class="fw-semibold">{{ __('فئة') }} #${idx}</div>
+                        <button type="button" class="btn btn-sm btn-outline-danger" aria-label="Remove" onclick="this.closest('[data-cat-card]').remove()">&times;</button>
+                    </div>
+                    <div class="text-muted small">{{ __('تمت الإضافة، سيكتمل النموذج بعد تحميل السكربت الكامل أو بعد الحفظ.') }}</div>
+                `;
+                list.appendChild(card);
+                return false;
+            };
+        })();
+    </script>
 @endsection
 @push('scripts')
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            if (typeof tinymce !== 'undefined') {
-                tinymce.init({
-                    selector: '#store_terms_editor',
-                    height: 350,
-                    menubar: false,
-                    directionality: document.documentElement.getAttribute('dir') || 'ltr',
-                    plugins: ['advlist autolink lists link charmap preview anchor', 'searchreplace visualblocks code fullscreen', 'insertdatetime media table paste code help wordcount'],
-                    toolbar: 'undo redo | formatselect | bold italic backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | help'
-                });
-            }
+            // يُسمح بنص عادي فقط لشروط المتجر (بدون محرر WYSIWYG أو أكواد)
 
             const storeCategories = @json($categories ?? []);
             const initialCategories = @json(old('featured_categories') ? json_decode(old('featured_categories'), true) : $uiSetting->featured_categories);
@@ -359,13 +363,15 @@
             const form = document.getElementById('storefrontUiForm');
             const offersListEl = document.getElementById('offersList');
             const discountsListEl = document.getElementById('discountsList');
+            const summaryCats = document.getElementById('summaryCats');
+            const summaryPromos = document.getElementById('summaryPromos');
+            const summaryOffers = document.getElementById('summaryOffers');
+            const summaryDiscounts = document.getElementById('summaryDiscounts');
+
             const modalEl = document.getElementById('itemsPickerModal');
             const itemsModal = (modalEl && window.bootstrap && window.bootstrap.Modal)
                 ? new bootstrap.Modal(modalEl)
-                : {
-                    show() { if (modalEl) { modalEl.classList.add('show'); modalEl.style.display = 'block'; } },
-                    hide() { if (modalEl) { modalEl.classList.remove('show'); modalEl.style.display = 'none'; } },
-                };
+                : { show() { if (modalEl) { modalEl.classList.add('show'); modalEl.style.display = 'block'; } }, hide() { if (modalEl) { modalEl.classList.remove('show'); modalEl.style.display = 'none'; } } };
             const itemsResults = document.getElementById('itemsResults');
             const itemsSearchInput = document.getElementById('itemsSearchInput');
             const itemsSearchBtn = document.getElementById('itemsSearchBtn');
@@ -373,6 +379,13 @@
             let pickerTarget = null;
             let offersSelection = Array.isArray(initialOffers) ? initialOffers : [];
             let discountsSelection = Array.isArray(initialDiscounts) ? initialDiscounts : [];
+
+            function setSummary() {
+                summaryCats.textContent = catList ? catList.querySelectorAll('[data-cat-card]').length : 0;
+                summaryPromos.textContent = promoList ? promoList.querySelectorAll('[data-promo-card]').length : 0;
+                summaryOffers.textContent = offersSelection.length;
+                summaryDiscounts.textContent = discountsSelection.length;
+            }
 
             function renderCategoryOptions(selected) {
                 const placeholder = "{{ __('اختر فئة') }}";
@@ -386,7 +399,7 @@
                 return `<option value="">${placeholder}</option>${options}`;
             }
 
-            function buildCategoryCard(data = {}) {
+            window.sfAddCategory = function(data = {}) {
                 if (!catList) return;
                 const idx = catList.children.length + 1;
                 const card = document.createElement('div');
@@ -395,7 +408,7 @@
                 card.innerHTML = `
                     <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
                         <div class="fw-semibold">{{ __('فئة') }} #${idx}</div>
-                        <button type="button" class="btn btn-sm btn-outline-danger" aria-label="Remove" onclick="this.closest('[data-cat-card]').remove()">&times;</button>
+                        <button type="button" class="btn btn-sm btn-outline-danger" aria-label="Remove" onclick="this.closest('[data-cat-card]').remove(); setTimeout(setSummary, 50);">&times;</button>
                     </div>
                     <div class="row g-2">
                         <div class="col-md-6">
@@ -421,9 +434,10 @@
                     </div>
                 `;
                 catList.appendChild(card);
+                setSummary();
             }
 
-            function buildPromoCard(slot = {}) {
+            window.sfAddPromo = function(slot = {}) {
                 if (!promoList) return;
                 const item = Array.isArray(slot.items) && slot.items.length ? slot.items[0] : {};
                 const idx = promoList.children.length + 1;
@@ -433,7 +447,7 @@
                 card.innerHTML = `
                     <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
                         <div class="fw-semibold">{{ __('ترويج') }} #${idx}</div>
-                        <button type="button" class="btn btn-sm btn-outline-danger" aria-label="Remove" onclick="this.closest('[data-promo-card]').remove()">&times;</button>
+                        <button type="button" class="btn btn-sm btn-outline-danger" aria-label="Remove" onclick="this.closest('[data-promo-card]').remove(); setTimeout(setSummary, 50);">&times;</button>
                     </div>
                     <div class="row g-2">
                         <div class="col-md-4">
@@ -470,10 +484,10 @@
                     </div>
                 `;
                 promoList.appendChild(card);
+                setSummary();
             }
-
-            document.getElementById('addCategoryBtn')?.addEventListener('click', (e) => { e.preventDefault(); buildCategoryCard(); });
-            document.getElementById('addPromoBtn')?.addEventListener('click', (e) => { e.preventDefault(); buildPromoCard(); });
+            document.getElementById('addCategoryBtn')?.addEventListener('click', (e) => { e.preventDefault(); window.sfAddCategory(); });
+            document.getElementById('addPromoBtn')?.addEventListener('click', (e) => { e.preventDefault(); window.sfAddPromo(); });
             document.querySelectorAll('[data-select-items]').forEach(btn => {
                 btn.addEventListener('click', () => {
                     pickerTarget = btn.getAttribute('data-select-items');
@@ -484,18 +498,23 @@
                 });
             });
 
-            (initialCategories || []).forEach(cat => buildCategoryCard(cat));
-            (initialPromotions || []).forEach(slot => buildPromoCard(slot));
-            if (catList && catList.children.length === 0) buildCategoryCard();
-            if (promoList && promoList.children.length === 0) buildPromoCard();
+            (initialCategories || []).forEach(cat => window.sfAddCategory(cat));
+            (initialPromotions || []).forEach(slot => window.sfAddPromo(slot));
+            if (catList && catList.children.length === 0) window.sfAddCategory();
+            if (promoList && promoList.children.length === 0) window.sfAddPromo();
+            setSummary();
 
             function renderSelection(target, data) {
                 const container = target === 'offers' ? offersListEl : discountsListEl;
                 if (!container) return;
                 container.innerHTML = '';
+                if (!data.length) {
+                    container.innerHTML = `<div class="list-row ghost">${target === 'offers' ? '{{ __('لا توجد عروض محددة') }}' : '{{ __('لا توجد تخفيضات محددة') }}'}</div>`;
+                    return;
+                }
                 data.forEach((item) => {
                     const row = document.createElement('div');
-                    row.className = 'border rounded p-2 d-flex align-items-center gap-3';
+                    row.className = 'list-row d-flex align-items-center gap-3';
                     row.innerHTML = `
                         <div class="flex-shrink-0">
                             ${item.thumbnail ? `<img src="${item.thumbnail}" alt="${item.name}" class="rounded" style="width:48px;height:48px;object-fit:cover;">` : '<div class="rounded bg-light" style="width:48px;height:48px;"></div>'}
@@ -525,6 +544,7 @@
                     discountsSelection = discountsSelection.filter(i => i.id != id);
                     renderSelection('discounts', discountsSelection);
                 }
+                setSummary();
             });
 
             async function searchItems(query) {
@@ -558,6 +578,7 @@
                                 if (!discountsSelection.find(i => i.id === item.id)) discountsSelection.push(item);
                                 renderSelection('discounts', discountsSelection);
                             }
+                            setSummary();
                             itemsModal.hide();
                         });
                         itemsResults.appendChild(el);
@@ -617,10 +638,7 @@
                             }
                         }
 
-                        return {
-                            frequency: freq,
-                            items: [item],
-                        };
+                        return { frequency: freq, items: [item] };
                     }).filter(Boolean);
 
                     hiddenCats.value = JSON.stringify(cats);
@@ -635,3 +653,4 @@
         });
     </script>
 @endpush
+

@@ -257,6 +257,9 @@ class FetchItemSummaryCubit extends Cubit<FetchItemSummaryState> {
     if (a.storeId != b.storeId) {
       return false;
     }
+    if (a.interfaceType != b.interfaceType) {
+      return false;
+    }
 
     return a.maxPrice == b.maxPrice &&
         a.minPrice == b.minPrice &&
@@ -287,6 +290,7 @@ class FetchItemSummaryCubit extends Cubit<FetchItemSummaryState> {
       storeId: filter.storeId,
       customFields: clonedCustomFields,
       userId: filter.userId,
+      interfaceType: filter.interfaceType,
     );
   }
 

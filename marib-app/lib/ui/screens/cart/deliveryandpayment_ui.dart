@@ -1,4 +1,4 @@
-// ط§ظ„ظˆط§ط¬ظ‡ط© ظپظ‚ط·
+// الواجهة فقط
 import 'package:flutter/material.dart';
 import 'package:marib/data/model/item/cart_model.dart';
 import 'package:marib/ui/theme/theme.dart';
@@ -25,14 +25,14 @@ import 'package:marib/ui/widgets/store_status_card.dart';
 import 'package:marib/utils/store_status_view_model.dart';
 
 class DeliveryAndPaymentUI extends StatelessWidget {
-  // ط­ط§ظ„ط© ط¹ط§ظ…ط©
+  // حالة عامة
   final bool loading;
   final bool depositRecalculating;
   final List<CartDiscount> discounts;
   final bool addressReady;
   final bool showAddressBlock;
 
-  // ط§ظ„ط³ظ„ط©
+  // السلة
   final List<Cart> cartItems;
   final TextEditingController couponController;
   final bool couponInProgress;
@@ -42,11 +42,11 @@ class DeliveryAndPaymentUI extends StatelessWidget {
   final VoidCallback? onDismissCouponMessage;
   final String requiredAmountDisplay;
 
-  // ط§ظ„ط¹ظ†ظˆط§ظ†
+  // العنوان
   final Map<String, dynamic>? address;
   final VoidCallback onManageAddresses;
 
-  // ط§ظ„ط¯ظپط¹
+  // الدفع
   final List<CheckoutBank> banks;
   final int? selectedBankIndex;
   final String? selectedPaymentMethod;
@@ -70,13 +70,13 @@ class DeliveryAndPaymentUI extends StatelessWidget {
   final String? shippingCurrency;
   final String? departmentNotice;
 
-  /// ظ†طµ ط³ظٹط§ط³ط© ط§ظ„ط§ط³طھط±ط¬ط§ط¹ ط§ظ„ظ…ط±ط³ظ„ط© ظ…ظ† ط§ظ„ط´ط§ط´ط© ط§ظ„ط±ط¦ظٹط³ظٹط©.
+  /// نص سياسة الاسترجاع المرسلة من الشاشة الرئيسية.
   final String? returnPolicyText;
 
-  /// ط¨ظٹط§ظ†ط§طھ ط§ظ„ظˆط¯ظٹط¹ط© ط§ظ„ظ…ظ†ط³ظ‘ظ‚ط© ظ„ظ„ط¹ط±ط¶ ط¶ظ…ظ† طھط¨ظˆظٹط¨ ط§ظ„ط³ظٹط§ط³ط§طھ.
+  /// بيانات الوديعة المنسَّقة للعرض ضمن تبويب السياسات.
   final Map<String, dynamic>? depositInfo;
 
-  /// ط§ط³طھط¯ط¹ط§ط، ظٹط­ط¯ظ‘ط« ط­ط§ظ„ط© طھظپط¹ظٹظ„ ط§ظ„ط¯ظپط¹ط© ط§ظ„ظ…ظ‚ط¯ظ…ط© ط¹ظ†ط¯ طھظˆظپط± ط®ظٹط§ط± ط§ظ„طھط¨ط¯ظٹظ„.
+  /// إحداث حالة تفعيل الدفع النقدي عند توفر خيار التبديل.
   final ValueChanged<bool>? onToggleDeposit;
 
   final bool allowPayNow;
@@ -85,11 +85,11 @@ class DeliveryAndPaymentUI extends StatelessWidget {
   final String? codFeeDisplay;
   final bool payOnDeliverySelected;
 
-  // ط§ظ„طھظˆطµظٹظ„
+  // التوصيل
   final CheckoutDeliveryInfo? deliveryInfo;
   final String? deliveryPrice;
 
-  // ط§ظ„ط´ط±ظٹط· ط§ظ„ط³ظپظ„ظٹ
+  // الشريط السفلي
   final bool canProceed;
   final bool submitting;
   final Future<void> Function(ManualTransferSubmissionData? manualTransfer)
@@ -182,9 +182,8 @@ class DeliveryAndPaymentUI extends StatelessWidget {
             ? selectedTimingOption!.description
             : paymentTimingNote;
 
-    final String resolvedDeliveryFee = freeShippingApplied
-        ? 'ظ…ط¬ط§ظ†ظ‹ط§'
-        : _resolveDeliveryFee(deliveryPrice);
+    final String resolvedDeliveryFee =
+        freeShippingApplied ? 'مجانا' : _resolveDeliveryFee(deliveryPrice);
 
     final bool showCheckoutError =
         checkoutErrorMessage != null && checkoutErrorMessage!.trim().isNotEmpty;
@@ -195,14 +194,14 @@ class DeliveryAndPaymentUI extends StatelessWidget {
     final String resolvedStoreName =
         (storeStatus.name?.trim().isNotEmpty ?? false)
             ? storeStatus.name!.trim()
-            : 'ط§ظ„ظ…طھط¬ط±';
+            : 'المتجر';
     final Map<String, dynamic>? assurance =
         store?['assurance'] is Map<String, dynamic>
             ? Map<String, dynamic>.from(store!['assurance'])
             : null;
     final bool showAssuranceBanner = assurance?['active'] == true;
     final String assuranceMessage = assurance?['message'] ??
-        'ظ‡ط°ط§ ط§ظ„ط·ظ„ط¨ ظٹط®ط¶ط¹ ظ„ط¶ظ…ط§ظ† طھط§ط¬ط± ظ…ظˆط«ظ‘ظژظ‚طŒ ظˆط³ظٹطھظ… ط­ظ…ط§ظٹط© ط§ظ„ظ…ط¨ظ„ط؛ ط£ظˆ طھط¹ظˆظٹط¶ظƒ ط¹ظ†ط¯ ط­ط¯ظˆط« ظ…ط´ظƒظ„ط© ط¨ط§ظ„ط¯ظپط¹.';
+        'هذا الطلب يخضع لضمان تاجر موثّق؛ سنحمي المبلغ أو نعوضك عند حدوث مشكلة بالدفع.';
     final MoneyFormatter totalFormatter = MoneyFormatter.fromCartCurrency(
       currency: orderCurrencyLabel,
       currencyCode: orderCurrencyCode,
@@ -227,7 +226,7 @@ class DeliveryAndPaymentUI extends StatelessWidget {
           : const Color(0xFFF0F2F4),
       appBar: UiUtils.buildAppBar(
         context,
-        title: 'ط¨ظٹط§ظ†ط§طھ ط§ظ„طھظˆطµظٹظ„ ظˆط§ظ„ط¯ظپط¹',
+        title: 'بيانات التوصيل والدفع',
         bottomHeight: 20,
         showBackButton: true,
       ),
@@ -343,10 +342,10 @@ class DeliveryAndPaymentUI extends StatelessWidget {
     String? restrictionMessage;
     if (payOnDeliverySelected && !allowPayOnDelivery) {
       restrictionMessage =
-          'ًںڑ« ط®ظٹط§ط± ط§ظ„ط¯ظپط¹ ط¹ظ†ط¯ ط§ظ„ط§ط³طھظ„ط§ظ… ط؛ظٹط± ظ…طھط§ط­ ظ„ظ‡ط°ظ‡ ط§ظ„ط·ظ„ط¨ظٹط©.';
+          '🤚 خيار الدفع عند الاستلام غير متاح لهذه الطلبية.';
     } else if (!payOnDeliverySelected && !allowPayNow) {
       restrictionMessage =
-          'ًںڑ« ط®ظٹط§ط± ط§ظ„ط¯ظپط¹ ط§ظ„ط¢ظ† ط؛ظٹط± ظ…طھط§ط­ ظ„ظ‡ط°ظ‡ ط§ظ„ط·ظ„ط¨ظٹط©.';
+          '🤚 خيار الدفع الآن غير متاح لهذه الطلبية.';
     }
     final bool buttonEnabled = isButtonEnabled;
 
@@ -712,7 +711,7 @@ class DeliveryAndPaymentUI extends StatelessWidget {
                                 ),
                                 textAlignVertical: TextAlignVertical.center,
                                 decoration: InputDecoration(
-                                  hintText: 'ط£ط¯ط®ظ„ ط±ظ…ط² ط§ظ„ظƒظˆط¨ظˆظ†',
+                                  hintText: 'أدخل رمز الكوبون',
                                   filled: true,
                                   fillColor: inputFillColor,
                                   border: inputBorder,
@@ -760,7 +759,7 @@ class DeliveryAndPaymentUI extends StatelessWidget {
                                           strokeWidth: 2),
                                     )
                                   : const Text(
-                                      'طھط·ط¨ظٹظ‚ ط§ظ„ظƒظˆط¨ظˆظ†',
+                                      'تطبيق الكوبون',
                                       style: TextStyle(
                                           fontWeight: FontWeight.w700),
                                     ),
@@ -835,7 +834,7 @@ class DeliveryAndPaymentUI extends StatelessWidget {
                       : Row(
                           children: [
                             Expanded(
-                              child: Text('ط§ظ„ظ…ط¨ظ„ط؛ ط§ظ„ط¥ط¬ظ…ط§ظ„ظٹ',
+                              child: Text('المبلغ الإجمالي',
                                   style: totalLabelStyle),
                             ),
                             Column(
@@ -894,11 +893,11 @@ class DeliveryAndPaymentUI extends StatelessWidget {
                             .trim()
                             .toLowerCase();
 
-                    if (requiresPurchaseCodeGateway(pm) ||
+                      if (requiresPurchaseCodeGateway(pm) ||
                         requiresPurchaseCodeGateway(bankMethod)) {
                       if (selectedBank == null && banks.length > 1) {
                         HelperUtils.showSnackBarMessage(
-                            context, 'ط§ط®طھط± ط¨ظ†ظƒظ‹ط§ ط£ظˆظ„ظ‹ط§');
+                            context, 'اختر بنكاً أولاً.');
 
                         return;
                       }
@@ -912,7 +911,7 @@ class DeliveryAndPaymentUI extends StatelessWidget {
                     if (selectedBank != null || isBank) {
                       if (selectedBank == null) {
                         HelperUtils.showSnackBarMessage(
-                            context, 'ط§ط®طھط± ط¨ظ†ظƒظ‹ط§ ط£ظˆظ„ظ‹ط§');
+                            context, 'اختر بنكاً أولاً.');
 
                         return;
                       }
@@ -950,9 +949,9 @@ class DeliveryAndPaymentUI extends StatelessWidget {
                       return;
                     }
                     HelperUtils.showSnackBarMessage(
-                        context, 'ط­ط¯ط¯ ط·ط±ظٹظ‚ط© ط§ظ„ط¯ظپط¹');
+                        context, 'حدد طريقة الدفع');
                   },
-                  buttonTitle: 'ط¥ظƒظ…ط§ظ„ ط§ظ„ط¯ظپط¹',
+                  buttonTitle: 'إكمال الدفع',
                   radius: 12,
                   height: 50,
                   showElevation: false,
@@ -960,7 +959,7 @@ class DeliveryAndPaymentUI extends StatelessWidget {
                   disabled: !buttonEnabled,
                   onTapDisabledButton: () {
                     final String feedbackMessage = restrictionMessage ??
-                        'ظٹط±ط¬ظ‰ ط¥ظƒظ…ط§ظ„ ط¨ظٹط§ظ†ط§طھ ط§ظ„طھظˆطµظٹظ„ ظˆط§ظ„ط¯ظپط¹ ط£ظˆظ„ظ‹ط§.';
+                        'يرجى إكمال بيانات التوصيل والدفع أولاً.';
                     HelperUtils.showSnackBarMessage(context, feedbackMessage);
                   },
                 ),
@@ -1146,7 +1145,7 @@ class _CheckoutErrorBanner extends StatelessWidget {
               Icon(icon, color: textColor),
               const SizedBox(width: 6),
               Text(
-                'طھظ†ط¨ظٹظ‡',
+                'تنبيه',
                 style: TextStyle(
                   color: textColor,
                   fontWeight: FontWeight.bold,
@@ -1174,7 +1173,7 @@ class _CheckoutErrorBanner extends StatelessWidget {
                       },
                 icon: Icon(Icons.refresh, color: textColor),
                 label: Text(
-                  'ط¥ط¹ط§ط¯ط© ط§ظ„ظ…ط­ط§ظˆظ„ط©',
+                  'إعادة المحاولة',
                   style: TextStyle(color: textColor),
                 ),
                 style: TextButton.styleFrom(

@@ -329,9 +329,9 @@ class Section_screenState extends State<Section_screen> {
   String? _featuredStyleOverride;
   String? _featuredOrderMode;
 
-  late final String _sliderInterfaceType;
+  String _sliderInterfaceType = 'homepage';
 
-  late final bool _hasAdSlider;
+  bool _hasAdSlider = false;
 
   bool _showAdSlider = false;
   bool _requestedSlider = false;
@@ -450,7 +450,6 @@ class Section_screenState extends State<Section_screen> {
     );
     final int? sellerId = _sellerUserId ?? widget.sellerId;
     final int? storeId = _storeId;
-
     final ItemFilterModel built = source == null
         ? ItemFilterModel(
             categoryId: resolvedCategoryId,
@@ -463,7 +462,11 @@ class Section_screenState extends State<Section_screen> {
             storeId: storeId ?? source.storeId,
           );
 
-    return _applyStorefrontGuard(built);
+    final ItemFilterModel sanitized = _hasStorefrontContext
+        ? built.copyWith(interfaceType: null)
+        : built;
+
+    return _applyStorefrontGuard(sanitized);
   }
 
   ItemFilterModel _applyStorefrontGuard(ItemFilterModel filter) {
@@ -1206,6 +1209,10 @@ class Section_screenState extends State<Section_screen> {
         }
 
         if (state is StorefrontLoading) {
+          if (snapshot != null) {
+            // Keep showing current details; only the follow button will shimmer.
+            return _buildStorefrontHeaderFromDetails(snapshot);
+          }
           return const _StorefrontHeaderPlaceholder();
         }
 
@@ -1243,13 +1250,11 @@ class Section_screenState extends State<Section_screen> {
           }
         },
         builder: (context, followState) {
-          if (followState.isLoading) {
-            return const _StorefrontHeaderPlaceholder();
-          }
           return MerchantStorefrontHeader(
             details: details,
             isFollowingOverride: followState.isFollowing,
-            followersCountOverride: followState.followersCount,
+            followersCountOverride:
+                followState.hasFetched ? followState.followersCount : null,
             isFollowLoading: followState.isLoading,
             onCallTap: _hasContactValue(phone) ? () => _launchPhone(phone) : null,
             onWhatsappTap: _hasContactValue(whatsapp)

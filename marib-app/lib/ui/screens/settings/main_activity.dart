@@ -79,9 +79,13 @@ class MainActivity extends StatefulWidget {
   State<MainActivity> createState() => MainActivityState();
 
   static Route route(RouteSettings routeSettings) {
-    final Map arguments = routeSettings.arguments as Map;
+    final Map? arguments =
+        routeSettings.arguments != null && routeSettings.arguments is Map
+            ? routeSettings.arguments as Map
+            : null;
     return BlurredRouter(
-      builder: (_) => MainActivity(from: arguments['from'] as String),
+      builder: (_) =>
+          MainActivity(from: (arguments?['from'] as String?) ?? 'login'),
     );
   }
 }
@@ -116,6 +120,10 @@ class MainActivityState extends State<MainActivity> with TickerProviderStateMixi
     initAppLinks();
 
     _pages[0] = HomeScreen(from: widget.from);
+    currtab = 0;
+    navigationStack
+      ..clear()
+      ..add(0);
 
     _maybeBootstrapMerchantStoreStatus();
 

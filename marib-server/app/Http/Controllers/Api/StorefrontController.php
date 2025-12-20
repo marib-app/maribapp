@@ -9,6 +9,7 @@ use App\Models\Store;
 use App\Models\StoreFollower;
 use App\Models\StoreGatewayAccount;
 use App\Models\StorePolicy;
+use App\Models\StoreReview;
 use App\Models\StoreSetting;
 use App\Models\StoreWorkingHour;
 use App\Models\User;
@@ -23,6 +24,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\PersonalAccessToken;
+use Throwable;
 
 use App\Services\Store\StoreStatusService;
 
@@ -272,10 +274,183 @@ class StorefrontController extends Controller
             ->where('user_id', $user->getKey())
             ->exists();
 
+        $this->notifyUnfollowConfirmationSafe($user, $storeModel);
+
         return response()->json([
             'data' => [
                 'is_following' => $isFollowing,
                 'followers_count' => $followersCount,
+            ],
+        ]);
+    }
+
+    public function reviews(Request $request, string $store): JsonResponse
+    {
+        $storeModel = $this->resolveStoreOrResponse($store, includeInactive: true);
+        if ($storeModel === null) {
+            return response()->json(['message' => 'Store not found'], 404);
+        }
+
+        $validated = $request->validate([
+            'page' => ['nullable', 'integer', 'min:1'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:50'],
+        ]);
+
+        $currentUser = $this->resolveCurrentUser($request);
+        $viewerId = $this->resolveViewerId($request, $currentUser);
+        $perPage = $validated['per_page'] ?? 10;
+
+        $reviews = StoreReview::query()
+            ->where('store_id', $storeModel->getKey())
+            ->with(['user:id,name,profile'])
+            ->latest('created_at')
+            ->paginate($perPage);
+
+        $formatted = $reviews->getCollection()
+            ->map(fn (StoreReview $review) => $this->formatStoreReview($review))
+            ->values()
+            ->all();
+
+        $summary = $this->buildStoreReviewSummary($storeModel->getKey());
+        $summary['can_review'] = $viewerId !== null
+            ? !$this->userHasStoreReview($storeModel->getKey(), $viewerId)
+            : false;
+        $summary['my_review'] = $viewerId !== null
+            ? $this->formatStoreReviewIfExists($this->getUserStoreReview($storeModel->getKey(), $viewerId))
+            : null;
+
+        return $this->paginateResponse($reviews, $formatted, [
+            'store' => [
+                'id' => $storeModel->getKey(),
+                'name' => $storeModel->name,
+                'slug' => $storeModel->slug,
+            ],
+            'summary' => $summary,
+        ]);
+    }
+
+    public function addReview(Request $request, string $store): JsonResponse
+    {
+        $storeModel = $this->resolveStoreOrResponse($store, includeInactive: true);
+        if ($storeModel === null) {
+            return response()->json(['message' => 'Store not found'], 404);
+        }
+
+        /** @var User|null $user */
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        $validated = $request->validate([
+            'rating' => ['required', 'integer', 'min:1', 'max:5'],
+            'comment' => ['nullable', 'string', 'max:2000'],
+            'attachments' => ['nullable', 'array'],
+            'attachments.*' => ['nullable', 'string', 'max:2048'],
+        ]);
+
+        if ($this->userHasStoreReview($storeModel->getKey(), $user->getKey())) {
+            return response()->json([
+                'message' => __('You already reviewed this store.'),
+            ], 422);
+        }
+
+        $attachments = $this->normalizeAttachments($validated['attachments'] ?? null);
+
+        $review = StoreReview::create([
+            'store_id' => $storeModel->getKey(),
+            'user_id' => $user->getKey(),
+            'rating' => (int) $validated['rating'],
+            'comment' => $validated['comment'] ?? null,
+            'attachments' => $attachments,
+        ]);
+
+        $summary = $this->buildStoreReviewSummary($storeModel->getKey());
+        $summary['can_review'] = false;
+        $summary['my_review'] = $this->formatStoreReview($review->loadMissing('user:id,name,profile'));
+
+        $this->notifyStoreOwnerAboutStoreReviewSafe($storeModel, $review, $user);
+
+        return response()->json([
+            'data' => [
+                'review' => $this->formatStoreReview($review),
+                'summary' => $summary,
+            ],
+        ], 201);
+    }
+
+    public function updateReview(Request $request, string $store): JsonResponse
+    {
+        $storeModel = $this->resolveStoreOrResponse($store, includeInactive: true);
+        if ($storeModel === null) {
+            return response()->json(['message' => 'Store not found'], 404);
+        }
+
+        /** @var User|null $user */
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        $validated = $request->validate([
+            'rating' => ['required', 'integer', 'min:1', 'max:5'],
+            'comment' => ['nullable', 'string', 'max:2000'],
+            'attachments' => ['nullable', 'array'],
+            'attachments.*' => ['nullable', 'string', 'max:2048'],
+        ]);
+
+        $review = $this->getUserStoreReview($storeModel->getKey(), $user->getKey());
+        if (!$review) {
+            return response()->json(['message' => 'Review not found'], 404);
+        }
+
+        $attachments = $this->normalizeAttachments($validated['attachments'] ?? null);
+
+        $review->fill([
+            'rating' => (int) $validated['rating'],
+            'comment' => $validated['comment'] ?? null,
+            'attachments' => $attachments,
+        ])->save();
+
+        $summary = $this->buildStoreReviewSummary($storeModel->getKey());
+        $summary['can_review'] = false;
+        $summary['my_review'] = $this->formatStoreReview($review->loadMissing('user:id,name,profile'));
+
+        return response()->json([
+            'data' => [
+                'review' => $this->formatStoreReview($review),
+                'summary' => $summary,
+            ],
+        ]);
+    }
+
+    public function deleteReview(Request $request, string $store): JsonResponse
+    {
+        $storeModel = $this->resolveStoreOrResponse($store, includeInactive: true);
+        if ($storeModel === null) {
+            return response()->json(['message' => 'Store not found'], 404);
+        }
+
+        /** @var User|null $user */
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        $review = $this->getUserStoreReview($storeModel->getKey(), $user->getKey());
+        if (!$review) {
+            return response()->json(['message' => 'Review not found'], 404);
+        }
+
+        $review->delete();
+
+        $summary = $this->buildStoreReviewSummary($storeModel->getKey());
+        $summary['can_review'] = true;
+        $summary['my_review'] = null;
+
+        return response()->json([
+            'data' => [
+                'summary' => $summary,
             ],
         ]);
     }
@@ -303,6 +478,12 @@ class StorefrontController extends Controller
         $statusPayload = $this->storeStatusService->resolve($store);
         $currentUser = $currentUser ?? auth('sanctum')->user() ?? Auth::user();
         $followersCount = $store->followers_count ?? $store->followers()->count();
+        $ratingsAverage = StoreReview::query()
+            ->where('store_id', $store->getKey())
+            ->avg('rating');
+        $ratingsCount = StoreReview::query()
+            ->where('store_id', $store->getKey())
+            ->count();
         // Prefer the authenticated user if available; fall back to viewerId header/query.
         $effectiveViewerId = $currentUser?->getKey() ?? $viewerId;
         $isFollowed = $effectiveViewerId
@@ -323,6 +504,8 @@ class StorefrontController extends Controller
             'status' => $statusPayload,
             'followers_count' => $followersCount,
             'is_followed' => $isFollowed,
+            'ratings_average' => $ratingsAverage !== null ? round((float) $ratingsAverage, 2) : null,
+            'ratings_count' => (int) $ratingsCount,
             'contact' => $includeDetails ? $this->formatContactInfo($store, $settings) : null,
             'location' => $includeDetails ? $this->formatLocation($store) : null,
         ];
@@ -609,6 +792,36 @@ class StorefrontController extends Controller
         );
     }
 
+    private function notifyUnfollowConfirmationSafe(User $follower, Store $store): void
+    {
+        $tokens = UserFcmToken::query()
+            ->where('user_id', $follower->getKey())
+            ->pluck('fcm_token')
+            ->filter()
+            ->values()
+            ->all();
+
+        if ($tokens === []) {
+            return;
+        }
+
+        $title = __('طھظ…طھ ط¥ظ„ط؛ط§ط، طظ…طھط§ط¨ط¹ط© ط§ظ„ظ…طھط¬ط±');
+        $body = __('ظ„ظ‚ط¯ ط£ظ„ط؛ظٹطھ ظ…طھط§ط¨ط¹ط© ط§ظ„ظ…طھط¬ط± :store. ظ„ظ† طھطµظ„ظƒ ط¥ط´ط¹ط§ط±ط§طھ ط¬ط¯ظٹط© ظ…ظ†ظ‡.', [
+            'store' => $store->name,
+        ]);
+
+        NotificationService::sendFcmNotification(
+            $tokens,
+            $title,
+            $body,
+            'store_unfollow_confirmation',
+            [
+                'store_id' => $store->getKey(),
+                'store_name' => $store->name,
+            ]
+        );
+    }
+
     private function notifyFollowerConfirmation(User $follower, Store $store): void
     {
         $tokens = UserFcmToken::query()
@@ -704,6 +917,142 @@ class StorefrontController extends Controller
             [
                 'store_id' => $store->getKey(),
                 'store_name' => $store->name,
+            ]
+        );
+    }
+
+    private function formatStoreReview(StoreReview $review): array
+    {
+        $user = $review->relationLoaded('user') ? $review->user : null;
+
+        return [
+            'id' => $review->getKey(),
+            'store_id' => $review->store_id,
+            'user_id' => $review->user_id,
+            'rating' => (int) $review->rating,
+            'comment' => $review->comment,
+            'attachments' => $review->attachments ?? [],
+            'created_at' => optional($review->created_at)->toIso8601String(),
+            'updated_at' => optional($review->updated_at)->toIso8601String(),
+            'user' => $user ? [
+                'id' => $user->getKey(),
+                'name' => $user->name,
+                'profile' => $this->resolveMediaUrl($user->profile ?? null),
+            ] : null,
+        ];
+    }
+
+    private function formatStoreReviewIfExists(?StoreReview $review): ?array
+    {
+        return $review ? $this->formatStoreReview($review) : null;
+    }
+
+    private function buildStoreReviewSummary(int $storeId): array
+    {
+        $average = StoreReview::query()
+            ->where('store_id', $storeId)
+            ->avg('rating');
+
+        $total = StoreReview::query()
+            ->where('store_id', $storeId)
+            ->count();
+
+        return [
+            'average_rating' => $average !== null ? round((float) $average, 2) : null,
+            'total_reviews' => (int) $total,
+            'distribution' => $this->getStoreReviewDistribution($storeId),
+        ];
+    }
+
+    private function getStoreReviewDistribution(int $storeId): array
+    {
+        $distribution = array_fill(1, 5, 0);
+
+        $rows = StoreReview::query()
+            ->select('rating', DB::raw('count(*) as total'))
+            ->where('store_id', $storeId)
+            ->groupBy('rating')
+            ->get();
+
+        foreach ($rows as $row) {
+            $rating = (int) $row->rating;
+            if ($rating >= 1 && $rating <= 5) {
+                $distribution[$rating] = (int) $row->total;
+            }
+        }
+
+        return $distribution;
+    }
+
+    private function normalizeAttachments(mixed $attachments): ?array
+    {
+        if (!is_array($attachments)) {
+            return null;
+        }
+
+        $clean = [];
+        foreach ($attachments as $value) {
+            if (is_string($value)) {
+                $trimmed = trim($value);
+                if ($trimmed !== '') {
+                    $clean[] = $trimmed;
+                }
+            }
+        }
+
+        return $clean === [] ? null : array_values($clean);
+    }
+
+    private function userHasStoreReview(int $storeId, int $userId): bool
+    {
+        return StoreReview::query()
+            ->where('store_id', $storeId)
+            ->where('user_id', $userId)
+            ->exists();
+    }
+
+    private function getUserStoreReview(int $storeId, int $userId): ?StoreReview
+    {
+        return StoreReview::query()
+            ->where('store_id', $storeId)
+            ->where('user_id', $userId)
+            ->with('user:id,name,profile')
+            ->first();
+    }
+
+    private function notifyStoreOwnerAboutStoreReviewSafe(Store $store, StoreReview $review, User $reviewer): void
+    {
+        $ownerId = $store->user_id;
+        if ($ownerId === null || $ownerId === $reviewer->getKey()) {
+            return;
+        }
+
+        $tokens = UserFcmToken::query()
+            ->where('user_id', $ownerId)
+            ->pluck('fcm_token')
+            ->filter()
+            ->values()
+            ->all();
+
+        if ($tokens === []) {
+            return;
+        }
+
+        $title = __('طھظ‚ظٹظٹظ… ط¬ط¯ظٹط¯ ظ„ظ„ظ…طھط¬ط±');
+        $body = __(':user ظ‚ط§ظ… ط¨طھط±ظƒ طھظ‚ظٹظٹظ…ظ‡ ظ„ظ„ظ…طھط¬ط± :store', [
+            'user' => $reviewer->name ?? __('ظ…ط³طھط®ط¯ظ…'),
+            'store' => $store->name,
+        ]);
+
+        NotificationService::sendFcmNotification(
+            $tokens,
+            $title,
+            $body,
+            'store_review',
+            [
+                'store_id' => $store->getKey(),
+                'review_id' => $review->getKey(),
+                'rating' => $review->rating,
             ]
         );
     }

@@ -278,13 +278,7 @@ class _ChatScreenState extends State<ChatScreen>
       return;
     }
 
-    final PermissionStatus requestedStatus = await Permission.notification.request();
-    _emitPermissionStatus(requestedStatus);
-
-    if (!mounted || _shouldStopMonitoringPermission(requestedStatus)) {
-      return;
-    }
-
+    // لا نطلب إذن الإشعار هنا بشكل مستقل، نكتفي بمراقبة الحالة
     _startPermissionStatusMonitoring();
   }
 

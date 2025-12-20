@@ -1,5 +1,4 @@
-// ًں›’ ط§ظ„ظˆط§ط¬ظ‡ط© ظپظ‚ط·
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:marib/data/model/item/cart_model.dart';
 import 'package:marib/ui/screens/cart/cart_horizontal_card.dart';
 import 'package:marib/ui/theme/theme.dart';
@@ -19,7 +18,7 @@ import 'package:marib/utils/delivery_department.dart';
 import 'package:marib/ui/widgets/store_status_card.dart';
 
 class CartUI extends StatelessWidget {
-  // ظ…ط¯ط®ظ„ط§طھ ط§ظ„ط­ط§ظ„ط©
+
   final bool isLoading;
   final List<Cart> cartItems;
   final double subtotal;
@@ -46,11 +45,11 @@ class CartUI extends StatelessWidget {
   final bool selectAll;
   final Set<String> selectedItemIds;
 
-  // ظ†ظپط³ طھظ…ظˆط¶ط¹ ط²ط± ط§ظ„ظˆط§طھط³ط§ط¨
+
   final double whatsappBottom;
   final double whatsappRight;
 
-  // ط±ط¯ظˆط¯ ط§ظ„ط£ظپط¹ط§ظ„
+
   final VoidCallback onTapDeleteAll;
   final VoidCallback onToggleSelectAll;
   final void Function(Cart item) onToggleSelectItem;
@@ -136,7 +135,7 @@ class CartUI extends StatelessWidget {
     final String localizedFallbackRaw =
         UiUtils.getTranslatedLabel(context, 'notAvailable');
     final String fallbackStoreName = localizedFallbackRaw == 'notAvailable'
-        ? 'ط؛ظٹط± ظ…طھظˆظپط±'
+        ? 'غير متوفر'
         : localizedFallbackRaw;
 
     String? _trimOrNull(String? value) {
@@ -201,7 +200,7 @@ class CartUI extends StatelessWidget {
     final String whatsappTooltip =
         (whatsappLabelRaw != null && whatsappLabelRaw.isNotEmpty)
             ? whatsappLabelRaw
-            : 'طھظˆط§طµظ„ ط¹ط¨ط± ظˆط§طھط³ط§ط¨';
+            : 'التواصل عبر واتساب';
 
     Uri? buildWhatsappUri() {
       final String? sanitizedNumber = sanitizedWhatsappNumber;
@@ -220,8 +219,7 @@ class CartUI extends StatelessWidget {
     Future<void> openWhatsappSupport() async {
       final Uri? uri = buildWhatsappUri();
       if (uri == null) {
-        showWhatsappSnack(
-            'ط¨ظٹط§ظ†ط§طھ ط§ظ„طھظˆط§طµظ„ ط¹ط¨ط± ط§ظ„ظˆط§طھط³ط§ط¨ ط؛ظٹط± ظ…طھظˆظپط±ط© ط­ط§ظ„ظٹط§ظ‹.');
+        showWhatsappSnack('تعذر تجهيز رابط واتساب. تأكد من توفر رقم الدعم.');
         return;
       }
 
@@ -231,10 +229,10 @@ class CartUI extends StatelessWidget {
           mode: LaunchMode.externalApplication,
         );
         if (!launched) {
-          showWhatsappSnack('طھط¹ط°ط± ظپطھط­ طھط·ط¨ظٹظ‚ ط§ظ„ظˆط§طھط³ط§ط¨.');
+          showWhatsappSnack('تعذر فتح واتساب.');
         }
       } catch (_) {
-        showWhatsappSnack('طھط¹ط°ط± ظپطھط­ طھط·ط¨ظٹظ‚ ط§ظ„ظˆط§طھط³ط§ط¨.');
+        showWhatsappSnack('تعذر فتح واتساب.');
       }
     }
 
@@ -321,7 +319,8 @@ class CartUI extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        tip.title ?? 'ظ†طµظٹط­ط© ط§ظ„ط³ظ„ط§ظ…ط©',
+                        tip.title ??
+                            'نصيحة أمان لطلبك',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: context.color.textDefaultColor,
@@ -434,7 +433,7 @@ class CartUI extends StatelessWidget {
                   if (discount.amountDisplay != null) ...[
                     const SizedBox(height: 4),
                     Text(
-                      'ظ‚ظٹظ…ط© ط§ظ„ط®طµظ…: ${discount.amountDisplay}',
+                      'قيمة الخصم المطبقة: ${discount.amountDisplay}',
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         color: accent,
@@ -466,7 +465,7 @@ class CartUI extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'ظ‚ط³ظٹظ…ط© ط§ظ„ط®طµظ…',
+            'إضافة كوبون خصم',
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 15,
@@ -482,7 +481,8 @@ class CartUI extends StatelessWidget {
                   enabled: !couponInProgress && !isLoading,
                   textInputAction: TextInputAction.done,
                   decoration: InputDecoration(
-                    hintText: 'ط£ط¯ط®ظ„ ط±ظ…ط² ط§ظ„ظ‚ط³ظٹظ…ط©',
+                    hintText:
+                        'أدخل رمز الخصم ثم اضغط تطبيق الكوبون',
                     filled: true,
                     fillColor:
                         isDarkInput ? Colors.grey.shade900 : Colors.white,
@@ -516,7 +516,7 @@ class CartUI extends StatelessWidget {
                         width: 18,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('طھط·ط¨ظٹظ‚'),
+                    : const Text('تطبيق الكوبون'),
               ),
             ],
           ),
@@ -853,7 +853,7 @@ class CartUI extends StatelessWidget {
                 Icon(Icons.schedule, color: accent),
                 const SizedBox(width: 8),
                 Text(
-                  'ظˆظ‚طھ ط¯ظپط¹ ط§ظ„ظ…ط¨ظ„ط؛ ط§ظ„ظ…طھط¨ظ‚ظٹ',
+                  'اختر وقت التوصيل أو الدفع المناسب من الخيارات التالية',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: context.color.textDefaultColor,
@@ -900,7 +900,7 @@ class CartUI extends StatelessWidget {
       if (trimmed != null && trimmed.isNotEmpty) {
         return trimmed;
       }
-      return 'ط­ط¯ط« ط®ط·ط£ ط£ط«ظ†ط§ط، طھط­ظ…ظٹظ„ ط§ظ„ط³ظ„ط©. ط­ط§ظˆظ„ ظ…ط±ط© ط£ط®ط±ظ‰.';
+      return 'تعذر تحميل السلة الآن. تحقق من اتصالك بالإنترنت ثم جرّب السحب للتحديث أو اضغط زر إعادة المحاولة.';
     }
 
     Widget buildErrorPlaceholder() {
@@ -943,7 +943,7 @@ class CartUI extends StatelessWidget {
                   ElevatedButton.icon(
                     onPressed: onRetry,
                     icon: const Icon(Icons.refresh),
-                    label: const Text('ط¥ط¹ط§ط¯ط© ط§ظ„ظ…ط­ط§ظˆظ„ط©'),
+                    label: const Text('إعادة المحاولة'),
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 20,
@@ -990,7 +990,7 @@ class CartUI extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'ط³ظ„ط© ط§ظ„ظ…ط´طھط±ظٹط§طھ ظپط§ط±ط؛ط©',
+                  'سلة التسوق فارغة',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: context.color.textDefaultColor,
@@ -1000,7 +1000,7 @@ class CartUI extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'ط§ط¨ط¯ط£ ط§ظ„طھط³ظˆظ‚ ط§ظ„ط¢ظ† ظ„ط¥ط¶ط§ظپط© ظ…ظ†طھط¬ط§طھظƒ ط§ظ„ظ…ظپط¶ظ„ط©.',
+                  'أضف منتجات للسلة للمتابعة في الدفع. استخدم زر الرجوع للعودة للتسوق أو حدّث الصفحة بعد إضافة العناصر.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: context.color.textDefaultColor.withOpacity(0.75),
@@ -1020,7 +1020,8 @@ class CartUI extends StatelessWidget {
                     ),
                     backgroundColor: accent,
                   ),
-                  child: const Text('طھط³ظˆظ‚ ط§ظ„ط¢ظ†'),
+                  child: const Text(
+                      'العودة للتسوق'),
                 ),
               ],
             ),
@@ -1155,9 +1156,14 @@ class CartUI extends StatelessWidget {
                     children: [
                       BackButton(color: context.color.textColorDark),
                       const SizedBox(width: 8),
-                      Text("ط³ظ„ط© ط§ظ„ظ…ط´طھط±ظٹط§طھ",
-                          style: TextStyle(color: context.color.textColorDark)),
-                      const Spacer(),
+                      Expanded(
+                        child: Text(
+                          "سلة المشتريات",
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: context.color.textColorDark),
+                        ),
+                      ),
                       if (hasCartItems)
                         IconButton(
                           icon: const Icon(Icons.delete,
@@ -1220,7 +1226,7 @@ class CartUI extends StatelessWidget {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                "ط§ظ„ظ…ط¨ظ„ط؛ ط§ظ„ط¥ط¬ظ…ط§ظ„ظٹ",
+                                "الإجمالي",
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
@@ -1244,7 +1250,8 @@ class CartUI extends StatelessWidget {
                       UiUtils.buildButton(
                         context,
                         onPressed: onContinueToPayment,
-                        buttonTitle: "المتابعة إلى الدفع",
+                        buttonTitle:
+                            "متابعة الدفع",
                         radius: 12,
                         width: double.infinity,
                         height: 52,
@@ -1253,15 +1260,15 @@ class CartUI extends StatelessWidget {
                             ? () => HelperUtils.showSnackBarMessage(
                                   context,
                                   showEmptyGuidance
-                                      ? 'ط£ط¶ظپ ظ…ظ†طھط¬ط§طھ ط¥ظ„ظ‰ ط§ظ„ط³ظ„ط© ظ„ظ„ظ…طھط§ط¨ط¹ط© ط¥ظ„ظ‰ ط§ظ„ط¯ظپط¹.'
-                                      : 'ط§ظ†طھط¸ط± ط­طھظ‰ ظٹطھظ… طھط­ظ…ظٹظ„ ط§ظ„ط³ظ„ط© ظ‚ط¨ظ„ ط§ظ„ظ…طھط§ط¨ط¹ط©.',
+                                      ? 'أضف منتجات إلى السلة ثم اسحب للتحديث قبل المتابعة للدفع.'
+                                      : 'تأكد من اتصالك ثم أعد تحميل السلة قبل المتابعة للدفع.'
                                 )
                             : null,
                       ),
                       if (showEmptyGuidance) ...[
                         const SizedBox(height: 12),
                         Text(
-                          'ط³ظ„طھظƒ ظپط§ط±ط؛ط© ط­ط§ظ„ظٹط§ظ‹. ط£ط¶ظپ ظ…ظ†طھط¬ط§طھ ظ„ظ„ظ…طھط§ط¨ط¹ط© ط¥ظ„ظ‰ ط§ظ„ط¯ظپط¹.',
+                          'أضف منتجاتك ثم اسحب للتحديث ليظهر المحتوى وتتمكن من المتابعة للدفع.',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color:
@@ -1274,7 +1281,7 @@ class CartUI extends StatelessWidget {
                       if (showErrorGuidance) ...[
                         const SizedBox(height: 12),
                         Text(
-                          'طھط¹ط°ط± ط§ظ„ظ…طھط§ط¨ط¹ط© ظ‚ط¨ظ„ طھط­ظ…ظٹظ„ ط§ظ„ط³ظ„ط© ط¨ظ†ط¬ط§ط­. ط­ط§ظˆظ„ طھط­ط¯ظٹط« ط§ظ„طµظپط­ط© ط£ظˆ ط¥ط¹ط§ط¯ط© ط§ظ„ظ…ط­ط§ظˆظ„ط©.',
+                          'حدثت مشكلة أثناء تحميل السلة. تأكد من الاتصال واضغط إعادة المحاولة أو اسحب للتحديث.',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color:
@@ -1334,7 +1341,7 @@ class CartUI extends StatelessWidget {
     );
   }
 
-  // ===== ط´ظٹظ…ط±ط§طھ ط§ظ„ط¹ط±ط¶ =====
+
   Widget _buildShimmerItem(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return Shimmer.fromColors(
@@ -1394,11 +1401,11 @@ class CartUI extends StatelessWidget {
     final String? normalized = normalizeDeliveryDepartment(sectionRaw);
     switch (normalized) {
       case 'shein':
-        return 'ط´ظٹ ط¥ظ†';
+        return 'قسم شي إن';
       case 'computer':
-        return 'ط§ظ„ظƒظ…ط¨ظٹظˆطھط±';
+        return 'قسم الكمبيوتر';
       case 'store':
-        return 'ط§ظ„ظ…طھط¬ط±';
+        return 'المتجر';
       default:
         return null;
     }
@@ -1433,3 +1440,4 @@ class _DeliveryTimingOption {
   final bool isDisabled;
   final bool isInitiallySelected;
 }
+

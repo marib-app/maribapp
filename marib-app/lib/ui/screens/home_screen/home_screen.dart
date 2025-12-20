@@ -175,9 +175,25 @@ class HomeScreenState extends State<HomeScreen>
   }
 
   Future<void> _showPermissionPromptIfNeeded() async {
+    if (_permissionsPromptShown || HiveUtils.hasCorePermissionsSnapshot()) {
+      _permissionsPromptShown = true;
+      return;
+    }
     _permissionsPromptShown = true;
+
+    if (!await _needsCorePermissions()) {
+      await HiveUtils.setCorePermissionsSnapshot(true);
+      return;
+    }
+
+    final bool accepted = await _showCorePermissionSheet();
+    if (!accepted) {
+      await HiveUtils.setCorePermissionsSnapshot(false);
+      return;
+    }
+
+    await _requestCorePermissions();
     await HiveUtils.setCorePermissionsSnapshot(true);
-    return;
   }
 
   Future<void> _requestCorePermissions() async {
@@ -236,6 +252,128 @@ class HomeScreenState extends State<HomeScreen>
 
   bool _isGrantedOrLimited(PermissionStatus status) {
     return status.isGranted || status.isLimited;
+  }
+
+  Future<bool> _showCorePermissionSheet() async {
+    return await showModalBottomSheet<bool>(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: sheetContext.color.primaryColor,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          builder: (sheetContext) {
+            final theme = Theme.of(sheetContext);
+            final colors = sheetContext.color;
+
+            Widget bullet(String text) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.check_circle_outline,
+                          size: 18, color: colors.territoryColor),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          text,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: colors.onSurface.withOpacity(0.9),
+                            height: 1.4,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 24,
+                top: 20,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 42,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: colors.onSurface.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    "السماح بالصلاحيات",
+                    style: theme.textTheme.titleLarge
+                        ?.copyWith(fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "نحتاج بعض الأذونات لتعمل الميزات الأساسية بسلاسة:",
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: colors.onSurface.withOpacity(0.75),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  bullet("الإشعارات لإخبارك بالرسائل والتنبيهات المهمة."),
+                  bullet("الموقع لعرض الخدمات القريبة وضبط نتائج البحث."),
+                  bullet("الوسائط/الصور لرفع صور الإعلانات والملفات."),
+                  bullet("الكاميرا/الميكروفون للاتصال وتصوير المنتجات."),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.of(sheetContext).pop(false),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            side: BorderSide(color: colors.outline),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Text(
+                            "لاحقاً",
+                            style: theme.textTheme.titleMedium
+                                ?.copyWith(color: colors.onSurface),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.of(sheetContext).pop(true),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: colors.territoryColor,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Text(
+                            "متابعة",
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: colors.onPrimary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        ) ??
+        false;
   }
 
   Future<bool> _isMediaPermissionSatisfied() async {
@@ -646,8 +784,5 @@ class _PermissionPromptSheet extends StatelessWidget {
 // ط£ط°ظˆظ†ط§طھ ط§ظ„ط¥ط´ط¹ط§ط±ط§طھ
 // =============
 Future<void> notificationPermissionChecker() async {
-  // âœ… ط·ظ„ط¨ ط§ظ„ط¥ط°ظ† ط¹ظ†ط¯ ط§ظ„ط­ط§ط¬ط© ظپظ‚ط·
-  if (!(await Permission.notification.isGranted)) {
-    await Permission.notification.request();
-  }
+  // طلب إشعار مستقل أُلغي لصالح النافذة الموحدة
 }

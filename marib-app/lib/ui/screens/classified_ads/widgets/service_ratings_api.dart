@@ -1,7 +1,7 @@
 ﻿// lib/new_code/data/service_ratings_api.dart
 import 'package:flutter/foundation.dart';
 import 'package:marib/utils/api.dart';
-import 'package:marib/data/model/seller_ratings_model.dart' show UserRatings;
+import 'package:marib/data/model/seller_ratings_model.dart' show Buyer, UserRatings;
 import 'package:marib/utils/hive_utils.dart';
 
 typedef _GetRequestHandler = Future<Map<String, dynamic>> Function({
@@ -84,6 +84,19 @@ class ServiceRatingsApi {
       serviceUid: uid,
     );
 
+    // اجلب تقييمي الشخصي أولاً لنضمن إدراجه حتى لو كانت القائمة الرئيسية فارغة
+    UserRatings? myReview;
+    try {
+      myReview = await getMyReview(serviceId: resolvedServiceId, serviceUid: uid);
+      if (kDebugMode) {
+        // ignore: avoid_print
+        print(
+            '[ratings] preload myReview for fetch sid=$resolvedServiceId rating=${myReview?.ratings} review=${myReview?.review}');
+      }
+    } catch (_) {
+      myReview = null;
+    }
+
     // ظ†ط³طھط®ط¯ظ… getItemApi ظ„ط£ظ†ظ‡ ط§ظ„ط£ظƒط«ط± ط«ط¨ط§طھظ‹ط§ ظ„ط¯ظٹظƒظ…طŒ
     // ظˆظ†ظ…ط±ط± ظ…ظپط§طھظٹط­ ط´ط§ط¦ط¹ط© ظ„ظ„طھط±ظ‚ظٹظ…/ط§ظ„ظپط±ط² ظƒظٹ ظٹطھط¬ط§ظ‡ظ„ظ‡ط§ ط§ظ„ط¨ط§ظƒ ط¥ظ†ط¯ ط¥ظ† ظ„ظ… ظٹط¯ط¹ظ…ظ‡ط§.
     final Map<String, dynamic> resp = await _performGet(
@@ -100,6 +113,7 @@ class ServiceRatingsApi {
         'item_type': 'services',
         'type_alt': 'service',
         'item_type_alt': 'service',
+        'status': 'all', // اطلب جميع الحالات لأصحاب الخدمة (سيتجاهلها السيرفر لغير المالك)
         if (uid != null) 'service_uid': uid,
         if (uid != null) 'uid': uid,
         if (sort != null) 'sort': sort,
@@ -114,8 +128,88 @@ class ServiceRatingsApi {
           '[ratings] got response keys: ${resp.keys.take(6).toList()} for serviceId=$resolvedServiceId');
     }
 
-    final rows = _extractReviewRows(resp);
-    final list = rows.map(_toUserRatings).whereType<UserRatings>().toList();
+    List<Map<String, dynamic>> rows = _extractReviewRows(resp);
+    if (kDebugMode) {
+      // ignore: avoid_print
+      final dataNode = resp['data'];
+      final dataKeys =
+          dataNode is Map ? dataNode.keys.take(8).toList() : dataNode?.runtimeType;
+      print(
+          '[ratings] fetchRatings sid=$resolvedServiceId uid=$uid rows=${rows.length} page=$page keys=${resp.keys.take(6).toList()} msg=${resp['message']} data_keys=$dataKeys');
+      if (rows.isEmpty && dataNode is Map && page == 1) {
+        // log content of reviews node to understand structure
+        final rev = dataNode['reviews'];
+        final revType = rev?.runtimeType;
+        final revLen = rev is List ? rev.length : (rev is Map && rev['data'] is List ? (rev['data'] as List).length : null);
+        print('[ratings] reviews node type=$revType len=$revLen raw=$rev');
+      }
+    }
+    Map<String, dynamic> metaSource = resp;
+    // لو رجع خالياً في الصفحة الأولى، جرب استدعاءً أبسط بدون معاملات إضافية
+    if (page == 1 && rows.isEmpty) {
+      try {
+        final alt = await _performGet(
+          url: Api.serviceReviewsApi,
+          queryParameters: {
+            'service_id': resolvedServiceId,
+            'status': 'all',
+            if (uid != null) 'service_uid': uid,
+            if (uid != null) 'uid': uid,
+          },
+        );
+        final altRows = _extractReviewRows(alt);
+        if (altRows.isNotEmpty) {
+          rows = altRows;
+          metaSource = alt;
+          if (kDebugMode) {
+            // ignore: avoid_print
+            print(
+                '[ratings] fallback fetch succeeded sid=$resolvedServiceId rows=${rows.length} msg=${alt['message']}');
+          }
+        }
+      } catch (_) {
+        // ignore and keep original rows
+      }
+    }
+    List<UserRatings> list =
+        rows.map(_toUserRatings).whereType<UserRatings>().toList();
+
+    // أضف تقييمي الشخصي إن وجد لأي حال (أعد الطلب إن كان null)
+    if (myReview == null && page == 1) {
+      try {
+        myReview = await getMyReview(
+          serviceId: resolvedServiceId,
+          serviceUid: uid,
+        );
+        if (kDebugMode) {
+          // ignore: avoid_print
+          print('[ratings] late fetch myReview sid=$resolvedServiceId rating=${myReview?.ratings}');
+        }
+      } catch (_) {
+        myReview = null;
+      }
+    }
+
+    if (myReview != null) {
+      final bool exists = list.any(
+          (r) => r.id != null && myReview!.id != null && r.id == myReview!.id);
+      if (!exists) {
+        list.insert(0, myReview!);
+        if (kDebugMode) {
+          // ignore: avoid_print
+          print('[ratings] appended myReview to list sid=$resolvedServiceId');
+        }
+      }
+    }
+
+    // إذا بقيت القائمة فارغة لكن لدينا تقييمي الشخصي، استخدمه كقائمة وحيدة
+    if (list.isEmpty && myReview != null) {
+      list.add(myReview!);
+      if (kDebugMode) {
+        // ignore: avoid_print
+        print('[ratings] using only myReview as list sid=$resolvedServiceId');
+      }
+    }
 
     final String trackerKey = _paginationTrackerKey(
       serviceId: resolvedServiceId,
@@ -141,22 +235,45 @@ class ServiceRatingsApi {
     }
     final double fallbackAverage =
         list.isEmpty ? 0.0 : totalRatings / list.length;
-    final double averageRating = _extractAverageRating(resp) ?? fallbackAverage;
+    final double averageRating =
+        _extractAverageRating(metaSource) ?? fallbackAverage;
 
     final int fallbackTotal = ((page - 1) * perPage) + list.length;
-    final int? extractedTotal = _extractTotalReviews(resp);
-    final int totalReviews = extractedTotal != null
+    final int? extractedTotal = _extractTotalReviews(metaSource);
+    int totalReviews = extractedTotal != null
         ? (extractedTotal < fallbackTotal ? fallbackTotal : extractedTotal)
         : fallbackTotal;
+    // إذا بقيت القائمة فارغة لكن لدينا تقييمي الشخصي، استخدمه كقائمة وحيدة
+    if (list.isEmpty && myReview != null) {
+      list = [myReview!];
+      totalRatings = (myReview!.ratings ?? 0).toDouble();
+      totalReviews = 1;
+      if (kDebugMode) {
+        // ignore: avoid_print
+        print('[ratings] using only myReview as list sid=$resolvedServiceId');
+      }
+    }
+    // إذا كنا نعرض تقييمي الشخصي فقط، لا تترك العدد صفراً
+    if (totalReviews == 0 && list.isNotEmpty) {
+      totalReviews = list.length;
+    }
+
+    if (kDebugMode) {
+      // ignore: avoid_print
+      final first = list.isNotEmpty ? list.first : null;
+      print(
+          '[ratings] final list len=${list.length} first_review=${first?.review} rating=${first?.ratings} status=${first?.buyerId}');
+    }
 
     final int extractedServiceId =
-        _extractServiceIdFromAny(resp, matchUid: uid) ?? resolvedServiceId;
+        _extractServiceIdFromAny(metaSource, matchUid: uid) ??
+            resolvedServiceId;
 
     return ServiceRatingsResult(
       list: list,
       hasMore: pg.hasMore,
       nextPage: pg.nextPage,
-      canReview: _extractCanReview(resp),
+      canReview: _extractCanReview(metaSource),
       averageRating: averageRating,
       totalReviews: totalReviews,
       serviceId: extractedServiceId,
@@ -255,20 +372,55 @@ class ServiceRatingsApi {
         if (uid != null) 'uid': uid,
       },
     );
+    if (kDebugMode) {
+      // ignore: avoid_print
+      final dn = resp['data'];
+      final dType = dn?.runtimeType;
+      final dLen = dn is List ? dn.length : (dn is Map ? dn.length : null);
+      final first = dn is List && dn.isNotEmpty ? dn.first : null;
+      print('[ratings] getMyReview sid=$resolvedServiceId uid=$uid keys=${resp.keys.take(6).toList()} msg=${resp['message']} data_type=$dType data_len=$dLen first=$first');
+    }
     final row = _firstRow(resp);
     if (row != null) {
-      final parsed = _toUserRatings(row);
+      final parsed = _toUserRatings(row, fillCurrentUserIfMissing: true) ??
+          _fillBuyerFromHiveIfMissing(
+              _bestEffortRating(row, resolvedServiceId),
+              force: true);
       if (parsed != null) return parsed;
+    }
+
+    // قد يعود data كـ List مباشرة
+    final dynamic dataNode = resp['data'];
+    if (dataNode is List) {
+      for (final item in dataNode) {
+        if (item is Map) {
+          final map = <String, dynamic>{};
+          item.forEach((key, value) {
+            map[key.toString()] = value;
+          });
+          final parsed = _toUserRatings(map, fillCurrentUserIfMissing: true) ??
+              _fillBuyerFromHiveIfMissing(
+                  _bestEffortRating(map, resolvedServiceId),
+                  force: true);
+          if (parsed != null) return parsed;
+        }
+      }
     }
 
     // قد يعود كائن مفرد بدلاً من قائمة
     if (resp is Map<String, dynamic>) {
       final dataNode = resp['data'];
       if (dataNode is Map<String, dynamic>) {
-        final parsed = _toUserRatings(dataNode);
+        final parsed = _toUserRatings(dataNode, fillCurrentUserIfMissing: true) ??
+            _fillBuyerFromHiveIfMissing(
+                _bestEffortRating(dataNode, resolvedServiceId),
+                force: true);
         if (parsed != null) return parsed;
       }
-      final parsed = _toUserRatings(resp);
+      final parsed = _toUserRatings(resp, fillCurrentUserIfMissing: true) ??
+          _fillBuyerFromHiveIfMissing(
+              _bestEffortRating(resp, resolvedServiceId),
+              force: true);
       if (parsed != null) return parsed;
     }
 
@@ -490,6 +642,111 @@ class ServiceRatingsApi {
     return null;
   }
 
+  static UserRatings _bestEffortRating(Map<String, dynamic> map, int serviceId) {
+    final buyerMap = _extractBuyerMap(map);
+    final rating = UserRatings(
+      id: _asPositiveInt(map['id']),
+      itemId: serviceId,
+      ratings: (map['ratings'] ?? map['rating'] ?? map['stars']) is num
+          ? (map['ratings'] ?? map['rating'] ?? map['stars']).toDouble()
+          : null,
+      review: (map['review'] ?? map['comment'] ?? '').toString(),
+      createdAt: (map['created_at'] ?? map['created'] ?? '').toString(),
+      updatedAt: (map['updated_at'] ?? map['updated'] ?? '').toString(),
+      buyer: buyerMap != null ? Buyer.fromJson(buyerMap) : null,
+      buyerId: buyerMap != null ? _asPositiveInt(buyerMap['id']) : null,
+    );
+    return rating;
+  }
+
+  static Map<String, dynamic>? _extractBuyerMap(Map<String, dynamic> map) {
+    Map<String, dynamic>? take(dynamic value) {
+      if (value is Map<String, dynamic>) return value;
+      if (value is Map) {
+        return value.map((k, v) => MapEntry(k.toString(), v));
+      }
+      return null;
+    }
+
+    final Map<String, dynamic>? directBuyer = take(map['buyer'] ??
+        map['user'] ??
+        map['customer'] ??
+        map['client'] ??
+        map['author']);
+    Map<String, dynamic>? buyer = directBuyer != null
+        ? Map<String, dynamic>.from(directBuyer)
+        : <String, dynamic>{};
+
+    final candidateId = _asPositiveInt(map['buyer_id'] ??
+        map['user_id'] ??
+        map['customer_id'] ??
+        map['client_id'] ??
+        map['author_id'] ??
+        map['uid'] ??
+        buyer['id']);
+    if (candidateId != null) buyer['id'] = candidateId;
+
+    final String? name = (map['buyer_name'] ??
+            map['user_name'] ??
+            map['customer_name'] ??
+            map['author_name'] ??
+            map['name'] ??
+            buyer['name'])
+        ?.toString();
+    if (name != null && name.trim().isNotEmpty) {
+      buyer['name'] = name.trim();
+    }
+
+    final String? avatar = (map['buyer_profile'] ??
+            map['user_profile'] ??
+            map['customer_profile'] ??
+            map['author_profile'] ??
+            map['profile'] ??
+            map['avatar'] ??
+            buyer['profile'])
+        ?.toString();
+    if (avatar != null && avatar.trim().isNotEmpty) {
+      buyer['profile'] = avatar.trim();
+    }
+
+    if (buyer.isEmpty) return null;
+    return buyer;
+  }
+
+  static UserRatings _fillBuyerFromHiveIfMissing(UserRatings rating,
+      {bool force = false}) {
+    try {
+      final bool hasBuyer =
+          rating.buyer != null && (rating.buyer!.name?.trim().isNotEmpty ?? false);
+      final int? buyerId = rating.buyerId ?? rating.buyer?.id;
+      final int? currentUserId = HiveUtils.getUserDetails().id;
+      final bool isCurrentUser =
+          currentUserId != null && buyerId != null && buyerId == currentUserId;
+
+      if (!force && (hasBuyer || !isCurrentUser)) {
+        return rating;
+      }
+
+      final user = HiveUtils.getUserDetails();
+      final int? uid = user.id;
+      final String? uname = user.name?.toString();
+      final String? uprofile = user.profile?.toString();
+      if (uid == null && (uname == null || uname.trim().isEmpty)) {
+        return rating;
+      }
+      return rating.copyWith(
+        buyerId: buyerId ?? uid,
+        buyer: Buyer(
+          id: buyerId ?? uid,
+          name: uname ?? user.mobile ?? 'User',
+          profile: uprofile,
+        ),
+      );
+    } catch (_) {
+      return rating;
+    }
+  }
+
   /// ظٹط­ط§ظˆظ„ ط§ط³طھط®ط±ط§ط¬ ظ…طµظپظˆظپط© ط§ظ„طھط¹ظ„ظٹظ‚ط§طھ/ط§ظ„طھظ‚ظٹظٹظ…ط§طھ ظ…ظ† ط£ظ†ظ…ط§ط· ط´ط§ط¦ط¹ط©
   static List<Map<String, dynamic>> _extractReviewRows(
       Map<String, dynamic> resp) {
@@ -565,7 +822,8 @@ class ServiceRatingsApi {
   }
 
   /// طھط­ظˆظٹظ„ ظ…ط±ظ† ط¥ظ„ظ‰ UserRatings
-  static UserRatings? _toUserRatings(Map<String, dynamic> m) {
+  static UserRatings? _toUserRatings(Map<String, dynamic> m,
+      {bool fillCurrentUserIfMissing = false}) {
     try {
       // ظˆظپظ‘ط± ظ…ظپط§طھظٹط­ ط§ظپطھط±ط§ط¶ظٹط© ظ„ظƒظٹ ظٹظ‚ط±ط£ظ‡ط§ ظ…ظˆط¯ظٹظ„ UserRatings ط¨ط³ظ„ط§ط³ط©
       final rating = m['ratings'] ?? m['rating'] ?? m['stars'] ?? 0;
@@ -583,11 +841,22 @@ class ServiceRatingsApi {
           .toString();
 
       final mm = Map<String, dynamic>.from(m);
+      final Map<String, dynamic>? buyerMap = _extractBuyerMap(mm);
+      if (buyerMap != null) {
+        mm['buyer'] = buyerMap;
+        if (buyerMap['id'] != null) {
+          mm.putIfAbsent('buyer_id', () => buyerMap['id']);
+        }
+      }
       mm.putIfAbsent('ratings', () => rating);
       mm.putIfAbsent('review', () => review);
       mm.putIfAbsent('created_at', () => created);
 
-      return UserRatings.fromJson(mm);
+      final parsed = UserRatings.fromJson(mm);
+      if (fillCurrentUserIfMissing) {
+        return _fillBuyerFromHiveIfMissing(parsed, force: true);
+      }
+      return parsed;
     } catch (_) {
       return null;
     }

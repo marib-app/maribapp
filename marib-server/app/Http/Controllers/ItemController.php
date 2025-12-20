@@ -722,7 +722,18 @@ class ItemController extends Controller {
             $limit = $request->input('limit', 10);
             $sort = $request->input('sort', 'id');
             $order = $request->input('order', 'ASC');
-            $sql = Item::with(['custom_fields', 'category:id,name', 'user:id,name', 'gallery_images', 'featured_items'])->withTrashed();
+            $sql = Item::with([
+                'custom_fields',
+                'category:id,name',
+                'user' => function ($q) {
+                    $q->withTrashed()->select('id', 'name');
+                },
+                'user.store' => function ($q) {
+                    $q->withTrashed()->select('id', 'user_id', 'name');
+                },
+                'gallery_images',
+                'featured_items'
+            ])->withTrashed();
 
 
 
@@ -834,6 +845,12 @@ class ItemController extends Controller {
                 $operate = '';
                 
 
+                // اسم المعلن: متجر أو اسم المستخدم أو "-"
+                $advertiserName = trim($row->user->store->name ?? '') ?: trim($row->user->name ?? '') ?: '-';
+
+                $tempRow['user'] = ['name' => $advertiserName];
+                $tempRow['user_name'] = $advertiserName;
+
 
                 $permissionPrefix = $this->resolvePermissionPrefixFromCategoryId($row->category_id);
                 $viewPermissions = $this->buildPermissionList($permissionPrefix, 'list', 'item-list');
@@ -854,7 +871,7 @@ class ItemController extends Controller {
                         [
                             'title' => __('View'),
                         ],
-                        __('View')
+                        ''
                     );
                 }
 
@@ -864,13 +881,13 @@ class ItemController extends Controller {
                         $operate .= BootstrapTableService::editButton(
                             route('item.approval', $row->id),
                             true,
-                            '#editStatusModal',
-                            'edit-status',
-                            $row->id,
-                            'fa fa-edit',
-                            null,
-                            __('Edit Status')
-                        );
+                        '#editStatusModal',
+                        'edit-status',
+                        $row->id,
+                        'fa fa-edit',
+                        null,
+                        ''
+                    );
                     
                     
                     }
@@ -882,7 +899,7 @@ class ItemController extends Controller {
                             route('item.shein.products.edit', $row->id),
                             ['edit-item', 'btn-success', 'btn-sm', 'me-1'],
                             ['title' => __("Edit All Data")],
-                            __('Edit All Data')
+                            ''
                         );
 
 
@@ -901,7 +918,7 @@ class ItemController extends Controller {
                         null,
                         null,
                         null,
-                        __('Delete')
+                        ''
                     );
                 
                 }

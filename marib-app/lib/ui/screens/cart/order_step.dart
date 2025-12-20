@@ -79,11 +79,13 @@ class _OrderStepsScreenState extends State<OrderStepsScreen> {
   OrderDetails? _orderDetails;
   List<UserOrder> _orders = const <UserOrder>[];
   String? _activeDetailId;
+  Timer? _autoRefreshTimer;
 
   @override
   void initState() {
     super.initState();
     _initialize();
+    _startAutoRefresh();
   }
 
   Future<void> _initialize() async {
@@ -216,6 +218,32 @@ class _OrderStepsScreenState extends State<OrderStepsScreen> {
     }
   }
 
+  void _startAutoRefresh() {
+    _autoRefreshTimer?.cancel();
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      _refreshActiveOrderSilently();
+    });
+  }
+
+  Future<void> _refreshActiveOrderSilently() async {
+    final String? id =
+        _activeDetailId ?? _orderDetails?.order.id ?? widget.orderId;
+    if (id == null || id.trim().isEmpty) return;
+
+    try {
+      final OrderDetails detailed =
+          await _ordersRepository.fetchOrderDetails(id.trim());
+      if (!mounted) return;
+
+      setState(() {
+        _orderDetails = detailed;
+        _orders = _updateOrdersList(detailed.order);
+      });
+    } catch (_) {
+      // تجاهل التحديث الصامت في حال الفشل
+    }
+  }
+
   List<UserOrder> _updateOrdersList(UserOrder updated) {
     if (_orders.isEmpty) {
       return <UserOrder>[updated];
@@ -257,6 +285,12 @@ class _OrderStepsScreenState extends State<OrderStepsScreen> {
     } else {
       await _fetchOrders();
     }
+  }
+
+  @override
+  void dispose() {
+    _autoRefreshTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _openInvoice(UserOrder order) async {
@@ -875,5 +909,3 @@ class _OrderStepsScreenState extends State<OrderStepsScreen> {
     );
   }
 }
-
-

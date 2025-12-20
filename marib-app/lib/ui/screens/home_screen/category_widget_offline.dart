@@ -15,7 +15,7 @@ class CategoryWidgetOffline extends StatelessWidget {
     {"id": 181,"name": "medicalServices",     "url": "assets/category/7.png", 'interfaceType': 'services_medical'},
     {"id": 180,"name": "studentServices",     "url": "assets/category/6.png", 'interfaceType': 'services_student'},
     {"id": 175,"name": "jobs",                "url": "assets/category/2.png", 'interfaceType': 'jobs'},
-    {"id": 175,"name": "eventsOffers",        "url": "assets/category/3.png", 'interfaceType': 'events_offers'},
+    {"id": 176,"name": "eventsOffers",        "url": "assets/category/3.png", 'interfaceType': 'events_offers'},
     {"id": 114,"name": "maribLost",           "url": "assets/category/4.png", 'interfaceType': 'marib_lost'},
     {"id": 177,"name": "maribGuide",          "url": "assets/category/5.png", 'interfaceType': 'marib_guide'},
 

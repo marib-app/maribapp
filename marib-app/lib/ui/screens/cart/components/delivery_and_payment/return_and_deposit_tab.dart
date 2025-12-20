@@ -69,6 +69,7 @@ class CartReturnAndDepositTab extends StatelessWidget {
     }
 
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color accent = Theme.of(context).colorScheme.primary;
 
     Widget buildLoadingSkeleton() {
       return Padding(
@@ -132,7 +133,12 @@ class CartReturnAndDepositTab extends StatelessWidget {
           key: storageKey ?? const PageStorageKey<String>('cart_return_deposit'),
           initiallyExpanded: initiallyExpanded,
           tilePadding: const EdgeInsets.symmetric(horizontal: 16),
-          leading: SvgPicture.asset(AppIcons.money, width: 24, height: 24),
+          leading: SvgPicture.asset(
+            AppIcons.privacy,
+            width: 24,
+            height: 24,
+            colorFilter: ColorFilter.mode(accent, BlendMode.srcIn),
+          ),
           title: const Text(
             'الوديعة وسياسة الإرجاع',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),

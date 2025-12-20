@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:marquee/marquee.dart';
 import 'package:timeago/timeago.dart' as timeago;
@@ -241,7 +241,7 @@ class _SectionsAdapterState extends State<SectionsAdapter> {
           controller: _searchController,
           onChanged: (value) => setState(() => _query = value),
           decoration: InputDecoration(
-            hintText: 'ابحث في المتاجر',
+            hintText: 'ابحث عن متجر أو إعلان داخل المتجر',
             prefixIcon: const Icon(Icons.search),
             isDense: true,
             contentPadding:
@@ -409,7 +409,7 @@ class _SectionsAdapterState extends State<SectionsAdapter> {
     final String? slug = catId == null ? idText : null;
 
     if (catId == null && (slug == null || slug.isEmpty)) {
-      UiUtils.showSoftSnackBar(context, message: 'تعذر فتح الفئة المحددة.');
+      UiUtils.showSoftSnackBar(context, message: 'تعذر فتح هذه الفئة، حاول مرة أخرى لاحقاً.');
       return;
     }
 
@@ -1028,3 +1028,9 @@ class _PromotionCard extends StatelessWidget {
     );
   }
 }
+
+
+
+
+
+

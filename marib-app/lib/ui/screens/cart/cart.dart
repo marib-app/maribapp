@@ -1,5 +1,4 @@
-// ًں›’ ط§ظ„ظ…ظ†ط·ظ‚ ظپظ‚ط·
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:marib/app/routes.dart';
 import 'package:marib/data/cubits/cart/cart_cubit.dart';
@@ -8,8 +7,8 @@ import 'package:marib/ui/screens/widgets/animated_routes/blur_page_route.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/ui/theme/theme.dart';
-import 'package:flutter/services.dart'; // ظ„ظˆ ظƒظ†طھ طھط³طھط®ط¯ظ… AnnotatedRegion ط¨ظ†ظ…ط· ط§ظ„ظ†ط¸ط§ظ…
-import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart'; // ظ„طھط¹ط±ظٹظپ BlurredDialogBox
+import 'package:flutter/services.dart';
+import 'package:marib/ui/screens/widgets/blurred_dialoge_box.dart';
 
 import 'cart_ui.dart';
 import 'package:marib/data/model/cart/cart_discount.dart';
@@ -41,7 +40,7 @@ class _CartScreenState extends State<CartScreen> {
   final Set<String> _selectedItems = <String>{};
   final TextEditingController _couponController = TextEditingController();
 
-  // ظ†ظپط³ ط§ظ„ظ‚ظٹظ… ط§ظ„ط£طµظ„ظٹط©
+  // موضع زر واتساب العائم
   final double _whatsappBottom = 155;
   final double _whatsappRight = 340;
   Set<String> _appliedCouponSnapshot = <String>{};
@@ -59,7 +58,7 @@ class _CartScreenState extends State<CartScreen> {
     super.dispose();
   }
 
-  // TODO: ط§ط±ط¨ط· ط¨ظ…طµط¯ط± ط¨ظٹط§ظ†ط§طھظƒ ط§ظ„ط­ظ‚ظٹظ‚ظٹ ط¨ط¯ظ„ط§ظ‹ ظ…ظ† ط£ظٹ ط¨ظٹط§ظ†ط§طھ ظ…ط¤ظ‚طھط©.
+  // TODO: اربط بمصدر بيانات حقيقي بدلاً من أي بيانات مؤقتة.
   Future<void> _initLoad() async {
     setState(() {
       _loading = true;
@@ -67,8 +66,8 @@ class _CartScreenState extends State<CartScreen> {
     });
 
     try {
-      // ظ…ط«ط§ظ„: await context.read<CartCubit>().loadCartFromApi();
-      // ظ…ظ„ط§ط­ط¸ط©: ط¹ظ†ط¯ ظˆطµظˆظ„ ط§ظ„ط¨ظٹط§ظ†ط§طھطŒ ظ„ط§ طھظ†ط³ظژ ط¶ط¨ط· ط§ظ„ط§ط®طھظٹط§ط±ط§طھ/ط§ظ„ط§ظپطھط±ط§ط¶ظٹ ط­ط³ط¨ ط­ط§ط¬طھظƒ.
+      // مثال: await context.read<CartCubit>().loadCartFromApi();
+      // ملاحظة: يعتمد على توفر واجهات الخلفية/البيانات المبدئية حالياً.
       final CartCubit cubit = context.read<CartCubit>();
       _syncCouponSnapshot(cubit.state.discounts);
       _lastCartState = cubit.state;
@@ -76,7 +75,7 @@ class _CartScreenState extends State<CartScreen> {
       _syncCouponSnapshot(cubit.state.discounts);
       _lastCartState = cubit.state;
     } catch (_) {
-      // TODO: طھط¹ط§ظ…ظ„ ظ…ط¹ ط§ظ„ط®ط·ط£ ط­ط³ط¨ ظ†ط¸ط§ظ… ط§ظ„طھظ†ط¨ظٹظ‡ط§طھ ظ„ط¯ظٹظƒ
+      // TODO: عالج الأخطاء بحسب نظام التنبيهات لديك
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -293,8 +292,20 @@ class _CartScreenState extends State<CartScreen> {
         ? status.name!.trim()
         : fallbackStore;
     final String? nextOpen = status.formatNextOpenLabel(locale: 'ar');
-    final String sixHoursHint = DateFormat('EEEE d MMM, h:mm a', 'ar')
-        .format(DateTime.now().add(const Duration(hours: 6)));
+    final DateTime now = DateTime.now();
+    final DateTime? nextOpenAt = status.nextOpenAt;
+    final Duration? untilOpen =
+        nextOpenAt != null ? nextOpenAt.difference(now) : null;
+    final int hoursHint = (untilOpen != null && untilOpen.inMinutes > 0)
+        ? ((untilOpen.inMinutes + 59) ~/ 60)
+        : 6;
+    final String sixHoursHint =
+        DateFormat('EEEE d MMM, h:mm a', 'ar').format(now.add(
+      Duration(hours: hoursHint),
+    ));
+    final String nextOpenDisplay = (nextOpen != null && nextOpen.trim().isNotEmpty)
+        ? nextOpen.trim()
+        : sixHoursHint;
 
     await showModalBottomSheet<void>(
       context: context,
@@ -363,19 +374,20 @@ class _CartScreenState extends State<CartScreen> {
                       _buildIconLine(
                         icon: Icons.schedule_outlined,
                         color: Colors.teal,
-                        text:
-                            '\u0627\u0644\u0641\u062a\u062d \u0627\u0644\u0642\u0627\u062f\u0645: ',
+                        text: '\u0627\u0644\u0641\u062a\u062d \u0627\u0644\u0642\u0627\u062f\u0645: $nextOpenDisplay',
                         style: bodyStyle,
                       ),
                     ],
-                    const SizedBox(height: 10),
-                    _buildIconLine(
-                      icon: Icons.lightbulb_outline,
-                      color: Colors.blueGrey,
-                      text:
-                          '\u062c\u0631\u0651\u0628 \u0627\u0644\u0631\u062c\u0648\u0639 \u0628\u0639\u062f 6 \u0633\u0627\u0639\u0627\u062a \u0645\u0646 \u0627\u0644\u0622\u0646 ().',
-                      style: bodyStyle,
-                    ),
+                    if (hoursHint < 24) ...[
+                      const SizedBox(height: 10),
+                      _buildIconLine(
+                        icon: Icons.lightbulb_outline,
+                        color: Colors.blueGrey,
+                        text:
+                            '\u062c\u0631\u0651\u0628 \u0627\u0644\u0631\u062c\u0648\u0639 \u0628\u0639\u062f \u0646\u062d\u0648 $hoursHint \u0633\u0627\u0639\u0629.',
+                        style: bodyStyle,
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -436,9 +448,9 @@ class _CartScreenState extends State<CartScreen> {
       UiUtils.showBlurredDialoge(
         context,
         dialoge: BlurredDialogBox(
-          title: "طھظ†ط¨ظٹظ‡",
+          title: "تنبيه",
           content: const Text(
-              "ط§ظ„ط³ظ„ط© ظپط§ط±ط؛ط©طŒ ظٹط±ط¬ظ‰ ط¥ط¶ط§ظپط© ظ…ظ†طھط¬ط§طھ ط£ظˆظ„ط§ظ‹."),
+              "السلة فارغة حالياً. يرجى إضافة منتجات أولاً."),
           showCancleButton: false,
         ),
       );
@@ -698,8 +710,8 @@ class _CartScreenState extends State<CartScreen> {
                 final String title = ((discount?.displayTitle ?? '').trim());
                 final String message = title.isNotEmpty &&
                         title.toLowerCase() != resolvedCode.toLowerCase()
-                    ? 'طھظ… طھط·ط¨ظٹظ‚ ط§ظ„ظ‚ط³ظٹظ…ط© $resolvedCode ط¨ظ†ط¬ط§ط­: $title'
-                    : 'طھظ… طھط·ط¨ظٹظ‚ ط§ظ„ظ‚ط³ظٹظ…ط© $resolvedCode ط¨ظ†ط¬ط§ط­.';
+                    ? 'تم تطبيق كوبون الخصم $resolvedCode بنجاح: $title'
+                    : 'تم تطبيق كوبون الخصم $resolvedCode بنجاح.';
                 HelperUtils.showSnackBarMessage(context, message);
               }
             }
@@ -724,18 +736,17 @@ class _CartScreenState extends State<CartScreen> {
             if (cartItems.isEmpty) {
               HelperUtils.showSnackBarMessage(
                 context,
-                "ط§ظ„ط³ظ„ط© ظپط§ط±ط؛ط©طŒ ظ„ط§ ظٹظˆط¬ط¯ ط¹ظ†ط§طµط± ظ„ظ„ط­ط°ظپ.",
+                'السلة فارغة، لا توجد عناصر للحذف.',
               );
             } else {
               UiUtils.showBlurredDialoge(
                 context,
                 dialoge: BlurredDialogBox(
-                  title: "طھط£ظƒظٹط¯ ط§ظ„ط­ط°ظپ",
+                  title: 'تأكيد الحذف',
                   onAccept: _clearAll,
                   cancelTextColor: context.color.textColorDark,
-                  svgImagePath: "assets/lottie/delete_user.json",
                   content: const Text(
-                      "ظ‡ظ„ ط£ظ†طھ ظ…طھط£ظƒط¯ ظ…ظ† ط­ط°ظپ ط¬ظ…ظٹط¹ ط§ظ„ظ…ظ†طھط¬ط§طھطں"),
+                      'هل أنت متأكد من حذف جميع المنتجات؟'),
                 ),
               );
             }

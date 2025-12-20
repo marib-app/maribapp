@@ -18,6 +18,7 @@ class ItemFilterModel {
   final Map<String, dynamic>? customFields;
   final int? userId;
   final int? storeId;
+  final String? interfaceType;
 
   ItemFilterModel({
     this.maxPrice,
@@ -36,6 +37,7 @@ class ItemFilterModel {
     this.currency,
     this.userId,
     this.storeId,
+    this.interfaceType,
     this.customFields = const {},
   });
 
@@ -56,6 +58,7 @@ class ItemFilterModel {
     String? currency,
     int? userId,
     int? storeId,
+    String? interfaceType,
     Map<String, dynamic>? customFields,
   }) {
     return ItemFilterModel(
@@ -75,6 +78,7 @@ class ItemFilterModel {
       currency: currency ?? this.currency,
       userId: userId ?? this.userId,
       storeId: storeId ?? this.storeId,
+      interfaceType: interfaceType ?? this.interfaceType,
       customFields: customFields ?? this.customFields,
     );
   }
@@ -95,6 +99,7 @@ class ItemFilterModel {
       'longitude': longitude,
       'latitude': latitude,
       'currency': currency,
+      'interface_type': interfaceType,
     };
     map.removeWhere((key, value) => value == null);
     if (userId != null) {
@@ -135,6 +140,7 @@ class ItemFilterModel {
       storeId: map['store_id'] != null
           ? int.tryParse(map['store_id'].toString())
           : null,
+      interfaceType: map['interface_type']?.toString(),
       customFields: Map<String, dynamic>.from(map['custom_fields'] ?? {}),
     );
   }
@@ -146,7 +152,7 @@ class ItemFilterModel {
 
   @override
   String toString() {
-    return 'ItemFilterModel(maxPrice: $maxPrice, minPrice: $minPrice, categoryId: $categoryId, postedSince: $postedSince, sortBy: $sortBy, city: $city, state: $state, country: $country, area: $area, areaId: $areaId, custom_fields: $customFields,radius:$radius,latitude:$latitude,longitude:$longitude,userId:$userId,storeId:$storeId)';
+    return 'ItemFilterModel(maxPrice: $maxPrice, minPrice: $minPrice, categoryId: $categoryId, postedSince: $postedSince, sortBy: $sortBy, city: $city, state: $state, country: $country, area: $area, areaId: $areaId, custom_fields: $customFields,radius:$radius,latitude:$latitude,longitude:$longitude,userId:$userId,storeId:$storeId,interfaceType:$interfaceType)';
   }
 
   factory ItemFilterModel.createEmpty() {
@@ -167,6 +173,7 @@ class ItemFilterModel {
       customFields: const {},
       userId: null,
       storeId: null,
+      interfaceType: null,
     );
   }
 
@@ -190,6 +197,7 @@ class ItemFilterModel {
         other.currency == currency &&
         other.userId == userId &&
         other.storeId == storeId &&
+        other.interfaceType == interfaceType &&
         other.customFields == customFields;
   }
 
@@ -211,6 +219,7 @@ class ItemFilterModel {
         currency.hashCode ^
         (storeId?.hashCode ?? 0) ^
         (userId?.hashCode ?? 0) ^
+        (interfaceType?.hashCode ?? 0) ^
         customFields.hashCode;
   }
 }

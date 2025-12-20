@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:marib/data/model/orders/user_order.dart';
 import 'package:marib/ui/theme/theme.dart';
@@ -6,6 +6,9 @@ import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/ui_utils.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:marib/ui/screens/cart/order_outstanding_info.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:marib/utils/api.dart';
+import 'package:marib/utils/constant.dart';
 
 class OrderStepData {
   const OrderStepData({
@@ -344,24 +347,14 @@ class OrderStepContent extends StatelessWidget {
   }) {
     final List<OrderStepData> effectiveSteps =
         providedSteps.isNotEmpty ? providedSteps : buildOrderStepData(order);
-    final List<OrderTimelineEntry> timeline = order.effectiveTimeline;
 
-    final OrderStatusDisplay? statusDisplay = order.statusDisplay;
-    final OrderStatusReserveOptions? reserveOptions =
-        order.statusReserveOptions;
     final OrderPolicy? policy = details?.policy;
     final OrderSupport? support = details?.support;
     final OrderActions actions = order.actions;
     final Map<String, dynamic>? resolvedDepositSummary =
         depositSummary ?? details?.depositSummary ?? order.depositSummary;
-    final bool showStatusDisplay =
-        statusDisplay != null && statusDisplay.hasContent;
-    final bool showReserveOptions =
-        reserveOptions != null && reserveOptions.hasContent;
     final bool showPolicySection = (policy != null && policy.hasReturnPolicy) ||
         (support != null && support.hasContact);
-
-    final Widget? timelineSection = _buildTimelineSection(context, timeline);
 
     final Widget? paymentsSummarySection = _buildFinancialSummarySection(
       context,
@@ -377,23 +370,11 @@ class OrderStepContent extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          if (showStatusDisplay) ...<Widget>[
-            _buildStatusDisplayCard(context, statusDisplay!),
-            const SizedBox(height: 20),
-          ],
-          if (showReserveOptions) ...<Widget>[
-            _buildReserveOptionsCard(context, reserveOptions!),
-            const SizedBox(height: 20),
-          ],
           if (effectiveSteps.isNotEmpty)
             _buildStepsRow(context, effectiveSteps)
           else
             _buildStepsPlaceholder(context),
           const SizedBox(height: 20),
-          if (timelineSection != null) ...<Widget>[
-            timelineSection,
-            const SizedBox(height: 20),
-          ],
           _buildInfoCard(
             context,
             order,
@@ -471,6 +452,17 @@ class OrderStepContent extends StatelessWidget {
       summary: deliverySource,
       fallbackSource: deliveryPaymentSummary,
     );
+
+    final bool hasDepositPaid = depositBreakdown != null &&
+        ((depositBreakdown.paidValue ?? 0) > 0 ||
+            (depositBreakdown.paidText?.trim().isNotEmpty ?? false));
+    final bool hasDepositDue = depositBreakdown != null &&
+        ((depositBreakdown.dueValue ?? 0) > 0 ||
+            (depositBreakdown.dueText?.trim().isNotEmpty ?? false));
+    final bool shouldShowDepositSummary = hasDepositPaid && hasDepositDue;
+    if (!shouldShowDepositSummary) {
+      return null;
+    }
 
     final List<_PaymentBreakdown> breakdowns = <_PaymentBreakdown>[
       if (depositBreakdown != null && depositBreakdown.hasContent)
@@ -569,275 +561,6 @@ class OrderStepContent extends StatelessWidget {
     }
 
     return lines.join('\n');
-  }
-
-  Widget? _buildTimelineSection(
-      BuildContext context, List<OrderTimelineEntry> timeline) {
-    if (timeline.isEmpty) {
-      return null;
-    }
-
-    final DateFormat timelineFormat = DateFormat(
-      'yyyy/MM/dd HH:mm',
-      dateFormat.locale,
-    );
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: context.color.primaryColor,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const <BoxShadow>[
-          BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 2)),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          const Text(
-            'سجل التحديثات',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-          ),
-          const SizedBox(height: 12),
-          for (int i = 0; i < timeline.length; i++) ...<Widget>[
-            _buildTimelineEntry(
-              context,
-              timeline[i],
-              timelineFormat,
-              isLast: i == timeline.length - 1,
-            ),
-            if (i != timeline.length - 1) const SizedBox(height: 12),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTimelineEntry(
-    BuildContext context,
-    OrderTimelineEntry entry,
-    DateFormat timelineFormat, {
-    required bool isLast,
-  }) {
-    final Color accent = _timelineAccentColor(entry);
-    final IconData icon = _resolveTimelineIcon(entry);
-    final String title = (entry.status ?? entry.label).trim().isEmpty
-        ? entry.label
-        : (entry.status ?? entry.label).trim();
-    final String? timestamp = entry.timestamp != null
-        ? timelineFormat.format(entry.timestamp!.toLocal())
-        : null;
-
-    final Map<String, dynamic> raw = entry.raw != null
-        ? _normalizeMap(entry.raw as Map<dynamic, dynamic>)
-        : <String, dynamic>{};
-    final String? display = _stringFromDynamic(raw['display']) ??
-        _stringFromDynamic(raw['message']);
-    final String? comment = entry.description;
-    final String? note = _stringFromDynamic(raw['note'] ?? raw['notes']);
-    final String? metaNote = _stringFromDynamic(raw['meta']);
-
-    final List<String> details = <String>[];
-    void addDetail(String? value) {
-      if (_isMeaningfulText(value)) {
-        final String trimmed = value!.trim();
-        if (!details.contains(trimmed)) {
-          details.add(trimmed);
-        }
-      }
-    }
-
-    addDetail(display);
-    addDetail(comment);
-    addDetail(note);
-    addDetail(metaNote);
-
-    final Map<String, dynamic>? userMap = _asMap(raw['user']);
-    String? recordedBy;
-    if (userMap != null) {
-      recordedBy = _stringFromDynamic(userMap['name']) ??
-          _stringFromDynamic(userMap['full_name']) ??
-          _stringFromDynamic(userMap['username']);
-    }
-    recordedBy ??= _stringFromDynamic(raw['user_name']);
-    recordedBy ??= _stringFromDynamic(raw['recorded_by']);
-    if (recordedBy == null && raw['user_id'] != null) {
-      recordedBy = '#${raw['user_id']}';
-    }
-
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          SizedBox(
-            width: 40,
-            child: Column(
-              children: <Widget>[
-                Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: entry.isCompleted || entry.isCurrent
-                        ? accent
-                        : accent.withOpacity(0.15),
-                    border: Border.all(color: accent, width: 2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    icon,
-                    size: 16,
-                    color: entry.isCompleted || entry.isCurrent
-                        ? Colors.white
-                        : accent,
-                  ),
-                ),
-                if (!isLast)
-                  Expanded(
-                    child: Container(
-                      width: 2,
-                      margin: const EdgeInsets.symmetric(vertical: 4),
-                      color: Colors.grey.shade300,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontWeight:
-                        entry.isCurrent ? FontWeight.bold : FontWeight.w600,
-                    color:
-                        entry.isCurrent ? accent : context.color.textColorDark,
-                  ),
-                ),
-                if (timestamp != null || recordedBy != null) ...<Widget>[
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 4,
-                    children: <Widget>[
-                      if (timestamp != null)
-                        _buildTimelineMetaChip(
-                          icon: Icons.schedule,
-                          label: timestamp,
-                        ),
-                      if (recordedBy != null)
-                        _buildTimelineMetaChip(
-                          icon: Icons.person_outline,
-                          label: recordedBy,
-                        ),
-                    ],
-                  ),
-                ],
-                for (final String detail in details) ...<Widget>[
-                  const SizedBox(height: 8),
-                  Text(
-                    detail,
-                    style: TextStyle(
-                      height: 1.5,
-                      color: Colors.grey.shade700,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTimelineMetaChip({
-    required IconData icon,
-    required String label,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Icon(icon, size: 14, color: Colors.grey.shade700),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey.shade700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  IconData _resolveTimelineIcon(OrderTimelineEntry entry) {
-    final String combined =
-        '${entry.status ?? ''} ${entry.label}'.toLowerCase();
-    if (combined.contains('cancel') || combined.contains('ملغ')) {
-      return Icons.cancel_outlined;
-    }
-    if (combined.contains('fail') || combined.contains('فشل')) {
-      return Icons.error_outline;
-    }
-    if (combined.contains('deliver') ||
-        combined.contains('تسليم') ||
-        combined.contains('توصيل') ||
-        combined.contains('استلام')) {
-      return Icons.home_outlined;
-    }
-    if (combined.contains('ship') ||
-        combined.contains('شحن') ||
-        combined.contains('طريق')) {
-      return Icons.local_shipping_outlined;
-    }
-    if (combined.contains('paid') ||
-        combined.contains('مدفوع') ||
-        combined.contains('سداد') ||
-        combined.contains('دفع')) {
-      return Icons.payments_outlined;
-    }
-    if (combined.contains('processing') ||
-        combined.contains('قيد') ||
-        combined.contains('انتظار')) {
-      return Icons.hourglass_bottom;
-    }
-    return entry.isCompleted
-        ? Icons.check_circle_outline
-        : Icons.radio_button_unchecked;
-  }
-
-  Color _timelineAccentColor(OrderTimelineEntry entry) {
-    if (entry.isCurrent) {
-      return Colors.orange.shade600;
-    }
-    if (entry.isCompleted) {
-      return Colors.green.shade600;
-    }
-    final String combined =
-        '${entry.status ?? ''} ${entry.label}'.toLowerCase();
-    if (combined.contains('cancel') || combined.contains('ملغ')) {
-      return Colors.red.shade600;
-    }
-    if (combined.contains('fail') || combined.contains('فشل')) {
-      return Colors.red.shade400;
-    }
-    if (combined.contains('pending') ||
-        combined.contains('قيد') ||
-        combined.contains('انتظار')) {
-      return Colors.blueGrey.shade500;
-    }
-    return Colors.blue.shade600;
   }
 
   Widget _buildDepositReceiptsList(
@@ -1859,7 +1582,17 @@ class OrderStepContent extends StatelessWidget {
         order.createdAt != null ? dateFormat.format(order.createdAt!) : '—';
     final String paymentStatus = order.paymentLabel;
     final String deliveryStatus = order.deliveryLabel;
-    final String address = order.addressLabel ?? '—';
+    final String? rawAddress =
+        order.addressLabel != null && order.addressLabel!.trim().isNotEmpty
+            ? order.addressLabel!.trim()
+            : null;
+    final String formattedAddress = rawAddress != null
+        ? (_formatAddressShort(rawAddress).trim().isNotEmpty
+            ? _formatAddressShort(rawAddress)
+            : rawAddress)
+        : 'تحقق من عنوان التوصيل';
+    final bool hasAddress = rawAddress != null;
+    final bool isStoreOrder = _isStoreOrder(order);
     final bool showWarning = _shouldShowWarning(paymentStatus);
     final bool showCancel = actions.canCancel;
     final String? cancelHint =
@@ -1882,12 +1615,13 @@ class OrderStepContent extends StatelessWidget {
         children: <Widget>[
           _buildInfoRow(context, 'رقم الطلب:', order.displayLabel),
           _buildInfoRow(context, 'تاريخ تقديم الطلب:', createdAt),
-          _buildInfoRow(
-            context,
-            'موافقة التاجر:',
-            deliveryStatus,
-            valueColor: _statusColor(deliveryStatus),
-          ),
+          if (isStoreOrder)
+            _buildInfoRow(
+              context,
+              'موافقة التاجر:',
+              deliveryStatus,
+              valueColor: _statusColor(deliveryStatus),
+            ),
           _buildInfoRow(
             context,
             'حالة السداد:',
@@ -1900,55 +1634,70 @@ class OrderStepContent extends StatelessWidget {
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
-          Text(
-            address,
-            style: const TextStyle(height: 1.6),
+          InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => _handleAddressTap(context, order),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 14),
+              decoration: BoxDecoration(
+                color: context.color.territoryColor.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: context.color.territoryColor.withValues(alpha: 0.25),
+                ),
+              ),
+              child: Row(
+                children: <Widget>[
+                  Icon(
+                    Icons.location_on_outlined,
+                    color: context.color.territoryColor,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      formattedAddress,
+                      style: const TextStyle(fontSize: 14, height: 1.4),
+                    ),
+                  ),
+                  Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    color: context.color.territoryColor.withValues(alpha: 0.8),
+                    size: 16,
+                  ),
+                ],
+              ),
+            ),
           ),
           const SizedBox(height: 20),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Expanded(
-                child: OutlinedButton.icon(
+                child: _buildActionButton(
+                  context: context,
+                  label: isInvoiceLoading ? 'جار الفتح…' : 'عرض الفاتورة',
+                  icon: Icons.picture_as_pdf_outlined,
                   onPressed: (!canOpenInvoice || isInvoiceLoading)
                       ? null
                       : () => onOpenInvoice(order),
-                  icon: isInvoiceLoading
-                      ? SizedBox(
-                          height: 18,
-                          width: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Theme.of(context).colorScheme.primary,
-                            ),
-                          ),
-                        )
-                      : const Icon(Icons.picture_as_pdf_outlined),
-                  label: Text(
-                    isInvoiceLoading ? 'جار الفتح…' : 'عرض الفاتورة',
-                  ),
+                  loading: isInvoiceLoading,
+                  bgColor: context.color.territoryColor.withValues(alpha: 0.12),
+                  fgColor: context.color.territoryColor,
                 ),
               ),
               if (showCancel) ...<Widget>[
                 const SizedBox(width: 12),
                 Expanded(
-                  child: ElevatedButton.icon(
+                  child: _buildActionButton(
+                    context: context,
+                    label: isCancelling ? 'جار الإلغاء…' : actions.cancelButtonLabel,
+                    icon: Icons.cancel_outlined,
                     onPressed: isCancelling ? null : () => onCancelOrder(order),
-                    icon: isCancelling
-                        ? const SizedBox(
-                            height: 18,
-                            width: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
-                          )
-                        : const Icon(Icons.cancel_outlined),
-                    label: Text(
-                      isCancelling ? 'جار الإلغاء…' : actions.cancelButtonLabel,
-                    ),
+                    loading: isCancelling,
+                    bgColor: Colors.red.withValues(alpha: 0.08),
+                    fgColor: Colors.red.shade700,
+                    borderColor: Colors.red.shade200,
                   ),
                 ),
               ],
@@ -1986,12 +1735,16 @@ class OrderStepContent extends StatelessWidget {
                       ),
                       if (onPayOutstanding != null) ...<Widget>[
                         const SizedBox(height: 8),
-                        ElevatedButton.icon(
+                        _buildActionButton(
+                          context: context,
+                          label: 'تسديد المتبقي',
+                          icon: Icons.payment,
                           onPressed: () async {
                             await onPayOutstanding();
                           },
-                          icon: const Icon(Icons.payment),
-                          label: const Text('تسديد المتبقي'),
+                          bgColor: Colors.green.withValues(alpha: 0.12),
+                          fgColor: Colors.green.shade800,
+                          borderColor: Colors.green.shade200,
                         ),
                       ],
                     ],
@@ -2308,14 +2061,27 @@ class OrderStepContent extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           if (hasPolicy) ...<Widget>[
-            Text(
-              policy!.effectiveTitle,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              policy.returnPolicyText!.trim(),
-              style: const TextStyle(height: 1.6),
+            Theme(
+              data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+              child: ExpansionTile(
+                tilePadding: EdgeInsets.zero,
+                title: Text(
+                  policy!.effectiveTitle,
+                  style:
+                      const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                children: <Widget>[
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      policy.returnPolicyText!.trim(),
+                      style: const TextStyle(height: 1.6),
+                      textAlign: TextAlign.start,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
           if (hasPolicy && hasSupport) const SizedBox(height: 16),
@@ -2379,6 +2145,54 @@ class OrderStepContent extends StatelessWidget {
     );
   }
 
+  Widget _buildActionButton({
+    required BuildContext context,
+    required String label,
+    required IconData icon,
+    required VoidCallback? onPressed,
+    bool loading = false,
+    Color? bgColor,
+    Color? fgColor,
+    Color? borderColor,
+  }) {
+    final palette = context.color;
+    final Color background =
+        bgColor ?? palette.territoryColor.withValues(alpha: 0.12);
+    final Color foreground = fgColor ?? palette.territoryColor;
+    final ButtonStyle style = ElevatedButton.styleFrom(
+      elevation: 0,
+      backgroundColor: background,
+      foregroundColor: foreground,
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side:
+            borderColor != null ? BorderSide(color: borderColor) : BorderSide.none,
+      ),
+    );
+    return SizedBox(
+      height: 48,
+      child: ElevatedButton.icon(
+        onPressed: loading ? null : onPressed,
+        style: style,
+        icon: loading
+            ? SizedBox(
+                height: 18,
+                width: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(foreground),
+                ),
+              )
+            : Icon(icon),
+        label: Text(
+          label,
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+      ),
+    );
+  }
+
   Future<void> _openSupport(BuildContext context, OrderSupport support) async {
     if (!support.hasContact) {
       UiUtils.showSoftSnackBar(context, message: 'لا يتوفر رابط دعم حاليًا.');
@@ -2402,7 +2216,7 @@ class OrderStepContent extends StatelessWidget {
     }
   }
 
-  String? _supportSubtitle(OrderSupport support) {
+  String? _supportSubtitle(OrderSupport support) { 
     if (_hasValue(support.subtitle)) {
       return support.subtitle!.trim();
     }
@@ -2415,14 +2229,8 @@ class OrderStepContent extends StatelessWidget {
   bool _hasValue(String? value) => value != null && value.trim().isNotEmpty;
 
   Widget _buildOrderSummary(BuildContext context, UserOrder order) {
-    final OrderLine? line = order.items.isNotEmpty ? order.items.first : null;
-
-    final String productName = (line != null && line.name.trim().isNotEmpty)
-        ? line.name
-        : 'لا توجد منتجات مسجلة';
-    final String quantityText =
-        line != null ? 'عدد: ${line.quantity}' : 'عدد: 0';
-    final String subtotal = line?.totalText ?? order.totalLabel;
+    final List<OrderLine> items = order.items;
+    final bool hasItems = items.isNotEmpty;
     final String total = order.totalLabel;
 
     return Container(
@@ -2431,32 +2239,398 @@ class OrderStepContent extends StatelessWidget {
       decoration: BoxDecoration(
         color: context.color.primaryColor,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: const <BoxShadow>[
-          BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 2)),
-        ],
+        border: Border.all(color: Colors.grey.shade200),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           const Text(
-            'المنتج المطلوب',
+            'المنتجات المطلوبة',
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
           const SizedBox(height: 12),
-          Text(productName),
-          const SizedBox(height: 4),
-          Text(quantityText),
-          const Divider(height: 30),
-          _SummaryRow(title: 'المجموع الفرعي', amount: subtotal),
-          const Divider(height: 30),
-          _SummaryRow(
-            title: 'المجموع الإجمالي',
-            amount: total,
-            isBold: true,
+          if (!hasItems)
+            const Text('لا توجد منتجات مسجلة')
+          else ...<Widget>[
+            ...items.asMap().entries.map(
+              (MapEntry<int, OrderLine> entry) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _buildLineCard(
+                  context,
+                  entry.value,
+                  order.currency,
+                  index: entry.key + 1,
+                ),
+              ),
+            ),
+            const Divider(height: 30),
+            _SummaryRow(
+              title: 'المجموع الإجمالي',
+              amount: _withCurrencyLabel(total, order.currency),
+              currency: order.currency ?? Constant.currencySymbol,
+              isBold: true,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLineCard(
+      BuildContext context, OrderLine line, String? currency,
+      {int? index}) {
+    final String baseName = _resolveLineName(line) ?? 'منتج';
+    final String name = index != null ? '$index - $baseName' : baseName;
+    final List<_LineAttribute> attributes = _extractLineAttributes(line);
+    final String? imageUrl = _resolveLineImage(line);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Container(
+            width: 78,
+            height: 78,
+            margin: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: imageUrl != null
+                  ? Image.network(
+                      imageUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _placeholderThumb(),
+                      loadingBuilder: (BuildContext _, Widget child,
+                          ImageChunkEvent? progress) {
+                        if (progress == null) return child;
+                        return _placeholderThumb();
+                      },
+                    )
+                  : _placeholderThumb(),
+            ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: attributes
+                        .map(
+                          (_LineAttribute attr) => Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                if (attr.isColor && attr.color != null) ...<Widget>[
+                                  Container(
+                                    width: 14,
+                                    height: 14,
+                                    decoration: BoxDecoration(
+                                      color: attr.color,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: Colors.grey.shade400),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                ],
+                                Text(
+                                  attr.isColor && attr.color != null
+                                      ? '${attr.label}'
+                                      : '${attr.label}: ${attr.value}',
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
     );
+  }
+
+  String _lineTotalDisplay(OrderLine line, String? currency) {
+    if (line.subtotalDisplay != null &&
+        line.subtotalDisplay!.trim().isNotEmpty) {
+      return line.subtotalDisplay!.trim();
+    }
+    if (line.totalText.trim().isNotEmpty) {
+      return _withCurrencyLabel(line.totalText.trim(), currency);
+    }
+    if (line.subtotal != null) {
+      return _formatCurrency(line.subtotal!.toDouble(), currency);
+    }
+    if (line.price != null) {
+      final double total = line.price!.toDouble() * line.quantity;
+      return _formatCurrency(total, currency);
+    }
+    return '—';
+  }
+
+  String _withCurrencyLabel(String amount, String? currency) {
+    final String trimmedAmount = amount.trim();
+    final String cur =
+        (currency != null && currency.trim().isNotEmpty ? currency : Constant.currencySymbol)
+            .trim();
+
+    if (cur.isEmpty) return trimmedAmount;
+    if (trimmedAmount.toLowerCase().contains(cur.toLowerCase())) {
+      return trimmedAmount;
+    }
+    return '$trimmedAmount $cur';
+  }
+
+  List<_LineAttribute> _extractLineAttributes(OrderLine line) {
+    final List<_LineAttribute> attrs = <_LineAttribute>[
+      _LineAttribute(label: 'الكمية', value: line.quantity.toString()),
+    ];
+
+    final Map<String, dynamic>? raw = _asMap(line.raw);
+    String? color =
+        _stringFromDynamic(raw?['color'] ?? raw?['colour'] ?? raw?['variant']);
+    String? size = _stringFromDynamic(raw?['size'] ?? raw?['dimension']);
+    String? option = _stringFromDynamic(raw?['option'] ?? raw?['style']);
+
+    if (color != null && color.trim().isNotEmpty) {
+      attrs.add(
+        _LineAttribute(
+          label: 'اللون',
+          value: color.trim(),
+          isColor: true,
+          color: _parseColor(color),
+        ),
+      );
+    }
+    if (size != null && size.trim().isNotEmpty) {
+      attrs.add(_LineAttribute(label: 'المقاس', value: size.trim()));
+    }
+    if (option != null && option.trim().isNotEmpty) {
+      attrs.add(_LineAttribute(label: 'الخيار', value: option.trim()));
+    }
+
+    final Map<String, dynamic>? attrsMap =
+        _asMap(raw?['attributes'] ?? raw?['options']);
+    if (attrsMap != null && attrsMap.isNotEmpty) {
+      attrs.addAll(attrsMap.entries
+          .where((MapEntry<String, dynamic> e) =>
+              _stringFromDynamic(e.value)?.trim().isNotEmpty ?? false)
+          .map(
+            (MapEntry<String, dynamic> e) => _LineAttribute(
+              label: e.key,
+              value: _stringFromDynamic(e.value)!.trim(),
+              isColor: e.key.toLowerCase().contains('color'),
+              color: e.key.toLowerCase().contains('color')
+                  ? _parseColor(_stringFromDynamic(e.value)!)
+                  : null,
+            ),
+          ));
+    }
+
+    return attrs;
+  }
+
+  Color? _parseColor(String value) {
+    final String normalized = value.trim().toLowerCase();
+
+    const Map<String, int> namedColors = <String, int>{
+      'red': 0xFFFF0000,
+      'blue': 0xFF2196F3,
+      'green': 0xFF4CAF50,
+      'black': 0xFF000000,
+      'white': 0xFFFFFFFF,
+      'yellow': 0xFFFFEB3B,
+      'orange': 0xFFFF9800,
+      'purple': 0xFF9C27B0,
+      'pink': 0xFFE91E63,
+      'brown': 0xFF795548,
+      'gray': 0xFF9E9E9E,
+      'grey': 0xFF9E9E9E,
+    };
+
+    if (namedColors.containsKey(normalized)) {
+      return Color(namedColors[normalized]!);
+    }
+
+    String hex = normalized;
+    hex = hex.replaceAll('#', '').replaceAll('0x', '');
+    if (hex.length == 3) {
+      hex = hex.split('').map((String c) => '$c$c').join();
+    }
+    if (hex.length == 6) {
+      hex = 'FF$hex';
+    }
+    if (hex.length == 8) {
+      final int? color = int.tryParse(hex, radix: 16);
+      if (color != null) {
+        return Color(color);
+      }
+    }
+    return null;
+  }
+
+  String? _resolveLineImage(OrderLine line) {
+    final Map<String, dynamic>? raw = _asMap(line.raw);
+    final List<String> keys = <String>[
+      'image',
+      'image_url',
+      'imageUrl',
+      'product_image',
+      'productImage',
+      'product_photo',
+      'productPhoto',
+      'main_image',
+      'mainImage',
+      'featured_image',
+      'featuredImage',
+      'thumbnail',
+      'thumbnail_url',
+      'thumb_url',
+      'thumb',
+      'photo',
+      'picture',
+      'img',
+      'cover',
+      'url',
+      'src',
+      'path',
+      'image_path',
+      'imagePath',
+      'original',
+      'full',
+      'medium',
+      'small',
+    ];
+    String? pick(Map<String, dynamic>? source) {
+      if (source == null) return null;
+      for (final String key in keys) {
+        final String? url = _stringFromDynamic(source[key]);
+        if (url != null && url.trim().isNotEmpty) return url.trim();
+      }
+      return null;
+    }
+
+    String? candidate = pick(raw);
+    if (candidate != null) {
+      return _normalizeImageUrl(candidate);
+    }
+
+    final Map<String, dynamic>? product = _asMap(raw?['product']);
+    if (product != null) {
+      candidate = pick(product);
+      if (candidate != null) return _normalizeImageUrl(candidate);
+      final Map<String, dynamic>? productImage = _asMap(product['image']);
+      candidate = pick(productImage);
+      candidate ??=
+          _stringFromDynamic(productImage?['url'] ?? productImage?['src']);
+      if (candidate != null && candidate.trim().isNotEmpty) {
+        return _normalizeImageUrl(candidate);
+      }
+      final dynamic productGallery = product['gallery'] ?? product['media'] ?? product['images'];
+      if (productGallery is List && productGallery.isNotEmpty) {
+        for (final dynamic entry in productGallery) {
+          final String? direct = _stringFromDynamic(entry);
+          if (direct != null && direct.trim().isNotEmpty) {
+            return _normalizeImageUrl(direct);
+          }
+          final Map<String, dynamic>? map = _asMap(entry);
+          if (map != null) {
+            candidate = pick(map);
+            if (candidate != null) return _normalizeImageUrl(candidate);
+          }
+        }
+      }
+    }
+
+    final dynamic gallery =
+        raw?['images'] ?? raw?['gallery'] ?? product?['images'] ?? product?['gallery'];
+    if (gallery is List && gallery.isNotEmpty) {
+      for (final dynamic entry in gallery) {
+        final String? direct = _stringFromDynamic(entry);
+        if (direct != null && direct.trim().isNotEmpty) {
+          return _normalizeImageUrl(direct);
+        }
+        final Map<String, dynamic>? map = _asMap(entry);
+        if (map != null) {
+          candidate = pick(map);
+          if (candidate != null) return _normalizeImageUrl(candidate);
+        }
+      }
+    }
+    return null;
+  }
+
+  Widget _placeholderThumb() {
+    return Container(
+      color: Colors.grey.shade200,
+      child: const Icon(Icons.image_not_supported_outlined, color: Colors.grey),
+    );
+  }
+
+  String? _resolveLineName(OrderLine line) {
+    if (line.name.trim().isNotEmpty) return line.name.trim();
+
+    final Map<String, dynamic>? raw = _asMap(line.raw);
+    final Map<String, dynamic>? product = _asMap(raw?['product']);
+
+    final List<String> keys = <String>[
+      'name',
+      'title',
+      'product_name',
+      'productName',
+      'label',
+      'item',
+    ];
+
+    for (final String key in keys) {
+      final String? text = _stringFromDynamic(raw?[key]) ?? _stringFromDynamic(product?[key]);
+      if (text != null && text.trim().isNotEmpty) return text.trim();
+    }
+    return null;
+  }
+
+  String _normalizeImageUrl(String url) {
+    final String trimmed = url.trim();
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+    if (trimmed.startsWith('//')) {
+      return 'https:$trimmed';
+    }
+    final String base = Constant.baseUrl.endsWith('/')
+        ? Constant.baseUrl.substring(0, Constant.baseUrl.length - 1)
+        : Constant.baseUrl;
+    final String path = trimmed.startsWith('/')
+        ? trimmed
+        : '/$trimmed';
+    return '$base$path';
   }
 
   Widget _buildSkeleton(BuildContext context) {
@@ -2631,6 +2805,327 @@ class OrderStepContent extends StatelessWidget {
     }
     return null;
   }
+
+  String _formatAddressShort(String value) {
+    final String cleaned = value
+        .replaceAll(RegExp(r'[\u0000-\u001F\u007F]+'), ' ')
+        .replaceAll(RegExp(r'[^\u0600-\u06FFa-zA-Z0-9 ,.\-]'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+
+    if (cleaned.isEmpty) return value;
+
+    final List<String> parts = cleaned
+        .split(RegExp(r'[،,/\-]+'))
+        .map((String e) => e.trim())
+        .where((String e) => e.isNotEmpty)
+        .toList();
+
+    final List<String> picked =
+        parts.length > 1 ? parts.skip(1).take(2).toList() : parts.take(2).toList();
+    final String joined = picked.join(' ');
+
+    if (joined.length > 40) {
+      return '${joined.substring(0, 40).trim()}…';
+    }
+    return joined.isEmpty ? cleaned : joined;
+  }
+
+  void _handleAddressTap(BuildContext context, UserOrder order) {
+    final _OrderCoords? coords = _resolveOrderCoordinates(order);
+    final String? addressQuery = _resolveAddressQuery(order);
+
+    if (coords != null) {
+      _openAddressLocation(context, coords);
+      return;
+    }
+
+    if (addressQuery != null) {
+      _openAddressSearch(context, addressQuery);
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('تعذر تحديد موقع العنوان. يرجى تحديث عنوان التوصيل.'),
+      ),
+    );
+  }
+
+  void _openAddressLocation(BuildContext context, _OrderCoords coords) async {
+    final Uri uri = Uri.parse(
+      'https://www.google.com/maps/search/?api=1&query=${coords.lat},${coords.lng}',
+    );
+    try {
+      final bool launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تعذر فتح الموقع على الخريطة.')),
+        );
+      }
+    } catch (_) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تعذر فتح الموقع على الخريطة.')),
+      );
+    }
+  }
+
+  void _openAddressSearch(BuildContext context, String query) async {
+    final Uri uri = Uri.parse(
+      'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(query)}',
+    );
+    try {
+      final bool launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تعذر فتح الخريطة لهذا العنوان.')),
+        );
+      }
+    } catch (_) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تعذر فتح الخريطة لهذا العنوان.')),
+      );
+    }
+  }
+
+  _OrderCoords? _resolveOrderCoordinates(UserOrder order) {
+    final List<Map<String, dynamic>?> sources = <Map<String, dynamic>?>[
+      _asMap(order.raw),
+      _asMap(order.raw?['address']),
+      _asMap(order.raw?['shipping_address']),
+      _asMap(order.raw?['shipping']),
+      _asMap(order.raw?['delivery']),
+      _asMap(order.raw?['location']),
+      if (order.items.isNotEmpty) _asMap(order.items.first.raw),
+    ];
+
+    for (final Map<String, dynamic>? source in sources) {
+      if (source == null) continue;
+      final Map<String, dynamic> normalized = _normalizeMap(source);
+
+      double? lat = _tryParseCoordinate(normalized['lat']) ??
+          _tryParseCoordinate(normalized['latitude']) ??
+          _tryParseCoordinate(normalized['address_lat']) ??
+          _tryParseCoordinate(normalized['latlng']) ??
+          _tryParseCoordinate(normalized['latLng']) ??
+          _tryParseCoordinate(_asMap(normalized['coordinates'])?['lat']);
+
+      double? lng = _tryParseCoordinate(normalized['lng']) ??
+          _tryParseCoordinate(normalized['longitude']) ??
+          _tryParseCoordinate(normalized['address_lng']) ??
+          _tryParseCoordinate(normalized['lnglat']) ??
+          _tryParseCoordinate(normalized['lon']) ??
+          _tryParseCoordinate(_asMap(normalized['coordinates'])?['lng']);
+
+      if (lat == null && lng == null) {
+        final String? coordsString = _stringFromDynamic(normalized['coordinates']);
+        if (coordsString != null && coordsString.contains(',')) {
+          final List<String> parts = coordsString.split(',');
+          if (parts.length >= 2) {
+            lat = _tryParseCoordinate(parts[0]);
+            lng = _tryParseCoordinate(parts[1]);
+          }
+        }
+      }
+
+      if (lat != null && lng != null) {
+        return _OrderCoords(lat: lat, lng: lng);
+      }
+    }
+
+    return null;
+  }
+
+  String? _resolveAddressQuery(UserOrder order) {
+    if (order.addressLabel != null && order.addressLabel!.trim().isNotEmpty) {
+      return order.addressLabel!.trim();
+    }
+
+    final Map<String, dynamic>? raw = _asMap(order.raw);
+    if (raw != null) {
+      final Map<String, dynamic> normalized = _normalizeMap(raw);
+      final List<String> candidates = <String>[
+        _stringFromDynamic(normalized['address']) ?? '',
+        _stringFromDynamic(normalized['shipping_address']) ?? '',
+        _stringFromDynamic(normalized['formatted_address']) ?? '',
+        _stringFromDynamic(_asMap(normalized['location'])?['formatted_address']) ?? '',
+        _stringFromDynamic(_asMap(normalized['delivery'])?['address']) ?? '',
+      ];
+      for (final String candidate in candidates) {
+        final String trimmed = candidate.trim();
+        if (trimmed.isNotEmpty) return trimmed;
+      }
+    }
+    return null;
+  }
+
+  double? _tryParseCoordinate(dynamic value) {
+    final double? parsed = _tryParseNumeric(value);
+    if (parsed == null) return null;
+    if (parsed.abs() < 0.000001) return null;
+    return parsed;
+  }
+
+  bool _isStoreOrder(UserOrder order) {
+    if (_hasStoreHints(order.raw)) return true;
+    for (final OrderLine line in order.items) {
+      if (_hasStoreHints(line.raw)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool _hasStoreHints(Map<String, dynamic>? raw) {
+    if (raw == null || raw.isEmpty) return false;
+    final Map<String, dynamic> normalized = _normalizeMap(raw);
+
+    const List<String> marketplaceBlacklist = <String>[
+      'shein',
+      'شي ان',
+      'شي-ان',
+      'شي إن',
+      'شي إنّ',
+      'amazon',
+      'noon',
+      'ali',
+      'aliexpress',
+      'ali express',
+    ];
+
+    for (final dynamic value in normalized.values) {
+      final String? text = _stringFromDynamic(value);
+      if (text != null) {
+        final String lower = text.toLowerCase();
+        if (marketplaceBlacklist.any((String bad) => lower.contains(bad))) {
+          return false;
+        }
+      }
+    }
+
+    const List<String> idKeys = <String>[
+      'store_id',
+      'storeid',
+      'storeId',
+      'storefront_id',
+      'storefrontid',
+      'storefrontId',
+      'shop_id',
+      'shopid',
+      'shopId',
+      'merchant_id',
+      'merchantid',
+      'merchantId',
+      'seller_id',
+      'sellerid',
+      'sellerId',
+      'vendor_id',
+      'vendorid',
+      'vendorId',
+      'branch_id',
+      'branchid',
+      'branchId',
+    ];
+
+    for (final String key in normalized.keys) {
+      final String lowerKey = key.toLowerCase();
+      if (idKeys.contains(lowerKey)) {
+        final double? id = _tryParseCoordinate(normalized[key]);
+        if (id != null && id > 0) return true;
+      }
+
+      if (lowerKey == 'store' ||
+          lowerKey == 'storefront' ||
+          lowerKey == 'seller' ||
+          lowerKey == 'merchant' ||
+          lowerKey == 'shop' ||
+          lowerKey == 'vendor') {
+        final Map<String, dynamic>? nested = _asMap(normalized[key]);
+        if (nested != null) {
+          final double? id = _tryParseCoordinate(nested['id'] ?? nested['store_id']);
+          if (id != null && id > 0) return true;
+          if (_hasStoreHints(nested)) {
+            return true;
+          }
+        } else {
+          final double? id = _tryParseCoordinate(normalized[key]);
+          if (id != null && id > 0) return true;
+        }
+      }
+
+      if (lowerKey == 'source' || lowerKey == 'channel') {
+        final String? text = _stringFromDynamic(normalized[key]);
+        if (text != null) {
+          final String lower = text.toLowerCase();
+          if (marketplaceBlacklist.any((String bad) => lower.contains(bad))) {
+            return false;
+          }
+        }
+      }
+
+      if (lowerKey.contains('product_type') ||
+          lowerKey.contains('service') ||
+          lowerKey.contains('logistics') ||
+          lowerKey.contains('delivery_partner')) {
+        continue;
+      }
+
+      if (lowerKey.contains('store') ||
+          lowerKey.contains('shop') ||
+          lowerKey.contains('merchant') ||
+          lowerKey.contains('seller') ||
+          lowerKey.contains('vendor') ||
+          lowerKey.contains('branch')) {
+        final double? id = _tryParseCoordinate(normalized[key]);
+        if (id != null && id > 0) return true;
+        final String? text = _stringFromDynamic(normalized[key]);
+        if (text != null && text.trim().isNotEmpty) {
+          return true;
+        }
+      }
+
+      if (lowerKey == 'type' || lowerKey == 'category') {
+        // Avoid treating generic type fields as store hints.
+        continue;
+      }
+
+      if (lowerKey == 'order_type' && normalized[key] is String) {
+        final String lower = (normalized[key] as String).toLowerCase();
+        if (lower.contains('store') || lower.contains('shop')) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+}
+
+class _OrderCoords {
+  const _OrderCoords({required this.lat, required this.lng});
+
+  final double lat;
+  final double lng;
+}
+
+class _LineAttribute {
+  const _LineAttribute({
+    required this.label,
+    required this.value,
+    this.isColor = false,
+    this.color,
+  });
+
+  final String label;
+  final String value;
+  final bool isColor;
+  final Color? color;
 }
 
 class _OrderStepIndicator extends StatelessWidget {
@@ -2856,16 +3351,21 @@ class _SummaryRow extends StatelessWidget {
     required this.title,
     required this.amount,
     this.isBold = false,
+    this.currency,
   });
 
   final String title;
   final String amount;
   final bool isBold;
+  final String? currency;
 
   @override
   Widget build(BuildContext context) {
+    final Color textColor =
+        Theme.of(context).textTheme.bodyMedium?.color ?? context.color.textColorDark;
     final TextStyle style = TextStyle(
       fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+      color: textColor,
     );
 
     return Padding(
@@ -2874,11 +3374,85 @@ class _SummaryRow extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: <Widget>[
           Text(title, style: style),
-          Text(amount, style: style),
+          _buildAmountWidget(style),
         ],
       ),
     );
   }
+
+  Widget _buildAmountWidget(TextStyle baseStyle) {
+    final String cur =
+        (currency != null && currency!.trim().isNotEmpty) ? currency!.trim() : '';
+    final List<String> parts = amount.split(' ');
+    if (cur.isNotEmpty && parts.isNotEmpty) {
+      final String amt = parts.firstWhere((String p) => p.trim().isNotEmpty,
+          orElse: () => amount);
+      return RichText(
+        text: TextSpan(
+          text: amt,
+          style: baseStyle.copyWith(fontWeight: FontWeight.w700),
+          children: <InlineSpan>[
+            if (cur.isNotEmpty)
+              TextSpan(
+                text: ' $cur',
+                style: baseStyle.copyWith(
+                  fontWeight: FontWeight.w500,
+                  color: baseStyle.color?.withOpacity(0.7) ?? Colors.grey.shade700,
+                ),
+              ),
+          ],
+        ),
+      );
+    }
+    return Text(amount, style: baseStyle);
+  }
+}
+
+Widget _buildActionButton({
+  required BuildContext context,
+  required String label,
+  required IconData icon,
+  required VoidCallback? onPressed,
+  bool loading = false,
+  Color? bgColor,
+  Color? fgColor,
+  Color? borderColor,
+}) {
+  final palette = context.color;
+  final Color background =
+      bgColor ?? palette.territoryColor.withValues(alpha: 0.12);
+  final Color foreground = fgColor ?? palette.territoryColor;
+  final ButtonStyle style = ElevatedButton.styleFrom(
+    elevation: 0,
+    backgroundColor: background,
+    foregroundColor: foreground,
+    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(14),
+      side: borderColor != null ? BorderSide(color: borderColor) : BorderSide.none,
+    ),
+  );
+  return SizedBox(
+    height: 48,
+    child: ElevatedButton.icon(
+      onPressed: loading ? null : onPressed,
+      style: style,
+      icon: loading
+          ? SizedBox(
+              height: 18,
+              width: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(foreground),
+              ),
+            )
+          : Icon(icon),
+      label: Text(
+        label,
+        style: const TextStyle(fontWeight: FontWeight.w700),
+      ),
+    ),
+  );
 }
 
 class _PaymentBreakdownTile extends StatelessWidget {
@@ -3076,3 +3650,5 @@ String _formatCurrency(double value, String? currency) {
       : '';
   return '$formatted$suffix'.trim();
 }
+
+

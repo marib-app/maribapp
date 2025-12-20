@@ -1,36 +1,42 @@
-﻿import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:marib/app/routes.dart';
 import 'package:marib/data/model/seller_ratings_model.dart' show UserRatings;
 import 'package:marib/ui/theme/theme.dart';
 import 'package:marib/utils/extensions/extensions.dart';
 import 'package:marib/utils/hive_utils.dart';
-import 'widgets/addrating.dart';
-import 'widgets/comments.dart';
-import 'widgets/service_ratings_api.dart';
+import 'package:marib/ui/screens/storefront/widgets/store_addrating.dart';
+import 'package:marib/ui/screens/storefront/widgets/store_comments.dart';
+import 'package:marib/ui/screens/storefront/widgets/store_ratings_api.dart';
 
 String _tr(BuildContext context, String ar, String en) =>
     Directionality.of(context) == TextDirection.rtl ? ar : en;
 
 const Map<int, int> _emptyRatingDistribution = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0};
 
-class ServiceRatingPage extends StatefulWidget {
-  const ServiceRatingPage({super.key});
+class StoreRatingPage extends StatefulWidget {
+  const StoreRatingPage({super.key});
 
-  /// ظ…ظپطھط§ط­ ظ‚ط§ط¦ظ…ط© ط§ظ„طھط¹ظ„ظٹظ‚ط§طھ ظ„ظ†ط¯ط§ط، reload()
-  static final GlobalKey<ItemCommentsListState> commentsKey =
-      GlobalKey<ItemCommentsListState>();
+  static Route route(RouteSettings settings) {
+    return MaterialPageRoute(
+      settings: settings,
+      builder: (_) => const StoreRatingPage(),
+    );
+  }
 
-  /// ظ†ط§ط´ط± ط¨ط³ظٹط· ظ„ط¥ط¹ط§ط¯ط© ط¨ظ†ط§ط، ظƒط±طھ ط§ظ„طھظ‚ظٹظٹظ… ط§ظ„ط¹ط§ظ… ط¨ط¹ط¯ ط¥ط¶ط§ظپط© طھظ‚ظٹظٹظ…
+  static final GlobalKey<StoreCommentsListState> commentsKey =
+      GlobalKey<StoreCommentsListState>();
+
   static final ValueNotifier<int> headerRefresh = ValueNotifier<int>(0);
 
   @override
-  State<ServiceRatingPage> createState() => _ServiceRatingPageState();
+  State<StoreRatingPage> createState() => _StoreRatingPageState();
 }
 
-class _ServiceRatingPageState extends State<ServiceRatingPage> {
+class _StoreRatingPageState extends State<StoreRatingPage> {
   bool? _canReview;
-  int? _serviceId;
+  int? _storeId;
+  String? _storeSlug;
+  _Summary? _overrideSummary;
 
   void _updateCanReview(bool? value) {
     if (!mounted || value == null || _canReview == value) return;
@@ -45,16 +51,16 @@ class _ServiceRatingPageState extends State<ServiceRatingPage> {
     });
   }
 
-  void _updateServiceId(int? value) {
-    if (!mounted || value == null || value <= 0 || _serviceId == value) return;
-    setState(() => _serviceId = value);
+  void _updateStoreId(int? value) {
+    if (!mounted || value == null || value <= 0 || _storeId == value) return;
+    setState(() => _storeId = value);
   }
 
-  void _scheduleServiceIdUpdate(int? value) {
-    if (value == null || value <= 0 || _serviceId == value) return;
+  void _scheduleStoreIdUpdate(int? value) {
+    if (value == null || value <= 0 || _storeId == value) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || _serviceId == value) return;
-      setState(() => _serviceId = value);
+      if (!mounted || _storeId == value) return;
+      setState(() => _storeId = value);
     });
   }
 
@@ -67,6 +73,7 @@ class _ServiceRatingPageState extends State<ServiceRatingPage> {
     final args = (ModalRoute.of(context)?.settings.arguments as Map?)
             ?.cast<String, dynamic>() ??
         const {};
+
     int? parseId(dynamic raw) {
       if (raw == null) return null;
       if (raw is int) return raw;
@@ -75,38 +82,27 @@ class _ServiceRatingPageState extends State<ServiceRatingPage> {
       return null;
     }
 
-    final int? serviceIdArg = parseId(args['serviceId'] ?? args['service_id']);
-    final int? itemIdArg =
-        parseId(args['itemId'] ?? args['item_id'] ?? args['id']);
-    final int? effectiveServiceId = serviceIdArg ?? itemIdArg;
-
-    final dynamic sellerIdRaw = args['sellerId'];
-    final int? sellerIdArg =
-        sellerIdRaw is String ? int.tryParse(sellerIdRaw) : sellerIdRaw as int?;
-    final String serviceTitleResolved =
-        (args['serviceTitle'] as String?)?.trim() ??
-            _t('بدون عنوان', 'Untitled service');
-
-    final dynamic serviceUidRaw = args['serviceUid'] ?? args['service_uid'];
-    final String? serviceUidArg = serviceUidRaw is String
-        ? (serviceUidRaw.trim().isNotEmpty ? serviceUidRaw.trim() : null)
-        : null;
+    final int? storeIdArg = parseId(args['storeId'] ?? args['store_id'] ?? args['id']);
+    final String? storeSlugArg = (args['storeSlug'] ?? args['store_slug'] ?? args['slug'])?.toString().trim();
+    final String storeNameResolved =
+        (args['storeName'] ?? args['store_name'] ?? args['name'] as String?)
+                ?.trim() ??
+            _t('المتجر', 'Store');
 
     final bool hasLookupKey =
-        (effectiveServiceId != null && effectiveServiceId > 0) ||
-            (serviceUidArg != null && serviceUidArg.isNotEmpty);
+        (storeIdArg != null && storeIdArg > 0) || (storeSlugArg?.isNotEmpty ?? false);
 
-    _scheduleServiceIdUpdate(effectiveServiceId);
+    _scheduleStoreIdUpdate(storeIdArg);
+    _storeSlug ??= storeSlugArg;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_t('تقييم الخدمة', 'Rate service'),
+        title: Text(_t('تقييم المتجر', 'Rate store'),
             style: TextStyle(color: isDark ? Colors.white : Colors.black)),
         backgroundColor: isDark ? Colors.black : Colors.white,
         iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
         elevation: 0,
       ),
-
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -114,22 +110,31 @@ class _ServiceRatingPageState extends State<ServiceRatingPage> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: ValueListenableBuilder<int>(
-                valueListenable: ServiceRatingPage.headerRefresh,
+                valueListenable: StoreRatingPage.headerRefresh,
                 builder: (context, _, __) {
                   if (!hasLookupKey) {
                     return OverallRatingSection(
-                      serviceTitle: serviceTitleResolved,
+                      storeName: storeNameResolved,
                       ratingValue: 0.0,
                       ratingCount: 0,
                       ratingDistribution: _emptyRatingDistribution,
                     );
                   }
-                  return FutureBuilder<ServiceRatingsResult>(
-                    future: ServiceRatingsApi.fetchRatings(
-                      serviceId: _serviceId ?? effectiveServiceId,
+                  if (_overrideSummary != null && _overrideSummary!.count > 0) {
+                    final s = _overrideSummary!;
+                    return OverallRatingSection(
+                      storeName: storeNameResolved,
+                      ratingValue: s.avg,
+                      ratingCount: s.count,
+                      ratingDistribution: s.dist,
+                    );
+                  }
+                  return FutureBuilder<StoreRatingsResult>(
+                    future: StoreRatingsApi.fetchRatings(
+                      storeId: _storeId ?? storeIdArg ?? 0,
+                      storeSlug: _storeSlug ?? storeSlugArg,
                       page: 1,
                       perPage: 100,
-                      serviceUid: serviceUidArg,
                     ),
                     builder: (context, snap) {
                       switch (snap.connectionState) {
@@ -143,16 +148,16 @@ class _ServiceRatingPageState extends State<ServiceRatingPage> {
 
                       if (snap.hasError) {
                         debugPrint(
-                            'ServiceRatingPage: failed to fetch ratings for service ${_serviceId ?? effectiveServiceId} => ${snap.error}');
+                            'StoreRatingPage: failed to fetch ratings for store ${_storeId ?? storeIdArg} => ${snap.error}');
                         return _buildOverallRatingErrorFallback(
                           context,
-                          serviceTitle: serviceTitleResolved,
+                          storeName: storeNameResolved,
                         );
                       }
 
                       if (!snap.hasData) {
                         return OverallRatingSection(
-                          serviceTitle: serviceTitleResolved,
+                          storeName: storeNameResolved,
                           ratingValue: 0.0,
                           ratingCount: 0,
                           ratingDistribution: _emptyRatingDistribution,
@@ -160,14 +165,13 @@ class _ServiceRatingPageState extends State<ServiceRatingPage> {
                       }
                       final result = snap.data!;
                       _scheduleCanReviewUpdate(result.canReview);
-                      _scheduleServiceIdUpdate(result.serviceId);
+                      _scheduleStoreIdUpdate(result.storeId);
                       final list = result.list;
-                      final cached = ItemCommentsListState.cachedRatings(
-                        serviceId: _serviceId ?? effectiveServiceId,
-                        serviceUid: serviceUidArg,
+                      final cached = StoreCommentsListState.cachedRatings(
+                        storeId: _storeId ?? storeIdArg,
+                        storeSlug: _storeSlug ?? storeSlugArg,
                       );
-                      final effectiveList =
-                          list.isNotEmpty ? list : cached;
+                      final effectiveList = list.isNotEmpty ? list : cached;
 
                       final summary = _summaryFrom(effectiveList);
                       final double ratingValue =
@@ -178,7 +182,7 @@ class _ServiceRatingPageState extends State<ServiceRatingPage> {
                           ? result.totalReviews
                           : summary.count;
                       return OverallRatingSection(
-                        serviceTitle: serviceTitleResolved,
+                        storeName: storeNameResolved,
                         ratingValue: ratingValue,
                         ratingCount: ratingCount,
                         ratingDistribution: summary.dist,
@@ -188,48 +192,41 @@ class _ServiceRatingPageState extends State<ServiceRatingPage> {
                 },
               ),
             ),
-
-            // âœ… ط§ظ„ط¹ظ†ظˆط§ظ† "ط¢ط±ط§ط، ط§ظ„ط¹ظ…ظ„ط§ط،" â€” ط«ط§ط¨طھ ظ…ط¹ ظپظ„طھط±ط© (ط­ط§ظ„ظٹظ‹ط§ ظ†ط¹ظ…ظ„ reload ظپظ‚ط·)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: CommentsListSection(
                 onFilter: (value) {
-                  ServiceRatingPage.commentsKey.currentState?.reload();
+                  StoreRatingPage.commentsKey.currentState?.reload(sort: value);
                 },
               ),
             ),
-
             const SizedBox(height: 8),
-
-            // âœ… ظ‚ط§ط¦ظ…ط© ط§ظ„طھط¹ظ„ظٹظ‚ط§طھ â€” ظ…ط±ط¨ظˆط·ط© ط¨ط§ظ„ط³ظٹط±ظپط±
             Expanded(
               child: !hasLookupKey
-                  ? const Center(
-                      child: Text('لا يمكن جلب التعليقات بدون معرف الخدمة.'))
-                  : ItemCommentsList(
-                      key: ServiceRatingPage.commentsKey,
-                      serviceId: _serviceId ?? effectiveServiceId,
-                      serviceUid: serviceUidArg,
+                  ? const Center(child: Text('لا يمكن جلب التعليقات بدون معرف المتجر.'))
+                  : StoreCommentsList(
+                      key: StoreRatingPage.commentsKey,
+                      storeId: _storeId ?? storeIdArg,
+                      storeSlug: _storeSlug ?? storeSlugArg,
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       onCanReviewChanged: _updateCanReview,
-                      onServiceIdResolved: _updateServiceId,
-                      onRatingsUpdated: (_) {
-                        ServiceRatingPage.headerRefresh.value++;
+                      onStoreIdResolved: _updateStoreId,
+                      onRatingsUpdated: (list) {
+                        final summary = _summaryFrom(list);
+                        setState(() => _overrideSummary = summary);
+                        StoreRatingPage.headerRefresh.value++;
                       },
                     ),
             ),
           ],
         ),
       ),
-
-      // âœ… ط²ط± ط¥ط¶ط§ظپط© طھظ‚ظٹظٹظ… â€” ظ†ظپط³ ط§ظ„ط´ظƒظ„. ط¨ط¹ط¯ ط§ظ„ط¥ط±ط³ط§ظ„: ظ†ط¹ظٹط¯ طھط­ظ…ظٹظ„ ط§ظ„طھط¹ظ„ظٹظ‚ط§طھ ظˆط§ظ„ط±ط£ط³.
       bottomNavigationBar: _buildAddRatingButton(
         context,
-        serviceId: _serviceId ?? effectiveServiceId,
-        serviceTitle: serviceTitleResolved,
+        storeId: _storeId ?? storeIdArg,
+        storeName: storeNameResolved,
         canReview: _canReview,
-        sellerId: sellerIdArg,
-        serviceUid: serviceUidArg,
+        storeSlug: _storeSlug ?? storeSlugArg,
       ),
     );
   }
@@ -257,7 +254,7 @@ class _ServiceRatingPageState extends State<ServiceRatingPage> {
 
   Widget _buildOverallRatingErrorFallback(
     BuildContext context, {
-    required String serviceTitle,
+    required String storeName,
   }) {
     final theme = Theme.of(context);
     final messageStyle =
@@ -269,7 +266,7 @@ class _ServiceRatingPageState extends State<ServiceRatingPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         OverallRatingSection(
-          serviceTitle: serviceTitle,
+          storeName: storeName,
           ratingValue: 0.0,
           ratingCount: 0,
           ratingDistribution: _emptyRatingDistribution,
@@ -286,14 +283,12 @@ class _ServiceRatingPageState extends State<ServiceRatingPage> {
   }
 }
 
-// ط²ط± ط«ط§ط¨طھ ط£ط³ظپظ„ ط§ظ„ط´ط§ط´ط© ظ„ط¥ط¶ط§ظپط© طھظ‚ظٹظٹظ… ط¬ط¯ظٹط¯ (ظ†ظپط³ طھطµظ…ظٹظ…ظƒ)
 Widget _buildAddRatingButton(
   BuildContext context, {
-  int? serviceId,
-  String? serviceTitle,
-  int? sellerId,
+  int? storeId,
+  String? storeName,
   bool? canReview,
-  String? serviceUid,
+  String? storeSlug,
 }) {
   final theme = Theme.of(context);
   final colors = context.color;
@@ -302,9 +297,8 @@ Widget _buildAddRatingButton(
   String _t(String ar, String en) => isRtl ? ar : en;
 
   Widget buildInfoMessage(String message, {IconData icon = Icons.info_outline}) {
-    final bg = colors.secondaryColor.withOpacity(
-      theme.brightness == Brightness.dark ? 0.4 : 0.7,
-    );
+    final double bgOpacity = theme.brightness == Brightness.dark ? 0.4 : 0.7;
+    final bg = colors.secondaryColor.withValues(alpha: bgOpacity);
 
     return Container(
       width: double.infinity,
@@ -312,7 +306,7 @@ Widget _buildAddRatingButton(
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.borderColor.withOpacity(0.35)),
+        border: Border.all(color: colors.borderColor.withValues(alpha: 0.35)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -343,10 +337,9 @@ Widget _buildAddRatingButton(
     );
   }
 
-  if (serviceId == null || serviceId <= 0) {
-    final missing = _t(
-        'لا يمكن العثور على الخدمة الحالية لإضافة تقييم.',
-        'Cannot resolve the current service to add a rating.');
+  if (storeId == null || storeId <= 0) {
+    final missing = _t('لا يمكن العثور على المتجر الحالي لإضافة تقييم.',
+        'Cannot resolve the current store to add a rating.');
     return wrapInfoMessage(buildInfoMessage(missing));
   }
 
@@ -378,8 +371,8 @@ Widget _buildAddRatingButton(
                     arguments: {'popToCurrent': true},
                   );
                   if (HiveUtils.isUserAuthenticated()) {
-                    ServiceRatingPage.commentsKey.currentState?.reload();
-                    ServiceRatingPage.headerRefresh.value++;
+                    StoreRatingPage.commentsKey.currentState?.reload();
+                    StoreRatingPage.headerRefresh.value++;
                   }
                 },
               ),
@@ -393,8 +386,8 @@ Widget _buildAddRatingButton(
   if (canReview == false) {
     return wrapInfoMessage(
       buildInfoMessage(
-        _t('لقد قمت بتقييم هذه الخدمة مسبقاً، شكراً لمساهمتك.',
-            'You already rated this service, thank you.'),
+        _t('لقد قمت بتقييم هذا المتجر مسبقاً، شكراً لمساهمتك.',
+            'You already rated this store, thank you.'),
         icon: Icons.info,
       ),
     );
@@ -402,7 +395,7 @@ Widget _buildAddRatingButton(
 
   final bool isLoading = canReview == null;
   final loadingText = _t('جاري التحميل...', 'Loading...');
-  final actionText = _t('قيّم الخدمة', 'Rate service');
+  final actionText = _t('قيّم المتجر', 'Rate store');
 
   return SafeArea(
     child: Padding(
@@ -411,8 +404,7 @@ Widget _buildAddRatingButton(
         height: 50,
         width: double.infinity,
         child: ElevatedButton.icon(
-          icon: Icon(isLoading ? Icons.hourglass_top : Icons.rate_review,
-              size: 22),
+          icon: Icon(isLoading ? Icons.hourglass_top : Icons.rate_review, size: 22),
           label: Text(
             isLoading ? loadingText : actionText,
             style: const TextStyle(fontSize: 16),
@@ -420,31 +412,27 @@ Widget _buildAddRatingButton(
           style: ElevatedButton.styleFrom(
             backgroundColor: accent,
             foregroundColor: colors.secondaryColor,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
           onPressed: isLoading
               ? null
               : () async {
-                  final dynamic added =
-                      await showModalBottomSheet<dynamic>(
+                  final dynamic added = await showModalBottomSheet<dynamic>(
                     context: context,
                     isScrollControlled: true,
                     useSafeArea: true,
                     backgroundColor: Theme.of(context).cardColor,
                     shape: const RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.vertical(top: Radius.circular(20)),
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
                     ),
                     builder: (ctx) => Padding(
                       padding: EdgeInsets.only(
                         bottom: MediaQuery.of(ctx).viewInsets.bottom,
                       ),
-                      child: AddRatingBottomSheet(
-                        serviceId: serviceId,
-                        serviceTitle: serviceTitle,
-                        sellerId: sellerId,
-                        serviceUid: serviceUid,
+                      child: AddStoreRatingBottomSheet(
+                        storeId: storeId,
+                        storeSlug: storeSlug,
+                        storeName: storeName,
                       ),
                     ),
                   );
@@ -453,18 +441,15 @@ Widget _buildAddRatingButton(
                     final stars = (added['stars'] as num?)?.toDouble();
                     final review = (added['review'] as String?)?.trim() ?? '';
                     if (stars != null) {
-                      ServiceRatingPage.commentsKey.currentState
-                          ?.addLocalRating(
+                      StoreRatingPage.commentsKey.currentState?.addLocalRating(
                         stars: stars,
                         review: review,
                       );
-                      ServiceRatingPage.headerRefresh.value++;
+                      StoreRatingPage.headerRefresh.value++;
                     }
-                    // اترك التعليق المحلي ظاهر بدون إعادة تحميل فورية
-                    // (يمكن للمستخدم السحب للتحديث لاحقاً)
                   } else if (added == true) {
-                    ServiceRatingPage.commentsKey.currentState?.reload();
-                    ServiceRatingPage.headerRefresh.value++;
+                    StoreRatingPage.commentsKey.currentState?.reload();
+                    StoreRatingPage.headerRefresh.value++;
                   }
                 },
         ),
@@ -472,28 +457,23 @@ Widget _buildAddRatingButton(
     ),
   );
 }
+
 class OverallRatingSection extends StatelessWidget {
   final double ratingValue;
   final int ratingCount;
   final Map<int, int> ratingDistribution;
-  final String serviceTitle;
+  final String storeName;
 
   const OverallRatingSection({
     super.key,
     required this.ratingValue,
     required this.ratingCount,
     required this.ratingDistribution,
-    required this.serviceTitle,
+    required this.storeName,
   });
 
   @override
   Widget build(BuildContext context) {
-    final args =
-        (ModalRoute.of(context)?.settings.arguments ?? const {}) as Map;
-    final serviceTitleArg =
-        (args['serviceTitle'] as String?)?.trim() ??
-            _tr(context, 'بدون عنوان', 'Untitled service');
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -502,11 +482,11 @@ class OverallRatingSection extends StatelessWidget {
             style: DefaultTextStyle.of(context).style.copyWith(fontSize: 12),
             children: [
               TextSpan(
-                  text: _tr(context, 'تقييمات المستخدمين لخدمة ',
-                      'User ratings for service '),
+                  text: _tr(context, 'تقييمات المستخدمين لمتجر ',
+                      'User ratings for store '),
                   style: const TextStyle(fontWeight: FontWeight.w500)),
               TextSpan(
-                text: serviceTitle,
+                text: storeName,
                 style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
@@ -600,11 +580,17 @@ class OverallRatingSection extends StatelessWidget {
   }
 }
 
-// ط­ط³ط§ط¨ ط§ظ„ظ…طھظˆط³ط· ظˆط§ظ„طھظˆط²ظٹط¹ ظ…ظ† ظ‚ط§ط¦ظ…ط© UserRatings (ط¨ط¯ظˆظ† ط£ظٹ طھط؛ظٹظٹط± ظپظٹ ظˆط§ط¬ظ‡طھظƒ)
-({double avg, int count, Map<int, int> dist}) _summaryFrom(
-    List<UserRatings> list) {
-  if (list.isEmpty)
-    return (avg: 0.0, count: 0, dist: {1: 0, 2: 0, 3: 0, 4: 0, 5: 0});
+class _Summary {
+  _Summary({required this.avg, required this.count, required this.dist});
+  final double avg;
+  final int count;
+  final Map<int, int> dist;
+}
+
+_Summary _summaryFrom(List<UserRatings> list) {
+  if (list.isEmpty) {
+    return _Summary(avg: 0.0, count: 0, dist: {1: 0, 2: 0, 3: 0, 4: 0, 5: 0});
+  }
   final dist = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0};
   double sum = 0;
   for (final r in list) {
@@ -613,10 +599,9 @@ class OverallRatingSection extends StatelessWidget {
     sum += (r.ratings ?? 0);
   }
   final avg = sum / list.length;
-  return (avg: avg, count: list.length, dist: dist);
+  return _Summary(avg: avg, count: list.length, dist: dist);
 }
 
-// ظ†ظپط³ ظˆظٹط¬طھ ط§ظ„ط¹ظ†ظˆط§ظ† ظˆط§ظ„ظپظ„طھط±ط© ط§ظ„طھظٹ ط¹ظ†ط¯ظƒ
 class CommentsListSection extends StatelessWidget {
   final ValueChanged<String>? onFilter;
 
@@ -656,10 +641,10 @@ class CommentsListSection extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.sort, size: 18, color: color.withOpacity(0.8)),
+              Icon(Icons.sort, size: 18, color: color.withValues(alpha: 0.8)),
               const SizedBox(width: 6),
               Text(_t('فرز', 'Sort'),
-                  style: TextStyle(color: color.withOpacity(0.9))),
+                  style: TextStyle(color: color.withValues(alpha: 0.9))),
             ],
           ),
         ),

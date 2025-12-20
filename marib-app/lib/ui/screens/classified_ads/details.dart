@@ -34,6 +34,7 @@ import 'package:marib/utils/ui_utils.dart';
 import 'package:marib/utils/hive_utils.dart';
 
 import 'service_rating_page.dart' show ServiceRatingPage;
+import 'widgets/service_ratings_api.dart';
 import 'widgets/report_service.dart';
 import 'details_ui.dart';
 import 'package:marib/utils/notification/notification_service.dart';
@@ -143,6 +144,9 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
   bool _statusUpdating = false;
   bool? _ownerStatusOverride;
   bool _viewRecorded = false;
+  double? _ratingValueOverride;
+  int? _ratingCountOverride;
+  bool _ratingFetching = false;
   String? get _initialTitle => widget.initialTitle ?? widget.classified?.title;
 
 
@@ -239,11 +243,18 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
 
       setState(() {
         _data = fresh;
-        _loading = false;
         _error = false;
         _errorMsg = null;
         _ownerStatusOverride = null;
         _statusUpdating = false;
+      });
+
+      // انتظر ملخص التقييمات قبل إنهاء الشيمر لتجنب ظهور "لا يوجد تقييم" مؤقتاً
+      await _refreshRatingsSummary(applyState: true, serviceId: fresh.id ?? id, serviceUid: fresh.serviceUid);
+
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
       });
 
       final int? viewId = fresh.id ?? id;
@@ -270,6 +281,35 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
       );
     } catch (_) {
       // تجاهل أخطاء عداد المشاهدات حتى لا تؤثر على واجهة المستخدم
+    }
+  }
+
+  Future<void> _refreshRatingsSummary({bool applyState = true, int? serviceId, String? serviceUid}) async {
+    if (_ratingFetching) return;
+    final int? sid = serviceId ?? _extractServiceId();
+    final String? suid = serviceUid ?? _data?.serviceUid;
+    if (sid == null || sid <= 0) return;
+    _ratingFetching = true;
+    try {
+      final res = await ServiceRatingsApi.fetchRatings(
+        serviceId: sid,
+        serviceUid: suid,
+        page: 1,
+        perPage: 1,
+      );
+      if (applyState && mounted) {
+        setState(() {
+          _ratingValueOverride = res.averageRating;
+          _ratingCountOverride = res.totalReviews;
+        });
+      } else {
+        _ratingValueOverride = res.averageRating;
+        _ratingCountOverride = res.totalReviews;
+      }
+    } catch (_) {
+      // ignore
+    } finally {
+      _ratingFetching = false;
     }
   }
 
@@ -1101,8 +1141,8 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
       html: html,
       dateLine: dateLine,
       ratingText: ratingText,
-      ratingValue: _data?.rating,
-      ratingCount: _data?.totalRatings,
+      ratingValue: _ratingValueOverride ?? _data?.rating,
+      ratingCount: _ratingCountOverride ?? _data?.totalRatings,
       viewsCount: _data?.views,
       directiveHidden: hideActionButton,
       buttonTitle: buttonTitle,
@@ -1162,7 +1202,7 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
 
             }),
           ),
-        );
+        ).then((_) => _refreshRatingsSummary());
       },
 
       onChatTap: chatRedirectEnabled
@@ -1179,4 +1219,3 @@ class _ClassifiedDetailsState extends State<ClassifiedDetails> {
 }
 
 enum _NextAction { customFields, payment, directRequest, none }
-

@@ -251,14 +251,28 @@ class LoginScreenState extends State<SignUpMainScreen> {
     return draft;
   }
 
+  Map<String, dynamic> _sanitizePlaceholderEmail(Map<String, dynamic> data) {
+    final Map<String, dynamic> sanitized = Map<String, dynamic>.from(data);
+    final dynamic rawEmail = sanitized['email'];
+    final String email =
+        rawEmail == null ? '' : rawEmail.toString().trim().toLowerCase();
+
+    if (email.isNotEmpty &&
+        (email.endsWith('@phone.marib.app') || email.startsWith('user_'))) {
+      sanitized['email'] = '';
+    }
+    return sanitized;
+  }
+
   Future<void> _switchToUser(Map<String, dynamic> apiResponse) async {
     await HiveUtils.logoutUser(
       context,
       onLogout: () {},
       isRedirect: false,
     );
+    await HiveUtils.setCorePermissionsSnapshot(false);
     HiveUtils.setJWT(apiResponse['token']);
-    HiveUtils.setUserData(apiResponse['data']);
+    HiveUtils.setUserData(_sanitizePlaceholderEmail(apiResponse['data']));
     HiveUtils.setUserIsAuthenticated(true);
     context.read<UserDetailsCubit>().fill(HiveUtils.getUserDetails());
     await NotificationService.resendPendingTokenIfNeeded();
@@ -491,7 +505,7 @@ class LoginScreenState extends State<SignUpMainScreen> {
 
       if (response['error'] == false) {
         HiveUtils.setJWT(response['token']);
-        HiveUtils.setUserData(response['data']);
+        HiveUtils.setUserData(_sanitizePlaceholderEmail(response['data']));
 
         final userData = response['data'];
         final bool hasAccountType =
@@ -719,18 +733,26 @@ class LoginScreenState extends State<SignUpMainScreen> {
 
     _isSubmitting = true;
     Widgets.showLoader(context);
+    bool _navigationTriggered = false;
+    bool _signUpSuccess = false;
+    void _goHome() {
+      if (_navigationTriggered) return;
+      _navigationTriggered = true;
+      Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil(
+        Routes.main,
+        (route) => false,
+        arguments: {"from": "signup"},
+      );
+    }
 
     // نطلب الموقع فقط إذا أدخل المستخدم كود إحالة (للتحقق من نطاق مأرب)
     final String referralCode = codeCtrl.text.trim();
     Map<String, dynamic> locationPayload = {};
     if (referralCode.isNotEmpty) {
       final loc = await _prepareLocationPayload();
-      if (loc == null) {
-        Widgets.hideLoder(context);
-        _isSubmitting = false;
-        return;
+      if (loc != null) {
+        locationPayload = loc;
       }
-      locationPayload = loc;
     }
 
     try {
@@ -739,13 +761,16 @@ class LoginScreenState extends State<SignUpMainScreen> {
         "mobile": mobileCtrl.text,
         "password": passwordCtrl.text,
         "account_type": selectedAccountType ?? "1",
-        "email": emailCtrl.text,
         "country_code": countryCode?.toString() ?? "",
         "country_name": countryName ?? "Unknown",
         "flag_emoji": flagEmoji ?? "ye",
         "platform_type": Platform.isAndroid ? "android" : "ios",
         ...locationPayload,
       };
+      final String trimmedEmail = emailCtrl.text.trim();
+      if (trimmedEmail.isNotEmpty) {
+        basePayload["email"] = trimmedEmail;
+      }
 
       if (referralCode.isNotEmpty) {
         basePayload["code"] = referralCode;
@@ -763,14 +788,9 @@ class LoginScreenState extends State<SignUpMainScreen> {
         };
       } else {
         // Phone signup path
-        String firebaseId;
         final currentUser = firebase_auth.FirebaseAuth.instance.currentUser;
-        if (currentUser != null) {
-          firebaseId = currentUser.uid;
-        } else {
-          firebaseId =
-              "user_${countryCode}${mobileCtrl.text}"; // temporary fallback
-        }
+        final String firebaseId =
+            (currentUser?.uid ?? '').isNotEmpty ? currentUser!.uid : mobileCtrl.text;
 
         payload = {
           ...basePayload,
@@ -782,7 +802,12 @@ class LoginScreenState extends State<SignUpMainScreen> {
       final response = await Api.post(url: "user-signup", parameter: payload);
 
       if (response['error'] == false) {
-        await _switchToUser(response);
+        _signUpSuccess = true;
+        try {
+          await _switchToUser(response);
+        } catch (_) {
+          // حتى لو فشل تهيئة الجلسة، نتابع التوجيه للصفحة الرئيسية
+        }
 
         if (selectedAccountType == "3") {
           final draft = _buildMerchantDraft(basePayload);
@@ -790,19 +815,11 @@ class LoginScreenState extends State<SignUpMainScreen> {
           return;
         }
 
-        Navigator.pushNamed(
-          context,
-          Routes.otp,
-          arguments: {
-            'selectedAccountType': selectedAccountType,
-            'phoneNumber': mobileCtrl.text,
-            'countryCode': countryCode,
-            'username': usernameCtrl.text,
-            'password': passwordCtrl.text,
-            'isFromGoogleLogin': isFromGoogleLogin,
-            'googleData': googleData,
-          },
-        );
+        if (!mounted) return;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!context.mounted) return;
+          _goHome();
+        });
       } else {
         HelperUtils.showSnackBarMessage(
           context,
@@ -816,6 +833,12 @@ class LoginScreenState extends State<SignUpMainScreen> {
     } finally {
       Widgets.hideLoder(context);
       _isSubmitting = false;
+      if (!mounted) return;
+      if (_signUpSuccess &&
+          !_navigationTriggered &&
+          selectedAccountType != "3") {
+        _goHome();
+      }
     }
   }
 

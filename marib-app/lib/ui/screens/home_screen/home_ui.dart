@@ -427,61 +427,74 @@ class ProfileHeaderShimmer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsetsDirectional.only(
-        start: 10.rw(context),
-        end: 10.rw(context),
-        bottom: (12.rh(context)).floorToDouble(),
-      ),
-      child: SizedBox(
-        height: 72,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            const ShimmerBox(
-              width: 58,
-              height: 58,
-              borderRadius: BorderRadius.all(Radius.circular(18)),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ShimmerBox(
-                    height: 16,
-                    width: MediaQuery.of(context).size.width * 0.35,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  const SizedBox(height: 8),
-                  ShimmerBox(
-                    height: 12,
-                    width: MediaQuery.of(context).size.width * 0.5,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            Row(
-              children: List.generate(
-                3,
-                (index) => Padding(
-                  padding:
-                      EdgeInsetsDirectional.only(start: index == 0 ? 0 : 8),
-                  child: const ShimmerBox(
-                    width: 44,
-                    height: 44,
-                    borderRadius: BorderRadius.all(Radius.circular(14)),
+    final double bottomPad = (12.rh(context)).floorToDouble();
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final double available =
+            constraints.hasBoundedHeight && constraints.maxHeight.isFinite
+                ? constraints.maxHeight - bottomPad
+                : 64.0;
+        final double headerHeight =
+            available.isFinite ? available.clamp(0.0, 64.0) : 64.0;
+
+        return Padding(
+          padding: EdgeInsetsDirectional.only(
+            start: 10.rw(context),
+            end: 10.rw(context),
+            bottom: bottomPad,
+          ),
+          child: SizedBox(
+            height: headerHeight,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const ShimmerBox(
+                  width: 52,
+                  height: 52,
+                  borderRadius: BorderRadius.all(Radius.circular(16)),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ShimmerBox(
+                        height: 16,
+                        width: MediaQuery.of(context).size.width * 0.35,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      const SizedBox(height: 8),
+                      ShimmerBox(
+                        height: 12,
+                        width: MediaQuery.of(context).size.width * 0.5,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ],
                   ),
                 ),
-              ),
+                const SizedBox(width: 10),
+                Row(
+                  children: List.generate(
+                    3,
+                    (index) => Padding(
+                      padding: EdgeInsetsDirectional.only(
+                          start: index == 0 ? 0 : 8),
+                      child: const ShimmerBox(
+                        width: 40,
+                        height: 40,
+                        borderRadius: BorderRadius.all(Radius.circular(12)),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }

@@ -236,36 +236,8 @@ class ItemsListListState extends State<ItemsListSeller> {
         BlocBuilder<FetchSellersCubit, FetchSellersState>(
           builder: (context, state) {
             if (state is FetchSellersProgress) {
-              final shimmerItemCount = (lastSellersCount / 2).ceil();
-              return SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    return Row(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Container(
-                            margin: EdgeInsets.all(8.0),
-                            child: CustomShimmer(
-                                height: 150,
-                                width: double.infinity,
-                                borderRadius: 12),
-                          ),
-                        ),
-                        Expanded(
-                          child: Container(
-                            margin: EdgeInsets.all(8.0),
-                            child: CustomShimmer(
-                                height: 150,
-                                width: double.infinity,
-                                borderRadius: 12),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                  childCount: shimmerItemCount,
-                ),
+              return const SliverToBoxAdapter(
+                child: _StorefrontShimmer(),
               );
             } else if (state is FetchSellersSuccess) {
               lastSellersCount = state.sellers.length;
@@ -788,6 +760,146 @@ class ItemsListListState extends State<ItemsListSeller> {
       return null;
     }
     return Map<String, dynamic>.from(source);
+  }
+}
+
+class _StorefrontShimmer extends StatelessWidget {
+  const _StorefrontShimmer();
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 8),
+          CustomShimmer(
+            height: 180,
+            width: double.infinity,
+            borderRadius: 16,
+          ),
+          const SizedBox(height: 16),
+          CustomShimmer(
+            height: 46,
+            width: double.infinity,
+            borderRadius: 12,
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 40,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemBuilder: (_, __) => CustomShimmer(
+                height: 36,
+                width: 90,
+                borderRadius: 20,
+              ),
+              separatorBuilder: (_, __) => const SizedBox(width: 10),
+              itemCount: 6,
+            ),
+          ),
+          const SizedBox(height: 16),
+          CustomShimmer(
+            height: 120,
+            width: double.infinity,
+            borderRadius: 14,
+          ),
+          const SizedBox(height: 12),
+          ...List.generate(4, (index) => const _StoreCardShimmer()).expand(
+            (w) => [w, const SizedBox(height: 12)],
+          ),
+          const SizedBox(height: 12),
+        ],
+      ),
+    );
+  }
+}
+
+class _StoreCardShimmer extends StatelessWidget {
+  const _StoreCardShimmer();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        color: Theme.of(context).colorScheme.secondaryColor,
+        border: Border.all(
+          color: Theme.of(context).colorScheme.borderColor.darken(30),
+        ),
+      ),
+      child: Stack(
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CustomShimmer(
+                height: 150,
+                width: double.infinity,
+                borderRadius: 18,
+              ),
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        CustomShimmer(
+                          height: 16,
+                          width: 90,
+                          borderRadius: 6,
+                        ),
+                        const SizedBox(width: 10),
+                        CustomShimmer(
+                          height: 16,
+                          width: 60,
+                          borderRadius: 6,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    CustomShimmer(
+                      height: 18,
+                      width: 160,
+                      borderRadius: 8,
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        CustomShimmer(
+                          height: 16,
+                          width: 80,
+                          borderRadius: 6,
+                        ),
+                        const SizedBox(width: 8),
+                        CustomShimmer(
+                          height: 16,
+                          width: 80,
+                          borderRadius: 6,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          Positioned(
+            top: 10,
+            left: 10,
+            child: CustomShimmer(
+              height: 38,
+              width: 38,
+              borderRadius: 12,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

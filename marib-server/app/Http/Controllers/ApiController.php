@@ -2038,6 +2038,7 @@ class ApiController extends Controller {
             'category_id'    => 'nullable',
             'category_ids'   => 'nullable|array',
             'category_ids.*' => 'integer',
+            'store_id'       => 'nullable|integer|exists:stores,id',
             'user_id'        => 'nullable',
             'min_price'      => 'nullable',
             'max_price'      => 'nullable',
@@ -2075,6 +2076,50 @@ class ApiController extends Controller {
             $viewMode = strtolower((string) $request->query('view', 'detail'));
             $isSummaryView = $viewMode === 'summary';
             $isDetailView = ! $isSummaryView;
+
+            if ($isSummaryView) {
+                Log::info('getItem.params', $request->all());
+            }
+
+            // If this is an e_store context and store_id is missing, infer it from user_id
+            if ($request->interface_type === 'e_store'
+                && ! $request->filled('store_id')
+                && $request->filled('user_id')) {
+                $storeIdGuess = Store::where('user_id', $request->input('user_id'))
+                    ->value('id');
+                if ($storeIdGuess) {
+                    $request->merge(['store_id' => $storeIdGuess]);
+                }
+            }
+
+            // Prevent leaking cross-store items: if e_store context without store/user, return empty.
+            if ($request->interface_type === 'e_store'
+                && ! $request->filled('store_id')
+                && ! $request->filled('user_id')) {
+                return ResponseService::successResponse('OK', [
+                    'data' => [],
+                    'total' => 0,
+                ]);
+            }
+
+            // Hard guard: in e_store context, enforce store or user filter.
+            if ($request->interface_type === 'e_store') {
+                if ($request->filled('store_id')) {
+                    $request->merge(['store_id' => (int) $request->input('store_id')]);
+                } elseif ($request->filled('user_id')) {
+                    $request->merge(['user_id' => (int) $request->input('user_id')]);
+                }
+            }
+
+            // Extra guard for store category requests (storefront root category = 3):
+            if ((string) $request->input('category_id') === '3'
+                && ! $request->filled('store_id')
+                && ! $request->filled('user_id')) {
+                return ResponseService::successResponse('OK', [
+                    'data' => [],
+                    'total' => 0,
+                ]);
+            }
 
 
             $interfaceTypeFilter = null;
@@ -2223,6 +2268,8 @@ class ApiController extends Controller {
                 //     return $sql->where('area_id', $request->area_id);
                 })->when($request->user_id, function ($sql) use ($request) {
                     return $sql->where('user_id', $request->user_id);
+                })->when($request->store_id, function ($sql) use ($request) {
+                    return $sql->where('store_id', $request->store_id);
                 })->when($request->slug, function ($sql) use ($request) {
                     return $sql->where('slug', $request->slug);
                 })->when($this->requestHasBoundingBox($request), function ($sql) use ($request) {

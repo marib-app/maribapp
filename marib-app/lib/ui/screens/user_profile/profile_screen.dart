@@ -1,4 +1,4 @@
-
+﻿
 // lib/ui/screens/user_profile/profile_screen.dart
 // هذا هو "ملف المنطق" وهو الملف الذي يُستورد كما كان من أي مكان آخر.
 // يُبقي الرمز ProfileScreen معرفاً (لأن الـ part أدناه يحتوي الواجهة).
@@ -33,6 +33,8 @@ import 'package:marib/data/cubits/seller/fetch_verification_request_cubit.dart';
 import 'package:marib/data/cubits/system/app_theme_cubit.dart';
 import 'package:marib/data/cubits/system/fetch_language_cubit.dart';
 import 'package:marib/data/cubits/system/fetch_system_settings_cubit.dart';
+import 'package:marib/data/repositories/item/item_repository.dart';
+import 'package:marib/data/repositories/my_services_repository.dart';
 import 'package:marib/data/cubits/system/language_cubit.dart';
 import 'package:marib/data/cubits/system/user_details.dart';
 import 'package:marib/data/helper/widgets.dart';
@@ -75,8 +77,10 @@ mixin ProfileScreenLogic<T extends StatefulWidget> on State<T> {
     super.initState();
     final settings = context.read<FetchSystemSettingsCubit>();
 
-    if (!const bool.fromEnvironment("force-disable-demo-mode", defaultValue: false)) {
-      Constant.isDemoModeOn = settings.getSetting(SystemSetting.demoMode) ?? false;
+    if (!const bool.fromEnvironment(
+        "force-disable-demo-mode", defaultValue: false)) {
+      Constant.isDemoModeOn =
+          settings.getSetting(SystemSetting.demoMode) ?? false;
     }
   }
 
@@ -120,193 +124,258 @@ mixin ProfileScreenLogic<T extends StatefulWidget> on State<T> {
               );
             },
             cancelTextColor: context.color.textColorDark,
-            svgImagePath: "assets/lottie/logout.json",
             content: Text("confirmLogOutMsg".translate(context))));
   }
 
   void deleteConfirmWidget() {
-    UiUtils.showBlurredDialoge(
-      context,
-      dialoge: BlurredDialogBox(
-        title: "deleteProfileMessageTitle".translate(context),
-        content: Text("yourAdsAndTransactionDelete".translate(context)),
-        cancelButtonName: 'no'.translate(context),
-        acceptButtonName: "deleteBtnLbl".translate(context),
-        onAccept: () async {
-          // ضع هنا كود الحذف أو نفس منطقك القديم
-        },
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
+      backgroundColor: context.color.primaryColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-    );
-  }
+      builder: (sheetContext) {
+        final theme = Theme.of(sheetContext);
+        final colors = theme.colorScheme;
+        bool isDeleting = false;
 
+        Future<void> _deleteOwnedContent() async {
+          final itemRepository = ItemRepository();
+          int fetchedItems = 0;
+          int page = 1;
+          while (true) {
+            final itemsPage = await itemRepository.fetchMyItems(page: page);
+            final items = itemsPage.modelList;
+            if (items.isEmpty) break;
+            for (final item in items) {
+              final id = item.id;
+              if (id != null) {
+                try {
+                  await itemRepository.deleteItem(id);
+                } catch (_) {}
+              }
+            }
+            fetchedItems += items.length;
+            if (fetchedItems >= itemsPage.total) break;
+            page += 1;
+          }
 
-
-  String sellerStatus(String status) {
-    if (status == 'pending') {
-      return 'underReview'.translate(context);
-    } else if (status == 'approved') {
-      return 'approved'.translate(context);
-    } else if (status == 'rejected') {
-      return 'rejected'.translate(context);
-    } else if (status == 'resubmitted') {
-      return 'resubmitted'.translate(context);
-    } else {
-      return '';
-    }
-  }
-
-  void askToLoginAgain() {
-    HelperUtils.showSnackBarMessage(context, 'loginReqMsg'.translate(context));
-    HiveUtils.clear();
-    Constant.favoriteItemList.clear();
-    context.read<UserDetailsCubit>().clear();
-    context.read<FavoriteCubit>().resetState();
-    context.read<UpdatedReportItemCubit>().clearItem();
-    context.read<GetBuyerChatListCubit>().resetState();
-    context.read<BlockedUsersListCubit>().resetState();
-    FetchSystemSettingsCubit.resetDelegateSectionsFor(
-      context,
-      clearCachedSections: true,
-    );
-    HiveUtils.logoutUser(context, onLogout: () {});
-    Navigator.of(context).pushNamedAndRemoveUntil(Routes.login, (route) => false);
-  }
-
-  Future<void> signOut(AuthenticationType? type) async {
-    if (type == AuthenticationType.google) {
-      await _googleSignIn.signOut();
-    } else {
-      await _auth.signOut();
-    }
-  }
-
-  Future<void> proceedToDeleteProfile() async {
-    try {
-      await _auth.currentUser!.delete().then((_) async {
-        final value = await context.read<DeleteUserCubit>().deleteUser();
-        HelperUtils.showSnackBarMessage(context, (value["message"]));
-        for (int i = 0; i < AuthenticationType.values.length; i++) {
-          if (AuthenticationType.values[i].name == HiveUtils.getUserDetails().type) {
-            await signOut(AuthenticationType.values[i]);
-
-            HiveUtils.clear();
-            Constant.favoriteItemList.clear();
-            context.read<UserDetailsCubit>().clear();
-            context.read<FavoriteCubit>().resetState();
-            context.read<UpdatedReportItemCubit>().clearItem();
-            context.read<GetBuyerChatListCubit>().resetState();
-            context.read<BlockedUsersListCubit>().resetState();
-
-            await FetchSystemSettingsCubit.resetDelegateSectionsFor(
-              context,
-              clearCachedSections: true,
-            );
-            await HiveUtils.logoutUser(context, onLogout: () {});
-
-            Navigator.of(context).pushNamedAndRemoveUntil(Routes.login, (route) => false);
+          final myServicesRepository = MyServicesRepository();
+          int fetchedServices = 0;
+          int servicePage = 1;
+          while (true) {
+            final servicesPage =
+                await myServicesRepository.fetchMyServices(page: servicePage);
+            final services = servicesPage.modelList;
+            if (services.isEmpty) break;
+            for (final service in services) {
+              final id = service.id;
+              if (id != null) {
+                try {
+                  await myServicesRepository.deleteService(id);
+                } catch (_) {}
+              }
+            }
+            fetchedServices += services.length;
+            if (fetchedServices >= servicesPage.total) break;
+            servicePage += 1;
           }
         }
-      });
-    } on FirebaseAuthException catch (error) {
-      if (error.code == "requires-recent-login") {
-        for (int i = 0; i < AuthenticationType.values.length; i++) {
-          if (AuthenticationType.values[i].name == HiveUtils.getUserDetails().type) {
-            await signOut(AuthenticationType.values[i]);
 
-            HiveUtils.clear();
-            Constant.favoriteItemList.clear();
-            context.read<UserDetailsCubit>().clear();
-            context.read<FavoriteCubit>().resetState();
-            context.read<UpdatedReportItemCubit>().clearItem();
-            context.read<GetBuyerChatListCubit>().resetState();
-            context.read<BlockedUsersListCubit>().resetState();
+        Future<void> _performDelete(StateSetter setModalState) async {
+          setModalState(() => isDeleting = true);
 
-            await FetchSystemSettingsCubit.resetDelegateSectionsFor(
-              context,
-              clearCachedSections: true,
+          try {
+            await _deleteOwnedContent();
+          } catch (_) {}
+
+          final deleteCubit = sheetContext.read<DeleteUserCubit>();
+          final result = await deleteCubit.deleteUser();
+          final deleteFailed =
+              deleteCubit.state is DeleteUserFetchFailure || result == null;
+
+          if (!mounted) return;
+
+          if (deleteFailed) {
+            setModalState(() => isDeleting = false);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("تعذر حذف الحساب، حاول لاحقاً."),
+              ),
             );
-            await HiveUtils.logoutUser(context, onLogout: () {});
-
-            Navigator.of(context).pushNamedAndRemoveUntil(Routes.login, (route) => false);
+            return;
           }
+
+          HiveUtils.clear();
+          Constant.favoriteItemList.clear();
+          context.read<UserDetailsCubit>().clear();
+          context.read<FavoriteCubit>().resetState();
+          context.read<UpdatedReportItemCubit>().clearItem();
+          context.read<GetBuyerChatListCubit>().resetState();
+          context.read<BlockedUsersListCubit>().resetState();
+          await FetchSystemSettingsCubit.resetDelegateSectionsFor(
+            context,
+            clearCachedSections: true,
+          );
+          await HiveUtils.logoutUser(
+            context,
+            onLogout: () {},
+          );
+
+          if (!mounted) return;
+
+          Navigator.of(sheetContext).pop();
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            Routes.login,
+            (_) => false,
+          );
         }
-      } else {
-        final rawMessage = error.message?.trim();
-        final errorMessage = (rawMessage != null && rawMessage.isNotEmpty)
-            ? rawMessage
-            : 'somethingWentWrong'.translate(context);
-        HelperUtils.showSnackBarMessage(context, errorMessage);
 
-      }
-    } catch (e) {
-      debugPrint("unable to delete user - ${e.toString()}");
-    }
-  }
+        const bullets = <String>[
+          "سيتم حذف إعلاناتك وكل بياناتها.",
+          "سيتم إزالة المحادثات المرتبطة بحسابك.",
+          "لن تستطيع استعادة الحساب أو البيانات لاحقاً.",
+          "قد تبقى بعض السجلات المالية لأسباب تنظيمية.",
+        ];
 
-  Future<void> rateUs() {
-    return _inAppReview.openStoreListing(
-      appStoreId: Constant.iOSAppId,
-      microsoftStoreId: 'microsoftStoreId',
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return WillPopScope(
+              onWillPop: () async => !isDeleting,
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: 20,
+                  right: 20,
+                  bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 20,
+                  top: 20,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 42,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: colors.onSurface.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      "شكراً لتجربتك",
+                      style: theme.textTheme.titleLarge
+                          ?.copyWith(fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "قبل حذف حسابك، خذ لحظة لقراءة ما سيحدث بعد التأكيد.",
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colors.onSurface.withOpacity(0.75),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      "ماذا يعني حذف حسابك؟",
+                      style: theme.textTheme.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 10),
+                    ...bullets.map(
+                      (item) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              Icons.brightness_1,
+                              size: 8,
+                              color: colors.error.withOpacity(0.8),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                item,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: colors.onSurface.withOpacity(0.85),
+                                  height: 1.4,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: isDeleting
+                                ? null
+                                : () => Navigator.of(sheetContext).pop(),
+                            style: OutlinedButton.styleFrom(
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 14),
+                              side: BorderSide(color: colors.outline),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: Text(
+                              "رجوع",
+                              style: theme.textTheme.titleMedium
+                                  ?.copyWith(color: colors.onSurface),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: isDeleting
+                                ? null
+                                : () => _performDelete(setModalState),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: colors.error,
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: isDeleting
+                                ? SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: colors.onError,
+                                    ),
+                                  )
+                                : Text(
+                                    "تأكيد حذف الحساب",
+                                    style:
+                                        theme.textTheme.titleMedium?.copyWith(
+                                      color: colors.onError,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
-
-  void shareApp() {
-    try {
-      if (Platform.isAndroid) {
-        Share.share(
-          '${Constant.appName}\n${Constant.playstoreURLAndroid}\n${Constant.shareappText}',
-          subject: Constant.appName,
-        );
-      } else {
-        Share.share(
-          '${Constant.appName}\n${Constant.appstoreURLios}\n${Constant.shareappText}',
-          subject: Constant.appName,
-          sharePositionOrigin: Rect.fromLTWH(
-            0,
-            0,
-            MediaQuery.of(context).size.width,
-            MediaQuery.of(context).size.height / 2,
-          ),
-        );
-      }
-    } catch (e) {
-      HelperUtils.showSnackBarMessage(context, e.toString());
-    }
-  }
-
-  Color _getAccountTypeBadgeColor(BuildContext context) {
-    final int? accountType = HiveUtils.getUserDetails().userType;
-    switch (accountType) {
-      case 1:
-        return Colors.blue;   // فردي
-      case 2:
-        return Colors.green;  // عقاري
-      case 3:
-        return Colors.orange; // تجاري
-      default:
-        return Colors.grey;
-    }
-  }
-
-  String _getAccountTypeText() {
-    final int? accountType = HiveUtils.getUserDetails().userType;
-    switch (accountType) {
-      case 1:
-        return 'individual'.translate(context);
-      case 2:
-        return 'realEstate'.translate(context);
-      case 3:
-        return 'commercial'.translate(context);
-      default:
-        return 'notSpecified'.translate(context);
-    }
-  }
-
-  // واجهات لاستخدامها من الواجهة
-  Color getAccountTypeBadgeColor(BuildContext context) => _getAccountTypeBadgeColor(context);
-  String getAccountTypeText() => _getAccountTypeText();
 }
-
-
-
-

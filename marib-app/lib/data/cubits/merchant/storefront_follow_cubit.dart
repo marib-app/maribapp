@@ -12,24 +12,28 @@ class StorefrontFollowState extends Equatable {
     required this.followersCount,
     this.isLoading = false,
     this.errorMessage,
+    this.hasFetched = false,
   });
 
   final bool isFollowing;
   final int followersCount;
   final bool isLoading;
   final String? errorMessage;
+  final bool hasFetched;
 
   StorefrontFollowState copyWith({
     bool? isFollowing,
     int? followersCount,
     bool? isLoading,
     String? errorMessage,
+    bool? hasFetched,
   }) {
     return StorefrontFollowState(
       isFollowing: isFollowing ?? this.isFollowing,
       followersCount: followersCount ?? this.followersCount,
       isLoading: isLoading ?? this.isLoading,
       errorMessage: errorMessage,
+      hasFetched: hasFetched ?? this.hasFetched,
     );
   }
 
@@ -39,6 +43,7 @@ class StorefrontFollowState extends Equatable {
         followersCount,
         isLoading,
         errorMessage,
+        hasFetched,
       ];
 }
 
@@ -55,10 +60,11 @@ class StorefrontFollowCubit extends Cubit<StorefrontFollowState> {
         super(
           StorefrontFollowState(
             isFollowing: initialIsFollowing,
-            followersCount: max(0, initialFollowersCount),
-            isLoading: true,
-          ),
-        ) {
+        followersCount: max(0, initialFollowersCount),
+        isLoading: true,
+        hasFetched: false,
+      ),
+    ) {
     // Sync with server to ensure initial state matches backend, even if snapshot is stale.
     Future.microtask(_refreshFromServer);
   }
@@ -100,6 +106,7 @@ class StorefrontFollowCubit extends Cubit<StorefrontFollowState> {
         followersCount: nextCount,
         isLoading: true,
         errorMessage: null,
+        hasFetched: state.hasFetched,
       ),
     );
 
@@ -113,6 +120,7 @@ class StorefrontFollowCubit extends Cubit<StorefrontFollowState> {
           isFollowing: result.isFollowing,
           followersCount: result.followersCount ?? state.followersCount,
           isLoading: false,
+          hasFetched: true,
         ),
       );
       await _refreshFromServer();
@@ -122,6 +130,7 @@ class StorefrontFollowCubit extends Cubit<StorefrontFollowState> {
           isFollowing: !targetFollow,
           followersCount: currentCount,
           isLoading: false,
+          hasFetched: true,
           errorMessage: error.toString(),
         ),
       );
@@ -162,6 +171,7 @@ class StorefrontFollowCubit extends Cubit<StorefrontFollowState> {
         isFollowing: isFollowing,
         followersCount: followersCount,
         isLoading: false,
+        hasFetched: true,
       ),
     );
   }
